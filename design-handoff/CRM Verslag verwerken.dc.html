@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9EDE6}a{color:#00532D}a:hover{color:#2F6038}
+@keyframes vl-line{0%{transform:scaleX(0)}40%,100%{transform:scaleX(1)}}
+@keyframes vl-scan{0%{top:14%}50%{top:80%}100%{top:14%}}
+@keyframes vl-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes vl-fly{0%{transform:translate(-90px,40px) rotate(-8deg);opacity:0}15%{opacity:1}70%{opacity:1}100%{transform:translate(110px,-46px) rotate(-8deg);opacity:0}}
+@keyframes vl-dash{to{stroke-dashoffset:-24}}
+@keyframes vl-spin{to{transform:rotate(360deg)}}
+@keyframes vl-bar{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
+@keyframes vl-pop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.08);opacity:1}100%{transform:scale(1)}}
+@keyframes vl-ring{0%{transform:scale(.8);opacity:.5}100%{transform:scale(1.5);opacity:0}}
+</style>
+</helmet>
+<section id="t44" style="padding:40px 44px 48px">
+<div style="display:flex;align-items:baseline;gap:10px;margin:0 0 22px"><a href="#t44" style="font:600 10px 'IBM Plex Sans',sans-serif;letter-spacing:.06em;padding:3px 7px;background:#00532D;color:#fff;border-radius:4px;text-decoration:none">44</a><span style="font:600 13px/1.2 'IBM Plex Sans',sans-serif;color:#00532D">Volle pagina tijdens opmaken en verzenden (geen overlay) — werfverslag (44a–c) en budget-PDF vanuit stap 9 (44d–f); de pagina gaat vanzelf verder</span></div>
+<div style="display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start">
+<sc-for list="{{ screens }}" as="s" hint-placeholder-count="6">
+<div id="{{ s.id }}" style="flex:none;width:1180px;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 12px/1.4 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)"><a href="{{ s.href }}" style="font:600 10.5px 'IBM Plex Sans',sans-serif;padding:3px 7px;background:rgba(0,0,0,.08);color:#00532D;border-radius:5px;text-decoration:none">{{ s.id }}</a><span>{{ s.note }}</span></div>
+<div data-screen-label="{{ s.id }}" style="height:840px;display:flex;background:#F2F5EF;gap:12px;padding:12px;box-sizing:border-box;border-radius:18px;border:1px solid rgba(0,83,45,.10);box-shadow:0 30px 60px -34px rgba(44,59,42,.45)">
+<div style="width:72px;flex:none;display:flex;flex-direction:column;align-items:center;padding:4px 0;gap:6px">
+<div style="width:40px;height:40px;border:1px dashed rgba(44,59,42,.18);border-radius:8px;display:flex;align-items:center;justify-content:center;font:9px 'IBM Plex Sans',sans-serif;color:#4A5B48">logo</div>
+<div style="width:36px;height:1.5px;background:rgba(44,59,42,.10);margin:6px 0"></div>
+<sc-for list="{{ rail }}" as="m" hint-placeholder-count="8"><div style="width:48px;height:48px;flex:none;border-radius:12px;background:{{ m.bg }};box-shadow:0 1px 2px rgba(0,83,45,.06),0 8px 18px -10px rgba(44,59,42,.28)"></div></sc-for>
+</div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;background:#fff;border-radius:16px;box-shadow:0 1px 2px rgba(0,83,45,.06),0 22px 46px -26px rgba(44,59,42,.38);overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;padding:0 18px;height:62px;flex:none;border-bottom:1px solid rgba(44,59,42,.08)">
+<div style="display:flex;flex-direction:column;gap:3px"><span style="font:500 19px 'Playfair Display',Georgia,serif;color:#2C3B2A">{{ s.head }}</span><div style="display:flex;gap:6px;font:500 10.5px 'IBM Plex Sans',sans-serif;color:#5a6b58"><span>Verkaveling Keerstraat</span><span>/</span><span>{{ s.path }}</span><span>/</span><span style="color:#00532D">{{ s.crumb }}</span></div></div>
+<span style="flex:1"></span>
+<div style="display:flex;align-items:center;gap:10px;padding:4px 12px 4px 4px;border-radius:20px;border:1px solid rgba(44,59,42,.10)"><div style="width:30px;height:30px;border-radius:15px;background:#00532D;color:#fff;display:flex;align-items:center;justify-content:center;font:600 11px 'IBM Plex Sans',sans-serif">NL</div><span style="font:500 12.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A">Hallo, Niels Lataire</span></div>
+</div>
+<div style="flex:1;background:#F7F9F5;display:flex;align-items:center;justify-content:center;padding:32px">
+<div style="width:460px;display:flex;flex-direction:column;align-items:center;gap:26px">
+<div style="width:260px;height:200px;position:relative;display:flex;align-items:center;justify-content:center">{{ s.art }}</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center">
+<span style="font:600 10px 'IBM Plex Sans',sans-serif;letter-spacing:.16em;color:#00532D">{{ s.kicker }}</span>
+<span style="font:500 26px/1.2 'Playfair Display',Georgia,serif;color:#2C3B2A">{{ s.title }}</span>
+<span style="font:450 13px/1.55 'IBM Plex Sans',sans-serif;color:#5a6b58;text-wrap:pretty">{{ s.sub }}</span>
+</div>
+<sc-if value="{{ s.hasBar }}" hint-placeholder-val="{{ true }}"><div style="width:100%;height:6px;border-radius:3px;background:#E2ECDA;overflow:hidden;position:relative">{{ s.bar }}</div></sc-if>
+<div style="width:100%;display:flex;flex-direction:column;gap:2px;background:#fff;border-radius:12px;padding:8px;box-sizing:border-box;box-shadow:0 1px 2px rgba(0,83,45,.05),0 16px 34px -28px rgba(44,59,42,.42)">
+<sc-for list="{{ s.steps }}" as="st" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:12px;height:40px;padding:0 10px;border-radius:8px;background:{{ st.bg }}">
+<span style="width:22px;height:22px;flex:none;display:flex;align-items:center;justify-content:center">{{ st.icon }}</span>
+<span style="flex:1;font:{{ st.fw }} 13px 'IBM Plex Sans',sans-serif;color:{{ st.col }}">{{ st.t }}</span>
+<span style="font:500 12px 'IBM Plex Sans',sans-serif;color:{{ st.mcol }};font-variant-numeric:tabular-nums">{{ st.m }}</span>
+</div>
+</sc-for>
+</div>
+<sc-if value="{{ s.hasFoot }}" hint-placeholder-val="{{ true }}"><span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#7a8a78;text-align:center">{{ s.foot }}</span></sc-if>
+<sc-if value="{{ s.hasActions }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:10px"><div style="height:40px;padding:0 16px;border-radius:8px;border:1px solid #7A9E6E;display:flex;align-items:center;font:600 13px 'IBM Plex Sans',sans-serif;color:#2F6038">{{ s.a2 }}</div><div style="height:40px;padding:0 16px;border-radius:8px;background:#00532D;color:#fff;display:flex;align-items:center;font:600 13px 'IBM Plex Sans',sans-serif">{{ s.a1 }}</div></div></sc-if>
+</div>
+</div>
+</div>
+</div>
+</div>
+</sc-for>
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const h = React.createElement, G = '#00532D';
+    const svg = (d, c, w = 2, sz = 14) => h('svg', { viewBox: '0 0 16 16', style: { width: sz, height: sz, fill: 'none', stroke: c, strokeWidth: w, strokeLinecap: 'round', strokeLinejoin: 'round' } }, h('path', { d }));
+    const ic = {
+      done: h('span', { style: { width: 22, height: 22, borderRadius: 11, background: G, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, svg('M3.4 8.4l3 3 6.2-6.8', '#fff', 2.2, 12)),
+      act: h('span', { style: { width: 18, height: 18, borderRadius: 9, border: '2px solid #D6E5CC', borderTopColor: G, boxSizing: 'border-box', animation: 'vl-spin .9s linear infinite' } }),
+      todo: h('span', { style: { width: 10, height: 10, borderRadius: 5, border: '1.5px solid rgba(44,59,42,.25)' } })
+    };
+    const step = (t, m, k) => ({ t, m, icon: ic[k], bg: k === 'act' ? '#F2F5EF' : 'transparent', fw: k === 'act' ? '600' : '500', col: k === 'todo' ? '#9aa898' : '#2C3B2A', mcol: k === 'act' ? G : '#7a8a78' });
+    const bar = h('span', { style: { position: 'absolute', top: 0, bottom: 0, left: 0, width: '40%', borderRadius: 3, background: G, animation: 'vl-bar 1.6s ease-in-out infinite' } });
+    const sheet = (kids, st) => h('div', { style: { position: 'absolute', width: 132, height: 172, background: '#fff', borderRadius: 6, boxShadow: '0 2px 6px rgba(44,59,42,.12),0 24px 40px -22px rgba(44,59,42,.5)', overflow: 'hidden', ...st } }, kids);
+    const line = (w, d, top) => h('span', { style: { position: 'absolute', left: 16, top, height: 5, width: w, borderRadius: 3, background: '#D6E5CC', transformOrigin: 'left', animation: `vl-line 2.4s ${d}s ease-out infinite` } });
+    const prep = h('div', { style: { position: 'relative', width: 260, height: 200, animation: 'vl-float 3.2s ease-in-out infinite' } },
+      sheet(null, { left: 78, top: 22, transform: 'rotate(6deg)', opacity: .6 }),
+      sheet([
+        h('span', { key: 'b', style: { position: 'absolute', left: 0, right: 0, top: 0, height: 8, background: G } }),
+        h('span', { key: 't', style: { position: 'absolute', left: 16, top: 20, width: 60, height: 8, borderRadius: 3, background: '#2C3B2A', opacity: .8 } }),
+        h('span', { key: 'p', style: { position: 'absolute', left: 16, top: 40, width: 40, height: 30, borderRadius: 3, background: '#E2ECDA' } }),
+        h('span', { key: 'p2', style: { position: 'absolute', left: 62, top: 40, width: 54, height: 30, borderRadius: 3, background: '#EDEFEB' } }),
+        h('span', { key: 'l1' }, line(100, 0, 82)), h('span', { key: 'l2' }, line(84, .25, 94)), h('span', { key: 'l3' }, line(96, .5, 112)), h('span', { key: 'l4' }, line(70, .75, 124)), h('span', { key: 'l5' }, line(90, 1, 142)),
+        h('span', { key: 's', style: { position: 'absolute', left: 0, right: 0, height: 2, background: '#C9A96E', boxShadow: '0 0 12px 2px rgba(201,169,110,.55)', animation: 'vl-scan 2.4s ease-in-out infinite' } })
+      ], { left: 62, top: 14 })
+    );
+    const send = h('div', { style: { position: 'relative', width: 260, height: 200 } },
+      h('svg', { viewBox: '0 0 260 200', style: { position: 'absolute', inset: 0, width: 260, height: 200, fill: 'none' } },
+        h('path', { d: 'M20 170 C 90 160, 150 110, 240 30', stroke: '#B9C8B0', strokeWidth: 2, strokeDasharray: '4 8', style: { animation: 'vl-dash 1s linear infinite' } })),
+      h('div', { style: { position: 'absolute', left: 105, top: 75, width: 54, height: 54, animation: 'vl-fly 2.2s ease-in-out infinite' } },
+        h('svg', { viewBox: '0 0 24 24', style: { width: 54, height: 54, fill: G, stroke: G, strokeWidth: 1, strokeLinejoin: 'round' } }, h('path', { d: 'M2.5 11.2 21 3.4l-5.6 17.2-4.6-6.4-6.6-2.2z' }), h('path', { d: 'M10.8 14.2 21 3.4', stroke: '#fff', strokeWidth: 1.2 }))),
+      ...[[214, 16], [232, 52], [190, 8]].map(([x, y], i) => h('span', { key: i, style: { position: 'absolute', left: x, top: y, width: 26, height: 26, borderRadius: 13, background: '#fff', border: '1px solid rgba(44,59,42,.12)', boxShadow: '0 6px 14px -8px rgba(44,59,42,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', font: "600 9px 'IBM Plex Sans',sans-serif", color: '#4A5B48' } }, ['VH', 'TB', 'EV'][i]))
+    );
+    const ok = h('div', { style: { position: 'relative', width: 120, height: 120 } },
+      h('span', { style: { position: 'absolute', inset: 0, borderRadius: 60, border: '2px solid #7A9E6E', animation: 'vl-ring 1.8s ease-out infinite' } }),
+      h('span', { style: { position: 'absolute', inset: 0, borderRadius: 60, background: G, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'vl-pop .6s ease-out both' } }, svg('M3.4 8.4l3 3 6.2-6.8', '#fff', 1.8, 56)));
+    const screens = [
+      { id: '44a', note: 'Voorbereiden — na "Verslag opmaken": punten, foto\'s en plannen worden verzameld en de PDF wordt opgemaakt', crumb: 'Voorbereiden', art: prep, kicker: 'STAP 1 VAN 2 · VOORBEREIDEN', title: 'Het verslag wordt voorbereid', head: 'Werfverslag 14 · 14/10/2026', path: 'Verslagen', sub: '24 punten · 31 foto\'s · 3 plannen. Je kan dit venster verlaten — we laten je weten wanneer het klaar is.', hasBar: true, bar, hasFoot: true, foot: 'Gemiddeld 20 à 40 seconden', hasActions: false,
+        steps: [step('Punten verzamelen', '24', 'done'), step('Foto\'s verwerken', '18 / 31', 'act'), step('Plannen met aanduidingen', '', 'todo'), step('PDF opmaken', '', 'todo')] },
+      { id: '44b', note: 'Verzenden — na goedkeuring: PDF naar elke aannemer met enkel zijn punten, kopie naar bouwheer en klant', crumb: 'Verzenden', art: send, head: 'Werfverslag 14 · 14/10/2026', path: 'Verslagen', kicker: 'STAP 2 VAN 2 · VERZENDEN', title: 'Het verslag wordt verzonden', sub: 'Elke aannemer krijgt het verslag met zijn eigen punten. Mails die mislukken, kan je daarna opnieuw versturen.', hasBar: true, bar, hasFoot: true, foot: 'Verzonden vanuit werfverslagen@groupln.be', hasActions: false,
+        steps: [step('PDF opgemaakt', '12 pagina\'s', 'done'), step('Naar aannemers', '4 / 7', 'act'), step('Kopie naar bouwheer en klant', '', 'todo'), step('Archiveren in Documenten', '', 'todo')] },
+      { id: '44c', note: 'Klaar — kort zichtbaar, daarna automatisch naar het verslag (of meteen via de knop)', crumb: 'Verzonden', art: ok, head: 'Werfverslag 14 · 14/10/2026', path: 'Verslagen', kicker: 'VERZONDEN · 14/10/2026 · 10:42', title: 'Verslag verzonden', sub: 'Naar 7 aannemers, de bouwheer en 3 klanten. Het verslag staat in Documenten › Verslagen.', hasBar: false, hasFoot: false, hasActions: true,
+        steps: [step('PDF opgemaakt', '12 pagina\'s', 'done'), step('Naar aannemers', '7 / 7', 'done'), step('Kopie naar bouwheer en klant', '4', 'done'), step('Archiveren in Documenten', '', 'done')] }
+      ,{ id: '44d', note: 'Budget-PDF · intern — na "PDF › Intern budget" in stap 9 (39j); alle hoofdstukken', head: 'Budget testindexc · v2', path: 'Budgetten', crumb: 'PDF intern', art: prep, kicker: 'INTERN BUDGET · VERTROUWELIJK', title: 'Het interne budget wordt opgemaakt', sub: 'Alle kosten, oppervlaktes, verkoop en resultaat — 7 pagina\'s. De PDF opent vanzelf zodra hij klaar is.', hasBar: true, bar, hasFoot: true, foot: 'Gemiddeld 10 à 20 seconden', hasActions: false,
+        steps: [step('Samenvatting en resultaat', '', 'done'), step('Bouwkosten per activiteit', '86 posten', 'done'), step('Grondkost, financiering, verkoopkosten', '', 'act'), step('Onvoorzien en publiciteit', '', 'todo'), step('Oppervlaktes en verkooptabel', '', 'todo')] },
+      { id: '44e', note: 'Budget-PDF · bank — na "PDF › Budget voor de bank"; zelfde pagina, hoofdstukken die niet meegaan zijn doorgestreept', head: 'Budget testindexc · v2', path: 'Budgetten', crumb: 'PDF bank', art: prep, kicker: 'BUDGET VOOR DE BANK', title: 'Het budget voor de bank wordt opgemaakt', sub: 'Zonder financieringskosten, onvoorzien en publiciteit — 5 pagina\'s.', hasBar: true, bar, hasFoot: true, foot: 'Gemiddeld 10 à 20 seconden', hasActions: false,
+        steps: [step('Samenvatting en resultaat', '', 'done'), step('Bouwkosten per activiteit', '86 posten', 'act'), step('Grondkost en verkoopkosten', '', 'todo'), { ...step('Financiering, onvoorzien, publiciteit', 'niet opgenomen', 'todo'), col: '#9aa898', mcol: '#9aa898', t: 'Financiering, onvoorzien, publiciteit' }, step('Oppervlaktes en verkooptabel', '', 'todo')] },
+      { id: '44f', note: 'Budget-PDF klaar — de PDF opent in een nieuw tabblad; deze pagina blijft staan met download', head: 'Budget testindexc · v2', path: 'Budgetten', crumb: 'PDF klaar', art: ok, kicker: 'OPGEMAAKT · 14/10/2026 · 11:08', title: 'Budget voor de bank is klaar', sub: 'Budget_testindexc_v2_bank.pdf · 5 pagina\'s · ook bewaard in Documenten › Budgetten.', hasBar: false, hasFoot: false, hasActions: true, a1: 'Download PDF', a2: 'Terug naar stap 9',
+        steps: [step('Samenvatting en resultaat', '', 'done'), step('Bouwkosten per activiteit', '86 posten', 'done'), step('Grondkost en verkoopkosten', '', 'done'), step('Oppervlaktes en verkooptabel', '', 'done')] }
+    ].map(s => ({ a1: 'Verslag openen', a2: 'Terug naar verslagen', ...s, href: '#' + s.id }));
+    const rail = Array.from({ length: 8 }, (_, i) => ({ bg: i === 4 ? '#D6E5CC' : '#fff' }));
+    return { screens, rail };
+  }
+}
+</script>
+</body>
+</html>

@@ -16,7 +16,7 @@ intro: |
   volledige overzicht klik je door.
 faq:
   - q: Waarom is een veld in Algemene gegevens leeg?
-    a: Het is nog niet ingevuld. Je vult het aan via **Bewerken**.
+    a: Het is nog niet ingevuld. Je vult het aan via Bewerken.
 ---
 ## Het team en het adres bekijken
 

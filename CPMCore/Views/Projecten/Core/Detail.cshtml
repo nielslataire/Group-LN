@@ -840,12 +840,13 @@
                                     @foreach (var doc in Model.LatestDocs)
                                     {
                                         var badge = DocBadge(doc.Filename);
-                                        var docTitle = string.IsNullOrWhiteSpace(doc.Name) ? doc.Type.GetDisplayName() : doc.Name;
+                                        var docTypeNaam = Enum.IsDefined(doc.Type) ? doc.Type.GetDisplayName() : "Budget"; // type 0 = budgetdocument (map Budgetten), geen ProjectDocType
+                                        var docTitle = string.IsNullOrWhiteSpace(doc.Name) ? docTypeNaam : doc.Name;
                                         <a class="gl-doc-item" href="@Url.Action("ViewDoc", "Projecten", new { id = doc.Docid })" target="_blank" rel="noopener">
                                             <span class="gl-doc-badge @badge.Cls">@badge.Label</span>
                                             <span class="gl-doc-main">
                                                 <span class="gl-doc-title">@docTitle</span>
-                                                <span class="gl-doc-sub">@doc.Type.GetDisplayName()@(doc.DocDate.HasValue ? " · " + doc.DocDate.Value.ToString("dd/MM/yyyy") : "")</span>
+                                                <span class="gl-doc-sub">@docTypeNaam@(doc.DocDate.HasValue ? " · " + doc.DocDate.Value.ToString("dd/MM/yyyy") : "")</span>
                                             </span>
                                             <span class="gl-doc-open">Open</span>
                                         </a>

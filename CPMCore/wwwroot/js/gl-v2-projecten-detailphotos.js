@@ -26,7 +26,14 @@
             headers: { "Content-Type": "application/json", "RequestVerificationToken": antiForgery },
             body: JSON.stringify(body)
         }).then(function (r) {
-            if (!r.ok) { alert("Actie mislukt (status " + r.status + "). Mogelijk ontbreken de nodige rechten."); throw new Error("postJson " + url + " failed: " + r.status); }
+            if (!r.ok) {
+                GlV2Dialog.alert({
+                    tone: "danger", icon: "ph-warning-circle",
+                    title: "Actie mislukt",
+                    description: "De actie kon niet worden uitgevoerd (status " + r.status + "). Mogelijk ontbreken de nodige rechten. Probeer het opnieuw of neem contact op met de administrator."
+                });
+                throw new Error("postJson " + url + " failed: " + r.status);
+            }
             return r;
         });
     }
@@ -259,8 +266,18 @@
     });
     var deleteSelBtn = document.getElementById("gl-v2-dp-selectionbar-delete");
     if (deleteSelBtn) deleteSelBtn.addEventListener("click", function () {
-        if (!confirm("Weet u zeker dat u " + selectedIds.size + " item(s) wil verwijderen? Dit kan niet ongedaan worden gemaakt.")) return;
-        postJson(cfg.urls.bulkDelete, { MediaIds: Array.from(selectedIds) }).then(function () { location.reload(); });
+        var n = selectedIds.size;
+        if (!n) return;
+        GlV2Dialog.confirm({
+            tone: "danger", icon: "ph-trash",
+            title: n === 1 ? "Media verwijderen" : n + " items verwijderen",
+            description: (n === 1 ? "Weet u zeker dat u dit bestand wil verwijderen?" : "Weet u zeker dat u deze " + n + " bestanden wil verwijderen?") +
+                " Ook alle bestanden in de opslag worden gewist. Dit kan niet ongedaan worden gemaakt.",
+            confirmLabel: "Verwijderen"
+        }).then(function (ok) {
+            if (!ok) return;
+            postJson(cfg.urls.bulkDelete, { MediaIds: Array.from(selectedIds) }).then(function () { location.reload(); }, function () { /* postJson toonde de foutmelding al */ });
+        });
     });
 
     // ── "Ander hoofdbeeld" — kiesmodus ─────────────────────────────────────────────────────────

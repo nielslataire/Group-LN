@@ -19,7 +19,7 @@ faq:
   - q: Waarvoor dient het weerstation?
     a: CPM berekent met het weerstation de weerverletdagen van het project.
   - q: Waarom staat er Geen opleverdatum op de projectkaart?
-    a: Er is nog geen aanvangsdatum of uitvoeringstermijn ingevuld op het tabblad **Planning**.
+    a: Er is nog geen aanvangsdatum of uitvoeringstermijn ingevuld op het tabblad Planning.
 ---
 ## De status kiezen
 

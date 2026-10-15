@@ -9,7 +9,7 @@
 }
 <div class="gl-v2-pf-row web-rep-row web-rep-@Model.Kind">
     <span class="gl-v2-pf-handle" title="Sleep om te herschikken" aria-hidden="true"><i class="ph ph-dots-six-vertical"></i></span>
-    @if (Model.Kind != "quote")
+    @if (Model.Kind == "story" || Model.Kind == "detail")
     {
         <div class="web-pick-cell">
             <input type="hidden" name="@(n + ".ImageName")" value="@Model.ImageName" />
@@ -27,6 +27,50 @@
     {
         <div class="gl-v2-field web-rep-grow"><div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea name="@(n + ".Text")" rows="2" maxlength="600" class="gl-v2-field-input" placeholder="Quote" aria-label="Quote">@Model.Text</textarea></div></div>
         <div class="gl-v2-field web-rep-person"><div class="gl-v2-field-box"><input type="text" name="@(n + ".Person")" value="@Model.Person" maxlength="200" class="gl-v2-field-input" placeholder="Persoon" autocomplete="off" aria-label="Persoon" /></div></div>
+    }
+    else if (Model.Kind == "guide")
+    {
+        <div class="gl-v2-field web-rep-person"><div class="gl-v2-field-box"><input type="text" name="@(n + ".Title")" value="@Model.Title" maxlength="120" class="gl-v2-field-input" placeholder="Titel, bv. Dorpsleven" autocomplete="off" aria-label="Titel" /></div></div>
+        <div class="gl-v2-field web-rep-grow"><div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea name="@(n + ".Text")" rows="2" maxlength="600" class="gl-v2-field-input" placeholder="Tekst" aria-label="Tekst">@Model.Text</textarea></div></div>
+    }
+    else if (Model.Kind == "travel")
+    {
+        <div class="gl-v2-field web-rep-person"><div class="gl-v2-field-box"><input type="text" name="@(n + ".Place")" value="@Model.Place" maxlength="80" class="gl-v2-field-input" placeholder="Plaats, bv. Aalst" autocomplete="off" aria-label="Plaats" /></div></div>
+        <div class="gl-v2-field web-rep-grow"><div class="gl-v2-field-box"><input type="text" name="@(n + ".Duration")" value="@Model.Duration" maxlength="40" class="gl-v2-field-input" placeholder="Reistijd, bv. 12 min" autocomplete="off" aria-label="Reistijd" /></div></div>
+    }
+    else if (Model.Kind == "poi")
+    {
+        <div class="gl-v2-field web-poi-cat"><div class="gl-v2-field-box"><select name="@(n + ".Category")" class="gl-v2-field-input" aria-label="Categorie">
+            @foreach (var c in new[] { ("school", "School"), ("shop", "Winkel"), ("ov", "Openbaar vervoer"), ("groen", "Groen"), ("sport", "Sport") })
+            {
+                <option value="@c.Item1" selected="@(Model.Category == c.Item1 ? "selected" : null)">@c.Item2</option>
+            }
+        </select></div></div>
+        <div class="gl-v2-field web-rep-grow"><div class="gl-v2-field-box"><input type="text" name="@(n + ".Name")" value="@Model.Title" maxlength="150" class="gl-v2-field-input" placeholder="Naam" autocomplete="off" aria-label="Naam" /></div></div>
+        <div class="gl-v2-field web-poi-num"><div class="gl-v2-field-box"><input type="text" name="@(n + ".Distance")" value="@Model.Distance" maxlength="30" class="gl-v2-field-input" placeholder="350 m" autocomplete="off" aria-label="Afstand" /></div></div>
+        <div class="gl-v2-field web-poi-time"><div class="gl-v2-field-box"><input type="text" name="@(n + ".Time")" value="@Model.Time" maxlength="40" class="gl-v2-field-input" placeholder="5 min te voet" autocomplete="off" aria-label="Tijd" /></div></div>
+        <div class="gl-v2-field web-poi-coord"><div class="gl-v2-field-box"><input type="text" name="@(n + ".Lat")" value="@Model.Lat" maxlength="12" class="gl-v2-field-input" placeholder="breedte" autocomplete="off" aria-label="Breedtegraad" /></div></div>
+        <div class="gl-v2-field web-poi-coord"><div class="gl-v2-field-box"><input type="text" name="@(n + ".Lng")" value="@Model.Lng" maxlength="12" class="gl-v2-field-input" placeholder="lengte" autocomplete="off" aria-label="Lengtegraad" /></div></div>
+    }
+    else if (Model.Kind == "buy")
+    {
+        <div class="gl-v2-field web-rep-person"><div class="gl-v2-field-box"><input type="text" name="@(n + ".Title")" value="@Model.Title" maxlength="120" class="gl-v2-field-input" placeholder="Titel, bv. Kennismaking" autocomplete="off" aria-label="Titel van de stap" /></div></div>
+        <div class="gl-v2-field web-rep-grow"><div class="gl-v2-field-box"><input type="text" name="@(n + ".Text")" value="@Model.Text" maxlength="400" class="gl-v2-field-input" placeholder="Eén zin uitleg" autocomplete="off" aria-label="Zin bij de stap" /></div></div>
+    }
+    else if (Model.Kind == "faq")
+    {
+        <div class="web-faq-main">
+            <div class="gl-v2-field"><div class="gl-v2-field-box"><input type="text" name="@(n + ".Question")" value="@Model.Title" maxlength="300" class="gl-v2-field-input" placeholder="Vraag" autocomplete="off" aria-label="Vraag" /></div></div>
+            <div class="web-faq-answer">
+                <div class="web-faq-editor gl-v2-pf-editor" data-placeholder="Antwoord — met opmaak of een link"></div>
+                <textarea class="web-faq-source" name="@(n + ".Answer")" hidden>@Model.Text</textarea>
+            </div>
+        </div>
+    }
+    else if (Model.Kind == "comfort")
+    {
+        <div class="gl-v2-field web-rep-person"><div class="gl-v2-field-box"><input type="text" name="@(n + ".Title")" value="@Model.Title" maxlength="120" class="gl-v2-field-input" placeholder="Titel, bv. Warmtepomp" autocomplete="off" aria-label="Titel" /></div></div>
+        <div class="gl-v2-field web-rep-grow"><div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea name="@(n + ".Text")" rows="2" maxlength="500" class="gl-v2-field-input" placeholder="Subtitel / uitleg" aria-label="Subtitel">@Model.Text</textarea></div></div>
     }
     else
     {

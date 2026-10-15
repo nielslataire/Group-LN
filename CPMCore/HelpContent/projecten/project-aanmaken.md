@@ -18,7 +18,7 @@ faq:
   - q: Kan ik een project aanmaken zonder gemeente, als het adres nog niet vaststaat?
     a: Nee, de gemeente is verplicht. Kies voorlopig de dichtstbijzijnde gemeente. Straat en nummer vul je later aan, en je kunt alles nog corrigeren.
   - q: Waar vul ik de eenheden in?
-    a: Niet op dit formulier. Na het aanmaken sta je op de projectpagina. Daar voeg je eenheden toe via **Eenheden** in het linkermenu.
+    a: Niet op dit formulier. Na het aanmaken sta je op de projectpagina. Daar voeg je eenheden toe via Eenheden in het linkermenu.
   - q: Kan ik een project achteraf nog verwijderen?
     a: Enkel een beheerder kan een project verwijderen. Archiveren kan nog niet. [VRAAG: wat gebeurt er met facturen en documenten van een verwijderd project?]
 ---

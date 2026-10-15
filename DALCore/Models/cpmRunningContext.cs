@@ -3507,6 +3507,15 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.PubliciteitForfait).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.DoelMargePerc).HasColumnType("decimal(8, 4)");
             entity.Property(e => e.GrondMargePerc).HasColumnType("decimal(8, 4)");
+            // Migraties 092-096: zonder expliciet type schrijft EF deze kolommen als decimal(18, 2) weg, waardoor bv. 2,5 % (0,025) als 3 % (0,03) en 0,04 % als 0 bewaard werd.
+            entity.Property(e => e.OpmetingPerc).HasColumnType("decimal(9, 6)");
+            entity.Property(e => e.SonderingPerc).HasColumnType("decimal(9, 6)");
+            entity.Property(e => e.RegistratierechtenPerc).HasColumnType("decimal(9, 6)");
+            entity.Property(e => e.PubliciteitPerc).HasColumnType("decimal(9, 6)");
+            entity.Property(e => e.MakelaarsCommissiePerc).HasColumnType("decimal(9, 6)");
+            entity.Property(e => e.GrondAgrarischPerc).HasColumnType("decimal(9, 6)");
+            entity.Property(e => e.AktekostenPerAkte).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.OverigeVerkoopkosten).HasColumnType("decimal(18, 2)");
 
             entity.HasOne(d => d.BudgetVersie).WithOne()
                 .HasForeignKey<BudgetParams>(d => d.BudgetVersieId)

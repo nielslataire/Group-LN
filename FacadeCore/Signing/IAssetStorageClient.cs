@@ -27,4 +27,17 @@ public interface IAssetStorageClient
 
     /// <summary>Best-effort verwijderen (bestaand gedrag: fouten worden geslikt).</summary>
     Task<bool> DeleteAsync(string folder, string fileName, CancellationToken ct = default);
+
+    /// <summary>
+    /// Uploadt één foto-origineel (max 50 MB, max 10.000 px lange zijde) naar <c>POST /api/assets/photo</c>. De Storage API
+    /// draait de foto volgens EXIF, verwijdert EXIF, bewaart een master-JPEG (korte zijde max 5000 px, kwaliteit 92) en maakt de
+    /// WebP-varianten (breedtes 320-2560 + de vierkante 447/800 + 'pictures'). <paramref name="baseName"/> = bestandsnaam zonder extensie.
+    /// </summary>
+    Task<PhotoUploadResult> UploadPhotoAsync(Stream content, string originalFileName, string? contentType, string baseName, CancellationToken ct = default);
+
+    /// <summary>Verwijdert alle varianten van een foto (master-JPEG + alle WebP's, ook de vierkante 447/800); best-effort.</summary>
+    Task<bool> DeletePhotoAsync(string fileName, CancellationToken ct = default);
 }
+
+/// <summary>Resultaat van <see cref="IAssetStorageClient.UploadPhotoAsync"/>. Width/Height = afmetingen van het (georiënteerde) origineel.</summary>
+public sealed record PhotoUploadResult(bool Success, string? FileName, int Width, int Height, string? Error);

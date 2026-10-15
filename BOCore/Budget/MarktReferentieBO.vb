@@ -9,6 +9,8 @@ Namespace Budget
         ''' <summary>"Appartement", "Woning" of "Overig".</summary>
         Public Property PropertyType As String
         Public Property LivingArea As Decimal?
+        ''' <summary>Perceeloppervlakte (grond) van de unit; Nothing als onbekend.</summary>
+        Public Property LandArea As Decimal?
         Public Property Prijs As Decimal?
         Public Property PrijsPerM2 As Decimal?
         Public Property IsVerkocht As Boolean

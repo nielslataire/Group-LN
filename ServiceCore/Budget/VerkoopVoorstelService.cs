@@ -38,6 +38,8 @@ namespace ServiceCore.Budget
 
         /// <summary>Oppervlakteband (±) waarbinnen een unit "vergelijkbaar" is.</summary>
         public const decimal MarktOppBand = 0.20m;
+    /// <summary>Bandbreedte op de perceeloppervlakte bij woningen (±30 %): de grond bepaalt mee de prijs, niet enkel de bewoonbare oppervlakte.</summary>
+    public const decimal MarktPerceelBand = 0.30m;
 
         public VerkoopVoorstelService(
             BudgetBerekeningService berekening,
@@ -58,10 +60,46 @@ namespace ServiceCore.Budget
         public async Task<BudgetVerkoopSamenvattingBO> SamenvattingAsync(int budgetVersieId)
         {
             var voorstel = await BerekenAsync(budgetVersieId);
-            var lijnen = _uow.BudgetVerkoopLijn.GetNoTracking()
-                .Where(l => l.BudgetVersieId == budgetVersieId)
-                .ToList();
+            var lijnen = await HerberekendeLijnenAsync(budgetVersieId);
             return BouwSamenvatting(voorstel, lijnen);
+        }
+
+        /// <summary>
+        /// Stap 8 herrekent bij het openen elke lijn met de huidige oppervlaktes (€/m² × gereduceerde of grondoppervlakte); in de database staat nog wat laatst
+        /// bewaard werd. Resultaat, Excel en PDF moeten dezelfde getallen zien als stap 8, dus passen ze dezelfde rekenregels toe.
+        /// </summary>
+        public Task<List<DALCore.Models.BudgetVerkoopLijn>> HerberekendeLijnenAsync(int budgetVersieId)
+        {
+            var lijnen = _uow.BudgetVerkoopLijn.GetNoTracking().Where(l => l.BudgetVersieId == budgetVersieId).ToList();
+            var oppResp = _budgetService.GetBudgetOppervlaktes(budgetVersieId);
+            var opps = (oppResp.Success && oppResp.Values != null ? oppResp.Values : new List<BudgetOppervlaktesBO>())
+                .Where(o => !string.IsNullOrWhiteSpace(o.EenheidNaam))
+                .GroupBy(o => o.EenheidNaam.Trim(), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+            foreach (var l in lijnen)
+            {
+                if (opps.TryGetValue((l.EenheidNaam ?? "").Trim(), out var o)) VerkoopLijnRekenregel.Herbereken(l, o.OppGereduceerd, o.Grondopp, o.GrondoppAgrarisch);
+                else VerkoopLijnRekenregel.Herbereken(l, 0m, 0m);
+            }
+            return Task.FromResult(lijnen);
+        }
+
+        /// <summary>
+        /// Grond- en bouwwaarde waarbij de ingevulde marges de effectieve NETTO marges zijn: de verkoopkosten (makelaarscommissie, met btw enkel op het grondaandeel,
+        /// plus overige verkoopkosten) zitten al in de prijs. Per deel: waarde = (kost × (1 + marge) + aandeel overige) / (1 − commissie × btw-factor).
+        /// Zonder commissie en overige is dit gewoon kost × (1 + marge).
+        /// </summary>
+        public static (decimal Grond, decimal Bouw) Waarden(decimal grondKost, decimal bouwKost, decimal grondMarge, decimal bouwMarge, decimal commissie, decimal overige)
+        {
+            var kost = grondKost + bouwKost;
+            var overigeGrond = kost > 0m ? overige * grondKost / kost : 0m;
+            var overigeBouw = overige - overigeGrond;
+            var noemerGrond = 1m - commissie * (1m + VerkoopResultaat.BtwCommissie);   // btw op het grondaandeel is niet aftrekbaar: kost
+            var noemerBouw = 1m - commissie;                                           // btw op het bouwaandeel is aftrekbaar: geen kost
+            if (noemerGrond <= 0m) noemerGrond = 1m;
+            if (noemerBouw <= 0m) noemerBouw = 1m;
+            return (Math.Round((grondKost * (1m + grondMarge) + overigeGrond) / noemerGrond, 2),
+                    Math.Round((bouwKost * (1m + bouwMarge) + overigeBouw) / noemerBouw, 2));
         }
 
         /// <summary>Pure functie (unit-getest): voorstel + verkooplijnen → opbrengst en marge.</summary>
@@ -123,7 +161,7 @@ namespace ServiceCore.Budget
                 {
                     UnitId      = l.UnitId!.Value,
                     EenheidNaam = l.EenheidNaam,
-                    Grondwaarde = l.Grondwaarde,
+                    Grondwaarde = (l.Grondwaarde.HasValue || l.GrondwaardeAgrarisch.HasValue) ? (l.Grondwaarde ?? 0m) + (l.GrondwaardeAgrarisch ?? 0m) : (decimal?)null,
                     Bouwwaarde  = l.Bouwwaarde
                 })
                 .ToList();
@@ -167,8 +205,7 @@ namespace ServiceCore.Budget
 
         /// <summary>
         /// Vult gemeentecijfers en per eenheid de markt-mediaan in. Pure functie (unit-getest).
-        /// Per eenheid wordt gezocht naar minstens 5 vergelijkbare units, in deze volgorde van
-        /// voorkeur: verkocht in de periode → te koop → beide samen; en van nauw naar breed:
+        /// Per eenheid worden verkochte en te koop staande units samen genomen (minstens 3), van nauw naar breed:
         /// zelfde type met oppervlakte ±20 % → zelfde type → alle types. Vanaf 3 units wordt
         /// een mediaan gegeven maar als "beperkt" gemarkeerd via MarktAantal.
         /// </summary>
@@ -209,6 +246,17 @@ namespace ServiceCore.Budget
 
                 // Kandidaatfilters van nauw naar breed
                 var filters = new List<(string Label, Func<MarktReferentieUnitBO, bool> Pred)>();
+                // Woningen: eerst ook op perceelgrootte vergelijken (en opp. + perceel samen), want de grond bepaalt mee de prijs
+                var perceel = e.Grondopp + e.GrondoppAgrarisch;
+                Func<MarktReferentieUnitBO, bool> perceelOk = u => u.LandArea.HasValue
+                    && u.LandArea.Value >= perceel * (1m - MarktPerceelBand) && u.LandArea.Value <= perceel * (1m + MarktPerceelBand);
+                Func<MarktReferentieUnitBO, bool> oppOk = u => u.LivingArea.HasValue
+                    && u.LivingArea.Value >= opp * (1m - MarktOppBand) && u.LivingArea.Value <= opp * (1m + MarktOppBand);
+                if (type == "Woning" && perceel > 0m)
+                {
+                    if (opp > 0m) filters.Add(("zelfde type, opp. ±20 %, perceel ±30 %", u => u.PropertyType == type && oppOk(u) && perceelOk(u)));
+                    filters.Add(("zelfde type, perceel ±30 %", u => u.PropertyType == type && perceelOk(u)));
+                }
                 if (type is not null && opp > 0m)
                     filters.Add(("zelfde type, opp. ±20 %", u => u.PropertyType == type && u.LivingArea.HasValue
                         && u.LivingArea.Value >= opp * (1m - MarktOppBand) && u.LivingArea.Value <= opp * (1m + MarktOppBand)));
@@ -225,9 +273,13 @@ namespace ServiceCore.Budget
                     var v = verkocht.Where(pred).Select(u => u.PrijsPerM2.Value).ToList();
                     var k = teKoop.Where(pred).Select(u => u.PrijsPerM2.Value).ToList();
 
-                    if (v.Count >= 5)      { gekozen = v; e.MarktBasis = "verkocht"; }
-                    else if (k.Count >= 5) { gekozen = k; e.MarktBasis = "te koop"; }
-                    else if (v.Count + k.Count >= 3) { gekozen = v.Concat(k).ToList(); e.MarktBasis = "te koop + verkocht"; }
+                    // Verkochte én te koop staande units tellen samen mee (minstens 3 per stap): enkel verkochte units geven een te smalle,
+                    // vertraagde set; het aanbod laat zien waar de markt nu staat.
+                    if (v.Count + k.Count >= 3)
+                    {
+                        gekozen = v.Concat(k).ToList();
+                        e.MarktBasis = v.Count == 0 ? "te koop" : k.Count == 0 ? "verkocht" : "te koop + verkocht";
+                    }
 
                     if (gekozen is not null) { e.MarktVergelijking = label; break; }
                 }
@@ -303,7 +355,9 @@ namespace ServiceCore.Budget
 
             // ── Kostprijs splitsen in grond en bouw ──────────────────────────
             decimal grondAankoop  = p.AankoopprijsGrond ?? 0m;
-            decimal grondForfaits = (p.InfrastructuurForfait ?? 0m) + (p.OpmetingSonderingForfait ?? 0m);
+            // Opmeting en sondering zijn sinds migratie 092 percentages (posten in KostenOpBouw) maar blijven grondgebonden kosten
+            decimal grondForfaits = (p.InfrastructuurForfait ?? 0m)
+                + resultaat.KostenOpBouw.Where(k => string.Equals(k.Omschrijving, "Opmeting", StringComparison.OrdinalIgnoreCase) || string.Equals(k.Omschrijving, "Sondering", StringComparison.OrdinalIgnoreCase)).Sum(k => k.Bedrag);
             decimal slGrond       = resultaat.Financiering
                 .Where(f => (f.Omschrijving ?? "").StartsWith("Straight loan grond", StringComparison.OrdinalIgnoreCase))
                 .Sum(f => f.Bedrag);
@@ -311,12 +365,14 @@ namespace ServiceCore.Budget
             // De aankoopprijs zit sinds okt. 2026 ook in resultaat.TotaalKosten (groep Grond): daar weer uithalen, zodat
             // GrondKost + BouwKost = TotaalKosten blijft kloppen en de grond niet dubbel telt.
             decimal grondInResultaat = resultaat.Grond.Sum(g => g.Bedrag);
-            bo.GrondKost = grondAankoop + grondForfaits + slGrond;
+            // Registratierechten en notariskosten staan als grondposten in het resultaat (naast de aankoopprijs zelf)
+            decimal grondExtra = resultaat.Grond.Where(g => !string.Equals(g.Omschrijving, "Aankoopprijs grond", StringComparison.OrdinalIgnoreCase)).Sum(g => g.Bedrag);
+            bo.GrondKost = grondAankoop + grondExtra + grondForfaits + slGrond;
             bo.BouwKost  = resultaat.TotaalKosten - grondInResultaat - grondForfaits - slGrond;
             if (bo.BouwKost < 0m) bo.BouwKost = 0m;
 
-            bo.Grondwaarde = Math.Round(bo.GrondKost * (1m + bo.GrondMargePerc), 2);
-            bo.Bouwwaarde  = Math.Round(bo.BouwKost  * (1m + bo.DoelMargePerc), 2);
+            // De ingevulde marges zijn netto: de verkoopkosten (commissie + overige, zie Parameters › Verkoopkosten) zitten al in de waarden
+            (bo.Grondwaarde, bo.Bouwwaarde) = Waarden(bo.GrondKost, bo.BouwKost, bo.GrondMargePerc, bo.DoelMargePerc, p.MakelaarsCommissiePerc ?? 0m, p.OverigeVerkoopkosten ?? 0m);
 
             if (rijen.Count == 0)
             {
@@ -348,11 +404,15 @@ namespace ServiceCore.Budget
             }
 
             Func<BudgetOppervlaktesBO, decimal> grondBasis;
-            var somGrond = rijen.Sum(r => r.Grondopp);
+            // Een tweede grondzone (bv. agrarisch) telt mee naar haar relatieve waarde (standaard 20 % van de eerste zone)
+            var agrGewicht = p.GrondAgrarischPerc ?? 0.20m;
+            bo.AgrarischGewicht = agrGewicht;
+            var somGrond = rijen.Sum(r => r.Grondopp + r.GrondoppAgrarisch * agrGewicht);
             if (somGrond > 0m)
             {
-                grondBasis = r => r.Grondopp;
-                bo.VerdeelsleutelGrond = "grondoppervlakte";
+                grondBasis = r => r.Grondopp + r.GrondoppAgrarisch * agrGewicht;
+                bo.VerdeelsleutelGrond = rijen.Any(r => r.GrondoppAgrarisch > 0m)
+                    ? "grondoppervlakte (tweede zone telt voor " + (agrGewicht * 100m).ToString("0.##") + " %)" : "grondoppervlakte";
             }
             else
             {
@@ -378,6 +438,7 @@ namespace ServiceCore.Budget
                     BewoonbareOpp  = r.BewoonbareOpp,
                     OppGereduceerd = r.OppGereduceerd,
                     Grondopp       = r.Grondopp,
+                    GrondoppAgrarisch = r.GrondoppAgrarisch,
                     AandeelBouw    = aandeelBouw,
                     AandeelGrond   = aandeelGrond,
                     KostprijsBouw  = Math.Round(bo.BouwKost   * aandeelBouw,  2),

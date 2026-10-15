@@ -42,6 +42,8 @@ public partial class WerfverslagPunt
     /// <summary>Wat je ter plaatse zag: 0 = blijft open, 1 = opgelost, 2 = afgesloten; null = nog niet nagekeken.</summary>
     public int? TerPlaatse { get; set; }
     public string Opmerking { get; set; }
+    /// <summary>Status van het punt toen het verslag gestart werd ("vorig verslag" in de PDF); null bij een nieuw punt.</summary>
+    public int? StatusBijStart { get; set; }
 
     public virtual Werfverslag Verslag { get; set; }
     public virtual ConstructionIssue Issue { get; set; }

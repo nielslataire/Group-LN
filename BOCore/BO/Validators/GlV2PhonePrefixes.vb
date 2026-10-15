@@ -67,7 +67,7 @@ Public NotInheritable Class GlV2PhonePrefixes
         If Not s.StartsWith("+") Then Return (DefaultCode, s)
         For Each p In OrderedByLength
             If s.StartsWith(p.Code & " ") Then Return (p.Code, s.Substring(p.Code.Length).Trim())
-            If s.StartsWith(p.Code) AndAlso (s.Length = p.Code.Length OrElse Not Char.IsDigit(s(p.Code.Length))) Then
+            If s.StartsWith(p.Code) Then ' ook zonder spatie ("+32468159469"), langste code eerst
                 Return (p.Code, s.Substring(p.Code.Length).Trim())
             End If
         Next
@@ -94,7 +94,11 @@ Public NotInheritable Class GlV2PhonePrefixes
         If String.IsNullOrWhiteSpace(stored) Then Return True
         Dim parsed = Split(stored)
         Dim digits = New String(parsed.Number.Where(AddressOf Char.IsDigit).ToArray())
-        If digits.Length = 0 Then Return False
+        ' Enkel masker-resten ("+__ ___ __ __ __", spaties, "+") zonder één cijfer: behandel als leeg, niet als fout.
+        If digits.Length = 0 Then Return Not stored.Any(Function(c) Char.IsLetterOrDigit(c) AndAlso c <> "_"c)
+        ' Nationale voorloopnul ("0495 12 34 56" bij +32): bestaande data heeft die vaak nog, ze telt niet mee.
+        ' Uitzondering: +39 (Italië), daar hoort de 0 bij het nummer.
+        If digits.Length > 1 AndAlso digits(0) = "0"c AndAlso parsed.Prefix <> "+39" Then digits = digits.Substring(1)
         Dim rule = Find(parsed.Prefix)
         If rule Is Nothing Then Return digits.Length >= 6 AndAlso digits.Length <= 15
         Return digits.Length >= rule.MinDigits AndAlso digits.Length <= rule.MaxDigits

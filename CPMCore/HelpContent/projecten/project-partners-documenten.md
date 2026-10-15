@@ -15,9 +15,9 @@ intro: |
   **Documenten** bepaal je welke documenten voor dit project verplicht zijn.
 faq:
   - q: Een partner staat niet in de keuzelijst. Wat nu?
-    a: De lijst komt uit **Leveranciers**. Je maakt de partner rechtstreeks vanuit dit scherm aan als nieuwe leverancier.
+    a: De lijst komt uit Leveranciers. Je maakt de partner rechtstreeks vanuit dit scherm aan als nieuwe leverancier.
   - q: Kan ik hier een document opladen?
-    a: Niet rechtstreeks. De knop **Opladen** brengt je naar de documentenpagina van het project. Daar voeg je het bestand toe.
+    a: Niet rechtstreeks. De knop Opladen brengt je naar de documentenpagina van het project. Daar voeg je het bestand toe.
 ---
 ## Een partner kiezen
 

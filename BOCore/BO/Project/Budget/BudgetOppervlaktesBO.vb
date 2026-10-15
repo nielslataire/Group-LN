@@ -249,6 +249,9 @@ Public Class BudgetOppervlaktesBO
         End Set
     End Property
 
+    ''' <summary>Tweede grondzone (bv. agrarisch deel van de woning) met een eigen waarde; Grondopp is het eerste deel (woongebied).</summary>
+    Public Property GrondoppAgrarisch As Decimal
+
     ' ── Berekende eigenschappen ───────────────────────────────────────────────
 
     ''' <summary>VMSW-reductiefactoren van de budgetversie (standaard als niet ingesteld); gezet door de service bij het laden.</summary>

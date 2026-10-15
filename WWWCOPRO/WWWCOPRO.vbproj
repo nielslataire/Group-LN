@@ -274,6 +274,7 @@
     <Compile Include="Models\Projects\ProjectPageV4Model.vb" />
     <Compile Include="Models\Projects\ProjectPageV4Provider.vb" />
     <Compile Include="Models\Projects\ProjectWebsiteReader.vb" />
+    <Compile Include="Models\Projects\ProjectPictureInfoReader.vb" />
     <Compile Include="Models\References\ReferencesModel.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />
     <Compile Include="My Project\Application.Designer.vb">

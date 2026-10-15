@@ -114,7 +114,7 @@ namespace CPMCore.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> BudgetIndex(int projectId)
+        public async Task<IActionResult> BudgetIndex(int projectId, int? vergelijk = null)
         {
             var projectNaamLite = _projectService.GetProjectNameById(projectId);
             if (string.IsNullOrEmpty(projectNaamLite)) return NotFound();
@@ -131,6 +131,8 @@ namespace CPMCore.Controllers
             SetBudgetPageContext(model.ProjectId, model.ProjectName, nameof(BudgetIndex), "Budgetten");
             if (GebruikGlV2)
             {
+                ViewData["HelpScreenId"] = "budget-index";
+                ViewData["VergelijkVoorselectie"] = vergelijk;   // opent de vergelijkmodal met deze versie aangevinkt
                 await VulBudgetIndexV2Async(model);
                 return View("BudgetIndexV2", model);
             }
@@ -159,6 +161,12 @@ namespace CPMCore.Controllers
         {
             if (!ModelState.IsValid)
             {
+                // gl-v2: terug naar het overzicht met de reden, niet naar de klassieke pagina
+                if (GebruikGlV2)
+                {
+                    TempData["Error"] = string.Join(" ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).Where(m => !string.IsNullOrWhiteSpace(m)).DefaultIfEmpty("Het budget kon niet aangemaakt worden."));
+                    return RedirectToAction(nameof(BudgetIndex), new { projectId = model.ProjectId });
+                }
                 SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budgetmaster aanmaken");
                 return View(model);
             }
@@ -182,14 +190,53 @@ namespace CPMCore.Controllers
                 return View(model);
             }
 
-            // 39a "Nieuw budget — leeg of als kopie van een bestaand budget": versie 1 krijgt de volledige inhoud van de gekozen versie.
+            var versieId = response.InsertedId;
+
+            // 39l "Meteen actief budget maken": zonder die keuze blijft het huidige actieve budget actief (het eerste budget van een project is wel meteen actief).
+            var nieuweVersie = _db.BudgetVersie.AsNoTracking().FirstOrDefault(x => x.Id == versieId);
+            if (nieuweVersie != null)
+            {
+                var nieuwMaster = _db.BudgetMaster.FirstOrDefault(m => m.Id == nieuweVersie.BudgetMasterId);
+                var andere = _db.BudgetMaster.Where(m => m.ProjectId == model.ProjectId && m.Id != nieuweVersie.BudgetMasterId).ToList();
+                if (nieuwMaster != null && andere.Count > 0)
+                {
+                    nieuwMaster.IsActief = model.ActiefMaken;
+                    if (model.ActiefMaken) foreach (var m in andere) m.IsActief = false;
+                    _db.SaveChanges();
+                }
+            }
+
+            // 39l "Nieuw budget — leeg of als kopie van een bestaand budget": enkel de aangevinkte stappen komen mee, de rest begint leeg.
+            var stappen = model.OvernemenIngevuld
+                ? new HashSet<string>((model.Overnemen ?? new List<string>()).Where(k => ServiceCore.BudgetWizardService.KopieStappen.Contains(k)))
+                : null;
             if (model.KopieVanVersieId is > 0)
             {
-                var kopie = _budgetService.KopieerVersieInhoud(model.KopieVanVersieId.Value, response.InsertedId);
+                var kopie = _budgetService.KopieerVersieInhoud(model.KopieVanVersieId.Value, versieId, stappen);
                 if (!kopie.Success) TempData["Error"] = "Budget aangemaakt, maar de kopie mislukte: " + kopie.Messages.FirstOrDefault()?.Message;
             }
 
-            return RedirectToAction(nameof(BudgetGegevens), new { versieId = response.InsertedId });
+            // EENHEDEN: een leeg budget (of een kopie zonder oppervlaktes) krijgt de eenheden van het project, tenzij je "leeg" kiest.
+            var oppervlaktesGekopieerd = model.KopieVanVersieId is > 0 && (stappen == null || stappen.Contains("oppervlaktes"));
+            if (!oppervlaktesGekopieerd && !string.Equals(model.EenhedenBron, "leeg", StringComparison.OrdinalIgnoreCase))
+                _budgetService.SeedOppervlaktesUitProject(versieId, model.ProjectId);
+
+            // INDEX: standaard de nieuwste S- en I-index; "bron" houdt die van de gekopieerde versie (enkel zinvol als de gegevens meekomen).
+            if (!string.Equals(model.IndexBron, "bron", StringComparison.OrdinalIgnoreCase) || !(model.KopieVanVersieId is > 0 && (stappen == null || stappen.Contains("gegevens"))))
+            {
+                var gegevens = _db.BudgetGegevens.FirstOrDefault(x => x.BudgetVersieId == versieId);
+                if (gegevens != null)
+                {
+                    var s = _bouwIndex.GetActieveIndexAsync("S").GetAwaiter().GetResult();
+                    var i = _bouwIndex.GetActieveIndexAsync("I2021").GetAwaiter().GetResult();
+                    gegevens.SIndexHuidig = s; gegevens.IIndexHuidig = i;
+                    if ((gegevens.SIndexStart ?? 0m) == 0m) gegevens.SIndexStart = s;
+                    if ((gegevens.IIndexStart ?? 0m) == 0m) gegevens.IIndexStart = i;
+                    _db.SaveChanges();
+                }
+            }
+
+            return RedirectToAction(nameof(BudgetGegevens), new { versieId });
         }
 
         [HttpGet]
@@ -459,7 +506,8 @@ namespace CPMCore.Controllers
                 Zolder                  = model.Zolder,
                 GemeenschappelijkeDelen = model.GemeenschappelijkeDelen,
                 Wegenis                 = model.Wegenis,
-                Grondopp                = model.Grondopp
+                Grondopp                = model.Grondopp,
+                GrondoppAgrarisch       = model.GrondoppAgrarisch
             };
 
             var response = _budgetService.UpdateBudgetOppervlaktesRij(bo);
@@ -1057,7 +1105,7 @@ namespace CPMCore.Controllers
 
             // Zelfde bouwkost als stap 6: effectief bedrag per activiteit (opgeslagen alt.prijs
             // óf het voorstel/formule-bedrag), per woon-/comm. eenheid, met de correctie-%.
-            var totaalBouw = await _budgetActivityService.GetTotaalGecorrigeerdeBouwAsync(versieId);
+            var totaalBouw = await _budgetActivityService.GetTotaalGecorrigeerdeBouwAsync(versieId, alsPercentageBasis: true);
 
             var projectNaam = _projectService.GetProjectNameById(versie.ProjectId);
 
@@ -1093,7 +1141,7 @@ namespace CPMCore.Controllers
         public async Task<IActionResult> BudgetParams(BudgetParamsModel model,
             decimal? pctProjectcoord, decimal? pctArchitect, decimal? pctIngenieur,
             decimal? pctDoelmarge, decimal? pctGrondmarge,
-            decimal? pctVeiligheid, decimal? pctDecennale, decimal? pctABR, decimal? pctOnvoorzien,
+            decimal? pctVeiligheid, decimal? pctDecennale, decimal? pctABR, decimal? pctOnvoorzien, decimal? pctOpmeting, decimal? pctSondering, decimal? pctRegistratie, decimal? pctPubliciteit, decimal? pctMakelaar, decimal? pctAgrarisch,
             decimal? pctWetBreyne, decimal? pctSlGebouw, decimal? pctSlGrond)
         {
             // Alle percentages worden in procentpunten ingevoerd (2,00) en als fractie bewaard (0,02) — voordien stond de ene helft
@@ -1103,6 +1151,18 @@ namespace CPMCore.Controllers
             model.Params.VeiligheidscoordEPBPerc  = FractieOfNull(pctVeiligheid);
             model.Params.DecennaleGeslRuwbouwPerc = FractieOfNull(pctDecennale);
             model.Params.ABRPlaatsbeschrPerc      = FractieOfNull(pctABR);
+            model.Params.OpmetingPerc             = FractieOfNull(pctOpmeting);
+            model.Params.SonderingPerc            = FractieOfNull(pctSondering);
+            model.Params.RegistratierechtenPerc   = FractieOfNull(pctRegistratie);
+            model.Params.PubliciteitPerc          = FractieOfNull(pctPubliciteit);
+            model.Params.MakelaarsCommissiePerc   = FractieOfNull(pctMakelaar);
+            model.Params.GrondAgrarischPerc       = FractieOfNull(pctAgrarisch);
+            // Aankoop in delen: het totaal van de delen is de aankoopprijs; zonder delen blijft het ingevulde totaal staan (één akte).
+            {
+                var delen = ServiceCore.Budget.NotarisTarief.Aankopen(model.Params.GrondAankopenJson, 0m);
+                model.Params.GrondAankopenJson = delen.Count > 0 ? ServiceCore.Budget.NotarisTarief.NaarJson(delen) : null;
+                if (delen.Count > 0) model.Params.AankoopprijsGrond = delen.Sum(d => d.P);
+            }
             model.Params.OnvoorzienPerc           = Fractie(pctOnvoorzien);
             model.Params.WetBreynePerc            = Fractie(pctWetBreyne);
             model.Params.StraightloanGebouwPerc   = Fractie(pctSlGebouw);
@@ -1134,6 +1194,15 @@ namespace CPMCore.Controllers
                 bestaand.VentVerslaggeverForfait  = model.Params.VentVerslaggeverForfait;
                 bestaand.StudieIRPerc             = model.Params.StudieIRPerc;
                 bestaand.OpmetingSonderingForfait = model.Params.OpmetingSonderingForfait;
+                bestaand.OpmetingPerc             = model.Params.OpmetingPerc;
+                bestaand.SonderingPerc            = model.Params.SonderingPerc;
+                bestaand.RegistratierechtenPerc   = model.Params.RegistratierechtenPerc;
+                bestaand.PubliciteitPerc          = model.Params.PubliciteitPerc;
+                bestaand.MakelaarsCommissiePerc   = model.Params.MakelaarsCommissiePerc;
+                bestaand.OverigeVerkoopkosten     = model.Params.OverigeVerkoopkosten;
+                bestaand.GrondAgrarischPerc       = model.Params.GrondAgrarischPerc;
+                bestaand.GrondAankopenJson        = model.Params.GrondAankopenJson;
+                bestaand.AktekostenPerAkte        = model.Params.AktekostenPerAkte;
                 bestaand.DecennaleGeslRuwbouwPerc = model.Params.DecennaleGeslRuwbouwPerc;
                 bestaand.ABRPlaatsbeschrPerc      = model.Params.ABRPlaatsbeschrPerc;
                 bestaand.InfrastructuurForfait    = model.Params.InfrastructuurForfait;
@@ -1266,7 +1335,7 @@ namespace CPMCore.Controllers
                     var lijn = req.Lijnen[i].NaarEntiteit(req.BudgetVersieId, i);
                     var naam = (lijn.EenheidNaam ?? "").Trim();
                     if (oppervlaktes.TryGetValue(naam, out var opp))
-                        ServiceCore.Budget.VerkoopLijnRekenregel.Herbereken(lijn, opp.OppGereduceerd, opp.Grondopp);
+                        ServiceCore.Budget.VerkoopLijnRekenregel.Herbereken(lijn, opp.OppGereduceerd, opp.Grondopp, opp.GrondoppAgrarisch);
                     else
                         ServiceCore.Budget.VerkoopLijnRekenregel.Herbereken(lijn, 0m, 0m);
                     nieuw.Add(lijn);
@@ -1397,9 +1466,15 @@ namespace CPMCore.Controllers
 
             var voorstel = await _verkoopVoorstelService.BerekenAsync(versieId);
 
+            // Verkoop t.o.v. kostprijs: vastgelegde vraagprijzen - verkoopkosten (makelaar + overige) - totale kostprijs
+            var verkoopParams = await _berekeningService.GetOrCreateParamsAsync(versieId);
+            var verkoopLijnen = await _verkoopVoorstelService.HerberekendeLijnenAsync(versieId);
+            var verkoopResultaat = ServiceCore.Budget.VerkoopResultaat.Bereken(resultaat.Verkoop, voorstel, verkoopLijnen, verkoopParams.MakelaarsCommissiePerc ?? 0m, verkoopParams.OverigeVerkoopkosten ?? 0m, resultaat.TotaalKosten);
+
             var model = new BudgetResultaatModel
             {
                 Voorstel             = voorstel,
+                VerkoopResultaat     = verkoopResultaat,
                 BudgetVersieId       = versieId,
                 ProjectId            = versie.ProjectId,
                 ProjectName          = projectNaam,
@@ -1437,6 +1512,13 @@ namespace CPMCore.Controllers
                 .FirstOrDefaultAsync(m => m.Id == masterId);
 
             if (master == null) return NotFound();
+
+            // gl-v2: de vergelijking start vanuit het overzicht (modal 39m), met de huidige versie van dit budget al aangevinkt
+            if (GebruikGlV2)
+            {
+                var huidigId = master.BudgetVersies.OrderByDescending(v => v.IsHuidig).ThenByDescending(v => v.Versienummer).Select(v => (int?)v.Id).FirstOrDefault();
+                return RedirectToAction(nameof(BudgetIndex), new { projectId = master.ProjectId, vergelijk = huidigId });
+            }
 
             var project = await _db.Project.FindAsync(master.ProjectId);
 
@@ -1543,6 +1625,98 @@ namespace CPMCore.Controllers
             return File(pdfBytes, "application/pdf", bestandsnaam);
         }
 
+        // ── DownloadBudgetPdfV2 — budget in de gl-v2-layout (design-handoff 35q intern, 35r bank) ──────
+
+        [HttpGet]
+        public async Task<IActionResult> DownloadBudgetPdfV2(int versieId, bool intern = true)
+        {
+            var builder = HttpContext.RequestServices.GetRequiredService<CPMCore.Services.BudgetPdfBuilder>();
+            var gebruiker = _db.Users.AsNoTracking().FirstOrDefault(u => u.Email == User.Identity.Name);
+            var naam = gebruiker == null ? "" : $"{gebruiker.Voornaam} {gebruiker.Familienaam}".Trim();
+            var res = await builder.RenderAsync(versieId, intern, naam, HttpContext.RequestAborted);
+            if (res is null) return NotFound();
+            try
+            {
+                using var ms = new MemoryStream(res.Value.Pdf);
+                using var doc = PdfSharpCore.Pdf.IO.PdfReader.Open(ms, PdfSharpCore.Pdf.IO.PdfDocumentOpenMode.Import);
+                Response.Headers["X-Pagina-Aantal"] = doc.PageCount.ToString();
+            }
+            catch { /* paginatelling is enkel voor de klaar-pagina */ }
+            Response.Headers["X-Bestandsnaam"] = res.Value.Bestandsnaam;
+            return File(res.Value.Pdf, "application/pdf", res.Value.Bestandsnaam);
+        }
+
+        /// <summary>Maakt de budget-PDF op (design 44d/44e) en bewaart hem in Documenten › Budgetten (44f). POST omdat er een document wordt aangemaakt;
+        /// lukt het bewaren niet, dan komt de PDF toch terug (X-Bewaard: 0).</summary>
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> BudgetPdfMaken(int versieId, bool intern = true)
+        {
+            var builder = HttpContext.RequestServices.GetRequiredService<CPMCore.Services.BudgetPdfBuilder>();
+            var gebruiker = _db.Users.AsNoTracking().FirstOrDefault(u => u.Email == User.Identity.Name);
+            var naam = gebruiker == null ? "" : $"{gebruiker.Voornaam} {gebruiker.Familienaam}".Trim();
+            var res = await builder.RenderAsync(versieId, intern, naam, HttpContext.RequestAborted);
+            if (res is null) return NotFound();
+            try
+            {
+                using var ms = new MemoryStream(res.Value.Pdf);
+                using var doc = PdfSharpCore.Pdf.IO.PdfReader.Open(ms, PdfSharpCore.Pdf.IO.PdfDocumentOpenMode.Import);
+                Response.Headers["X-Pagina-Aantal"] = doc.PageCount.ToString();
+            }
+            catch { /* paginatelling is enkel voor de klaar-pagina */ }
+            Response.Headers["X-Bestandsnaam"] = res.Value.Bestandsnaam;
+            Response.Headers["X-Bewaard"] = await BewaarBudgetPdfAsync(versieId, intern, res.Value.Pdf, res.Value.Bestandsnaam) ? "1" : "0";
+            return File(res.Value.Pdf, "application/pdf", res.Value.Bestandsnaam);
+        }
+
+        /// <summary>Bewaart de PDF in de documentenmodule (map Budgetten, of Overige als die map nog niet bestaat). Geen koppelingen, dus nooit zichtbaar voor klanten of op de website.</summary>
+        private async Task<bool> BewaarBudgetPdfAsync(int versieId, bool intern, byte[] pdf, string bestandsnaam)
+        {
+            try
+            {
+                var versie = await _db.BudgetVersie.AsNoTracking().Include(v => v.BudgetMaster).FirstOrDefaultAsync(v => v.Id == versieId);
+                if (versie == null) return false;
+                using var stream = new MemoryStream(pdf);
+                var stored = await UploadAssetToStorageAsync(stream, bestandsnaam, "application/pdf", "docs");
+                if (string.IsNullOrWhiteSpace(stored)) return false;
+                try { await GenerateDocThumbnailViaStorageAsync(stored); }
+                catch (Exception ex) { _logger.LogWarning(ex, "Thumbnail voor {File} kon niet gemaakt worden.", stored); }
+
+                var map = await _db.DocumentFolders.AsNoTracking().Where(f => f.Code == "budgetten").Select(f => (int?)f.Id).FirstOrDefaultAsync();
+                var budgetNaam = string.IsNullOrWhiteSpace(versie.BudgetMaster?.Naam) ? "Budget" : versie.BudgetMaster!.Naam;
+                var naam = $"Budget {(intern ? "intern" : "bank")} — {budgetNaam} v{versie.Versienummer}";
+                var up = await DocsSvc.Upload(new FacadeCore.DocUploadDto
+                {
+                    ProjectId = versie.ProjectId, Mode = "new", Name = naam, FolderId = map,
+                    DocDate = DateOnly.FromDateTime(DateTime.Today), UploaderKind = DocumentUploaderKind.Intern,
+                    StoredFilename = stored, OriginalFilename = bestandsnaam, SizeBytes = pdf.Length,
+                    Status = DocumentStatus.Goedgekeurd, UserId = DocUserId, UserName = DocUserName
+                });
+                return up.Ok;
+            }
+            catch (Exception ex) { _logger.LogWarning(ex, "Budget-PDF kon niet in Documenten bewaard worden."); return false; }
+        }
+
+        // ── BudgetPdfOpmaken — volle pagina tijdens het opmaken (design-handoff 44d intern, 44e bank, 44f klaar) ──
+
+        [HttpGet]
+        public IActionResult BudgetPdfOpmaken(int versieId, bool intern = true)
+        {
+            var versie = _uow.BudgetVersies.GetNoTracking()
+                .Include(v => v.BudgetMaster).Include(v => v.Project)
+                .FirstOrDefault(v => v.Id == versieId);
+            if (versie == null) return NotFound();
+            var model = new CPMCore.Models.Budget.BudgetPdfOpmakenModel
+            {
+                BudgetVersieId = versieId,
+                ProjectId = versie.ProjectId,
+                ProjectName = versie.Project?.ProjectName ?? "",
+                Intern = intern,
+                BudgetNaam = string.IsNullOrWhiteSpace(versie.BudgetMaster?.Naam) ? "Budget" : versie.BudgetMaster!.Naam,
+                Versienummer = versie.Versienummer
+            };
+            return View("BudgetPdfOpmakenV2", model);
+        }
+
         // ── DownloadBudgetExcel ───────────────────────────────────────────────
 
         [HttpGet]
@@ -1572,8 +1746,12 @@ namespace CPMCore.Controllers
             var oppervlaktes = _uow.BudgetOppervlaktes.GetNoTracking()
                 .Where(o => o.BudgetVersieId == versieId).OrderBy(o => o.SortOrder).ToList();
 
+            var verkoopParams = await _berekeningService.GetOrCreateParamsAsync(versieId);
+            var verkoopResultaat = VerkoopResultaat.Bereken(resultaat.Verkoop, await _verkoopVoorstelService.BerekenAsync(versieId), await _verkoopVoorstelService.HerberekendeLijnenAsync(versieId),
+                verkoopParams.MakelaarsCommissiePerc ?? 0m, verkoopParams.OverigeVerkoopkosten ?? 0m, resultaat.TotaalKosten);
+
             var excelBytes = _excelService.GenereerBudgetExcel(
-                resultaat, versie, activiteitLijnen, activiteiten, groepen, oppervlaktes, gewogen);
+                resultaat, versie, activiteitLijnen, activiteiten, groepen, oppervlaktes, gewogen, verkoopResultaat);
 
             var bestandsnaam = $"Budget_{versie.VersieNaam}_v{versie.Versienummer}_{DateTime.Now:yyyyMMdd}.xlsx"
                 .Replace(Path.GetInvalidFileNameChars(), '_');

@@ -149,7 +149,7 @@ namespace CPMCore.Controllers
         }
 
         [CPMCore.Filters.PermissionDelete(PermissionCodes.ProjectsPhotos)]
-        public ActionResult DeletePhoto(int id, int projectid, PictureType type)
+        public async Task<ActionResult> DeletePhoto(int id, int projectid, PictureType type)
         {
             if (id != 0 && projectid != 0)
             {
@@ -161,7 +161,7 @@ namespace CPMCore.Controllers
                     var response1 = service.SetDefaultProjectPicture(projectid, 0);
                     if (response1.Success)
                     {
-                        DeletePictureFile(id);
+                        await DeletePictureFilesAsync(ids);
                         var response2 = service.DeletePicture(ids);
 
                         if (response2.Success)
@@ -183,9 +183,9 @@ namespace CPMCore.Controllers
                 }
                 else
                 {
-                    DeletePictureFile(id);
                     var service = _projectService;
                     var ids = new List<int> { id };
+                    await DeletePictureFilesAsync(ids);
                     var response = service.DeletePicture(ids);
 
                     if (response.Success)
@@ -421,7 +421,6 @@ namespace CPMCore.Controllers
             // eventueel gekoppelde foto verwijderen
             if (pictureId > 0)
             {
-                try { DeletePictureFile(pictureId); } catch { /* log indien gewenst */ }
 
                 var respPic = _projectService.DeletePicture(new List<int> { pictureId });
                 if (!respPic.Success)
@@ -531,7 +530,6 @@ namespace CPMCore.Controllers
                 // Als we een nieuwe foto hebben gezet of expliciet verwijderen, oude foto opruimen
                 if ((newPicture is not null || RemovePicture) && oldPicId > 0)
                 {
-                    try { DeletePictureFile(oldPicId); } catch { /* loggen indien gewenst */ }
                     _projectService.DeletePicture(new List<int> { oldPicId });
                 }
 
@@ -546,8 +544,11 @@ namespace CPMCore.Controllers
         }
 
 
+        // Een foto-origineel mag 50 MB zijn (Kestrel/IIS staan standaard ~30 MB toe)
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RequestSizeLimit(60_000_000)]
+        [RequestFormLimits(MultipartBodyLengthLimit = 60_000_000)]
         public async Task<IActionResult> UploadImage(ProjectPictureBO UploadedBO, IFormFile file)
         {
             if (file == null || file.Length == 0)
@@ -608,88 +609,55 @@ namespace CPMCore.Controllers
                 return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
             }
 
-            // Image: schalen, bijsnijden en opslaan als WebP
-            var ts         = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
-            var tempRootImg = Path.Combine(Path.GetTempPath(), "cpmcore-pictures");
-            Directory.CreateDirectory(tempRootImg);
-
-            var rawPath   = Path.Combine(tempRootImg, $"raw_{ts}{Path.GetExtension(file.FileName)}");
-            var main447   = Path.Combine(tempRootImg, $"447_{ts}.webp");
-            var main800   = Path.Combine(tempRootImg, $"800_{ts}.webp");
-            var mainFull  = Path.Combine(tempRootImg, $"main_{ts}.webp");
-            var webpName  = $"{ts}.webp";
-
-            try
+            // Foto: het origineel gaat integraal naar de Storage API. Die draait de foto volgens EXIF, verwijdert de EXIF-gegevens,
+            // bewaart een master-JPEG (korte zijde max 5000 px, kwaliteit 92) en maakt de WebP-varianten op breedte
+            // (320/640/960/1280/1920/2560, nooit vergroot) plus de bestaande vierkante 447/800 en "pictures".
+            // Limieten: max 50 MB en max 10.000 px aan de lange zijde (de Storage API controleert de afmetingen).
+            const long maxPhotoBytes = 50L * 1024 * 1024;
+            if (file.Length > maxPhotoBytes)
             {
-                using (var stream = System.IO.File.Create(rawPath))
-                    await file.CopyToAsync(stream);
-
-                // Lees afmetingen voor de DB
-                int imgWidth = 0, imgHeight = 0;
-                using (var img = SixLabors.ImageSharp.Image.Load(rawPath))
-                {
-                    imgWidth  = img.Width;
-                    imgHeight = img.Height;
-                }
-
-                System.IO.File.Copy(rawPath, main447, overwrite: true);
-                System.IO.File.Copy(rawPath, main800, overwrite: true);
-                System.IO.File.Copy(rawPath, mainFull, overwrite: true);
-
-                ScaleAndCropImage(main447, 447, 447);
-                ScaleAndCropImage(main800, 800, 800);
-                ScaleImage(mainFull, 1280, 960);
-
-                // Na ScaleAndCropImage worden paden omgezet naar .webp indien nodig
-                main447  = Path.ChangeExtension(main447,  ".webp");
-                main800  = Path.ChangeExtension(main800,  ".webp");
-                mainFull = Path.ChangeExtension(mainFull, ".webp");
-
-                var uploadMain = await UploadAssetFileToStorageAsync(mainFull, "pictures",     webpName, "image/webp");
-                var upload447  = await UploadAssetFileToStorageAsync(main447,  "pictures/447", webpName, "image/webp");
-                var upload800  = await UploadAssetFileToStorageAsync(main800,  "pictures/800", webpName, "image/webp");
-
-                if (string.IsNullOrWhiteSpace(uploadMain) || string.IsNullOrWhiteSpace(upload447) || string.IsNullOrWhiteSpace(upload800))
-                {
-                    AddMessage("error", "Afbeelding upload naar storage API mislukt.", "Fout!");
-                    return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
-                }
-
-                storedFilename = webpName;
-
-                var picture = new ProjectPictureBO
-                {
-                    Name            = storedFilename,
-                    Caption         = UploadedBO.Caption,
-                    ProjectId       = UploadedBO.ProjectId,
-                    Type            = UploadedBO.Type,
-                    SectionId       = UploadedBO.SectionId,
-                    IsPublic        = UploadedBO.IsPublic,
-                    MediaType       = 0, // Photo
-                    FileSizeBytes   = file.Length,
-                    WidthPx         = imgWidth,
-                    HeightPx        = imgHeight,
-                    DateTimeUploaded = DateTime.Now
-                };
-
-                var service  = _projectService;
-                var response = service.InsertUpdatePicture(picture);
-
-                if (picture.Type == PictureType.Hoofdfoto && response?.Messages != null)
-                {
-                    foreach (var msg in response.Messages)
-                    {
-                        if (msg.Type == MessageType.Value && int.TryParse(msg.Message, out var pictureId))
-                            _ = service.SetDefaultProjectPicture(UploadedBO.ProjectId, pictureId);
-                    }
-                }
+                AddMessage("error", $"De foto is {file.Length / 1024d / 1024d:0.#} MB; het maximum is 50 MB.", "Fout!");
+                return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
             }
-            finally
+
+            var storage = HttpContext.RequestServices.GetRequiredService<FacadeCore.Signing.IAssetStorageClient>();
+            var baseName = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
+            FacadeCore.Signing.PhotoUploadResult upload;
+            await using (var photoStream = file.OpenReadStream())
+                upload = await storage.UploadPhotoAsync(photoStream, file.FileName, file.ContentType, baseName);
+
+            if (!upload.Success || string.IsNullOrWhiteSpace(upload.FileName))
             {
-                TryDeleteTempFile(rawPath);
-                TryDeleteTempFile(main447);
-                TryDeleteTempFile(main800);
-                TryDeleteTempFile(mainFull);
+                AddMessage("error", upload.Error ?? "Afbeelding upload naar storage API mislukt.", "Fout!");
+                return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
+            }
+
+            var picture = new ProjectPictureBO
+            {
+                Name            = upload.FileName,        // "{baseName}.webp" — varianten staan onder dezelfde naam in alle mappen
+                Caption         = UploadedBO.Caption,
+                ProjectId       = UploadedBO.ProjectId,
+                Type            = UploadedBO.Type,
+                SectionId       = UploadedBO.SectionId,
+                IsPublic        = UploadedBO.IsPublic,
+                MediaType       = 0, // Photo
+                FileSizeBytes   = file.Length,
+                WidthPx         = upload.Width,           // afmetingen van het georiënteerde origineel (voor de website)
+                HeightPx        = upload.Height,
+                HasVariants     = true,                   // WebP-breedtes + master-jpeg bestaan (zie _migrations/087)
+                DateTimeUploaded = DateTime.Now
+            };
+
+            var service  = _projectService;
+            var response = service.InsertUpdatePicture(picture);
+
+            if (picture.Type == PictureType.Hoofdfoto && response?.Messages != null)
+            {
+                foreach (var msg in response.Messages)
+                {
+                    if (msg.Type == MessageType.Value && int.TryParse(msg.Message, out var pictureId))
+                        _ = service.SetDefaultProjectPicture(UploadedBO.ProjectId, pictureId);
+                }
             }
 
             return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
@@ -810,24 +778,10 @@ namespace CPMCore.Controllers
                 .Where(p => req.MediaIds.Contains(p.Id))
                 .ToList();
 
-            var baseUrl     = (Configuration["StorageApi:BaseUrl"] ?? "").TrimEnd('/');
-            var writeApiKey = Configuration["StorageApi:WriteApiKey"] ?? "";
-
+            // Eerst de bestanden (awaited, alle varianten), dan de database-rijen
+            await DeletePictureFilesAsync(items.Select(i => i.Id).ToList());
             foreach (var item in items)
-            {
-                // Verwijder fysieke bestanden via Storage API (best-effort)
-                if (!string.IsNullOrWhiteSpace(baseUrl) && !string.IsNullOrWhiteSpace(item.Name))
-                {
-                    var folder = item.MediaType == 1 ? "videos" : "pictures";
-                    _ = DeleteStorageFileAsync(baseUrl, writeApiKey, folder, item.Name);
-                    if (item.MediaType == 0)
-                    {
-                        _ = DeleteStorageFileAsync(baseUrl, writeApiKey, "pictures/447", item.Name);
-                        _ = DeleteStorageFileAsync(baseUrl, writeApiKey, "pictures/800", item.Name);
-                    }
-                }
                 ctx.Set<DALCore.Models.ProjectPictures>().Remove(item);
-            }
             await ctx.SaveChangesAsync();
             return Ok(new { deleted = items.Count });
         }
@@ -1426,9 +1380,27 @@ namespace CPMCore.Controllers
         }
 
         // ==== LOKALE FOTO'S VERWIJDEREN (ongewijzigd, puur filesystem) ====
-        public void DeletePictureFile(int id)
+        // Verwijdert de bestanden in de Storage API van de opgegeven foto's/video's (project-media, geen nieuwsfoto's): bij een foto
+        // alle varianten (master-jpeg, alle WebP-breedtes, de vierkante 447/800 en "pictures"), bij een video het videobestand.
+        // Wordt awaited vóór het wissen van de database-rijen, zodat er nooit wezen in de opslag achterblijven. Een bestand dat nog
+        // door een andere rij gebruikt wordt, blijft staan.
+        private async Task DeletePictureFilesAsync(IEnumerable<int> ids)
         {
-            // Bestanden worden beheerd door de Storage API; lokale cleanup is niet meer van toepassing.
+            var idList = ids.ToList();
+            if (idList.Count == 0) return;
+            var items = _db.Set<DALCore.Models.ProjectPictures>().AsNoTracking()
+                .Where(p => idList.Contains(p.Id))
+                .Select(p => new { p.Id, p.Name, p.MediaType, p.Type })
+                .ToList();
+            var storage = HttpContext.RequestServices.GetRequiredService<FacadeCore.Signing.IAssetStorageClient>();
+            foreach (var it in items)
+            {
+                if (string.IsNullOrWhiteSpace(it.Name) || it.Type == (int)PictureType.Nieuws) continue;
+                var stillUsed = _db.Set<DALCore.Models.ProjectPictures>().Any(p => p.Name == it.Name && !idList.Contains(p.Id));
+                if (stillUsed) continue;
+                if (it.MediaType == 1) await storage.DeleteAsync("videos", it.Name);
+                else await storage.DeletePhotoAsync(it.Name);
+            }
         }
 
         // ==== REMOTE FILE DELETE ====

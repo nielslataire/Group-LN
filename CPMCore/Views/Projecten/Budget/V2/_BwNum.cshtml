@@ -13,7 +13,7 @@
     <div class="gl-v2-field-box">
         @if (!string.IsNullOrEmpty(Model.Prefix)) { <span class="gl-v2-field-prefix">@Model.Prefix</span> }
         <input type="text" inputmode="@(Model.Integer ? "numeric" : "decimal")" id="@Model.ElementId" name="@Model.Name" value="@Model.Text" placeholder="@Model.Placeholder"
-               autocomplete="off" class="gl-v2-field-input is-num is-tabular" @Html.Raw(Model.Attrs) />
+               autocomplete="off" class="gl-v2-field-input is-num is-tabular@(Model.Masked ? " Currencymask" : "")" @Html.Raw(Model.Attrs) />
         <i class="ph ph-warning gl-v2-field-state-icon is-w" aria-hidden="true"></i><i class="ph ph-warning-circle gl-v2-field-state-icon is-e" aria-hidden="true"></i>
         @if (!string.IsNullOrEmpty(Model.Unit)) { <span class="gl-v2-field-unit">@Model.Unit</span> }
     </div>

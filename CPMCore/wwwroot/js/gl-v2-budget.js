@@ -258,5 +258,13 @@
         var r = await post(b.getAttribute("data-bw-negeer-url"), { versieId: b.getAttribute("data-bw-versie"), sleutel: b.getAttribute("data-bw-code"), bevestigd: herstel ? "false" : "true" }, false);
         if (r && r.success) window.location.reload(); else { b.disabled = false; toast("danger", "Niet gelukt", "De waarschuwing kon niet aangepast worden."); }
     });
-    window.GlV2Budget = { fout: fout, bevestig: bevestig, register: register, autosave: autosave, markDirty: markDirty, saved: saved, setStatus: setStatus, isDirty: isDirty, toast: toast, post: post, token: token, step: step };
+    /** Zet de waarde van een veld; een .Currencymask-veld (AutoNumeric) via zijn eigen API zodat de opmaak (1.234,56) klopt. */
+    function zet(el, v) {
+        if (!el) return;
+        var n = typeof v === "number" ? v : parseFloat(String(v == null ? "" : v).replace(/\s/g, "").replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", "."));
+        var an = window.AutoNumeric && AutoNumeric.getAutoNumericElement ? AutoNumeric.getAutoNumericElement(el) : null;
+        if (an) { if (isNaN(n)) an.clear(); else an.set(n); } else el.value = isNaN(n) ? "" : String(n).replace(".", ",");
+    }
+
+    window.GlV2Budget = { zet: zet, fout: fout, bevestig: bevestig, register: register, autosave: autosave, markDirty: markDirty, saved: saved, setStatus: setStatus, isDirty: isDirty, toast: toast, post: post, token: token, step: step };
 })();

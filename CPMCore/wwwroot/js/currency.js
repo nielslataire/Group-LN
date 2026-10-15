@@ -45,6 +45,18 @@ if (!window.CurrencyMask) window.CurrencyMask = (function () {
         });
     }
 
+    // Een formulier dat via new FormData(form) verstuurd wordt (autosave) slaat de submit-unformat over: "1.500" zou als 1,5 gelezen worden.
+    // Daarom krijgt elk .Currencymask-veld hier het kale getal (1500.00) in de FormData.
+    document.addEventListener('formdata', function (e) {
+        const form = e.target;
+        if (!form || !form.querySelectorAll) return;
+        form.querySelectorAll('.Currencymask').forEach(function (el) {
+            if (!el.name || !e.formData.has(el.name)) return;
+            const an = window.AutoNumeric && AutoNumeric.getAutoNumericElement(el);
+            if (an) { const v = an.getNumericString(); e.formData.set(el.name, v == null ? '' : v); }
+        });
+    }, true);
+
     // publieke API
     return {
         init: init

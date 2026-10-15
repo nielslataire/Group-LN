@@ -42,6 +42,9 @@ namespace CPMCore.Documents.GlV2
         /// Lijsten/overzichten gebruiken de compacte kop vanaf pagina 1. (Punt 35a/36.4.)</summary>
         protected virtual bool CompactHeaderFromFirstPage => false;
 
+        /// <summary>True = de volledige kop (groot logo, titel, kicker) op elke pagina i.p.v. de compacte kop vanaf pagina 2 (budget).</summary>
+        protected virtual bool FullHeaderOnEveryPage => false;
+
         /// <summary>Huiskleur van het document: banden, kicker, nummer, sectielabels (standaard het gl-v2-groen). Een document kan hem
         /// overschrijven met de kleur van het uitgevende bedrijf (factuur: <c>BrandPrimaryColor</c>).</summary>
         protected virtual string Accent => GlV2PdfTheme.Groen;
@@ -61,11 +64,27 @@ namespace CPMCore.Documents.GlV2
         /// null = "x / y" van dit document zelf.</summary>
         protected virtual string? PageLabelOverride => null;
 
-        public void Compose(IDocumentContainer container)
+        /// <summary>Optelling op het paginanummer in de voet (bijlage die achter een ander PDF komt); 0 = geen.</summary>
+        protected virtual int PageNumberOffset => 0;
+        /// <summary>Totaal aantal pagina's van het samengevoegde geheel in de voet; null = totaal van dit document.</summary>
+        protected virtual int? TotalPagesOverride => null;
+
+        /// <summary>Extra regel boven de titel in de compacte kop (bv. "INTERN — NIET VERSPREIDEN" bij het budget, 35q/35r); optioneel.</summary>
+        protected virtual string? CompactKicker => null;
+        /// <summary>Kleur van <see cref="CompactKicker"/>; standaard de huiskleur.</summary>
+        protected virtual string? CompactKickerKleur => null;
+        /// <summary>Kleine toelichtingsregel onder de ondertitel in de compacte kop (bv. "Budget v2 · definitief 13/10/2026"); optioneel.</summary>
+        protected virtual string? CompactNote => null;
+
+        public virtual void Compose(IDocumentContainer container) => ComposePage(container, Format, Content);
+
+        /// <summary>Eén pagina-reeks met de standaardkop/-voet; een document met meerdere formaten (budget: A4 staand + A4 liggend)
+        /// roept dit meermaals aan vanuit zijn eigen <see cref="Compose"/>.</summary>
+        protected void ComposePage(IDocumentContainer container, GlV2PdfFormat format, Action<IContainer> content, bool? compactVanafEerste = null)
         {
             container.Page(page =>
             {
-                page.Size(Format.ToPageSize());
+                page.Size(format.ToPageSize());
                 page.Margin(0);
                 page.DefaultTextStyle(x => x.FontFamily(BodyFont).FontSize(8f).FontColor(GlV2PdfTheme.Inkt).LineHeight(1.45f));
 
@@ -74,7 +93,11 @@ namespace CPMCore.Documents.GlV2
                     col.Item().Height(GlV2PdfTheme.BandHoogteMm, Unit.Millimetre).Background(Accent);
                     col.Item().PaddingHorizontal(GlV2PdfTheme.ZijMargeMm, Unit.Millimetre).PaddingTop(10, Unit.Millimetre).Column(head =>
                     {
-                        if (CompactHeaderFromFirstPage)
+                        if (FullHeaderOnEveryPage)
+                        {
+                            head.Item().Element(FullHeader);
+                        }
+                        else if (compactVanafEerste ?? CompactHeaderFromFirstPage)
                         {
                             head.Item().Element(CompactHeader);
                         }
@@ -89,7 +112,7 @@ namespace CPMCore.Documents.GlV2
                 page.Content()
                     .PaddingHorizontal(GlV2PdfTheme.ZijMargeMm, Unit.Millimetre)
                     .PaddingTop(10, Unit.Millimetre)
-                    .Element(Content);
+                    .Element(content);
 
                 page.Footer().Column(col =>
                 {
@@ -111,14 +134,16 @@ namespace CPMCore.Documents.GlV2
                     if (Company.LogoBytes is { Length: > 0 })
                         logo.Image(Company.LogoBytes).FitHeight();
                 });
-                row.ConstantItem(90, Unit.Millimetre).AlignRight().Column(title =>
+                row.ConstantItem(CompactNote is null ? 90 : 120, Unit.Millimetre).AlignRight().Column(title =>
                 {
                     if (!string.IsNullOrWhiteSpace(Kicker))
-                        title.Item().AlignRight().Text(Kicker!.ToUpperInvariant()).FontFamily(BodyFont).FontSize(7).Bold().LetterSpacing(0.18f).FontColor(Accent);
+                        title.Item().AlignRight().Text(Kicker!.ToUpperInvariant()).FontFamily(BodyFont).FontSize(7).Bold().LetterSpacing(0.18f).FontColor(CompactKickerKleur ?? Accent);
                     title.Item().AlignRight().Text(DocumentTitle).FontFamily(TitleFont).FontSize(22).FontColor(GlV2PdfTheme.Inkt);
                     if (!string.IsNullOrWhiteSpace(DocumentNumber))
                         title.Item().AlignRight().Text(DocumentNumber!).FontFamily(BodyFont).FontSize(9).SemiBold().FontColor(Accent)
                             .EnableFontFeature(FontFeatures.TabularFigures);
+                    if (!string.IsNullOrWhiteSpace(CompactNote))
+                        title.Item().AlignRight().Text(CompactNote!).FontFamily(BodyFont).FontSize(6.5f).FontColor(GlV2PdfTheme.Gedempt);
                 });
             });
         }
@@ -139,14 +164,18 @@ namespace CPMCore.Documents.GlV2
                         logoRow.ConstantItem(2, Unit.Millimetre);
                         logoRow.AutoItem().AlignMiddle().Text(Company.Name).FontFamily(BodyFont).FontSize(11).Bold().FontColor(GlV2PdfTheme.Bedrijfsnaam);
                     });
-                    row.ConstantItem(90, Unit.Millimetre).AlignRight().Column(title =>
+                    row.ConstantItem(CompactNote is null ? 90 : 120, Unit.Millimetre).AlignRight().Column(title =>
                     {
+                        if (!string.IsNullOrWhiteSpace(CompactKicker))
+                            title.Item().AlignRight().Text(CompactKicker!.ToUpperInvariant()).FontFamily(BodyFont).FontSize(6.5f).Bold().LetterSpacing(0.18f).FontColor(CompactKickerKleur ?? Accent);
                         title.Item().AlignRight().Text(DocumentTitle).FontFamily(TitleFont).FontSize(18).FontColor(GlV2PdfTheme.Inkt);
                         if (!string.IsNullOrWhiteSpace(CompactSubtitle))
                             title.Item().AlignRight().Text(CompactSubtitle!).FontFamily(BodyFont).FontSize(8.5f).Bold().FontColor(Accent);
                         else if (!string.IsNullOrWhiteSpace(DocumentNumber))
                             title.Item().AlignRight().Text(DocumentNumber!).FontFamily(BodyFont).FontSize(8).SemiBold().FontColor(Accent)
                                 .EnableFontFeature(FontFeatures.TabularFigures);
+                        if (!string.IsNullOrWhiteSpace(CompactNote))
+                            title.Item().AlignRight().Text(CompactNote!).FontFamily(BodyFont).FontSize(6.5f).FontColor(GlV2PdfTheme.Gedempt);
                     });
                 });
                 col.Item().PaddingTop(4, Unit.Millimetre).BorderBottom(0.6f, Unit.Millimetre).BorderColor(Accent);
@@ -156,7 +185,7 @@ namespace CPMCore.Documents.GlV2
         // ── Voet (punt 35a "VOET", 36.5) - kolommen zoals het offerte-voorbeeld (35d): adres (smal)
         // en contact, allebei links uitgelijnd; rechtsvorm+btw+IBAN rechts uitgelijnd; enkel
         // "x / y" (geen "pagina"-tekst), vast en rechts uitgelijnd op de rand.
-        private void Footer(IContainer c)
+        protected virtual void Footer(IContainer c)
         {
             c.BorderTop(0.3f, Unit.Millimetre).BorderColor(GlV2PdfTheme.Lijn)
                 .PaddingTop(3, Unit.Millimetre).Row(row =>
@@ -181,9 +210,11 @@ namespace CPMCore.Documents.GlV2
                 {
                     t.DefaultTextStyle(x => x.FontFamily(BodyFont).FontSize(6.5f).SemiBold().FontColor(GlV2PdfTheme.Inkt));
                     if (PageLabelOverride is { } label) { t.Span(label); return; }
-                    t.CurrentPageNumber();
+                    if (PageNumberOffset != 0) t.CurrentPageNumber().Format(n => ((n ?? 0) + PageNumberOffset).ToString());
+                    else t.CurrentPageNumber();
                     t.Span(" / ");
-                    t.TotalPages();
+                    if (TotalPagesOverride is { } tot) t.Span(tot.ToString());
+                    else t.TotalPages();
                 });
             });
         }

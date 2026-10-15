@@ -6,6 +6,8 @@ Namespace Budget
         Public Property Percentage As Decimal
         Public Property IsPerc As Boolean
         Public Property BasisBedrag As Decimal
+        ''' <summary>De activiteit (tabel Activity) waaronder deze post valt, voor de koppeling met contracten en facturen; leeg = geen vaste activiteit.</summary>
+        Public Property ActivityId As Integer?
     End Class
 
     Public Class BudgetResultaatBO

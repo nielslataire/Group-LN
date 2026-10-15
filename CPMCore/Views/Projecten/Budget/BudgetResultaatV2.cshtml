@@ -38,7 +38,7 @@
     <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-budget.css" asp-append-version="true" />
     <style>
-        .bw-res-cols { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+        .bw-res-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
         .bw-res-groep th { background: var(--gl-v2-bg, #F2F5EF); color: var(--gl-v2-primary); font: 700 11.5px var(--gl-v2-font-sans); letter-spacing: .04em; text-transform: uppercase; height: 34px; padding: 0 10px; text-align: left; border-top: 1px solid var(--gl-v2-hairline-soft); }
         .bw-res-tabel td.is-pad { padding-left: 22px; }
         .bw-res-tabel tr.is-totaal td { background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); font-weight: 700; font-size: 14px; }
@@ -72,7 +72,9 @@
 @section PageActions
 {
     <a href="@Url.Action("BudgetVergelijken", "Projecten", new { masterId = Model.BudgetMasterId })" class="gl-v2-btn gl-v2-btn-secondary" data-bw-plain><i class="ph ph-git-diff" aria-hidden="true"></i>Versies vergelijken</a>
-    <a href="@Url.Action("DownloadBudgetPDF", "Projecten", new { versieId = Model.BudgetVersieId })" class="gl-v2-btn gl-v2-btn-secondary" target="_blank" data-bw-plain><i class="ph ph-file-pdf" aria-hidden="true"></i>PDF</a>
+    <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-gl-v2-menu-trigger" id="bw-res-pdf-btn" aria-haspopup="true" aria-expanded="false" aria-controls="bw-res-pdf-menu" data-bw-keep>
+        <i class="ph ph-file-pdf" aria-hidden="true"></i><span>PDF</span><i class="ph ph-caret-down" aria-hidden="true"></i>
+    </button>
     <a href="@Url.Action("DownloadBudgetExcel", "Projecten", new { versieId = Model.BudgetVersieId })" class="gl-v2-btn gl-v2-btn-secondary" data-bw-plain><i class="ph ph-file-xls" aria-hidden="true"></i>Excel</a>
 }
 
@@ -153,6 +155,7 @@
             }
         </div>
 
+
         <div class="bw-res-cols">
             <section class="gl-v2-section-card">
                 <div class="gl-v2-section-card-header">
@@ -218,6 +221,45 @@
                     </div>
                 </section>
 
+            @if (Model.VerkoopResultaat is { HeeftVerkoop: true } vr)
+            {
+                decimal Bw(decimal v) => vr.Verkoopwaarde > 0m ? Math.Max(0m, Math.Min(100m, Math.Abs(v) / vr.Verkoopwaarde * 100m)) : 0m;
+                string W(decimal v) => Bw(v).ToString("0.##", inv) + "%";
+                string Min(decimal v) => (v == 0m ? "" : "– ") + Eur0(v);
+                var perc = (vr.CommissiePerc * 100m).ToString("0.00", nl);
+                <section class="gl-v2-section-card bw-vkr" id="bw-vkr">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-chart-bar" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Verkoop t.o.v. kostprijs</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">vraagprijzen uit stap 8 – verkoopkosten – totale kostprijs</span>
+                        <span class="gl-v2-section-card-meta" style="margin-left:auto">makelaar @perc % · <a href="@ch.Steps[6].Href" data-bw-nav="back">aanpassen in stap 7 ›</a></span>
+                    </div>
+                    <div class="bw-vkr-body">
+                        <div class="bw-vkr-tabel">
+                            <div class="bw-vkr-hoofd"><span>Post</span><span>Bedrag</span></div>
+                            <div class="bw-vkr-rij"><div class="bw-vkr-tekst"><strong>Verkoopwaarde</strong><small>@vr.AantalLijnen @(vr.AantalLijnen == 1 ? "vastgelegde vraagprijs" : "vastgelegde vraagprijzen") · grond @Eur0(vr.GrondDeel) + bouw @Eur0(vr.BouwDeel)</small></div><div class="bw-vkr-balk"><i class="is-verkoop" style="width:@W(vr.Verkoopwaarde)"></i></div><div class="bw-vkr-bedrag">@Eur0(vr.Verkoopwaarde)</div></div>
+                            <div class="bw-vkr-rij"><div class="bw-vkr-tekst"><strong>– Verkoopkosten</strong><small>makelaar@(vr.Overige > 0m ? " + overige" : ""), zie verdeling hieronder</small></div><div class="bw-vkr-balk"><i class="is-kost" style="width:@W(vr.Verkoopkosten)"></i></div><div class="bw-vkr-bedrag is-neg">@Min(vr.Verkoopkosten)</div></div>
+                            <div class="bw-vkr-rij is-sub"><div class="bw-vkr-tekst"><span>op grondwaarde</span><small>@perc % × @Eur0(vr.GrondDeel) = @Eur0(vr.CommissieGrond) + 21 % btw — btw niet aftrekbaar, telt mee</small></div><div class="bw-vkr-balk"><i class="is-kost" style="width:@W(vr.GrondKostInclBtw)"></i></div><div class="bw-vkr-bedrag">@Eur0(vr.GrondKostInclBtw)</div></div>
+                            <div class="bw-vkr-rij is-sub"><div class="bw-vkr-tekst"><span>op bouwwaarde</span><small>@perc % × @Eur0(vr.BouwDeel) — btw @Eur0(vr.BtwBouwAftrekbaar) aftrekbaar, telt niet mee</small></div><div class="bw-vkr-balk"><i class="is-kost" style="width:@W(vr.CommissieBouw)"></i></div><div class="bw-vkr-bedrag">@Eur0(vr.CommissieBouw)</div></div>
+                            @if (vr.Overige > 0m)
+                            {
+                                <div class="bw-vkr-rij is-sub"><div class="bw-vkr-tekst"><span>overige verkoopkosten</span><small>forfait per project</small></div><div class="bw-vkr-balk"><i class="is-kost" style="width:@W(vr.Overige)"></i></div><div class="bw-vkr-bedrag">@Eur0(vr.Overige)</div></div>
+                            }
+                            <div class="bw-vkr-rij is-tussen"><div class="bw-vkr-tekst"><strong>= Netto opbrengst</strong></div><div class="bw-vkr-balk"><i class="is-verkoop" style="width:@W(vr.NettoOpbrengst)"></i></div><div class="bw-vkr-bedrag">@Eur0(vr.NettoOpbrengst)</div></div>
+                            <div class="bw-vkr-rij"><div class="bw-vkr-tekst"><strong>– Totale kostprijs</strong><small>uit Kostenoverzicht</small></div><div class="bw-vkr-balk"><i class="is-kostprijs" style="width:@W(vr.Kostprijs)"></i></div><div class="bw-vkr-bedrag is-neg">@Min(vr.Kostprijs)</div></div>
+                            <div class="bw-vkr-rij is-resultaat"><div class="bw-vkr-tekst"><strong>= Resultaat</strong><small>netto opbrengst – kostprijs</small></div><div class="bw-vkr-balk"><i class="@(vr.Resultaat >= 0m ? "is-res" : "is-res-neg")" style="width:@W(vr.Resultaat)"></i></div><div class="bw-vkr-bedrag @(vr.Resultaat >= 0m ? "is-pos" : "is-neg")">@(vr.Resultaat < 0m ? "– " : "")@Eur0(Math.Abs(vr.Resultaat))</div></div>
+                        </div>
+                        <aside class="bw-vkr-kpis" aria-label="Kengetallen verkoop">
+                            <div><span class="lbl">Marge op kostprijs</span><span class="val">@((vr.MargeOpKostprijs * 100m).ToString("0.0", nl)) %</span><span class="sub">vóór verkoopkosten @((vr.MargeVoorKosten * 100m).ToString("0.0", nl)) %</span></div>
+                            <div><span class="lbl">Marge op verkoop</span><span class="val">@((vr.MargeOpVerkoop * 100m).ToString("0.0", nl)) %</span><span class="sub">resultaat / verkoopwaarde</span></div>
+                            <div><span class="lbl">Resultaat per eenheid</span><span class="val">@Eur0(vr.ResultaatPerLijn)</span><span class="sub">@vr.AantalLijnen @(vr.AantalLijnen == 1 ? "verkochte lijn" : "verkochte lijnen")</span></div>
+                            <div><span class="lbl">Break-even verkoopwaarde</span><span class="val">@Eur0(vr.BreakEven)</span><span class="sub">kostprijs + verkoopkosten · @((vr.RuimteTovBreakEven * 100m).ToString("0.0", nl)) % ruimte</span></div>
+                        </aside>
+                    </div>
+                </section>
+            }
+
                 @if (Model.AndereVersies.Any())
                 {
                     <section class="gl-v2-section-card">
@@ -274,3 +316,22 @@
 })();
 </script>
 }
+
+@* PDF-menu (topbar): het gedeelde contextmenu (.gl-v2-menu); positie/open/sluiten door gl-v2-shell.js. 35q = intern, 35r = bank. *@
+<div class="gl-v2-menu" id="bw-res-pdf-menu">
+    <div class="gl-v2-menu-title">BUDGET ALS PDF</div>
+    <a class="gl-v2-menu-item" href="@Url.Action("BudgetPdfOpmaken", "Projecten", new { versieId = Model.BudgetVersieId, intern = true })" data-bw-plain>
+        <i class="ph ph-lock-key" aria-hidden="true"></i>
+        <span class="gl-v2-menu-item-text">
+            <span class="gl-v2-menu-item-label">PDF intern</span>
+            <span class="gl-v2-menu-item-sub">Alle kosten incl. financiering, onvoorzien en publiciteit, met verkoop en resultaat per eenheid. Niet te verspreiden.</span>
+        </span>
+    </a>
+    <a class="gl-v2-menu-item" href="@Url.Action("BudgetPdfOpmaken", "Projecten", new { versieId = Model.BudgetVersieId, intern = false })" data-bw-plain>
+        <i class="ph ph-bank" aria-hidden="true"></i>
+        <span class="gl-v2-menu-item-text">
+            <span class="gl-v2-menu-item-label">PDF bank</span>
+            <span class="gl-v2-menu-item-sub">Voor een kredietaanvraag: zonder financiering, onvoorzien, publiciteit en verkoop per eenheid.</span>
+        </span>
+    </a>
+</div>

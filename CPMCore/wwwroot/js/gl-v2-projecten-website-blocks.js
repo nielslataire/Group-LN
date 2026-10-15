@@ -54,6 +54,28 @@
         sync(false);
     }
 
+    // ── Vragen: opgemaakt antwoord (Quill, zelfde werkbalk als de commerciële tekst) ──────────────────
+    // De verborgen textarea .web-faq-source bevat de HTML die mee gepost wordt; de service schoont ze op (enkel eenvoudige opmaak + links).
+    function initFaqEditors(root) {
+        if (typeof Quill === "undefined") return;
+        (root || document).querySelectorAll(".web-faq-editor").forEach(function (box) {
+            if (box.__quill) return;
+            var source = box.parentNode.querySelector(".web-faq-source");
+            var quill = new Quill(box, {
+                theme: "snow",
+                placeholder: box.getAttribute("data-placeholder") || "",
+                modules: { toolbar: [["bold", "italic", "underline"], [{ list: "ordered" }, { list: "bullet" }], ["link"], ["clean"]] }
+            });
+            box.__quill = quill;
+            if (source.value) quill.clipboard.dangerouslyPasteHTML(source.value, "silent");
+            quill.on("text-change", function (delta, old, src) {
+                var empty = quill.getText().trim().length === 0 && !quill.root.querySelector("img");
+                source.value = empty ? "" : quill.root.innerHTML;
+                if (src === "user") source.dispatchEvent(new Event("input", { bubbles: true }));
+            });
+        });
+    }
+
     // ── Herhaalbare lijsten ──────────────────────────────────────────────────────────────────
     var pop = document.getElementById("webPhotoPop");
     var popTarget = null;
@@ -81,7 +103,8 @@
             var row = holder.firstElementChild;
             listEl.appendChild(row);
             renumber();
-            var f = row.querySelector("textarea, input[type=text]");
+            initFaqEditors(row);
+            var f = row.querySelector("textarea:not([hidden]), input[type=text]");
             if (f) f.focus();
             changed(listEl);
         });
@@ -121,6 +144,63 @@
         });
         listEl.addEventListener("dragend", function () { if (drag) { drag.draggable = false; drag = null; renumber(); changed(listEl); } });
     });
+
+    initFaqEditors(document);
+
+    // ── Ligging: kaartpunt via adres + voorzieningen voorstellen ────────────────────────────────────
+    (function () {
+        var card = document.getElementById("websiteLocationCard");
+        if (!card) return;
+        var token = function () { var t = document.querySelector("input[name='__RequestVerificationToken']"); return t ? t.value : ""; };
+        var latInput = document.getElementById("Website_LocationLat"), lngInput = document.getElementById("Website_LocationLng");
+        var say = function (title, description) { if (window.GlV2Dialog) GlV2Dialog.alert({ tone: "danger", icon: "ph-warning-circle", title: title, description: description }); else alert(description); };
+        function post(url, data) {
+            var body = new URLSearchParams(data);
+            return fetch(url, { method: "POST", headers: { "RequestVerificationToken": token(), "Content-Type": "application/x-www-form-urlencoded" }, body: body }).then(function (r) { return r.json(); });
+        }
+        function busy(btn, on) { btn.disabled = on; btn.classList.toggle("is-loading", on); }
+
+        var geoBtn = document.getElementById("webGeoBtn");
+        if (geoBtn) geoBtn.addEventListener("click", function () {
+            busy(geoBtn, true);
+            post(card.getAttribute("data-geocode-url"), { projectId: card.getAttribute("data-project-id") }).then(function (res) {
+                if (!res.ok) { say("Adres niet gevonden", res.error); return; }
+                latInput.value = res.lat; lngInput.value = res.lng;
+                latInput.dispatchEvent(new Event("input", { bubbles: true }));
+                document.getElementById("webGeoHelp").textContent = "Gevonden: " + (res.label || (res.lat + ", " + res.lng)) + " — controleer of dit klopt.";
+            }).catch(function () { say("Zoeken mislukt", "De opzoeking kon niet uitgevoerd worden. Probeer het opnieuw."); }).then(function () { busy(geoBtn, false); });
+        });
+
+        var poiBtn = document.getElementById("webPoiSuggestBtn");
+        if (poiBtn) poiBtn.addEventListener("click", function () {
+            if (!latInput.value.trim() || !lngInput.value.trim()) { say("Kaartpunt ontbreekt", "Vul eerst het kaartpunt van het project in of klik op “Zoek via adres”."); return; }
+            busy(poiBtn, true);
+            post(card.getAttribute("data-poi-url"), { lat: latInput.value, lng: lngInput.value }).then(function (res) {
+                if (!res.ok) { say("Voorzieningen ophalen mislukt", res.error); return; }
+                var box = document.getElementById("webPoiBox");
+                var rows = function () { return Array.prototype.slice.call(box.querySelectorAll(".web-rep-row")); };
+                var have = {};
+                rows().forEach(function (r) {
+                    var c = r.querySelector("select"), n = r.querySelector("input[name$='.Name']");
+                    if (c && n) have[c.value + "|" + n.value.trim().toLowerCase()] = true;
+                });
+                var added = 0;
+                res.items.forEach(function (it) {
+                    if (have[it.category + "|" + it.name.toLowerCase()]) return;
+                    box.querySelector("[data-rep-add]").click();
+                    var row = rows()[rows().length - 1];
+                    row.querySelector("select").value = it.category;
+                    row.querySelector("input[name$='.Name']").value = it.name;
+                    row.querySelector("input[name$='.Distance']").value = it.distance;
+                    row.querySelector("input[name$='.Time']").value = it.time;
+                    row.querySelector("input[name$='.Lat']").value = it.lat;
+                    row.querySelector("input[name$='.Lng']").value = it.lng;
+                    added++;
+                });
+                document.getElementById("webPoiHelp").textContent = added + " voorziening(en) toegevoegd" + (res.items.length - added ? " (" + (res.items.length - added) + " stonden er al)" : "") + ". Controleer ze, pas aan of verwijder wat niet past.";
+            }).catch(function () { say("Voorzieningen ophalen mislukt", "De opzoeking kon niet uitgevoerd worden. Probeer het opnieuw."); }).then(function () { busy(poiBtn, false); });
+        });
+    })();
 
     // ── Foto kiezen (één gedeeld venstertje) ──────────────────────────────────────────────────
     function openPop(btn) {

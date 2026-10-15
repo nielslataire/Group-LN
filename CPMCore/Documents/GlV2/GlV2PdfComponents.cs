@@ -333,5 +333,216 @@ namespace CPMCore.Documents.GlV2
                 col.Item().ExtendVertical().AlignBottom().Text(label.ToLowerInvariant()).FontFamily(bodyFont).FontSize(6).FontColor(GlV2PdfTheme.Licht);
             });
         }
+
+        /// <summary>Tekst met paginaverwijzingen: <c>{p:naam}</c> wordt het paginanummer waar de sectie <c>naam</c> (container.Section("naam")) begint,
+        /// zodat "p. 3" ook klopt als een tabel over meerdere pagina's loopt.</summary>
+        public static void PaginaTekst(TextDescriptor t, string? tekst)
+        {
+            if (string.IsNullOrEmpty(tekst)) { t.Span(" "); return; }   // een lege cel houdt zo zijn regelhoogte (en dus zijn lijnen)
+            var delen = System.Text.RegularExpressions.Regex.Split(tekst ?? "", @"(\{p:[A-Za-z0-9_]+\})");
+            foreach (var d in delen)
+            {
+                if (d.StartsWith("{p:") && d.EndsWith("}")) t.BeginPageNumberOfSection(d.Substring(3, d.Length - 4));
+                else if (d.Length > 0) t.Span(d);
+            }
+        }
+
+        // ── Bouwstenen voor het budgetdocument (35q/35r) ─────────────────────────────────────────────
+
+        /// <summary>Sectiekop: groen label (6,5pt 700, .18em) + hairline over de rest van de breedte + optionele toelichting rechts.</summary>
+        public static void SectieKop(IContainer c, string bodyFont, string label, string? rechts = null, string? accent = null)
+        {
+            c.Row(r =>
+            {
+                r.AutoItem().Text(label.ToUpperInvariant()).FontFamily(bodyFont).FontSize(6.5f).Bold().LetterSpacing(0.18f).FontColor(accent ?? GlV2PdfTheme.Groen);
+                r.ConstantItem(4, Unit.Millimetre);
+                r.RelativeItem().AlignMiddle().Height(0.3f, Unit.Millimetre).Background(GlV2PdfTheme.Lijn);
+                if (!string.IsNullOrWhiteSpace(rechts))
+                {
+                    r.ConstantItem(4, Unit.Millimetre);
+                    r.AutoItem().Text(t => { t.DefaultTextStyle(x => x.FontFamily(bodyFont).FontSize(6.5f).FontColor(GlV2PdfTheme.Gedempt)); PaginaTekst(t, rechts); });
+                }
+            });
+        }
+
+        public record FicheVeld(string Label, string Waarde, string? Sub = null);
+
+        /// <summary>Projectfiche: raster van 4 kolommen met een hairline-kader; per cel label (6pt 600 gedempt), waarde (8pt 700) en subregel (6,5pt gedempt).</summary>
+        public static void Fiche(IContainer c, string bodyFont, IReadOnlyList<FicheVeld> velden)
+        {
+            const int Kolommen = 4;
+            var rijen = (velden.Count + Kolommen - 1) / Kolommen;
+            c.Border(0.25f, Unit.Millimetre).BorderColor(GlV2PdfTheme.Lijn).Table(t =>
+            {
+                t.ColumnsDefinition(d => { for (var i = 0; i < Kolommen; i++) d.RelativeColumn(); });
+                for (var i = 0; i < velden.Count; i++)
+                {
+                    var v = velden[i];
+                    var kol = i % Kolommen; var rij = i / Kolommen;
+                    var inner = t.Cell().ShowEntire();
+                    if (kol < Kolommen - 1) inner = inner.BorderRight(0.25f, Unit.Millimetre).BorderColor(GlV2PdfTheme.Lijn);
+                    if (rij < rijen - 1) inner = inner.BorderBottom(0.25f, Unit.Millimetre).BorderColor(GlV2PdfTheme.Lijn);
+                    inner.PaddingVertical(2.4f, Unit.Millimetre).PaddingHorizontal(3.5f, Unit.Millimetre).Column(col =>
+                    {
+                        col.Spacing(0.8f, Unit.Millimetre);
+                        col.Item().Text(v.Label.ToUpperInvariant()).FontFamily(bodyFont).FontSize(6).SemiBold().LetterSpacing(0.12f).FontColor(GlV2PdfTheme.Gedempt);
+                        col.Item().Text(v.Waarde).FontFamily(bodyFont).FontSize(8).Bold().FontColor(GlV2PdfTheme.Inkt).EnableFontFeature(FontFeatures.TabularFigures);
+                        if (!string.IsNullOrWhiteSpace(v.Sub))
+                            col.Item().Text(v.Sub).FontFamily(bodyFont).FontSize(6.5f).LineHeight(1.4f).FontColor(GlV2PdfTheme.Gedempt);
+                    });
+                }
+            });
+        }
+
+        public record KpiTegel(string Label, string Waarde, string? Sub = null, bool Donker = false);
+
+        /// <summary>KPI-tegels naast elkaar (gap 3mm): lichtgroen vlak, of donkergroen voor de belangrijkste (label 6pt, waarde 12pt 700, sub 6,5pt).</summary>
+        public static void KpiTegels(IContainer c, string bodyFont, IReadOnlyList<KpiTegel> tegels, string? accent = null)
+        {
+            var kleur = accent ?? GlV2PdfTheme.Groen;
+            c.Row(r =>
+            {
+                r.Spacing(3, Unit.Millimetre);
+                foreach (var t in tegels)
+                    r.RelativeItem().Background(t.Donker ? kleur : GlV2PdfTheme.VlakGroepsrij).PaddingVertical(3, Unit.Millimetre).PaddingHorizontal(3.5f, Unit.Millimetre).Column(col =>
+                    {
+                        col.Spacing(0.8f, Unit.Millimetre);
+                        col.Item().Text(t.Label.ToUpperInvariant()).FontFamily(bodyFont).FontSize(6).SemiBold().LetterSpacing(0.12f).FontColor(t.Donker ? "#D6E5CC" : GlV2PdfTheme.Gedempt);
+                        col.Item().Text(t.Waarde).FontFamily(bodyFont).FontSize(12).Bold().FontColor(t.Donker ? GlV2PdfTheme.Wit : GlV2PdfTheme.Inkt).EnableFontFeature(FontFeatures.TabularFigures);
+                        if (!string.IsNullOrWhiteSpace(t.Sub))
+                            col.Item().Text(tx => { tx.DefaultTextStyle(x => x.FontFamily(bodyFont).FontSize(6.5f).FontColor(t.Donker ? "#D6E5CC" : GlV2PdfTheme.Gedempt)); PaginaTekst(tx, t.Sub); });
+                    });
+            });
+        }
+
+        /// <summary>Kolom van de budgettabel: vaste breedte in mm of relatief gewicht; <c>Gedempt</c> = gedempte tekstkleur (basis/toelichting).</summary>
+        public record BKolom(string Kop, float? BreedteMm = null, bool Rechts = false, bool Gedempt = false, float Gewicht = 1f);
+
+        /// <summary>Cel met optionele kleur en vet; een gewone string converteert impliciet.</summary>
+        public record BCel(string Tekst, string? Kleur = null, bool Vet = false)
+        {
+            public static implicit operator BCel(string tekst) => new(tekst);
+        }
+
+        public enum BRegelSoort { Rij, Groep, Subtotaal, Totaal }
+        public record BRegel(BRegelSoort Soort, IReadOnlyList<BCel> Cellen, string? Titel = null)
+        {
+            public static BRegel Rij(params BCel[] cellen) => new(BRegelSoort.Rij, cellen);
+            public static BRegel Groep(string titel) => new(BRegelSoort.Groep, Array.Empty<BCel>(), titel);
+            public static BRegel Subtotaal(params BCel[] cellen) => new(BRegelSoort.Subtotaal, cellen);
+            public static BRegel Totaal(params BCel[] cellen) => new(BRegelSoort.Totaal, cellen);
+        }
+
+        /// <summary>Budgettabel (35q/35r): kop op groen vlak (6pt 700 wit, .08em), groepsrij op #EEF4EA (6,5pt 700, .14em), rijen met hairline,
+        /// subtotaalrij op #FAFBF8 (600 gedempt) en een totaalrij met 0,5mm lijn erboven (8pt 700 groen). Kolomafstand 3mm, 3mm binnenmarge links/rechts.
+        /// De kop herhaalt op elke pagina en een rij splitst nooit (36 · 7).</summary>
+        public static void BudgetTabel(IContainer c, string bodyFont, IReadOnlyList<BKolom> kolommen, IEnumerable<BRegel> regels, float punten = 7f, string? accent = null)
+        {
+            var kleur = accent ?? GlV2PdfTheme.Groen;
+            const float Gap = 3f, Rand = 3f;
+            var laatste = kolommen.Count - 1;
+
+            IContainer Pad(IContainer x, int i, float verticaal) =>
+                x.PaddingVertical(verticaal, Unit.Millimetre).PaddingLeft(i == 0 ? Rand : 0, Unit.Millimetre).PaddingRight(i == laatste ? Rand : Gap, Unit.Millimetre);
+
+            c.Table(t =>
+            {
+                t.ColumnsDefinition(d =>
+                {
+                    for (var i = 0; i < kolommen.Count; i++)
+                    {
+                        var k = kolommen[i];
+                        var extra = (i == 0 ? Rand : 0) + (i == laatste ? Rand : Gap);
+                        if (k.BreedteMm is null) d.RelativeColumn(k.Gewicht);
+                        else d.ConstantColumn(k.BreedteMm.Value + extra, Unit.Millimetre);
+                    }
+                });
+
+                t.Header(h =>
+                {
+                    for (var i = 0; i < kolommen.Count; i++)
+                    {
+                        var k = kolommen[i];
+                        var tx = Pad(h.Cell().Background(kleur).AlignBottom(), i, 2f).Text(k.Kop.ToUpperInvariant())
+                            .FontFamily(bodyFont).FontSize(6).Bold().LetterSpacing(0.08f).FontColor(GlV2PdfTheme.Wit);
+                        if (k.Rechts) tx.AlignRight();
+                    }
+                });
+
+                foreach (var regel in regels)
+                {
+                    if (regel.Soort == BRegelSoort.Groep)
+                    {
+                        t.Cell().ColumnSpan((uint)kolommen.Count).ShowEntire().Background(GlV2PdfTheme.VlakGroepsrij)
+                            .BorderBottom(0.25f, Unit.Millimetre).BorderColor(GlV2PdfTheme.Lijn).PaddingVertical(0.9f, Unit.Millimetre).PaddingHorizontal(Rand, Unit.Millimetre)
+                            .Text(regel.Titel?.ToUpperInvariant()).FontFamily(bodyFont).FontSize(6.5f).Bold().LetterSpacing(0.14f).FontColor(GlV2PdfTheme.Inkt);
+                        continue;
+                    }
+
+                    var totaal = regel.Soort == BRegelSoort.Totaal;
+                    var subtotaal = regel.Soort == BRegelSoort.Subtotaal;
+                    for (var i = 0; i < kolommen.Count; i++)
+                    {
+                        var cel = i < regel.Cellen.Count ? regel.Cellen[i] : new BCel("");
+                        var x = t.Cell().ShowEntire().AlignMiddle();
+                        if (subtotaal) x = x.Background("#FAFBF8");
+                        x = totaal
+                            ? x.BorderTop(0.5f, Unit.Millimetre).BorderColor(GlV2PdfTheme.Inkt)
+                            : x.BorderBottom(subtotaal ? 0.25f : 0.2f, Unit.Millimetre).BorderColor(GlV2PdfTheme.Lijn);
+                        var tint = cel.Kleur ?? (totaal ? GlV2PdfTheme.Groen : subtotaal || kolommen[i].Gedempt ? GlV2PdfTheme.Gedempt : GlV2PdfTheme.Inkt);
+                        var vet = cel.Vet || totaal; var half = !vet && subtotaal; var rechts = kolommen[i].Rechts; var pt = totaal ? 8f : punten;
+                        Pad(x, i, totaal ? 1.4f : subtotaal ? 0.9f : 0.8f).Text(tx =>
+                        {
+                            tx.DefaultTextStyle(st =>
+                            {
+                                st = st.FontFamily(bodyFont).FontSize(pt).FontColor(tint).EnableFontFeature(FontFeatures.TabularFigures);
+                                return vet ? st.Bold() : half ? st.SemiBold() : st;
+                            });
+                            if (rechts) tx.AlignRight();
+                            PaginaTekst(tx, cel.Tekst);
+                        });
+                    }
+                }
+            });
+        }
+
+        /// <summary>De resultaatstrook (35q): groene kop met rechts uitgelijnde labels, een rij toelichtingen (6,5pt gedempt) en een rij waarden (9pt),
+        /// afgesloten met een 0,5mm lijn. De laatste kolom is smal (marge).</summary>
+        public static void ResultaatStrook(IContainer c, string bodyFont, IReadOnlyList<string> koppen, IReadOnlyList<string> subs, IReadOnlyList<BCel> waarden, float laatsteBreedteMm = 22f, string? accent = null)
+        {
+            var kleur = accent ?? GlV2PdfTheme.Groen;
+            var n = koppen.Count;
+            c.Column(col =>
+            {
+                void Rij(Action<IContainer, int> cel, float top, float bottom, string? bg = null, bool lijn = false)
+                {
+                    var rij = col.Item();
+                    if (bg is not null) rij = rij.Background(bg);
+                    if (lijn) rij = rij.BorderBottom(0.5f, Unit.Millimetre).BorderColor(GlV2PdfTheme.Inkt);
+                    rij.PaddingTop(top, Unit.Millimetre).PaddingBottom(bottom, Unit.Millimetre).PaddingHorizontal(3, Unit.Millimetre).Row(r =>
+                    {
+                        r.Spacing(3, Unit.Millimetre);
+                        for (var i = 0; i < n; i++)
+                            cel(i == n - 1 ? r.ConstantItem(laatsteBreedteMm, Unit.Millimetre) : r.RelativeItem(), i);
+                    });
+                }
+                Rij((x, i) => x.AlignRight().Text(koppen[i].ToUpperInvariant()).FontFamily(bodyFont).FontSize(6).Bold().LetterSpacing(0.08f).FontColor(GlV2PdfTheme.Wit), 2, 2, kleur);
+                Rij((x, i) => x.AlignRight().Text(i < subs.Count ? subs[i] : "").FontFamily(bodyFont).FontSize(6.5f).FontColor(GlV2PdfTheme.Gedempt), 1.6f, 0);
+                Rij((x, i) =>
+                {
+                    var w = waarden[i];
+                    var tx = x.AlignRight().Text(w.Tekst).FontFamily(bodyFont).FontSize(9).FontColor(w.Kleur ?? GlV2PdfTheme.Inkt).EnableFontFeature(FontFeatures.TabularFigures);
+                    if (w.Vet) tx.Bold(); else tx.SemiBold();
+                }, 0.6f, 2.2f, null, true);
+            });
+        }
+
+        /// <summary>Aandachtsblok (35q): warm vlak #F6EEDC met rand #E6D3A8 en bruine tekst (7pt/1,5); <c>groen</c> voor een neutrale toelichting (bankversie).</summary>
+        public static void Aandachtsblok(IContainer c, string bodyFont, string tekst, bool groen = false)
+        {
+            c.Background(groen ? GlV2PdfTheme.VlakGroen : GlV2PdfTheme.VlakWarm).Border(0.25f, Unit.Millimetre).BorderColor(groen ? "#CFE0C6" : "#E6D3A8")
+                .PaddingVertical(2.4f, Unit.Millimetre).PaddingHorizontal(3.5f, Unit.Millimetre)
+                .Text(tekst).FontFamily(bodyFont).FontSize(7).LineHeight(1.5f).FontColor(groen ? GlV2PdfTheme.Groen : "#6B4F22");
+        }
     }
 }

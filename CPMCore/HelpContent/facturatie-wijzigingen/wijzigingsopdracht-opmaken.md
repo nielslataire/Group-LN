@@ -21,7 +21,7 @@ faq:
   - q: Wat als een eigenaar niet wil ondertekenen?
     a: De eigenaar kan weigeren en geeft daarbij een reden. De wijzigingsopdracht krijgt dan de status Geweigerd. Je maakt een nieuwe versie of annuleert ze.
   - q: Kan ik een wijzigingsopdracht maken zonder offerte van de leverancier?
-    a: Ja. Kies **Leeg beginnen** en vul de regels zelf in.
+    a: Ja. Kies Leeg beginnen en vul de regels zelf in.
   - q: Waarom ziet de klant de commissie niet?
     a: De klantversie toont enkel de prijs inclusief commissie, nooit beide bedragen apart.
 ---

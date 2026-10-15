@@ -1,0 +1,62 @@
+@model CPMCore.Models.Projecten.BudgetIndexModel
+@using BOCore
+@using CPMCore.Models.GlV2
+@*
+    gl-v2 — "Budgetten vergelijken" (design-handoff 39m): kies 2 of 3 versies van het project, de eerste is de basis (standaard het definitieve budget),
+    en kies waarop je vergelijkt. Staat op het overzicht en op de vergelijkingspagina ("Versie toevoegen"); gl-v2-budget-vergelijk.js doet de rest
+    (maximaal 3, "N gekozen", basis-keuze, doorsturen naar BudgetVersiesVergelijken). Een concept telt mee tot de laatst ingevulde stap.
+    ViewData: VergelijkSelectie (List<int> reeds gekozen versies), VergelijkBasis (int?), VergelijkModus ("alles" | "kosten").
+*@
+@{
+    var nl = new System.Globalization.CultureInfo("nl-BE");
+    var gekozen = ViewData["VergelijkSelectie"] as List<int> ?? new List<int>();
+    var basisId = ViewData["VergelijkBasis"] as int?;
+    var modus = ViewData["VergelijkModus"] as string ?? "alles";
+    var def = Model.DefinitiefVersie;
+    var rijen = Model.BudgetMasters.SelectMany(m => m.Versies.Select(v => (Master: m, Versie: v))).OrderByDescending(x => x.Master.IsActief).ThenBy(x => x.Master.Naam).ThenByDescending(x => x.Versie.Versienummer).ToList();
+    string StatusLabel(BudgetVersieBO v) => v.Status == "Definitief" ? "Definitief" : v.Status == "Afgerond" ? "Afgerond" : (v.IsHuidig ? "Huidig · concept" : "Concept");
+    string StatusKlasse(BudgetVersieBO v) => v.Status == "Definitief" ? "is-positive" : v.Status == "Afgerond" ? "is-neutral" : v.IsHuidig ? "is-attention" : "is-inactive";
+}
+<div class="modal fade gl-v2-modal-form bw-modal" id="bw-vg-modal" tabindex="-1" aria-hidden="true" aria-labelledby="bw-vg-titel"
+     data-url="@Url.Action("BudgetVersiesVergelijken", "Projecten")" data-project="@Model.ProjectId" data-definitief="@(def?.Id.ToString() ?? "")" data-basis="@(basisId?.ToString() ?? "")" data-gekozen="@string.Join(",", gekozen)" data-auto="@(ViewData["VergelijkAuto"] as string ?? "")">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down" style="--bw-modal-w:640px">
+        <div class="modal-content">
+            <div class="modal-header bw-mod-kop">
+                <span class="bw-mod-icoon"><i class="ph ph-git-diff" aria-hidden="true"></i></span>
+                <div class="bw-mod-titels"><h2 class="modal-title" id="bw-vg-titel">Budgetten vergelijken</h2><span class="bw-mod-sub">@Model.ProjectName · @rijen.Count @(rijen.Count == 1 ? "versie" : "versies") beschikbaar</span></div>
+                <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+            </div>
+            <div class="modal-body bw-mod-body">
+                <p class="bw-mod-uitleg">Kies 2 of 3 versies. De eerste is de basis; verschillen worden daartegenover getoond.</p>
+                <div class="bw-vg-lijst" role="group" aria-label="Versies">
+                    <div class="bw-vg-kop"><span></span><span>Budget · versie</span><span>Status</span><span class="is-num">Totaal</span><span class="is-num">Marge</span></div>
+                    @foreach (var (m, v) in rijen)
+                    {
+                        var heeftTot = Model.Totalen.TryGetValue(v.Id, out var tot) && tot.HasValue;
+                        Model.Marges.TryGetValue(v.Id, out var marge);
+                        var naam = $"{m.Naam} · v{v.Versienummer}{(string.IsNullOrWhiteSpace(v.VersieNaam) ? "" : " " + v.VersieNaam)}";
+                        <label class="bw-vg-rij" data-id="@v.Id" data-naam="@naam" data-status="@v.Status" data-def="@(v.Status == "Definitief" ? "1" : "0")">
+                            <input type="checkbox" class="bw-vg-cb" value="@v.Id" @(gekozen.Contains(v.Id) ? "checked" : "") />
+                            <span class="bw-check" aria-hidden="true"><i class="ph ph-check"></i></span>
+                            <span class="bw-vg-naam">@naam</span>
+                            <span><span class="gl-v2-badge @StatusKlasse(v)">@StatusLabel(v)</span></span>
+                            <span class="is-num bw-vg-tot">@(heeftTot ? "€ " + tot.Value.ToString("N0", nl) : "—")</span>
+                            <span class="is-num bw-vg-mrg @(marge == null ? "is-leeg" : "")">@(marge == null ? "—" : (marge.Percentage * 100m).ToString("0.0", nl) + " %")</span>
+                        </label>
+                    }
+                </div>
+                <div class="bw-mod-twee">
+                    <div class="bw-mod-veld"><span class="bw-mod-lbl">Basis</span>@await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "basis", Id = "bw-vg-basis", Bare = true, Placeholder = "Kies eerst versies…", Value = "", Items = new List<GlV2SelectItem>() })<span class="gl-v2-field-help">standaard het definitief budget</span></div>
+                    <div class="bw-mod-veld"><span class="bw-mod-lbl">Vergelijken op</span>@await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "modus", Id = "bw-vg-modus", Bare = true, Value = modus, Items = new List<GlV2SelectItem> { new() { Value = "alles", Text = "Kostprijs, verkoop en marge" }, new() { Value = "kosten", Text = "Enkel kosten per activiteit" } } })<span class="gl-v2-field-help">of enkel kosten per activiteit</span></div>
+                </div>
+                <div class="bw-mod-nota"><i class="ph ph-info" aria-hidden="true"></i><span>Een concept wordt vergeleken tot de laatst ingevulde stap; marge en verkoop blijven dan leeg.</span></div>
+            </div>
+            <div class="modal-footer bw-mod-voet">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                <span class="bw-mod-flex"></span>
+                <span class="bw-vg-teller" id="bw-vg-teller">0 gekozen</span>
+                <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="bw-vg-go" disabled><i class="ph ph-git-diff" aria-hidden="true"></i>Vergelijken</button>
+            </div>
+        </div>
+    </div>
+</div>

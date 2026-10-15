@@ -939,6 +939,7 @@ namespace ServiceCore
             entity.FileSizeBytes   = picture.FileSizeBytes;
             entity.WidthPx         = picture.WidthPx;
             entity.HeightPx        = picture.HeightPx;
+            if (picture.HasVariants) entity.HasVariants = true; // nooit terugzetten via een BO dat de vlag niet kent
             entity.DurationSeconds = picture.DurationSeconds;
 
             // 5) Opslaan
@@ -3117,6 +3118,16 @@ namespace ServiceCore
                 ArchEyebrow = web?.ArchEyebrow,
                 ArchTitle = web?.ArchTitle,
                 ArchText = web?.ArchText,
+                ComfortTitle = web?.ComfortTitle,
+                ComfortSubtitle = web?.ComfortSubtitle,
+                BuyTitle = web?.BuyTitle,
+                ContactTitle = web?.ContactTitle,
+                ContactText = web?.ContactText,
+                LocationTitle = web?.LocationTitle,
+                LocationText = web?.LocationText,
+                LocationMunicipality = web?.LocationMunicipality,
+                LocationLat = web?.LocationLat?.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture),
+                LocationLng = web?.LocationLng?.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture),
                 Present = true
             };
             dto.LotShapes = _uow.ProjectWebsiteLots.GetNoTracking()
@@ -3133,9 +3144,33 @@ namespace ServiceCore
             dto.Details = _uow.ProjectWebsiteDetails.GetNoTracking()
                 .Where(d => d.ProjectId == projectId).OrderBy(d => d.SortOrder).ThenBy(d => d.Id)
                 .Select(d => new ProjectWebsiteDetailDto { ImageName = d.ImageName, Title = d.Title, Text = d.Text }).ToList();
+            dto.ComfortItems = _uow.ProjectWebsiteComfortItems.GetNoTracking()
+                .Where(c => c.ProjectId == projectId).OrderBy(c => c.SortOrder).ThenBy(c => c.Id)
+                .Select(c => new ProjectWebsiteComfortItemDto { Title = c.Title, Text = c.Text }).ToList();
+            dto.FaqItems = _uow.ProjectWebsiteFaqs.GetNoTracking()
+                .Where(f => f.ProjectId == projectId).OrderBy(f => f.SortOrder).ThenBy(f => f.Id)
+                .Select(f => new ProjectWebsiteFaqItemDto { Question = f.Question, Answer = f.Answer }).ToList();
+            var hasFaq = dto.FaqItems.Count > 0;
+            dto.GuideItems = _uow.ProjectWebsiteGuideItems.GetNoTracking().Where(g => g.ProjectId == projectId).OrderBy(g => g.SortOrder).ThenBy(g => g.Id)
+                .Select(g => new ProjectWebsiteGuideItemDto { Title = g.Title, Text = g.Text }).ToList();
+            dto.Pois = _uow.ProjectWebsitePois.GetNoTracking().Where(o => o.ProjectId == projectId).OrderBy(o => o.SortOrder).ThenBy(o => o.Id).ToList()
+                .Select(o => new ProjectWebsitePoiDto { Category = o.Category, Name = o.Name, Lat = o.Lat.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture), Lng = o.Lng.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture), Distance = o.Distance, Time = o.TimeText }).ToList();
+            dto.TravelTimes = _uow.ProjectWebsiteTravels.GetNoTracking().Where(t => t.ProjectId == projectId).OrderBy(t => t.SortOrder).ThenBy(t => t.Id)
+                .Select(t => new ProjectWebsiteTravelDto { Place = t.Place, Duration = t.Duration }).ToList();
+            var hasLocation = !string.IsNullOrWhiteSpace(dto.LocationTitle) || !string.IsNullOrWhiteSpace(dto.LocationText) || dto.GuideItems.Count > 0 || dto.Pois.Count > 0 || dto.TravelTimes.Count > 0 || !string.IsNullOrWhiteSpace(dto.LocationLat);
+            dto.BuySteps = _uow.ProjectWebsiteBuySteps.GetNoTracking()
+                .Where(b => b.ProjectId == projectId).OrderBy(b => b.SortOrder).ThenBy(b => b.Id)
+                .Select(b => new ProjectWebsiteBuyStepDto { Title = b.Title, Text = b.Text }).ToList();
+            // Nog niets bewaard: het formulier toont de standaardtitel en -stappen, zodat ze meteen aanpasbaar zijn
+            if (dto.BuySteps.Count == 0 && string.IsNullOrWhiteSpace(dto.BuyTitle))
+            {
+                dto.BuyTitle = DefaultBuyTitle;
+                dto.BuySteps = DefaultBuySteps.Select(x => new ProjectWebsiteBuyStepDto { Title = x.Title, Text = x.Text }).ToList();
+            }
+            var hasComfort = !string.IsNullOrWhiteSpace(dto.ComfortTitle) || !string.IsNullOrWhiteSpace(dto.ComfortSubtitle) || dto.ComfortItems.Count > 0;
             var hasStory = !string.IsNullOrWhiteSpace(dto.StoryTitle) || !string.IsNullOrWhiteSpace(dto.StoryText) || dto.StoryItems.Count > 0;
             var hasArch = !string.IsNullOrWhiteSpace(dto.ArchTitle) || !string.IsNullOrWhiteSpace(dto.ArchText) || dto.Quotes.Count > 0 || dto.Details.Count > 0;
-            dto.Blocks = NormalizeBlocks(web?.BlocksJson, hasStory, hasArch);
+            dto.Blocks = NormalizeBlocks(web?.BlocksJson, hasStory, hasArch, hasComfort, hasFaq, hasLocation);
             dto.Kpis = _uow.ProjectWebsiteKpis.GetNoTracking()
                 .Where(k => k.ProjectId == projectId)
                 .OrderBy(k => k.SortOrder).ThenBy(k => k.Id)
@@ -3176,11 +3211,21 @@ namespace ServiceCore
             web.ArchEyebrow = Clean(website.ArchEyebrow, 200);
             web.ArchTitle = Clean(website.ArchTitle, 250);
             web.ArchText = string.IsNullOrWhiteSpace(website.ArchText) ? null : website.ArchText.Trim();
+            web.ComfortTitle = Clean(website.ComfortTitle, 250);
+            web.ComfortSubtitle = Clean(website.ComfortSubtitle, 600);
+            web.BuyTitle = Clean(website.BuyTitle, 250);
+            web.ContactTitle = Clean(website.ContactTitle, 250);
+            web.ContactText = Clean(website.ContactText, 600);
+            web.LocationTitle = Clean(website.LocationTitle, 250);
+            web.LocationText = string.IsNullOrWhiteSpace(website.LocationText) ? null : website.LocationText.Trim();
+            web.LocationMunicipality = Clean(website.LocationMunicipality, 120);
+            web.LocationLat = ParseCoordinate(website.LocationLat, 90m);
+            web.LocationLng = ParseCoordinate(website.LocationLng, 180m);
             if (website.BlocksJson != null)
             {
                 var blocks = ParseBlocks(website.BlocksJson);
                 web.BlocksJson = System.Text.Json.JsonSerializer.Serialize(
-                    NormalizeBlocks(System.Text.Json.JsonSerializer.Serialize(blocks.Select(b => new { key = b.Key, visible = b.Visible })), true, true)
+                    NormalizeBlocks(System.Text.Json.JsonSerializer.Serialize(blocks.Select(b => new { key = b.Key, visible = b.Visible })), true, true, true, true, true)
                         .Select(b => new { key = b.Key, visible = b.Visible }));
             }
             web.UpdatedOn = DateTime.Now;
@@ -3189,6 +3234,60 @@ namespace ServiceCore
             foreach (var e in _uow.ProjectWebsiteStoryItems.GetNormal().Where(i => i.ProjectId == projectId).ToList()) _uow.ProjectWebsiteStoryItems.DeleteObject(e);
             foreach (var e in _uow.ProjectWebsiteQuotes.GetNormal().Where(i => i.ProjectId == projectId).ToList()) _uow.ProjectWebsiteQuotes.DeleteObject(e);
             foreach (var e in _uow.ProjectWebsiteDetails.GetNormal().Where(i => i.ProjectId == projectId).ToList()) _uow.ProjectWebsiteDetails.DeleteObject(e);
+            foreach (var e in _uow.ProjectWebsiteComfortItems.GetNormal().Where(i => i.ProjectId == projectId).ToList()) _uow.ProjectWebsiteComfortItems.DeleteObject(e);
+            foreach (var e in _uow.ProjectWebsiteFaqs.GetNormal().Where(i => i.ProjectId == projectId).ToList()) _uow.ProjectWebsiteFaqs.DeleteObject(e);
+            foreach (var e in _uow.ProjectWebsiteBuySteps.GetNormal().Where(i => i.ProjectId == projectId).ToList()) _uow.ProjectWebsiteBuySteps.DeleteObject(e);
+            foreach (var e in _uow.ProjectWebsiteGuideItems.GetNormal().Where(i => i.ProjectId == projectId).ToList()) _uow.ProjectWebsiteGuideItems.DeleteObject(e);
+            foreach (var e in _uow.ProjectWebsitePois.GetNormal().Where(i => i.ProjectId == projectId).ToList()) _uow.ProjectWebsitePois.DeleteObject(e);
+            foreach (var e in _uow.ProjectWebsiteTravels.GetNormal().Where(i => i.ProjectId == projectId).ToList()) _uow.ProjectWebsiteTravels.DeleteObject(e);
+            var go = 0;
+            foreach (var gi in website.GuideItems ?? new List<ProjectWebsiteGuideItemDto>())
+            {
+                var gtitle = Clean(gi.Title, 120);
+                if (gtitle == null) continue;
+                _uow.ProjectWebsiteGuideItems.Add(new ProjectWebsiteGuideItem { ProjectId = projectId, Title = gtitle, Text = Clean(gi.Text, 600), SortOrder = go++ });
+            }
+            var po = 0;
+            var validCategories = new HashSet<string> { "school", "shop", "ov", "groen", "sport" };
+            foreach (var pi in website.Pois ?? new List<ProjectWebsitePoiDto>())
+            {
+                var pname = Clean(pi.Name, 150);
+                var pcat = (pi.Category ?? string.Empty).Trim().ToLowerInvariant();
+                var plat = ParseCoordinate(pi.Lat, 90m);
+                var plng = ParseCoordinate(pi.Lng, 180m);
+                if (pname == null || !validCategories.Contains(pcat) || plat == null || plng == null) continue; // een voorziening heeft categorie, naam en positie nodig
+                _uow.ProjectWebsitePois.Add(new ProjectWebsitePoi { ProjectId = projectId, Category = pcat, Name = pname, Lat = plat.Value, Lng = plng.Value, Distance = Clean(pi.Distance, 30), TimeText = Clean(pi.Time, 40), SortOrder = po++ });
+            }
+            var to = 0;
+            foreach (var tr in website.TravelTimes ?? new List<ProjectWebsiteTravelDto>())
+            {
+                var place = Clean(tr.Place, 80);
+                var duration = Clean(tr.Duration, 40);
+                if (place == null || duration == null) continue;
+                _uow.ProjectWebsiteTravels.Add(new ProjectWebsiteTravel { ProjectId = projectId, Place = place, Duration = duration, SortOrder = to++ });
+            }
+            var bo = 0;
+            foreach (var bs in website.BuySteps ?? new List<ProjectWebsiteBuyStepDto>())
+            {
+                var btitle = Clean(bs.Title, 120);
+                if (btitle == null) continue;
+                _uow.ProjectWebsiteBuySteps.Add(new ProjectWebsiteBuyStep { ProjectId = projectId, Title = btitle, Text = Clean(bs.Text, 400), SortOrder = bo++ });
+            }
+            var fo = 0;
+            foreach (var fq in website.FaqItems ?? new List<ProjectWebsiteFaqItemDto>())
+            {
+                var question = Clean(fq.Question, 300);
+                var answer = ServiceCore.Helpers.HtmlSanitizer.Clean(fq.Answer);
+                if (question == null || answer.Length == 0) continue; // vraag en antwoord zijn allebei nodig
+                _uow.ProjectWebsiteFaqs.Add(new ProjectWebsiteFaq { ProjectId = projectId, Question = question, Answer = answer, SortOrder = fo++ });
+            }
+            var co = 0;
+            foreach (var ci in website.ComfortItems ?? new List<ProjectWebsiteComfortItemDto>())
+            {
+                var ctitle = Clean(ci.Title, 120);
+                if (ctitle == null) continue;
+                _uow.ProjectWebsiteComfortItems.Add(new ProjectWebsiteComfortItem { ProjectId = projectId, Title = ctitle, Text = Clean(ci.Text, 500), SortOrder = co++ });
+            }
             var so = 0;
             foreach (var i in website.StoryItems ?? new List<ProjectWebsiteStoryItemDto>())
             {
@@ -3209,6 +3308,19 @@ namespace ServiceCore
                 var title = Clean(d.Title, 200);
                 if (title == null) continue;
                 _uow.ProjectWebsiteDetails.Add(new ProjectWebsiteDetail { ProjectId = projectId, ImageName = Clean(d.ImageName, 260), Title = title, Text = Clean(d.Text, 1000), SortOrder = so++ });
+            }
+
+            // Foto's die op de website gekozen zijn (verhaal, architectuur, projectkaart) moeten publiek zijn. Enkel de publiek-vlag wordt
+            // gezet: de sectie blijft zoals ze is, dus een foto belandt hierdoor niet in de sectie "Galerij" (de beelden links op de pagina).
+            var chosenPhotos = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (!string.IsNullOrWhiteSpace(web.AerialImageName)) chosenPhotos.Add(web.AerialImageName);
+            foreach (var si in website.StoryItems ?? new List<ProjectWebsiteStoryItemDto>()) { var n = Clean(si.ImageName, 260); if (n != null) chosenPhotos.Add(n); }
+            foreach (var dt in website.Details ?? new List<ProjectWebsiteDetailDto>()) { var n = Clean(dt.ImageName, 260); if (n != null) chosenPhotos.Add(n); }
+            if (chosenPhotos.Count > 0)
+            {
+                var names = chosenPhotos.ToList();
+                foreach (var pic in _uow.ProjectPictures.GetNormal().Where(x => x.ProjectId == projectId && names.Contains(x.Name) && !x.IsPublic).ToList())
+                    pic.IsPublic = true;
             }
 
             // Projectkaart: omtrekken per eenheid vervangen door de lijst uit het formulier.
@@ -3259,13 +3371,37 @@ namespace ServiceCore
             return response;
         }
 
+        // Coördinaat uit tekst met punt of komma ("50,9155"); buiten het bereik of onleesbaar = null
+        private static decimal? ParseCoordinate(string? text, decimal limit)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return null;
+            if (!decimal.TryParse(text.Trim().Replace(',', '.'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v)) return null;
+            return Math.Abs(v) <= limit ? Math.Round(v, 6) : null;
+        }
+
+        // Standaardinhoud van het blok "Zo verloopt de aankoop" (zelfde als op de publieke pagina tot een project eigen stappen bewaart)
+        private const string DefaultBuyTitle = "Zo verloopt de aankoop";
+        private static readonly (string Title, string Text)[] DefaultBuySteps =
+        {
+            ("Kennismaking", "Een gesprek over je wensen, budget en timing."),
+            ("Plannen & keuze", "Samen overlopen we plannen, lastenboek en prijs."),
+            ("Reservatie", "We houden je woning vrij terwijl je financiering rond raakt."),
+            ("Compromis & akte", "Wij begeleiden je tot bij de notaris."),
+            ("Afwerking kiezen", "Keuken, sanitair en vloeren bij onze partners."),
+            ("Sleutels", "Samen lopen we alles na. Welkom thuis."),
+        };
+
         // Sorteerbare blokken van de projectpagina (intro en contact staan vast en komen hier niet in voor).
         private static readonly (string Key, string Label)[] WebsiteBlockKeys =
         {
             ("story", "Verhaal"),
             ("architecture", "Architectuur"),
+            ("comfort", "Comfort en energie"),
             ("homes", "De woningen"),
+            ("documents", "Documenten"),
+            ("location", "Ligging"),
             ("buy", "Zo verloopt de aankoop"),
+            ("faq", "Vragen"),
         };
 
         private static List<ProjectWebsiteBlockDto> ParseBlocks(string json)
@@ -3289,7 +3425,7 @@ namespace ServiceCore
 
         // Geldige, volledige lijst: enkel bekende sleutels, geen dubbels, ontbrekende blokken achteraan met standaardwaarde
         // (verhaal/architectuur zichtbaar zodra er inhoud is; woningen en aankoop standaard zichtbaar).
-        private static List<ProjectWebsiteBlockDto> NormalizeBlocks(string json, bool hasStory, bool hasArch)
+        private static List<ProjectWebsiteBlockDto> NormalizeBlocks(string json, bool hasStory, bool hasArch, bool hasComfort, bool hasFaq, bool hasLocation)
         {
             var known = WebsiteBlockKeys.ToDictionary(b => b.Key, b => b.Label);
             var result = new List<ProjectWebsiteBlockDto>();
@@ -3301,7 +3437,7 @@ namespace ServiceCore
             foreach (var (key, label) in WebsiteBlockKeys)
             {
                 if (result.Any(r => r.Key == key)) continue;
-                var visible = key switch { "story" => hasStory, "architecture" => hasArch, _ => true };
+                var visible = key switch { "story" => hasStory, "architecture" => hasArch, "comfort" => hasComfort, "faq" => hasFaq, "location" => hasLocation, _ => true };
                 result.Add(new ProjectWebsiteBlockDto { Key = key, Label = label, Visible = visible });
             }
             return result;

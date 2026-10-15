@@ -25,5 +25,8 @@ namespace CPMCore.Models.Budget
 
         /// <summary>Verkoopvoorstel: minimale verkoopwaarde (kostprijs + marge), grond/bouw gesplitst.</summary>
         public BudgetVerkoopVoorstelBO Voorstel { get; set; }
+
+        /// <summary>Verkoopwaarde - verkoopkosten - kostprijs (kaart "Verkoop t.o.v. kostprijs").</summary>
+        public ServiceCore.Budget.VerkoopResultaat VerkoopResultaat { get; set; }
     }
 }

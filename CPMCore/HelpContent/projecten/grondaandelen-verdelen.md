@@ -23,7 +23,7 @@ faq:
   - q: Waarom zie ik de knop Verdelen op oppervlakte niet?
     a: De knop verschijnt enkel als het project een totaal heeft en de eenheden een oppervlakte hebben. Zonder oppervlaktes valt er niets naar rato te verdelen.
   - q: Waar pas ik het totaal aan?
-    a: Niet op het scherm met de aandelen zelf. Gebruik **Totaal wijzigen** of ga naar **Bewerken**, tabblad **Status & foto**. Zo bestaat het totaal maar op één plek.
+    a: Niet op het scherm met de aandelen zelf. Gebruik Totaal wijzigen of ga naar Bewerken, tabblad Status & foto. Zo bestaat het totaal maar op één plek.
   - q: Wat gebeurt er als de som niet klopt?
     a: CPM waarschuwt, maar blokkeert het opslaan niet. Je kunt dus opslaan terwijl de som niet klopt. Controleer daarom op de eenhedenlijst of er een melding staat. De notaris heeft een kloppende verdeling nodig voor de verkoopakte.
 ---

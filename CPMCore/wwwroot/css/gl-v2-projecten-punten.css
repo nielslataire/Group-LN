@@ -177,3 +177,76 @@
 /* Zijpaneel breder op grote schermen */
 @media (min-width: 1400px) { .gl-v2-pt-panel { width: 560px; } }
 @media (min-width: 1800px) { .gl-v2-pt-panel { width: 640px; } }
+
+/* Plan in het paneel: klein voorbeeld (klik = vergroten); toevoegen- en grote-plan-modal boven het paneel */
+#pt-plan-viewer .gl-v2-pv-scroll { height: 300px; }
+#pt-plan-viewer .gl-v2-pv-bar { display: none; }
+#pt-plan-viewer .gl-v2-pv-stage { cursor: zoom-in; }
+.gl-v2-pt-planbox-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 6px; font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-pt-linkbtn { border: 0; background: transparent; padding: 0; font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); cursor: pointer; }
+.gl-v2-pt-linkbtn:hover { text-decoration: underline; }
+body.pt-over .modal-backdrop { z-index: 100000; }
+body.pt-over .modal.gl-v2-pt-over { z-index: 100010; }
+.gl-v2-pt-big-sub { margin: 2px 0 0; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-pt-big-body { padding: 0 !important; }
+#pt-plan-big-viewer .gl-v2-pv { border: 0; border-radius: 0; }
+#pt-plan-big-viewer .gl-v2-pv-scroll { height: calc(100vh - 230px); min-height: 360px; }
+#pt-plan-big-viewer .gl-v2-pv-stage { cursor: crosshair; }
+.gl-v2-pt-err { color: var(--gl-v2-danger); }
+.gl-v2-pt-file { font: 450 12.5px var(--gl-v2-font-sans); }
+
+/* Locatie op plan: lege staat (40r), plannenkiezer (40p), nieuw plan (40q) */
+.gl-v2-pt-opt { font-weight: 450; text-transform: none; letter-spacing: 0; color: var(--gl-v2-muted-light); }
+.gl-v2-pt-plan-empty { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; padding: 14px 16px; border: 1px dashed var(--gl-v2-dashed); border-radius: var(--gl-v2-radius-sm); background: var(--gl-v2-bg); }
+.gl-v2-pt-plan-empty[hidden] { display: none; }
+.gl-v2-pt-plan-empty b { font: 650 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-pt-plan-empty p { margin: 0; font: 450 12px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
+.gl-v2-pt-plan-empty-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.gl-v2-pt-plan-empty .gl-v2-pt-plan-note { font-size: 11px; color: var(--gl-v2-muted); }
+.gl-v2-pt-plan-caption { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-pt-planbox { display: flex; flex-direction: column; gap: 6px; }
+.gl-v2-pt-planbox[hidden] { display: none; }
+.gl-v2-pt-pick-body { display: flex; flex-direction: column; gap: 12px; }
+.gl-v2-pt-pick-seg { display: flex; gap: 6px; }
+.gl-v2-pt-pick-seg button { border: 1px solid var(--gl-v2-hairline); background: var(--gl-v2-surface); border-radius: 16px; padding: 5px 12px; font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); cursor: pointer; }
+.gl-v2-pt-pick-seg button.is-active { background: var(--gl-v2-primary-tint); border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); }
+.gl-v2-pt-pick-list { max-height: 340px; overflow-y: auto; border: 1px solid var(--gl-v2-hairline-soft); border-radius: var(--gl-v2-radius-sm); }
+.gl-v2-pt-pick-group { padding: 10px 14px 4px; font: 600 9px var(--gl-v2-font-sans); letter-spacing: .12em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gl-v2-pt-pick-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 14px; border: 0; border-top: 1px solid var(--gl-v2-hairline-soft); background: transparent; text-align: left; cursor: pointer; }
+.gl-v2-pt-pick-group + .gl-v2-pt-pick-item { border-top: 0; }
+.gl-v2-pt-pick-item:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-pt-pick-item.is-active { background: var(--gl-v2-primary-tint); box-shadow: inset 0 0 0 1.5px var(--gl-v2-primary); }
+.gl-v2-pt-pick-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.gl-v2-pt-pick-text b { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-pt-pick-text small { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-pt-pick-count { font: 600 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); min-width: 16px; text-align: right; }
+.gl-v2-pt-pick-empty { padding: 20px; text-align: center; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-pt-pick-foot { margin: 0; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
+.gl-v2-pt-pick-foot small { display: block; margin-top: 2px; color: var(--gl-v2-muted-light); font-size: 10.5px; }
+.gl-v2-pt-filecard { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-sm); }
+.gl-v2-pt-filecard[hidden] { display: none; }
+.gl-v2-pt-filecard i { font-size: 22px; color: var(--gl-v2-primary); }
+.gl-v2-pt-filecard span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.gl-v2-pt-filecard b { font: 600 12.5px var(--gl-v2-font-sans); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-pt-filecard small { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-pt-spacer { flex: 1; }
+
+.gl-v2-pt-photos { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.gl-v2-pt-photos[hidden] { display: none; }
+.gl-v2-pt-photo { position: relative; width: 72px; height: 72px; border-radius: 8px; overflow: hidden; border: 1px solid var(--gl-v2-hairline-soft); background: var(--gl-v2-bg); }
+.gl-v2-pt-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gl-v2-pt-photo button { position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; border: 0; border-radius: 50%; background: rgba(18, 28, 18, .7); color: #fff; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; padding: 0; }
+.gl-v2-pt-photo button:hover { background: var(--gl-v2-danger); }
+
+/* Punt op plan plaatsen: groot venster (desktop bijna schermvullend, tablet en gsm schermvullend), plan over de volledige breedte zonder kader */
+#pt-plan-big .modal-dialog { width: 96vw; max-width: 1700px; height: 94vh; margin: 3vh auto; align-items: stretch; }
+#pt-plan-big .modal-content { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+#pt-plan-big .modal-body { flex: 1; min-height: 0; padding: 0 !important; display: flex; }
+#pt-plan-big #pt-plan-big-viewer { flex: 1; min-width: 0; display: flex; }
+#pt-plan-big #pt-plan-big-viewer .gl-v2-pv { flex: 1; min-width: 0; border: 0; border-radius: 0; background: var(--gl-v2-bg); }
+#pt-plan-big #pt-plan-big-viewer .gl-v2-pv-scroll { height: auto; min-height: 0; flex: 1; }
+#pt-plan-big #pt-plan-big-viewer .gl-v2-pv-stage { margin: auto; box-shadow: none; }
+@media (max-width: 1199.98px) {
+    #pt-plan-big .modal-dialog { width: 100vw; max-width: none; height: 100dvh; margin: 0; }
+    #pt-plan-big .modal-content { border-radius: 0; }
+}

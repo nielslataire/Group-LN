@@ -253,6 +253,29 @@ public sealed class ChangeOrderPdfBuilder
 
     /// <summary>Bedrijfsgegevens voor kop/voet van een gl-v2-document: het facturatiebedrijf van het project;
     /// enkel als dat niets opleverde (zou niet mogen voorkomen) de terugval uit <see cref="GlV2PdfCompanyOptions"/>.</summary>
+    /// <summary>Bedrijfsgegevens (kop/voet/logo) van een project voor andere gl-v2-documenten (bv. het werfverslag): exact dezelfde regel en dezelfde
+    /// opmaak als de wijzigingsopdracht — het facturatiebedrijf van het project, met de terugval uit de configuratie.</summary>
+    public async Task<GlV2PdfCompanyInfo> BuildGlV2CompanyForProjectAsync(int projectId, CancellationToken ct = default)
+    {
+        var project = await _db.Project.AsNoTracking().FirstOrDefaultAsync(p => p.ProjectId == projectId, ct);
+        var issuer = await ResolveIssuerCompanyAsync(project, ct);
+        var model = new ChangeOrderPdfModel
+        {
+            IssuerCompanyId = issuer?.Id,
+            IssuerCompanyName = issuer?.Name,
+            IssuerCompanyLegalLine = issuer is null ? null : string.Join(" ", new[] { issuer.LegalName ?? issuer.Name, issuer.CompanyLegalFormAbbreviation }.Where(s => !string.IsNullOrWhiteSpace(s))),
+            IssuerCompanyVatNumber = issuer?.VatNumber,
+            IssuerCompanyIban = issuer?.DefaultBankAccountIban,
+            IssuerCompanyStreet = issuer is null ? null : string.Join(" ", new[] { issuer.AddressLine1, issuer.AddressLine2 }.Where(s => !string.IsNullOrWhiteSpace(s))),
+            IssuerCompanyPostalCity = issuer is null ? null : string.Join(" ", new[] { issuer.PostalCode, issuer.City }.Where(s => !string.IsNullOrWhiteSpace(s))),
+            IssuerCompanyPhone = issuer?.Phone,
+            IssuerCompanyEmail = issuer?.Email,
+            IssuerCompanyWebsite = issuer?.Website,
+            IssuerCompanyLogoBytes = issuer?.LogoBytes,
+        };
+        return BuildGlV2Company(model);
+    }
+
     public GlV2PdfCompanyInfo BuildGlV2Company(ChangeOrderPdfModel model)
     {
         var logoPath = Path.Combine(_env.WebRootPath, "Img", "groupln-logo.png");

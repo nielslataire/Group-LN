@@ -315,7 +315,7 @@
             function herreken() {
                 var l = lees(), heeft = l.length > 0, som = rond(l.reduce(function (t, x) { return t + x.aantal * x.oppervlakte; }, 0));
                 json.value = JSON.stringify(l); tot.textContent = nfm.format(som);
-                if (heeft) { opp.value = nfm.format(som); opp.readOnly = true; help.textContent = 'som van ' + l.length + ' regel' + (l.length === 1 ? '' : 's'); }
+                if (heeft) { GlV2Budget.zet(opp, som); opp.readOnly = true; help.textContent = 'som van ' + l.length + ' regel' + (l.length === 1 ? '' : 's'); }
                 else { opp.readOnly = false; help.textContent = leegTekst; }
             }
             function wijzig() { herreken(); grond(); json.dispatchEvent(new Event('input', { bubbles: true })); }
@@ -336,7 +336,7 @@
             var f = form.elements['Gegevens.DiepteFunderingCm'].value, v = form.elements['Gegevens.DiepteOndergrondsCm'].value, n = parseInt(form.elements['Gegevens.AantalVerdiepingenOndergronds'].value, 10) || 0;
             var dF = String(f).trim() === '' ? 40 : getal(f), dV = String(v).trim() === '' ? 300 : getal(v), a1 = getal(fund.value);
             var leegOnder = String(onder.value).trim() === '', a2 = leegOnder ? n * a1 : getal(onder.value);
-            g3.value = nfm.format(rond((a1 * dF + a2 * dV) / 100));
+            GlV2Budget.zet(g3, rond((a1 * dF + a2 * dV) / 100));
             var gw = g3.closest('.gl-v2-field'); if (gw) gw.classList.remove('is-warning', 'is-error');   // automatisch veld: nooit zelf in waarschuwing
             if (a1 > 0) { var fw = fund.closest('.gl-v2-field'); if (fw) fw.classList.remove('is-warning'); }   // de waarschuwing 'funderingen leeg' verdwijnt meteen
             var gh = g3.closest('.gl-v2-field').querySelector('.gl-v2-field-help');
@@ -356,12 +356,12 @@
     document.addEventListener('click', function (e) {
         var b = e.target.closest('[data-bw-take]'); if (!b) return;
         var inp = document.getElementById(b.getAttribute('data-bw-take')); if (!inp) return;
-        inp.value = inp.getAttribute('data-base'); live(); inp.dispatchEvent(new Event('input', { bubbles: true }));
+        GlV2Budget.zet(inp, inp.getAttribute('data-base')); live(); inp.dispatchEvent(new Event('input', { bubbles: true }));
     });
     // Leeg veld → de gekoppelde basisprijs als startwaarde (zoals de klassieke pagina)
     ['ruwbouw', 'gevel', 'gips', 'terras'].forEach(function (k) {
         var inp = document.getElementById('inp-' + k);
-        if (inp && num(inp) === 0 && inp.getAttribute('data-base')) { inp.value = inp.getAttribute('data-base'); }
+        if (inp && num(inp) === 0 && inp.getAttribute('data-base')) { GlV2Budget.zet(inp, inp.getAttribute('data-base')); }
     });
     live();
 
@@ -384,7 +384,7 @@
     document.getElementById('bw-index-ok').addEventListener('click', function () {
         var v = document.getElementById('bw-index-pick'); if (!v || !v.value) return;
         var inp = document.getElementById(target === 'S' ? 'bw-sindex' : 'bw-iindex');
-        inp.value = String(v.value).replace('.', ','); live(); inp.dispatchEvent(new Event('input', { bubbles: true })); modal.hide();
+        GlV2Budget.zet(inp, v.value); live(); inp.dispatchEvent(new Event('input', { bubbles: true })); modal.hide();
     });
 })();
 </script>

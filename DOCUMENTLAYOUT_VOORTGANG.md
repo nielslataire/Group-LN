@@ -464,3 +464,11 @@ Console.WriteLine("Klaar.");
 Draaien: `dotnet run` in die map. Resultaat: `.pdf` + `_p1.png`/`_p2.png`/… per document in een
 `out/`-submap naast de build-output. **Lees het `.pdf`-bestand** (met de Read-tool of een PDF-viewer)
 voor de echte controle — de losse PNG's hebben een transparante achtergrond (zie "Visueel testen").
+
+## Budget intern (35q) en bank (35r) — gebouwd 13/10/2026
+- `CPMCore/Documents/GlV2/BudgetDocumentV2.cs` (één klasse, twee varianten via `BudgetPdfModel.Intern`), gevuld door `CPMCore/Services/BudgetPdfBuilder.cs` (scoped, geregistreerd in Program.cs). Route: `ProjectenController.DownloadBudgetPdfV2(versieId, intern)`; de topbarknop PDF op Resultaat is een dropdown (PDF intern / PDF bank).
+- Basis uitgebreid: `GlV2PdfDocumentBase.Compose` is virtueel (meerdere paginaformaten: A4 staand + A4 liggend), `Footer` is virtueel, compacte kop kent `CompactKicker`/`CompactKickerKleur`/`CompactNote`.
+- Nieuwe bouwstenen in `GlV2PdfComponents`: `SectieKop`, `Fiche`, `KpiTegels`, `BudgetTabel` (groene kop, groeps-, subtotaal- en totaalrij), `ResultaatStrook`, `Aandachtsblok`.
+- Keuzes (Niels, 13/10/2026): geen codekolom bij de activiteiten (onze activiteiten hebben geen code); de "delen" zijn de lots uit stap 6; de oude PDF-knop is vervangen door de dropdown.
+- Afwijkingen van het ontwerp: pagina-verwijzingen ("p. 2", "p. 4") zijn vast (zoals in het ontwerp); kostprijs per eenheid volgt de verdeelsleutels van stap 8 (grond naar grondoppervlakte incl. 2e zone, bouw naar gereduceerde oppervlakte); bank = totale kostprijs min financiering, onvoorzien en publiciteit.
+- Visueel getest met voorbeelddata (scratchpad `PdfBudgetTest`, rendert uit de gebouwde CPMCore.dll zodat Visual Studio de bin-map mag vasthouden); niet getest met echte budgetdata uit de database.

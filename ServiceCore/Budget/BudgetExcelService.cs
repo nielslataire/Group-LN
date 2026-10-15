@@ -17,7 +17,8 @@ namespace ServiceCore.Budget
             List<Activity> activiteiten,
             List<ActivityGroup> groepen,
             List<BudgetOppervlaktes> oppervlaktes,
-            decimal gewogenFactor)
+            decimal gewogenFactor,
+            VerkoopResultaat verkoopResultaat = null)
         {
             using var wb = new XLWorkbook();
 
@@ -135,20 +136,44 @@ namespace ServiceCore.Budget
                 SetKostenRij(rij++, "Minimale verkoopwaarde", vk.MinimaleVerkoopwaarde);
                 if (vk.MarktTotaal.HasValue) SetKostenRij(rij++, "Marktwaarde (mediaan vergelijkbare units)", vk.MarktTotaal.Value);
 
-                ws1.Cell(rij, 1).Value = $"OPBRENGST ({vk.OpbrengstBron})";
-                ws1.Cell(rij, 2).Value = (double)vk.Opbrengst;
-                ws1.Cell(rij, 2).Style.NumberFormat.Format = "€ #,##0";
-                ws1.Range(rij, 1, rij, 3).Style.Font.Bold = true;
-                ws1.Range(rij, 1, rij, 3).Style.Fill.BackgroundColor = XLColor.FromHtml("#ffe5b4");
-                rij++;
+                if (verkoopResultaat is { HeeftVerkoop: true } vr)
+                {
+                    // Zelfde cijfers als stap 9 (Verkoop t.o.v. kostprijs): verkoopwaarde min verkoopkosten min kostprijs.
+                    SetKostenRij(rij++, $"Verkoopwaarde ({vr.Bron})", vr.Verkoopwaarde);
+                    SetKostenRij(rij++, "Makelaar — grondaandeel (incl. niet-aftrekbare btw)", vr.GrondKostInclBtw);
+                    SetKostenRij(rij++, "Makelaar — bouwaandeel (btw aftrekbaar, telt niet mee)", vr.CommissieBouw);
+                    if (vr.Overige > 0) SetKostenRij(rij++, "Overige verkoopkosten", vr.Overige);
+                    SetKostenRij(rij++, "Verkoopkosten totaal", vr.Verkoopkosten);
+                    SetKostenRij(rij++, "Netto opbrengst", vr.NettoOpbrengst);
 
-                ws1.Cell(rij, 1).Value = "MARGE";
-                ws1.Cell(rij, 2).Value = (double)vk.Marge;
-                ws1.Cell(rij, 2).Style.NumberFormat.Format = "€ #,##0";
-                ws1.Cell(rij, 3).Value = (double)vk.MargePerc;
-                ws1.Cell(rij, 3).Style.NumberFormat.Format = "0.0%";
-                ws1.Range(rij, 1, rij, 3).Style.Font.Bold = true;
-                ws1.Range(rij, 1, rij, 3).Style.Font.FontColor = XLColor.FromHtml(vk.Marge >= 0 ? "#198754" : "#dc3545");
+                    ws1.Cell(rij, 1).Value = "RESULTAAT";
+                    ws1.Cell(rij, 2).Value = (double)vr.Resultaat;
+                    ws1.Cell(rij, 2).Style.NumberFormat.Format = "€ #,##0";
+                    ws1.Cell(rij, 3).Value = (double)vr.MargeOpKostprijs;
+                    ws1.Cell(rij, 3).Style.NumberFormat.Format = "0.0%";
+                    ws1.Cell(rij, 4).Value = "marge op kostprijs";
+                    ws1.Range(rij, 1, rij, 3).Style.Font.Bold = true;
+                    ws1.Range(rij, 1, rij, 3).Style.Fill.BackgroundColor = XLColor.FromHtml("#ffe5b4");
+                    ws1.Range(rij, 1, rij, 3).Style.Font.FontColor = XLColor.FromHtml(vr.Resultaat >= 0 ? "#198754" : "#dc3545");
+                    rij++;
+                }
+                else
+                {
+                    ws1.Cell(rij, 1).Value = $"OPBRENGST ({vk.OpbrengstBron})";
+                    ws1.Cell(rij, 2).Value = (double)vk.Opbrengst;
+                    ws1.Cell(rij, 2).Style.NumberFormat.Format = "€ #,##0";
+                    ws1.Range(rij, 1, rij, 3).Style.Font.Bold = true;
+                    ws1.Range(rij, 1, rij, 3).Style.Fill.BackgroundColor = XLColor.FromHtml("#ffe5b4");
+                    rij++;
+
+                    ws1.Cell(rij, 1).Value = "MARGE";
+                    ws1.Cell(rij, 2).Value = (double)vk.Marge;
+                    ws1.Cell(rij, 2).Style.NumberFormat.Format = "€ #,##0";
+                    ws1.Cell(rij, 3).Value = (double)vk.MargePerc;
+                    ws1.Cell(rij, 3).Style.NumberFormat.Format = "0.0%";
+                    ws1.Range(rij, 1, rij, 3).Style.Font.Bold = true;
+                    ws1.Range(rij, 1, rij, 3).Style.Font.FontColor = XLColor.FromHtml(vk.Marge >= 0 ? "#198754" : "#dc3545");
+                }
             }
 
             ws1.Column(1).Width = 45;
@@ -240,7 +265,7 @@ namespace ServiceCore.Budget
                 ws3.Cell(1, 1).Style.Font.FontSize = 14;
                 ws3.Cell(1, 1).Style.Font.FontColor = XLColor.FromHtml("#0d6efd");
 
-                var headers3 = new[] { "Eenheid", "GBA (m²)", "Tuin", "Terras", "Dakterras", "Grondopp." };
+                var headers3 = new[] { "Eenheid", "GBA (m²)", "Tuin", "Terras", "Dakterras", "Grondopp. zone 1", "Grondopp. zone 2", "Grondopp. totaal" };
                 for (int c = 0; c < headers3.Length; c++)
                 {
                     ws3.Cell(3, c + 1).Value = headers3[c];
@@ -257,12 +282,14 @@ namespace ServiceCore.Budget
                     ws3.Cell(rij3, 4).Value = (double)(o.TerrasPrefab + o.TerrasGelijkvloers);
                     ws3.Cell(rij3, 5).Value = (double)o.Dakterras;
                     ws3.Cell(rij3, 6).Value = (double)o.Grondopp;
-                    for (int c = 2; c <= 6; c++) ws3.Cell(rij3, c).Style.NumberFormat.Format = "#,##0.00";
+                    ws3.Cell(rij3, 7).Value = (double)o.GrondoppAgrarisch;
+                    ws3.Cell(rij3, 8).Value = (double)(o.Grondopp + o.GrondoppAgrarisch);
+                    for (int c = 2; c <= 8; c++) ws3.Cell(rij3, c).Style.NumberFormat.Format = "#,##0.00";
                     rij3++;
                 }
 
                 ws3.Column(1).Width = 30;
-                for (int c = 2; c <= 6; c++) ws3.Column(c).Width = 14;
+                for (int c = 2; c <= 8; c++) ws3.Column(c).Width = 16;
             }
 
             using var ms = new MemoryStream();

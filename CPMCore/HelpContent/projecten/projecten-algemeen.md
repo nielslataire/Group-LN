@@ -17,9 +17,9 @@ intro: |
   kaarten. Hier zoek je een project om te openen, of start je een nieuw project.
 faq:
   - q: Waarom zie ik niet meteen alle projecten?
-    a: De lijst toont eerst 30 projecten, gesorteerd op fase. Klik onderaan op **Laad meer** voor de volgende reeks, of zoek en filter om sneller te vinden wat je nodig hebt.
+    a: De lijst toont eerst 30 projecten, gesorteerd op fase. Klik onderaan op Laad meer voor de volgende reeks, of zoek en filter om sneller te vinden wat je nodig hebt.
   - q: Waarom staat er Geen opleverdatum op een kaart?
-    a: Er is nog geen aanvangsdatum of uitvoeringstermijn ingevuld. Vul die in bij **Project bewerken**, tabblad **Planning**.
+    a: Er is nog geen aanvangsdatum of uitvoeringstermijn ingevuld. Vul die in bij Project bewerken, tabblad Planning.
   - q: Ik mis een project in de lijst. Waar is het?
     a: Je ziet enkel projecten waar je toegang toe hebt. [VRAAG: wie geeft toegang tot een project, en waar stelt een beheerder dat in?]
 ---

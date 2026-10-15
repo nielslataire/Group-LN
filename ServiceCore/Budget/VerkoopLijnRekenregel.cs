@@ -16,7 +16,7 @@ namespace ServiceCore.Budget
     public static class VerkoopLijnRekenregel
     {
         /// <summary>Herrekent de afgeleide velden van de lijn volgens haar bron. Oppervlaktes komen uit stap 2 (BudgetOppervlaktesBO).</summary>
-        public static void Herbereken(BudgetVerkoopLijn l, decimal oppGereduceerd, decimal grondopp)
+        public static void Herbereken(BudgetVerkoopLijn l, decimal oppGereduceerd, decimal grondopp, decimal grondoppAgrarisch = 0m)
         {
             if (l is null) return;
             var bron = (VerkoopPrijsBron?)l.PrijsBron;
@@ -38,6 +38,11 @@ namespace ServiceCore.Budget
                 l.GrondPrijsPerM2 = Afgeleid(l.Grondwaarde, grondopp);
             }
 
+            // Tweede grondzone (bv. agrarisch): eigen €/m² per woning × de tweede oppervlakte; bij ruil of zonder tweede oppervlakte niets
+            if (l.IsRuil || grondoppAgrarisch <= 0m) { l.GrondwaardeAgrarisch = null; l.GrondAgrPrijsPerM2 = null; }
+            else if (l.GrondAgrPrijsPerM2.HasValue) l.GrondwaardeAgrarisch = Math.Round(l.GrondAgrPrijsPerM2.Value * grondoppAgrarisch, 2);
+            else if (l.GrondwaardeAgrarisch.HasValue) l.GrondAgrPrijsPerM2 = Afgeleid(l.GrondwaardeAgrarisch, grondoppAgrarisch);
+
             if (perM2)
             {
                 if (l.BouwPrijsPerM2.HasValue && oppGereduceerd > 0m)
@@ -50,7 +55,7 @@ namespace ServiceCore.Budget
 
             var eigenVraagprijs = bron == VerkoopPrijsBron.ManueelBedrag && l.Vraagprijs is > 0m;
             if (!eigenVraagprijs)
-                l.Vraagprijs = Vraagprijs(l.Bouwwaarde, l.Grondwaarde, l.ExtraForfait);
+                l.Vraagprijs = Vraagprijs(l.Bouwwaarde, (l.Grondwaarde.HasValue || l.GrondwaardeAgrarisch.HasValue) ? (l.Grondwaarde ?? 0m) + (l.GrondwaardeAgrarisch ?? 0m) : null, l.ExtraForfait);
         }
 
         /// <summary>bouw + grond + forfait; null als er geen enkel bedrag is.</summary>

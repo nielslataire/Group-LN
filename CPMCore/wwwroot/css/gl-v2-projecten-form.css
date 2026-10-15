@@ -328,3 +328,72 @@
     .web-rep-row, .web-rep-quote, .web-rep-detail { grid-template-columns: 20px minmax(0, 1fr) auto; }
     .web-rep-row > .web-pick-cell, .web-rep-row > .gl-v2-field { grid-column: 2 / 3; }
 }
+
+.web-rep-comfort { grid-template-columns: 20px minmax(0, 1fr) minmax(0, 2fr) auto; }
+.web-doc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.web-doc-list li { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.web-doc-list i { color: var(--gl-v2-primary); font-size: 18px; }
+@media (max-width: 767.98px) { .web-rep-comfort { grid-template-columns: 20px minmax(0, 1fr) auto; } }
+
+.web-rep-buy { grid-template-columns: 20px minmax(0, 1fr) minmax(0, 2fr) auto; }
+.web-rep-faq { grid-template-columns: 20px minmax(0, 1fr) auto; }
+.web-faq-main { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.web-faq-answer .ql-container { min-height: 110px; font-size: 14px; }
+.web-faq-answer .ql-editor { min-height: 110px; }
+@media (max-width: 767.98px) { .web-rep-buy { grid-template-columns: 20px minmax(0, 1fr) auto; } }
+
+.web-rep-guide { grid-template-columns: 20px minmax(0, 1fr) minmax(0, 2fr) auto; }
+.web-rep-travel { grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1fr) auto; }
+.web-rep-poi { grid-template-columns: 20px 150px minmax(0, 1fr) 84px 124px 88px 88px auto; }
+.web-loc-point { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 10px; align-items: end; }
+@media (max-width: 991.98px) {
+    .web-rep-poi { grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1fr) auto; }
+    .web-rep-poi > .web-rep-grow { grid-column: 2 / 4; }
+}
+@media (max-width: 767.98px) {
+    .web-rep-guide, .web-rep-travel { grid-template-columns: 20px minmax(0, 1fr) auto; }
+    .web-loc-point { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ── Tab "SEO & website": navigatie links (zelfde look als Instellingen) + inklapbare blokkaarten ── */
+/* Sticky ONDERDELEN-menu: op ≥768px scrolt de pagina zelf (de kaart is geen vaste hoogte), maar zowel .gl-v2-body{overflow:hidden}
+   als .gl-v2-project-scroll{overflow-y:auto} zijn dan scrollcontainers die niet scrollen — position:sticky bindt eraan en blijft staan.
+   Enkel bij de zichtbare SEO-tab: body 'clip' (zelfde correctie als Projecten/DetailDocsV2 en UnitFormV2), de schil zelf visible. */
+@media (min-width: 768px) {
+    .gl-v2 .gl-v2-body.is-full-height:has(.gl-v2-tab-panel[data-tab-panel="seo"]:not([hidden])) { overflow: clip; }
+    .gl-v2-project-form .gl-v2-project-scroll:has(> .gl-v2-tab-panel[data-tab-panel="seo"]:not([hidden])) { overflow: visible; }
+}
+.web-layout { display: flex; align-items: flex-start; gap: 22px; }
+.web-nav { width: 210px; flex: none; position: sticky; top: 12px; display: flex; flex-direction: column; gap: 2px; }
+.web-nav-label { font: 600 9px var(--gl-v2-font-sans); color: var(--gl-v2-muted); letter-spacing: .14em; padding: 0 10px 8px; }
+.web-nav-list { display: flex; flex-direction: column; gap: 2px; }
+.web-nav-item { display: flex; align-items: center; gap: 9px; height: 34px; padding: 0 10px; border-radius: 8px; border-left: 3px solid transparent; text-decoration: none; color: var(--gl-v2-ink); }
+.web-nav-item:hover { background: var(--gl-v2-hover-tint); }
+.web-nav-item.is-active { background: var(--gl-v2-primary-tint); border-left-color: var(--gl-v2-primary); }
+.web-nav-item-label { flex: 1; font: 500 13px var(--gl-v2-font-sans); }
+.web-nav-item.is-active .web-nav-item-label { color: var(--gl-v2-primary); font-weight: 600; }
+.web-nav-item.is-off .web-nav-item-label { color: var(--gl-v2-muted); }
+.web-nav-item-off { font: 600 10px var(--gl-v2-font-sans); color: var(--gl-v2-muted); text-transform: uppercase; letter-spacing: .06em; }
+.web-nav-rule { height: 1px; background: var(--gl-v2-hairline); margin: 12px 10px; }
+.web-nav-hint { font: 450 11px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted); padding: 0 10px; margin: 0; text-wrap: pretty; }
+.web-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.web-main > .gl-v2-section-card { scroll-margin-top: 12px; }
+
+.web-card-header { cursor: pointer; }
+.web-card-chevron { margin-left: auto; color: var(--gl-v2-muted); transition: transform .15s; }
+.web-main > .gl-v2-section-card.is-collapsed .web-card-chevron { transform: rotate(-90deg); }
+.web-main > .gl-v2-section-card.is-collapsed > :not(.gl-v2-section-card-header) { display: none !important; }
+.web-main > .gl-v2-section-card.is-collapsed { padding-bottom: 14px; }
+.web-main > .gl-v2-section-card.is-collapsed .gl-v2-section-card-header { margin-bottom: 0; border-bottom: 0; }
+.web-main > .gl-v2-section-card.is-collapsed .gl-v2-section-card-title { color: var(--gl-v2-muted); }
+.web-main > .gl-v2-section-card.is-collapsed .gl-v2-section-card-header::after { content: "staat uit"; font: 600 10px var(--gl-v2-font-sans); color: var(--gl-v2-muted); text-transform: uppercase; letter-spacing: .06em; order: 5; margin-left: 8px; }
+.web-main > .gl-v2-section-card.is-collapsed .web-card-chevron { order: 6; }
+
+@media (max-width: 1099.98px) {
+    .web-layout { flex-direction: column; }
+    .web-nav { width: 100%; position: static; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .web-nav-label, .web-nav-rule, .web-nav-hint { display: none; }
+    .web-nav-list { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+    .web-nav-item { height: 30px; border-left: 0; border: 1px solid var(--gl-v2-hairline); }
+    .web-nav-item.is-active { border-color: var(--gl-v2-primary); }
+}

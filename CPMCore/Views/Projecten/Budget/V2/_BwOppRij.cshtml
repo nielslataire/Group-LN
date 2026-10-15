@@ -19,7 +19,7 @@
         ("tuin", "buiten", Model.Tuin), ("terrasPrefab", "buiten", Model.TerrasPrefab), ("terrasGelijkvloers", "buiten", Model.TerrasGelijkvloers), ("dakterras", "buiten", Model.Dakterras),
         ("garagesParkingsBovenGr", "park", Model.GaragesParkingsBovenGr), ("garBergOndergronds", "park", Model.GarBergOndergronds), ("bergGelijkvloers", "park", Model.BergGelijkvloers), ("carports", "park", Model.Carports),
         ("poorten", "park", (decimal)Model.Poorten), ("doorritGVL", "overig", Model.DoorritGVL), ("zolder", "overig", Model.Zolder), ("gemeenschappelijkeDelen", "overig", Model.GemeenschappelijkeDelen), ("wegenis", "overig", Model.Wegenis),
-        ("grondopp", "grond", Model.Grondopp),
+        ("grondopp", "grond", Model.Grondopp), ("grondoppAgrarisch", "grond", Model.GrondoppAgrarisch),
     };
     var isWoning = (Model.GroupTypeName ?? "").Contains("woon", StringComparison.OrdinalIgnoreCase);
     var zonderGrond = isWoning && Model.Grondopp <= 0m;
@@ -45,7 +45,7 @@
         var leeg = opp0 && ((field == "grondopp" && Model.Grondopp <= 0m) || (field == "bewoonbareOpp" && Model.BewoonbareOpp <= 0m));
         <td class="is-num" data-group="@group" style="min-width:86px">
             <div class="gl-v2-field gl-v2-field-bare@(leeg ? " is-warning" : "")"><div class="gl-v2-field-box">
-                <input type="text" inputmode="decimal" class="gl-v2-field-input is-num is-tabular opp-input" data-field="@field" value="@(val == 0m && field == "grondopp" && isWoning ? "" : field == "poorten" ? ((int)val).ToString() : F(val))" placeholder="@(leeg ? "—" : field == "poorten" ? "0" : "0,00")" aria-label="@(field == "poorten" ? "Aantal garagepoorten" : field)" title="@(leeg ? "Deze woning heeft geen grondoppervlakte" : "")" />
+                <input type="text" inputmode="decimal" class="gl-v2-field-input is-num is-tabular opp-input" data-field="@field" value="@(val == 0m && ((field == "grondopp" && isWoning) || field == "grondoppAgrarisch") ? "" : field == "poorten" ? ((int)val).ToString() : F(val))" placeholder="@(leeg ? "—" : field == "poorten" ? "0" : "0,00")" aria-label="@(field == "poorten" ? "Aantal garagepoorten" : field == "grondoppAgrarisch" ? "Tweede grondzone (m², bv. agrarisch)" : field)" title="@(leeg ? "Deze woning heeft geen grondoppervlakte" : "")" />
             </div></div>
         </td>
     }

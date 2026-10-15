@@ -33,9 +33,9 @@ public class VerkoopVoorstelMarktTests
     }
 
     [Fact]
-    public void Verkochte_units_van_zelfde_type_en_oppervlakte_hebben_voorrang()
+    public void Verkochte_en_te_koop_units_van_zelfde_type_en_oppervlakte_tellen_samen()
     {
-        // 5 verkochte appartementen rond 90 m² à 4.000-4.400 €/m², plus duurdere te-koop-units die niet mogen meetellen
+        // 5 verkochte appartementen rond 90 m² à 4.000-4.400 €/m², plus 5 duurdere te-koop-units: beide tellen mee
         var markt = Markt(
             Unit("Appartement", 85, 4000, true, 60), Unit("Appartement", 88, 4100, true, 90), Unit("Appartement", 90, 4200, true, 120),
             Unit("Appartement", 95, 4300, true, 45), Unit("Appartement", 100, 4400, true, 200),
@@ -46,13 +46,13 @@ public class VerkoopVoorstelMarktTests
         VerkoopVoorstelService.VerrijkMetMarkt(bo, markt);
 
         var e = bo.Eenheden.Single();
-        Assert.Equal("verkocht", e.MarktBasis);
+        Assert.Equal("te koop + verkocht", e.MarktBasis);
         Assert.Equal("zelfde type, opp. ±20 %", e.MarktVergelijking);
-        Assert.Equal(5, e.MarktAantal);
-        Assert.Equal(4200m, e.MarktMediaanPerM2);
-        Assert.Equal(4200m * 90m, e.MarktPrijs);
-        Assert.Equal(4100m, e.MarktP25PerM2);
-        Assert.Equal(4300m, e.MarktP75PerM2);
+        Assert.Equal(10, e.MarktAantal);
+        Assert.Equal(4950m, e.MarktMediaanPerM2);   // mediaan van 4.000 ... 5.900
+        Assert.Equal(4950m * 90m, e.MarktPrijs);
+        Assert.Equal(4225m, e.MarktP25PerM2);
+        Assert.Equal(5675m, e.MarktP75PerM2);
 
         Assert.Equal(5, markt.AantalTeKoop);
         Assert.Equal(5, markt.VerkochtInPeriode);
@@ -80,8 +80,8 @@ public class VerkoopVoorstelMarktTests
         // Appartement: 1 verkocht + 0 te koop van zelfde type → te weinig; alle types (6 units) ≥ 5 te koop → "te koop" op "alle types, opp ±20 %"? nee: opp-band rond 90 bevat enkel de ene verkochte → door naar "alle types": 5 te koop
         var app = bo.Eenheden.Single(e => e.EenheidNaam == "App B");
         Assert.Equal("alle types", app.MarktVergelijking);
-        Assert.Equal("te koop", app.MarktBasis);
-        Assert.Equal(5, app.MarktAantal);
+        Assert.Equal("te koop + verkocht", app.MarktBasis);   // verkocht en te koop tellen samen mee
+        Assert.Equal(6, app.MarktAantal);
     }
 
     [Fact]
@@ -155,5 +155,22 @@ public class VerkoopVoorstelMarktTests
     public void Classificeert_type_op_naam(string type, string groep, string verwacht)
     {
         Assert.Equal(verwacht, VerkoopVoorstelService.ClassificeerType(type, groep));
+    }
+
+    [Fact]
+    public void Woning_wordt_ook_op_perceelgrootte_vergeleken()
+    {
+        MarktReferentieUnitBO W(decimal opp, decimal perceel, decimal ppm2) { var u = Unit("Woning", opp, ppm2, true, 60); u.LandArea = perceel; return u; }
+        // 5 woningen op een vergelijkbaar perceel (±100 m²) à 3.500 €/m², en 5 op veel groter perceel à 5.000 €/m²
+        var markt = Markt(
+            W(120, 90, 3500), W(125, 95, 3500), W(118, 100, 3500), W(122, 110, 3500), W(121, 120, 3500),
+            W(120, 600, 5000), W(125, 650, 5000), W(118, 700, 5000), W(122, 800, 5000), W(121, 900, 5000));
+
+        var bo = Voorstel(("Woning 1", "Woning", 120m));   // Grondopp = 100 m²
+        VerkoopVoorstelService.VerrijkMetMarkt(bo, markt);
+
+        var e = bo.Eenheden.Single();
+        Assert.Equal("zelfde type, opp. ±20 %, perceel ±30 %", e.MarktVergelijking);
+        Assert.Equal(3500m, e.MarktMediaanPerM2);
     }
 }

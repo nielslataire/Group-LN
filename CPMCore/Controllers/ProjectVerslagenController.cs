@@ -13,6 +13,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using QuestPDF.Fluent;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Processing;
 using SmartBreadcrumbs.Nodes;
 
 namespace CPMCore.Controllers;
@@ -30,6 +33,8 @@ public class ProjectVerslagenController : BaseController
     private readonly IWebHostEnvironment _env;
     private readonly IOptions<GlV2PdfCompanyOptions> _company;
     private readonly ILogger<ProjectVerslagenController> _logger;
+    private readonly FacadeCore.Signing.IAssetStorageClient _storage;
+    private readonly CPMCore.Services.Signing.ChangeOrderPdfBuilder _pdfBuilder;
 
     // Statussen van een punt dat "nog open" is bij een volgend bezoek (nieuwe reeks + legacy) en dus
     // meegaat als "vorig punt" in het volgende verslag. Concept/PendingApproval staan hier bewust niet
@@ -46,9 +51,9 @@ public class ProjectVerslagenController : BaseController
     };
 
     public ProjectVerslagenController(cpmRunningContext db, IConstructionIssueService issues, IEmailSender email, IWebHostEnvironment env,
-        IOptions<GlV2PdfCompanyOptions> company, ILogger<ProjectVerslagenController> logger)
+        IOptions<GlV2PdfCompanyOptions> company, ILogger<ProjectVerslagenController> logger, FacadeCore.Signing.IAssetStorageClient storage, CPMCore.Services.Signing.ChangeOrderPdfBuilder pdfBuilder)
     {
-        _db = db; _issues = issues; _email = email; _env = env; _company = company; _logger = logger;
+        _db = db; _issues = issues; _email = email; _env = env; _company = company; _logger = logger; _storage = storage; _pdfBuilder = pdfBuilder;
     }
 
     private string? UserCode => User.FindFirst(CpmClaims.UserId)?.Value;
@@ -149,8 +154,8 @@ public class ProjectVerslagenController : BaseController
         await _db.SaveChangesAsync();
 
         // Alle punten die nog open staan komen mee; afgesloten punten niet.
-        var openIds = await _db.ConstructionIssue.AsNoTracking().Where(i => i.ProjectId == projectId && OpenStatuses.Contains(i.Status)).Select(i => i.Id).ToListAsync();
-        foreach (var iid in openIds) _db.WerfverslagPunt.Add(new WerfverslagPunt { VerslagId = verslag.Id, IssueId = iid, IsNieuw = false });
+        var openIssues = await _db.ConstructionIssue.AsNoTracking().Where(i => i.ProjectId == projectId && OpenStatuses.Contains(i.Status)).Select(i => new { i.Id, i.Status }).ToListAsync();
+        foreach (var oi in openIssues) _db.WerfverslagPunt.Add(new WerfverslagPunt { VerslagId = verslag.Id, IssueId = oi.Id, IsNieuw = false, StatusBijStart = PuntenWeergave.Canon(oi.Status) });
         await _db.SaveChangesAsync();
         return RedirectToAction(nameof(Edit), new { projectId, id = verslag.Id });
     }
@@ -230,7 +235,13 @@ public class ProjectVerslagenController : BaseController
             Aanwezigen = ParseAanwezigen(v.AanwezigenJson), Suggesties = sugg.DistinctBy(s => s.Name.ToLowerInvariant()).ToList(),
             OpenPunten = open, NieuwePunten = nieuw, VorigId = vorig?.Id, VorigNaam = vorig?.Naam, VorigDatum = vorig?.Datum,
             Panel = await BuildPanelData(projectId, name),
+            PlanPages = (await PlanPages(await LoadData(v, projectId), projectId)).Select(x => (object)new
+            {
+                key = x.Key, url = x.Url, kind = x.Kind, page = x.Page, naam = x.Naam,
+                pins = x.Pins.Select(p => new { x = p.X, y = p.Y, label = p.Label, kritiek = p.Kritiek }).ToList()
+            }).ToList(),
         };
+        ViewData["HelpScreenId"] = "verslagen-edit";
         return View("EditV2", vm);
     }
 
@@ -363,80 +374,224 @@ public class ProjectVerslagenController : BaseController
         return Json(new { ok = true, issueId = issue.Id, nr = "P-" + (issue.PuntNr ?? issue.Id).ToString("000"), title = PuntenWeergave.Titel(title), contractor = contractorName });
     }
 
-    // ── Afronden: punten goedkeuren/afsluiten + verslag versturen ───────────────────────────────────
+    // ── Gegevens voor het verslag en de plannen-bijlage ─────────────────────────────────────────────
 
-    private async Task<WerfverslagPdfModel> BuildPdfModel(Werfverslag v, int projectId)
+    private sealed record PlanPinDef(double X, double Y, string Label, bool Kritiek, string Nr, string Tekst);
+    private sealed record PlanPageDef(string Key, int PlanId, int Page, string Naam, string Sub, string Url, string Kind, List<PlanPinDef> Pins);
+
+    private sealed class VerslagData
     {
-        var projectName = await ProjectName(projectId);
+        public Werfverslag V = null!;
+        public List<(WerfverslagPunt P, ConstructionIssue I)> Nieuwe = new();
+        public List<(WerfverslagPunt P, ConstructionIssue I)> Open = new();
+        public Dictionary<int, int> Num = new();
+        public Dictionary<int, string> Contractors = new();
+    }
+
+    private async Task<VerslagData> LoadData(Werfverslag v, int projectId)
+    {
         var punten = await _db.WerfverslagPunt.AsNoTracking().Where(p => p.VerslagId == v.Id).ToListAsync();
         var ids = punten.Select(p => p.IssueId).ToList();
         var issues = await _db.ConstructionIssue.AsNoTracking().Include(i => i.Unit).Where(i => ids.Contains(i.Id)).ToDictionaryAsync(i => i.Id);
-        var contractors = await _db.Contract.AsNoTracking().Where(c => c.ProjectId == projectId).Select(c => new { c.CompanyId, N = c.Company.BedrijfsNaam }).Distinct().ToDictionaryAsync(c => c.CompanyId, c => c.N);
-        string Ter(int? t) => t switch { 0 => "Blijft open", 1 => "Opgelost", 2 => "Afgesloten", _ => "Niet nagekeken" };
-        WerfverslagPdfPunt Map(WerfverslagPunt p)
+        var d = new VerslagData { V = v };
+        d.Contractors = await _db.Contract.AsNoTracking().Where(c => c.ProjectId == projectId).Select(c => new { c.CompanyId, N = c.Company.BedrijfsNaam }).Distinct().ToDictionaryAsync(c => c.CompanyId, c => c.N);
+        foreach (var p in punten.Where(p => issues.ContainsKey(p.IssueId)).OrderBy(p => issues[p.IssueId].PuntNr ?? issues[p.IssueId].Id))
+            (p.IsNieuw ? d.Nieuwe : d.Open).Add((p, issues[p.IssueId]));
+        for (var n = 0; n < d.Nieuwe.Count; n++) d.Num[d.Nieuwe[n].I.Id] = n + 1;
+        return d;
+    }
+
+    private static string NrOf(ConstructionIssue i) => "P-" + (i.PuntNr ?? i.Id).ToString("000");
+    private static string AannemerOf(ConstructionIssue i, VerslagData d)
+    {
+        var naam = PuntenWeergave.Aannemer(i.ResponsiblePartyId.HasValue && d.Contractors.TryGetValue(i.ResponsiblePartyId.Value, out var n) ? n : i.ResponsibleOtherName);
+        return naam == "" ? "—" : naam;
+    }
+
+    /// <summary>Per plan(pagina) de punten die erop staan, met hetzelfde nummer als in het verslag (nieuw: 1, 2, 3 …; open uit een vorig verslag: "O").</summary>
+    private async Task<List<PlanPageDef>> PlanPages(VerslagData d, int projectId)
+    {
+        var all = d.Nieuwe.Concat(d.Open).Where(x => x.I.PlanDocumentId.HasValue && x.I.PlanXnormalized.HasValue && x.I.PlanYnormalized.HasValue).ToList();
+        if (all.Count == 0) return new();
+        var planIds = all.Select(x => x.I.PlanDocumentId!.Value).Distinct().ToList();
+        var plans = await _db.UnitExecutionPlan.AsNoTracking().Include(p => p.Unit).Where(p => planIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id);
+        var result = new List<PlanPageDef>();
+        foreach (var g in all.GroupBy(x => (Plan: x.I.PlanDocumentId!.Value, Page: x.I.PlanPageNumber ?? 1)).OrderBy(g => g.Key.Plan).ThenBy(g => g.Key.Page))
         {
-            var i = issues[p.IssueId];
-            var aannemer = PuntenWeergave.Aannemer(i.ResponsiblePartyId.HasValue && contractors.TryGetValue(i.ResponsiblePartyId.Value, out var n) ? n : i.ResponsibleOtherName);
-            return new WerfverslagPdfPunt("P-" + (i.PuntNr ?? i.Id).ToString("000"), PuntenWeergave.Titel(i.Title), i.Unit?.Name ?? "Algemeen", aannemer == "" ? "—" : aannemer,
-                PuntenWeergave.Label(i.Status), Ter(p.TerPlaatse), p.Opmerking ?? "");
+            if (!plans.TryGetValue(g.Key.Plan, out var plan)) continue;
+            var naam = plan.UnitId == null ? plan.Name : (plan.Unit?.Name ?? "") + " · " + plan.Name;
+            var ext = Path.GetExtension(plan.FileId ?? "").ToLowerInvariant();
+            var pins = g.Select(x => new PlanPinDef((double)x.I.PlanXnormalized!.Value, (double)x.I.PlanYnormalized!.Value,
+                x.P.IsNieuw ? d.Num[x.I.Id].ToString() : "O", x.I.Priority == 3, NrOf(x.I), PuntenWeergave.Titel(x.I.Title) + " · " + (x.I.Unit?.Name ?? "Algemeen"))).ToList();
+            result.Add(new PlanPageDef($"{plan.Id}:{g.Key.Page}", plan.Id, g.Key.Page, naam, (plan.Soort ?? "plan") + " · v" + plan.Versie,
+                Url.Action("PlanContent", "ProjectsIssues", new { projectId, fileId = plan.FileId }) ?? "", ext is ".png" or ".jpg" or ".jpeg" ? "image" : "pdf", pins));
         }
-        var ordered = punten.Where(p => issues.ContainsKey(p.IssueId)).OrderBy(p => issues[p.IssueId].PuntNr ?? issues[p.IssueId].Id).ToList();
+        return result;
+    }
+
+    private static byte[]? Shrink(byte[]? src, int max = 900)
+    {
+        if (src == null || src.Length == 0) return null;
+        try
+        {
+            using var img = SixLabors.ImageSharp.Image.Load(src);
+            img.Mutate(x => x.Resize(new ResizeOptions { Size = new Size(max, max), Mode = ResizeMode.Max }));
+            using var ms = new MemoryStream();
+            img.Save(ms, new JpegEncoder { Quality = 72 });
+            return ms.ToArray();
+        }
+        catch { return null; }
+    }
+
+    private static byte[]? FromDataUrl(string? s)
+    {
+        if (string.IsNullOrEmpty(s)) return null;
+        var i = s.IndexOf("base64,", StringComparison.Ordinal);
+        if (i < 0) return null;
+        try { return Convert.FromBase64String(s[(i + 7)..]); } catch { return null; }
+    }
+
+    /// <summary>De door de browser gerasterde plannen (pdf.js + pins) uit het formulier: velden "planimg:{planId}:{pagina}" met een data-URL.</summary>
+    private Dictionary<string, string> PlanImagesFromForm()
+    {
+        var map = new Dictionary<string, string>();
+        if (!Request.HasFormContentType) return map;
+        foreach (var k in Request.Form.Keys.Where(k => k.StartsWith("planimg:", StringComparison.Ordinal)))
+            map[k.Substring(8)] = Request.Form[k].ToString();
+        return map;
+    }
+
+    // ── Afronden: punten goedkeuren/afsluiten + verslag versturen ───────────────────────────────────
+
+    private async Task<WerfverslagPdfModel> BuildPdfModel(Werfverslag v, int projectId, Dictionary<string, string>? planImages = null)
+    {
+        var d = await LoadData(v, projectId);
+        var projectName = await ProjectName(projectId);
+        var project = await _db.Project.AsNoTracking().Include(p => p.PostalCode).FirstOrDefaultAsync(p => p.ProjectId == projectId);
+        string J(params string?[] parts) => string.Join(" ", parts.Where(s => !string.IsNullOrWhiteSpace(s)));
+        var adres = string.Join(", ", new[] { J(project?.Street, project?.Number), J(project?.PostalCode?.Postcode, project?.PostalCode?.Gemeente) }.Where(s => s != ""));
+        var vorigV = v.HernomenVanId.HasValue ? await _db.Werfverslag.AsNoTracking().FirstOrDefaultAsync(x => x.Id == v.HernomenVanId) : null;
+        var aanwezigen = ParseAanwezigen(v.AanwezigenJson);
+
+        // plannamen (ook voor punten zonder pin) + foto's van de nieuwe punten
+        var planIds = d.Nieuwe.Concat(d.Open).Where(x => x.I.PlanDocumentId.HasValue).Select(x => x.I.PlanDocumentId!.Value).Distinct().ToList();
+        var planNames = await _db.UnitExecutionPlan.AsNoTracking().Include(p => p.Unit).Where(p => planIds.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id, p => p.UnitId == null ? p.Name : (p.Unit != null ? p.Unit.Name : "") + " · " + p.Name);
+        var nieuweIds = d.Nieuwe.Select(x => x.I.Id).ToList();
+        var media = await _db.ConstructionIssueMedia.AsNoTracking().Where(m => nieuweIds.Contains(m.IssueId) && m.MediaType == (int)ConstructionIssueMediaType.Photo).OrderBy(m => m.Id).ToListAsync();
+
+        var nieuwe = new List<WerfverslagPdfNieuw>();
+        foreach (var (p, i) in d.Nieuwe)
+        {
+            var fotos = new List<byte[]>();
+            foreach (var m in media.Where(m => m.IssueId == i.Id).Take(3))
+            {
+                var bytes = Shrink(await _storage.DownloadAsync("pictures", m.FileId));
+                if (bytes != null) fotos.Add(bytes);
+            }
+            nieuwe.Add(new WerfverslagPdfNieuw(d.Num[i.Id], NrOf(i), PuntenWeergave.Titel(i.Title), i.Unit?.Name ?? "Algemeen", AannemerOf(i, d), PuntenWeergave.Label(i.Status),
+                i.Priority == 3, i.Description, i.DueDate?.ToString("dd/MM/yyyy"), i.PlanDocumentId.HasValue && planNames.TryGetValue(i.PlanDocumentId.Value, out var pn) ? pn : null, fotos));
+        }
+
+        // openstaand uit vorig verslag; "nu" houdt rekening met wat ter plaatse vastgesteld werd (ook in het voorbeeld vóór afronden)
+        var open = new List<WerfverslagPdfOpen>(); var afgesloten = new List<WerfverslagPdfOpen>();
+        foreach (var (p, i) in d.Open)
+        {
+            var dat = v.Datum.ToString("dd/MM");
+            var nu = p.TerPlaatse switch { 2 => "Afgesloten", 1 => "Gemeld uitgevoerd", _ => PuntenWeergave.Label(i.Status) };
+            var notitie = p.TerPlaatse switch
+            {
+                2 => $"Gecontroleerd op {dat} — in orde.",
+                1 => $"Opgelost vastgesteld op {dat}.",
+                _ => null,
+            };
+            if (!string.IsNullOrWhiteSpace(p.Opmerking)) notitie = (notitie == null ? "" : notitie + " ") + p.Opmerking.Trim();
+            var vorig = p.StatusBijStart.HasValue ? PuntenWeergave.Label(p.StatusBijStart.Value) : "—";
+            var row = new WerfverslagPdfOpen(NrOf(i), PuntenWeergave.Titel(i.Title), notitie, i.Unit?.Name ?? "Algemeen", AannemerOf(i, d), vorig, nu);
+            (p.TerPlaatse == 2 || PuntenWeergave.IsClosed(i.Status) ? afgesloten : open).Add(row);
+        }
+
+        // plannen-bijlage: enkel plan(pagina)'s waarvoor de browser een afbeelding meestuurde
+        var plannen = new List<WerfverslagPdfPlan>();
+        if (planImages is { Count: > 0 })
+            foreach (var def in await PlanPages(d, projectId))
+            {
+                var img = Shrink(FromDataUrl(planImages.GetValueOrDefault(def.Key)), 2000);
+                if (img == null) continue;
+                plannen.Add(new WerfverslagPdfPlan(def.Naam, def.Sub, img, def.Pins.Select(x => new WerfverslagPdfPlanPunt(x.Label, x.Nr, x.Tekst, x.Kritiek)).ToList()));
+            }
+
         return new WerfverslagPdfModel
         {
-            Naam = v.Naam, TypeLabel = v.VerslagType == 1 ? "Voorlopige oplevering" : "Werfverslag", ProjectName = projectName, Datum = v.Datum,
-            Uur = v.Uur?.ToString("HH:mm"), Aanwezigen = ParseAanwezigen(v.AanwezigenJson).Select(a => a.Name).ToList(), Weer = v.Weer, Opmerkingen = v.Opmerkingen,
-            VolgendBezoek = v.VolgendBezoek, Nieuwe = ordered.Where(p => p.IsNieuw).Select(Map).ToList(), Open = ordered.Where(p => !p.IsNieuw).Select(Map).ToList(),
+            Naam = v.Naam, TypeLabel = v.VerslagType == 1 ? "Voorlopige oplevering" : "Werfverslag", ProjectName = projectName, ProjectAdres = adres == "" ? null : adres,
+            Datum = v.Datum, Uur = v.Uur?.ToString("HH:mm"), VorigBezoek = vorigV == null ? null : vorigV.Naam + " · " + vorigV.Datum.ToString("dd/MM/yyyy"),
+            Aanwezigen = aanwezigen.Select(a => a.Name).ToList(), Weer = v.Weer, Opmerkingen = v.Opmerkingen, VolgendBezoek = v.VolgendBezoek,
+            Nieuwe = nieuwe, Open = open, Afgesloten = afgesloten,
+            Kritiek = d.Nieuwe.Count(x => x.I.Priority == 3) + d.Open.Count(x => x.I.Priority == 3 && x.P.TerPlaatse != 2 && !PuntenWeergave.IsClosed(x.I.Status)),
+            Verdeling = aanwezigen.Select(a => new WerfverslagPdfVerdeling(a.Name, string.IsNullOrWhiteSpace(a.Email) ? null : a.Email, "volledig verslag")).ToList(),
+            Plannen = plannen,
         };
     }
 
-    private byte[] RenderPdf(WerfverslagPdfModel model)
+    private async Task<byte[]> RenderPdfAsync(WerfverslagPdfModel model, int projectId)
     {
-        var o = _company.Value;
-        var logoPath = Path.Combine(_env.WebRootPath, "Img", "groupln-logo.png");
-        var company = new GlV2PdfCompanyInfo
-        {
-            Name = o.Name, Tagline = o.Tagline, Street = o.Street, PostalCity = o.PostalCity, Phone = o.Phone, Email = o.Email, Website = o.Website,
-            LegalForm = o.LegalForm, VatNumber = o.VatNumber, Iban = o.Iban, LogoBytes = System.IO.File.Exists(logoPath) ? System.IO.File.ReadAllBytes(logoPath) : null,
-        };
+        // kop/voet/logo: het facturatiebedrijf van het project, zoals bij de wijzigingsopdracht (logo zonder tekst ernaast)
+        var company = await _pdfBuilder.BuildGlV2CompanyForProjectAsync(projectId);
         var fonts = GlV2PdfFonts.EnsureRegistered(_env, _logger);
-        return new WerfverslagDocumentV2(model, company, fonts).GeneratePdf();
+        var hoofd = new WerfverslagDocumentV2(model, company, fonts).GeneratePdf();
+        if (model.Plannen.Count == 0) return hoofd;
+
+        // bijlage: één pagina (A4 liggend) per plan, elk met de volledige kop; paginanummers lopen door vanaf het verslag
+        int PaginaTelling(byte[] pdf) { using var m = new MemoryStream(pdf); using var d = PdfSharpCore.Pdf.IO.PdfReader.Open(m, PdfSharpCore.Pdf.IO.PdfDocumentOpenMode.Import); return d.PageCount; }
+        var hoofdPaginas = PaginaTelling(hoofd);
+        var totaal = hoofdPaginas + model.Plannen.Count;
+        hoofd = new WerfverslagDocumentV2(model, company, fonts, totaal).GeneratePdf();
+        var delen = new List<byte[]> { hoofd };
+        for (var i = 0; i < model.Plannen.Count; i++)
+            delen.Add(new WerfverslagBijlageDocumentV2(model, i, hoofdPaginas + i, totaal, company, fonts).GeneratePdf());
+        using var output = new PdfSharpCore.Pdf.PdfDocument();
+        foreach (var part in delen)
+        {
+            using var ms = new MemoryStream(part);
+            using var input = PdfSharpCore.Pdf.IO.PdfReader.Open(ms, PdfSharpCore.Pdf.IO.PdfDocumentOpenMode.Import);
+            foreach (PdfSharpCore.Pdf.PdfPage page in input.Pages) output.AddPage(page);
+        }
+        using var outMs = new MemoryStream();
+        output.Save(outMs);
+        return outMs.ToArray();
     }
 
+    /// <summary>Voorbeeld zonder plannen-bijlage (geen browser-rendering mogelijk); het voorbeeld vanuit de bewerkpagina (PdfPreview) neemt de plannen wél mee.</summary>
     [HttpGet("{id:int}/Pdf")]
     public async Task<IActionResult> Pdf(int projectId, int id)
     {
         var v = await _db.Werfverslag.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id && x.ProjectId == projectId);
         if (v == null) return NotFound();
-        var bytes = RenderPdf(await BuildPdfModel(v, projectId));
+        var bytes = await RenderPdfAsync(await BuildPdfModel(v, projectId), projectId);
+        Response.Headers["Content-Disposition"] = $"inline; filename=\"{v.Naam.Replace(' ', '_')}.pdf\"";
+        return File(bytes, "application/pdf");
+    }
+
+    /// <summary>Voorbeeld mét plannen: de bewerkpagina post de door pdf.js gerasterde plannen (met pins) mee.</summary>
+    [HttpPost("{id:int}/PdfPreview")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> PdfPreview(int projectId, int id)
+    {
+        var v = await _db.Werfverslag.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id && x.ProjectId == projectId);
+        if (v == null) return NotFound();
+        var bytes = await RenderPdfAsync(await BuildPdfModel(v, projectId, PlanImagesFromForm()), projectId);
         Response.Headers["Content-Disposition"] = $"inline; filename=\"{v.Naam.Replace(' ', '_')}.pdf\"";
         return File(bytes, "application/pdf");
     }
 
     [HttpPost("{id:int}/Finish")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Finish(int projectId, int id, bool forceer = false)
+    public async Task<IActionResult> Finish(int projectId, int id)
     {
         var v = await Concept(projectId, id);
         if (v == null) { AddMessage("error", "Verslag niet gevonden of al verstuurd.", "Fout"); return RedirectToAction(nameof(Index), new { projectId }); }
         var punten = await _db.WerfverslagPunt.Where(p => p.VerslagId == id).ToListAsync();
         var issues = await _db.ConstructionIssue.AsNoTracking().Where(i => punten.Select(p => p.IssueId).Contains(i.Id)).ToDictionaryAsync(i => i.Id);
-
-        // 1b. punten die nog in concept staan of nog ter goedkeuring zijn, horen niet onafgewerkt in een
-        // verstuurd verslag (Niels, 2026-10-10): eerst waarschuwen, enkel bij expliciete "toch versturen"
-        // (forceer) doorgaan — en dan die punten uit dit verslag halen i.p.v. ze mee te versturen.
-        bool NogNietKlaar(ConstructionIssue i) => i.Status is (int)ConstructionIssueStatus.Concept or (int)ConstructionIssueStatus.PendingApproval;
-        var nogNietKlaar = punten.Where(p => issues.TryGetValue(p.IssueId, out var i) && NogNietKlaar(i)).ToList();
-        if (nogNietKlaar.Count > 0 && !forceer)
-        {
-            AddMessage("warning", $"Dit verslag bevat nog {nogNietKlaar.Count} punt(en) in concept of ter goedkeuring. Verstuur je toch, dan gaan die niet mee in dit verslag.", "Nog niet afgerond");
-            return RedirectToAction(nameof(Edit), new { projectId, id });
-        }
-        if (nogNietKlaar.Count > 0)
-        {
-            _db.WerfverslagPunt.RemoveRange(nogNietKlaar);
-            punten = punten.Except(nogNietKlaar).ToList();
-            await _db.SaveChangesAsync();
-        }
 
         // 1. wat ter plaatse vastgesteld werd: opgelost → gemeld uitgevoerd (de werfleider heeft het gezien maar sluit nog niet af), afgesloten → afgesloten
         foreach (var p in punten.Where(p => !p.IsNieuw))
@@ -447,12 +602,18 @@ public class ProjectVerslagenController : BaseController
                 await _issues.ChangeStatus(projectId, issue.Id, (int)ConstructionIssueStatus.Reported, $"Opgelost vastgesteld bij {v.Naam}", UserCode);
             if (!string.IsNullOrWhiteSpace(p.Opmerking)) await _issues.AddMessage(projectId, issue.Id, $"{v.Naam}: {p.Opmerking}", isInternal: true, UserCode);
         }
-        // 2. nieuwe punten die wél al goedgekeurd/doorgestuurd zijn, blijven gewoon zo — enkel concept/ter
-        // goedkeuring is hierboven al uit het verslag gehaald.
+        // 2. afronden keurt de nieuwe punten goed (Concept / Ter goedkeuring → Goedgekeurd); ze gaan daarna via de avondmelding of "Doorsturen" naar de aannemer
+        var goedgekeurd = 0;
+        foreach (var p in punten.Where(p => p.IsNieuw))
+            if (issues.TryGetValue(p.IssueId, out var nieuw) && PuntenWeergave.Canon(nieuw.Status) is (int)ConstructionIssueStatus.Concept or (int)ConstructionIssueStatus.PendingApproval)
+            {
+                await _issues.ChangeStatus(projectId, nieuw.Id, (int)ConstructionIssueStatus.Approved, $"Goedgekeurd bij afronden van {v.Naam}", UserCode);
+                goedgekeurd++;
+            }
 
-        // 3. PDF + mail naar de aanwezigen met e-mailadres
-        var model = await BuildPdfModel(v, projectId);
-        var pdf = RenderPdf(model);
+        // 3. PDF (met foto's en plannen) + mail naar de aanwezigen met e-mailadres
+        var model = await BuildPdfModel(v, projectId, PlanImagesFromForm());
+        var pdf = await RenderPdfAsync(model, projectId);
         var ontvangers = ParseAanwezigen(v.AanwezigenJson).Where(a => !string.IsNullOrWhiteSpace(a.Email)).ToList();
         var sent = 0;
         foreach (var a in ontvangers)
@@ -460,7 +621,7 @@ public class ProjectVerslagenController : BaseController
             try
             {
                 var html = $"<p>Beste {System.Net.WebUtility.HtmlEncode(a.Name)},</p><p>In bijlage het verslag <b>{System.Net.WebUtility.HtmlEncode(v.Naam)}</b> van {v.Datum:dd/MM/yyyy} voor {System.Net.WebUtility.HtmlEncode(model.ProjectName)}.</p>" +
-                           $"<p>Nieuwe punten gaan na goedkeuring naar de betrokken aannemers.</p>";
+                           $"<p>De nieuwe punten zijn goedgekeurd en gaan naar de betrokken aannemers.</p>";
                 await _email.SendEmailAsync(a.Email!, $"{v.Naam} — {model.ProjectName}", html, new[] { new EmailAttachment($"{v.Naam.Replace(' ', '_')}.pdf", pdf, "application/pdf") });
                 sent++;
             }
@@ -468,7 +629,7 @@ public class ProjectVerslagenController : BaseController
         }
         v.Status = 1; v.VerzondenOp = DateTime.UtcNow; v.VerzondenDoor = UserCode;
         await _db.SaveChangesAsync();
-        AddMessage("success", $"{v.Naam} afgerond." + (sent > 0 ? $" Het verslag is verstuurd naar {sent} aanwezige(n)." : " Geen aanwezige heeft een e-mailadres, dus er is niets verstuurd."), "Geslaagd");
+        AddMessage("success", $"{v.Naam} afgerond." + (goedgekeurd > 0 ? $" {goedgekeurd} nieuwe punt(en) goedgekeurd." : "") + (sent > 0 ? $" Het verslag is verstuurd naar {sent} aanwezige(n)." : " Geen aanwezige heeft een e-mailadres, dus er is niets verstuurd."), "Geslaagd");
         return RedirectToAction(nameof(Index), new { projectId, id });
     }
 }

@@ -245,6 +245,14 @@ Namespace Controllers
             Dim data = If(response.Success, response.Values.FirstOrDefault, Nothing)
             If data Is Nothing OrElse data.Id = 0 Then Return HttpNotFound()
 
+            ' Zelfde doorverwijzingen als /woonprojecten/{slug}: opgeleverd -> realisaties, commercieel -> commerciele-projecten
+            If data.Status IsNot Nothing AndAlso data.Status.Id = CInt(ProjectStatusType.Opgeleverd) Then
+                Return RedirectToRoutePermanent("ReferenceBySlug", New With {.slug = slug})
+            End If
+            If data.ProjectType = ProjectType.Commerciëel Then
+                Return RedirectToRoutePermanent("CommercieelBySlug", New With {.slug = slug})
+            End If
+
             data.Pictures = data.Pictures.Where(Function(m) Not m.Type = PictureType.Nieuws).OrderByDescending(Function(m) m.DateTimeUploaded).ToList
 
             Dim units As New List(Of UnitWithDetailsBO)
@@ -264,7 +272,31 @@ Namespace Controllers
             Dim canonical As String = "https://www.groupln.be/woonprojecten/" & If(data.Slug, "").ToLowerInvariant()
             Dim imageBase As String = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL")
             Dim web = ProjectWebsiteReader.Load(data.Id)
-            Dim model = ProjectPageV4Provider.FromProject(data, units, settings, imageBase, canonical, web)
+            Dim picInfo = ProjectPictureInfoReader.Load(data.Id)
+
+            ' Verkoopdocumenten zonder klant/eenheid (zelfde bron als de gewone projectpagina): brochure, lastenboek en het documentenblok
+            Dim docsResponse = service.GetProjectDocs(data.Id, ProjectDocType.Sales)
+            Dim docs As List(Of ProjectDocBO) = If(docsResponse.Values, New List(Of ProjectDocBO))
+            Dim model = ProjectPageV4Provider.FromProject(data, units, settings, imageBase, canonical, web, picInfo, docs)
+
+            ' Brochure: enkel tonen als er een brochure-document bestaat (en de verkoop zichtbaar is, net als op Detail)
+            Dim brochure = docs.FirstOrDefault(Function(d) d.IsBrochure)
+            model.BrochureDocId = If(brochure IsNot Nothing AndAlso settings.SaleVisible, brochure.Docid, 0)
+            If model.BrochureDocId = 0 Then model.Story.ShowBrochureCta = False
+
+            ' Deelbeeld (og/twitter:image) = de eerste galerijfoto, dezelfde als links bovenaan op de pagina; bij voorkeur een variant van 1200-1600 px breed
+            Dim shareMedia = model.Media.FirstOrDefault(Function(x) Not String.IsNullOrWhiteSpace(x.ImageUrl))
+            If shareMedia IsNot Nothing Then
+                Dim shareUrl As String = shareMedia.ImageUrl
+                If shareMedia.Pic IsNot Nothing Then
+                    Dim widths = shareMedia.Pic.AvailableWidths()
+                    Dim pick = widths.Where(Function(w) w >= 1200).OrderBy(Function(w) w).FirstOrDefault()
+                    If pick = 0 AndAlso widths.Count > 0 Then pick = widths.Max()
+                    If pick > 0 Then shareUrl = shareMedia.Pic.VariantUrl(pick)
+                End If
+                ViewData("ogimage") = shareUrl
+                ViewData("twitterimage") = shareUrl
+            End If
             Return View("DetailV4", model)
         End Function
 

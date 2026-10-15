@@ -121,6 +121,9 @@ Public Class ProjectPictureBO
         End Set
     End Property
 
+    ' True = WebP-varianten op breedte (pictures/w320 ... w2560) bestaan voor deze foto
+    Public Property HasVariants() As Boolean
+
     Private _widthPx As Integer?
     Public Property WidthPx() As Integer?
         Get

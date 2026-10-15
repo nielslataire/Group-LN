@@ -36,6 +36,8 @@ namespace CPMCore.Controllers
         /// enkel de pagina zelf kent (bv. vraagprijzen onder het minimum op stap 8) en de standaardberekening overschrijven.</summary>
         private async Task<BudgetWizardChromeVm> PrepareWizardV2(int versieId, int step, IDictionary<int, (int Errors, int Warnings)> extra = null, bool registreer = true)
         {
+            // Koppelt de pagina aan de helpartikels (Helpcentrum, "?"-paneel): budget-stap-1 … budget-stap-9.
+            ViewData["HelpScreenId"] = "budget-stap-" + step;
             var versie = await _uow.BudgetVersies.GetNoTracking().Include(v => v.BudgetMaster).FirstAsync(v => v.Id == versieId);
             var projectNaam = _projectService.GetProjectNameById(versie.ProjectId) ?? "";
 
@@ -161,11 +163,11 @@ namespace CPMCore.Controllers
         [HttpPost]
         public async Task<IActionResult> BudgetParamsOpslaan(CPMCore.Models.Budget.BudgetParamsModel model,
             decimal? pctProjectcoord, decimal? pctArchitect, decimal? pctIngenieur, decimal? pctDoelmarge, decimal? pctGrondmarge,
-            decimal? pctVeiligheid, decimal? pctDecennale, decimal? pctABR, decimal? pctOnvoorzien, decimal? pctWetBreyne, decimal? pctSlGebouw, decimal? pctSlGrond)
+            decimal? pctVeiligheid, decimal? pctDecennale, decimal? pctABR, decimal? pctOnvoorzien, decimal? pctOpmeting, decimal? pctSondering, decimal? pctRegistratie, decimal? pctPubliciteit, decimal? pctMakelaar, decimal? pctAgrarisch, decimal? pctWetBreyne, decimal? pctSlGebouw, decimal? pctSlGrond)
         {
             try
             {
-                await BudgetParams(model, pctProjectcoord, pctArchitect, pctIngenieur, pctDoelmarge, pctGrondmarge, pctVeiligheid, pctDecennale, pctABR, pctOnvoorzien, pctWetBreyne, pctSlGebouw, pctSlGrond);
+                await BudgetParams(model, pctProjectcoord, pctArchitect, pctIngenieur, pctDoelmarge, pctGrondmarge, pctVeiligheid, pctDecennale, pctABR, pctOnvoorzien, pctOpmeting, pctSondering, pctRegistratie, pctPubliciteit, pctMakelaar, pctAgrarisch, pctWetBreyne, pctSlGebouw, pctSlGrond);
                 return Json(new { success = true });
             }
             catch (Exception ex) { return Json(new { success = false, message = ex.Message }); }
@@ -198,6 +200,42 @@ namespace CPMCore.Controllers
             return RedirectToAction(nameof(BudgetIndex), new { projectId });
         }
 
+        /// <summary>Verwijdert een budgetversie die niet definitief is (dat vraagt het verwijderrecht op projecten; de naam bevat "Delete" zodat de permissiefilter dat afdwingt).
+        /// Is het de laatste versie van het budget, dan verdwijnt het budget mee. Kindrijen (oppervlaktes, activiteiten, verkoop…) gaan mee via de cascade in de database.
+        /// Was het het actieve budget of de huidige versie, dan neemt een ander budget/versie die rol over.</summary>
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> BudgetVersieDelete(int versieId, int projectId)
+        {
+            var ps = HttpContext.RequestServices.GetRequiredService<FacadeCore.IPermissionService>();
+            if (!ps.HasDelete(PermissionCodes.ProjectsDetail)) { TempData["Error"] = "U hebt geen rechten om een budget te verwijderen."; return RedirectToAction(nameof(BudgetIndex), new { projectId }); }
+            var v = await _db.BudgetVersie.FirstOrDefaultAsync(x => x.Id == versieId && x.ProjectId == projectId);
+            if (v == null) return NotFound();
+            if (v.Status == "Definitief") { TempData["Error"] = "Een definitief budget kan niet verwijderd worden. Maak eerst een andere versie definitief."; return RedirectToAction(nameof(BudgetIndex), new { projectId }); }
+
+            var masterId = v.BudgetMasterId;
+            var master = await _db.BudgetMaster.FirstOrDefaultAsync(m => m.Id == masterId);
+            var rest = await _db.BudgetVersie.Where(x => x.BudgetMasterId == masterId && x.Id != versieId).OrderByDescending(x => x.Versienummer).ToListAsync();
+            var wasHuidig = v.IsHuidig;
+            var wasActief = master?.IsActief == true;
+
+            // De verwijderknop mag niet blijven hangen aan een verweesd budget: de laatste versie neemt het budget mee.
+            if (rest.Count == 0 && master != null) _db.BudgetMaster.Remove(master);
+            else
+            {
+                _db.BudgetVersie.Remove(v);
+                if (wasHuidig && rest.Count > 0 && !rest.Any(x => x.IsHuidig)) rest[0].IsHuidig = true;
+            }
+            await _db.SaveChangesAsync();
+
+            if (rest.Count == 0 && wasActief)
+            {
+                var volgende = await _db.BudgetMaster.Where(m => m.ProjectId == projectId).OrderByDescending(m => m.Id).FirstOrDefaultAsync();
+                if (volgende != null) { volgende.IsActief = true; await _db.SaveChangesAsync(); }
+            }
+            TempData["Message"] = rest.Count == 0 ? "Het budget is verwijderd." : "De versie is verwijderd.";
+            return RedirectToAction(nameof(BudgetIndex), new { projectId });
+        }
+
         /// <summary>39a "Maak actief": één actief budget per project.</summary>
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> BudgetMasterActiveren(int masterId, int projectId)
@@ -208,6 +246,59 @@ namespace CPMCore.Controllers
             return RedirectToAction(nameof(BudgetIndex), new { projectId });
         }
 
+        /// <summary>De versies voor de vergelijking: maximaal 3, enkel van dit project, de basis eerst.</summary>
+        private async Task<List<int>> LeesVergelijkIdsAsync(int projectId, string versies, int? basis)
+        {
+            var ids = (versies ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(x => int.TryParse(x, out var n) ? n : 0).Where(n => n > 0).Distinct().ToList();
+            if (basis is > 0 && ids.Contains(basis.Value)) { ids.Remove(basis.Value); ids.Insert(0, basis.Value); }
+            ids = ids.Take(3).ToList();
+            var geldig = await _db.BudgetVersie.AsNoTracking().Where(v => v.ProjectId == projectId && ids.Contains(v.Id)).Select(v => v.Id).ToListAsync();
+            return ids.Where(geldig.Contains).ToList();
+        }
+
+        /// <summary>Budgetten vergelijken (design-handoff 39n): 2 of 3 versies, de eerste is de basis (standaard het definitieve budget).</summary>
+        [HttpGet]
+        public async Task<IActionResult> BudgetVersiesVergelijken(int projectId, string versies, int? basis, string modus = "alles")
+        {
+            var projectNaam = _projectService.GetProjectNameById(projectId);
+            if (string.IsNullOrEmpty(projectNaam)) return NotFound();
+            var ids = await LeesVergelijkIdsAsync(projectId, versies, basis);
+            if (!GebruikGlV2 || ids.Count < 2)
+            {
+                if (ids.Count < 2) TempData["Error"] = "Kies minstens twee versies om te vergelijken.";
+                return RedirectToAction(nameof(BudgetIndex), new { projectId });
+            }
+
+            var service = HttpContext.RequestServices.GetRequiredService<ServiceCore.Budget.BudgetVergelijkService>();
+            var vergelijking = await service.VergelijkAsync(ids, string.Equals(modus, "kosten", StringComparison.OrdinalIgnoreCase));
+            var mastersResponse = _budgetService.GetBudgetMasters(projectId);
+            var index = new CPMCore.Models.Projecten.BudgetIndexModel { ProjectId = projectId, ProjectName = projectNaam, BudgetMasters = mastersResponse.Success ? mastersResponse.Values : new List<BudgetMasterBO>() };
+            await VulBudgetIndexV2Async(index);
+
+            ViewData["HelpScreenId"] = "budget-vergelijken";
+            SetBudgetPageContext(projectId, projectNaam, nameof(BudgetVersiesVergelijken), "Budgetten vergelijken", new { projectId, versies, basis, modus });
+            return View("BudgetVergelijkV2", new CPMCore.Models.Projecten.BudgetVergelijkPaginaModel
+            {
+                ProjectId = projectId, ProjectName = projectNaam, Vergelijking = vergelijking, Index = index, Modus = vergelijking.EnkelKosten ? "kosten" : "alles", VersieIds = ids
+            });
+        }
+
+        /// <summary>Knop "Exporteren" op de vergelijkingspagina: Excel met kerncijfers, hoofdgroepen met activiteiten, verkoop per eenheid en parameters.</summary>
+        [HttpGet]
+        public async Task<IActionResult> BudgetVergelijkExport(int projectId, string versies, int? basis, string modus = "alles")
+        {
+            var projectNaam = _projectService.GetProjectNameById(projectId);
+            if (string.IsNullOrEmpty(projectNaam)) return NotFound();
+            var ids = await LeesVergelijkIdsAsync(projectId, versies, basis);
+            if (ids.Count < 2) return RedirectToAction(nameof(BudgetIndex), new { projectId });
+            var service = HttpContext.RequestServices.GetRequiredService<ServiceCore.Budget.BudgetVergelijkService>();
+            var vergelijking = await service.VergelijkAsync(ids, string.Equals(modus, "kosten", StringComparison.OrdinalIgnoreCase));
+            var bytes = ServiceCore.Budget.BudgetVergelijkService.NaarExcel(vergelijking, projectNaam);
+            var naam = $"Budgetvergelijking_{projectNaam}_{DateTime.Now:yyyyMMdd}.xlsx";
+            foreach (var c in System.IO.Path.GetInvalidFileNameChars()) naam = naam.Replace(c, '_');
+            return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", naam.Replace(' ', '_'));
+        }
+
         /// <summary>Vult de gl-v2-overzichtsgegevens (39a): definitieve versie, totalen, eenheden per budget, kopieeropties.</summary>
         private async Task VulBudgetIndexV2Async(CPMCore.Models.Projecten.BudgetIndexModel model)
         {
@@ -215,7 +306,7 @@ namespace CPMCore.Controllers
             model.DefinitiefVersie = versies.FirstOrDefault(v => v.Status == BudgetVersie.StatusDefinitief);
             // Totalen komen uit de bewaarde kolom; ontbreekt/veroudert die (filter zet ze op NULL bij elke wijziging), dan lui herberekenen en bewaren.
             var bewaard = await _db.BudgetVersie.AsNoTracking().Where(x => x.ProjectId == model.ProjectId).Select(x => new { x.Id, x.TotaalKosten }).ToDictionaryAsync(x => x.Id, x => x.TotaalKosten);
-            foreach (var v in versies.Where(v => v.Status != BudgetVersie.StatusConcept || v.IsHuidig))
+            foreach (var v in versies.Where(v => v.Status != BudgetVersie.StatusConcept || v.IsHuidig || v.LaatsteStap >= 9))
             {
                 if (bewaard.TryGetValue(v.Id, out var t) && t.HasValue) { model.Totalen[v.Id] = t; continue; }
                 try
@@ -227,6 +318,29 @@ namespace CPMCore.Controllers
                 }
                 catch { model.Totalen[v.Id] = null; }
             }
+            // Marge (39a): enkel voor versies waarvan alle stappen doorlopen zijn (afgerond, definitief of concept dat stap 9 bereikte). Zwaarder dan het totaal
+            // (voorstel + verkooplijnen), dus bewaard in het geheugen per versie en tijdstip van de laatste wijziging.
+            var cache = HttpContext.RequestServices.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>();
+            foreach (var v in versies.Where(v => v.Status == BudgetVersie.StatusDefinitief || v.Status == BudgetVersie.StatusAfgerond || v.LaatsteStap >= 9))
+            {
+                var sleutel = $"bw-ix-marge2:{v.Id}:{(v.GewijzigdOp ?? v.CreatedAt).Ticks}:{v.Status}";
+                if (!cache.TryGetValue(sleutel, out CPMCore.Models.Projecten.BudgetMargeVm marge))
+                {
+                    try
+                    {
+                        var res = await _berekeningService.BerekenAsync(v.Id);
+                        var p = await _berekeningService.GetOrCreateParamsAsync(v.Id);
+                        var voorstel = await _verkoopVoorstelService.BerekenAsync(v.Id);
+                        var sam = await _verkoopVoorstelService.SamenvattingAsync(v.Id);
+                        var lijnen = await _verkoopVoorstelService.HerberekendeLijnenAsync(v.Id);
+                        var vr = ServiceCore.Budget.VerkoopResultaat.Bereken(sam, voorstel, lijnen, p.MakelaarsCommissiePerc ?? 0m, p.OverigeVerkoopkosten ?? 0m, res.TotaalKosten);
+                        marge = vr.HeeftVerkoop ? new CPMCore.Models.Projecten.BudgetMargeVm { Percentage = vr.MargeOpKostprijs, Bedrag = vr.Resultaat } : null;
+                    }
+                    catch { marge = null; }
+                    cache.Set(sleutel, marge, TimeSpan.FromHours(12));
+                }
+                if (marge != null) model.Marges[v.Id] = marge;
+            }
             foreach (var m in model.BudgetMasters)
             {
                 var huidig = m.Versies.FirstOrDefault(v => v.IsHuidig) ?? m.Versies.OrderByDescending(v => v.Versienummer).FirstOrDefault();
@@ -236,6 +350,25 @@ namespace CPMCore.Controllers
                 .Where(v => !v.BudgetMaster.IsGearchiveerd).OrderByDescending(v => v.ProjectId == model.ProjectId).ThenBy(v => v.BudgetMaster.Project.ProjectName).ThenBy(v => v.BudgetMaster.Naam).ThenByDescending(v => v.Versienummer)
                 .Select(v => new IdNameBO { ID = v.Id, Display = "v" + v.Versienummer + (v.VersieNaam == null || v.VersieNaam == "" ? "" : " · " + v.VersieNaam) + " (" + v.Status + ")", Group = v.BudgetMaster.Project.ProjectName + " · " + v.BudgetMaster.Naam })
                 .ToListAsync();
+
+            // 39l: budgetten (met versies) waarvan een nieuw budget een kopie kan zijn, gegroepeerd per project; dit project eerst
+            var vs = await _uow.BudgetVersies.GetNoTracking().Include(v => v.BudgetMaster).ThenInclude(m => m.Project)
+                .Where(v => !v.BudgetMaster.IsGearchiveerd).OrderBy(v => v.BudgetMaster.Project.ProjectName).ThenBy(v => v.BudgetMaster.Naam).ThenByDescending(v => v.Versienummer).ToListAsync();
+            model.KopieBronnen = vs.GroupBy(v => v.BudgetMasterId).Select(g => new CPMCore.Models.Projecten.BudgetKopieBronVm
+            {
+                MasterId = g.Key, Naam = g.First().BudgetMaster.Naam, ProjectNaam = g.First().BudgetMaster.Project?.ProjectName ?? "", EigenProject = g.First().ProjectId == model.ProjectId,
+                Versies = g.Select(v => new IdNameBO { ID = v.Id, Display = "v" + v.Versienummer + (string.IsNullOrWhiteSpace(v.VersieNaam) ? "" : " " + v.VersieNaam) + " · " + (v.Status ?? "Concept") }).ToList()
+            }).OrderByDescending(b => b.EigenProject).ThenBy(b => b.ProjectNaam).ThenBy(b => b.Naam).ToList();
+            model.AantalProjectEenheden = await _uow.Units.GetNoTracking().CountAsync(u => u.ProjectId == model.ProjectId && !u.IsLink);
+            try
+            {
+                var sRijen = _uow.BouwIndex.GetNoTracking().Where(x => x.IndexType == "S").ToList();
+                var sNu = await _bouwIndex.GetActieveIndexAsync("S");
+                var rij = ServiceCore.Budget.BudgetControleService.ZoekIndexRij(sRijen, sNu);
+                var peil = rij == null ? null : (rij.GeldigVanaf?.ToString("MM/yyyy") ?? (rij.Jaar.HasValue ? (rij.Maand.HasValue ? $"{rij.Maand:00}/{rij.Jaar}" : rij.Jaar.ToString()) : null));
+                model.ActieveIndexTekst = peil == null ? "Nieuwste S- en I-index" : "S- en I-index " + peil;
+            }
+            catch { model.ActieveIndexTekst = "Nieuwste S- en I-index"; }
         }
 
         /// <summary>Wijzigt de reductiefactoren van stap 2 voor deze versie (design-handoff 39c "Reductiefactoren VMSW").</summary>

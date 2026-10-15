@@ -14,7 +14,7 @@
     var bronLabel = ServiceCore.Budget.VerkoopLijnRekenregel.BronLabel(bron);
 }
 <tr class="bw-vk-detail" data-detail-for="@Model.Naam" hidden>
-    <td colspan="11">
+    <td colspan="12">
         <div class="bw-vk-detail-grid">
             <div class="bw-vk-zijde" data-zijde="grond">
                 <span class="k">Grond · €/m² grondoppervlakte</span>
@@ -33,6 +33,13 @@
                 <div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><input type="text" inputmode="decimal" class="gl-v2-field-input is-num is-tabular bouw-m2" value="@F2(l?.BouwPrijsPerM2)" placeholder="€/m²" aria-label="Bouwprijs per m²" /></div></div>
                 <span class="gl-v2-bw-hint">Bouwwaarde</span>
                 <div class="gl-v2-field gl-v2-field-bare" style="grid-column:span 3"><div class="gl-v2-field-box"><span class="gl-v2-field-prefix">€</span><input type="text" inputmode="numeric" class="gl-v2-field-input is-num is-tabular bouwwaarde" value="@F0(l?.Bouwwaarde)" placeholder="0" aria-label="Bouwwaarde" /></div></div>
+            </div>
+            <div class="bw-vk-zijde" data-zijde="grond2" @(Model.GrondoppAgrarisch > 0m ? "" : "hidden")>
+                <span class="k">Grond 2 · eigen €/m² voor de tweede zone (@Model.GrondoppAgrarisch.ToString("N0", nl) m²)</span>
+                <span class="gl-v2-bw-hint">€/m²</span>
+                <div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><input type="text" inputmode="decimal" class="gl-v2-field-input is-num is-tabular grond2-m2" value="@F2(l?.GrondAgrPrijsPerM2)" placeholder="€/m²" aria-label="Prijs per m² tweede grondzone" /></div></div>
+                <span class="gl-v2-bw-hint">Waarde 2e zone</span>
+                <div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><span class="gl-v2-field-prefix">€</span><input type="text" inputmode="numeric" class="gl-v2-field-input is-num is-tabular grond2waarde" value="@F0(l?.GrondwaardeAgrarisch)" placeholder="0" readonly tabindex="-1" aria-label="Waarde tweede grondzone" /></div></div>
             </div>
             <div class="bw-vk-extra">
                 <span><span class="gl-v2-bw-hint">Bron </span><span class="bw-bron bw-bron--@(bron ?? 0)">@bronLabel</span><input type="hidden" class="prijs-bron" value="@bron" /></span>

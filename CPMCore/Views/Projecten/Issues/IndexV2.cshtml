@@ -48,6 +48,9 @@
     <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-punt-planviewer.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-projecten-punten.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-punt-plansheets-m.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-punten-mobile.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-punt-spraak-m.css" asp-append-version="true" />
 }
 @section PageActions
 {
@@ -60,10 +63,16 @@
 }
 @section MobileQuickActions
 {
+    @* Snelactiesbar (design 6/41): Punt, Foto, Doorsturen, Afdrukken. Inspreken en Rondgang volgen in fase 6. *@
     @if (Model.CanWrite)
     {
         <button type="button" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary js-pt-new"><i class="ph ph-plus" aria-hidden="true"></i>Punt</button>
+        <button type="button" class="gl-v2-mobile-quickaction" id="pt-qa-foto" data-subtitle="Foto's nemen en een punt aanmaken"><i class="ph ph-camera" aria-hidden="true"></i>Foto</button>
+        <button type="button" class="gl-v2-mobile-quickaction" id="pt-qa-voice" data-subtitle="Een punt of meerdere punten inspreken"><i class="ph ph-microphone" aria-hidden="true"></i>Inspreken</button>
+        <button type="button" class="gl-v2-mobile-quickaction" id="pt-qa-rondgang" data-subtitle="Een volledig werfbezoek opnemen"><i class="ph ph-path" aria-hidden="true"></i>Rondgang</button>
+        <a class="gl-v2-mobile-quickaction" href="@Url.Action("SendV2", "ProjectsIssues", new { projectId = Model.ProjectId })"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>Doorsturen</a>
     }
+    <button type="button" class="gl-v2-mobile-quickaction" id="pt-print-m"><i class="ph ph-printer" aria-hidden="true"></i>Afdrukken</button>
 }
 @section ProjectMenu
 {
@@ -77,7 +86,10 @@
 @{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
 @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
 
-<div id="gl-v2-pt-root" data-send-url="@Url.Action("SendV2", "ProjectsIssues", new { projectId = Model.ProjectId })" data-edit-url="@Url.Action("EditV2", "ProjectsIssues", new { projectId = Model.ProjectId, id = 0 })" data-edit-data-url="@Url.Action("EditData", "ProjectsIssues", new { projectId = Model.ProjectId, id = 0 })" data-project-id="@Model.ProjectId" data-can-write="@(Model.CanWrite ? "1" : "0")">
+<div id="gl-v2-pt-root" data-send-url="@Url.Action("SendV2", "ProjectsIssues", new { projectId = Model.ProjectId })" data-edit-url="@Url.Action("EditV2", "ProjectsIssues", new { projectId = Model.ProjectId, id = 0 })" data-edit-data-url="@Url.Action("EditData", "ProjectsIssues", new { projectId = Model.ProjectId, id = 0 })" data-project-id="@Model.ProjectId" data-project-name="@Model.ProjectName" data-can-write="@(Model.CanWrite ? "1" : "0")"
+     data-issues-base="@Url.Action("Index", "ProjectsIssues", new { projectId = Model.ProjectId })"
+     data-units="@System.Text.Json.JsonSerializer.Serialize(Model.Units.Select(u => new { id = u.Key, name = u.Value }))"
+     data-verslagen="@System.Text.Json.JsonSerializer.Serialize(Model.Verslagen.Where(v => v.Open).Select(v => new { id = v.Id, name = v.Naam }))">
     @await Html.PartialAsync("GlV2/_KpiStrip", (IReadOnlyList<GlV2KpiItemVm>)kpis)
 
     <div class="gl-v2-toolbar-card gl-v2-filters-card">
@@ -138,6 +150,9 @@
         </div>
     </div>
 
+    @* gsm: kaartlijst (gl-v2-punt-mobile.js) i.p.v. de tabel *@
+    <div class="gl-v2-pt-cards" id="pt-cards"></div>
+
     <div class="gl-v2-card gl-v2-detail-table-card gl-v2-pt-card">
       <div class="gl-v2-card-body">
         <div class="table-responsive-md">
@@ -163,7 +178,7 @@
                         var word = PuntenWeergave.PriorityWord(r.Priority);
                         <tr class="gl-v2-pt-row @(r.IsClosed ? "is-closed" : "")" data-id="@r.Id" data-nr="@r.Nr" data-status="@canon" data-closed="@(r.IsClosed ? 1 : 0)"
                             data-unit="@(r.UnitId ?? 0)" data-unitname="@r.UnitName" data-contractor="@(r.ContractorId ?? 0)" data-phase="@r.Phase"
-                            data-due="@r.DueDate?.ToString("yyyy-MM-dd")" data-overdue="@(r.Overdue ? 1 : 0)" data-priority="@r.Priority" data-plan="@(r.HasPlan ? 1 : 0)" data-verslagen="@r.VerslagIds"
+                            data-due="@r.DueDate?.ToString("yyyy-MM-dd")" data-overdue="@(r.Overdue ? 1 : 0)" data-priority="@r.Priority" data-plan="@(r.HasPlan ? 1 : 0)" data-photo="@r.FirstPhotoUrl" data-verslagen="@r.VerslagIds"
                             data-href="@Url.Action("Details", "ProjectsIssues", new { projectId = Model.ProjectId, id = r.Id })"
                             data-search="@((r.Title + " " + r.NrLabel + " " + r.UnitName + " " + r.Zone + " " + r.Contractor).ToLowerInvariant())">
                             <td class="gl-v2-pt-check"><input type="checkbox" class="js-pt-check" value="@r.Id" aria-label="Selecteer @r.NrLabel" @(Model.CanWrite ? "" : "hidden")></td>
@@ -290,5 +305,8 @@
     <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
     <script src="~/js/gl-v2-punt-planviewer.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-punt-panel.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-punt-plansheets-m.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-projecten-punten.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-punt-mobile.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-punt-spraak-m.js" asp-append-version="true"></script>
 }

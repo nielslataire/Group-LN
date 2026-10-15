@@ -13,5 +13,7 @@ namespace CPMCore.Models.Budget
         public List<GlV2SelectItem> RefGrond { get; set; } = new();
         public List<GlV2SelectItem> Units { get; set; } = new();
         public int Rij { get; set; }
+        /// <summary>Tweede grondzone (m²) van de eenheid; > 0 toont het blok 'Grond 2' met een eigen €/m².</summary>
+        public decimal GrondoppAgrarisch { get; set; }
     }
 }

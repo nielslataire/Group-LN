@@ -5,6 +5,10 @@
     Layout = "~/Views/Shared/_Layout.vbhtml"
 
     Dim ser As New JavaScriptSerializer()
+    ' Label rechtsboven op de foto: eerst "straat, gemeente", daarna het blok dat rechts in beeld is
+    Dim introLabel As String = String.Join(", ", New String() {If(Model.StreetName, ""), If(Model.Deelgemeente, "")}.Where(Function(x) Not String.IsNullOrWhiteSpace(x)))
+    If introLabel = "" Then introLabel = Model.Name
+    Dim allProjectsUrl As String = Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional})
     Dim p = Model
     Dim homes = p.Homes
     Dim available = p.AvailableLots
@@ -25,7 +29,10 @@
     Dim shapedLots = p.Lots.Where(Function(l) Not String.IsNullOrWhiteSpace(l.Polygon)).ToList()
     Dim calcLot As V4Lot = available.FirstOrDefault()
 
-    Dim priceNote As String = (If(homes.PriceListNote, "") & If(String.IsNullOrWhiteSpace(homes.PriceListUpdated), "", " Bijgewerkt op " & homes.PriceListUpdated & ".")).Trim()
+    Dim listTitle As String = If(homes.ShowPrices, "Prijslijst", "Beschikbaarheid")
+    Dim priceNote As String = If(homes.ShowPrices,
+        (If(homes.PriceListNote, "") & If(String.IsNullOrWhiteSpace(homes.PriceListUpdated), "", " Bijgewerkt op " & homes.PriceListUpdated & ".")).Trim(),
+        "Overzicht van alle woningen en hun beschikbaarheid. Neem contact op voor de prijzen.")
     Dim sumLiving As String = V4Format.Range(p.Lots.Select(Function(l) CDec(l.LivingArea)), " m²")
     Dim sumLand As String = V4Format.Range(p.Lots.Select(Function(l) CDec(l.LandArea)), " m²")
     Dim sumBeds As String = V4Format.Range(p.Lots.Select(Function(l) CDec(l.Bedrooms)))
@@ -38,11 +45,11 @@
         .living = l.LivingArea, .land = l.LandArea, .bed = l.Bedrooms, .bath = l.Bathrooms,
         .garden = l.GardenOrientation, .status = l.Status, .avail = l.IsAvailable,
         .desc = l.Description, .polygon = l.Polygon, .lx = l.LabelX, .ly = l.LabelY, .zoom = l.Zoom,
-        .plan = l.FloorPlanUrl, .hasRender = Not String.IsNullOrWhiteSpace(l.RenderUrl),
+        .hasPlan = l.HasPlan, .hasPrice = l.HasPrice, .hasRender = Not String.IsNullOrWhiteSpace(l.RenderUrl),
         .finishes = l.Finishes.Select(Function(f) New With {.shortLabel = f.ShortLabel, .label = f.Label, .price = f.Price, .desc = f.Description}).ToList()
     }).ToList()
     Dim pageData = New With {
-        .project = New With {.name = p.Name, .lat = p.Lat, .lng = p.Lng, .address = p.Street & ", " & p.Postcode & " " & p.Deelgemeente},
+        .project = New With {.id = p.ProjectId, .name = p.Name, .lat = p.Lat, .lng = p.Lng, .address = p.Street & ", " & p.Postcode & " " & p.Deelgemeente},
         .lots = lotData,
         .calc = New With {.down = defaultDown, .rate = defaultRate, .years = defaultYears},
         .map = New With {
@@ -51,17 +58,28 @@
             .logo = V4Html.ResolveUrl("~/Content/img/logo.png"),
             .showMap = p.Location.Visible AndAlso p.Location.ShowMap
         },
-        .contact = New With {.titleMany = p.Contact.TitleMany, .general = p.Contact.GeneralInfoLabel, .brochureMessage = "", .buyMessage = p.Buy.CtaPrefilledMessage},
+        .contact = New With {.titleMany = p.Contact.TitleMany, .fixedTitle = If(p.Contact.CustomTitle, ""), .general = p.Contact.GeneralInfoLabel, .brochureMessage = "", .buyMessage = p.Buy.CtaPrefilledMessage},
         .endpoints = New With {.contact = p.ContactPostUrl, .brochure = p.BrochurePostUrl, .updates = p.UpdatesPostUrl},
+        .brochureDocId = p.BrochureDocId,
         .hasMobileBar = p.ShowMobileBar,
         .barSingle = (available.Count = 1)
     }
-    Dim pageJson As String = ser.Serialize(pageData).Replace("<", "<")
+    Dim pageJson As String = ser.Serialize(pageData).Replace("<", "\u003c")
 End Code
 
 @Section PageMeta
     @Code
         Dim ld As New List(Of Object)
+        Dim shareImage As String = CStr(If(ViewData("ogimage"), ""))
+        Dim seoDescription As String = CStr(If(ViewData("MetaDescription"), ""))
+        ' Provincie -> ISO 3166-2:BE voor de geo-metatags
+        Dim geoRegions As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase) From {
+            {"Oost-Vlaanderen", "BE-VOV"}, {"West-Vlaanderen", "BE-VWV"}, {"Antwerpen", "BE-VAN"}, {"Limburg", "BE-VLI"}, {"Vlaams-Brabant", "BE-VBR"},
+            {"Waals-Brabant", "BE-WBR"}, {"Henegouwen", "BE-WHT"}, {"Luik", "BE-WLG"}, {"Luxemburg", "BE-WLX"}, {"Namen", "BE-WNA"}, {"Brussel", "BE-BRU"}}
+        Dim geoRegion As String = Nothing
+        If Not String.IsNullOrWhiteSpace(p.Provincie) Then geoRegions.TryGetValue(p.Provincie.Trim(), geoRegion)
+        Dim hasGeo As Boolean = (p.Lat <> 0 AndAlso p.Lng <> 0)
+        Dim geoPos As String = If(hasGeo, p.Lat.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture) & ";" & p.Lng.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture), "")
         ld.Add(New Dictionary(Of String, Object) From {
             {"@context", "https://schema.org"}, {"@type", "BreadcrumbList"},
             {"itemListElement", New Object() {
@@ -70,43 +88,76 @@ End Code
                 New Dictionary(Of String, Object) From {{"@type", "ListItem"}, {"position", 3}, {"name", p.Name}, {"item", p.CanonicalUrl}}
             }}
         })
-        ld.Add(New Dictionary(Of String, Object) From {
-            {"@context", "https://schema.org"}, {"@type", "Residence"}, {"name", p.Name}, {"url", p.CanonicalUrl},
-            {"address", New Dictionary(Of String, Object) From {
-                {"@type", "PostalAddress"}, {"streetAddress", p.Street}, {"postalCode", p.Postcode},
-                {"addressLocality", p.Deelgemeente}, {"addressRegion", p.Provincie}, {"addressCountry", "BE"}}},
-            {"geo", New Dictionary(Of String, Object) From {{"@type", "GeoCoordinates"}, {"latitude", p.Lat}, {"longitude", p.Lng}}}
-        })
-        For Each lot In available
-            ld.Add(New Dictionary(Of String, Object) From {
-                {"@context", "https://schema.org"}, {"@type", "Offer"},
-                {"name", lot.Name & " — " & lot.Type.ToLowerInvariant() & " woning, " & p.Name & " " & p.Deelgemeente},
-                {"price", lot.FromPrice.Value}, {"priceCurrency", "EUR"}, {"availability", "https://schema.org/InStock"},
-                {"url", p.CanonicalUrl},
-                {"itemOffered", New Dictionary(Of String, Object) From {
-                    {"@type", "SingleFamilyResidence"}, {"name", lot.Name},
-                    {"floorSize", New Dictionary(Of String, Object) From {{"@type", "QuantitativeValue"}, {"value", lot.LivingArea}, {"unitCode", "MTK"}}},
-                    {"numberOfRooms", lot.Bedrooms}}},
-                {"seller", New Dictionary(Of String, Object) From {{"@type", "Organization"}, {"name", "Group LN"}, {"telephone", "+32 9 216 49 50"}}}
-            })
+        ' Zelfde RealEstateListing als op de gewone projectpagina (naam, beschrijving, url, beeld, adres), aangevuld met de
+        ' coördinaten (mainEntity) en de beschikbare woningen met prijs (offers -> itemOffered).
+        Dim address As New Dictionary(Of String, Object) From {
+            {"@type", "PostalAddress"}, {"streetAddress", p.Street}, {"postalCode", p.Postcode},
+            {"addressLocality", p.Deelgemeente}, {"addressRegion", p.Provincie}, {"addressCountry", "BE"}}
+        Dim place As New Dictionary(Of String, Object) From {{"@type", "Residence"}, {"name", p.Name}, {"address", address}}
+        If hasGeo Then place("geo") = New Dictionary(Of String, Object) From {{"@type", "GeoCoordinates"}, {"latitude", p.Lat}, {"longitude", p.Lng}}
+        Dim offers As New List(Of Object)
+        For Each lot In available.Where(Function(x) x.HasPrice)
+            Dim item As New Dictionary(Of String, Object) From {{"@type", "SingleFamilyResidence"}, {"name", lot.Name & " — " & lot.Type.ToLowerInvariant() & " woning, " & p.Name & " " & p.Deelgemeente}}
+            If lot.LivingArea > 0 Then item("floorSize") = New Dictionary(Of String, Object) From {{"@type", "QuantitativeValue"}, {"value", lot.LivingArea}, {"unitCode", "MTK"}}
+            If lot.Bedrooms > 0 Then item("numberOfBedrooms") = lot.Bedrooms
+            offers.Add(New Dictionary(Of String, Object) From {
+                {"@type", "Offer"}, {"price", lot.FromPrice.Value}, {"priceCurrency", "EUR"}, {"availability", "https://schema.org/InStock"},
+                {"url", p.CanonicalUrl}, {"itemOffered", item},
+                {"seller", New Dictionary(Of String, Object) From {{"@type", "Organization"}, {"@id", "https://www.groupln.be/#organization"}, {"name", "Group LN"}}}})
         Next
+        Dim listing As New Dictionary(Of String, Object) From {
+            {"@context", "https://schema.org"}, {"@type", "RealEstateListing"}, {"name", CStr(If(ViewData("ogtitle"), p.Name))},
+            {"description", seoDescription}, {"url", p.CanonicalUrl}, {"image", shareImage}, {"address", address}, {"mainEntity", place}}
+        If offers.Count > 0 Then listing("offers") = offers
+        ld.Add(listing)
         If p.Faq.Visible AndAlso p.Faq.Items.Count > 0 Then
             ld.Add(New Dictionary(Of String, Object) From {
                 {"@context", "https://schema.org"}, {"@type", "FAQPage"},
                 {"mainEntity", p.Faq.Items.Select(Function(f) New Dictionary(Of String, Object) From {
                     {"@type", "Question"}, {"name", f.Title},
-                    {"acceptedAnswer", New Dictionary(Of String, Object) From {{"@type", "Answer"}, {"text", f.Text}}}}).ToList()}
+                    {"acceptedAnswer", New Dictionary(Of String, Object) From {{"@type", "Answer"}, {"text", V4Html.PlainText(f.Text)}}}}).ToList()}
             })
         End If
     End Code
+    @Code
+        ' lege waarden (geen foto/omschrijving) niet in de JSON-LD opnemen
+        For Each item In ld
+            Dim d = TryCast(item, Dictionary(Of String, Object))
+            If d IsNot Nothing Then
+                For Each k In d.Where(Function(kv) kv.Value Is Nothing OrElse (TypeOf kv.Value Is String AndAlso String.IsNullOrWhiteSpace(CStr(kv.Value)))).Select(Function(kv) kv.Key).ToList()
+                    d.Remove(k)
+                Next
+            End If
+        Next
+    End Code
+    @* Testfase: de v4-pagina is nog niet bedoeld voor zoekmachines (canonical wijst naar /woonprojecten/{slug}). Verwijderen bij livegang. *@
+    <meta name="robots" content="noindex, follow" />
+    @If Not String.IsNullOrEmpty(geoRegion) Then
+        @<meta name="geo.region" content="@geoRegion" />
+    End If
+    @If Not String.IsNullOrWhiteSpace(p.Deelgemeente) Then
+        @<meta name="geo.placename" content="@(p.Deelgemeente & If(String.IsNullOrWhiteSpace(p.Provincie), "", ", " & p.Provincie))" />
+    End If
+    @If hasGeo Then
+        @<text>
+            <meta name="geo.position" content="@geoPos" />
+            <meta name="ICBM" content="@geoPos.Replace(";", ", ")" />
+        </text>
+    End If
     @For Each item In ld
-        @<script type="application/ld+json">@Html.Raw(ser.Serialize(item).Replace("<", "<"))</script>
+        @<script type="application/ld+json">@Html.Raw(ser.Serialize(item).Replace("<", "\u003c"))</script>
     Next
+    @If layers.Count > 0 AndAlso layers(0).Pic IsNot Nothing AndAlso layers(0).Pic.AvailableWidths().Count > 0 Then
+        Dim heroPic = layers(0).Pic
+        Dim heroSet As String = String.Join(", ", heroPic.AvailableWidths().Select(Function(w) heroPic.VariantUrl(w) & " " & w & "w"))
+        @<link rel="preload" as="image" fetchpriority="high" imagesrcset="@heroSet" imagesizes="(max-width: 999px) 100vw, 50vw" />
+    End If
 End Section
 
 @Section PageStyle
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="@Url.Content("~/Content/project-detail-v4.css")" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" media="print" onload="this.media='all'" />
+    <noscript><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" /></noscript>
+    <link rel="stylesheet" href="@Url.Content("~/Content/project-detail-v4.css")?v=@(System.IO.File.GetLastWriteTimeUtc(Server.MapPath("~/Content/project-detail-v4.css")).Ticks)" />
 End Section
 
 <div class="pdv4-page">
@@ -118,12 +169,15 @@ End Section
             @For i As Integer = 0 To layers.Count - 1
                 Dim m = layers(i)
                 @<div class="pdv4-layer@(If(i = 0, " is-active", ""))" data-key="@m.Key" data-label="@m.Label">
-                    @V4Html.Img(m.ImageUrl, m.Alt, i > 0)
+                    @V4Html.Img(m.ImageUrl, m.Alt, i > 0, m.Pic, "(max-width: 999px) 100vw, 50vw", i = 0)
                 </div>
             Next
         </div>
         <div class="pdv4-media__shade"></div>
-        <div class="pdv4-media__top"><span id="pdv4MediaLabel" class="pdv4-media__label">@(If(layers.Count > 0, layers(0).Label, ""))</span></div>
+        <div class="pdv4-media__top">
+            <a href="@allProjectsUrl" class="pdv4-back pdv4-back--photo"><svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6H1M5.5 1.5 1 6l4.5 4.5"/></svg><span>Alle woonprojecten</span></a>
+            <span id="pdv4MediaLabel" class="pdv4-media__label" aria-hidden="true">@introLabel</span>
+        </div>
         <div class="pdv4-media__bottom">
             @If available.Count > 0 OrElse Not String.IsNullOrWhiteSpace(p.HeroBadgeOverride) Then
                 @<span class="pdv4-badge"><span class="pdv4-badge__dot"></span>@p.HeroBadge</span>
@@ -143,9 +197,17 @@ End Section
     <div class="pdv4-content">
 
         @If p.Intro.Visible Then
-            @<section id="intro" class="pdv4-sec" data-media="@p.Intro.MediaKey" aria-labelledby="pdv4-h1">
+            @<section id="intro" class="pdv4-sec" data-block-label="@introLabel" data-media="@p.Intro.MediaKey" aria-labelledby="pdv4-h1">
                 <p class="pdv4-eyebrow">@p.Intro.Eyebrow</p>
-                <h1 id="pdv4-h1" class="pdv4-h1">@p.Intro.TitleLead <em>@p.Intro.TitleEmphasis</em></h1>
+                @Code
+                    Dim titleMain As String = If(p.Intro.TitleLead, "").Trim().TrimEnd(","c).Trim()
+                    Dim titleSub As String = If(p.Intro.TitleEmphasis, "").Trim()
+                End Code
+                <div class="pdv4-h1 pdv4-titleline">
+                    <h1 id="pdv4-h1" class="pdv4-titleline__h1@(If(titleSub <> "", " has-sub", ""))">@V4Html.NoBreakHyphens(titleMain)</h1>@If titleSub <> "" Then
+                        @<text> <span class="pdv4-titleline__sub"><em>@V4Html.NoBreakHyphens(titleSub)</em></span></text>
+                    End If
+                </div>
                 @For i As Integer = 0 To p.Intro.Paragraphs.Count - 1
                     @<p class="@(If(i = 0, "pdv4-lead", "pdv4-text"))">@p.Intro.Paragraphs(i)</p>
                 Next
@@ -167,13 +229,13 @@ End Section
 
         @For Each blockKey In p.BlockOrder
         @If blockKey = "story" AndAlso p.Story.Visible Then
-            @<section id="verhaal" class="pdv4-sec pdv4-sec--white" data-media="@p.Story.MediaKey" aria-labelledby="pdv4-verhaal-h">
+            @<section id="verhaal" class="pdv4-sec pdv4-sec--white" data-block-label="Verhaal" data-media="@p.Story.MediaKey" aria-labelledby="pdv4-verhaal-h">
                 <h2 id="pdv4-verhaal-h" class="pdv4-h2">@p.Story.Title</h2>
-                <p class="pdv4-lead pdv4-lead--m">@p.Story.Intro</p>
+                <div class="pdv4-lead-stack">@V4Html.Paragraphs(p.Story.Intro, "pdv4-lead pdv4-lead--m")</div>
                 <div class="pdv4-figures">
                     @For Each fig In p.Story.Figures
                         @<figure class="pdv4-figure">
-                            <div class="pdv4-figure__img pdv4-figure__img--32">@V4Html.Img(fig.ImageUrl, fig.Alt)</div>
+                            <div class="pdv4-figure__img pdv4-figure__img--32">@V4Html.Img(fig.ImageUrl, fig.Alt, True, fig.Pic, "(max-width: 999px) 100vw, 45vw")</div>
                             <figcaption>@fig.Text</figcaption>
                         </figure>
                     Next
@@ -182,19 +244,24 @@ End Section
                     @<div class="pdv4-cta-green" id="brochure">
                         <p class="pdv4-eyebrow pdv4-eyebrow--gold">@p.Story.BrochureEyebrow</p>
                         <h3 class="pdv4-h3 pdv4-h3--inv">@p.Story.BrochureTitle</h3>
-                        <form class="pdv4-inline-form" data-form="brochure" novalidate>
-                            <input type="email" name="email" aria-label="E-mailadres" placeholder="jouw@email.be" autocomplete="email" required />
-                            <button type="submit" class="pdv4-btn pdv4-btn--gold">@p.Story.BrochureButton</button>
-                            <p class="pdv4-form-error" role="alert" hidden></p>
-                        </form>
-                        <p class="pdv4-inline-done" hidden>@p.Story.BrochureSuccess</p>
+                        <div class="pdv4-bro__ask" id="pdv4BroAsk">
+                            <p>@p.Story.BrochureText</p>
+                            <button type="button" class="pdv4-btn pdv4-btn--gold" data-open-brochure>@p.Story.BrochureButton</button>
+                        </div>
+                        <div class="pdv4-bro-done" id="pdv4BroDone" role="status" hidden>
+                            <span class="pdv4-bro-done__icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                            <div class="pdv4-bro-done__text">
+                                <strong>De brochure is onderweg.</strong>
+                                <p>We stuurden ze naar <b data-bro-email></b>. Niets ontvangen binnen enkele minuten? Kijk even bij je reclame of <button type="button" class="pdv4-bro-done__reset" data-bro-reset>gebruik een ander adres</button>.</p>
+                            </div>
+                        </div>
                     </div>
                 End If
             </section>
         End If
 
         @If blockKey = "architecture" AndAlso p.Architecture.Visible Then
-            @<section id="architectuur" class="pdv4-sec" data-media="@p.Architecture.MediaKey" aria-labelledby="pdv4-arch-h">
+            @<section id="architectuur" class="pdv4-sec" data-block-label="Architectuur" data-media="@p.Architecture.MediaKey" aria-labelledby="pdv4-arch-h">
                 <p class="pdv4-eyebrow">@p.Architecture.Eyebrow</p>
                 <h2 id="pdv4-arch-h" class="pdv4-h2">@p.Architecture.Title</h2>
                 @For Each para In p.Architecture.Paragraphs
@@ -212,7 +279,7 @@ End Section
                     @<div class="pdv4-materials">
                         @For Each mt In p.Architecture.Materials
                             @<figure class="pdv4-material">
-                                <div class="pdv4-figure__img pdv4-figure__img--45">@V4Html.Img(mt.ImageUrl, mt.Alt)</div>
+                                <div class="pdv4-figure__img pdv4-figure__img--45">@V4Html.Img(mt.ImageUrl, mt.Alt, True, mt.Pic, "(max-width: 639px) 100vw, (max-width: 999px) 33vw, 16vw")</div>
                                 <figcaption>
                                     <h3 class="pdv4-h3 pdv4-h3--sm">@mt.Title</h3>
                                     <p>@mt.Text</p>
@@ -221,31 +288,40 @@ End Section
                         Next
                     </div>
                 End If
-                @If p.Architecture.Techniques.Count > 0 Then
-                    @<h3 class="pdv4-h3 pdv4-h3--mt">@p.Architecture.ComfortTitle</h3>
-                    @<p class="pdv4-small">@p.Architecture.ComfortIntro</p>
+            </section>
+        End If
+
+        @If blockKey = "comfort" AndAlso p.Comfort.Visible Then
+            @<section id="comfort" class="pdv4-sec pdv4-sec--flush" data-block-label="Comfort en energie" data-media="@p.Comfort.MediaKey" aria-label="Comfort en energie">
+                @If Not String.IsNullOrWhiteSpace(p.Comfort.Title) Then
+                    @<h2 class="pdv4-h2 pdv4-h2--tight">@p.Comfort.Title</h2>
+                End If
+                @If Not String.IsNullOrWhiteSpace(p.Comfort.Subtitle) Then
+                    @<p class="pdv4-lead pdv4-lead--s">@p.Comfort.Subtitle</p>
+                End If
+                @If p.Comfort.Items.Count > 0 Then
                     @<dl class="pdv4-tech">
-                        @For Each t In p.Architecture.Techniques
+                        @For Each t In p.Comfort.Items
                             @<div class="pdv4-tech__item"><dt>@t.Title</dt><dd>@t.Text</dd></div>
                         Next
                     </dl>
                 End If
-                @If p.Architecture.ShowSpecCta Then
+                @If p.Comfort.SpecDocId > 0 Then
                     @<div class="pdv4-cta-row pdv4-cta-row--card">
-                        <div class="pdv4-cta-row__text"><strong>@p.Architecture.SpecCtaTitle</strong><span>@p.Architecture.SpecCtaText</span></div>
-                        <a href="@p.Architecture.SpecCtaUrl" class="pdv4-btn pdv4-btn--outline">@p.Architecture.SpecCtaLabel</a>
+                        <div class="pdv4-cta-row__text"><strong>@p.Comfort.SpecCtaTitle</strong><span>@p.Comfort.SpecCtaText</span></div>
+                        <a href="#" class="pdv4-btn pdv4-btn--outline" data-open-brochure>@p.Comfort.SpecCtaLabel</a>
                     </div>
                 End If
             </section>
         End If
 
         @If blockKey = "homes" AndAlso homes.Visible Then
-            @<section id="woningen" class="pdv4-sec pdv4-sec--homes" data-media="@homes.MediaKey" aria-labelledby="pdv4-woningen-h">
+            @<section id="woningen" class="pdv4-sec pdv4-sec--homes" data-block-label="De woningen" data-media="@homes.MediaKey" aria-labelledby="pdv4-woningen-h">
                 <h2 id="pdv4-woningen-h" class="pdv4-h2 pdv4-h2--tight">@homes.Title</h2>
                 <p class="pdv4-lead pdv4-lead--s">@homes.Intro</p>
 
                 @If homes.ShowMap Then
-                    @<div role="tablist" aria-label="Kies een lot" class="pdv4-lottabs" id="pdv4LotTabs">
+                    @<div role="tablist" aria-label="Kies een woning" class="pdv4-lottabs" id="pdv4LotTabs">
                         @For Each lot In p.Lots
                             @<button type="button" role="tab" aria-selected="false" class="pdv4-lottab" data-lot="@lot.Id">
                                 <span class="pdv4-dot@(If(lot.IsAvailable, " pdv4-dot--avail", ""))"></span>@lot.Name
@@ -255,7 +331,7 @@ End Section
                     @<div class="pdv4-mapwrap">
                         <div class="pdv4-map" id="pdv4ProjectMap">
                             <div class="pdv4-map__stage" id="pdv4Stage">
-                                @V4Html.Img(homes.AerialImageUrl, homes.AerialAlt, False)
+                                @V4Html.Img(homes.AerialImageUrl, homes.AerialAlt, True, homes.AerialPic, "(max-width: 999px) 200vw, 100vw")
                                 <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="pdv4-map__svg" aria-hidden="false">
                                     <rect x="0" y="0" width="100" height="100" fill="transparent" data-bg></rect>
                                     @For Each lot In shapedLots
@@ -269,17 +345,17 @@ End Section
                                     </span>
                                 Next
                             </div>
-                            <span class="pdv4-map__hint" id="pdv4MapHint"><span class="pdv4-hint-desktop">Klik op een perceel</span><span class="pdv4-hint-touch">Tik op een perceel</span></span>
+                            <span class="pdv4-map__hint" id="pdv4MapHint"><span class="pdv4-hint-desktop">Klik op een eenheid</span><span class="pdv4-hint-touch">Tik op een eenheid</span></span>
                         </div>
-                        <div class="pdv4-lotcard" id="pdv4LotCard" role="dialog" hidden></div>
+                        <div class="pdv4-lotcard" id="pdv4LotCard" role="region" hidden></div>
                     </div>
                 End If
 
                 @If homes.ShowPriceList Then
-                    @<div id="prijslijst" class="pdv4-pricelist">
+                    @<div id="prijslijst" class="pdv4-pricelist" data-block-label="@listTitle">
                         <div class="pdv4-pricelist__head">
                             <div>
-                                <h3 class="pdv4-h3 pdv4-h3--lg">Prijslijst</h3>
+                                <h3 class="pdv4-h3 pdv4-h3--lg">@listTitle</h3>
                                 <p class="pdv4-small pdv4-small--tight">@priceNote</p>
                             </div>
                             <div role="radiogroup" aria-label="Filter" class="pdv4-seg" id="pdv4ListFilter">
@@ -288,14 +364,14 @@ End Section
                             </div>
                         </div>
 
-                        <div class="pdv4-table" role="table" aria-label="Prijslijst @p.Name" id="pdv4Table">
+                        <div class="pdv4-table" role="table" aria-label="@listTitle @p.Name" id="pdv4Table">
                             <div class="pdv4-table__row pdv4-table__row--head" role="row">
-                                <span role="columnheader">Lot</span>
+                                <span role="columnheader">Woning</span>
                                 <span role="columnheader" class="r">Bewoonbaar</span>
                                 <span role="columnheader" class="r">Grond</span>
-                                <span role="columnheader">Slpk</span>
+                                <span role="columnheader" title="Slaapkamers">Slaapk.</span>
                                 <span role="columnheader" class="r">Prijs</span>
-                                <span role="columnheader" class="c">Plan</span>
+                                <span role="columnheader" class="c">Grondplan</span>
                             </div>
                             @For Each lot In p.Lots
                                 Dim multi = lot.Finishes.Count > 1
@@ -312,6 +388,8 @@ End Section
                                     <span role="cell" class="pdv4-pricecell">
                                         @If Not lot.IsAvailable Then
                                             @<span class="pdv4-pill pdv4-pill--sold"><span></span>@(If(lot.IsSold, "Verkocht", If(lot.Status = "Optie", "In optie", "Op aanvraag")))</span>
+                                        ElseIf Not lot.HasPrice Then
+                                            @<span class="pdv4-pill pdv4-pill--ask"><span></span>Op aanvraag</span>
                                         Else
                                             @For Each f In lot.Finishes
                                                 @<span class="pdv4-priceline">
@@ -327,8 +405,8 @@ End Section
                                         End If
                                     </span>
                                     <span role="cell" class="c">
-                                        @If lot.IsAvailable AndAlso Not String.IsNullOrWhiteSpace(lot.FloorPlanUrl) Then
-                                            @<a href="@lot.FloorPlanUrl" class="pdv4-iconbtn" aria-label="Grondplan @lot.Name downloaden (PDF)" title="Grondplan @lot.Name downloaden (PDF)">
+                                        @If lot.IsAvailable AndAlso lot.HasPlan Then
+                                            @<a href="#" data-plan-id="@lot.Id" class="pdv4-iconbtn" aria-label="Grondplan @lot.Name downloaden (PDF)" title="Grondplan @lot.Name downloaden (PDF)">
                                                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v8M4.5 7 8 10.5 11.5 7M3 13.5h10"></path></svg>
                                             </a>
                                         End If
@@ -343,8 +421,10 @@ End Section
                                 @<article class="pdv4-card@(If(lot.IsAvailable, "", " is-sold"))" data-lot="@lot.Id" data-avail="@(If(lot.IsAvailable, "1", "0"))">
                                     <div class="pdv4-card__top">
                                         <h4>@lot.Name</h4>
-                                        @If lot.IsAvailable AndAlso Not multi Then
+                                        @If lot.IsAvailable AndAlso lot.HasPrice AndAlso Not multi Then
                                             @<span class="pdv4-card__price">@V4Format.Eur(lot.Finishes.First().Price)</span>
+                                        ElseIf lot.IsAvailable AndAlso Not lot.HasPrice Then
+                                            @<span class="pdv4-card__price">Op aanvraag</span>
                                         ElseIf Not lot.IsAvailable Then
                                             @<span class="pdv4-card__price is-sold">@(If(lot.IsSold, "Verkocht", If(lot.Status = "Optie", "In optie", "Op aanvraag")))</span>
                                         End If
@@ -358,15 +438,15 @@ End Section
                                         </div>
                                     End If
                                     @If lot.IsAvailable Then
-                                        If homes.ShowCalculator Then
+                                        If homes.ShowCalculator AndAlso lot.HasPrice Then
                                             @<button type="button" class="pdv4-linkbtn pdv4-linkbtn--l" data-tocalc="@lot.Id|0">≈ <span data-monthly="@lot.Id|0">@V4Format.Eur(V4Format.MonthlyPayment(lot.Finishes.First().Price, defaultDown, defaultRate, defaultYears))</span> / maand · bereken</button>
                                         End If
                                         @<div class="pdv4-card__btns">
-                                            @If Not String.IsNullOrWhiteSpace(lot.FloorPlanUrl) Then
-                                                @<a href="@lot.FloorPlanUrl">⤓ Grondplan</a>
+                                            @If lot.HasPlan Then
+                                                @<a href="#" data-plan-id="@lot.Id"><svg class="pdv4-ico" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>Grondplan</a>
                                             End If
-                                            @If Not String.IsNullOrWhiteSpace(homes.SpecDocUrl) Then
-                                                @<a href="@homes.SpecDocUrl">⤓ Lastenboek</a>
+                                            @If p.Comfort.SpecDocId > 0 Then
+                                                @<a href="#" data-open-brochure><svg class="pdv4-ico" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>Projectbrochure</a>
                                             End If
                                         </div>
                                     End If
@@ -379,13 +459,15 @@ End Section
                             <div><dt>Bewoonbaar</dt><dd>@sumLiving</dd><dd class="s">per woning</dd></div>
                             <div><dt>Grond</dt><dd>@sumLand</dd><dd class="s">per perceel</dd></div>
                             <div><dt>Slaapkamers</dt><dd>@sumBeds</dd><dd class="s">per woning</dd></div>
-                            <div><dt>Prijsrange</dt><dd>@sumPrice</dd><dd class="s">beschikbare loten</dd></div>
+                            @If homes.ShowPrices Then
+                                @<div><dt>Prijsrange</dt><dd>@sumPrice</dd><dd class="s">beschikbare loten</dd></div>
+                            End If
                         </dl>
                     </div>
                 End If
 
                 @If homes.ShowCalculator AndAlso calcLot IsNot Nothing Then
-                    @<div id="maandlast" class="pdv4-calc">
+                    @<div id="maandlast" class="pdv4-calc" data-block-label="Maandlast">
                         <div class="pdv4-calc__top">
                             <div>
                                 <h3 class="pdv4-h3 pdv4-h3--lg">@homes.CalculatorTitle</h3>
@@ -440,7 +522,7 @@ End Section
                             @<a href="@d.Url" class="pdv4-doc">
                                 <span class="pdv4-doc__icon">PDF</span>
                                 <span class="pdv4-doc__text"><strong>@d.Title</strong><small>@d.Meta</small></span>
-                                <span class="pdv4-doc__dl" aria-hidden="true">⤓</span>
+                                <span class="pdv4-doc__dl" aria-hidden="true"><svg class="pdv4-ico" width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg></span>
                             </a>
                         Next
                     </div>
@@ -448,8 +530,23 @@ End Section
             </section>
         End If
 
+        @If blockKey = "documents" AndAlso p.Documents.Visible Then
+            @<section id="documenten" class="pdv4-sec pdv4-sec--flush" data-block-label="Documenten" data-media="@p.Documents.MediaKey" aria-label="Documenten">
+                <h2 class="pdv4-h2 pdv4-h2--tight">@p.Documents.Title</h2>
+                <div class="pdv4-docs">
+                    @For Each d In p.Documents.Docs
+                        @<a href="#" class="pdv4-doc" data-doc-id="@d.Id" data-doc-name="@d.Title"@(If(d.IsBrochure, " data-open-brochure", ""))>
+                            <span class="pdv4-doc__icon">PDF</span>
+                            <span class="pdv4-doc__text"><strong>@d.Title</strong><small>@d.Meta</small></span>
+                            <span class="pdv4-doc__dl" aria-hidden="true"><svg class="pdv4-ico" width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg></span>
+                        </a>
+                    Next
+                </div>
+            </section>
+        End If
+
         @If blockKey = "location" AndAlso p.Location.Visible Then
-            @<section id="ligging" class="pdv4-sec pdv4-sec--white" data-media="@p.Location.MediaKey" aria-labelledby="pdv4-ligging-h">
+            @<section id="ligging" class="pdv4-sec pdv4-sec--white" data-block-label="Ligging" data-media="@p.Location.MediaKey" aria-labelledby="pdv4-ligging-h">
                 <h2 id="pdv4-ligging-h" class="pdv4-h2 pdv4-h2--tight">@p.Location.Title</h2>
                 <p class="pdv4-lead pdv4-lead--s">@p.Location.Intro</p>
                 @If p.Location.Guide.Count > 0 Then
@@ -478,7 +575,7 @@ End Section
                     @<div class="pdv4-cta-row pdv4-cta-row--soft">
                         <div class="pdv4-cta-row__text"><strong>@p.Location.CtaTitle</strong><span>@p.Location.CtaText</span></div>
                         <div class="pdv4-actions pdv4-actions--tight">
-                            <a href="tel:@p.PhoneHref" class="pdv4-btn pdv4-btn--outline">Bel ons</a>
+                            <a href="tel:@p.PhoneHref" class="pdv4-btn pdv4-btn--outline pdv4-only-mobile">Bel ons</a>
                             <button type="button" class="pdv4-btn pdv4-btn--primary" data-goto-question>Stel je vraag</button>
                         </div>
                     </div>
@@ -487,7 +584,7 @@ End Section
         End If
 
         @If blockKey = "buildphase" AndAlso p.BuildPhase.Visible Then
-            @<section id="bouwfase" class="pdv4-sec" data-media="@p.BuildPhase.MediaKey" aria-labelledby="pdv4-bouw-h">
+            @<section id="bouwfase" class="pdv4-sec" data-block-label="Bouwfase" data-media="@p.BuildPhase.MediaKey" aria-labelledby="pdv4-bouw-h">
                 <div class="pdv4-phase__head">
                     <h2 id="pdv4-bouw-h" class="pdv4-h2 pdv4-h2--flat">@p.BuildPhase.Title</h2>
                     <span class="pdv4-phase__pct">@p.BuildPhase.ProgressPercent%</span>
@@ -516,7 +613,7 @@ End Section
         End If
 
         @If blockKey = "buy" AndAlso p.Buy.Visible Then
-            @<section id="kopen" class="pdv4-sec pdv4-sec--white" data-media="@p.Buy.MediaKey" aria-labelledby="pdv4-kopen-h">
+            @<section id="kopen" class="pdv4-sec pdv4-sec--white" data-block-label="Aankoop" data-media="@p.Buy.MediaKey" aria-labelledby="pdv4-kopen-h">
                 <h2 id="pdv4-kopen-h" class="pdv4-h2 pdv4-h2--flat">@p.Buy.Title</h2>
                 <ol class="pdv4-steps">
                     @For Each s In p.Buy.Steps
@@ -531,14 +628,14 @@ End Section
         End If
 
         @If blockKey = "faq" AndAlso p.Faq.Visible AndAlso p.Faq.Items.Count > 0 Then
-            @<section id="vragen" class="pdv4-sec" data-media="@p.Faq.MediaKey" aria-labelledby="pdv4-vragen-h">
+            @<section id="vragen" class="pdv4-sec" data-block-label="Vragen" data-media="@p.Faq.MediaKey" aria-labelledby="pdv4-vragen-h">
                 <h2 id="pdv4-vragen-h" class="pdv4-h2 pdv4-h2--flat">@p.Faq.Title</h2>
                 <div class="pdv4-faq">
                     @For i As Integer = 0 To p.Faq.Items.Count - 1
                         Dim q = p.Faq.Items(i)
                         @<div class="pdv4-faq__item@(If(i = 0, " is-open", ""))">
                             <h3><button type="button" aria-expanded="@(If(i = 0, "true", "false"))" aria-controls="pdv4-faq-a@(i)" id="pdv4-faq-q@(i)"><span>@q.Title</span><span class="pdv4-faq__sign" aria-hidden="true">@(If(i = 0, "−", "+"))</span></button></h3>
-                            <p id="pdv4-faq-a@(i)" role="region" aria-labelledby="pdv4-faq-q@(i)" @(If(i = 0, "", "hidden"))>@q.Text</p>
+                            <div id="pdv4-faq-a@(i)" class="pdv4-faq__answer" role="region" aria-labelledby="pdv4-faq-q@(i)" @(If(i = 0, "", "hidden"))>@V4Html.SafeHtml(q.Text)</div>
                         </div>
                     Next
                 </div>
@@ -552,7 +649,7 @@ End Section
         Next
 
         @If p.Contact.Visible Then
-            @<section id="contact" class="pdv4-sec pdv4-sec--contact" data-media="@p.Contact.MediaKey" aria-labelledby="pdv4-contact-h">
+            @<section id="contact" class="pdv4-sec pdv4-sec--contact" data-block-label="Contact" data-media="@p.Contact.MediaKey" aria-labelledby="pdv4-contact-h">
                 <h2 id="pdv4-contact-h" class="pdv4-h2">@p.ContactTitleDefault</h2>
                 <p class="pdv4-lead">@p.Contact.Intro</p>
                 <form class="pdv4-form" id="pdv4ContactForm" novalidate>
@@ -577,15 +674,45 @@ End Section
                     <p class="pdv4-form-error" role="alert" id="pdv4FormError" hidden></p>
                     <button type="submit" class="pdv4-btn pdv4-btn--primary pdv4-btn--xl">@p.Contact.SubmitLabel</button>
                 </form>
-                <div class="pdv4-thanks" id="pdv4Thanks" hidden>
-                    <strong>@p.Contact.ThanksTitle</strong>
-                    <span>@p.Contact.ThanksText</span>
+                @Code
+                    Dim thanksStreet As Boolean = V4Html.IsStreetName(p.Name)
+                    Dim thanksPlace As String = If(thanksStreet, "aan de " & p.Name, "bij " & p.Name)
+                    Dim thanksLive As String = If(thanksStreet, "wonen aan de " & p.Name, p.Name)
+                End Code
+                <div class="pdv4-thanks" id="pdv4Thanks" role="status" tabindex="-1" hidden>
+                    <div class="pdv4-thanks__main">
+                        <span class="pdv4-thanks__check" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19 7.5"/></svg></span>
+                        <p class="pdv4-thanks__eyebrow">Aanvraag ontvangen</p>
+                        <h3 class="pdv4-thanks__title">Je eerste stap naar een thuis @thanksPlace.</h3>
+                        <p class="pdv4-thanks__text">Bedankt voor je interesse. Een van onze projectadviseurs bezorgt je binnen één werkdag de informatie die voor jou relevant is en beantwoordt je vragen. Zo kan je rustig nagaan of @thanksLive bij jou past.</p>
+                    </div>
+                    <div class="pdv4-thanks__next">
+                        <p class="pdv4-thanks__eyebrow">Wat er nu gebeurt</p>
+                        <ul class="pdv4-thanks__steps">
+                            <li class="pdv4-thanks__step pdv4-thanks__step--1"><strong>We mailen je de informatie</strong><span>Je ontvangt de documenten die bij je aanvraag horen, samen met een antwoord op je vragen.</span></li>
+                            <li class="pdv4-thanks__step pdv4-thanks__step--2"><strong>Rustig doornemen</strong><span>Bekijk alles op je eigen tempo. Heb je nog vragen, dan staat je projectadviseur klaar.</span></li>
+                            <li class="pdv4-thanks__step pdv4-thanks__step--3"><strong>Een gesprek, als je dat wil</strong><span>Wil je verder, dan plannen we een vrijblijvend gesprek op kantoor of ter plaatse.</span></li>
+                        </ul>
+                        <a href="#intro" class="pdv4-thanks__more">Lees verder over het project <span aria-hidden="true">&rarr;</span></a>
+                    </div>
                 </div>
                 <p class="pdv4-call">Liever meteen iemand spreken? Bel <a href="tel:@p.PhoneHref">@p.Phone</a></p>
             </section>
         End If
     </div>
 </div>
+
+<section class="pdv4-more" aria-labelledby="pdv4-more-h">
+    <div class="container">
+    <div class="pdv4-more__inner">
+        <div class="pdv4-more__text">
+            <p class="pdv4-more__eyebrow">Nog niet gevonden wat je zoekt?</p>
+            <h2 id="pdv4-more-h" class="pdv4-more__title">Ontdek onze andere woonprojecten</h2>
+        </div>
+        <a href="@allProjectsUrl" class="pdv4-btn pdv4-btn--outline">Alle woonprojecten <span aria-hidden="true">&rarr;</span></a>
+    </div>
+    </div>
+</section>
 
 @If p.ShowMobileBar AndAlso available.Count > 0 Then
     @<div class="pdv4-bar" id="pdv4Bar" hidden>
@@ -594,11 +721,101 @@ End Section
         <a href="#contact" class="pdv4-btn pdv4-btn--primary">Info aanvragen</a>
     </div>
 End If
+
+<div id="pdv4DocModal" class="pdv4-modal" hidden>
+    <div class="pdv4-modal__backdrop" data-doc-close></div>
+    <div class="pdv4-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="pdv4DocTitle">
+        <button type="button" class="pdv4-modal__close" data-doc-close aria-label="Sluiten">&times;</button>
+        <p class="pdv4-eyebrow" data-doc-eyebrow>Document @p.Name</p>
+        <h2 id="pdv4DocTitle" class="pdv4-modal__title" data-doc-title>Ontvang het document in je mailbox</h2>
+        <p class="pdv4-modal__intro">Vul je gegevens in en we sturen je <span data-doc-name-intro>het document</span> meteen per e-mail.</p>
+        <form id="pdv4DocForm" class="pdv4-modal__form" novalidate>
+            <input type="hidden" name="DocId" value="" />
+            <input type="hidden" name="g-recaptcha-response" id="pdv4DocToken" />
+            <div class="pdv4-hp" aria-hidden="true"><label>Laat dit veld leeg<input type="text" name="website_url" tabindex="-1" autocomplete="off" /></label></div>
+            <div class="pdv4-modal__grid">
+                <label><span class="pdv4-lbl">Voornaam <span class="pdv4-req" aria-hidden="true">*</span></span><input name="Firstname" autocomplete="given-name" required aria-required="true" /><em class="pdv4-field-error" hidden></em></label>
+                <label><span class="pdv4-lbl">Naam <span class="pdv4-req" aria-hidden="true">*</span></span><input name="Name" autocomplete="family-name" required aria-required="true" /><em class="pdv4-field-error" hidden></em></label>
+                <label><span class="pdv4-lbl">E-mail <span class="pdv4-req" aria-hidden="true">*</span></span><input name="Email" type="email" inputmode="email" autocomplete="email" placeholder="naam@voorbeeld.be" required aria-required="true" /><em class="pdv4-field-error" hidden></em></label>
+                <label><span class="pdv4-lbl">Telefoon <span class="pdv4-req" aria-hidden="true">*</span></span><input name="Phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+32 4…" required aria-required="true" /><em class="pdv4-field-error" hidden></em></label>
+            </div>
+            <p class="pdv4-modal__note"><span class="pdv4-req" aria-hidden="true">*</span> Verplichte velden</p>
+            <p class="pdv4-modal__privacy">Group LN gebruikt je gegevens enkel om je het document te bezorgen en je over dit project te informeren. Lees meer in ons <a href="@Url.Action("Privacybeleid", "Legal")" target="_blank" rel="noopener">privacybeleid</a>.</p>
+            <p class="pdv4-form-error" role="alert" id="pdv4DocError" hidden></p>
+            <button type="submit" class="pdv4-btn pdv4-btn--primary pdv4-btn--xl pdv4-modal__submit" id="pdv4DocSubmit">Stuur mij het document</button>
+        </form>
+        <div class="pdv4-modal__done" role="status" hidden>
+            <strong>Het document is onderweg.</strong>
+            <p>We stuurden het naar <b data-done-email></b>. Niets ontvangen binnen enkele minuten? Kijk even bij je reclame.</p>
+            <button type="button" class="pdv4-btn pdv4-btn--primary" data-doc-close>Sluiten</button>
+        </div>
+    </div>
 </div>
+
+<div id="pdv4PlanModal" class="pdv4-modal" hidden>
+    <div class="pdv4-modal__backdrop" data-plan-close></div>
+    <div class="pdv4-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="pdv4PlanTitle">
+        <button type="button" class="pdv4-modal__close" data-plan-close aria-label="Sluiten">&times;</button>
+        <p class="pdv4-eyebrow" data-plan-eyebrow>Grondplan @p.Name</p>
+        <h2 id="pdv4PlanTitle" class="pdv4-modal__title">Ontvang het grondplan in je mailbox</h2>
+        <p class="pdv4-modal__intro">Vul je gegevens in en we sturen je het grondplan van <span data-plan-lot>deze woning</span> meteen per e-mail.</p>
+        <form id="pdv4PlanForm" class="pdv4-modal__form" novalidate>
+            <input type="hidden" name="UnitId" value="" />
+            <input type="hidden" name="g-recaptcha-response" id="pdv4PlanToken" />
+            <div class="pdv4-hp" aria-hidden="true"><label>Laat dit veld leeg<input type="text" name="website_url" tabindex="-1" autocomplete="off" /></label></div>
+            <div class="pdv4-modal__grid">
+                <label><span class="pdv4-lbl">Voornaam <span class="pdv4-req" aria-hidden="true">*</span></span><input name="Firstname" autocomplete="given-name" required aria-required="true" /><em class="pdv4-field-error" hidden></em></label>
+                <label><span class="pdv4-lbl">Naam <span class="pdv4-req" aria-hidden="true">*</span></span><input name="Name" autocomplete="family-name" required aria-required="true" /><em class="pdv4-field-error" hidden></em></label>
+                <label><span class="pdv4-lbl">E-mail <span class="pdv4-req" aria-hidden="true">*</span></span><input name="Email" type="email" inputmode="email" autocomplete="email" placeholder="naam@voorbeeld.be" required aria-required="true" /><em class="pdv4-field-error" hidden></em></label>
+                <label><span class="pdv4-lbl">Telefoon <span class="pdv4-req" aria-hidden="true">*</span></span><input name="Phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+32 4…" required aria-required="true" /><em class="pdv4-field-error" hidden></em></label>
+            </div>
+            <p class="pdv4-modal__note"><span class="pdv4-req" aria-hidden="true">*</span> Verplichte velden</p>
+            <p class="pdv4-modal__privacy">Group LN gebruikt je gegevens enkel om je het grondplan te bezorgen en je over dit project te informeren. Lees meer in ons <a href="@Url.Action("Privacybeleid", "Legal")" target="_blank" rel="noopener">privacybeleid</a>.</p>
+            <p class="pdv4-form-error" role="alert" id="pdv4PlanError" hidden></p>
+            <button type="submit" class="pdv4-btn pdv4-btn--primary pdv4-btn--xl pdv4-modal__submit" id="pdv4PlanSubmit">Stuur mij het grondplan</button>
+        </form>
+        <div class="pdv4-modal__done" role="status" hidden>
+            <strong>Het grondplan is onderweg.</strong>
+            <p>We stuurden het naar <b data-done-email></b>. Niets ontvangen binnen enkele minuten? Kijk even bij je reclame.</p>
+            <button type="button" class="pdv4-btn pdv4-btn--primary" data-plan-close>Sluiten</button>
+        </div>
+    </div>
+</div>
+
+<div id="pdv4BroModal" class="pdv4-modal" hidden>
+    <div class="pdv4-modal__backdrop" data-bro-close></div>
+    <div class="pdv4-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="pdv4BroTitle">
+        <button type="button" class="pdv4-modal__close" data-bro-close aria-label="Sluiten">&times;</button>
+        <p class="pdv4-eyebrow">Brochure @p.Name</p>
+        <h2 id="pdv4BroTitle" class="pdv4-modal__title">Ontvang de brochure in je mailbox</h2>
+        <p class="pdv4-modal__intro">Vul je gegevens in en we sturen je de brochure meteen per e-mail, met alle materialen, afwerkingen en de volledige beschrijving van het project.</p>
+        <form id="pdv4BroForm" class="pdv4-modal__form" novalidate>
+            <input type="hidden" name="DocId" value="@p.BrochureDocId" />
+            <input type="hidden" name="g-recaptcha-response" id="pdv4BroToken" />
+            <div class="pdv4-hp" aria-hidden="true"><label>Laat dit veld leeg<input type="text" name="website_url" tabindex="-1" autocomplete="off" /></label></div>
+            <div class="pdv4-modal__grid">
+                <label><span class="pdv4-lbl">Voornaam <span class="pdv4-req" aria-hidden="true">*</span></span><input name="Firstname" autocomplete="given-name" required aria-required="true" /><em class="pdv4-field-error" hidden></em></label>
+                <label><span class="pdv4-lbl">Naam <span class="pdv4-req" aria-hidden="true">*</span></span><input name="Name" autocomplete="family-name" required aria-required="true" /><em class="pdv4-field-error" hidden></em></label>
+                <label><span class="pdv4-lbl">E-mail <span class="pdv4-req" aria-hidden="true">*</span></span><input name="Email" type="email" inputmode="email" autocomplete="email" placeholder="naam@voorbeeld.be" required aria-required="true" /><em class="pdv4-field-error" hidden></em></label>
+                <label><span class="pdv4-lbl">Telefoon <span class="pdv4-req" aria-hidden="true">*</span></span><input name="Phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+32 4…" required aria-required="true" /><em class="pdv4-field-error" hidden></em></label>
+            </div>
+            <p class="pdv4-modal__note"><span class="pdv4-req" aria-hidden="true">*</span> Verplichte velden</p>
+            <p class="pdv4-modal__privacy">Group LN gebruikt je gegevens enkel om je de brochure te bezorgen en je over dit project te informeren. Lees meer in ons <a href="@Url.Action("Privacybeleid", "Legal")" target="_blank" rel="noopener">privacybeleid</a>.</p>
+            <p class="pdv4-form-error" role="alert" id="pdv4BroError" hidden></p>
+            <button type="submit" class="pdv4-btn pdv4-btn--primary pdv4-btn--xl pdv4-modal__submit" id="pdv4BroSubmit">Stuur mij de brochure</button>
+        </form>
+    </div>
+</div>
+</div>
+
 
 <script type="application/json" id="pdv4-data">@Html.Raw(pageJson)</script>
 
 @Section scripts
+    <script>
+        // Site-wide beschikbaar voor de modal-partials (SendPlan e.d.), die via AJAX in de pagina komen.
+        window.reCaptchaSiteKey = '@ViewBag.ReCaptchaSiteKey';
+    </script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="@Url.Content("~/Scripts/project-detail-v4.js")"></script>
+    <script src="@Url.Content("~/Scripts/project-detail-v4.js")?v=@(System.IO.File.GetLastWriteTimeUtc(Server.MapPath("~/Scripts/project-detail-v4.js")).Ticks)"></script>
 End Section

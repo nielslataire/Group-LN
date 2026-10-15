@@ -16,7 +16,8 @@ public class VerkoopVoorstelServiceTests
     {
         var r = new BudgetResultaatBO { BudgetVersieId = 1, TotaalBouw = 870_000m, Onvoorzien = 65_000m };
         r.Forfaits.Add(new BudgetKostenPostBO { Omschrijving = "Infrastructuur",       Bedrag = 50_000m });
-        r.Forfaits.Add(new BudgetKostenPostBO { Omschrijving = "Opmeting + sondering", Bedrag = 10_000m });
+        r.KostenOpBouw.Add(new BudgetKostenPostBO { Omschrijving = "Opmeting",  Bedrag = 4_000m, IsPerc = true });
+        r.KostenOpBouw.Add(new BudgetKostenPostBO { Omschrijving = "Sondering", Bedrag = 6_000m, IsPerc = true });
         r.Financiering.Add(new BudgetKostenPostBO { Omschrijving = "Straight loan grond (6 mnd)", Bedrag = 5_000m, IsPerc = true });
         return r;
     }
@@ -25,7 +26,6 @@ public class VerkoopVoorstelServiceTests
     {
         AankoopprijsGrond        = 400_000m,
         InfrastructuurForfait    = 50_000m,
-        OpmetingSonderingForfait = 10_000m,
         DoelMargePerc            = doel,
         GrondMargePerc           = grond
     };

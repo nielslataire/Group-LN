@@ -716,5 +716,14 @@ namespace CPMCore.Models.Projecten
         public string Title { get; set; }
         public string Text { get; set; }
         public string Person { get; set; }
+        // voorziening (poi)
+        public string Category { get; set; }
+        public string Distance { get; set; }
+        public string Time { get; set; }
+        public string Lat { get; set; }
+        public string Lng { get; set; }
+        // reistijd
+        public string Place { get; set; }
+        public string Duration { get; set; }
     }
 }

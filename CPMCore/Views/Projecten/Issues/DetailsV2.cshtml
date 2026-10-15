@@ -42,12 +42,24 @@
             <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="pd-status-menu"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i><span>Status</span><i class="ph ph-caret-down" aria-hidden="true"></i></button>
         }
     }
+    @if (Model.CanDelete)
+    {
+        <button type="button" class="gl-v2-btn gl-v2-btn-danger" data-bs-toggle="modal" data-bs-target="#pd-delete-modal"><i class="ph ph-trash" aria-hidden="true"></i><span>Verwijderen</span></button>
+    }
 }
 @section MobileQuickActions
 {
     @if (Model.CanWrite && onHold)
     {
         <button type="button" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary js-pd-status" data-status="10"><i class="ph ph-play" aria-hidden="true"></i>Hervatten</button>
+    }
+    @if (Model.CanWrite && Model.NextStatuses.Count > 0)
+    {
+        <button type="button" class="gl-v2-mobile-quickaction js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="pd-status-menu"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i>Status</button>
+    }
+    @if (Model.CanDelete)
+    {
+        <button type="button" class="gl-v2-mobile-quickaction" data-bs-toggle="modal" data-bs-target="#pd-delete-modal"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</button>
     }
     <a class="gl-v2-mobile-quickaction" href="@ViewData["BackUrl"]"><i class="ph ph-list" aria-hidden="true"></i>Alle punten</a>
 }
@@ -210,7 +222,7 @@
             <section class="gl-v2-card gl-v2-pd-card">
                 <div class="gl-v2-card-header"><span class="gl-v2-card-header-icon"><i class="ph ph-map-pin" aria-hidden="true"></i></span><h2 class="gl-v2-card-header-title">Op plan</h2><span class="gl-v2-field-divider"></span><span class="gl-v2-card-header-count">@Model.PlanName</span></div>
                 <div class="gl-v2-card-body">
-                    <div id="pd-plan" data-url="@Model.PlanUrl" data-page="@Model.PlanPage" data-x="@Model.PlanX.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-y="@Model.PlanY.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-status="@Model.Status"></div>
+                    <div id="pd-plan" data-url="@Model.PlanUrl" data-page="@Model.PlanPage" data-x="@Model.PlanX.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-y="@Model.PlanY.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-status="@Model.Status" data-pin="@(Model.PlanHasPin ? "1" : "0")"></div>
                     <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("PlanV2", "ProjectsIssues", new { projectId = Model.ProjectId, issue = Model.Id })"><i class="ph ph-map-trifold" aria-hidden="true"></i>Openen op plan</a>
                 </div>
             </section>
@@ -253,6 +265,16 @@
             </div>
         </div>
     </div>
+}
+
+@if (Model.CanDelete)
+{
+    @await Html.PartialAsync("GlV2/_ModalConfirm", new GlV2ModalConfirmVm
+    {
+        Id = "pd-delete-modal", Tone = GlV2ModalTone.Danger, IconClass = "ph-trash", Title = "Punt verwijderen?",
+        Description = Model.NrLabel + " " + Model.Title + " wordt definitief verwijderd, met foto's en historiek.",
+        ConfirmLabel = "Verwijderen", FormAction = Url.Action("Delete", "ProjectsIssues", new { projectId = Model.ProjectId, id = Model.Id })!
+    })
 }
 
 @section PageScripts

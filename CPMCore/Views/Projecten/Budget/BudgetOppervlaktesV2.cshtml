@@ -36,7 +36,7 @@
         ("buiten", "Buitenruimtes",       new[] { "Tuin", "T. prefab", "T. gvl.", "Dakt." }, Model.Rijen.Any(r => r.Tuin + r.TerrasPrefab + r.TerrasGelijkvloers + r.Dakterras > 0)),
         ("park",   "Parkeren & berging",  new[] { "Gar. bgr.", "Berg. ond.", "Berg. gvl.", "Carport", "Poorten" }, Model.Rijen.Any(r => r.GaragesParkingsBovenGr + r.GarBergOndergronds + r.BergGelijkvloers + r.Carports + r.Poorten > 0)),
         ("overig", "Overige",             new[] { "Doorrit", "Zolder", "Gem. delen", "Wegenis" }, Model.Rijen.Any(r => r.DoorritGVL + r.Zolder + r.GemeenschappelijkeDelen + r.Wegenis > 0)),
-        ("grond",  "Grond",               new[] { "Grond m²" }, true),
+        ("grond",  "Grond",               new[] { "Grond m²", "Grond 2 m²" }, true),
     };
 }
 @section PageStyle
@@ -170,6 +170,7 @@
                             <td data-group="park"></td><td data-group="park"></td><td data-group="park"></td><td data-group="park"></td><td class="is-num" data-group="park" id="bw-opp-ft-poorten"></td>
                             <td data-group="overig"></td><td data-group="overig"></td><td data-group="overig"></td><td data-group="overig"></td>
                             <td class="is-num" data-group="grond" id="bw-opp-ft-grond">@t.TotaalGrondopp.ToString("N2", nl)</td>
+                            <td class="is-num" data-group="grond" id="bw-opp-ft-grond2">@Model.Rijen.Sum(r => r.GrondoppAgrarisch).ToString("N2", nl)</td>
                             <td class="is-num" id="bw-opp-ft-gered">@t.TotaalGereduceerd.ToString("N2", nl)</td>
                             <td></td>
                         </tr>
@@ -178,7 +179,7 @@
                             <td><div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="bw-opp-add-naam" placeholder="bv. Lot 10" aria-label="Naam nieuwe eenheid" /></div></div></td>
                             <td>@await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "add-grp", Id = "bw-opp-add-grp", Bare = true, Placeholder = "— hoofdtype —", Items = Model.GroupTypes.Skip(1).Select(g => new GlV2SelectItem { Value = g.Value, Text = g.Text }).ToList() })</td>
                             <td>@await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "add-sub", Id = "bw-opp-add-sub", Bare = true, Disabled = true, Placeholder = "— eerst hoofdtype —", Items = new List<GlV2SelectItem>() })</td>
-                            <td data-group="bew"></td><td data-group="buiten"></td><td data-group="buiten"></td><td data-group="buiten"></td><td data-group="buiten"></td><td data-group="park"></td><td data-group="park"></td><td data-group="park"></td><td data-group="park"></td><td data-group="park"></td><td data-group="overig"></td><td data-group="overig"></td><td data-group="overig"></td><td data-group="overig"></td><td data-group="grond"></td><td></td>
+                            <td data-group="bew"></td><td data-group="buiten"></td><td data-group="buiten"></td><td data-group="buiten"></td><td data-group="buiten"></td><td data-group="park"></td><td data-group="park"></td><td data-group="park"></td><td data-group="park"></td><td data-group="park"></td><td data-group="overig"></td><td data-group="overig"></td><td data-group="overig"></td><td data-group="overig"></td><td data-group="grond"></td><td data-group="grond"></td><td></td>
                             <td class="col-actions"><button type="button" class="gl-v2-btn gl-v2-btn-primary" id="bw-opp-add" style="height:34px;padding:0 12px"><i class="ph ph-plus" aria-hidden="true"></i>Toevoegen</button></td>
                         </tr>
                     </tfoot>
@@ -243,13 +244,13 @@
         return d;
     }
     function totalen() {
-        var bew = 0, grond = 0, ger = 0, zonder = 0, n = 0, poorten = 0;
+        var bew = 0, grond = 0, grond2 = 0, ger = 0, zonder = 0, n = 0, poorten = 0;
         body.querySelectorAll('tr').forEach(function (tr, i) {
             tr.querySelector('.bw-rijnr').textContent = i + 1; n++;
-            var d = rijData(tr); poorten += Math.round(d.poorten || 0); bew += d.bewoonbareOpp; grond += d.grondopp; ger += gered(d); if (tr.classList.contains('is-warn')) zonder++;
+            var d = rijData(tr); poorten += Math.round(d.poorten || 0); bew += d.bewoonbareOpp; grond += d.grondopp; grond2 += d.grondoppAgrarisch || 0; ger += gered(d); if (tr.classList.contains('is-warn')) zonder++;
         });
         var ftP = document.getElementById('bw-opp-ft-poorten'); if (ftP) ftP.textContent = poorten || '';
-        document.getElementById('bw-opp-ft-bew').textContent = fmt(bew); document.getElementById('bw-opp-ft-grond').textContent = fmt(grond); document.getElementById('bw-opp-ft-gered').textContent = fmt(ger);
+        document.getElementById('bw-opp-ft-bew').textContent = fmt(bew); document.getElementById('bw-opp-ft-grond').textContent = fmt(grond); document.getElementById('bw-opp-ft-grond2').textContent = fmt(grond2); document.getElementById('bw-opp-ft-gered').textContent = fmt(ger);
         document.getElementById('bw-opp-zondergrond').textContent = zonder ? zonder + ' eenhe' + (zonder === 1 ? 'id' : 'den') + ' zonder grond' : '';
         document.getElementById('bw-opp-grond-tile').classList.toggle('is-warn', zonder > 0);
         var e = document.getElementById('bw-opp-empty'); if (e) e.hidden = n > 0;

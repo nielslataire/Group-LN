@@ -18,7 +18,7 @@
     var menuVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · verslagen" };
     var gemeldCount = Model.OpenPunten.Count(p => CPMCore.Helpers.PuntenWeergave.Canon(p.Status) == (int)BOCore.ConstructionIssueStatus.Reported);
     var nagekeken = Model.OpenPunten.Count(p => p.TerPlaatse != null);
-    var data = new { projectId = Model.ProjectId, id = Model.Id, readOnly = ro, aanwezigen = Model.Aanwezigen.Select(a => new { name = a.Name, email = a.Email }), suggesties = Model.Suggesties.Select(s => new { name = s.Name, email = s.Email, org = s.Org }), openTotaal = Model.OpenPunten.Count, teGoedkeurenAantal = Model.TeGoedkeurenAantal };
+    var data = new { projectId = Model.ProjectId, id = Model.Id, readOnly = ro, aanwezigen = Model.Aanwezigen.Select(a => new { name = a.Name, email = a.Email }), suggesties = Model.Suggesties.Select(s => new { name = s.Name, email = s.Email, org = s.Org }), openTotaal = Model.OpenPunten.Count, planPages = Model.PlanPages };
 }
 @section PageStyle
 {
@@ -29,11 +29,12 @@
 }
 @section PageTitleBadges
 {
+    <span class="gl-v2-badge is-attention" id="vs-dirty-badge" hidden>NIET-OPGESLAGEN WIJZIGINGEN</span>
     <span class="gl-v2-badge @(Model.Status == 1 ? "is-positive" : "is-attention")">@(Model.Status == 1 ? "VERSTUURD" : "CONCEPT")</span>
 }
 @section PageActions
 {
-    <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("Pdf", "ProjectVerslagen", new { projectId = Model.ProjectId, id = Model.Id })" target="_blank" rel="noopener"><i class="ph ph-file-pdf" aria-hidden="true"></i><span>Voorbeeld PDF</span></a>
+    <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="vs-preview"><i class="ph ph-file-pdf" aria-hidden="true"></i><span>Voorbeeld PDF</span></button>
     @if (Model.CanDelete)
     {
         <button type="button" class="gl-v2-btn gl-v2-btn-danger" data-bs-toggle="modal" data-bs-target="#vs-delete-modal"><i class="ph ph-trash" aria-hidden="true"></i><span>Verwijderen</span></button>
@@ -64,6 +65,24 @@
 @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
 
 <form id="vs-token-form" hidden>@Html.AntiForgeryToken()</form>
+@* Voorbeeld-PDF: de gerasterde plannen (met pins) worden door de browser meegepost, daarom een POST naar een nieuw venster i.p.v. een gewone link. *@
+<form id="vs-preview-form" method="post" action="@Url.Action("PdfPreview", "ProjectVerslagen", new { projectId = Model.ProjectId, id = Model.Id })" hidden>@Html.AntiForgeryToken()</form>
+
+@* Verlaat-bewaking (DESIGN.md "Verlaat-bewaking"): dirty-badge met id …dirty-badge + deze modal met bevestigingslink *@
+<div class="modal fade gl-v2-modal-confirm" id="gl-v2-discard-changes-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-discard-changes-title">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content is-warning">
+            <div class="modal-body">
+                <span class="gl-v2-modal-icon is-warning"><i class="ph ph-warning" aria-hidden="true"></i></span>
+                <div class="gl-v2-modal-text"><h2 class="gl-v2-modal-title" id="gl-v2-discard-changes-title">Wijzigingen niet opslaan?</h2><p class="gl-v2-modal-desc">U staat op het punt dit verslag te verlaten zonder uw laatste wijzigingen op te slaan.</p></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Terug naar het verslag</button>
+                <a href="#" class="gl-v2-btn gl-v2-btn-warning" id="gl-v2-discard-changes-confirm">Wijzigingen niet opslaan</a>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div class="gl-v2-vs-form @(ro ? "gl-v2-vs-ro" : "")" id="gl-v2-vs-edit" data-base-url="@Url.Action("Edit", "ProjectVerslagen", new { projectId = Model.ProjectId, id = Model.Id })">
     <div class="gl-v2-vs-scroll-y">
@@ -195,7 +214,7 @@
             }
             else
             {
-                <a href="@ViewData["BackUrl"]" class="gl-v2-btn gl-v2-btn-secondary" id="vs-save-back"><i class="ph ph-floppy-disk" aria-hidden="true"></i>Opslaan &amp; terug naar verslagen</a>
+                <a href="@ViewData["BackUrl"]" class="gl-v2-btn gl-v2-btn-secondary" id="vs-save-back" data-gl-v2-leave-ok><i class="ph ph-floppy-disk" aria-hidden="true"></i>Opslaan &amp; terug naar verslagen</a>
                 <button type="button" class="gl-v2-btn gl-v2-btn-primary js-vs-finish"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>Afronden: punten goedkeuren &amp; verslag versturen</button>
             }
         </div>
@@ -215,32 +234,19 @@
 }
 @if (!ro)
 {
-    var teGoedkeuren = Model.TeGoedkeurenAantal;
-    var finishTone = teGoedkeuren > 0 ? "is-warning" : "is-success";
     <div class="modal fade gl-v2-modal-confirm" id="vs-finish-modal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content @finishTone">
+            <div class="modal-content is-success">
                 <div class="modal-body">
-                    <span class="gl-v2-modal-icon @finishTone"><i class="ph @(teGoedkeuren > 0 ? "ph-warning" : "ph-paper-plane-tilt")" aria-hidden="true"></i></span>
+                    <span class="gl-v2-modal-icon is-success"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i></span>
                     <div class="gl-v2-modal-text">
                         <h2 class="gl-v2-modal-title">@Model.Naam afronden?</h2>
-                        @if (teGoedkeuren > 0)
-                        {
-                            <p class="gl-v2-modal-desc" id="vs-finish-desc">Dit verslag bevat nog @teGoedkeuren punt@(teGoedkeuren > 1 ? "en" : "") in concept of ter goedkeuring. Verstuur je toch, dan gaan die niet mee in dit verslag — keur ze eerst goed als ze er wél bij moeten.</p>
-                        }
-                        else
-                        {
-                            <p class="gl-v2-modal-desc" id="vs-finish-desc">Het verslag gaat als PDF naar de aanwezigen met een e-mailadres. De nieuwe punten blijven concept: je kan er nog foto's en details aan toevoegen en ze daarna goedkeuren.</p>
-                        }
+                        <p class="gl-v2-modal-desc" id="vs-finish-desc">De nieuwe punten worden goedgekeurd en het verslag (met foto's en plannen) gaat als PDF naar de aanwezigen met een e-mailadres.</p>
                     </div>
                 </div>
-                <form method="post" action="@Url.Action("Finish", "ProjectVerslagen", new { projectId = Model.ProjectId, id = Model.Id })">
+                <form method="post" id="vs-finish-form" action="@Url.Action("Finish", "ProjectVerslagen", new { projectId = Model.ProjectId, id = Model.Id })">
                     @Html.AntiForgeryToken()
-                    @if (teGoedkeuren > 0)
-                    {
-                        <input type="hidden" name="forceer" value="true" />
-                    }
-                    <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Nog niet</button><button type="submit" class="gl-v2-btn @(teGoedkeuren > 0 ? "gl-v2-btn-warning" : "gl-v2-btn-primary")">@(teGoedkeuren > 0 ? "Toch versturen" : "Afronden & versturen")</button></div>
+                    <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Nog niet</button><button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="vs-finish-submit">Afronden &amp; versturen</button></div>
                 </form>
             </div>
         </div>

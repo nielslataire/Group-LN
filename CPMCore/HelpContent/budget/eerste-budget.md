@@ -1,45 +1,71 @@
 ---
 title: Een budget opmaken met de budgetwizard
 topic: budget
+treeOrder: 2
 role: Projectleider
 device: Desktop · tablet
-minutes: 8
-updated: 2026-10-12
+minutes: 5
+updated: 2026-10-13
 startOrder: 3
-synonyms: budgetwizard, referentieprojecten, s-index, i-index, eerste budget
-description: de 9 stappen van de wizard
-related: project-aanmaken
+screens: budget-stap-1
+synonyms: budgetwizard, stappen, stappenplan, eerste budget, toon berekeningen, opslaan, autosave
+description: de negen stappen van het budget en hoe je erdoorheen navigeert
+related: budget-overzicht, budget-meldingen, budget-definitief, budget-stap-gegevens
 intro: |
-  Met de budgetwizard maak je in 9 stappen een budget voor een project. Je kunt op elk moment
-  tussentijds opslaan en later verderwerken.
+  De budgetwizard rekent de kostprijs en de verkoopwaarde van een project uit in negen stappen. Je vult in stap 1 tot 5 de
+  gegevens van het gebouw in. In stap 6 tot 8 rekent CPM de kosten en prijzen uit. Stap 9 toont het resultaat.
 before: |
-  Het project en zijn eenheden moeten al bestaan. Zie "Een project aanmaken".
+  Het project en zijn eenheden bestaan al. Zie "Een project aanmaken". Open eerst een budget via **Budgetten**. Zie "Een nieuw budget of een nieuwe versie maken".
 faq:
-  - q: Kan ik een definitief budget nog aanpassen?
-    a: Niet rechtstreeks. Een definitief budget herzie je enkel als het bedrijf beslissingen heeft genomen die het budget beïnvloeden. [VRAAG: hoe start je een herziening, en maakt dat een nieuwe budgetversie?]
-  - q: Wat is een peildatum?
-    a: Dat is de datum waarop de prijzen en indexen gelden. Is ze ouder dan 6 maanden, dan krijg je een waarschuwing. [VRAAG: klopt deze uitleg van peildatum, en wat betekenen de S-index en I-index?]
+  - q: Moet ik op Opslaan klikken?
+    a: Meestal niet. CPM slaat elk veld op zodra je het invult. Onderaan staat dan Alle wijzigingen opgeslagen. Enkel stap 6 heeft een knop Opslaan en stap 7 en 8 hebben Opslaan & volgende.
+  - q: Kan ik stappen overslaan?
+    a: Ja. Klik in de balk bovenaan op de stap die je wilt openen. Een stap met een uitroepteken en een getal heeft nog aandachtspunten.
+  - q: Waar zie ik hoe een bedrag is berekend?
+    a: Zet de schakelaar Toon berekeningen bovenaan aan. Bij elk bedrag in stap 6 verschijnt dan de berekening. CPM onthoudt die keuze voor je.
+  - q: Kan ik het budget afdrukken of exporteren?
+    a: Dit antwoord volgt nog. Het afdrukken als PDF en het exporteren naar Excel zijn nog in opbouw.
 ---
-## Stap 1: Gegevens
+## De negen stappen
 
-Vul de peildatum en de algemene projectgegevens in. Een peildatum ouder dan 6 maanden geeft een
-waarschuwing, omdat de index dan minder betrouwbaar is.
+| Stap | Naam | Wat je er doet |
+|---|---|---|
+| 1 | Gegevens | de aantallen, de funderingen en de indexen invullen |
+| 2 | Oppervlaktes | per eenheid de oppervlaktes invullen |
+| 3 | Sanitair | het sanitair per eenheid invullen |
+| 4 | Gevels | de gevels, ramen, balustrades en leien invullen |
+| 5 | Dak & afbraak | de daken en de afbraak invullen |
+| 6 | Activiteiten | de kost per activiteit controleren en corrigeren |
+| 7 | Parameters | percentages, grondkost, financiering en marges instellen |
+| 8 | Verkoop | de prijscodes en de vraagprijs per eenheid bepalen |
+| 9 | Resultaat | de kostprijs, de marge en het resultaat controleren |
 
-## Stap 2 tot en met 8: Oppervlaktes en activiteiten
+Elke stap heeft een eigen artikel. Begin bij "De projectgegevens en de indexen invullen".
 
-Vul per activiteit, zoals ruwbouw, dak en afwerking, de oppervlaktes en eventuele correcties in. Elke
-stap toont referentieprojecten ter vergelijking. [VRAAG: wat is een referentieproject en hoe kiest CPM welke het toont?]
+## Door de stappen navigeren
 
-## Stap 9: Het budget definitief maken
+![De stappenbalk bovenaan](/img/help/budget/eerste-budget/1-stappenbalk.png)
 
-Kijk eerst naar het stappenplan rechtsboven. Staan er nog rode fouten, dan kun je niet afronden.
-Gouden waarschuwingen blokkeren niet, maar controleer ze nog een laatste keer.
+1. Bovenaan staat de stappenbalk. Een vinkje betekent dat de stap in orde is. De stap waar je bent, heeft een nummer.
+2. Een stap met een uitroepteken en een getal heeft aandachtspunten. Het getal is het aantal. Zie "Waarschuwingen en fouten in het budget verwerken".
+3. Klik onderaan op **Volgende** of **Vorige**, of klik op een stap in de balk. CPM slaat eerst op en opent dan de stap.
+4. Met **Terug naar overzicht** onderaan stap 1 ga je terug naar de pagina Budgetten.
 
-## Resultaat
+## Opslaan
 
-Het budget is definitief. De projectpagina toont het budget voortaan tegenover wat al besteed en
-gecontracteerd is.
+CPM slaat elke wijziging meteen op. Onderaan zie je de status:
+
+- **Alle wijzigingen opgeslagen**: alles is bewaard.
+- Een melding met een rode stip: het opslaan is mislukt. Er verschijnt een venster met de reden.
+
+In stap 6 klik je zelf op **Opslaan**. In stap 7 en 8 staat de knop **Opslaan & volgende**.
+
+## De berekeningen tonen
+
+Bovenaan in stap 2 tot 6 staat de schakelaar **Toon berekeningen**. Staat hij aan, dan toont CPM bij elk bedrag in stap 6 hoe het is
+opgebouwd. Dat zijn de eenheidsprijs, de index en de hoeveelheid uit de vorige stappen. Zo zie je meteen waar een getal vandaan komt.
 
 ## Let op
 
-Een definitief budget kun je niet meer rechtstreeks wijzigen. Het wordt enkel herzien na beslissingen van het bedrijf die het budget beïnvloeden. Controleer dus alles voor je afrondt.
+- In een versie met de status **Definitief** kun je niets wijzigen. Zie "Een versie afronden en definitief maken".
+- Het afdrukken van het budget als PDF en het exporteren naar Excel zijn nog in opbouw. Ze staan bovenaan in stap 9.

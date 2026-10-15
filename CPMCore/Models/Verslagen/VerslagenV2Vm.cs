@@ -103,6 +103,8 @@ public class VerslagEditV2Vm
     public DateOnly? VorigDatum { get; set; }
     /// <summary>Gegevens voor het gedeelde punt-zijpaneel (Bewerken van een nieuw punt).</summary>
     public CPMCore.Models.Issues.PuntenIndexV2Vm Panel { get; set; } = new();
+    /// <summary>Plan(pagina)'s met punten voor de bijlage: de browser rastert ze (pdf.js) met de pins en stuurt ze mee bij voorbeeld/afronden.</summary>
+    public IReadOnlyList<object> PlanPages { get; set; } = Array.Empty<object>();
     /// <summary>Punten die nog in concept staan of nog ter goedkeuring zijn — die mogen niet zomaar mee in
     /// het verstuurde verslag (Niels, 2026-10-10). De "Afronden"-modal waarschuwt hiervoor en biedt een
     /// expliciete "toch versturen"-optie; <c>Finish</c> sluit ze dan uit i.p.v. ze onafgewerkt te versturen.</summary>

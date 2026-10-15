@@ -22,7 +22,9 @@ Public Class ProjectPageV4Provider
     Public Shared Function FromProject(data As ProjectBO, units As IEnumerable(Of UnitWithDetailsBO),
                                        settings As ProjectSalesSettingsBO, imageBase As String,
                                        canonicalUrl As String,
-                                       Optional web As ProjectWebsiteContent = Nothing) As ProjectPageV4Model
+                                       Optional web As ProjectWebsiteContent = Nothing,
+                                       Optional picInfo As Dictionary(Of String, ProjectPictureInfo) = Nothing,
+                                       Optional docs As IEnumerable(Of ProjectDocBO) = Nothing) As ProjectPageV4Model
         Dim nl = System.Globalization.CultureInfo.GetCultureInfo("nl-BE")
         Dim gemeente As String = If(data.Postalcode IsNot Nothing, data.Postalcode.Gemeente, "")
         Dim saleVisible As Boolean = settings IsNot Nothing AndAlso settings.SaleVisible
@@ -34,25 +36,45 @@ Public Class ProjectPageV4Provider
             .Deelgemeente = gemeente,
             .Gemeente = gemeente,
             .Street = (If(data.Street, "") & " " & If(data.HouseNumber, "")).Trim(),
+            .StreetName = If(data.Street, "").Trim(),
             .Postcode = If(data.Postalcode IsNot Nothing, data.Postalcode.Postcode, ""),
             .CanonicalUrl = canonicalUrl
         }
 
-        ' ── Foto's (geen video's) → linkerbeelden, per blok doorgeschoven ──
+        ' Foto-object met afmetingen en varianten-vlag (srcset op de pagina)
+        Dim makePic As Func(Of String, V4Pic) = Function(name)
+                                                    If String.IsNullOrWhiteSpace(name) Then Return Nothing
+                                                    Dim info As ProjectPictureInfo = Nothing
+                                                    If picInfo IsNot Nothing Then picInfo.TryGetValue(name, info)
+                                                    Return New V4Pic With {.Base = imageBase, .Name = name, .Width = If(info IsNot Nothing, info.Width, 0), .Height = If(info IsNot Nothing, info.Height, 0), .HasVariants = (info IsNot Nothing AndAlso info.HasVariants)}
+                                                End Function
+
+        ' Alt-tekst: die van de foto zelf (CPMCore) als ze ingevuld is, anders de meegegeven terugval
+        Dim altFor As Func(Of String, String, String) = Function(name, fallback)
+                                                           Dim info As ProjectPictureInfo = Nothing
+                                                           If Not String.IsNullOrWhiteSpace(name) AndAlso picInfo IsNot Nothing AndAlso picInfo.TryGetValue(name, info) AndAlso Not String.IsNullOrWhiteSpace(info.AltText) Then Return info.AltText
+                                                           Return fallback
+                                                       End Function
+
+        ' Een gekozen foto (verhaal, architectuur, projectkaart) wordt enkel getoond als ze publiek mag zijn
+        Dim allowed As Func(Of String, Boolean) = Function(name)
+                                                      If String.IsNullOrWhiteSpace(name) OrElse picInfo Is Nothing Then Return False
+                                                      Dim info As ProjectPictureInfo = Nothing
+                                                      Return picInfo.TryGetValue(name, info) AndAlso info.IsPublic
+                                                  End Function
+
+        ' ── Linkerbeelden: de publieke foto's uit de sectie "Galerij" (hoofdfoto eerst, dan volgorde uit CPMCore, dan nieuwste) ──
         Dim videoExts As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase) From {".mp4", ".webm", ".mov", ".avi"}
-        Dim pics As New List(Of ProjectPictureBO)
-        If data.DefaultPicture IsNot Nothing Then pics.Add(data.DefaultPicture)
-        If data.Pictures IsNot Nothing Then
-            pics.AddRange(data.Pictures.Where(Function(x) data.DefaultPicture Is Nothing OrElse x.Id <> data.DefaultPicture.Id))
-        End If
-        Dim urls = pics.Where(Function(x) Not String.IsNullOrWhiteSpace(x.Name) AndAlso x.MediaType <> 1 AndAlso Not videoExts.Contains(System.IO.Path.GetExtension(x.Name))).
-                        Select(Function(x) New With {.Url = imageBase & "pictures/" & x.Name, .Alt = If(Not String.IsNullOrWhiteSpace(x.Caption), x.Caption, data.Name)}).ToList()
-        If urls.Count > 0 Then m.OgImageUrl = urls(0).Url
-        Dim keys = {"intro", "story", "architecture", "homes", "location", "buildphase", "buy", "contact"}
-        Dim labels = {data.Name & ", " & gemeente, "Het project", "Architectuur", "De woningen", "Ligging", "Bouwfase", "Kopen", "Contact"}
+        Dim gallery = If(picInfo Is Nothing, New List(Of ProjectPictureInfo),
+                         picInfo.Values.Where(Function(x) x.IsPublic AndAlso x.InGallery AndAlso x.Type <> 3 AndAlso Not videoExts.Contains(System.IO.Path.GetExtension(x.Name))).
+                             OrderBy(Function(x) If(x.Type = 0, 0, 1)).ThenBy(Function(x) x.SortOrder).ThenByDescending(Function(x) x.Uploaded).ToList())
+        Dim urls = gallery.Select(Function(x) New With {.Pic = makePic(x.Name), .Url = imageBase & "pictures/" & x.Name, .Alt = altFor(x.Name, If(Not String.IsNullOrWhiteSpace(x.Caption), x.Caption, data.Name))}).ToList()
+        If urls.Count > 0 Then m.OgImageUrl = urls(0).Pic.BestUrl(1280)
+        Dim keys = {"intro", "story", "architecture", "comfort", "homes", "documents", "location", "buildphase", "buy", "contact"}
+        Dim labels = {data.Name & ", " & gemeente, "Het project", "Architectuur", "Comfort en energie", "De woningen", "Documenten", "Ligging", "Bouwfase", "Kopen", "Contact"}
         For i As Integer = 0 To keys.Length - 1
             Dim pic = If(urls.Count > 0, urls(i Mod urls.Count), Nothing)
-            m.Media.Add(New V4Media With {.Key = keys(i), .Label = labels(i), .ImageUrl = If(pic IsNot Nothing, pic.Url, ""), .Alt = If(pic IsNot Nothing, pic.Alt, data.Name)})
+            m.Media.Add(New V4Media With {.Key = keys(i), .Label = labels(i), .ImageUrl = If(pic IsNot Nothing, pic.Url, ""), .Pic = If(pic IsNot Nothing, pic.Pic, Nothing), .Alt = If(pic IsNot Nothing, pic.Alt, data.Name)})
         Next
 
         ' ── Woningen ──
@@ -62,6 +84,7 @@ Public Class ProjectPageV4Provider
                 .Id = u.Id, .Name = u.Name, .Type = If(u.Type.Name, "Woning"),
                 .LivingArea = CInt(u.Surface), .LandArea = CInt(u.GroundSurface),
                 .Bedrooms = If(slpkRoom IsNot Nothing, slpkRoom.Number, 0),
+                .HasPlan = (u.Plan IsNot Nothing),
                 .Status = If(u.ClientAccountId <> 0, "Verkocht", If(u.IsOption, "Optie", "Beschikbaar"))
             }
             If lot.Status = "Beschikbaar" AndAlso saleVisible Then
@@ -78,7 +101,7 @@ Public Class ProjectPageV4Provider
         Next
 
         ' ── Projectkaart: gekozen foto + omtrek per eenheid (CPMCore, tab "SEO & website") ──
-        Dim hasAerial As Boolean = web IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(web.AerialImageName)
+        Dim hasAerial As Boolean = web IsNot Nothing AndAlso allowed(web.AerialImageName)
         Dim shapedLots As Integer = 0
         If hasAerial Then
             For Each lot In m.Lots
@@ -124,8 +147,9 @@ Public Class ProjectPageV4Provider
                 .ShowBrochureCta = web.ShowBrochure
                 For Each it In web.StoryItems
                     .Figures.Add(New V4Figure With {
-                        .ImageUrl = If(String.IsNullOrWhiteSpace(it.ImageUrl), "", imageBase & "pictures/" & it.ImageUrl),
-                        .Alt = If(Not String.IsNullOrWhiteSpace(it.Text), it.Text, data.Name),
+                        .ImageUrl = If(allowed(it.ImageUrl), imageBase & "pictures/" & it.ImageUrl, ""),
+                        .Pic = If(allowed(it.ImageUrl), makePic(it.ImageUrl), Nothing),
+                        .Alt = altFor(it.ImageUrl, If(Not String.IsNullOrWhiteSpace(it.Text), it.Text, data.Name)),
                         .Text = it.Text})
                 Next
             End With
@@ -145,17 +169,76 @@ Public Class ProjectPageV4Provider
                 For Each d In web.Details
                     .Materials.Add(New V4Material With {
                         .Title = d.Title, .Text = d.Text,
-                        .ImageUrl = If(String.IsNullOrWhiteSpace(d.ImageUrl), "", imageBase & "pictures/" & d.ImageUrl),
-                        .Alt = d.Title})
+                        .ImageUrl = If(allowed(d.ImageUrl), imageBase & "pictures/" & d.ImageUrl, ""),
+                        .Pic = If(allowed(d.ImageUrl), makePic(d.ImageUrl), Nothing),
+                        .Alt = altFor(d.ImageUrl, d.Title)})
                 Next
-                .ShowSpecCta = False
             End With
             archHasContent = Not String.IsNullOrWhiteSpace(web.ArchTitle) OrElse Not String.IsNullOrWhiteSpace(web.ArchText) OrElse
                              Not String.IsNullOrWhiteSpace(web.ArchEyebrow) OrElse web.Quotes.Count > 0 OrElse web.Details.Count > 0
         End If
 
         ' ── Volgorde + zichtbaarheid (CPMCore "Blokken op de pagina") ──
-        Dim visibleFlags As New Dictionary(Of String, Boolean) From {{"story", storyHasContent}, {"architecture", archHasContent}, {"homes", True}, {"buy", True}}
+        ' ── Comfort en energie + technische details (= de projectbrochure) ──
+        Dim salesDocs As List(Of ProjectDocBO) = If(docs IsNot Nothing AndAlso saleVisible, docs.ToList(), New List(Of ProjectDocBO))
+        Dim brochureDoc = salesDocs.FirstOrDefault(Function(d) d.IsBrochure)
+        Dim comfortHasContent As Boolean = False
+        If hasWeb Then
+            With m.Comfort
+                .Title = web.ComfortTitle
+                .Subtitle = web.ComfortSubtitle
+                .Items.AddRange(web.ComfortItems)
+            End With
+            comfortHasContent = Not String.IsNullOrWhiteSpace(web.ComfortTitle) OrElse Not String.IsNullOrWhiteSpace(web.ComfortSubtitle) OrElse web.ComfortItems.Count > 0
+        End If
+        If brochureDoc IsNot Nothing Then
+            m.Comfort.SpecDocId = brochureDoc.Docid
+            m.Comfort.SpecDocName = brochureDoc.Name
+        End If
+
+        ' ── Documenten: alle verkoopdocumenten die niet aan een klant/eenheid hangen (zelfde lijst als de gewone projectpagina) ──
+        For Each d In salesDocs
+            m.Documents.Docs.Add(New V4Doc With {.Id = d.Docid, .IsBrochure = d.IsBrochure, .Title = d.Name, .Meta = If(d.DocDate.HasValue, "van " & d.DocDate.Value.ToString("d MMMM yyyy", nl), "")})
+        Next
+
+        ' ── Ligging: tekst, puntjes, kaart met voorzieningen, reistijden en het vaste blokje "Wil je weten of … bij je past?" ──
+        Dim locationHasContent As Boolean = False
+        If hasWeb Then
+            With m.Location
+                .Title = If(Not String.IsNullOrWhiteSpace(web.LocationTitle), web.LocationTitle, "Ligging")
+                .Intro = web.LocationText
+                .Guide.AddRange(web.GuideItems)
+                .Pois.AddRange(web.Pois)
+                .TravelTimes.AddRange(web.TravelTimes)
+                ' enkel de categorieën waarvoor er voorzieningen zijn, plus "Fietsbereik" (cirkels rond het project)
+                Dim defs As New List(Of V4PoiCategory) From {
+                    New V4PoiCategory With {.Id = "school", .Label = "Scholen", .Icon = "S", .DefaultOn = True},
+                    New V4PoiCategory With {.Id = "shop", .Label = "Winkels", .Icon = "W", .DefaultOn = True},
+                    New V4PoiCategory With {.Id = "ov", .Label = "Openbaar vervoer", .Icon = "OV", .DefaultOn = True},
+                    New V4PoiCategory With {.Id = "groen", .Label = "Groen", .Icon = "G", .DefaultOn = True},
+                    New V4PoiCategory With {.Id = "sport", .Label = "Sport", .Icon = "Sp", .DefaultOn = False}}
+                .Categories.Clear()
+                For Each d In defs
+                    If web.Pois.Any(Function(x) x.Category = d.Id) Then .Categories.Add(d)
+                Next
+                If web.LocationLat.HasValue AndAlso web.LocationLng.HasValue Then
+                    .Categories.Add(New V4PoiCategory With {.Id = "fiets", .Label = "Fietsbereik", .Icon = "◎", .DefaultOn = False})
+                End If
+                .ShowMap = web.LocationLat.HasValue AndAlso web.LocationLng.HasValue
+                .ShowCta = True
+                Dim muni As String = If(Not String.IsNullOrWhiteSpace(web.LocationMunicipality), web.LocationMunicipality, gemeente)
+                .CtaTitle = If(String.IsNullOrWhiteSpace(muni), "Wil je weten of de buurt bij je past?", "Wil je weten of " & V4Html.ProperName(muni) & " bij je past?")
+                .CtaText = "We kennen de buurt en vertellen je er graag meer over."
+            End With
+            If web.LocationLat.HasValue AndAlso web.LocationLng.HasValue Then
+                m.Lat = web.LocationLat.Value
+                m.Lng = web.LocationLng.Value
+            End If
+            locationHasContent = Not String.IsNullOrWhiteSpace(web.LocationTitle) OrElse Not String.IsNullOrWhiteSpace(web.LocationText) OrElse
+                                 web.GuideItems.Count > 0 OrElse web.Pois.Count > 0 OrElse web.TravelTimes.Count > 0 OrElse web.LocationLat.HasValue
+        End If
+
+        Dim visibleFlags As New Dictionary(Of String, Boolean) From {{"story", storyHasContent}, {"architecture", archHasContent}, {"comfort", comfortHasContent}, {"faq", hasWeb AndAlso web.FaqItems.Count > 0}, {"location", locationHasContent}, {"homes", True}, {"documents", True}, {"buy", True}}
         Dim order As New List(Of String)
         If hasWeb AndAlso Not String.IsNullOrWhiteSpace(web.BlocksJson) Then
             Try
@@ -177,9 +260,12 @@ Public Class ProjectPageV4Provider
 
         m.Story.Visible = visibleFlags("story") AndAlso storyHasContent
         m.Architecture.Visible = visibleFlags("architecture") AndAlso archHasContent
-        m.Location.Visible = False
+        m.Comfort.Visible = visibleFlags("comfort") AndAlso (comfortHasContent OrElse m.Comfort.SpecDocId > 0)
+        m.Documents.Visible = visibleFlags("documents") AndAlso m.Documents.Docs.Count > 0
+        m.Location.Visible = visibleFlags("location") AndAlso locationHasContent
         m.BuildPhase.Visible = False
-        m.Faq.Visible = False
+        If hasWeb Then m.Faq.Items.AddRange(web.FaqItems)
+        m.Faq.Visible = visibleFlags("faq") AndAlso m.Faq.Items.Count > 0
 
         With m.Homes
             .Visible = m.Lots.Count > 0 AndAlso visibleFlags("homes")
@@ -188,16 +274,26 @@ Public Class ProjectPageV4Provider
             .ShowMap = hasAerial AndAlso shapedLots > 0
             If hasAerial Then
                 .AerialImageUrl = imageBase & "pictures/" & web.AerialImageName
-                .AerialAlt = "Luchtfoto van " & data.Name
+                .AerialPic = makePic(web.AerialImageName)
+                .AerialAlt = altFor(web.AerialImageName, "Luchtfoto van " & data.Name)
             End If
-            .ShowPriceList = saleVisible
-            .ShowCalculator = saleVisible
+            .ShowPriceList = m.Lots.Count > 0
+            .ShowPrices = saleVisible
+            .ShowCalculator = False ' voorlopig verborgen (was: saleVisible); de berekening blijft in de code
             .ShowDocuments = False
             .PriceListNote = "Prijzen excl. btw, registratie- en notariskosten."
         End With
-        If Not saleVisible Then m.Intro.SecondaryCtaLabel = ""
+        If Not saleVisible Then m.Intro.SecondaryCtaLabel = "Bekijk de woningen"
 
-        m.Buy.Steps.AddRange(DefaultBuySteps())
+        ' Aankoopstappen: eigen stappen uit CPMCore, anders de standaardstappen
+        If hasWeb AndAlso web.BuySteps.Count > 0 Then
+            m.Buy.Steps.AddRange(web.BuySteps)
+        Else
+            m.Buy.Steps.AddRange(DefaultBuySteps())
+        End If
+        If hasWeb AndAlso Not String.IsNullOrWhiteSpace(web.BuyTitle) Then m.Buy.Title = web.BuyTitle
+        If hasWeb AndAlso Not String.IsNullOrWhiteSpace(web.ContactTitle) Then m.Contact.CustomTitle = web.ContactTitle.Trim()
+        If hasWeb AndAlso Not String.IsNullOrWhiteSpace(web.ContactText) Then m.Contact.Intro = web.ContactText.Trim()
         m.Buy.Visible = visibleFlags("buy")
         Return m
     End Function
@@ -235,6 +331,7 @@ Public Class ProjectPageV4Provider
             .Gemeente = "Erpe-Mere",
             .Provincie = "Oost-Vlaanderen",
             .Street = "Keerstraat 237",
+            .StreetName = "Keerstraat",
             .Postcode = "9420",
             .Lat = 50.9155,
             .Lng = 3.939,
@@ -248,7 +345,9 @@ Public Class ProjectPageV4Provider
             New V4Media With {.Key = "intro", .Label = "Keerstraat, Vlekkem", .Alt = "Gevel van de woningen aan de Keerstraat bij avondlicht"},
             New V4Media With {.Key = "story", .Label = "Een dag aan de Keerstraat", .ImageUrl = "~/Content/img/about.webp", .Alt = "Interieur met veel licht en hout"},
             New V4Media With {.Key = "architecture", .Label = "Architectuur", .Alt = "Gevel, detail van de materialen"},
+            New V4Media With {.Key = "comfort", .Label = "Comfort en energie", .Alt = "Technische details van de woningen"},
             New V4Media With {.Key = "homes", .Label = "De woningen", .Alt = "Render van de woningen"},
+            New V4Media With {.Key = "documents", .Label = "Documenten", .Alt = "Documenten van het project"},
             New V4Media With {.Key = "location", .Label = "Ligging", .Alt = "Luchtfoto van de velden rond Vlekkem"},
             New V4Media With {.Key = "buildphase", .Label = "Bouwfase", .ImageUrl = "~/Content/img/grondverwerving/bouwgrond.webp", .Alt = "Werffoto"},
             New V4Media With {.Key = "buy", .Label = "Kopen", .Alt = "Leefruimte van een woning"},
@@ -261,7 +360,7 @@ Public Class ProjectPageV4Provider
         m.Lots.Add(New V4Lot With {.Id = 2, .Name = "Lot 2", .Type = "Gesloten", .LivingArea = 230, .LandArea = 411, .Bedrooms = 4, .Bathrooms = 2, .GardenOrientation = "Zuid", .EnergyLevel = "E20", .Status = "Verkocht",
                                    .Description = "Gesloten bebouwing in het midden van het straatfront, met vier slaapkamers.", .Polygon = "31,18 52,17 53,47 31,48", .LabelX = 41.8, .LabelY = 32.5})
         Dim lot3 As New V4Lot With {.Id = 3, .Name = "Lot 3", .Type = "Halfopen", .LivingArea = 200, .LandArea = 404, .Bedrooms = 3, .Bathrooms = 1, .GardenOrientation = "Zuidoost", .EnergyLevel = "E20", .Status = "Beschikbaar",
-                                    .Description = "De laatste vrije woning. Halfopen, met een tuin op het zuidoosten en ochtendzon op het terras.", .Polygon = "53,17 74,16 75,46 53,47", .LabelX = 63.8, .LabelY = 31.5, .FloorPlanUrl = "#"}
+                                    .Description = "De laatste vrije woning. Halfopen, met een tuin op het zuidoosten en ochtendzon op het terras.", .Polygon = "53,17 74,16 75,46 53,47", .LabelX = 63.8, .LabelY = 31.5}
         lot3.Finishes.Add(Fin("Afgewerkt", "Volledig afgewerkt", 567000D, "Instapklaar, afwerking naar keuze binnen budget"))
         lot3.Finishes.Add(Fin("Casco", "Casco", 512000D, "Zonder binnenafwerking, technieken voorzien"))
         m.Lots.Add(lot3)
@@ -303,9 +402,12 @@ Public Class ProjectPageV4Provider
             .Materials.Add(New V4Material With {.Title = "Lichte gevelsteen", .Text = "Een zachte, lichtgrijze handvormsteen die met de jaren mooier wordt. Hij past in het landelijke straatbeeld en vraagt nauwelijks onderhoud.", .Alt = "Detail van de gevelsteen"})
             .Materials.Add(New V4Material With {.Title = "Houten lamellen", .Text = "Verticale lamellen rond ramen en garagepoort geven privacy en warmte. In de zomer temperen ze de zon, zodat het binnen aangenaam koel blijft.", .Alt = "Detail van de houten lamellen"})
             .Materials.Add(New V4Material With {.Title = "Grote raampartijen", .Text = "Aluminium schrijnwerk met driedubbele beglazing. De leefruimtes openen zich naar de tuin: veel daglicht en een directe band met buiten.", .ImageUrl = "~/Content/img/about.webp", .Alt = "Raampartij naar de tuin"})
-            .ComfortTitle = "Comfort en energie"
-            .ComfortIntro = "Alle woningen halen een E-peil van E20 of lager. Ze zijn klaar voor een toekomst zonder fossiele brandstoffen."
-            .Techniques.AddRange({
+        End With
+
+        With m.Comfort
+            .Title = "Comfort en energie"
+            .Subtitle = "Alle woningen halen een E-peil van E20 of lager. Ze zijn klaar voor een toekomst zonder fossiele brandstoffen."
+            .Items.AddRange({
                 TT("Warmtepomp", "Lucht-waterwarmtepomp voor verwarming en sanitair warm water."),
                 TT("Vloerverwarming", "Op gelijkvloers en verdieping, voor gelijkmatige warmte."),
                 TT("Ventilatie D", "Mechanische ventilatie met warmterecuperatie."),
@@ -313,11 +415,11 @@ Public Class ProjectPageV4Provider
                 TT("Isolatie", "Hoogwaardige isolatie van dak, muren en vloer; luchtdicht gebouwd."),
                 TT("Regenwater", "Regenwaterput voor toilet, wasmachine en tuin.")
             })
-            .SpecCtaTitle = "Alle technische details"
-            .SpecCtaText = "Het lastenboek beschrijft materialen, technieken en afwerking per woning."
-            .SpecCtaLabel = "⤓ Lastenboek"
-            .SpecCtaUrl = "#"
         End With
+        m.Documents.Docs.AddRange({
+            New V4Doc With {.Id = 0, .IsBrochure = True, .Title = "Projectbrochure", .Meta = "Project, materialen & technieken"},
+            New V4Doc With {.Id = 0, .Title = "Inplantingsplan", .Meta = "Percelen & oprit"}
+        })
 
         ' ── Woningen ──
         With m.Homes

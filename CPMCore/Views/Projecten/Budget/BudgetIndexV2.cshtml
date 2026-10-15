@@ -1,6 +1,7 @@
 @model CPMCore.Models.Projecten.BudgetIndexModel
 @using CPMCore.Models.GlV2
 @using BOCore
+@inject FacadeCore.IPermissionService PermissionService
 @*
     gl-v2 — Budgetten, overzicht (design-handoff 39a): bovenaan het definitieve budget (één per project — vastgezet op/door, alleen-lezen,
     basis voor facturen & contracten; de tegels Gecontracteerd/Gefactureerd/Verwacht verschil zijn placeholders tot de koppeling met
@@ -9,6 +10,7 @@
 *@
 @{
     ViewData["Title"] = "Budgetten";
+    var kanVerwijderen = PermissionService.HasDelete(PermissionCodes.ProjectsDetail);
     ViewData["PageIcon"] = "ph ph-table";
     ViewData["GlV2FullHeightBody"] = true; // bodycard vult het scherm als de inhoud korter is (DESIGN.md: GlV2FullHeightBody)
     ViewData["BackUrl"] = Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId });
@@ -17,31 +19,57 @@
     var menu = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName ?? "", ProjectSubtitle = "project · budgetten", Mode = GlV2ProjectMenuMode.Outer };
     var def = Model.DefinitiefVersie;
     var defMaster = def == null ? null : Model.BudgetMasters.FirstOrDefault(m => m.Id == def.BudgetMasterId);
-    string StatusLabel(BudgetVersieBO v) => v.Status == "Definitief" ? "Definitief" : v.Status == "Afgerond" ? "Afgerond" : (v.IsHuidig ? "Huidig · " : "") + "concept" + (v.LaatsteStap is > 0 and < 9 ? $" stap {v.LaatsteStap} van 9" : "");
+    string StatusLabel(BudgetVersieBO v) => v.Status == "Definitief" ? "Definitief" : v.Status == "Afgerond" ? "Afgerond" : (v.IsHuidig ? "Huidig · " : "") + "concept";
+    bool Compleet(BudgetVersieBO v) => v.Status == "Definitief" || v.Status == "Afgerond" || v.LaatsteStap >= 9;
+    string Pct1(decimal f) => (f * 100m).ToString("0.0", nl) + " %";
     string StatusKlasse(BudgetVersieBO v) => v.Status == "Definitief" ? "is-positive" : v.Status == "Afgerond" ? "is-neutral" : v.IsHuidig ? "is-attention" : "is-inactive";
     var alleVersies = Model.BudgetMasters.SelectMany(m => m.Versies.Select(v => (Master: m, Versie: v))).ToList();
+    if (ViewData["VergelijkVoorselectie"] is int voorId && voorId > 0) { ViewData["VergelijkSelectie"] = new List<int> { voorId }; ViewData["VergelijkAuto"] = voorId.ToString(); }
 }
 @section PageStyle
 {
     <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-budget.css" asp-append-version="true" />
     <style>
-        .bw-ix-def { border: 1px solid var(--gl-v2-primary-tint); }
-        .bw-ix-def .gl-v2-section-card-header { background: var(--gl-v2-primary-tint); }
-        .bw-ix-def-body { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr)); gap: 16px; padding: 16px 20px 18px; align-items: start; }
-        .bw-ix-def-naam { font: 500 19px var(--gl-v2-font-serif); color: var(--gl-v2-ink); }
-        .bw-ix-def-sub { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); margin-top: 4px; }
-        .bw-ix-def-tot { font: 600 22px var(--gl-v2-font-sans); color: var(--gl-v2-primary); font-variant-numeric: tabular-nums; margin-top: 8px; }
-        .bw-ix-acties { display: flex; gap: 10px; flex-wrap: wrap; padding: 0 20px 18px; }
-        .bw-ix-kaarten { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
-        @@media (min-width: 1200px) { .bw-ix-kaarten { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        /* Definitief budget (39a): volle breedte bovenaan — slotje, titel/totaal/marge, vastzet-regel en drie kengetallen; rechts de twee knoppen onder elkaar */
+        .bw-ix-def { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 18px; padding: 16px 20px; background: var(--gl-v2-surface, #fff); border-radius: 12px; box-shadow: 0 1px 2px rgba(0,83,45,.05), 0 18px 40px -28px rgba(44,59,42,.4); }
+        .bw-ix-def-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--gl-v2-primary); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 18px; }
+        .bw-ix-def-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+        .bw-ix-def-kop { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .bw-ix-def-lbl { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; color: var(--gl-v2-muted); }
+        .bw-ix-def-naam { font: 700 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+        .bw-ix-def-tot { font: 700 14px var(--gl-v2-font-sans); color: var(--gl-v2-primary); font-variant-numeric: tabular-nums; }
+        .bw-ix-def-marge { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; line-height: 1.2; }
+        .bw-ix-def-marge b { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); font-variant-numeric: tabular-nums; }
+        .bw-ix-def-marge span { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .bw-ix-def-sub { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+        .bw-ix-def-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 200px)); gap: 18px; margin-top: 6px; }
+        .bw-ix-def-kpis > div { display: flex; flex-direction: column; gap: 2px; }
+        .bw-ix-def-kpis .l { font: 600 9px var(--gl-v2-font-sans); letter-spacing: .1em; color: var(--gl-v2-muted); }
+        .bw-ix-def-kpis .v { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
+        .bw-ix-def-kpis .s { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
+        .bw-ix-def-acties { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
+        /* Lege kaart "Nieuw budget" (39a): gestreepte rand naast de budgetkaarten */
+        .bw-ix-nieuw-kaart { border: 1.5px dashed rgba(44,59,42,.2); border-radius: 12px; min-height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: transparent; cursor: pointer; padding: 16px; }
+        .bw-ix-nieuw-kaart:hover { background: rgba(0,83,45,.03); border-color: rgba(0,83,45,.4); }
+        .bw-ix-nieuw-kaart .plus { width: 36px; height: 36px; border-radius: 10px; background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); display: inline-flex; align-items: center; justify-content: center; font-size: 16px; }
+        .bw-ix-nieuw-kaart .t { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+        .bw-ix-nieuw-kaart .s { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+        .bw-ix-stap { font: 500 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; }
+        .bw-ix-marge { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.25; }
+        .bw-ix-marge b { font-weight: 600; color: var(--gl-v2-primary); }
+        .bw-ix-marge span { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+        /* De versietabel heeft zes kolommen en heeft zeker 640px nodig. Twee kaarten naast elkaar (vroeger vanaf 1200px) knipten de laatste
+           kolom af op een gewoon scherm; nu gaan ze pas naast elkaar als elke kaart minstens 660px breed kan zijn. */
+        .bw-ix-kaarten { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 660px), 1fr)); gap: 16px; }
+        .bw-ix-kaart { min-width: 0; }
+        .bw-ix-kaart .gl-v2-bw-table-wrap { overflow-x: auto; }
         .bw-ix-kaart .gl-v2-section-card-header { flex-wrap: wrap; row-gap: 6px; }
         .bw-ix-kaart .gl-v2-section-card-title { font-family: var(--gl-v2-font-serif); font-weight: 500; font-size: 16px; text-transform: none; letter-spacing: 0; }
         .bw-ix-versie { cursor: pointer; }
         .bw-ix-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 20px 14px; border-top: 1px solid var(--gl-v2-hairline-soft); flex-wrap: wrap; }
         .bw-ix-ph { color: var(--gl-v2-muted-light); font-weight: 450; }
-        @@media (max-width: 1199.98px) { .bw-ix-def-body { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-        @@media (max-width: 767.98px) { .bw-ix-def-body { grid-template-columns: minmax(0, 1fr); } }
+        @@media (max-width: 991.98px) { .bw-ix-def { grid-template-columns: auto minmax(0, 1fr); } .bw-ix-def-acties { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; } .bw-ix-def-kpis { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); } }
     </style>
 }
 @section ProjectMenu
@@ -52,6 +80,7 @@
 @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhone)
 @section PageActions
 {
+    <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="bw-ix-vergelijk" data-bw-vergelijk=""@(Model.BudgetMasters.Sum(m => m.Versies.Count) < 2 ? " disabled title=\"Je hebt minstens twee versies nodig om te vergelijken.\"" : "")><i class="ph ph-git-diff" aria-hidden="true"></i>Vergelijken</button>
     <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="bw-ix-nieuw"><i class="ph ph-plus" aria-hidden="true"></i>Nieuw budget</button>
 }
 
@@ -59,40 +88,34 @@
 
 @if (def != null)
 {
-    <section class="gl-v2-section-card bw-ix-def">
-        <div class="gl-v2-section-card-header">
-            <span class="gl-v2-section-card-icon"><i class="ph ph-lock-key" aria-hidden="true"></i></span>
-            <h2 class="gl-v2-section-card-title">Definitief budget</h2>
-            <span class="gl-v2-field-divider"></span>
-            <span class="gl-v2-section-card-desc">basis voor facturen &amp; contracten</span>
-        </div>
-        <div class="bw-ix-def-body">
-            <div>
-                <div class="bw-ix-def-naam">@defMaster?.Naam · v@(def.Versienummer)@(string.IsNullOrWhiteSpace(def.VersieNaam) ? "" : " · " + def.VersieNaam)</div>
-                <div class="bw-ix-def-tot">@(Model.Totalen.TryGetValue(def.Id, out var dt) && dt.HasValue ? Eur0(dt.Value) : "—")</div>
-                <div class="bw-ix-def-sub">Vastgezet op @(def.VastgezetOp?.ToString("dd/MM/yyyy") ?? "—")@(string.IsNullOrWhiteSpace(def.VastgezetDoor) ? "" : " door " + def.VastgezetDoor) · alleen-lezen</div>
+    Model.Marges.TryGetValue(def.Id, out var defMarge);
+    <section class="bw-ix-def">
+        <span class="bw-ix-def-icon"><i class="ph ph-lock-key" aria-hidden="true"></i></span>
+        <div class="bw-ix-def-main">
+            <div class="bw-ix-def-kop">
+                <span class="bw-ix-def-lbl">DEFINITIEF BUDGET</span>
+                <span class="bw-ix-def-naam">@defMaster?.Naam · v@(def.Versienummer)@(string.IsNullOrWhiteSpace(def.VersieNaam) ? "" : " · " + def.VersieNaam)</span>
+                <span class="bw-ix-def-tot">@(Model.Totalen.TryGetValue(def.Id, out var dt) && dt.HasValue ? Eur0(dt.Value) : "—")</span>
+                @if (defMarge != null) { <span class="bw-ix-def-marge"><b>@Pct1(defMarge.Percentage)</b><span>@Eur0(defMarge.Bedrag)</span></span> }
             </div>
-            <div class="gl-v2-bw-tile"><span class="lbl">Gecontracteerd</span><span class="val bw-ix-ph">—</span><span class="sub">nog niet gekoppeld aan contracten</span></div>
-            <div class="gl-v2-bw-tile"><span class="lbl">Gefactureerd</span><span class="val bw-ix-ph">—</span><span class="sub">nog niet gekoppeld aan facturen</span></div>
-            <div class="gl-v2-bw-tile"><span class="lbl">Verwacht verschil</span><span class="val bw-ix-ph">—</span><span class="sub">volgt na de koppeling</span></div>
+            <span class="bw-ix-def-sub">Vastgezet op @(def.VastgezetOp?.ToString("dd/MM/yyyy") ?? "—")@(string.IsNullOrWhiteSpace(def.VastgezetDoor) ? "" : " door " + def.VastgezetDoor) · alleen-lezen · basis voor facturen &amp; contracten</span>
+            <div class="bw-ix-def-kpis">
+                <div><span class="l">GECONTRACTEERD</span><span class="v bw-ix-ph">—</span><span class="s">nog niet gekoppeld aan contracten</span></div>
+                <div><span class="l">GEFACTUREERD</span><span class="v bw-ix-ph">—</span><span class="s">nog niet gekoppeld aan facturen</span></div>
+                <div><span class="l">VERWACHT VERSCHIL</span><span class="v bw-ix-ph">—</span><span class="s">volgt na de koppeling</span></div>
+            </div>
         </div>
-        <div class="bw-ix-acties">
-            <a href="@Url.Action("BudgetResultaat", "Projecten", new { versieId = def.Id })" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-chart-bar" aria-hidden="true"></i>Vergelijking openen</a>
-            <button type="button" class="gl-v2-btn gl-v2-btn-text" id="bw-ix-ander-def"><i class="ph ph-arrows-left-right" aria-hidden="true"></i>Andere versie definitief maken…</button>
+        <div class="bw-ix-def-acties">
+            <button type="button" class="gl-v2-btn gl-v2-btn-primary" data-bw-vergelijk="@def.Id" data-bw-basis="@def.Id"@(Model.BudgetMasters.Sum(m => m.Versies.Count) < 2 ? " disabled" : "")><i class="ph ph-git-diff" aria-hidden="true"></i>Vergelijking openen</button>
+            <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="bw-ix-ander-def"><i class="ph ph-arrows-left-right" aria-hidden="true"></i>Andere versie definitief maken…</button>
         </div>
     </section>
 }
 else
 {
-    <div class="gl-v2-notice gl-v2-notice-compact is-info"><i class="ph ph-info" aria-hidden="true"></i><span>Nog geen definitief budget. Rond een versie af op stap 9 en kies "Afronden &amp; definitief maken"; die versie wordt dan de basis voor facturen en contracten.</span></div>
+    <div class="gl-v2-notice gl-v2-notice-compact is-info"><i class="ph ph-info" aria-hidden="true"></i><span>Nog geen definitief budget. Rond een versie af op stap 9 en kies "Afronden &amp; definitief maken"; die versie wordt dan de basis voor de vergelijking met facturen en contracten.</span></div>
 }
 
-@if (!Model.BudgetMasters.Any())
-{
-    <section class="gl-v2-section-card">
-        <div class="gl-v2-bw-empty" style="border:0"><span class="t">Nog geen budgetten voor dit project</span><span class="s">Maak een eerste budget aan om de berekening te starten — leeg, of als kopie van een budget van een ander project.</span></div>
-    </section>
-}
 <div class="bw-ix-kaarten">
     @foreach (var m in Model.BudgetMasters)
     {
@@ -116,7 +139,7 @@ else
             </div>
             <div class="gl-v2-bw-table-wrap">
                 <table class="gl-v2-bw-table">
-                    <thead><tr><th>Versie</th><th>Naam</th><th>Laatst gewijzigd</th><th>Status</th><th class="is-num">Totaal</th><th class="col-actions" style="width:120px"></th></tr></thead>
+                    <thead><tr><th>Versie</th><th>Naam</th><th>Datum</th><th>Status</th><th class="is-num">Totaal</th><th class="is-num">Marge</th><th class="col-actions" style="width:60px"></th></tr></thead>
                     <tbody>
                         @foreach (var v in m.Versies.OrderByDescending(x => x.Versienummer))
                         {
@@ -124,10 +147,11 @@ else
                             <tr class="bw-ix-versie" data-detail-url="@url">
                                 <td class="is-strong">v@(v.Versienummer)</td>
                                 <td>@(string.IsNullOrWhiteSpace(v.VersieNaam) ? "—" : v.VersieNaam)</td>
-                                <td class="is-muted">@((v.GewijzigdOp ?? v.CreatedAt).ToString("dd/MM/yyyy HH:mm"))</td>
+                                <td class="is-muted">@((v.GewijzigdOp ?? v.CreatedAt).ToString("dd/MM/yyyy"))</td>
                                 <td><span class="gl-v2-badge @StatusKlasse(v)">@StatusLabel(v)</span></td>
-                                <td class="is-num is-strong">@(Model.Totalen.TryGetValue(v.Id, out var t) && t.HasValue ? Eur0(t.Value) : "")</td>
-                                <td class="col-actions"><button type="button" class="gl-v2-row-action bw-ix-versie-hernoem" data-versie="@v.Id" data-naam="@v.VersieNaam" data-notitie="@v.Notitie"><i class="ph ph-pencil-simple" aria-hidden="true"></i><span class="gl-v2-row-action-label">Versie hernoemen</span></button> <a href="@url" class="gl-v2-row-action gl-v2-row-action-primary"><i class="ph ph-arrow-square-out" aria-hidden="true"></i><span class="gl-v2-row-action-label">Open versie</span></a></td>
+                                <td class="is-num is-strong">@if (!Compleet(v)) { <span class="bw-ix-stap">stap @(Math.Max(1, v.LaatsteStap ?? 1)) van 9</span> } else { @(Model.Totalen.TryGetValue(v.Id, out var t) && t.HasValue ? Eur0(t.Value) : "—") }</td>
+                                <td class="is-num">@if (Compleet(v) && Model.Marges.TryGetValue(v.Id, out var mg)) { <span class="bw-ix-marge"><b>@Pct1(mg.Percentage)</b><span>@Eur0(mg.Bedrag)</span></span> } else { <span class="bw-ix-ph">—</span> }</td>
+                                <td class="col-actions"><button type="button" class="gl-v2-row-action bw-ix-versie-hernoem" data-versie="@v.Id" data-naam="@v.VersieNaam" data-notitie="@v.Notitie"><i class="ph ph-pencil-simple" aria-hidden="true"></i><span class="gl-v2-row-action-label">Versie hernoemen</span></button> @if (kanVerwijderen && v.Status != "Definitief") { <button type="button" class="gl-v2-row-action bw-ix-versie-del" data-versie="@v.Id" data-budget="@m.Naam" data-vnr="v@(v.Versienummer)" data-laatste="@(m.Versies.Count == 1 ? "1" : "0")"><i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-row-action-label">Versie verwijderen</span></button> } <a href="@url" class="gl-v2-row-action gl-v2-row-action-primary"><i class="ph ph-arrow-square-out" aria-hidden="true"></i><span class="gl-v2-row-action-label">Open versie</span></a></td>
                             </tr>
                         }
                     </tbody>
@@ -139,29 +163,99 @@ else
             </div>
         </section>
     }
+    <button type="button" class="bw-ix-nieuw-kaart" id="bw-ix-nieuw-kaart">
+        <span class="plus"><i class="ph ph-plus" aria-hidden="true"></i></span>
+        <span class="t">Nieuw budget</span>
+        <span class="s">leeg of als kopie van een bestaand budget</span>
+    </button>
 </div>
 
-@* Nieuw budget *@
-<div class="modal fade gl-v2-modal-form" id="bw-ix-modal" tabindex="-1" aria-hidden="true" aria-labelledby="bw-ix-modal-title">
-    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+@* Nieuw budget (design-handoff 39l) *@
+@{
+    var bronnenJson = System.Text.Json.JsonSerializer.Serialize(Model.KopieBronnen.Select(b => new
+    {
+        id = b.MasterId, naam = b.Naam, groep = b.EigenProject ? "Dit project" : b.ProjectNaam,
+        versies = b.Versies.Select(v => new { value = v.ID.ToString(), text = v.Display })
+    }));
+    var stapKeuzes = new[] { ("gegevens", "Gegevens", true), ("oppervlaktes", "Oppervlaktes", true), ("sanitair", "Sanitair", true), ("gevels", "Gevels", true), ("dak", "Dak & afbraak", true),
+        ("activiteiten", "Activiteiten", true), ("parameters", "Parameters", true), ("verkoop", "Verkoop", false), ("opmerkingen", "Opmerkingen", false) };
+}
+<div class="modal fade gl-v2-modal-form bw-modal" id="bw-ix-modal" tabindex="-1" aria-hidden="true" aria-labelledby="bw-ix-modal-title"
+     data-bronnen="@bronnenJson" data-aantal="@Model.AantalProjectEenheden" data-index="@Model.ActieveIndexTekst">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down" style="--bw-modal-w:600px">
         <form method="post" asp-action="BudgetMasterAanmaken" asp-controller="Projecten" class="modal-content" autocomplete="off">
             @Html.AntiForgeryToken()
-            <input type="hidden" name="ProjectId" value="@Model.ProjectId" /><input type="hidden" name="ProjectName" value="@Model.ProjectName" />
-            <div class="modal-header"><h2 class="modal-title" id="bw-ix-modal-title">Nieuw budget</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sluiten"></button></div>
-            <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
-                <div class="gl-v2-field"><label class="gl-v2-field-label" for="bw-ix-naam">Naam <span style="color:#8B2A2A">*</span></label><div class="gl-v2-field-box"><input type="text" id="bw-ix-naam" name="Naam" class="gl-v2-field-input" placeholder="bv. 8 woningen" required maxlength="200" /></div></div>
-                <div class="gl-v2-field"><label class="gl-v2-field-label" for="bw-ix-oms">Omschrijving <span class="gl-v2-bw-hint">· optioneel</span></label><div class="gl-v2-field-box"><input type="text" id="bw-ix-oms" name="Omschrijving" class="gl-v2-field-input" placeholder="korte toelichting" maxlength="500" /></div></div>
-                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
-                {
-                    Name = "KopieVanVersieId", Id = "bw-ix-kopie", Label = "Starten als", EmptyText = "Leeg budget", Value = "",
-                    Items = Model.KopieerOpties.Select(o => new GlV2SelectItem { Value = o.ID.ToString(), Text = o.Display, Group = o.Group }).ToList()
-                })
-                <span class="gl-v2-field-help">Een kopie neemt alle stappen over (gegevens, oppervlaktes, activiteiten, parameters, verkooplijnen); de status wordt Concept.</span>
+            <input type="hidden" name="ProjectId" value="@Model.ProjectId" /><input type="hidden" name="ProjectName" value="@Model.ProjectName" /><input type="hidden" name="OvernemenIngevuld" value="true" />
+            <div class="modal-header bw-mod-kop">
+                <span class="bw-mod-icoon"><i class="ph ph-plus" aria-hidden="true"></i></span>
+                <div class="bw-mod-titels"><h2 class="modal-title" id="bw-ix-modal-title">Nieuw budget</h2><span class="bw-mod-sub">@Model.ProjectName</span></div>
+                <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
             </div>
-            <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="submit" class="gl-v2-btn gl-v2-btn-primary">Budget aanmaken</button></div>
+            <div class="modal-body bw-mod-body">
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="bw-ix-naam">Naam <span style="color:#8B2A2A">*</span></label>
+                    <div class="gl-v2-field-box"><input type="text" id="bw-ix-naam" name="Naam" class="gl-v2-field-input" maxlength="200" required placeholder="bv. Variant met kelder" /></div>
+                    <span class="gl-v2-field-help">zichtbaar in de lijst; versies krijgen v1, v2…</span>
+                </div>
+
+                <div class="bw-mod-groep">
+                    <span class="bw-mod-lbl">Startpunt</span>
+                    <div class="bw-start is-aan">
+                        <label class="bw-start-kop"><input type="radio" name="startpunt" value="leeg" checked /><span class="bw-radio" aria-hidden="true"></span>
+                            <span class="bw-start-tekst"><strong>Leeg budget</strong><small>alle stappen leeg, eenheden en oppervlaktes uit het project</small></span></label>
+                    </div>
+                    @* De keuzelijsten en vinkjes staan buiten het label van de radio: in een label opent een klik op de lijst tegelijk de radio, waardoor de lijst meteen weer sluit. *@
+                    <div class="bw-start">
+                        <label class="bw-start-kop"><input type="radio" name="startpunt" value="kopie" /><span class="bw-radio" aria-hidden="true"></span>
+                            <span class="bw-start-tekst"><strong>Kopie van een bestaand budget</strong><small>kies budget en versie; aangevinkte stappen worden overgenomen, de rest begint leeg</small></span></label>
+                        <span class="bw-start-kopie" hidden>
+                            <span class="bw-mod-twee bw-mod-twee--kopie">
+                                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "KopieBudgetId", Id = "bw-nb-budget", Bare = true, Placeholder = "Kies een budget…", Value = "", Items = new List<GlV2SelectItem>() })
+                                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "KopieVanVersieId", Id = "bw-nb-versie", Bare = true, Placeholder = "Kies een versie…", Value = "", Items = new List<GlV2SelectItem>() })
+                            </span>
+                            <span class="bw-mod-groep bw-mod-groep--klein">
+                                <span class="bw-mod-lbl">Overnemen</span>
+                                <span class="bw-overnemen-raster">
+                                    @foreach (var (sleutel, label, aan) in stapKeuzes)
+                                    {
+                                        <label class="bw-overnemen"><input type="checkbox" name="Overnemen" value="@sleutel" @(aan ? "checked" : "") /><span class="bw-check" aria-hidden="true"><i class="ph ph-check"></i></span><span>@label</span></label>
+                                    }
+                                </span>
+                            </span>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="bw-mod-twee">
+                    <div class="bw-mod-veld">
+                        <span class="bw-mod-lbl">Eenheden</span>
+                        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "EenhedenBron", Id = "bw-nb-eenheden", Bare = true, Value = "project", Items = new List<GlV2SelectItem> { new() { Value = "project", Text = $"{Model.AantalProjectEenheden} eenhe{(Model.AantalProjectEenheden == 1 ? "id" : "den")} uit het project" }, new() { Value = "leeg", Text = "Geen eenheden, zelf toevoegen in stap 2" } } })
+                        <span class="gl-v2-field-help" id="bw-nb-eenheden-help">aanpasbaar in stap 2</span>
+                    </div>
+                    <div class="bw-mod-veld">
+                        <span class="bw-mod-lbl">Index</span>
+                        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "IndexBron", Id = "bw-nb-index", Bare = true, Value = "actueel", Items = new List<GlV2SelectItem> { new() { Value = "actueel", Text = Model.ActieveIndexTekst } } })
+                        <span class="gl-v2-field-help">peildatum voor de prijzen</span>
+                    </div>
+                </div>
+
+                <label class="bw-toggle-rij">
+                    <input type="checkbox" name="ActiefMaken" value="true" class="gl-v2-toggle-switch" />
+                    <span class="bw-toggle-tekst">Meteen actief budget maken</span>
+                    <span class="bw-mod-flex"></span>
+                    <span class="bw-toggle-sub">het definitief budget blijft ongewijzigd</span>
+                </label>
+            </div>
+            <div class="modal-footer bw-mod-voet">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                <span class="bw-mod-flex"></span>
+                <button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-arrow-right" aria-hidden="true"></i>Aanmaken &amp; naar stap 1</button>
+            </div>
         </form>
     </div>
 </div>
+
+@await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwVergelijkModal.cshtml", Model)
 
 @* Budget hernoemen *@
 <div class="modal fade gl-v2-modal-form" id="bw-ix-hernoem-modal" tabindex="-1" aria-hidden="true" aria-labelledby="bw-ix-hernoem-title">
@@ -178,6 +272,30 @@ else
         </form>
     </div>
 </div>
+
+@* Versie verwijderen (alleen met verwijderrecht, nooit een definitieve versie) *@
+@if (kanVerwijderen)
+{
+<div class="modal fade gl-v2-modal-confirm" id="bw-ix-del-modal" tabindex="-1" aria-hidden="true" aria-labelledby="bw-ix-del-title">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="post" asp-action="BudgetVersieDelete" asp-controller="Projecten" class="modal-content is-danger">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="versieId" id="bw-del-versie" /><input type="hidden" name="projectId" value="@Model.ProjectId" />
+            <div class="modal-body">
+                <span class="gl-v2-modal-icon is-danger"><i class="ph ph-trash" aria-hidden="true"></i></span>
+                <div class="gl-v2-modal-text">
+                    <h2 class="gl-v2-modal-title" id="bw-ix-del-title">Versie verwijderen?</h2>
+                    <p class="gl-v2-modal-desc" id="bw-del-tekst"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                <button type="submit" class="gl-v2-btn gl-v2-btn-danger">Verwijderen</button>
+            </div>
+        </form>
+    </div>
+</div>
+}
 
 @* Versie hernoemen *@
 <div class="modal fade gl-v2-modal-form" id="bw-ix-vhernoem-modal" tabindex="-1" aria-hidden="true" aria-labelledby="bw-ix-vhernoem-title">
@@ -232,12 +350,25 @@ else
 @section PageScripts
 {
 <script src="~/js/gl-v2-budget.js" asp-append-version="true"></script>
+<script src="~/js/gl-v2-budget-vergelijk.js" asp-append-version="true"></script>
+<script src="~/js/gl-v2-budget-nieuw.js" asp-append-version="true"></script>
 <script>
 (function () {
     var nieuw = document.getElementById('bw-ix-nieuw'); if (nieuw) nieuw.addEventListener('click', function () { bootstrap.Modal.getOrCreateInstance(document.getElementById('bw-ix-modal')).show(); setTimeout(function () { document.getElementById('bw-ix-naam').focus(); }, 300); });
+    var kaart = document.getElementById('bw-ix-nieuw-kaart'); if (kaart && nieuw) kaart.addEventListener('click', function () { nieuw.click(); });
     var ander = document.getElementById('bw-ix-ander-def'); if (ander) ander.addEventListener('click', function () { bootstrap.Modal.getOrCreateInstance(document.getElementById('bw-ix-def-modal')).show(); });
     function modal(id) { return bootstrap.Modal.getOrCreateInstance(document.getElementById(id)); }
     document.querySelectorAll('.bw-ix-hernoem').forEach(function (b) { b.addEventListener('click', function () { document.getElementById('bw-hn-master').value = b.dataset.master; document.getElementById('bw-hn-naam').value = b.dataset.naam || ''; document.getElementById('bw-hn-oms').value = b.dataset.oms || ''; modal('bw-ix-hernoem-modal').show(); }); });
+    document.querySelectorAll('.bw-ix-versie-del').forEach(function (b) { b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var laatste = b.dataset.laatste === '1', budget = b.dataset.budget.replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }), versie = b.dataset.vnr;
+        document.getElementById('bw-del-versie').value = b.dataset.versie;
+        document.getElementById('bw-ix-del-title').textContent = laatste ? 'Budget verwijderen?' : 'Versie verwijderen?';
+        document.getElementById('bw-del-tekst').innerHTML = laatste
+            ? 'Versie ' + versie + ' is de enige versie van het budget <strong>' + budget + '</strong>. Het budget zelf wordt dus ook verwijderd, met alle ingevulde stappen. Andere budgetten van dit project blijven ongewijzigd. Dit kan niet ongedaan gemaakt worden.'
+            : 'Versie ' + versie + ' van het budget <strong>' + budget + '</strong> wordt verwijderd, met alle ingevulde stappen. De andere versies blijven bestaan. Dit kan niet ongedaan gemaakt worden.';
+        modal('bw-ix-del-modal').show();
+    }); });
     document.querySelectorAll('.bw-ix-versie-hernoem').forEach(function (b) { b.addEventListener('click', function (e) { e.stopPropagation(); document.getElementById('bw-vh-versie').value = b.dataset.versie; document.getElementById('bw-vh-naam').value = b.dataset.naam || ''; document.getElementById('bw-vh-notitie').value = b.dataset.notitie || ''; modal('bw-ix-vhernoem-modal').show(); }); });
     var masterId = 0, vm = document.getElementById('bw-ix-versie-modal');
     document.querySelectorAll('.bw-ix-nieuwe-versie').forEach(function (b) { b.addEventListener('click', function () { masterId = parseInt(b.getAttribute('data-master')); document.getElementById('bw-ix-versie-uitleg').textContent = 'Kopie van v' + b.getAttribute('data-van') + '; de nieuwe versie wordt de huidige.'; bootstrap.Modal.getOrCreateInstance(vm).show(); }); });

@@ -54,6 +54,7 @@
         .bw-vk-detail td { background: #FAFBF8; padding: 10px 10px 14px 46px; }
         .bw-vk-detail[hidden] { display: none; }
         .bw-vk-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 24px; }
+        .bw-vk-zijde[hidden] { display: none; }
         .bw-vk-zijde { display: grid; grid-template-columns: 110px minmax(0, 1fr) 110px minmax(0, 1fr); gap: 8px 10px; align-items: center; }
         .bw-vk-zijde .k { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--gl-v2-muted); grid-column: 1 / -1; }
         .bw-vk-zijde .gl-v2-field-box { height: 34px; }
@@ -189,10 +190,10 @@
                 </span>
             </div>
             <div class="gl-v2-bw-table-wrap">
-                <table class="gl-v2-bw-table" id="bw-vk-tabel" data-refprijzen='@Html.Raw(refPrijzen)'>
+                <table class="gl-v2-bw-table" id="bw-vk-tabel" data-agr-ratio="@((vs?.AgrarischGewicht ?? 0.20m).ToString(inv))" data-refprijzen='@Html.Raw(refPrijzen)'>
                     <thead>
                         <tr>
-                            <th style="width:28px"></th><th>Eenheid</th><th>Type</th><th class="is-num">Bew.</th><th class="is-num">Grond</th><th class="is-num">Kostprijs</th><th class="is-num">Bouwwaarde</th><th class="is-num" title="Grondwaarde + bouwwaarde (kost + marge)">Min. prijs</th>
+                            <th style="width:28px"></th><th>Eenheid</th><th>Type</th><th class="is-num" title="Bewoonbare oppervlakte">Bew.</th><th class="is-num" title="Gereduceerde oppervlakte: de basis waarmee de bouwkost en bouwwaarde over de eenheden verdeeld worden">Gered.</th><th class="is-num" title="Grondoppervlakte: de basis voor de verdeling van de grondkost en grondwaarde">Grond</th><th class="is-num">Kostprijs</th><th class="is-num">Bouwwaarde</th><th class="is-num" title="Grondwaarde + bouwwaarde (kost + marge)">Min. prijs</th>
                             <th class="is-num" title="Mediaan €/m² van vergelijkbare units (aantal)">Markt €/m²</th><th class="is-num" title="Mediaan €/m² × bewoonbare opp.">Marktprijs</th><th class="is-num" style="min-width:140px">Vraagprijs</th>
                         </tr>
                     </thead>
@@ -205,12 +206,13 @@
                             rij++;
                             var rijMld = l == null ? null : ch.Voor(8).Where(m => m.Sleutel == l.Id.ToString() && !m.Genegeerd && m.Plaats == "rij").OrderByDescending(m => (int)m.Type).FirstOrDefault();
                             var labels = l == null ? new List<ServiceCore.Budget.BudgetMelding>() : ch.Voor(8).Where(m => m.Sleutel == l.Id.ToString() && m.Plaats == "label" && !m.Genegeerd).ToList();
-                            <tr class="bw-vk-rij @(rijMld != null ? "is-warn" : "")" data-naam="@naam" data-info="1" data-gered="@e.OppGereduceerd.ToString(inv)" data-grondopp="@e.Grondopp.ToString(inv)" data-min="@min.ToString(inv)" data-vgrond="@Math.Round(e.Grondwaarde, 0).ToString(inv)" data-vbouw="@Math.Round(e.Bouwwaarde, 0).ToString(inv)" data-markt="@(e.MarktPrijs?.ToString(inv) ?? "")" data-bron="@(l?.PrijsBron?.ToString() ?? "")">
+                            <tr class="bw-vk-rij @(rijMld != null ? "is-warn" : "")" data-naam="@naam" data-info="1" data-gered="@e.OppGereduceerd.ToString(inv)" data-grondopp="@e.Grondopp.ToString(inv)" data-grondopp2="@e.GrondoppAgrarisch.ToString(inv)" data-min="@min.ToString(inv)" data-vgrond="@Math.Round(e.Grondwaarde, 0).ToString(inv)" data-vbouw="@Math.Round(e.Bouwwaarde, 0).ToString(inv)" data-markt="@(e.MarktPrijs?.ToString(inv) ?? "")" data-bron="@(l?.PrijsBron?.ToString() ?? "")">
                                 <td><button type="button" class="gl-v2-row-action bw-vk-toggle" aria-expanded="false" title="€/m² instellen, bron, ruil, forfait, unit" aria-label="Details"><i class="ph ph-caret-down" aria-hidden="true"></i><span class="gl-v2-row-action-label">Details</span></button></td>
                                 <td class="is-strong">@naam @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwRijIcoon.cshtml", rijMld)@foreach (var lb in labels) { <span class="bw-vk-label" title="@lb.Tekst"><i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i>@lb.Tekst</span> }</td>
                                 <td class="is-muted">@(string.IsNullOrEmpty(e.TypeName) ? e.GroupTypeName : e.TypeName)</td>
                                 <td class="is-num">@e.BewoonbareOpp.ToString("N0", nl) m²</td>
-                                <td class="is-num">@(e.Grondopp > 0 ? e.Grondopp.ToString("N0", nl) : "—")</td>
+                                <td class="is-num" title="Verdeelsleutel bouw: @vs?.VerdeelsleutelBouw">@(e.OppGereduceerd > 0 ? e.OppGereduceerd.ToString("N1", nl) + " m²" : "—")</td>
+                                <td class="is-num">@(e.Grondopp > 0 ? e.Grondopp.ToString("N0", nl) : "—")@(e.GrondoppAgrarisch > 0 ? " + " + e.GrondoppAgrarisch.ToString("N0", nl) : "")</td>
                                 <td class="is-num">@Eur0(e.Kostprijs)</td>
                                 <td class="is-num">@Eur0(e.Bouwwaarde)</td>
                                 <td class="is-num is-strong" style="color:var(--gl-v2-primary)">@Eur0(min)</td>
@@ -218,10 +220,10 @@
                                 <td class="is-num">@(e.MarktPrijs.HasValue ? Eur0(e.MarktPrijs.Value) : "—")@if (e.MarktVerschilPerc.HasValue) { <span class="@(e.MarktVerschilPerc.Value >= 0 ? "is-lager" : "is-hoger")" style="font-size:11px;margin-left:4px;color:@(e.MarktVerschilPerc.Value >= 0 ? "var(--gl-v2-primary)" : "#8B2A2A")">@PctS(e.MarktVerschilPerc.Value)</span> }</td>
                                 <td class="is-num"><div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box" style="width:140px;margin-left:auto"><span class="gl-v2-field-prefix">€</span><input type="text" inputmode="numeric" class="gl-v2-field-input is-num is-tabular vraagprijs" value="@F0(l?.Vraagprijs)" placeholder="@min.ToString("N0", nl)" aria-label="Vraagprijs @naam" /></div></div></td>
                             </tr>
-                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwVerkoopDetail.cshtml", new BwVerkoopDetailVm { Naam = naam, Lijn = l, RefBouw = refBouwItems, RefGrond = refGrondItems, Units = unitItems, Rij = rij })
+                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwVerkoopDetail.cshtml", new BwVerkoopDetailVm { Naam = naam, GrondoppAgrarisch = e.GrondoppAgrarisch, Lijn = l, RefBouw = refBouwItems, RefGrond = refGrondItems, Units = unitItems, Rij = rij })
                             if (l?.Vraagprijs is > 0m && l.Vraagprijs < min)
                             {
-                                <tr class="bw-vk-waarsch-rij"><td></td><td colspan="10" class="bw-vk-waarsch"><i class="ph ph-warning" aria-hidden="true"></i> @naam: vraagprijs @Eur0(l.Vraagprijs.Value) ligt @Eur0(min - l.Vraagprijs.Value) onder de minimale verkoopprijs.</td></tr>
+                                <tr class="bw-vk-waarsch-rij"><td></td><td colspan="11" class="bw-vk-waarsch"><i class="ph ph-warning" aria-hidden="true"></i> @naam: vraagprijs @Eur0(l.Vraagprijs.Value) ligt @Eur0(min - l.Vraagprijs.Value) onder de minimale verkoopprijs.</td></tr>
                             }
                         }
                         @foreach (var l in losseLijnen)
@@ -230,7 +232,7 @@
                             <tr class="bw-vk-rij" data-naam="@l.EenheidNaam" data-info="0" data-gered="0" data-grondopp="0" data-min="0" data-vgrond="" data-vbouw="" data-markt="" data-bron="@(l.PrijsBron?.ToString() ?? "")">
                                 <td><button type="button" class="gl-v2-row-action bw-vk-toggle" aria-expanded="false" title="Details" aria-label="Details"><i class="ph ph-caret-down" aria-hidden="true"></i><span class="gl-v2-row-action-label">Details</span></button></td>
                                 <td class="is-strong">@l.EenheidNaam <span class="gl-v2-bw-hint">niet op stap 2</span></td>
-                                <td class="is-muted" colspan="7">vrije lijn — geen voorstel</td>
+                                <td class="is-muted" colspan="8">vrije lijn — geen voorstel</td>
                                 <td></td>
                                 <td class="is-num"><div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box" style="width:140px;margin-left:auto"><span class="gl-v2-field-prefix">€</span><input type="text" inputmode="numeric" class="gl-v2-field-input is-num is-tabular vraagprijs" value="@F0(l.Vraagprijs)" aria-label="Vraagprijs" /></div></div></td>
                             </tr>
@@ -239,7 +241,7 @@
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="5">Totaal</td>
+                            <td colspan="6">Totaal</td>
                             <td class="is-num">@Eur0(vs?.TotaalKostprijs ?? 0m)</td>
                             <td class="is-num">@Eur0(vs?.Bouwwaarde ?? 0m)</td>
                             <td class="is-num" style="color:var(--gl-v2-primary)">@Eur0(vs?.TotaalVerkoopwaarde ?? 0m)</td>

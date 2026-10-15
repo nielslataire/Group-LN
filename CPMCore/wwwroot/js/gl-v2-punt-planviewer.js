@@ -32,7 +32,7 @@
         stage.appendChild(canvas); stage.appendChild(layer); scroll.appendChild(stage); scroll.appendChild(msg);
         host.appendChild(bar); host.appendChild(scroll);
 
-        var pdf = null, page = 1, zoom = 1, pins = [], marker = null, renderToken = 0;
+        var pdf = null, isImage = false, imgEl = null, page = 1, zoom = 1, pins = [], marker = null, renderToken = 0;
 
         function status(t) { msg.textContent = t; msg.hidden = !t; stage.style.visibility = t ? "hidden" : "visible"; }
 
@@ -51,21 +51,35 @@
         }
 
         function updateBar() {
-            var total = pdf ? pdf.numPages : 0;
+            var total = isImage ? 1 : (pdf ? pdf.numPages : 0);
             pageLbl.textContent = total ? "Pagina " + page + " van " + total : "—";
-            prev.disabled = page <= 1; next.disabled = !pdf || page >= total;
+            prev.disabled = page <= 1; next.disabled = (!pdf && !isImage) || page >= total;
             zLbl.textContent = Math.round(zoom * 100) + "%";
             zout.disabled = zoom <= 0.5; zin.disabled = zoom >= 4;
         }
 
+        function renderImage() {
+            var w = scroll.clientWidth || host.clientWidth || 600;
+            var h = scroll.clientHeight || 0;
+            var fit = h > 40 ? Math.min((w - 2) / imgEl.naturalWidth, (h - 2) / imgEl.naturalHeight) : (w - 2) / imgEl.naturalWidth;   // op 100% past het hele plan in het kader
+            var scale = fit * zoom, cw = imgEl.naturalWidth * scale, ch = imgEl.naturalHeight * scale, dpr = window.devicePixelRatio || 1;
+            canvas.width = Math.floor(cw * dpr); canvas.height = Math.floor(ch * dpr);
+            canvas.style.width = cw + "px"; canvas.style.height = ch + "px"; stage.style.width = cw + "px"; stage.style.height = ch + "px";
+            var ctx = canvas.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.drawImage(imgEl, 0, 0, cw, ch);
+            status(""); drawPins(); updateBar();
+        }
+
         function render() {
+            if (isImage && imgEl) { renderImage(); return; }
             if (!pdf) return;
             var token = ++renderToken;
             pdf.getPage(page).then(function (pg) {
                 if (token !== renderToken) return;
                 var w = scroll.clientWidth || host.clientWidth || 600;
                 var base = pg.getViewport({ scale: 1 });
-                var scale = (w - 2) / base.width * zoom;
+                var h = scroll.clientHeight || 0;
+                var fit = h > 40 ? Math.min((w - 2) / base.width, (h - 2) / base.height) : (w - 2) / base.width;   // op 100% past het hele plan in het kader
+                var scale = fit * zoom;
                 var vp = pg.getViewport({ scale: scale });
                 var dpr = window.devicePixelRatio || 1;
                 canvas.width = Math.floor(vp.width * dpr); canvas.height = Math.floor(vp.height * dpr);
@@ -91,7 +105,7 @@
         zout.addEventListener("click", function () { zoom = Math.max(0.5, +(zoom - 0.25).toFixed(2)); render(); });
 
         stage.addEventListener("click", function (e) {
-            if (!opts.onPlace || !pdf) return;
+            if (!opts.onPlace || (!pdf && !isImage)) return;
             var r = stage.getBoundingClientRect();
             var x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
             if (x < 0 || x > 1 || y < 0 || y > 1) return;
@@ -103,9 +117,18 @@
 
         updateBar();
         return {
-            load: function (url, startPage) {
-                pdf = null; marker = marker; zoom = 1; layer.innerHTML = "";
+            load: function (url, startPage, kind) {
+                pdf = null; isImage = false; imgEl = null; marker = marker; zoom = 1; layer.innerHTML = "";
                 if (!url) { status("Kies een plan."); updateBar(); return Promise.resolve(); }
+                if (kind === "image") {
+                    status("Plan laden…");
+                    return new Promise(function (resolve) {
+                        var im = new Image();
+                        im.onload = function () { imgEl = im; isImage = true; page = 1; render(); if (opts.onPage) opts.onPage(1, 1); resolve(); };
+                        im.onerror = function () { status("Het plan kon niet geladen worden."); resolve(); };
+                        im.src = url;
+                    });
+                }
                 if (!lib) { status("De plan-weergave (pdf.js) kon niet geladen worden."); return Promise.resolve(); }
                 lib.GlobalWorkerOptions.workerSrc = WORKER;
                 status("Plan laden…");

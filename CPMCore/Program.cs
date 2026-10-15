@@ -221,6 +221,15 @@ builder.Services.AddHttpClient(CPMCore.Services.QuoteExtraction.AnthropicQuoteAn
 {
     client.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
 });
+// Punten inspreken en rondgang (41c/41d): spraak naar tekst via OpenAI, punten herkennen via Anthropic. Sleutels: sectie "PuntenSpraak"
+// (OpenAiApiKey, AnthropicApiKey; de laatste valt terug op QuoteExtraction:AnthropicApiKey) via user-secrets of omgevingsvariabelen.
+builder.Services.Configure<CPMCore.Services.PuntenSpraak.PuntenSpraakOptions>(
+    builder.Configuration.GetSection(CPMCore.Services.PuntenSpraak.PuntenSpraakOptions.Section));
+builder.Services.AddHttpClient(CPMCore.Services.PuntenSpraak.PuntenSpraakService.HttpClientName);
+builder.Services.AddScoped<CPMCore.Services.PuntenSpraak.PuntenSpraakService>();
+builder.Services.AddScoped<CPMCore.Services.PuntenSpraak.SpraakContextLoader>();
+builder.Services.AddScoped<CPMCore.Services.PuntenSpraak.RondgangService>();
+builder.Services.AddHostedService<CPMCore.Services.PuntenSpraak.RondgangHostedService>();   // verwerkt rondgangen op de achtergrond (migratie 100)
 builder.Services.AddScoped<CPMCore.Services.QuoteExtraction.AzureQuoteAnalysisService>();
 builder.Services.AddScoped<CPMCore.Services.QuoteExtraction.AnthropicQuoteAnalysisService>();
 builder.Services.AddScoped<CPMCore.Services.QuoteExtraction.IQuoteRegionAnalysisService>(sp =>
@@ -263,6 +272,7 @@ builder.Services.AddHttpClient("I2021Sync").ConfigurePrimaryHttpMessageHandler((
 builder.Services.AddScoped<ServiceCore.Budget.BudgetActivityService>();
 builder.Services.AddScoped<ServiceCore.Budget.BudgetActivityFormuleService>();
 builder.Services.AddScoped<ServiceCore.Budget.BudgetBerekeningService>();
+builder.Services.AddScoped<ServiceCore.Budget.BudgetVergelijkService>();
 builder.Services.AddScoped<ServiceCore.Budget.BudgetControleService>();
 builder.Services.AddScoped<FacadeCore.IVerkoopVoorstelService, ServiceCore.Budget.VerkoopVoorstelService>();
 builder.Services.AddScoped<FacadeCore.IMarktReferentieService, CPMCore.Services.MarktReferentieService>();
@@ -370,6 +380,7 @@ builder.Services.AddScoped<FacadeCore.Signing.IMessageChannel, ServiceCore.Signi
 builder.Services.AddScoped<FacadeCore.Signing.IMessageChannel, ServiceCore.Signing.SmsChannel>();
 // Documentbronnen (fase 1: wijzigingsopdrachten). ISmsProvider-adapters komen in fase 4.
 builder.Services.AddScoped<CPMCore.Services.Signing.ChangeOrderPdfBuilder>();
+builder.Services.AddScoped<CPMCore.Services.BudgetPdfBuilder>();
 builder.Services.AddScoped<FacadeCore.Signing.ISigningDocumentSource, CPMCore.Services.Signing.ChangeOrderSigningSource>();
 builder.Services.AddScoped<ServiceCore.Signing.SigningRegistry>();
 builder.Services.AddScoped<FacadeCore.Signing.ISigningService, ServiceCore.Signing.SigningService>();

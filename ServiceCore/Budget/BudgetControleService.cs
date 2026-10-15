@@ -174,7 +174,8 @@ namespace ServiceCore.Budget
             var p = await _uow.BudgetParams.GetNoTracking().FirstOrDefaultAsync(x => x.BudgetVersieId == versieId);
             if (p != null)
             {
-                if ((p.DecennaleGeslRuwbouwPerc ?? 0m) <= 0m)
+                var decStd = BudgetBerekeningService.ZoekDecennaleStandaard(await _uow.BouwkostPercentages.GetNoTracking().ToListAsync());
+                if ((p.DecennaleGeslRuwbouwPerc ?? 0m) <= 0m && !(decStd > 0m))
                 {
                     Add(7, MeldingType.Waarschuwing, "decennale", "0 % — verplicht voor gesloten ruwbouw. Vul een percentage in of bevestig dat ze elders gedekt is.", "veld", "pctDecennale");
                 }

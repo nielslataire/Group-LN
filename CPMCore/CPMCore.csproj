@@ -30,6 +30,8 @@
 
   <ItemGroup>
     <None Include="package.json" />
+    <!-- Helpartikels (Markdown, geparset door HelpContentService vanuit ContentRootPath/HelpContent). Zonder dit staan ze niet in de publicatie: .md is geen Content, enkel de foto's onder wwwroot gaan standaard mee. -->
+    <None Update="HelpContent\**\*.md" CopyToPublishDirectory="PreserveNewest" />
     <None Include="wwwroot\htmlpage.html" />
     <None Include="wwwroot\Img\admin-banner.png" />
     <None Include="wwwroot\Img\admin\jstree-dark.png" />

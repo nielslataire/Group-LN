@@ -678,6 +678,8 @@ namespace CPMCore.Controllers
 
             model.Project = response.Value;
             model.Website = service.GetProjectWebsite(projectid).Value ?? new FacadeCore.ProjectWebsiteDto { ProjectId = projectid, Present = true };
+            // Gemeente voor "Wil je weten of … bij je past?": standaard die van het project (aanpasbaar)
+            if (string.IsNullOrWhiteSpace(model.Website.LocationMunicipality)) model.Website.LocationMunicipality = model.Project.Postalcode?.Gemeente;
             model.Docs = service.GetProjectDocs(projectid).Values;
             model.Project.Postalcode.Country.CountryId = model.Project.Postalcode.Country.CountryId == 0 ? 19 : model.Project.Postalcode.Country.CountryId;
             model.Project.Postalcode.Country.ISOCode = string.IsNullOrWhiteSpace(model.Project.Postalcode.Country.ISOCode) ? "BE" : model.Project.Postalcode.Country.ISOCode;
@@ -799,7 +801,23 @@ namespace CPMCore.Controllers
 
                 // Website-inhoud (enkel wanneer het formulier ze meestuurt: het oude scherm wist ze niet)
                 if (model.Website?.Present == true)
+                {
+                    // Nog geen kaartpunt: automatisch uit het adres van het project (stil, mislukt = leeg laten)
+                    if (string.IsNullOrWhiteSpace(model.Website.LocationLat) && string.IsNullOrWhiteSpace(model.Website.LocationLng))
+                    {
+                        try
+                        {
+                            var geo = await GeocodeProjectAddressAsync(model.Project);
+                            if (geo != null)
+                            {
+                                model.Website.LocationLat = geo.Value.Lat.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture);
+                                model.Website.LocationLng = geo.Value.Lon.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture);
+                            }
+                        }
+                        catch { /* geen kaartpunt: kan later handmatig of via de knop */ }
+                    }
                     service.SaveProjectWebsite(projectId, model.Website);
+                }
 
                 // Sla uurtarieven op
                 service.SaveProjectHourlyRates(projectId, model.HourlyRates?.Select(r => new ProjectHourlyRateBO
@@ -840,6 +858,75 @@ namespace CPMCore.Controllers
             var ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
             ViewBag.CanWriteProject = ps.HasWrite(PermissionCodes.ProjectsDetail);
         }
+        // Adres van het project -> coördinaat (OpenStreetMap Nominatim), met afnemend nauwkeurige pogingen
+        private static async Task<(double Lat, double Lon, string? Label)?> GeocodeProjectAddressAsync(BOCore.ProjectBO p)
+        {
+            var postcode = p.Postalcode?.Postcode; var gemeente = p.Postalcode?.Gemeente;
+            var street = $"{p.Street} {p.HouseNumber}".Trim();
+            var attempts = new[]
+            {
+                string.Join(", ", new[] { street, $"{postcode} {gemeente}".Trim(), "België" }.Where(x => !string.IsNullOrWhiteSpace(x))),
+                string.Join(", ", new[] { p.Street, $"{postcode} {gemeente}".Trim(), "België" }.Where(x => !string.IsNullOrWhiteSpace(x))),
+                string.Join(", ", new[] { $"{postcode} {gemeente}".Trim(), "België" }.Where(x => !string.IsNullOrWhiteSpace(x)))
+            }.Distinct().Where(x => x.Length > 8);
+            foreach (var a in attempts)
+            {
+                var g = await ServiceCore.Helpers.GeocodingHelper.GeocodeAsync(a);
+                if (g != null) return (g.Lat, g.Lon, g.DisplayName);
+                await Task.Delay(1100); // Nominatim: max 1 aanvraag per seconde
+            }
+            return null;
+        }
+
+        // Knop "Zoek via adres" in de tab SEO & website (blok Ligging)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GeocodeWebsiteLocation(int projectId)
+        {
+            var response = _projectService.GetProjectByID(projectId);
+            if (!response.Success || response.Value == null) return Json(new { ok = false, error = "Project niet gevonden." });
+            var geo = await GeocodeProjectAddressAsync(response.Value);
+            if (geo == null) return Json(new { ok = false, error = "Dit adres werd niet gevonden. Controleer straat, huisnummer en gemeente van het project, of vul het kaartpunt zelf in." });
+            return Json(new
+            {
+                ok = true,
+                lat = geo.Value.Lat.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture),
+                lng = geo.Value.Lon.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture),
+                label = geo.Value.Label
+            });
+        }
+
+        // Knop "Voorzieningen voorstellen": scholen, winkels, openbaar vervoer, groen en sport in de buurt (OpenStreetMap)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SuggestWebsitePois(string lat, string lng)
+        {
+            if (!double.TryParse((lat ?? "").Replace(',', '.'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var la) ||
+                !double.TryParse((lng ?? "").Replace(',', '.'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var lo))
+                return Json(new { ok = false, error = "Vul eerst het kaartpunt van het project in." });
+            try
+            {
+                var pois = await ServiceCore.Helpers.PoiSuggester.SuggestAsync(la, lo);
+                return Json(new
+                {
+                    ok = true,
+                    items = pois.Select(p => new
+                    {
+                        category = p.Category,
+                        name = p.Name,
+                        lat = p.Lat.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture),
+                        lng = p.Lng.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture),
+                        distance = p.Distance,
+                        time = p.Time
+                    })
+                });
+            }
+            catch (Exception)
+            {
+                return Json(new { ok = false, error = "De voorzieningen konden niet opgehaald worden (de kaartdienst antwoordt niet). Probeer het later opnieuw of voeg ze zelf toe." });
+            }
+        }
+
         // Woningen (eenheidstype 2) van het project voor de projectkaart-editor (omtrek per eenheid).
         private List<IdNameBO> LoadWebsiteUnits(int projectId) =>
             _db.Set<DALCore.Models.Units>()

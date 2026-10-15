@@ -35,6 +35,9 @@ public partial class ProjectPictures
 
     public int? HeightPx { get; set; }
 
+    // true = WebP-varianten op breedte (pictures/w320 ... w2560) + master-jpeg bestaan (nieuwe upload, zie _migrations/087)
+    public bool HasVariants { get; set; }
+
     public double? DurationSeconds { get; set; }
 
     public string AltText { get; set; }

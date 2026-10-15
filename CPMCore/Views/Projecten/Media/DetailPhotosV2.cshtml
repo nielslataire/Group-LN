@@ -640,7 +640,7 @@
         Tone = GlV2ModalTone.Danger,
         IconClass = "ph-trash",
         Title = "Media verwijderen",
-        Description = "Weet u zeker dat u dit bestand wil verwijderen? Dit kan niet ongedaan worden gemaakt.",
+        Description = "Weet u zeker dat u dit bestand wil verwijderen? Ook alle bestanden in de opslag worden gewist. Dit kan niet ongedaan worden gemaakt.",
         ConfirmLabel = "Verwijderen",
         FormAction = Url.Action("DeletePhoto", "Projecten") ?? "",
         HiddenFields = new Dictionary<string, string> { ["id"] = "0", ["projectid"] = Model.ProjectId.ToString(), ["type"] = ((int)PictureType.Nevenfoto).ToString() }
@@ -659,6 +659,7 @@
             urls: {
                 moveToSection: '@Url.Action("MoveMediaToSection", "Projecten")',
                 updateVisibility: '@Url.Action("UpdateMediaVisibility", "Projecten")',
+                updateSortOrder: '@Url.Action("UpdateMediaSortOrder", "Projecten")',
                 bulkDelete: '@Url.Action("BulkDeleteMedia", "Projecten")',
                 setHoofdMedia: '@Url.Action("SetHoofdMedia", "Projecten")',
                 updateDetails: '@Url.Action("UpdateMediaDetails", "Projecten")',
@@ -671,5 +672,7 @@
         };
     </script>
     <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-dialog.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-projecten-detailphotos.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-detailphotos-sort.js" asp-append-version="true"></script>
 }

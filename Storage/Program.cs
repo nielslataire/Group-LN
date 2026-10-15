@@ -20,7 +20,8 @@ builder.Services.AddSingleton<AssetSigningHelper>();
 
 builder.Services.Configure<FormOptions>(options =>
 {
-    options.MultipartBodyLengthLimit = 30 * 1024 * 1024;
+    // 30 MB voor gewone uploads; de foto-endpoint (/api/assets/photo) laat tot 50 MB origineel toe (+ marge voor het formulier)
+    options.MultipartBodyLengthLimit = 55L * 1024 * 1024;
 });
 
 builder.Services.AddCors(options =>
@@ -225,6 +226,82 @@ app.MapPost("/api/assets/upload", async (HttpRequest request, IOptions<AssetStor
         publicUrl,
         downloadUrl
     });
+});
+
+app.MapPost("/api/assets/photo", async (HttpRequest request, IOptions<AssetStorageSettings> options, IWebHostEnvironment env, ILoggerFactory loggerFactory, CancellationToken ct) =>
+{
+    var endpointLogger = loggerFactory.CreateLogger("PhotoUpload");
+    var localSettings = options.Value;
+
+    if (!TryValidateApiKey(request, localSettings.WriteApiKey))
+        return Results.Unauthorized();
+
+    if (!request.HasFormContentType)
+        return Results.BadRequest(new { error = "Request must be multipart/form-data." });
+
+    // Kestrel staat standaard 30 MB toe; een origineel mag 50 MB zijn
+    var bodyLimit = request.HttpContext.Features.Get<IHttpMaxRequestBodySizeFeature>();
+    if (bodyLimit is { IsReadOnly: false }) bodyLimit.MaxRequestBodySize = 60L * 1024 * 1024;
+
+    var form = await request.ReadFormAsync(ct);
+    var file = form.Files["file"];
+    if (file is null || file.Length == 0)
+        return Results.BadRequest(new { error = "File is required." });
+    if (file.Length > PhotoProcessor.MaxBytes)
+        return Results.BadRequest(new { error = $"De foto is {file.Length / 1024d / 1024d:0.#} MB; het maximum is 50 MB." });
+
+    var baseName = form["name"].ToString().Trim();
+    if (!System.Text.RegularExpressions.Regex.IsMatch(baseName, "^[A-Za-z0-9_-]{1,80}$"))
+        baseName = Guid.NewGuid().ToString("N");
+
+    var storageRoot = Path.Combine(env.ContentRootPath, localSettings.RootPath);
+    try
+    {
+        await using var input = file.OpenReadStream();
+        var result = await PhotoProcessor.ProcessAsync(input, baseName, storageRoot, ct);
+        endpointLogger.LogInformation("Photo {Name} verwerkt: {W}x{H}, master {MW}x{MH}, breedtes {Widths}", result.FileName, result.Width, result.Height, result.MasterWidth, result.MasterHeight, string.Join(",", result.Widths));
+        return Results.Ok(new
+        {
+            fileName = result.FileName,
+            width = result.Width,
+            height = result.Height,
+            masterWidth = result.MasterWidth,
+            masterHeight = result.MasterHeight,
+            widths = result.Widths
+        });
+    }
+    catch (PhotoProcessor.PhotoException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
+// Verwijdert alle varianten van één foto (master-jpeg + alle webp-varianten, ook de oude vierkante 447/800).
+// De bestaande DELETE /api/assets/{folder}/{file} kan geen submappen ("pictures/447") aanspreken.
+// Maakt de ontbrekende breedte-varianten voor een bestaande foto (zie PhotoProcessor.BackfillAsync) — gebruikt door het script _scripts/Backfill-FotoVarianten.ps1
+app.MapPost("/api/assets/photo/{name}/variants", async (HttpRequest request, string name, IOptions<AssetStorageSettings> options, IWebHostEnvironment env, CancellationToken ct) =>
+{
+    if (!TryValidateApiKey(request, options.Value.WriteApiKey))
+        return Results.Unauthorized();
+
+    if (!IsSafeFileName(name))
+        return Results.BadRequest(new { error = "Invalid file name." });
+
+    var result = await PhotoProcessor.BackfillAsync(Path.Combine(env.ContentRootPath, options.Value.RootPath), name, ct);
+    if (result is null) return Results.NotFound(new { error = "Bronbestand in 'pictures' niet gevonden of type niet ondersteund." });
+    return Results.Ok(new { width = result.Value.Width, height = result.Value.Height, widths = result.Value.Widths });
+});
+
+app.MapDelete("/api/assets/photo/{name}", (HttpRequest request, string name, IOptions<AssetStorageSettings> options, IWebHostEnvironment env) =>
+{
+    if (!TryValidateApiKey(request, options.Value.WriteApiKey))
+        return Results.Unauthorized();
+
+    if (!IsSafeFileName(name))
+        return Results.BadRequest(new { error = "Invalid file name." });
+
+    var deleted = PhotoProcessor.DeleteAll(Path.Combine(env.ContentRootPath, options.Value.RootPath), name);
+    return Results.Ok(new { deleted });
 });
 
 app.MapPost("/api/assets/{folder}/{fileName}/sign", (HttpRequest request, string folder, string fileName, IOptions<AssetStorageSettings> options, AssetSigningHelper signingHelper) =>
@@ -786,7 +863,8 @@ static class AssetFolders
     public const string Signing = "signing";
 
     public static bool IsValid(string folder) =>
-        folder is Pictures or Pictures447 or Pictures800
+        PhotoProcessor.IsWidthFolder(folder)
+        || folder is PhotoProcessor.OriginalFolder or Pictures or Pictures447 or Pictures800
             or PicturesNews or PicturesNewsOriginal or PicturesNews800
             or PicturesBlog
             or Videos or Plans or Docs or Guarantees or Signing;

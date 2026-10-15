@@ -52,7 +52,7 @@ html { scroll-padding-top: var(--pdv4-anchor-offset); }
 .pdv4-layer.is-active { opacity: 1; }
 .pdv4-layer img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .pdv4-media__shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 20, 10, .35) 0%, rgba(0, 20, 10, 0) 25%, rgba(0, 20, 10, 0) 50%, rgba(0, 20, 10, .82) 100%); pointer-events: none; }
-.pdv4-media__top { position: absolute; left: 0; right: 0; top: 0; padding: 24px clamp(20px, 3vw, 48px); pointer-events: none; }
+.pdv4-media__top { position: absolute; left: 0; right: 0; top: 0; padding: 24px clamp(20px, 3vw, 48px); display: flex; align-items: center; justify-content: space-between; gap: 16px; pointer-events: none; }
 .pdv4-media__label { font-size: 11px; font-weight: 700; letter-spacing: 1.8px; text-transform: uppercase; color: #fff; white-space: nowrap; }
 .pdv4-media__bottom { position: absolute; left: 0; right: 0; bottom: 0; padding: clamp(24px, 3vw, 48px); display: flex; flex-direction: column; gap: 18px; color: #fff; pointer-events: none; }
 .pdv4-badge { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; background: #fff; color: var(--pdv4-ink); font-size: 12px; font-weight: 700; padding: 7px 13px; border-radius: 20px; white-space: nowrap; }
@@ -78,7 +78,12 @@ html { scroll-padding-top: var(--pdv4-anchor-offset); }
 .pdv4-eyebrow { margin: 0 0 20px; font-size: 11px; font-weight: 700; letter-spacing: 1.8px; text-transform: uppercase; color: var(--pdv4-green); }
 .pdv4-eyebrow--gold { margin: 0; color: var(--pdv4-gold); }
 .pdv4-sec > .pdv4-eyebrow + .pdv4-h2 { margin-top: -6px; }
-.pdv4-h1 { margin: 0 0 24px; font-family: var(--pdv4-serif); font-weight: 500; font-size: clamp(26px, 4vw, 64px); line-height: 1.08; text-wrap: balance; overflow-wrap: break-word; }
+.pdv4-h1 { margin: 0 0 24px; font-family: var(--pdv4-serif); font-weight: 500; font-size: clamp(30px, 5.2vw, 52px); line-height: 1.08; text-wrap: balance; overflow-wrap: break-word; }
+.pdv4-page .pdv4-titleline .pdv4-titleline__h1 { display: inline; margin: 0; padding: 0; font: inherit; color: inherit; letter-spacing: inherit; text-transform: none; }
+/* De komma na de titel is een CSS-teken: zelfde stijl als de h1, maar geen onderdeel van de h1-tekst en nooit los van het laatste woord */
+.pdv4-titleline__h1.has-sub::after { content: ","; }
+.pdv4-titleline__sub em { font-style: italic; font-weight: 400; color: var(--pdv4-green); }
+.pdv4-nowrap { white-space: nowrap; }
 .pdv4-h1 em { font-style: italic; font-weight: 400; color: var(--pdv4-green); }
 .pdv4-h2 { margin: 0 0 20px; font-family: var(--pdv4-serif); font-weight: 500; font-size: clamp(30px, 3vw, 44px); line-height: 1.12; text-wrap: balance; }
 .pdv4-h2--tight { margin-bottom: 12px; }
@@ -91,6 +96,8 @@ html { scroll-padding-top: var(--pdv4-anchor-offset); }
 .pdv4-h3--mt { margin: 64px 0 8px; }
 .pdv4-h3--docs { margin: 56px 0 16px; font-size: clamp(22px, 2vw, 28px); }
 .pdv4-lead { margin: 0 0 18px; font-size: 18px; line-height: 1.75; color: var(--pdv4-muted); max-width: 600px; }
+.pdv4-lead-stack .pdv4-lead--m { margin-bottom: 18px; }
+.pdv4-lead-stack { margin-bottom: 40px; }
 .pdv4-lead--m { font-size: 17px; line-height: 1.8; margin-bottom: 40px; }
 .pdv4-lead--s { font-size: 16px; line-height: 1.75; margin-bottom: 24px; }
 .pdv4-sec .pdv4-text { margin: 0 0 16px; font-size: 16px; line-height: 1.8; color: var(--pdv4-muted); max-width: 600px; }
@@ -216,8 +223,10 @@ html { scroll-padding-top: var(--pdv4-anchor-offset); }
 .pdv4-seg { display: flex; background: #fff; border: 1px solid var(--pdv4-line-strong); border-radius: 24px; padding: 3px; }
 .pdv4-seg button { min-height: 40px; padding: 0 16px; border-radius: 20px; border: 0; background: transparent; color: var(--pdv4-ink); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
 .pdv4-seg button[aria-checked="true"] { background: var(--pdv4-green); color: #fff; }
+/* Tabel of kaartjes volgens de breedte van de prijslijst zelf (niet van het scherm): de kolom is maar half zo breed als het venster */
+.pdv4-pricelist { container-type: inline-size; }
 .pdv4-table { border-radius: 4px; overflow: hidden; border: 1px solid var(--pdv4-line); background: #fff; }
-.pdv4-table__row { display: grid; grid-template-columns: minmax(0, 1fr) 78px 74px 68px 140px 40px; gap: 8px; align-items: center; min-height: 64px; padding: 12px 20px; border-top: 1px solid var(--pdv4-line-soft); background: #fff; }
+.pdv4-table__row { display: grid; grid-template-columns: minmax(0, 1fr) 78px 74px 68px 140px 84px; gap: 8px; align-items: center; min-height: 64px; padding: 12px 20px; border-top: 1px solid var(--pdv4-line-soft); background: #fff; }
 .pdv4-table__row:hover { background: #FAFBF8; }
 .pdv4-table__row--head { min-height: 52px; padding-top: 0; padding-bottom: 0; background: var(--pdv4-green); border-top: 0; }
 .pdv4-table__row--head:hover { background: var(--pdv4-green); }
@@ -289,7 +298,7 @@ html { scroll-padding-top: var(--pdv4-anchor-offset); }
 .pdv4-calc__disclaimer { margin: 0; padding: 12px clamp(20px, 2.2vw, 28px); font-size: 12px; line-height: 1.6; color: var(--pdv4-muted); background: #F7F9F5; }
 
 /* Documenten */
-.pdv4-docs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 10px; }
+.pdv4-docs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 250px)); gap: 10px; }
 .pdv4-page .pdv4-doc { display: flex; align-items: center; gap: 14px; padding: 16px 18px; background: #fff; border: 1px solid var(--pdv4-line); border-radius: 6px; color: var(--pdv4-ink); }
 .pdv4-page .pdv4-doc:hover { border-color: var(--pdv4-green); color: var(--pdv4-ink); }
 .pdv4-doc__icon { width: 40px; height: 48px; flex-shrink: 0; border-radius: 3px; background: var(--pdv4-bg); border: 1px solid var(--pdv4-line-strong); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; font-size: 9px; font-weight: 900; letter-spacing: .5px; color: var(--pdv4-green); }
@@ -358,9 +367,26 @@ html { scroll-padding-top: var(--pdv4-anchor-offset); }
 .pdv4-form .pdv4-check { flex-direction: row; gap: 10px; align-items: flex-start; font-size: 13px; line-height: 1.5; color: var(--pdv4-muted); font-weight: 400; cursor: pointer; }
 .pdv4-check input { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--pdv4-green); flex-shrink: 0; }
 .pdv4-field-error--block { margin: -8px 0 0; }
-.pdv4-thanks { background: #fff; border: 1px solid rgba(0, 83, 45, .14); box-shadow: 0 18px 44px rgba(0, 61, 33, .14); border-radius: 6px; padding: 32px; color: var(--pdv4-ink); display: flex; flex-direction: column; gap: 8px; }
-.pdv4-thanks strong { font-family: var(--pdv4-serif); font-weight: 500; font-size: 26px; }
-.pdv4-thanks span { font-size: 15px; color: var(--pdv4-muted); }
+/* Bevestiging na verzenden: tweekoloms kaartje (links bedankt, rechts "wat er nu gebeurt"); de rest van het contactblok verdwijnt */
+.pdv4-sec--contact.is-sent > .pdv4-h2, .pdv4-sec--contact.is-sent > .pdv4-lead, .pdv4-sec--contact.is-sent > .pdv4-call { display: none; }
+.pdv4-page .pdv4-thanks { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); background: #fff; border-radius: 6px; overflow: hidden; color: var(--pdv4-ink); box-shadow: 0 18px 44px rgba(0, 61, 33, .14); }
+.pdv4-page .pdv4-thanks[hidden] { display: none; }
+.pdv4-thanks:focus { outline: none; }
+.pdv4-thanks__main { padding: clamp(24px, 4vw, 48px); display: flex; flex-direction: column; align-items: flex-start; }
+.pdv4-thanks__next { padding: clamp(24px, 4vw, 48px); background: var(--pdv4-bg); display: flex; flex-direction: column; }
+.pdv4-thanks__check { width: 48px; height: 48px; border-radius: 50%; background: #E6EFDC; color: var(--pdv4-green); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+.pdv4-page .pdv4-thanks__eyebrow { margin: 0 0 14px; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--pdv4-green); }
+.pdv4-page .pdv4-thanks__title { margin: 0 0 16px; font-family: var(--pdv4-serif); font-weight: 500; font-size: clamp(26px, 3vw, 38px); line-height: 1.15; text-transform: none; letter-spacing: 0; color: var(--pdv4-ink); }
+.pdv4-page .pdv4-thanks__text { margin: 0; font-size: 15px; line-height: 1.75; color: var(--pdv4-muted); }
+.pdv4-thanks__steps { list-style: none; margin: 0 0 24px; padding: 0; display: flex; flex-direction: column; gap: 18px; }
+.pdv4-thanks__step { position: relative; padding-left: 22px; display: flex; flex-direction: column; gap: 3px; }
+.pdv4-thanks__step::before { content: ""; position: absolute; left: 0; top: 7px; width: 8px; height: 8px; border-radius: 50%; background: var(--pdv4-green); }
+.pdv4-thanks__step--2::before { background: var(--pdv4-green-soft); }
+.pdv4-thanks__step--3::before { background: var(--pdv4-gold); }
+.pdv4-thanks__step strong { font-size: 15px; font-weight: 700; color: var(--pdv4-ink); }
+.pdv4-thanks__step span { font-size: 14px; line-height: 1.6; color: var(--pdv4-muted); }
+.pdv4-page .pdv4-thanks__more { margin-top: auto; font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--pdv4-green); text-decoration: none; }
+.pdv4-page .pdv4-thanks__more:hover { color: var(--pdv4-green-hover); text-decoration: underline; }
 .pdv4-call { margin: 20px 0 0; font-size: 14px; color: var(--pdv4-muted); }
 .pdv4-page .pdv4-call a { color: var(--pdv4-green); font-weight: 700; }
 
@@ -372,25 +398,33 @@ html { scroll-padding-top: var(--pdv4-anchor-offset); }
 .pdv4-page .pdv4-bar__call { width: 48px; height: 48px; flex-shrink: 0; border-radius: 4px; border: 1.5px solid var(--pdv4-green); display: flex; align-items: center; justify-content: center; color: var(--pdv4-green); font-size: 18px; }
 
 /* Leaflet-pins (gebouwd door het script) */
-.pdv4-pin { width: 30px; height: 30px; border-radius: 50%; background: #fff; border: 2px solid var(--pdv4-green); color: var(--pdv4-green); font: 900 10px var(--pdv4-sans); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0, 0, 0, .25); }
+.pdv4-pin { width: 32px; height: 32px; border-radius: 50%; background: #fff; border: 2px solid var(--pdv4-green); color: var(--pdv4-green); font: 900 12px var(--pdv4-sans); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0, 0, 0, .25); }
 .pdv4-pin--project { width: 52px; height: 52px; background: var(--pdv4-green); border: 3px solid var(--pdv4-gold); box-shadow: 0 6px 18px rgba(0, 0, 0, .35); }
 .pdv4-pin--project img { width: 30px; height: 30px; object-fit: contain; }
 
 
 /* Het cookie-icoon (linksonder, vast) mag niet over de teksten op het beeld vallen: extra ruimte links. */
 @media (min-width: 1000px) {
-    .pdv4-media__top, .pdv4-media__bottom { padding-left: 96px; }
+    .pdv4-media__bottom { padding-left: 96px; }
 }
 
 /* ───────── Responsive ───────── */
 @media (max-width: 999px) {
     .pdv4-split { grid-template-columns: minmax(0, 1fr); }
-    .pdv4-media { position: relative; top: 0; height: 70vh; }
+    /* eerste zicht: het beeld loopt tot onderaan het scherm (de balk onderaan verschijnt pas na het scrollen) */
+    .pdv4-media { position: relative; top: 0; height: calc(100vh - var(--pdv4-header-h)); height: calc(100svh - var(--pdv4-header-h)); }
+    /* inhoud op het beeld boven het cookie-icoon (linksonder, 52px) */
+    .pdv4-media__bottom { padding-bottom: 88px; }
     .pdv4-page { padding-bottom: 72px; }
 }
-@media (max-width: 639px) {
+@container (max-width: 660px) {
     .pdv4-table { display: none; }
     .pdv4-cards { display: flex; }
+}
+@supports not (container-type: inline-size) {
+    @media (max-width: 1279px) { .pdv4-table { display: none; } .pdv4-cards { display: flex; } }
+}
+@media (max-width: 639px) {
     .pdv4-form__grid { grid-template-columns: minmax(0, 1fr); }
     .pdv4-lotcard { position: fixed; left: 0; right: 0; bottom: 0; max-width: none; z-index: 1300; border-radius: 16px 16px 0 0; box-shadow: 0 -10px 40px rgba(0, 0, 0, .25); padding: 22px 20px calc(18px + env(safe-area-inset-bottom)); }
     .pdv4-lotcard::before { content: ''; position: absolute; top: 8px; left: 50%; width: 40px; height: 4px; margin-left: -20px; border-radius: 2px; background: var(--pdv4-green-pastel); }
@@ -426,3 +460,174 @@ html { scroll-padding-top: var(--pdv4-anchor-offset); }
 .pdv4-zonelabel__tag.is-avail { background: #CFEBD5; color: var(--pdv4-green-dark); }
 
 .pdv4-quote + .pdv4-quote { margin-top: -24px; }
+
+/* ── "Alle woonprojecten": terugknop op de foto (donker, wit bij hover) en boven de eyebrow (groene rand, groen bij hover) ── */
+.pdv4-page .pdv4-back { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px 0 10px; border-radius: 20px; border: 1px solid rgba(0, 83, 45, .22); background: #fff; color: var(--pdv4-green); font-size: 13px; font-weight: 700; line-height: 1; white-space: nowrap; transition: background-color .18s ease, color .18s ease, border-color .18s ease; }
+.pdv4-page .pdv4-back:hover, .pdv4-page .pdv4-back:focus-visible { background: var(--pdv4-bg); border-color: var(--pdv4-green); color: var(--pdv4-green); }
+.pdv4-page .pdv4-back svg { flex-shrink: 0; transition: transform .18s ease; }
+.pdv4-page .pdv4-back:hover svg { transform: translateX(-2px); }
+.pdv4-page .pdv4-back--photo { pointer-events: auto; border-color: rgba(255, 255, 255, .45); background: rgba(0, 0, 0, .35); color: #fff; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.pdv4-page .pdv4-back--photo:hover, .pdv4-page .pdv4-back--photo:focus-visible { background: #fff; border-color: #fff; color: var(--pdv4-ink); }
+.pdv4-crumbs { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }
+.pdv4-crumbs__list { display: flex; flex-wrap: wrap; gap: 0; list-style: none; margin: 0; padding: 0; font-size: 13px; color: var(--pdv4-muted); }
+.pdv4-crumbs__list li + li::before { content: "/"; margin: 0 8px; color: var(--pdv4-muted); opacity: .7; }
+.pdv4-crumbs__list li[aria-current] { color: var(--pdv4-ink); }
+.pdv4-page .pdv4-crumbs__list a { color: var(--pdv4-muted); }
+.pdv4-page .pdv4-crumbs__list a:hover { color: var(--pdv4-green); text-decoration: underline; }
+@media (max-width: 639px) { .pdv4-media__label { display: none; } }
+
+/* Brochure verstuurd: groen kader toont de bevestiging i.p.v. het e-mailveld (geen download- of afspraakknop) */
+.pdv4-bro-done { display: flex; align-items: flex-start; gap: 14px; margin-top: 4px; padding-top: 18px; border-top: 1px solid rgba(255, 255, 255, .2); }
+.pdv4-bro-done[hidden] { display: none; }
+.pdv4-bro-done__icon { width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; background: var(--pdv4-gold); color: var(--pdv4-ink); display: flex; align-items: center; justify-content: center; }
+.pdv4-bro-done__text strong { display: block; font-size: 15px; color: #fff; margin-bottom: 4px; }
+.pdv4-bro-done__text p { margin: 0; font-size: 13px; line-height: 1.6; color: rgba(255, 255, 255, .9); }
+.pdv4-bro-done__text b { color: #fff; }
+.pdv4-page .pdv4-bro-done__reset { background: none; border: 0; padding: 0; font: inherit; color: #fff; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.pdv4-page .pdv4-bro-done__reset:hover { color: var(--pdv4-gold); }
+
+/* Quote bij Architectuur: tekst in #2C3B2A (het site-thema kleurt blockquotes anders) */
+.pdv4-page .pdv4-quote, .pdv4-page .pdv4-quote p { color: #2C3B2A; }
+
+/* Brochure-blok: tekst links, gouden knop rechts */
+.pdv4-bro__ask { display: flex; align-items: center; justify-content: space-between; gap: 16px 24px; flex-wrap: wrap; margin-top: 6px; }
+.pdv4-bro__ask[hidden] { display: none; }
+.pdv4-bro__ask p { margin: 0; font-size: 13px; color: rgba(255, 255, 255, .92); }
+.pdv4-page .pdv4-cta-green .pdv4-h3 { max-width: 560px; }
+
+/* Brochure-modal */
+.pdv4-modal { position: fixed; inset: 0; z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.pdv4-modal[hidden] { display: none; }
+.pdv4-modal__backdrop { position: absolute; inset: 0; background: rgba(0, 20, 10, .55); }
+.pdv4-modal__dialog { position: relative; width: min(504px, 100%); max-height: calc(100dvh - 32px); overflow: auto; background: #fff; border-radius: 8px; padding: 32px clamp(20px, 5vw, 36px) 28px; box-shadow: 0 24px 64px rgba(0, 0, 0, .35); color: var(--pdv4-ink); }
+.pdv4-modal__close { position: absolute; top: 14px; right: 14px; width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(0, 83, 45, .2); background: #fff; color: var(--pdv4-ink); font-size: 22px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+.pdv4-modal__close:hover { border-color: var(--pdv4-green); background: var(--pdv4-bg); }
+.pdv4-modal__dialog .pdv4-eyebrow { margin: 0 52px 10px 0; font-size: 11px; }
+.pdv4-modal__title { margin: 0 52px 12px 0; font-family: var(--pdv4-serif); font-weight: 500; font-size: clamp(26px, 5vw, 32px); line-height: 1.15; color: var(--pdv4-ink); text-transform: none; }
+.pdv4-modal__intro { margin: 0 0 22px; font-size: 14px; line-height: 1.6; color: var(--pdv4-muted); }
+.pdv4-modal__form { display: flex; flex-direction: column; gap: 14px; }
+.pdv4-modal__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 18px; }
+.pdv4-modal__form label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 700; color: var(--pdv4-ink); }
+.pdv4-modal__form input:not([type=hidden]) { min-height: 50px; font: inherit; font-size: 15px; font-weight: 400; padding: 0 14px; border: 1px solid rgba(0, 83, 45, .22); border-radius: 4px; color: var(--pdv4-ink); background: #fff; width: 100%; }
+.pdv4-modal__form input:focus { outline: none; border-color: var(--pdv4-green); box-shadow: 0 0 0 3px rgba(0, 83, 45, .15); }
+.pdv4-modal__form input[aria-invalid="true"] { border-color: var(--pdv4-error); }
+.pdv4-modal__form input[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px rgba(179, 38, 30, .15); }
+.pdv4-req { color: #B3261E; font-weight: 700; }
+.pdv4-modal__note { margin: 0; font-size: 12px; color: var(--pdv4-muted); }
+.pdv4-modal__privacy { margin: 0; font-size: 13px; line-height: 1.55; color: var(--pdv4-muted); }
+.pdv4-page .pdv4-modal__privacy a { color: var(--pdv4-green); text-decoration: underline; text-underline-offset: 2px; }
+.pdv4-modal__submit { width: 100%; margin-top: 4px; }
+.pdv4-modal__submit[disabled] { opacity: .7; cursor: progress; }
+.pdv4-hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+@media (max-width: 520px) { .pdv4-modal__grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Modal-correcties: label + sterretje op één regel, ronde sluitknop (het thema overschrijft knoppen), scrollen niet doorgeven */
+.pdv4-modal__form label { gap: 6px; }
+.pdv4-modal__form .pdv4-lbl { display: block; line-height: 1.3; }
+.pdv4-page .pdv4-modal__close { border-radius: 50% !important; width: 44px; height: 44px; min-height: 0; padding: 0 !important; background: #fff !important; color: var(--pdv4-ink) !important; border: 1px solid rgba(0, 83, 45, .2) !important; box-shadow: none; }
+.pdv4-page .pdv4-modal__close:hover { border-color: var(--pdv4-green) !important; background: var(--pdv4-bg) !important; }
+.pdv4-page .pdv4-modal__submit, .pdv4-page .pdv4-modal__submit:disabled { background: var(--pdv4-green) !important; color: #fff !important; border-color: var(--pdv4-green) !important; }
+.pdv4-page .pdv4-modal__submit:hover:not(:disabled) { background: var(--pdv4-green-hover) !important; border-color: var(--pdv4-green-hover) !important; }
+.pdv4-modal__dialog { overscroll-behavior: contain; }
+.pdv4-modal__backdrop { touch-action: none; }
+
+/* Afgeronde pills/schakelaars: het thema zet knoppen op vierkant, dus expliciet afdwingen */
+.pdv4-page .pdv4-lottab { border-radius: 22px !important; }
+.pdv4-page .pdv4-seg { border-radius: 24px !important; overflow: hidden; }
+.pdv4-page .pdv4-seg button { border-radius: 20px !important; }
+.pdv4-page .pdv4-togglechip { border-radius: 20px !important; }
+.pdv4-page .pdv4-pill, .pdv4-page .pdv4-badge { border-radius: 20px !important; }
+.pdv4-pill--ask { background: #EAF3DE; color: #3B6D11; font-size: 10px; letter-spacing: .8px; text-transform: uppercase; }
+
+/* Plan-modal: bevestiging in plaats van het formulier */
+.pdv4-modal__done { display: flex; flex-direction: column; gap: 10px; padding: 8px 0 4px; }
+.pdv4-modal__done strong { font-family: var(--pdv4-serif); font-weight: 500; font-size: 24px; }
+.pdv4-modal__done p { margin: 0 0 6px; font-size: 14px; line-height: 1.6; color: var(--pdv4-muted); }
+.pdv4-modal__done .pdv4-btn { align-self: flex-start; }
+.pdv4-modal__dialog.is-done .pdv4-modal__form, .pdv4-modal__dialog.is-done .pdv4-modal__intro, .pdv4-modal__dialog.is-done .pdv4-modal__title { display: none; }
+.pdv4-page .pdv4-modal__done .pdv4-btn--primary { background: var(--pdv4-green) !important; color: #fff !important; border-color: var(--pdv4-green) !important; }
+
+/* Sluitknop van het lotkaartje: rond (het thema zet knoppen op vierkant) */
+.pdv4-page .pdv4-lotcard__close { border-radius: 50% !important; width: 44px; height: 44px; min-height: 0; padding: 0 !important; background: #fff !important; color: var(--pdv4-ink) !important; border: 1px solid rgba(0, 83, 45, .2) !important; box-shadow: none; }
+.pdv4-page .pdv4-lotcard__close:hover { border-color: var(--pdv4-green) !important; background: var(--pdv4-bg) !important; }
+
+/* Opeenvolgende secties met dezelfde achtergrond (comfort, documenten): één gewone tussenruimte i.p.v. onder- + bovenpadding bij elkaar */
+.pdv4-sec:not(.pdv4-sec--white):not(.pdv4-sec--contact):has(+ .pdv4-sec--flush) { padding-bottom: 0; }
+.pdv4-sec:not(.pdv4-sec--white):not(.pdv4-sec--contact) + .pdv4-sec--flush { padding-top: 64px; }
+.pdv4-sec--flush .pdv4-tech { margin-bottom: 0; }
+
+/* Contact: primaire kleur; het formulier blijft een wit kaartje. De strook "Ontdek onze andere woonprojecten" eronder scheidt het blok van de footer. */
+.pdv4-sec--contact { background: var(--pdv4-green); color: #fff; border-top: 0; }
+.pdv4-sec--contact .pdv4-h2 { color: #fff; }
+.pdv4-sec--contact .pdv4-lead { color: rgba(255, 255, 255, .85); }
+.pdv4-page .pdv4-sec--contact .pdv4-call { color: rgba(255, 255, 255, .85); }
+.pdv4-page .pdv4-sec--contact .pdv4-call a { color: #fff; font-weight: 700; }
+.pdv4-page .pdv4-sec--contact .pdv4-call a:hover { color: var(--pdv4-gold); }
+
+.pdv4-more { background: #fff; border-top: 1px solid var(--pdv4-line); padding: clamp(28px, 4vw, 48px) 0; }
+.pdv4-more__inner { margin: 0; display: flex; align-items: center; justify-content: space-between; gap: 16px 32px; flex-wrap: wrap; }
+.pdv4-page .pdv4-more__eyebrow { margin: 0 0 6px; font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--pdv4-green); }
+.pdv4-page .pdv4-more__title { margin: 0; font-family: var(--pdv4-serif); font-weight: 500; font-size: clamp(24px, 2.4vw, 32px); line-height: 1.2; color: var(--pdv4-ink); text-transform: none; }
+
+/* FAQ-antwoord met opmaak (paragrafen, lijsten, links) */
+.pdv4-faq__answer { margin: 0 0 22px; font-size: 15px; line-height: 1.8; color: var(--pdv4-muted); }
+.pdv4-faq__answer p { margin: 0 0 10px; }
+.pdv4-faq__answer p:last-child, .pdv4-faq__answer ul:last-child, .pdv4-faq__answer ol:last-child { margin-bottom: 0; }
+.pdv4-faq__answer ul, .pdv4-faq__answer ol { margin: 0 0 10px; padding-left: 22px; }
+.pdv4-page .pdv4-faq__answer a { color: var(--pdv4-green); text-decoration: underline; text-underline-offset: 2px; }
+.pdv4-faq__answer[hidden] { display: none; }
+
+/* "Bel ons" staat enkel op gsm bij het blokje "Wil je weten of … bij je past?" */
+@media (min-width: 640px) { .pdv4-page .pdv4-only-mobile { display: none; } }
+
+/* Getekend downloadicoon naast de tekst (prijslijst, kaartjes, documenten) */
+.pdv4-ico { flex-shrink: 0; margin-right: 6px; vertical-align: -2px; }
+.pdv4-doc__dl { display: inline-flex; }
+.pdv4-doc__dl .pdv4-ico { margin: 0; }
+.pdv4-lotcard:focus { outline: none; }
+.pdv4-lotcard__close { display: inline-flex; align-items: center; justify-content: center; }
+
+/* Cookie-icoon (linksonder) schuift boven de mobiele balk i.p.v. over de tekst ervan */
+@media (max-width: 999px) {
+    body:has(.pdv4-bar:not([hidden])) .cc-fab { bottom: 106px; }
+}
+@media (min-width: 1000px) {
+    .pdv4-page .pdv4-h1 { font-size: clamp(30px, 3.4vw, 56px); }
+}
+
+/* ───────── Gsm: knoppen op volle breedte, schuif en ruimte onder foto's ───────── */
+@media (max-width: 639px) {
+    /* alle actieknoppen over de volledige breedte */
+    .pdv4-page .pdv4-actions { flex-direction: column; align-items: stretch; }
+    .pdv4-page .pdv4-actions .pdv4-btn,
+    .pdv4-page .pdv4-media__meta .pdv4-btn,
+    .pdv4-page .pdv4-bro__ask .pdv4-btn,
+    .pdv4-page .pdv4-cta-row > .pdv4-btn,
+    .pdv4-page .pdv4-cta-line > .pdv4-btn,
+    .pdv4-page .pdv4-more .pdv4-btn { width: 100%; flex: 1 1 100%; }
+    .pdv4-page .pdv4-more__inner { flex-direction: column; align-items: stretch; }
+
+    /* "Bel ons" en "Stel je vraag" naast elkaar, elk de helft */
+    .pdv4-page .pdv4-cta-row .pdv4-actions { flex-direction: row; width: 100%; }
+    .pdv4-page .pdv4-cta-row .pdv4-actions .pdv4-btn { flex: 1 1 0; width: auto; min-width: 0; padding: 0 12px; }
+
+    /* de schuif "Beschikbaar / Alle woningen" over de volle breedte */
+    .pdv4-pricelist__head { flex-direction: column; align-items: stretch; }
+    .pdv4-page .pdv4-seg { width: 100%; }
+    .pdv4-page .pdv4-seg button { flex: 1 1 0; min-height: 44px; padding: 0 10px; }
+
+    /* ruimte tussen foto en titel bij de materialen (architectuur) */
+    .pdv4-materials { gap: 44px 20px; }
+    .pdv4-material { gap: 22px; }
+}
+
+/* Tekstvak bij een locatie op het liggingsplan: leesbare maat (Leaflet staat standaard op 12-13px) */
+.pdv4-leaflet .leaflet-popup-content-wrapper { border-radius: 8px; box-shadow: 0 10px 30px rgba(0, 61, 33, .25); }
+.pdv4-leaflet .leaflet-popup-content { margin: 16px 40px 16px 18px; font-family: var(--pdv4-sans); line-height: 1.4; color: var(--pdv4-ink); }
+.pdv4-leaflet .pdv4-pop__name { display: block; font-size: 17px; font-weight: 700; line-height: 1.3; margin: 0 0 4px; color: var(--pdv4-ink); }
+.pdv4-leaflet .pdv4-pop__meta { display: block; font-size: 15px; line-height: 1.45; color: var(--pdv4-muted); }
+.pdv4-leaflet .leaflet-container a.leaflet-popup-close-button { width: 36px; height: 36px; font-size: 22px; line-height: 36px; color: var(--pdv4-muted); }
+@media (min-width: 1000px) {
+    .pdv4-leaflet .pdv4-pop__name { font-size: 18px; }
+    .pdv4-leaflet .pdv4-pop__meta { font-size: 16px; }
+}

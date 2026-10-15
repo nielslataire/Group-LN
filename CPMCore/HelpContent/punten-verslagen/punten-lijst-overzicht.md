@@ -15,7 +15,7 @@ intro: |
   punten en past er meerdere tegelijk aan.
 faq:
   - q: Waarom zie ik geen afgesloten punten in de lijst?
-    a: Het statusfilter staat standaard op Open. Dat zijn alle fases behalve Afgesloten. Zet het filter op **Alle statussen** om ook afgesloten punten te zien.
+    a: Het statusfilter staat standaard op Open. Dat zijn alle fases behalve Afgesloten. Zet het filter op Alle statussen om ook afgesloten punten te zien.
   - q: Wat betekent de rode teller Kritiek?
     a: Dat zijn punten met prioriteit Kritiek die nog niet zijn afgesloten. Vaak zijn ze over hun deadline.
 ---

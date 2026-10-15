@@ -14,6 +14,15 @@ public partial class UnitExecutionPlan
 
     public int? ProjectId { get; set; }
 
+    /// <summary>grondplan, gevel, doorsnede, situering, technisch (vrij; NULL = niet opgegeven).</summary>
+    public string Soort { get; set; }
+
+    /// <summary>kelder, gelijkvloers, verdieping … (NULL = niet opgegeven).</summary>
+    public string Niveau { get; set; }
+
+    /// <summary>1, 2, … — hetzelfde plan (naam) opnieuw opgeladen = nieuwe versie.</summary>
+    public int Versie { get; set; } = 1;
+
     public string Name { get; set; }
 
     public string FileId { get; set; }

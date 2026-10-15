@@ -96,6 +96,31 @@ niet staat en die je niet zeker kent: vraag het, of zet `[VRAAG: ...]` in de tek
 - Concept, Ter goedkeuring, Doorgestuurd, Gemeld uitgevoerd, Afgesloten (fases van een punt): [VRAAG: wat betekent elke fase, en wie zet het punt naar de volgende?]
 - Mijlpaal: [VRAAG: definitie en wie vinkt ze af]
 
+### Budget (uit de budgetartikels)
+- Budget en versie: een budget is een berekening voor een project, bijvoorbeeld een variant met 8 woningen. Elk budget heeft genummerde versies.
+- Status van een versie: **Concept** (je werkt eraan), **Afgerond** (klaar, nog aanpasbaar) en **Definitief** (vergrendeld, één per project). Huidig is de versie waaraan je werkt.
+- Actief budget: het budget van een project dat CPM gebruikt voor de nacalculatie. Per project is er één. Een budget dat niet actief is, kan verwijderd worden.
+- Peildatum: de datum waarop de indexen gelden. Na 6 maanden geeft CPM een waarschuwing. S-index: de index van de lonen. I-index: de index van de materiaalprijzen.
+- Bouwkostindexering: de prijzen uit de nacalculatie, aangepast met de S-index (lonen) en de I-index (materialen).
+- Nacalculatie en referentieproject: de bouwkost van afgewerkte projecten, geïndexeerd naar vandaag. Je vergelijkt het budget ermee in stap 6. [VRAAG: wie beheert de lijst referentieprojecten en welke projecten komen erin?]
+- Lot: een groep van werken in stap 6, bijvoorbeeld Lot 2 Bovenbouw. [VRAAG: klopt deze uitleg van lot in het budget? Lot heeft ook een andere betekenis bij eenheden.]
+- Correctie: een percentage op het berekende bedrag van een activiteit. 100 betekent geen correctie. Een correctie vraagt een opmerking.
+- Gereduceerde oppervlakte en VMSW-factoren: elke soort oppervlakte telt met een eigen factor mee, bijvoorbeeld tuin met een kleine factor. De factoren zijn per versie aanpasbaar. [VRAAG: wat betekent VMSW, en waar komen de standaardfactoren vandaan?]
+- Bouwwaarde en grondwaarde: samen de verkoopprijs van een eenheid. Bouwwaarde rekent op de gereduceerde oppervlakte, grondwaarde op de grondoppervlakte.
+- Prijscode: een vaste prijs per m² met een code, bijvoorbeeld B-01 (bouw) of G-03 (grond). [VRAAG: wat betekent het teken P achter een code?]
+- Decennale: de verzekering uit de Wet Peeters, een verplichte verzekering van 10 jaar.
+- Wet Breyne: de kost die de bank aanrekent voor het stellen van een bankwaarborg van 100 %.
+- Straight loan: een lening van de bank om een grond of een bouwwerk te financieren.
+- Aan te bouwen buren: buren waar je tegenaan bouwt of waar er een risico is op schade.
+- Berlinerwanden, secanspalen, onderschoeiingen: specifieke funderingstechnieken.
+- Overnemen (stap 1): zet de standaardprijs terug na een eigen aanpassing. Referentie overnemen (stap 6): neemt het bedrag van de geselecteerde referentieprojecten over.
+- Voorstel overnemen en Markt overnemen (stap 8): nemen het verkoopprijsvoorstel van CPM of de gemiddelde marktprijs over.
+- Doorzetten naar units (stap 8): schrijft grond- en bouwwaarde van de gekoppelde rijen naar de eenheden van het project. Verkochte eenheden blijven ongemoeid.
+- Min. verkoopwaarde: kostprijs plus marge. Break-even verkoopwaarde: kostprijs plus verkoopkosten.
+- Vergelijken: je zet 2 of 3 versies van één project naast elkaar. De eerste is de basis (standaard het definitieve budget), de verschillen worden daartegenover getoond. Oker is duurder of een lagere opbrengst, groen is goedkoper of een hogere opbrengst.
+- Marge (op de pagina Budgetten en bij het vergelijken): het resultaat gedeeld door de totale kostprijs. Het resultaat is de verkoopprijs min de verkoopkosten min de kostprijs. Verkoopkosten zijn geen onderdeel van de kostprijs.
+- Overnemen (bij een nieuw budget): de stappen die uit de gekozen versie meekomen. Wat je niet aanvinkt, begint leeg. Een nieuw budget is niet vanzelf actief, tenzij je Meteen actief budget maken aanzet of het het eerste budget van het project is.
+
 ### Taal
 - Gebruik: "aanmaken" of "toevoegen", "opslaan", "wijzigen" of "bewerken": [VRAAG: kies één woord per handeling zodat alle artikels gelijk klinken]
 - Vermijd: id, slug, entity, record, DTO, endpoint, API, database, cache, gl-v2, scherm-ID's.
@@ -131,6 +156,10 @@ regel hier staat; anders `[VRAAG: ...]`.
   mail effectief verstuurd is.
 
 ### Budget
+- Fouten blokkeren het afronden van een versie. Waarschuwingen blokkeren niet en je kunt ze negeren per versie.
+- Een definitieve versie is vergrendeld. Er is er maar één per project. Een nieuwe definitieve versie maakt de vorige weer Afgerond.
+- Het afdrukken als PDF en het exporteren naar Excel in stap 9 zijn nog in opbouw. Schrijf er geen uitleg over tot ze klaar zijn.
+- De koppeling van het definitieve budget met contracten en facturen is nog niet gebouwd. De blokken op de pagina Budgetten tonen nog streepjes.
 - Een definitief budget wordt enkel herzien als het bedrijf beslissingen neemt die het budget beïnvloeden. [VRAAG: hoe start je een herziening, en is dat een nieuwe budgetversie?]
 - [VRAAG: wat gebeurt er met een goedgekeurd budget als de grondgegevens achteraf wijzigen?]
 

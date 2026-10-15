@@ -9,7 +9,9 @@
 <aside class="gl-v2-pt-panel" id="pt-panel" role="dialog"
        data-edit-url="@Url.Action("EditV2", "ProjectsIssues", new { projectId = Model.ProjectId, id = 0 })"
        data-edit-data-url="@Url.Action("EditData", "ProjectsIssues", new { projectId = Model.ProjectId, id = 0 })"
-       data-plans-url="@Url.Action("PlansV2", "ProjectsIssues", new { projectId = Model.ProjectId })" aria-modal="true" aria-labelledby="pt-panel-title" hidden>
+       data-delete-media-url="@Url.Action("DeleteMediaV2", "ProjectsIssues", new { projectId = Model.ProjectId, id = 0, mediaId = 0 })"
+       data-plans-url="@Url.Action("PlansV2", "ProjectsIssues", new { projectId = Model.ProjectId })"
+       data-upload-plan-url="@Url.Action("UploadPlanV2", "ProjectsIssues", new { projectId = Model.ProjectId })" aria-modal="true" aria-labelledby="pt-panel-title" hidden>
     <form id="pt-new-form" method="post" action="@Url.Action("CreateV2", "ProjectsIssues", new { projectId = Model.ProjectId })" enctype="multipart/form-data" novalidate>
         @Html.AntiForgeryToken()
         <header class="gl-v2-pt-panel-head">
@@ -49,21 +51,34 @@
                 })
             </div>
             <div class="gl-v2-field" id="pt-plan-field">
-                <span class="gl-v2-field-label">Locatie op plan</span>
-                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "planKey", Id = "pt-new-plan", Bare = true, Value = "", EmptyText = "Geen plan", Items = new List<GlV2SelectItem>() })
+                <span class="gl-v2-field-label">Locatie op plan <span class="gl-v2-pt-opt">· optioneel</span></span>
                 <input type="hidden" name="planId" id="pt-plan-id" /><input type="hidden" name="planPage" id="pt-plan-page" />
                 <input type="hidden" name="planX" id="pt-plan-x" /><input type="hidden" name="planY" id="pt-plan-y" />
                 <input type="hidden" name="clearPlan" id="pt-plan-clear-flag" value="false" />
+                @* 40r: nog geen plan gekozen *@
+                <div class="gl-v2-pt-plan-empty" id="pt-plan-empty">
+                    <b>Nog geen plan gekozen</b>
+                    <p id="pt-plan-empty-text">Kies een plan om het punt aan te duiden — of bewaar zonder plan.</p>
+                    <div class="gl-v2-pt-plan-empty-actions">
+                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-pt-plan-pick"><i class="ph ph-map-trifold" aria-hidden="true"></i>Plan kiezen</button>
+                        <button type="button" class="gl-v2-btn gl-v2-btn-text js-pt-plan-new"><i class="ph ph-plus" aria-hidden="true"></i>Nieuw plan</button>
+                    </div>
+                    <p class="gl-v2-pt-plan-note">Zonder plan verschijnt het punt niet in "Op plan" en niet op de plannen achteraan het verslag.</p>
+                </div>
+                @* 40c: plan gekozen — voorbeeld met de pin; klikken vergroot het plan om het punt te plaatsen *@
                 <div class="gl-v2-pt-planbox" id="pt-plan-box" hidden>
                     <div id="pt-plan-viewer"></div>
-                    <div class="gl-v2-pt-planbox-foot"><span id="pt-plan-hint">Tik op het plan om het punt te plaatsen.</span><button type="button" class="gl-v2-pt-linkbtn" id="pt-plan-remove" hidden>Locatie wissen</button></div>
+                    <div class="gl-v2-pt-planbox-foot"><span class="gl-v2-pt-plan-caption" id="pt-plan-caption"></span><button type="button" class="gl-v2-btn gl-v2-btn-secondary js-pt-plan-pick">Ander plan</button></div>
+                    <span class="gl-v2-field-help" id="pt-plan-hint">Klik op het plan om het te vergroten en de plaats van het punt aan te duiden.</span>
+                    <button type="button" class="gl-v2-pt-linkbtn" id="pt-plan-remove" hidden>Locatie wissen</button>
                 </div>
-                <span class="gl-v2-field-help" id="pt-plan-help">Plan kiest zich op basis van de eenheid; tik om te verplaatsen.</span>
             </div>
             <div class="gl-v2-field">
                 <label class="gl-v2-field-label" for="pt-new-files">Foto's</label>
                 <label class="gl-v2-pt-filebtn" for="pt-new-files"><i class="ph ph-camera" aria-hidden="true"></i><span id="pt-new-files-label">Foto's toevoegen</span></label>
                 <input type="file" id="pt-new-files" name="mediaFiles" accept="image/*" multiple hidden />
+                <div class="gl-v2-pt-photos" id="pt-new-thumbs" hidden></div>
+                <div class="gl-v2-pt-photos" id="pt-existing-photos" hidden></div>
             </div>
             <button type="button" class="gl-v2-pt-more" id="pt-new-more" aria-expanded="false"><i class="ph ph-caret-right" aria-hidden="true"></i>Meer: beschrijving, categorie, type, fase, prioriteit, deadline</button>
             <div class="gl-v2-pt-more-body" id="pt-new-more-body" hidden>
@@ -109,3 +124,66 @@
         </footer>
     </form>
 </aside>
+
+@* Modals buiten het paneelformulier (geen geneste forms): plan kiezen (40p), nieuw plan (40q) en het plan vergroot om een punt te plaatsen. *@
+<div class="modal fade gl-v2-modal-form gl-v2-pt-over" id="pt-plan-pick-modal" tabindex="-1" aria-hidden="true" aria-labelledby="pt-pick-title">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <div class="modal-content">
+            <div class="modal-header"><div><h2 class="modal-title" id="pt-pick-title">Plan kiezen</h2><p class="gl-v2-pt-big-sub" id="pt-pick-sub">voor dit punt</p></div><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+            <div class="modal-body gl-v2-pt-pick-body">
+                <div class="gl-v2-field"><div class="gl-v2-field-box"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input type="text" class="gl-v2-field-input" id="pt-pick-search" placeholder="Zoek een plan" autocomplete="off" aria-label="Zoek een plan"></div></div>
+                <div class="gl-v2-pt-pick-seg" id="pt-pick-seg"><button type="button" class="is-active" data-seg="unit" id="pt-pick-seg-unit">Deze eenheid + algemeen</button><button type="button" data-seg="all">Alle eenheden</button></div>
+                <div class="gl-v2-pt-pick-list" id="pt-pick-list"></div>
+                <p class="gl-v2-pt-pick-foot"><span class="gl-v2-pt-pick-q">Plan staat er niet tussen? </span><button type="button" class="gl-v2-pt-linkbtn" id="pt-pick-newplan"><i class="ph ph-plus" aria-hidden="true"></i>Nieuw plan toevoegen</button><small>eenheid of algemeen kiezen en een bestand opladen</small></p>
+            </div>
+            <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="button" class="gl-v2-btn gl-v2-btn-primary" id="pt-pick-ok" disabled>Dit plan gebruiken</button></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade gl-v2-modal-form gl-v2-pt-over" id="pt-plan-add-modal" tabindex="-1" aria-hidden="true" aria-labelledby="pt-plan-add-title">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <form class="modal-content" id="pt-plan-add-form" method="post" action="@Url.Action("UploadPlanV2", "ProjectsIssues", new { projectId = Model.ProjectId })" enctype="multipart/form-data" novalidate>
+            @Html.AntiForgeryToken()
+            <div class="modal-header"><button type="button" class="gl-v2-pt-sheet-back js-pt-add-terug" aria-label="Terug"><i class="ph ph-arrow-left" aria-hidden="true"></i></button><div><h2 class="modal-title" id="pt-plan-add-title">Nieuw plan</h2><p class="gl-v2-pt-big-sub">wordt opgeslagen bij de plannen van het project</p></div><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+            <div class="modal-body">
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                {
+                    Name = "unitId", Id = "pt-plan-add-unit", Label = "Hoort bij", Required = true, Value = "0", Help = "of \"Algemeen\" voor plannen van het hele project",
+                    Items = new[] { new GlV2SelectItem { Value = "0", Text = "Algemeen (heel het project)" } }.Concat(Model.Units.Select(u => new GlV2SelectItem { Value = u.Key.ToString(), Text = u.Value })).ToList()
+                })
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                {
+                    Name = "soort", Id = "pt-plan-add-soort", Label = "Soort", Value = "Grondplan", Help = "grondplan, gevel, doorsnede, situering, technisch",
+                    Items = new[] { "Grondplan", "Gevel", "Doorsnede", "Situering", "Technisch" }.Select(x => new GlV2SelectItem { Value = x, Text = x }).ToList()
+                })
+                <div class="gl-v2-field"><label class="gl-v2-field-label" for="pt-plan-add-name">Naam <span class="gl-v2-pt-req">*</span></label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="pt-plan-add-name" name="planName" maxlength="200" placeholder="bv. Lot 2 · Kelder" autocomplete="off" /></div><span class="gl-v2-field-help">standaard eenheid + niveau</span></div>
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                {
+                    Name = "niveau", Id = "pt-plan-add-niveau", Label = "Niveau", Value = "", EmptyText = "Geen niveau",
+                    Items = new[] { "Kelder", "Gelijkvloers", "Verdieping", "Zolder", "Dak" }.Select(x => new GlV2SelectItem { Value = x, Text = x }).ToList()
+                })
+                <div class="gl-v2-field">
+                    <span class="gl-v2-field-label">Bestand <span class="gl-v2-pt-req">*</span></span>
+                    <input type="file" id="pt-plan-add-file" name="planFile" accept="application/pdf,image/png,image/jpeg,.pdf,.png,.jpg,.jpeg" hidden />
+                    <button type="button" class="gl-v2-pt-filebtn" id="pt-add-file-pick"><i class="ph ph-upload-simple" aria-hidden="true"></i><span>Bestand kiezen</span></button>
+                    <div class="gl-v2-pt-filecard" id="pt-add-file-card" hidden><i class="ph ph-file-pdf" aria-hidden="true"></i><span><b id="pt-add-file-name"></b><small id="pt-add-file-meta"></small></span><button type="button" class="gl-v2-pt-linkbtn" id="pt-add-file-btn">Vervangen</button></div>
+                    <span class="gl-v2-field-help">PDF, PNG of JPG · bij een PDF met meerdere pagina's kies je de pagina bij het plaatsen van het punt</span>
+                    <span class="gl-v2-field-help gl-v2-pt-err" id="pt-plan-add-err" hidden></span>
+                </div>
+                <div class="gl-v2-notice gl-v2-notice-compact is-info"><i class="ph ph-info" aria-hidden="true"></i><span id="pt-plan-add-info">Het plan wordt toegevoegd aan de plannen van het project.</span></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" id="pt-add-back" hidden><i class="ph ph-arrow-left" aria-hidden="true"></i>Terug naar plannen</button><span class="gl-v2-pt-spacer"></span><button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-pt-sheet-terug js-pt-add-terug">Terug</button><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="pt-plan-add-submit"><span class="pt-lbl-d">Toevoegen &amp; gebruiken</span><span class="pt-lbl-m">Toevoegen &amp; kiezen</span></button></div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade gl-v2-modal-form gl-v2-pt-over" id="pt-plan-big" tabindex="-1" aria-hidden="true" aria-labelledby="pt-plan-big-title">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-fullscreen-lg-down">
+        <div class="modal-content">
+            <div class="modal-header"><div><h2 class="modal-title" id="pt-plan-big-title">Punt op het plan plaatsen</h2><p class="gl-v2-pt-big-sub" id="pt-plan-big-sub">Klik op het plan om het punt neer te zetten.</p></div><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+            <div class="modal-body gl-v2-pt-big-body"><div id="pt-plan-big-viewer"></div></div>
+            <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="button" class="gl-v2-btn gl-v2-btn-primary" id="pt-plan-big-ok" disabled><i class="ph ph-map-pin" aria-hidden="true"></i>Hier plaatsen</button></div>
+        </div>
+    </div>
+</div>

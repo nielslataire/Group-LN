@@ -1,0 +1,292 @@
+@model CPMCore.Models.Projecten.BudgetVergelijkPaginaModel
+@using CPMCore.Models.GlV2
+@using ServiceCore.Budget
+@*
+    gl-v2 — Budgetten vergelijken (design-handoff 39n): de basis (A, standaard het definitieve budget) tegenover 1 of 2 andere versies. Bovenaan de gekozen versies met
+    "Versie toevoegen", dan vier kerncijfers (kostprijs, verkoopprijs, marge, kostprijs per m² GBA), kostprijs per hoofdgroep met de activiteiten eronder
+    (oker = duurder, groen = goedkoper; "Enkel verschillen"), verkoop per eenheid (groen = hogere opbrengst, oker = lager) en de parameters die verschillen.
+    Een concept wordt vergeleken tot de laatst ingevulde stap; verkoop en marge blijven dan leeg. Zelfde cijfers als de resultaatpagina (BudgetVergelijkService).
+    Bewust anders dan het mockup: de verkoopkosten staan onder de totale kostprijs (ze zitten niet in onze kostprijs), zodat het totaal gelijk blijft aan het resultaat.
+*@
+@{
+    ViewData["Title"] = "Budgetten vergelijken";
+    ViewData["PageIcon"] = "ph ph-git-diff";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("BudgetIndex", "Projecten", new { projectId = Model.ProjectId });
+    var nl = new System.Globalization.CultureInfo("nl-BE");
+    var vg = Model.Vergelijking;
+    var vs = vg.Versies;
+    var n = vs.Count;
+    var basis = vs[0];
+    var anderen = vs.Skip(1).ToList();
+    var enkel = vg.EnkelKosten;
+    var menu = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName ?? "", ProjectSubtitle = "project · budgetten", Mode = GlV2ProjectMenuMode.Outer };
+
+    ViewData["VergelijkSelectie"] = Model.VersieIds;
+    ViewData["VergelijkBasis"] = (int?)basis.Id;
+    ViewData["VergelijkModus"] = Model.Modus;
+
+    string Eur0(decimal v) => "€ " + v.ToString("N0", nl);
+    string Delta(decimal d) => d == 0m ? "—" : (d > 0m ? "+ " : "– ") + "€ " + Math.Abs(d).ToString("N0", nl);
+    string PctD(decimal a, decimal b) => a == 0m ? "" : ((b - a) / a * 100m is var p && p >= 0m ? "+" : "") + ((b - a) / a * 100m).ToString("0.0", nl) + " %";
+    // kleur van een verschil: voor kosten is meer = oker (duurder), voor opbrengst en marge is meer = groen
+    string Toon(decimal d, bool meerIsGoed) => d == 0m ? "is-gelijk" : ((d > 0m) == meerIsGoed ? "is-goed" : "is-slecht");
+    string StatusLijn(VergelijkVersie v) => v.Status == "Definitief" ? $"definitief · {v.Datum:dd/MM/yyyy}"
+        : v.Status == "Afgerond" ? $"afgerond · {v.Datum:dd/MM/yyyy}"
+        : v.Compleet ? $"{(v.IsHuidig ? "huidig · " : "")}concept · {v.Datum:dd/MM/yyyy}"
+        : $"concept · stap {Math.Max(1, v.LaatsteStap ?? 1)} van 9 — vergeleken tot stap {Math.Max(1, v.LaatsteStap ?? 1)}";
+    string Url2(IEnumerable<int> ids) => Url.Action("BudgetVersiesVergelijken", "Projecten", new { projectId = Model.ProjectId, versies = string.Join(",", ids), basis = ids.First(), modus = Model.Modus });
+    decimal Bedrag(VergelijkGroep g, VergelijkVersie v) => g.Bedragen.TryGetValue(v.Id, out var b) ? b : 0m;
+    decimal LBedrag(VergelijkLijn l, VergelijkVersie v) => l.Bedragen.TryGetValue(v.Id, out var b) ? b : 0m;
+
+    // kolomindeling van de tabellen: label · bedragen per versie · verschil en % per andere versie · (balk bij twee versies)
+    var kolomKosten = "24px minmax(0,1.6fr) " + string.Concat(Enumerable.Repeat("minmax(96px,130px) ", n)) + string.Concat(Enumerable.Repeat("minmax(90px,120px) 76px ", n - 1)) + (n == 2 ? "minmax(80px,1fr)" : "");
+    var kolomVerkoop = "minmax(0,1fr) 90px 70px " + string.Concat(Enumerable.Repeat("minmax(96px,120px) ", n)) + string.Concat(Enumerable.Repeat("minmax(90px,110px) 70px ", n - 1)) + "130px";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-budget.css" asp-append-version="true" />
+}
+@section ProjectMenu
+{
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menu)
+}
+@{ var menuPhone = new GlV2ProjectMenuVm { ProjectId = menu.ProjectId, ProjectName = menu.ProjectName, ProjectSubtitle = menu.ProjectSubtitle, Mode = GlV2ProjectMenuMode.Phone }; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhone)
+@section PageActions
+{
+    <a href="@Url.Action("BudgetIndex", "Projecten", new { projectId = Model.ProjectId })" class="gl-v2-btn gl-v2-btn-text"><i class="ph ph-arrow-left" aria-hidden="true"></i>Terug naar budgetten</a>
+    <a href="@Url.Action("BudgetVergelijkExport", "Projecten", new { projectId = Model.ProjectId, versies = string.Join(",", Model.VersieIds), basis = basis.Id, modus = Model.Modus })" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-export" aria-hidden="true"></i>Exporteren</a>
+}
+
+<div class="bw-vg" id="bw-vg-pagina">
+    @* ── De gekozen versies ── *@
+    <div class="bw-vg-versies">
+        @for (var i = 0; i < n; i++)
+        {
+            var v = vs[i];
+            <div class="bw-vg-versie @(i == 0 ? "is-basis" : "")">
+                <span class="bw-vg-letter">@v.Letter</span>
+                <div class="bw-vg-versie-tekst"><strong title="@v.Label">@v.Label</strong><small>@StatusLijn(v)</small></div>
+                <span class="bw-vg-pil @(i == 0 ? "is-basis" : "")">@(i == 0 ? "Basis" : "Versie")</span>
+                @if (i > 0 && n > 2)
+                {
+                    <a class="bw-vg-weg" href="@Url2(Model.VersieIds.Where(x => x != v.Id))" aria-label="@v.Label verwijderen uit de vergelijking" title="Verwijderen uit de vergelijking"><i class="ph ph-x" aria-hidden="true"></i></a>
+                }
+            </div>
+        }
+        @if (n < 3)
+        {
+            <button type="button" class="bw-vg-toevoegen" data-bw-vergelijk-huidig data-bw-vergelijk="" data-bw-basis="@basis.Id"><i class="ph ph-plus" aria-hidden="true"></i>Versie toevoegen</button>
+        }
+    </div>
+
+    @* ── Kerncijfers ── *@
+    <div class="bw-vg-kpis">
+        @{
+            void Kpi(string titel, Func<VergelijkVersie, string> waarde, Func<VergelijkVersie, bool> heeft, Func<VergelijkVersie, VergelijkVersie, (decimal Delta, string Tekst, bool MeerIsGoed)?> verschil)
+            {
+                <div class="bw-vg-kpi">
+                    <span class="bw-vg-lbl">@titel</span>
+                    <div class="bw-vg-kpi-waarden">
+                        @foreach (var v in vs) { <span class="l @(v == basis ? "is-basis" : "")">@v.Letter</span><span class="w @(heeft(v) ? "" : "is-leeg")">@(heeft(v) ? waarde(v) : "—")</span> }
+                    </div>
+                    <div class="bw-vg-kpi-delta">
+                        @foreach (var o in anderen)
+                        {
+                            var d = heeft(basis) && heeft(o) ? verschil(basis, o) : null;
+                            if (d != null) { <span class="bw-vg-delta @Toon(d.Value.Delta, d.Value.MeerIsGoed)">@(n > 2 ? o.Letter + " " : "")@d.Value.Tekst</span> }
+                        }
+                    </div>
+                </div>
+            }
+        }
+        @{
+            Kpi("Totale kostprijs", v => Eur0(v.Kostprijs), v => true, (a, b) => (b.Kostprijs - a.Kostprijs, Delta(b.Kostprijs - a.Kostprijs) + (a.Kostprijs != 0m ? " · " + PctD(a.Kostprijs, b.Kostprijs) : ""), false));
+            if (!enkel)
+            {
+                Kpi("Verkoopprijs", v => Eur0(v.Verkoopwaarde), v => v.HeeftVerkoop, (a, b) => (b.Verkoopwaarde - a.Verkoopwaarde, Delta(b.Verkoopwaarde - a.Verkoopwaarde) + (a.Verkoopwaarde != 0m ? " · " + PctD(a.Verkoopwaarde, b.Verkoopwaarde) : ""), true));
+                Kpi("Marge", v => (v.MargeOpKost * 100m).ToString("0.0", nl) + " % · " + Eur0(v.Resultaat), v => v.HeeftVerkoop,
+                    (a, b) => { var pt = (b.MargeOpKost - a.MargeOpKost) * 100m; return (b.MargeOpKost - a.MargeOpKost, (pt >= 0m ? "+ " : "– ") + Math.Abs(pt).ToString("0.0", nl) + " pt · " + Delta(b.Resultaat - a.Resultaat), true); });
+            }
+            Kpi("Kostprijs / m² GBA", v => Eur0(v.KostprijsPerM2), v => v.Gba > 0m, (a, b) => (b.KostprijsPerM2 - a.KostprijsPerM2, Delta(b.KostprijsPerM2 - a.KostprijsPerM2), false));
+        }
+    </div>
+
+    @* ── Kostprijs per hoofdgroep ── *@
+    <section class="gl-v2-section-card bw-vg-kaart">
+        <div class="gl-v2-section-card-header">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-list-numbers" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-section-card-title">Kostprijs per hoofdgroep</h2>
+            <span class="gl-v2-field-divider"></span>
+            <span class="gl-v2-section-card-desc">@(string.Join(", ", anderen.Select(o => o.Letter)))@(n > 2 ? " tegenover " : " tegenover ")@basis.Letter · oker = duurder, groen = goedkoper</span>
+            <label class="bw-vg-enkel" style="margin-left:auto"><input type="checkbox" id="bw-vg-enkel" class="gl-v2-toggle-switch" checked /><span>Enkel verschillen</span></label>
+        </div>
+        <div class="bw-vg-tabel" style="--bw-vg-kol:@kolomKosten">
+            <div class="bw-vg-rij bw-vg-th">
+                <span></span><span>Hoofdgroep · activiteit</span>
+                @foreach (var v in vs) { <span class="is-num">@v.Letter · v@(v.Nummer)@(v.Status == "Definitief" ? " definitief" : "")</span> }
+                @foreach (var o in anderen) { <span class="is-num">Verschil @o.Letter</span><span class="is-num">%</span> }
+                @if (n == 2) { <span class="is-mid">− · +</span> }
+            </div>
+            @{
+                // de groep met het grootste verschil staat open; bij een gelijke vergelijking geen
+                var grootste = vg.Groepen.Select(g => new { g, d = anderen.Sum(o => Math.Abs(Bedrag(g, o) - Bedrag(g, basis))) }).OrderByDescending(x => x.d).FirstOrDefault();
+                var maxGroep = vg.Groepen.Count == 0 ? 0m : vg.Groepen.Max(g => anderen.Max(o => Math.Abs(Bedrag(g, o) - Bedrag(g, basis))));
+            }
+            @foreach (var g in vg.Groepen)
+            {
+                var gewijzigd = g.Lijnen.Count(l => anderen.Any(o => LBedrag(l, o) != LBedrag(l, basis)));
+                var heeftDiff = anderen.Any(o => Bedrag(g, o) != Bedrag(g, basis)) || gewijzigd > 0;
+                var open = heeftDiff && grootste != null && grootste.g == g && grootste.d > 0m;
+                var sub = string.IsNullOrWhiteSpace(g.Sub) ? (g.Lijnen.Count > 0 ? $"{g.Lijnen.Count} {(g.Lijnen.Count == 1 ? "activiteit" : "activiteiten")}" + (gewijzigd > 0 ? $" · {gewijzigd} gewijzigd" : "") : "") : g.Sub + (gewijzigd > 0 ? $" · {gewijzigd} gewijzigd" : "");
+                var maxLijn = g.Lijnen.Count == 0 ? 0m : g.Lijnen.Max(l => anderen.Max(o => Math.Abs(LBedrag(l, o) - LBedrag(l, basis))));
+                <div class="bw-vg-groep @(open ? "is-open" : "")" data-diff="@(heeftDiff ? "1" : "0")">
+                    <div class="bw-vg-rij bw-vg-groepkop" role="button" tabindex="0" aria-expanded="@(open ? "true" : "false")">
+                        <span class="bw-vg-chev">@if (g.Lijnen.Count > 0) { <i class="ph ph-caret-right" aria-hidden="true"></i> }</span>
+                        <span class="bw-vg-naam"><strong>@g.Titel</strong>@if (sub != "") { <small>@sub</small> }</span>
+                        @foreach (var v in vs) { <span class="is-num">@Eur0(Bedrag(g, v))</span> }
+                        @foreach (var o in anderen)
+                        {
+                            var d = Bedrag(g, o) - Bedrag(g, basis);
+                            <span class="is-num bw-vg-d @Toon(d, false)">@Delta(d)</span><span class="is-num bw-vg-p @Toon(d, false)">@PctD(Bedrag(g, basis), Bedrag(g, o))</span>
+                        }
+                        @if (n == 2)
+                        {
+                            var d2 = Bedrag(g, anderen[0]) - Bedrag(g, basis);
+                            <span class="bw-vg-balk"><i class="@Toon(d2, false)" style="@(d2 >= 0m ? "left" : "right"):50%;width:@((maxGroep > 0m ? Math.Abs(d2) / maxGroep * 50m : 0m).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"></i></span>
+                        }
+                    </div>
+                    @foreach (var l in g.Lijnen)
+                    {
+                        var lDiff = anderen.Any(o => LBedrag(l, o) != LBedrag(l, basis));
+                        <div class="bw-vg-rij bw-vg-lijn" data-diff="@(lDiff ? "1" : "0")" hidden>
+                            <span></span><span class="bw-vg-naam is-lijn">@l.Naam</span>
+                            @foreach (var v in vs) { <span class="is-num">@Eur0(LBedrag(l, v))</span> }
+                            @foreach (var o in anderen)
+                            {
+                                var d = LBedrag(l, o) - LBedrag(l, basis);
+                                <span class="is-num bw-vg-d @Toon(d, false)">@Delta(d)</span><span class="is-num bw-vg-p @Toon(d, false)">@PctD(LBedrag(l, basis), LBedrag(l, o))</span>
+                            }
+                            @if (n == 2)
+                            {
+                                var d2 = LBedrag(l, anderen[0]) - LBedrag(l, basis);
+                                <span class="bw-vg-balk"><i class="@Toon(d2, false)" style="@(d2 >= 0m ? "left" : "right"):50%;width:@((maxLijn > 0m ? Math.Abs(d2) / maxLijn * 50m : 0m).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"></i></span>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+            <div class="bw-vg-rij bw-vg-totaal">
+                <span></span><span class="bw-vg-naam"><strong>Totale kostprijs</strong></span>
+                @foreach (var v in vs) { <span class="is-num">@Eur0(v.Kostprijs)</span> }
+                @foreach (var o in anderen) { <span class="is-num">@Delta(o.Kostprijs - basis.Kostprijs)</span><span class="is-num">@PctD(basis.Kostprijs, o.Kostprijs)</span> }
+                @if (n == 2) { <span></span> }
+            </div>
+            @if (!enkel && vs.Any(v => v.HeeftVerkoop))
+            {
+                <div class="bw-vg-rij bw-vg-extra">
+                    <span></span><span class="bw-vg-naam"><strong>Verkoopkosten</strong><small>makelaar en overige · niet in de kostprijs</small></span>
+                    @foreach (var v in vs) { <span class="is-num">@(v.HeeftVerkoop ? Eur0(v.Verkoopkosten) : "—")</span> }
+                    @foreach (var o in anderen)
+                    {
+                        var d = o.HeeftVerkoop && basis.HeeftVerkoop ? o.Verkoopkosten - basis.Verkoopkosten : 0m;
+                        <span class="is-num bw-vg-d @Toon(d, false)">@(o.HeeftVerkoop && basis.HeeftVerkoop ? Delta(d) : "—")</span><span class="is-num bw-vg-p @Toon(d, false)">@(o.HeeftVerkoop && basis.HeeftVerkoop ? PctD(basis.Verkoopkosten, o.Verkoopkosten) : "")</span>
+                    }
+                    @if (n == 2) { <span></span> }
+                </div>
+            }
+        </div>
+    </section>
+
+    @* ── Verkoop per eenheid ── *@
+    @if (vg.HeeftVerkoop && vg.Eenheden.Count > 0)
+    {
+        <section class="gl-v2-section-card bw-vg-kaart">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-house" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Verkoop per eenheid</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">vraagprijs incl. grond · groen = hogere opbrengst, oker = lager</span>
+            </div>
+            <div class="bw-vg-tabel" style="--bw-vg-kol:@kolomVerkoop">
+                <div class="bw-vg-rij bw-vg-th">
+                    <span>Eenheid</span><span>Type</span><span class="is-num">GBA</span>
+                    @foreach (var v in vs) { <span class="is-num">@v.Letter · v@(v.Nummer)</span> }
+                    @foreach (var o in anderen) { <span class="is-num">Verschil @o.Letter</span><span class="is-num">%</span> }
+                    <span class="is-num">€ / m² @string.Join(" → ", vs.Select(v => v.Letter))</span>
+                </div>
+                @foreach (var e in vg.Eenheden)
+                {
+                    decimal? P(VergelijkVersie v) => e.Vraagprijs.TryGetValue(v.Id, out var x) ? x : null;
+                    decimal G(VergelijkVersie v) => e.Gba.TryGetValue(v.Id, out var x) ? x : 0m;
+                    var gba = vs.Select(G).FirstOrDefault(x => x > 0m);
+                    string M2(VergelijkVersie v) => P(v) is { } pr && G(v) > 0m ? (pr / G(v)).ToString("N0", nl) : "—";
+                    <div class="bw-vg-rij bw-vg-eenheid">
+                        <span class="bw-vg-naam"><strong>@e.Naam</strong></span><span class="is-muted">@e.Type</span><span class="is-num">@(gba > 0m ? gba.ToString("N0", nl) + " m²" : "—")</span>
+                        @foreach (var v in vs) { <span class="is-num">@(P(v).HasValue ? Eur0(P(v)!.Value) : "—")</span> }
+                        @foreach (var o in anderen)
+                        {
+                            var ok = P(basis).HasValue && P(o).HasValue; var d = ok ? P(o)!.Value - P(basis)!.Value : 0m;
+                            <span class="is-num bw-vg-d @(ok ? Toon(d, true) : "is-gelijk")">@(ok ? Delta(d) : "—")</span><span class="is-num bw-vg-p @(ok ? Toon(d, true) : "is-gelijk")">@(ok ? PctD(P(basis)!.Value, P(o)!.Value) : "")</span>
+                        }
+                        <span class="is-num is-muted">@("€ " + string.Join(" → ", vs.Select(M2)))</span>
+                    </div>
+                }
+                <div class="bw-vg-rij bw-vg-extra">
+                    <span class="bw-vg-naam"><strong>Verkoopkosten</strong></span><span class="is-muted">makelaar</span><span></span>
+                    @foreach (var v in vs) { <span class="is-num">@(v.HeeftVerkoop ? "– " + Eur0(v.Verkoopkosten) : "—")</span> }
+                    @foreach (var o in anderen)
+                    {
+                        var d = o.HeeftVerkoop && basis.HeeftVerkoop ? o.Verkoopkosten - basis.Verkoopkosten : 0m;
+                        <span class="is-num bw-vg-d @Toon(d, false)">@(o.HeeftVerkoop && basis.HeeftVerkoop ? Delta(-d) : "—")</span><span></span>
+                    }
+                    <span class="is-num is-muted">@string.Join(" → ", vs.Select(v => vg.CommissieTekst.TryGetValue(v.Id, out var ct) ? ct : "—"))</span>
+                </div>
+                <div class="bw-vg-rij bw-vg-totaal">
+                    <span class="bw-vg-naam"><strong>Totale verkoop</strong></span><span>@vg.Eenheden.Count @(vg.Eenheden.Count == 1 ? "eenheid" : "eenheden")</span>
+                    <span class="is-num">@(basis.Gba > 0m ? basis.Gba.ToString("N0", nl) + " m²" : "")</span>
+                    @foreach (var v in vs) { <span class="is-num">@(v.HeeftVerkoop ? Eur0(v.Verkoopwaarde) : "—")</span> }
+                    @foreach (var o in anderen) { <span class="is-num">@(o.HeeftVerkoop && basis.HeeftVerkoop ? Delta(o.Verkoopwaarde - basis.Verkoopwaarde) : "—")</span><span class="is-num">@(o.HeeftVerkoop && basis.HeeftVerkoop ? PctD(basis.Verkoopwaarde, o.Verkoopwaarde) : "")</span> }
+                    <span class="is-num">@string.Join(" → ", vs.Select(v => v.HeeftVerkoop && v.Gba > 0m ? "€ " + (v.Verkoopwaarde / v.Gba).ToString("N0", nl) : "—"))</span>
+                </div>
+            </div>
+        </section>
+    }
+
+    @* ── Gewijzigde parameters ── *@
+    @if (vg.Parameters.Count > 0)
+    {
+        <section class="gl-v2-section-card bw-vg-kaart">
+            <div class="gl-v2-section-card-header">
+                <h2 class="gl-v2-section-card-title">Gewijzigde parameters</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">verklaart een deel van het verschil</span>
+            </div>
+            <div class="bw-vg-params">
+                @foreach (var pr in vg.Parameters)
+                {
+                    <div class="bw-vg-param">
+                        <span class="bw-vg-param-naam">@pr.Label</span>
+                        <span class="bw-vg-param-waarden">
+                            @for (var i = 0; i < n; i++)
+                            {
+                                if (i > 0) { <span class="pijl">→</span> }
+                                <span class="@(i == 0 ? "is-basis" : "is-nieuw")">@(pr.Waarden.TryGetValue(vs[i].Id, out var w) ? w : "—")</span>
+                            }
+                        </span>
+                    </div>
+                }
+            </div>
+        </section>
+    }
+</div>
+
+@await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwVergelijkModal.cshtml", Model.Index)
+
+@section PageScripts
+{
+<script src="~/js/gl-v2-budget.js" asp-append-version="true"></script>
+<script src="~/js/gl-v2-budget-vergelijk.js" asp-append-version="true"></script>
+}

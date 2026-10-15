@@ -4,7 +4,8 @@
 // wijzigingen zijn) en een bevestigingsmodal (.modal met een id dat "discard" bevat en op "-modal" eindigt)
 // met een bevestigingslink (<a> met id "discard" … "-confirm"). Bij een link-klik terwijl de badge zichtbaar is,
 // toont dit de eigen modal i.p.v. de browserdialoog; de bevestigingslink gaat dan naar de aangeklikte bestemming.
-// Wie bevestigt, verbergt de badges zodat er geen browserwaarschuwing meer volgt.
+// Wie bevestigt, verbergt de badges zodat er geen browserwaarschuwing meer volgt. Een link met data-gl-v2-leave-ok bewaakt zichzelf
+// (bv. "Opslaan & terug", die eerst opslaat) en wordt niet onderschept.
 (function () {
     "use strict";
 
@@ -19,7 +20,7 @@
         if (!isDirty() || !window.bootstrap) return;
         var a = e.target && e.target.closest ? e.target.closest("a[href]") : null;
         if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-        if (a.target === "_blank" || a.hasAttribute("download") || a.hasAttribute("data-bs-toggle") || a.closest(".modal")) return;
+        if (a.target === "_blank" || a.hasAttribute("download") || a.hasAttribute("data-bs-toggle") || a.hasAttribute("data-gl-v2-leave-ok") || a.closest(".modal")) return;
         var href = a.getAttribute("href");
         if (!href || href.charAt(0) === "#" || /^javascript:/i.test(href)) return;
         var modal = findModal();

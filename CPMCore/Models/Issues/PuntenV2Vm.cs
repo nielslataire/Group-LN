@@ -83,6 +83,7 @@ public class PuntDetailV2Vm
     public int ProjectId { get; set; }
     public string ProjectName { get; set; } = "";
     public bool CanWrite { get; set; }
+    public bool CanDelete { get; set; }
     public int Id { get; set; }
     public string NrLabel { get; set; } = "";
     public string Title { get; set; } = "";
@@ -113,6 +114,7 @@ public class PuntDetailV2Vm
     public string? PlanName { get; set; }
     public string? PlanUrl { get; set; }
     public int PlanPage { get; set; } = 1;
+    public bool PlanHasPin { get; set; }
     public double PlanX { get; set; }
     public double PlanY { get; set; }
     public List<PuntHistoriekItemV2> History { get; set; } = new();
@@ -163,6 +165,17 @@ public class PuntPlanV2
     public int PlanId { get; set; }
     public string Name { get; set; } = "";
     public string Url { get; set; } = "";
+    public string? Soort { get; set; }
+    public string? Niveau { get; set; }
+    public int Versie { get; set; } = 1;
+    /// <summary>dd/MM/yyyy (opgeladen op).</summary>
+    public string Datum { get; set; } = "";
+    /// <summary>Aantal punten dat op dit plan staat.</summary>
+    public int Count { get; set; }
+    /// <summary>pdf | image</summary>
+    public string Kind { get; set; } = "pdf";
+    /// <summary>Enkel de nieuwste versie van een plan staat in de plankiezer.</summary>
+    public bool IsLatest { get; set; } = true;
 }
 
 public class PuntPinV2

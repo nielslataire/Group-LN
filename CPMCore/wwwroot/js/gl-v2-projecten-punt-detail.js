@@ -34,7 +34,7 @@
     if (planEl && window.PuntPlanViewer) {
         var x = parseFloat(planEl.dataset.x), y = parseFloat(planEl.dataset.y), pg = parseInt(planEl.dataset.page, 10) || 1;
         var v = window.PuntPlanViewer.create(planEl, {});
-        v.setPins([{ id: 0, page: pg, x: x, y: y, status: parseInt(planEl.dataset.status, 10) || 10, label: "Dit punt", selected: true }]);
+        if (planEl.dataset.pin === "1") v.setPins([{ id: 0, page: pg, x: x, y: y, status: parseInt(planEl.dataset.status, 10) || 10, label: "Dit punt", selected: true }]);
         v.load(planEl.dataset.url, pg);
     }
     var rc = $("#pd-reject-confirm");

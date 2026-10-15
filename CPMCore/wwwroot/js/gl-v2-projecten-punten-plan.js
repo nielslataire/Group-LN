@@ -56,7 +56,7 @@
         viewer.setMarker(null);
         if (!p) { viewer.load(null); updateHead(); return; }
         viewer.setPins(viewerPins());
-        viewer.load(p.url, currentPage).then(function () { viewer.setPins(viewerPins()); });
+        viewer.load(p.url, currentPage, p.kind).then(function () { viewer.setPins(viewerPins()); });
         updateHead();
     }
 

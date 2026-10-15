@@ -208,6 +208,8 @@ public class VerkoopLijnDto
     public decimal? Vraagprijs      { get; set; }
     public decimal? BouwPrijsPerM2  { get; set; }
     public decimal? GrondPrijsPerM2 { get; set; }
+    public decimal? GrondAgrPrijsPerM2   { get; set; }
+    public decimal? GrondwaardeAgrarisch { get; set; }
     public byte?    PrijsBron       { get; set; }
 
     public BudgetVerkoopLijn NaarEntiteit(int versieId, int sortOrder) => new()
@@ -225,6 +227,8 @@ public class VerkoopLijnDto
         Vraagprijs      = Vraagprijs,
         BouwPrijsPerM2  = BouwPrijsPerM2,
         GrondPrijsPerM2 = GrondPrijsPerM2,
+        GrondAgrPrijsPerM2   = GrondAgrPrijsPerM2,
+        GrondwaardeAgrarisch = GrondwaardeAgrarisch,
         PrijsBron       = PrijsBron
     };
 }

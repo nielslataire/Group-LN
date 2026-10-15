@@ -7,15 +7,34 @@ DEVNOTES.md §3, §5 en §7; dit bestand houdt bij wat af is, wat open staat en 
 punt 39, met versiestatus Concept/Afgerond/Definitief (deel 5). Niets gecommit, niets browser-getest.
 **Migraties 075 → 078 uitvoeren vóór de app start** (`_migrations/078_BudgetVersieStatus.sql` is nieuw).
 
+## 13/10/2026 — Parameters: Algemeen-activiteiten en percentages uit Bouwkost % (migraties 091 en 092)
+
+**Uitvoeren: `091_BudgetAlgemeenFormules.sql` en `092_BudgetParamsOpmetingSondering.sql`.** Niet browser-getest.
+- **EPB, veiligheidscoördinatie en ventilatieverslaggeving** zijn nu activiteiten in lot 0 Algemeen met een formule `@aantal_wooncomm * @mat_algemeen_<sleutel>` (091 zoekt bestaande activiteiten op naam, anders maakt ze die aan; vereist de koppelingen `algemeen_epb`, `algemeen_vc`, `algemeen_ventilatieverslaggeving`). Het percentage "Veiligheidscoörd. + EPB" en het forfait "Ventilatieverslaggever" zijn van de Parameters-pagina en uit de kostprijs gehaald (anders dubbel).
+- **ActivityID's** (opgegeven door Niels): EPB 166, veiligheidscoördinatie 165, ventilatieverslaggeving 278 (formules, migratie 091 gebruikt deze ID's en maakt geen activiteiten meer aan); opmeting 168, sondering 182, tienjarige/decennale 142 (percentageposten op Parameters). daarnaast architect 162, ingenieur 163, projectcoördinatie 277, ABR 142 (zelfde als decennale: samen tellen in het totaalbudget), financiering Wet Breyne 294 en straight loan 295 (gebouw én grond); onvoorzien krijgt bewust geen activiteit (reserve in het totaalbudget). Constanten in `BudgetAlgemeneActiviteit` (FormulaSleutels.cs); de kostenposten van het resultaat dragen nu hun `ActivityId` zodat ze later aan contracten/facturen gekoppeld kunnen worden.
+- **Opmeting en sondering** zijn twee aparte percentages op de bouwkost (`OpmetingPerc`, `SonderingPerc`) i.p.v. het forfait "Opmeting + sondering" (kolom blijft bestaan maar telt niet meer mee). Ze blijven grondgebonden in het verkoopvoorstel.
+- **Standaardwaarden uit Instellingen › Bouwkost %** (naam/sleutel): Decennale = rij "Wet Peeters (10-jarige)", ABR = "ABR", Opmeting = "Opmeting", Sondering = "Sonderingen"; een leeg of 0-veld op Parameters volgt de standaard (`BudgetBerekeningService.ZoekStandaard`). De decennale-waarschuwing verdwijnt als er een standaard bestaat.
+- Twee bestaande tests (`StructuredReferenceServiceTests`, OGM/EPC-betaalstructuur) falen; ze horen niet bij het budget.
+
 ## TE DOEN — nog na te kijken door Niels (genoteerd 12/10/2026)
 
 Inhoudelijke controles op de berekeningen (geen bouwwerk, wel nakijken en bijsturen waar nodig):
-1. **Nacalculatiebedragen bekijken** (stap 6): kloppen de referentiebedragen, de indexering naar de huidige index en het verschil per activiteit met wat je verwacht?
-2. **Percentages bij Parameters bekijken** (stap 7): standaardwaarden uit Instellingen › Bouwkost %, de voorstellen per rubriek en de afwijkingswaarschuwing (> 50 % t.o.v. Instellingen).
-3. **Afbraak invullen** (stap 5, Dak & afbraak): het type Afbraak is nog niet ingevuld voor de testbudgetten; nagaan of de afbraakkost daarna correct doorstroomt naar stap 6/9.
-4. **Alle berekeningen bij Parameters nakijken** (stap 7): bedrag onder elk percentage, totaal parameters en het percentage t.o.v. de bouwkost; financiering (Wet Breyne, straight loan), onvoorzien en forfaits.
-5. **Verkoop nakijken** (stap 8): grond- en bouwwaarde, minimumprijs, marges, prijscodes (B-/G-), marktprijs en de vraagprijs per eenheid, incl. garages en poorten.
-6. **Resultaat nakijken** (stap 9): kostenoverzicht, per eenheid, bouwkost t.o.v. nacalc, marge en de waarschuwingen/fouten.
+1. ~~**Nacalculatiebedragen bekijken** (stap 6)~~ — nagegaan door Niels (13/10/2026). Er moeten later nog verbeteringen gebeuren, zie hieronder.
+2. ~~**Percentages bij Parameters bekijken** (stap 7): standaardwaarden uit Instellingen › Bouwkost %, de voorstellen per rubriek en de afwijkingswaarschuwing (> 50 % t.o.v. Instellingen).~~ — nagekeken door Niels (14/10/2026).
+3. ~~**Alle berekeningen bij Parameters nakijken** (stap 7): bedrag onder elk percentage, totaal parameters en het percentage t.o.v. de bouwkost; financiering (Wet Breyne, straight loan), onvoorzien en forfaits.~~ — nagekeken door Niels (14/10/2026).
+4. ~~**Verkoop nakijken** (stap 8): grond- en bouwwaarde, minimumprijs, marges, prijscodes (B-/G-), marktprijs en de vraagprijs per eenheid, incl. garages en poorten.~~ — nagekeken door Niels (14/10/2026).
+5. ~~**Resultaat nakijken** (stap 9): kostenoverzicht, per eenheid, bouwkost t.o.v. nacalc, marge en de waarschuwingen/fouten.~~ — nagekeken door Niels (14/10/2026).
+
+## VERBETERINGEN NA NACALCULATIE — later te doen (genoteerd 13/10/2026)
+
+Uit de nacalculatiecontrole van Niels; geen van deze punten is al aangepast:
+- **Hellend dak en zolder**: geen beplating rekenen.
+- **Oppervlakte plat dak / hellend dak** berekenen uit de andere projectbudgetten en daarmee vergelijken, in plaats van gewoon op de bewoonbare oppervlakte.
+- **Dekvloer / PUR / schuimbeton** opsplitsen (nu één activiteit).
+- **Tuin**: onderscheid "afgewerkt" of "genivelleerd".
+- **Terras / oprit**: onderscheid "afgewerkt" of "onderlaag".
+- **Sanitaire installatie**: prijzen nakijken, vooral plaatsing toestellen, verwarming en ventilatie, in functie van nieuwe technieken.
+- **Buitenschrijnwerk**: prijzen vergelijken met de oppervlaktes uit andere budgetten, indien beschikbaar.
 
 ## 12/10/2026 — Stap 1: herleidbare funderingsoppervlakte + automatisch grondwerk (migratie 089)
 
@@ -41,6 +60,7 @@ Onder elke activiteit met een voorstel staat (als "Toon berekeningen" aanstaat) 
 - **Foutvenster bij mislukt opslaan** toont de reden en de open fouten met link; `post()` geeft altijd een leesbare reden terug.
 - **Index zonder peildatum**: opzoeken met tolerantie 0,005 (de binder rondt af op 2 decimalen) en bij het opslaan terugzetten op de exacte indexrij.
 - **Grondwerken-activiteit en `m3_grondwerken`** gebruiken het automatische grondwerk van stap 1.
+- **Afbraak (13/10)**: nieuwe formuleparameter `opp_afbraak` (totaal m² van de afbraakregels op stap 5) en een ingebouwd voorstel voor activiteit 172 (lot 0 Algemeen) = `opp_afbraak` × geïndexeerde prijs van de koppeling `algemeen_afbraak`; een eigen formule (`@opp_afbraak * @mat_algemeen_afbraak`) gaat voor.
 - **Open, niet opgelost**: het tabblad Budgetactiviteiten liep eenmalig vast met "Toon berekeningen" aan (na een materiaalprijswijziging); oorzaak niet gevonden, een nieuw venster werkte wel. Een extra beveiliging staat in de formulestrook (max. 24 onderdelen, fouten ingeslikt). Als het terugkomt: noteren wat er net gebeurde (schakelaar, prijs, vernieuwen).
 
 ## 12/10/2026 — Garagepoorten per rij (migratie 090)
@@ -281,3 +301,52 @@ daar nog niet; dat wordt een aparte kolom op Units als de verkoopmodule ze nodig
 `BudgetPrijsReferentie` + `Datum DATE NULL`, `Bron NVARCHAR(200) NULL`. `KopieerVersieInhoud` meenemen.
 
 **Volgorde**: (1) model + rekenregel + unit-tests, (2) stap 8 herbouwen (liefst meteen in gl-v2), (3) referentiebeheer, (4) doorzetten uitbreiden.
+
+
+## 13/10 - Grondkost + percentagebasis
+- Parameters, kaart Grondkost: aankoopprijs grond, registratierechten % (standaard uit Bouwkost %, rij 'Registratierechten', anders 12 %; per budget aanpasbaar, kolom RegistratierechtenPerc, migratie 093), notariskosten (ereloon volgens schaaltarief + 21 % btw, ServiceCore/Budget/NotarisTarief.cs), totale grondkost live. Posten 'Registratierechten' en 'Notariskosten (ereloon)' staan in de groep Grond en tellen mee in GrondKost van het verkoopvoorstel. Aktekosten/uitgaven zitten er niet in.
+- Percentagebasis: EPB (166), veiligheidscoordinatie (165) en ventilatieverslaggeving (278) staan wel in TotaalBouw/totaalbudget maar niet meer in de basis waarop erelonen, verzekeringen, Wet Breyne, straight loan gebouw en onvoorzien rekenen (BudgetAlgemeneActiviteit.BuitenPercentageBasis).
+- Migratie 093 uitvoeren vóór gebruik.
+- Publiciteit is nu een percentage van de totale verkoopprijs (PubliciteitPerc, standaard 0,04 % uit Bouwkost % rij 'publiciteit', migratie 093). Het forfait telt niet meer mee. Omdat de verkoopprijs zelf van de kost afhangt, wordt het bedrag algebraïsch opgelost: P = f*V0 / (1 - f*(1+doelmarge)).
+- Migratie 093 zet ook de standaardrijen 'registratierechten' (12 %) en 'publiciteit' (0,04 %) in Bouwkost % (groep 'Overige kosten').
+- Notariskosten herwerkt volgens het Tariefbesluit (consolidatie 9/2/2026): verkoop uit de hand = schaal J (vast 285, -86 tot 20.000; reeksen 2,5/2,5/1,75/1,71/1,14/0,57/0,20/0,20 %) + 21 % btw, per akte. Daarbovenop aktekosten per akte (standaard 1.500, per budget aanpasbaar).
+- Aankoop in delen: Parameters › Grondkost heeft een lijst Aankopen (JSON in BudgetParams.GrondAankopenJson), elk deel = één akte met eigen notariskosten; AankoopprijsGrond blijft het totaal. Migratie 094 vóór gebruik (093 ook).
+- Aktekosten per akte (standaard 1.500, excl. btw) worden met 21 % btw als kost gerekend, naast het ereloon (dat zelf ook incl. btw is).
+- Getalvelden van de budgetwizard (_BwNum, 2 decimalen, niet alleen-lezen) gebruiken nu het projectbrede .Currencymask (AutoNumeric, currency.js) i.p.v. een eigen opmaak. currency.js zet bij FormData-verzending (autosave) het kale getal; programmatische waarden gaan via GlV2Budget.zet().
+- Grondkost-kaart herbouwd naar de mock: tabel Aankopen (omschrijving, datum akte, prijs, dupliceren, verwijderen, nieuwe aankoop + Toevoegen), velden registratierechten/aktekosten/notaris-ereloon, rechts het berekeningspaneel met totale grondkost. Datum per aankoop zit in GrondAankopenJson.
+- Parameters › kaart Verkoopkosten (migratie 095): makelaarscommissie % (standaard uit Bouwkost % 'makelaarscommissie', 3 %), btw op commissie 21 % vast, overige verkoopkosten (forfait per project). Resultaat › kaart "Verkoop t.o.v. kostprijs" (ServiceCore/Budget/VerkoopResultaat.cs): verkoopwaarde (vastgelegde vraagprijzen) - verkoopkosten (btw op commissie telt enkel op het grondaandeel mee) - kostprijs = resultaat, met marges, resultaat per eenheid en break-even. Nog niet in PDF/Excel/versievergelijking en niet in het verkoopvoorstel van stap 8.
+- Marges zijn netto: Min. prijs per eenheid (stap 8) bevat de verkoopkosten. Waarde = (kost x (1 + marge) + aandeel overige) / (1 - commissie x btw-factor), grond met 21 % btw op de commissie, bouw zonder (VerkoopVoorstelService.Waarden). Publiciteit rekent mee op die verkoopprijs.
+- Resultaat/Excel/PDF gebruiken dezelfde herberekende verkooplijnen als stap 8 (HerberekendeLijnenAsync); stap 8 bewaart zelf een lijn die bij het openen afwijkt van de database.
+- OPEN VRAAG: grond in twee stukken per woning (woongebied + agrarisch) met verschillende waarde; ontwerp voorgesteld aan Niels, nog niet gebouwd.
+- Grond in twee zones per woning (migratie 096): stap 2 heeft een kolom "Grond 2 m²" (BudgetOppervlaktes.GrondoppAgrarisch); Parameters › Verkoop heeft "Waarde 2e grondzone" (standaard 20 %) enkel voor de verdeling van de grondkost (gewicht = zone 1 + zone 2 × %); stap 8 heeft per woning een blok "Grond 2" met eigen €/m² (volgt anders zone 1 × %); Grondwaarde = zone 1, GrondwaardeAgrarisch = zone 2, vraagprijs = som. Nog niet in Excel/PDF en niet in de formule opp_grondopp.
+- Budgetten-overzicht (39a) bijgewerkt: definitief budget bovenaan op volle breedte (slotje, naam · versie · totaal, marge % en €, vastzet-regel, drie kengetallen, knoppen rechts); budgetkaarten met kolommen Versie/Naam/Datum/Status/Totaal/Marge; in Totaal staat "stap x van 9" zolang niet alle stappen doorlopen zijn; marge op kostprijs (resultaat / totale kostprijs) bij definitief, afgerond en concept dat stap 9 bereikte (geheugen-cache per versie en wijzigingstijdstip); lege gestreepte kaart "Nieuw budget"; "Maak actief" bestond al.
+- BUG opgelost 14/10/2026: de nieuwe percentagekolommen van BudgetParams (092-096) hadden in de DbContext geen kolomtype, waardoor EF ze als decimal(18,2) wegschreef: 2,5 % werd 3 %, 0,04 % werd 0 (en dus telkens de standaard). Nu decimal(9,6) in cpmRunningContext. Eerder opgeslagen afgeronde waarden moeten eenmalig opnieuw ingevuld worden.
+- 39a/39l/39m/39n (14/10/2026): topbar Vergelijken + Nieuw budget, modal Nieuw budget (startpunt, overnemen per stap, eenheden, index, meteen actief; `KopieerVersieInhoud` met stappen, eenheden uit het project), modal Vergelijken en de vergelijkingspagina (`BudgetVergelijkService`, Excel-export), help geschreven; zie DESIGN.md 'Update 14/10/2026'. Niet browser-getest, enkel statisch gerenderd met voorbeelddata.
+- 44d/44e/44f (14/10/2026): PDF intern/bank in stap 9 opent nu de volle pagina `BudgetPdfOpmaken` (view `BudgetPdfOpmakenV2`, JS `gl-v2-budget-pdf.js`, CSS hergebruikt `.gl-v2-vsprep` uit gl-v2-projecten-verslagen.css): hoofdstukken (tijdgestuurd), PDF opvragen via `DownloadBudgetPdfV2` (headers X-Pagina-Aantal / X-Bestandsnaam), opent in nieuw tabblad, klaar-pagina met Download PDF + Terug naar stap 9. Bank: "Financiering, onvoorzien, publiciteit" doorgestreept. NIET gebouwd: bewaren in Documenten › Budgetten. Niet browser-getest.
+- 14/10/2026: Vergelijken-modal: native selects (Basis, Vergelijken op) vervangen door GlV2 `_SelectList` (`setItems` voor Basis). Versie/budget verwijderen op BudgetIndexV2: `ProjectenController.BudgetVersieDelete` (rechtencheck `HasDelete(ProjectsDetail)`, nooit een definitieve versie, laatste versie neemt het budget mee, actief budget/huidige versie gaan over op een ander), knop + bevestigingsmodal; kindrijen via DB-cascade. Build enkel gecompileerd (kopie mislukt omdat de app draait), niet browser-getest.
+- 14/10/2026 (later): verwijdermodal = danger-bevestiging met body; PDF opmaken bewaart in Documenten › Budgetten (`BudgetPdfMaken` POST, migratie 099 `DocumentMapBudgetten`). Gecompileerd, niet getest.
+- 14/10/2026 (later): Excel-export met verkoopkosten/resultaat en 2e grondzone; formule `opp_grondopp` = zone 1 + zone 2; Nieuw-budgetmodal: keuzelijsten openden niet (label rond radio) — opgelost; help-schermafbeeldingen voor PDF, vergelijken en verwijderen geplaatst. Opname Nieuw-budgetmodal geplaatst (keuzelijsten openen nu correct).
+
+---
+## OVERDRACHT 14/10/2026 — stand van zaken om op een andere pc verder te werken
+**Let op: er is NIETS gecommit** (branch `layout-experiment`, ±176 gewijzigde/nieuwe bestanden). Commit en push eerst op deze pc, anders staat het werk niet op de andere pc.
+Ook `bin/obj` van de lopende app blokkeert een build zolang de app draait: stop de app voor een volledige build.
+
+### Migraties (hand-run op de live DB, idempotent, volgorde)
+078, 080, 089, 090, 091, 092, 093, 094, 095, 096 zijn op de live DB uitgevoerd (bevestigd door Niels). **099_DocumentMapBudgetten.sql** (map "Budgetten" in Documenten): door Niels uitgevoerd (punt 1 en 2 "gedaan"), controleer dit op de andere DB indien die verschilt. 097/098/100 horen bij andere features (Punten/Werfverslagen).
+
+### Wat deze sessie is gebouwd (allemaal gecompileerd; browsergetest = alleen via Playwright-opnames)
+- **Stap 9 PDF intern/bank → volle opmaakpagina (design 44d/e/f):** `BudgetPdfOpmaken` (GET, view `Views/Projecten/Budget/BudgetPdfOpmakenV2.cshtml`, JS `wwwroot/js/gl-v2-budget-pdf.js`, CSS `.gl-v2-vsprep` uit `gl-v2-projecten-verslagen.css`), `BudgetPdfMaken` (POST, antiforgery via data-token) rendert, bewaart in Documenten › Budgetten (`BewaarBudgetPdfAsync`, geen koppelingen = nooit publiek) en geeft headers `X-Pagina-Aantal`, `X-Bestandsnaam`, `X-Bewaard`. Oude GET `DownloadBudgetPdfV2` blijft bestaan.
+- **Budget/versie verwijderen** (overzicht): `BudgetVersieDelete` (naam bevat "Delete" → permissiefilter; ook expliciete `HasDelete(ProjectsDetail)`), nooit definitief, laatste versie neemt budget mee, actief/huidig gaat over. Rode type-1 bevestigingsmodal met tekst.
+- **Keuzelijsten:** Vergelijken-modal (Basis, Vergelijken op) nu `GlV2/_SelectList`; Nieuw-budgetmodal: lijsten/vinkjes buiten het radio-`<label>` gezet (lijst sloot meteen).
+- **Kopie:** aantal veluxen niet mee zonder "Dak & afbraak"; activiteitenlijnen zonder voorstel (hoeveelheid 0) zonder handmatige prijs worden op 0 gezet (`BudgetActivityService`, oorzaak: oude prijs bleef staan).
+- **Excel-export:** verkoopwaarde, verkoopkosten, netto opbrengst, resultaat + marge op kostprijs (zelfde cijfers als stap 9, via `VerkoopResultaat.Bereken`), tabblad Oppervlaktes met grond zone 1/2/totaal. Formule `opp_grondopp` = zone 1 + zone 2.
+- **Docs:** DESIGN.md (blokken "Update 14/10/2026 …"), help `budget-nieuw.md`, `budget-stap-resultaat.md`, `budgetten-vergelijken.md` met schermafbeeldingen in `wwwroot/img/help/budget/…`, HELPCENTRUM_VOORTGANG.md.
+
+### Nog te doen
+1. **Excel-export testen** door Niels (stap 9 › Excel, budget met verkoop): kostenoverzicht en tabblad Oppervlaktes vergelijken met stap 9.
+2. **Kopie testen** (Niels): nieuw budget als kopie zonder Dak & afbraak → dakactiviteiten op 0.
+3. Browsertest van de rest van de nieuwe functies (Vergelijken/Nieuw budget/PDF-flow/verwijderen met en zonder verwijderrecht); alleen via Playwright-opnames gezien, nooit handmatig doorlopen.
+4. **Koppeling budget ↔ contracten/facturen/nacalculatie** (grootste openstaande brok): tegels Gecontracteerd/Gefactureerd/Verwacht verschil op de budgetindex zijn placeholders ("nog niet gekoppeld"). Eerst beslissen op welk niveau vergeleken wordt (per activiteit/lot); bijkomende nacalc-verbeteringen.
+5. Vastloper op de pagina Budgetactiviteiten (nooit gereproduceerd).
+6. Screenshot-recept: zie DESIGN.md "Schermafbeeldingen maken — herbruikbaar Playwright-recept"; script staat in de scratchpad van de sessie (niet in de repo): niet Escape drukken in een open modal, `waitUntil: 'load'` i.p.v. `networkidle`, radio's klikken via hun label.

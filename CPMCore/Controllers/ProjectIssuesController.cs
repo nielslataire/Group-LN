@@ -810,18 +810,22 @@ public partial class ProjectsIssuesController : BaseController
     }
 
 
-    private async Task AddIssueMedia(int projectId, int issueId, List<IFormFile>? files)
+    /// <summary>Slaat de foto's op; geeft het aantal effectief opgeslagen foto's terug (de gl-v2 pagina's melden het als er foto's waren maar geen enkele lukte).</summary>
+    private async Task<int> AddIssueMedia(int projectId, int issueId, List<IFormFile>? files)
     {
-        if (files == null) return;
+        if (files == null) return 0;
 
+        var saved = 0;
         foreach (var file in files.Where(x => x?.Length > 0))
         {
             var fileId = await UploadIssueMediaToStorageAsync(file);
             if (!string.IsNullOrWhiteSpace(fileId))
             {
                 await _service.AddMedia(projectId, issueId, fileId, (int)ConstructionIssueMediaType.Photo, User.FindFirst(CpmClaims.UserId)?.Value);
+                saved++;
             }
         }
+        return saved;
     }
 
     private async Task<string?> UploadIssueMediaToStorageAsync(IFormFile file)

@@ -166,6 +166,7 @@ namespace ServiceCore.Translators
             bo.GemeenschappelijkeDelen  = entity.GemeenschappelijkeDelen;
             bo.Wegenis                  = entity.Wegenis;
             bo.Grondopp                 = entity.Grondopp;
+            bo.GrondoppAgrarisch        = entity.GrondoppAgrarisch;
 
             bo.GroupTypeName  = entity.UnitGroupType?.Name;
             bo.TypeName       = entity.UnitType?.Name;
@@ -195,6 +196,7 @@ namespace ServiceCore.Translators
             entity.GemeenschappelijkeDelen  = bo.GemeenschappelijkeDelen;
             entity.Wegenis                  = bo.Wegenis;
             entity.Grondopp                 = bo.Grondopp;
+            entity.GrondoppAgrarisch        = bo.GrondoppAgrarisch;
         }
 
         internal static BudgetGevelElementBO TranslateGevelToBO(BudgetGevelElementen entity)

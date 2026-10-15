@@ -25,7 +25,9 @@ namespace CPMCore.Models.Budget
         /// <summary>Extra attributen op de input (bv. data-bw-live).</summary>
         public string Attrs { get; set; }
 
-        public string Text => Value.HasValue ? Value.Value.ToString("F" + Decimals, new CultureInfo("nl-BE")) : "";
+        /// <summary>Geldveld-opmaak van het hele project (.Currencymask / AutoNumeric): enkel bij 2 decimalen en als het veld bewerkbaar is.</summary>
+        public bool Masked => Decimals == 2 && !(Attrs ?? "").Contains("readonly", StringComparison.OrdinalIgnoreCase);
+        public string Text => !Value.HasValue ? "" : Masked ? Value.Value.ToString("0.00", CultureInfo.InvariantCulture) : Value.Value.ToString("F" + Decimals, new CultureInfo("nl-BE"));
         public string ElementId => Id ?? Name.Replace(".", "_").Replace("[", "_").Replace("]", "_");
 
         public static BwNumVm Maak(string name, string label, decimal? value, string unit = null, int decimals = 2, string prefix = null, string help = null)

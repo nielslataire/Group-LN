@@ -160,10 +160,9 @@ public partial class ProjectsIssuesController
 
         var nr = "P-" + (issue.PuntNr ?? issue.Id).ToString("000");
         PuntPlanV2? plan = null;
-        if (issue.PlanDocumentId.HasValue && issue.PlanXnormalized.HasValue && issue.PlanYnormalized.HasValue)
+        if (issue.PlanDocumentId.HasValue)
         {
-            var planKey = issue.UnitId.HasValue ? $"u{issue.UnitId}:{issue.PlanDocumentId}" : "a:" + issue.PlanDocumentId;
-            plan = (await LoadPlans(projectId)).FirstOrDefault(p => p.Key == planKey);
+            plan = (await LoadPlans(projectId)).FirstOrDefault(p => p.PlanId == issue.PlanDocumentId);
         }
         var home = new MvcBreadcrumbNode("Index", "Home", "Dashboard");
         var projecten = new MvcBreadcrumbNode("Index", "Projecten", "Projecten") { Parent = home };
@@ -179,6 +178,7 @@ public partial class ProjectsIssuesController
             ProjectId = projectId,
             ProjectName = project,
             CanWrite = ps.HasWrite(PermissionCodes.ProjectsIssues),
+            CanDelete = ps.HasDelete(PermissionCodes.ProjectsIssues),
             Id = issue.Id,
             NrLabel = nr,
             Title = PuntenWeergave.Titel(issue.Title),
@@ -208,6 +208,7 @@ public partial class ProjectsIssuesController
             PlanName = plan == null ? null : (plan.UnitId == null ? plan.Name : plan.UnitName + " · " + plan.Name),
             PlanUrl = plan?.Url,
             PlanPage = issue.PlanPageNumber ?? 1,
+            PlanHasPin = issue.PlanXnormalized.HasValue && issue.PlanYnormalized.HasValue,
             PlanX = (double)(issue.PlanXnormalized ?? 0),
             PlanY = (double)(issue.PlanYnormalized ?? 0),
             History = history,
@@ -249,14 +250,18 @@ public partial class ProjectsIssuesController
             ResponsiblePartyId = contractorId is > 0 ? contractorId : null,
             DueDate = dueDate,
         };
-        if (planX is >= 0 and <= 1 && planY is >= 0 and <= 1 && planId.HasValue)
+        if (planId.HasValue)
         {
+            // Een plan kiezen volstaat; de plaats (pin) is optioneel — zonder pin telt het punt wel mee voor het plan maar staat er geen pin op.
             if (!await PlanBelongs(projectId, unitId is > 0 ? unitId : null, planId.Value)) return Json(new { ok = false, error = "Dat plan hoort niet bij deze eenheid." });
-            dto.PlanDocumentId = planId; dto.PlanPageNumber = planPage ?? 1; dto.PlanXNormalized = planX; dto.PlanYNormalized = planY;
+            dto.PlanDocumentId = planId; dto.PlanPageNumber = planPage ?? 1;
+            if (planX is >= 0 and <= 1 && planY is >= 0 and <= 1) { dto.PlanXNormalized = planX; dto.PlanYNormalized = planY; }
         }
         var created = await _service.Create(projectId, dto, User.FindFirst(CpmClaims.UserId)?.Value);
-        await AddIssueMedia(projectId, created.Id, ResolveMediaFiles(mediaFiles));
-        return Json(new { ok = true, id = created.Id, nr = "P-" + (created.PuntNr ?? created.Id).ToString("000") });
+        var files = ResolveMediaFiles(mediaFiles);
+        var saved = await AddIssueMedia(projectId, created.Id, files);
+        var warn = (files?.Count(f => f?.Length > 0) ?? 0) > 0 && saved == 0 ? "Het punt is bewaard, maar de foto('s) konden niet opgeslagen worden (bestandsopslag of formaat). Voeg ze later toe via Bewerken." : null;
+        return Json(new { ok = true, id = created.Id, nr = "P-" + (created.PuntNr ?? created.Id).ToString("000"), saved, warning = warn });
     }
 
     /// <summary>Bewerken (zelfde paneel als snel ingeven): enkel de velden uit het paneel veranderen, status/plan/historiek blijven.</summary>
@@ -302,14 +307,18 @@ public partial class ProjectsIssuesController
             PlanYNormalized = issue.PlanYnormalized,
         };
         if (clearPlan) { dto.PlanDocumentId = null; dto.PlanPageNumber = null; dto.PlanXNormalized = null; dto.PlanYNormalized = null; }
-        else if (planX is >= 0 and <= 1 && planY is >= 0 and <= 1 && planId.HasValue)
+        else if (planId.HasValue)
         {
             if (!await PlanBelongs(projectId, unitId is > 0 ? unitId : null, planId.Value)) return Json(new { ok = false, error = "Dat plan hoort niet bij deze eenheid." });
-            dto.PlanDocumentId = planId; dto.PlanPageNumber = planPage ?? 1; dto.PlanXNormalized = planX; dto.PlanYNormalized = planY;
+            dto.PlanDocumentId = planId; dto.PlanPageNumber = planPage ?? 1;
+            var hasPin = planX is >= 0 and <= 1 && planY is >= 0 and <= 1;
+            dto.PlanXNormalized = hasPin ? planX : null; dto.PlanYNormalized = hasPin ? planY : null;   // ander plan of geen pin → oude pin vervalt
         }
         await _service.Update(projectId, id, dto, User.FindFirst(CpmClaims.UserId)?.Value);
-        await AddIssueMedia(projectId, id, ResolveMediaFiles(mediaFiles));
-        return Json(new { ok = true, id });
+        var files = ResolveMediaFiles(mediaFiles);
+        var saved = await AddIssueMedia(projectId, id, files);
+        var warn = (files?.Count(f => f?.Length > 0) ?? 0) > 0 && saved == 0 ? "Het punt is bewaard, maar de foto('s) konden niet opgeslagen worden (bestandsopslag of formaat)." : null;
+        return Json(new { ok = true, id, saved, warning = warn });
     }
 
     // ── Plannen (40b): per eenheid + algemene plannen van het project ─────────────────────────────────────
@@ -317,14 +326,13 @@ public partial class ProjectsIssuesController
     /// <summary>Enkel uitvoeringsplannen (UnitExecutionPlan); een algemeen plan heeft geen eenheid.</summary>
     private async Task<bool> PlanBelongs(int projectId, int? unitId, int planId)
     {
-        if (unitId.HasValue)
-        {
-            var unit = await _db.Units.AsNoTracking().FirstOrDefaultAsync(u => u.Id == unitId && u.ProjectId == projectId);
-            if (unit == null) return false;
-            if (planId == 0) return false; // het verkoopplan (Units.Plan) is geen uitvoeringsplan
-            return await _db.UnitExecutionPlan.AnyAsync(p => p.Id == planId && p.UnitId == unitId && p.DeletedDate == null);
-        }
-        return planId != 0 && await _db.UnitExecutionPlan.AnyAsync(p => p.Id == planId && p.UnitId == null && p.ProjectId == projectId && p.DeletedDate == null);
+        if (planId <= 0) return false;
+        var plan = await _db.UnitExecutionPlan.AsNoTracking().FirstOrDefaultAsync(p => p.Id == planId && p.DeletedDate == null);
+        if (plan == null) return false;
+        // algemeen plan van het project: te kiezen voor elk punt van het project, ook voor een punt met een eenheid
+        if (plan.UnitId == null) return plan.ProjectId == projectId;
+        // plan van een eenheid: enkel voor punten van die eenheid
+        return plan.UnitId == unitId && await _db.Units.AnyAsync(u => u.Id == plan.UnitId && u.ProjectId == projectId);
     }
 
     private async Task<List<PuntPlanV2>> LoadPlans(int projectId)
@@ -333,45 +341,61 @@ public partial class ProjectsIssuesController
         var unitIds = units.Select(u => u.Id).ToList();
         var rows = await _db.UnitExecutionPlan.AsNoTracking()
             .Where(p => p.DeletedDate == null && ((p.UnitId != null && unitIds.Contains(p.UnitId.Value)) || (p.UnitId == null && p.ProjectId == projectId)))
-            .OrderBy(p => p.Name).ToListAsync();
+            .OrderBy(p => p.Name).ThenByDescending(p => p.Versie).ToListAsync();
+        // aantal punten per plan (eenheid + plan-id)
+        var perPlan = (await _db.ConstructionIssue.AsNoTracking().Where(i => i.ProjectId == projectId && i.PlanDocumentId != null)
+            .Select(i => new { i.PlanDocumentId }).ToListAsync())
+            .GroupBy(i => i.PlanDocumentId).ToDictionary(g => g.Key, g => g.Count());
         string? Proxy(string fileId) => Url.Action(nameof(PlanContent), "ProjectsIssues", new { projectId, fileId });
+        static string KindOf(string fileId) => Path.GetExtension(fileId ?? "").ToLowerInvariant() is ".png" or ".jpg" or ".jpeg" ? "image" : "pdf";
+        PuntPlanV2 Map(UnitExecutionPlan r, string key, string unitName, bool latest) => new()
+        {
+            Key = key, UnitId = r.UnitId, UnitName = unitName, PlanId = r.Id, Name = r.Name, Url = Proxy(r.FileId) ?? "",
+            Soort = r.Soort, Niveau = r.Niveau, Versie = r.Versie, Datum = r.CreatedDate.ToLocalTime().ToString("dd/MM/yyyy"),
+            Count = perPlan.GetValueOrDefault((int?)r.Id), Kind = KindOf(r.FileId), IsLatest = latest,
+        };
+        bool IsLatest(UnitExecutionPlan r) => rows.Where(x => x.UnitId == r.UnitId && string.Equals(x.Name, r.Name, StringComparison.OrdinalIgnoreCase)).Max(x => x.Versie) == r.Versie;
         var list = new List<PuntPlanV2>();
         foreach (var r in rows.Where(r => r.UnitId == null))
-            list.Add(new PuntPlanV2 { Key = "a:" + r.Id, UnitId = null, UnitName = "Algemeen", PlanId = r.Id, Name = r.Name, Url = Proxy(r.FileId) ?? "" });
+            list.Add(Map(r, "a:" + r.Id, "Algemeen", IsLatest(r)));
+        // Enkel uitvoeringsplannen (UnitExecutionPlan). Units.Plan is het verkoopplan en hoort hier niet bij.
         foreach (var u in units)
-        {
-            // Enkel uitvoeringsplannen (UnitExecutionPlan). Units.Plan is het verkoopplan en hoort hier niet bij.
             foreach (var r in rows.Where(r => r.UnitId == u.Id))
-                list.Add(new PuntPlanV2 { Key = $"u{u.Id}:{r.Id}", UnitId = u.Id, UnitName = u.Name, PlanId = r.Id, Name = r.Name, Url = Proxy(r.FileId) ?? "" });
-        }
+                list.Add(Map(r, $"u{u.Id}:{r.Id}", u.Name, IsLatest(r)));
         return list;
     }
 
     /// <summary>Alle plannen van het project (voor de plankiezer in het paneel).</summary>
     [HttpGet("PlansV2")]
-    public async Task<IActionResult> PlansV2(int projectId) => Json((await LoadPlans(projectId)).Select(p => new { p.Key, p.UnitId, p.UnitName, p.PlanId, p.Name, p.Url }));
+    public async Task<IActionResult> PlansV2(int projectId) => Json((await LoadPlans(projectId)).Select(p => new { p.Key, p.UnitId, p.UnitName, p.PlanId, p.Name, p.Url, p.Soort, p.Niveau, p.Versie, p.Datum, p.Count, p.Kind, p.IsLatest }));
 
     [HttpPost("UploadPlanV2")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> UploadPlanV2(int projectId, int? unitId, string? planName, IFormFile? planFile)
+    public async Task<IActionResult> UploadPlanV2(int projectId, int? unitId, string? planName, string? soort, string? niveau, IFormFile? planFile)
     {
-        if (planFile == null || planFile.Length == 0) return Json(new { ok = false, error = "Kies een PDF-bestand." });
-        if (!string.Equals(Path.GetExtension(planFile.FileName), ".pdf", StringComparison.OrdinalIgnoreCase)) return Json(new { ok = false, error = "Enkel PDF-bestanden zijn toegelaten." });
+        if (planFile == null || planFile.Length == 0) return Json(new { ok = false, error = "Kies een bestand (PDF, PNG of JPG)." });
+        var ext = Path.GetExtension(planFile.FileName).ToLowerInvariant();
+        if (ext is not (".pdf" or ".png" or ".jpg" or ".jpeg")) return Json(new { ok = false, error = "Enkel PDF, PNG of JPG zijn toegelaten." });
         if (unitId is > 0 && !await _db.Units.AnyAsync(u => u.Id == unitId && u.ProjectId == projectId)) return Json(new { ok = false, error = "Eenheid niet gevonden." });
         if (!await _db.Project.AnyAsync(p => p.ProjectId == projectId)) return Json(new { ok = false, error = "Project niet gevonden." });
 
         var fileId = await UploadAssetToStorageAsync(planFile, "plans");
         if (string.IsNullOrWhiteSpace(fileId)) return Json(new { ok = false, error = "Uploaden van het plan is mislukt." });
+        var naam = string.IsNullOrWhiteSpace(planName) ? Path.GetFileNameWithoutExtension(planFile.FileName) : planName.Trim();
+        // zelfde naam in dezelfde eenheid (of algemeen) = nieuwe versie
+        var scopeUnit = unitId is > 0 ? unitId : null;
+        var bestaand = await _db.UnitExecutionPlan.Where(p => p.DeletedDate == null && p.UnitId == scopeUnit && (scopeUnit != null || p.ProjectId == projectId) && p.Name.ToLower() == naam.ToLower()).Select(p => (int?)p.Versie).MaxAsync();
         var plan = new UnitExecutionPlan
         {
-            UnitId = unitId is > 0 ? unitId : null,
+            UnitId = scopeUnit,
             ProjectId = unitId is > 0 ? null : projectId,
-            Name = string.IsNullOrWhiteSpace(planName) ? Path.GetFileNameWithoutExtension(planFile.FileName) : planName.Trim(),
+            Name = naam, Soort = string.IsNullOrWhiteSpace(soort) ? null : soort.Trim(), Niveau = string.IsNullOrWhiteSpace(niveau) ? null : niveau.Trim(),
+            Versie = (bestaand ?? 0) + 1,
             FileId = fileId, CreatedDate = DateTime.UtcNow, CreatedByUserId = User.FindFirst(CpmClaims.UserId)?.Value
         };
         _db.UnitExecutionPlan.Add(plan);
         await _db.SaveChangesAsync();
-        return Json(new { ok = true, key = unitId is > 0 ? $"u{unitId}:{plan.Id}" : "a:" + plan.Id });
+        return Json(new { ok = true, key = unitId is > 0 ? $"u{unitId}:{plan.Id}" : "a:" + plan.Id, versie = plan.Versie });
     }
 
     /// <summary>Op plan (40b): plannen links, het plan met pins in statuskleur, detail van de gekozen pin rechts.</summary>
@@ -389,8 +413,9 @@ public partial class ProjectsIssuesController
         var vm = new PuntenPlanV2Vm { Index = idx, Plans = plans };
         foreach (var i in pins)
         {
-            var planKey = i.UnitId.HasValue ? $"u{i.UnitId}:{i.PlanDocumentId}" : "a:" + i.PlanDocumentId;
-            if (!plans.Any(p => p.Key == planKey) || !rowBy.TryGetValue(i.Id, out var row)) continue;
+            var planOfPin = plans.FirstOrDefault(p => p.PlanId == i.PlanDocumentId);
+            if (planOfPin == null || !rowBy.TryGetValue(i.Id, out var row)) continue;
+            var planKey = planOfPin.Key;
             var ph = photos.Where(m => m.IssueId == i.Id).Select(m => GetSignedAssetUrlByFileName(m.FileId, "pictures")).Where(u => u != null).ToList();
             vm.Pins.Add(new PuntPinV2
             {
@@ -406,6 +431,12 @@ public partial class ProjectsIssuesController
         vm.SelectedIssueId = issue;
         return View("PlanV2", vm);
     }
+
+    /// <summary>Foto van een punt verwijderen vanuit het bewerkpaneel (JSON, geen redirect).</summary>
+    [HttpPost("DeleteMediaV2/{id:int}/{mediaId:int}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteMediaV2(int projectId, int id, int mediaId)
+        => Json(new { ok = await _service.DeleteMedia(projectId, id, mediaId, User.FindFirst(CpmClaims.UserId)?.Value) });
 
     // ── Goedkeuren & doorsturen (40d) ───────────────────────────────────────────────────────────────
 

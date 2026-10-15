@@ -12,6 +12,8 @@ Namespace Budget
         Public Property BewoonbareOpp As Decimal
         Public Property OppGereduceerd As Decimal
         Public Property Grondopp As Decimal
+        ''' <summary>Tweede grondzone (bv. agrarisch) van de eenheid, met een lagere waarde dan de eerste.</summary>
+        Public Property GrondoppAgrarisch As Decimal
 
         ''' <summary>Aandeel (fractie) van deze eenheid in de bouwkost/bouwwaarde.</summary>
         Public Property AandeelBouw As Decimal
@@ -99,6 +101,8 @@ Namespace Budget
     ''' verdeeld over de eenheden.
     ''' </summary>
     Public Class BudgetVerkoopVoorstelBO
+        ''' <summary>Relatieve waarde van de tweede grondzone t.o.v. de eerste (fractie), zoals gebruikt voor de verdeling.</summary>
+        Public Property AgrarischGewicht As Decimal = 0.2D
         Public Property BudgetVersieId As Integer
 
         ''' <summary>Fractie, bv. 0.15.</summary>

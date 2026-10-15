@@ -56,7 +56,7 @@
         <div class="gl-v2-bw-scroll">
         @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwKaders.cshtml", ch)
             <div class="gl-v2-bw-tiles">
-                <div class="gl-v2-bw-tile"><span class="lbl">Bouwkost activiteiten</span><span class="val">@Eur0(Model.TotaalBouw)</span><span class="sub">gecorrigeerd</span></div>
+                <div class="gl-v2-bw-tile"><span class="lbl">Bouwkost activiteiten</span><span class="val">@Eur0(Model.TotaalBouw)</span><span class="sub">basis voor de %, excl. EPB, VC en ventilatie</span></div>
                 <div class="gl-v2-bw-tile"><span class="lbl">Aantal eenheden</span><span class="val">@Model.AantalEenheden</span></div>
                 <div class="gl-v2-bw-tile"><span class="lbl">Liften</span><span class="val">@Model.AantalLiften</span><span class="sub">uit stap 1 · Gegevens</span></div>
                 <div class="gl-v2-bw-tile"><span class="lbl">Totaal parameters</span><span class="val" id="bw-par-tot">—</span><span class="sub" id="bw-par-tot-pct"></span></div>
@@ -79,15 +79,14 @@
                     <span class="gl-v2-section-card-icon"><i class="ph ph-user-check" aria-hidden="true"></i></span>
                     <h2 class="gl-v2-section-card-title">Erelonen &amp; studies</h2>
                     <span class="gl-v2-field-divider"></span>
-                    <span class="gl-v2-section-card-desc">standaard uit Instellingen › Bouwkost %, hier per budget aan te passen</span>
+                    <span class="gl-v2-section-card-desc">standaard uit Instellingen › Bouwkost %, hier per budget aan te passen · EPB, veiligheidscoördinatie en ventilatieverslaggeving staan als activiteit onder Algemeen (stap 6)</span>
                 </div>
-                <div class="gl-v2-bw-grid gl-v2-bw-grid--4">
+                <div class="gl-v2-bw-grid gl-v2-bw-grid--5">
                     @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctProjectcoord", "Projectcoördinatie", p.ProjectcoordinatiePerc, "projectcoord"))
                     @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctArchitect", "Architect", p.ArchitectPerc, "architect", "leeg = standaard uit Instellingen"))
-                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctVeiligheid", "Veiligheidscoörd. + EPB", p.VeiligheidscoordEPBPerc, "veiligheid"))
                     @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctIngenieur", "Ingenieur", p.StudieIRPerc, "ingenieur", "leeg = standaard uit Instellingen"))
-                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", EurVeld("Params.VentVerslaggeverForfait", "Ventilatieverslaggever", p.VentVerslaggeverForfait, "forfait"))
-                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", EurVeld("Params.OpmetingSonderingForfait", "Opmeting + sondering", p.OpmetingSonderingForfait, "forfait"))
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctOpmeting", "Opmeting", p.OpmetingPerc, "opmeting", "leeg = standaard uit Instellingen"))
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctSondering", "Sondering", p.SonderingPerc, "sondering", "leeg = standaard uit Instellingen"))
                 </div>
             </section>
 
@@ -98,9 +97,9 @@
                     <span class="gl-v2-field-divider"></span>
                     <span class="gl-v2-section-card-desc">decennale en plaatsbeschrijving</span>
                 </div>
-                <div class="gl-v2-bw-grid gl-v2-bw-grid--4">
-                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", WarnVeld(PctVeld("pctDecennale", "Decennale gesloten ruwbouw", p.DecennaleGeslRuwbouwPerc, "decennale"), decennaleNul && !decennaleBevestigd ? "0 % — verplicht voor gesloten ruwbouw. Vul een percentage in of bevestig." : null))
-                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctABR", "ABR + plaatsbeschrijving", p.ABRPlaatsbeschrPerc, "abr"))
+                <div class="gl-v2-bw-grid gl-v2-bw-grid--5">
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", WarnVeld(PctVeld("pctDecennale", "Decennale gesloten ruwbouw", p.DecennaleGeslRuwbouwPerc, "decennale", "leeg = standaard uit Instellingen"), decennaleNul && !decennaleBevestigd ? "0 % — verplicht voor gesloten ruwbouw. Vul een percentage in of bevestig." : null))
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctABR", "ABR + plaatsbeschrijving", p.ABRPlaatsbeschrPerc, "abr", "leeg = standaard uit Instellingen"))
                 </div>
             </section>
 
@@ -111,11 +110,61 @@
                     <span class="gl-v2-field-divider"></span>
                     <span class="gl-v2-section-card-desc">vaste kosten infrastructuur en liften per stuk</span>
                 </div>
-                <div class="gl-v2-bw-grid gl-v2-bw-grid--4">
+                <div class="gl-v2-bw-grid gl-v2-bw-grid--5">
                     @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", EurVeld("Params.InfrastructuurForfait", "Infrastructuur", p.InfrastructuurForfait, "forfait"))
                     @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", EurVeld("Params.LiftPrijsPerStuk", "Lift per stuk", p.LiftPrijsPerStuk, null, "data-lift"))
-                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", EurVeld("Params.PubliciteitForfait", "Publiciteit", p.PubliciteitForfait, "forfait"))
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctPubliciteit", "Publiciteit", p.PubliciteitPerc, "publiciteit", "van de totale verkoopprijs · leeg = standaard"))
                 </div>
+            </section>
+
+            @{
+                var aankopen = ServiceCore.Budget.NotarisTarief.Aankopen(p.GrondAankopenJson, p.AankoopprijsGrond ?? 0m);
+                var aankoop = aankopen.Sum(x => x.P);
+                var regP = p.RegistratierechtenPerc ?? 0m;
+                var akteKost = p.AktekostenPerAkte ?? ServiceCore.Budget.NotarisTarief.AktekostenStandaard;
+                var btwF = 1m + ServiceCore.Budget.NotarisTarief.Btw;
+                var regBedrag = Math.Round(aankoop * regP, 2);
+                var notarisBedrag = aankopen.Sum(x => ServiceCore.Budget.NotarisTarief.EerelonInclBtw(x.P));
+                var akteTotaal = Math.Round(akteKost * aankopen.Count * btwF, 2);
+                var totaalGrond = aankoop + regBedrag + notarisBedrag + akteTotaal;
+                string E2(decimal v) => "€ " + v.ToString("N2", nl);
+                var startRijen = aankopen.Count > 0 ? aankopen : new List<ServiceCore.Budget.GrondAankoop> { new() { O = "", P = 0m } };
+            }
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-house-line" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Grondkost</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">aankoop van het perceel — telt mee in de totale kost en de grondwaarde in stap 8</span>
+                </div>
+                <div class="bw-grond" id="bw-par-grondkost" data-schaal='@Html.Raw(ServiceCore.Budget.NotarisTarief.SchaalJson())' data-eenheden="@Model.AantalEenheden">
+                    <div class="bw-grond-links">
+                        <div class="bw-aankopen-kop"><span class="lbl">Aankopen</span><span class="bw-aankopen-hint">één regel per akte — elke akte krijgt eigen notariskosten</span></div>
+                        <div class="bw-aank-hoofd"><span></span><span>Omschrijving</span><span>Datum akte</span><span>Aankoopprijs</span><span></span></div>
+                        <div id="bw-aankopen-rijen"></div>
+                        <div class="bw-aank-nieuw">
+                            <div class="gl-v2-field"><div class="gl-v2-field-box"><input type="text" id="bw-aankoop-nieuw" class="gl-v2-field-input" placeholder="Omschrijving nieuwe aankoop…" autocomplete="off"></div></div>
+                            <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="bw-aankoop-add"><i class="ph ph-plus" aria-hidden="true"></i>Toevoegen</button>
+                        </div>
+                        <div class="bw-grond-velden">
+                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctRegistratie", "Registratierechten", p.RegistratierechtenPerc, "registratie", "op de totale aankoopprijs"))
+                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", EurVeld("Params.AktekostenPerAkte", "Aktekosten per akte", akteKost, "excl. btw · × aantal akten", "data-akte"))
+                            @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", new BwNumVm { Name = "notaris_berekend", Id = "bw-notaris", Label = "Notaris — ereloon", Value = notarisBedrag, Unit = "€", Decimals = 2, Attrs = "readonly tabindex=\"-1\"", Help = "berekend · wettelijke schaal + 21 % btw" })
+                        </div>
+                    </div>
+                    <aside class="bw-grond-calc" aria-label="Berekening grondkost">
+                        <div class="lbl">Berekening</div>
+                        <dl>
+                            <div><dt>Aankoopprijs grond<small id="gp-aankoop-sub">@aankopen.Count @(aankopen.Count == 1 ? "aankoop" : "aankopen")</small></dt><dd id="gp-aankoop">@E2(aankoop)</dd></div>
+                            <div><dt>Registratierechten<small id="gp-reg-sub">@((regP * 100m).ToString("0.##", nl)) % × @E2(aankoop)</small></dt><dd id="gp-reg">@E2(regBedrag)</dd></div>
+                            <div><dt>Notaris — ereloon<small>schaal + 21 % btw</small></dt><dd id="gp-notaris">@E2(notarisBedrag)</dd></div>
+                            <div><dt>Notaris — aktekosten<small id="gp-akte-sub">@aankopen.Count @(aankopen.Count == 1 ? "akte" : "akten") × € @akteKost.ToString("N0", nl) + 21 % btw</small></dt><dd id="gp-akte">@E2(akteTotaal)</dd></div>
+                        </dl>
+                        <div class="bw-grond-totaal" id="bw-grond-tile"><span class="lbl">Totale grondkost</span><span class="val" id="bw-grond-tot">@E2(totaalGrond)</span><span class="sub" id="bw-grond-sub">@(Model.AantalEenheden > 0 ? "€ " + (totaalGrond / Model.AantalEenheden).ToString("N0", nl) + " per eenheid · " + Model.AantalEenheden + " eenheden" : "aankoop + registratierechten + notaris")</span></div>
+                    </aside>
+                </div>
+                <input type="hidden" name="Params.AankoopprijsGrond" id="bw-grond-totaal-in" data-grond value="@aankoop.ToString("0.00", inv)" />
+                <input type="hidden" name="Params.GrondAankopenJson" id="bw-aankopen-json" value="@(string.IsNullOrWhiteSpace(p.GrondAankopenJson) ? "" : p.GrondAankopenJson)" />
             </section>
 
             <section class="gl-v2-section-card">
@@ -125,12 +174,11 @@
                     <span class="gl-v2-field-divider"></span>
                     <span class="gl-v2-section-card-desc">Wet Breyne en straight loan</span>
                 </div>
-                <div class="gl-v2-bw-grid gl-v2-bw-grid--4">
+                <div class="gl-v2-bw-grid gl-v2-bw-grid--5">
                     <div class="bw-par-dual">@await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", new BwNumVm { Name = "pctWetBreyne", Label = "Wet Breyne", Value = p.WetBreynePerc * 100m, Unit = "%", Decimals = 2 }) @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", new BwNumVm { Name = "Params.WetBreyneMaanden", Label = "Looptijd", Value = p.WetBreyneMaanden, Unit = "mnd", Decimals = 0 })</div>
                     <div class="bw-par-dual">@await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", new BwNumVm { Name = "pctSlGebouw", Label = "Straight loan gebouw", Value = p.StraightloanGebouwPerc * 100m, Unit = "%", Decimals = 2 }) @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", new BwNumVm { Name = "Params.StraightloanGebouwMaanden", Label = "Looptijd", Value = p.StraightloanGebouwMaanden, Unit = "mnd", Decimals = 0 })</div>
                     <div class="bw-par-dual">@await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", new BwNumVm { Name = "pctSlGrond", Label = "Straight loan grond", Value = p.StraightloanGrondPerc * 100m, Unit = "%", Decimals = 2 }) @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", new BwNumVm { Name = "Params.StraightloanGrondMaanden", Label = "Looptijd", Value = p.StraightloanGrondMaanden, Unit = "mnd", Decimals = 0 })</div>
                     @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctOnvoorzien", "Onvoorzien", p.OnvoorzienPerc, "onvoorzien"))
-                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", EurVeld("Params.AankoopprijsGrond", "Aankoopprijs grond", p.AankoopprijsGrond, (p.AankoopprijsGrond ?? 0m) == 0m ? "leeg — grondwaarde wordt 0 in stap 8" : null, "data-grond"))
                 </div>
             </section>
 
@@ -141,9 +189,28 @@
                     <span class="gl-v2-field-divider"></span>
                     <span class="gl-v2-section-card-desc">bouwwaarde = bouwkost × (1 + doelmarge), grondwaarde = grondkost × (1 + grondmarge) · leeg = standaard</span>
                 </div>
+                <div class="gl-v2-bw-grid gl-v2-bw-grid--5">
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctDoelmarge", "Doelmarge op bouwkost", p.DoelMargePerc, "doelmarge", "netto, na verkoopkosten"))
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctGrondmarge", "Marge op grondkost", p.GrondMargePerc, "grondmarge", "netto, na verkoopkosten"))
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", new BwNumVm { Name = "pctAgrarisch", Label = "Waarde 2e grondzone", Value = (p.GrondAgrarischPerc ?? 0.20m) * 100m, Unit = "%", Decimals = 2, Help = "t.o.v. de eerste zone, enkel voor de verdeling van de grondkost over de loten (bv. agrarisch)" })
+                </div>
+            </section>
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-tag" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Verkoopkosten</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">afgetrokken van de verkoopwaarde in stap 9 · Resultaat</span>
+                </div>
                 <div class="gl-v2-bw-grid gl-v2-bw-grid--4">
-                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctDoelmarge", "Doelmarge op bouwkost", p.DoelMargePerc, "doelmarge"))
-                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctGrondmarge", "Marge op grondkost", p.GrondMargePerc, "grondmarge"))
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", PctVeld("pctMakelaar", "Makelaarscommissie", p.MakelaarsCommissiePerc, "makelaar", "op de verkoopprijs per eenheid"))
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", new BwNumVm { Name = "btw_commissie", Id = "bw-btw-commissie", Label = "Btw op commissie", Value = ServiceCore.Budget.VerkoopResultaat.BtwCommissie * 100m, Unit = "%", Decimals = 2, Attrs = "readonly tabindex=\"-1\"", Help = "vast tarief" })
+                    @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", EurVeld("Params.OverigeVerkoopkosten", "Overige verkoopkosten", p.OverigeVerkoopkosten ?? 0m, "bv. EPC, keuring, forfait per project"))
+                    <div class="bw-par-nota">
+                        <strong>Btw op de commissie</strong>
+                        <p>Op het <b>grondaandeel</b> is de btw niet aftrekbaar — die telt mee als kost. Op het <b>bouwaandeel</b> is ze aftrekbaar — enkel de commissie excl. btw telt mee. De verdeling grond/bouw komt uit stap 8.</p>
+                    </div>
                 </div>
             </section>
         </div>
@@ -176,19 +243,91 @@
     var nf0 = new Intl.NumberFormat('nl-BE', { maximumFractionDigits: 0 });
     function num(el) { if (!el) return 0; var v = String(el.value || '').replace(/\s/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'); var n = parseFloat(v); return isNaN(n) ? 0 : n; }
     function help(inp) { var f = inp.closest('.gl-v2-field'); var h = f.querySelector('.gl-v2-field-help'); if (!h) { h = document.createElement('span'); h.className = 'gl-v2-field-help'; f.appendChild(h); } return h; }
+    var grondkost = document.getElementById('bw-par-grondkost'), aankJson = document.getElementById('bw-aankopen-json'), aankRijen = document.getElementById('bw-aankopen-rijen'), totIn = document.getElementById('bw-grond-totaal-in');
+    var nf2 = new Intl.NumberFormat('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    function eur(v) { return '€ ' + nf2.format(v); }
+    var aank = []; try { aank = JSON.parse(aankJson.value || '[]') || []; } catch (e) { aank = []; }
+    if (!aank.length) { var t0 = num(totIn); aank = [{ o: t0 > 0 ? 'Aankoop 1' : '', d: '', p: t0 }]; }
+    function ereloon(schaal, prijs) {   // zelfde regels als NotarisTarief.cs: schaal J, opeenvolgende reeksen, + btw
+        if (prijs <= 0) return 0;
+        var basis = Math.round(prijs), tot = schaal.vast - (basis <= schaal.redTot ? schaal.red : 0), vorige = 0, grens = 0;
+        for (var i = 0; i < schaal.s.length; i++) {
+            var r = schaal.s[i]; grens = r[0] === null ? Infinity : grens + r[0];
+            if (basis <= vorige) break;
+            tot += (Math.min(basis, grens) - vorige) * r[1]; vorige = grens;
+        }
+        return Math.round(tot * (1 + schaal.btw) * 100) / 100;
+    }
+    function grondLive() {
+        if (!grondkost) return;
+        var schaal = JSON.parse(grondkost.getAttribute('data-schaal')), n = parseInt(grondkost.getAttribute('data-eenheden'), 10) || 0;
+        var regPct = num(form.querySelector('[name="pctRegistratie"]')), akte = num(form.querySelector('[data-akte]'));
+        var delen = aank.filter(function (x) { return x.p > 0; });
+        var a = delen.reduce(function (s, x) { return s + x.p; }, 0);
+        var regB = Math.round(a * regPct / 100 * 100) / 100, notaris = delen.reduce(function (s, x) { return s + ereloon(schaal, x.p); }, 0);
+        var aktes = Math.round(akte * delen.length * (1 + schaal.btw) * 100) / 100, totaal = a + regB + notaris + aktes;
+        function zet(id, t) { document.getElementById(id).textContent = t; }
+        document.getElementById('bw-notaris').value = nf2.format(notaris);
+        zet('gp-aankoop', eur(a)); zet('gp-aankoop-sub', delen.length + (delen.length === 1 ? ' aankoop' : ' aankopen'));
+        zet('gp-reg', eur(regB)); zet('gp-reg-sub', regPct.toLocaleString('nl-BE', { maximumFractionDigits: 2 }) + ' % × ' + eur(a));
+        zet('gp-notaris', eur(notaris));
+        zet('gp-akte', eur(aktes)); zet('gp-akte-sub', delen.length + (delen.length === 1 ? ' akte' : ' akten') + ' × € ' + nf0.format(akte) + ' + 21 % btw');
+        zet('bw-grond-tot', eur(totaal));
+        zet('bw-grond-sub', n > 0 ? '€ ' + nf0.format(totaal / n) + ' per eenheid · ' + n + ' eenheden' : 'aankoop + registratierechten + notaris');
+    }
+    function aankSchrijf(vanRij) {   // delen -> verborgen JSON + verborgen totaal (de rest van de pagina en de server blijven op AankoopprijsGrond rekenen)
+        var delen = aank.filter(function (x) { return x.p > 0 || (x.o || '').trim(); });
+        aankJson.value = delen.length ? JSON.stringify(delen.map(function (x) { return { o: x.o || '', d: x.d || '', p: x.p || 0 }; })) : '';
+        totIn.value = String(Math.round(aank.reduce(function (s, x) { return s + (x.p || 0); }, 0) * 100) / 100);
+        if (vanRij) form.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    function aankTeken(focusIdx) {
+        aankRijen.innerHTML = '';
+        aank.forEach(function (x, i) {
+            var rij = document.createElement('div'); rij.className = 'bw-aank-rij';
+            rij.innerHTML = '<span class="bw-aank-nr"></span>' +
+                '<div class="gl-v2-field"><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" placeholder="Omschrijving, bv. perceel A" autocomplete="off"></div></div>' +
+                '<div class="gl-v2-field"><div class="gl-v2-field-box"><input type="date" class="gl-v2-field-input" aria-label="Datum akte"></div></div>' +
+                '<div class="gl-v2-field"><div class="gl-v2-field-box"><input type="text" inputmode="decimal" class="gl-v2-field-input is-num is-tabular Currencymask" placeholder="0,00" autocomplete="off"><span class="gl-v2-field-unit">€</span></div></div>' +
+                '<span class="bw-aank-acties"><button type="button" class="bw-aank-ico bw-aank-kopie" aria-label="Aankoop dupliceren" title="Dupliceren"><i class="ph ph-copy" aria-hidden="true"></i></button>' +
+                '<button type="button" class="bw-aank-ico is-del bw-aank-del" aria-label="Aankoop verwijderen" title="Verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button></span>';
+            rij.querySelector('.bw-aank-nr').textContent = i + 1;
+            var inp = rij.querySelectorAll('input'); inp[0].value = x.o || ''; inp[1].value = x.d || ''; inp[2].value = x.p ? String(x.p) : '';
+            if (window.CurrencyMask) window.CurrencyMask.init(inp[2]);
+            inp[0].addEventListener('input', function (e) { e.stopPropagation(); x.o = inp[0].value; aankSchrijf(true); });
+            inp[1].addEventListener('input', function (e) { e.stopPropagation(); x.d = inp[1].value; aankSchrijf(true); });
+            inp[2].addEventListener('input', function (e) { e.stopPropagation(); x.p = num(inp[2]); aankSchrijf(true); });
+            rij.querySelector('.bw-aank-kopie').addEventListener('click', function () { aank.splice(i + 1, 0, { o: x.o, d: x.d, p: x.p }); aankTeken(i + 1); aankSchrijf(true); });
+            rij.querySelector('.bw-aank-del').addEventListener('click', function () { if (aank.length > 1) aank.splice(i, 1); else aank[0] = { o: '', d: '', p: 0 }; aankTeken(); aankSchrijf(true); });
+            aankRijen.appendChild(rij);
+        });
+        if (focusIdx != null) { var r = aankRijen.children[focusIdx]; if (r) r.querySelectorAll('input')[2].focus(); }
+    }
+    function aankToevoegen() {
+        var veld = document.getElementById('bw-aankoop-nieuw'), naam = veld.value.trim();
+        if (aank.length === 1 && !aank[0].p && !(aank[0].o || '').trim()) aank.pop();   // de lege startrij vervangen
+        aank.push({ o: naam || ('Aankoop ' + (aank.length + 1)), d: '', p: 0 }); veld.value = '';
+        aankTeken(aank.length - 1); aankSchrijf(true);
+    }
+    document.getElementById('bw-aankoop-add').addEventListener('click', aankToevoegen);
+    document.getElementById('bw-aankoop-nieuw').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); aankToevoegen(); } });
+    aankTeken();
     function live() {
+        grondLive();
         var tot = 0;
         form.querySelectorAll('[data-pct]').forEach(function (inp) {
             var key = inp.getAttribute('data-pct'), pct = num(inp), h = help(inp);
-            if (key === 'grondmarge') { var g = num(form.querySelector('[data-grond]')); h.innerHTML = '<span class="bw-par-prev">= ' + '€ ' + nf0.format(g * pct / 100) + '</span> op aankoopprijs grond'; return; }
-            if (key === 'doelmarge') { h.innerHTML = '<span class="bw-par-prev">= € ' + nf0.format(bouw * pct / 100) + '</span> op de bouwkost'; return; }
+            if (key === 'grondmarge') { var g = num(form.querySelector('[data-grond]')); h.innerHTML = '<span class="bw-par-prev">= ' + '€ ' + nf0.format(g * pct / 100) + '</span> op aankoopprijs grond · netto, na verkoopkosten'; return; }
+            if (key === 'registratie' || key === 'makelaar') return;   // geen kosten op de bouwkost
+            if (key === 'publiciteit') { h.innerHTML = '<span class="bw-par-prev">op de totale verkoopprijs</span>' + (pct <= 0 ? ' · leeg = standaard uit Instellingen' : ''); return; }
+            if (key === 'doelmarge') { h.innerHTML = '<span class="bw-par-prev">= € ' + nf0.format(bouw * pct / 100) + '</span> op de bouwkost · netto, na verkoopkosten'; return; }
             var bedrag = bouw * pct / 100; tot += bedrag;
             var warn = key === 'decennale' && pct <= 0 && document.getElementById('bw-par-decennale').getAttribute('data-bevestigd') !== 'true';
             if (key === 'decennale') { inp.closest('.gl-v2-field').classList.toggle('is-warning', warn); if (warn) { h.textContent = '0 % — verplicht voor gesloten ruwbouw. Vul een percentage in of bevestig.'; return; } }
-            h.innerHTML = '<span class="bw-par-prev">' + '= € ' + nf0.format(bedrag) + '</span>' + ((key === 'architect' || key === 'ingenieur') && pct <= 0 ? ' · leeg = standaard uit Instellingen' : '');
+            h.innerHTML = '<span class="bw-par-prev">' + '= € ' + nf0.format(bedrag) + '</span>' + ((key === 'architect' || key === 'ingenieur' || key === 'opmeting' || key === 'sondering' || key === 'abr') && pct <= 0 ? ' · leeg = standaard uit Instellingen' : '');
         });
         var lift = form.querySelector('[data-lift]'); if (lift) { var lb = num(lift) * liften; tot += lb; help(lift).innerHTML = '× ' + liften + ' liften = <span class="bw-par-prev">€ ' + nf0.format(lb) + '</span>'; }
-        ['Params.VentVerslaggeverForfait', 'Params.OpmetingSonderingForfait', 'Params.InfrastructuurForfait', 'Params.PubliciteitForfait'].forEach(function (n) { tot += num(form.querySelector('[name="' + n + '"]')); });
+        ['Params.InfrastructuurForfait'].forEach(function (n) { tot += num(form.querySelector('[name="' + n + '"]')); });
         document.getElementById('bw-par-tot').textContent = '€ ' + nf0.format(tot);
         document.getElementById('bw-par-tot-pct').textContent = bouw > 0 ? (tot / bouw * 100).toLocaleString('nl-BE', { maximumFractionDigits: 1 }) + ' % op bouwkost' : '';
         var dec = num(form.querySelector('[name="pctDecennale"]')), w = document.getElementById('bw-par-decennale'), ok = document.getElementById('bw-par-decennale-ok');

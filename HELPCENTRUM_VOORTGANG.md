@@ -271,3 +271,52 @@ het nieuwe punt 43 (`CRM Paginatypes.dc.html`, 11 vaste paginatypes — Help-art
 - Niet gedekt: "Te koop" (`DetailSales`), `Klanten/AddClientAccount`/`Projecten/AddContract` tonen
   enkel hun eerste kaart (leeg formulier, geen bestaande data nodig) — de rest van die lange
   formulieren (Eigenaars, Facturatie, Eenheden, Voorwaarden, Loten) heeft nog geen screenshot.
+
+## 13/10/2026 — volledige help voor de budgetflow geschreven
+- 14 artikels in topic `budget` (tree): Overzicht (+ Nieuw budget/versie, Afronden & definitief maken), Een budget opmaken met de
+  budgetwizard (+ Stap 1 tot 9 in volgorde via `treeOrder`, + Waarschuwingen en fouten). Alle volgens `HELP_SCHRIJFGIDS.md`.
+- Geschreven vanuit project 71 (concept-budget) in de draaiende app; screenshots (anoniem: straat en gemeente vervangen) in
+  `wwwroot/img/help/budget/<slug>/`. Bron voor de meldingen: DESIGN.md "Budgetflow punt 39k".
+- Bewust NIET beschreven: PDF afdrukken en Excel exporteren bij stap 9 (Niels werkt dat nog af). Alleen vermeld als "in opbouw".
+- Help-koppeling: `ViewData["HelpScreenId"]` = `budget-index` (BudgetIndex) en `budget-stap-1` t/m `budget-stap-9` (`PrepareWizardV2`);
+  de artikels verwijzen ernaar via `screens:`. Controllerwijziging, herstart nodig voor het "?"-paneel.
+- Nog in te vullen als `[VRAAG: ...]` in de artikels (zichtbaar in de help tot beantwoord): actief budget, peildatum/S-index/I-index,
+  aan te bouwen buren, afkortingen in stap 2, berlinerwanden/secanspalen/onderschoeiingen, wat Overnemen doet (stap 1) en Referentie
+  overnemen (stap 6), referentieprojecten beheren, prijscodes (teken P, algemene codes), Voorstel/Markt overnemen en Doorzetten naar units
+  (stap 8), Versies vergelijken, Niet-definitief maken (welke status), budget verwijderen, decennale/Breyne/straight loan.
+- Bekend, niet opgelost: op de pagina Budgetten wordt de versiekaart rechts afgeknipt (rij-actie "Open versie" deels buiten de kaart).
+
+## 13/10/2026 (vervolg) — antwoorden budget verwerkt
+- Verwerkt: actief budget = gebruikt voor de nacalculatie; peildatum/S-index (lonen)/I-index (materialen); Overnemen (stap 1) = standaardprijs terug;
+  Referentie overnemen (stap 6) = bedrag van de geselecteerde referentieprojecten; Voorstel/Markt overnemen (stap 8); Niet-definitief maken = terug
+  naar Afgerond; aan te bouwen buren, berlinerwanden/secanspalen/onderschoeiingen, decennale (Wet Peeters), Wet Breyne, straight loan.
+- Doorzetten naar units nagekeken in de code (`VerkoopVoorstelService.DoorzettenNaarUnitsAsync`): schrijft grondwaarde (incl. tweede zone) en
+  bouwwaarde van de aan een eenheid gekoppelde verkooplijnen naar de Units; verkochte units blijven ongemoeid; fout als geen enkele lijn gekoppeld is.
+  Het zet NIET de vraagprijzen op de eenheden.
+- Open: Niels zegt dat een niet-actief budget verwijderd kan worden, maar er is geen verwijderactie of knop (controller en views) gevonden.
+  Artikel `budget-overzicht` heeft hierover nog een `[VRAAG]`.
+- Fix: versiekaart op de pagina Budgetten werd afgeknipt (kaarten stonden vanaf 1200px twee naast elkaar, de tabel heeft ~640px nodig).
+  `BudgetIndexV2.cshtml`: `repeat(auto-fill, minmax(min(100%, 660px), 1fr))` + `overflow-x:auto` op de tabelwrap. Gebouwd (0 fouten), nog niet in de
+  browser bekeken (app stond uit): herstart nodig.
+- "Versies vergelijken" (BudgetVergelijken) heeft nog de oude (niet-gl-v2) vormgeving.
+
+## 14/10/2026 — Budgetten: Nieuw budget (39l), Vergelijken (39m) en Vergelijkingspagina (39n)
+- Nieuw artikel `budget/budgetten-vergelijken.md` (parent `budget-overzicht`, treeOrder 3, `screens: budget-vergelijken`); `budget-nieuw.md` herschreven voor de nieuwe modal
+  (startpunt, overnemen per stap, eenheden, index, meteen actief) en `budget-overzicht.md` bijgewerkt (kolommen Datum en Marge, "stap x van 9" in Totaal, kaart Definitief budget,
+  Vergelijken, lege kaart). `budget-stap-resultaat.md` verwijst nu naar de nieuwe vergelijking.
+- Help-koppeling: `ViewData["HelpScreenId"] = "budget-vergelijken"` op `BudgetVersiesVergelijken`.
+- Geen nieuwe schermafbeeldingen: de pagina's zijn gebouwd en visueel getest met statische voorbeelddata, niet in de draaiende app. De oude schermafbeeldingen van de modal Nieuw budget
+  (`budget-nieuw/1-nieuw-budget.png`) en van het overzicht (`budget-overzicht/1-overzicht.png`) zijn niet meer in de artikels opgenomen omdat ze het oude scherm tonen. Nieuwe opnames maken
+  met het Playwright-recept in DESIGN.md zodra de pagina's in de app getest zijn.
+- Geen [VRAAG] bij dit artikel; de marge-definitie (resultaat / kostprijs) volgt de keuze van Niels van 14/10/2026.
+
+## 14/10/2026 — Budget-PDF opmaken (44d–f)
+- `budget/budget-stap-resultaat.md`: nieuwe sectie "Een PDF maken" (PDF intern/bank, opmaakpagina, nieuw tabblad, Download PDF, niet bewaard in Documenten), extra FAQ, oude "nog in opbouw"-zin vervangen. Geen schermafbeeldingen (niet in de draaiende app getest).
+- 14/10/2026 (later): budget-stap-resultaat.md en budget-nieuw.md bijgewerkt (PDF bewaard in Documenten › Budgetten, verwijderen met rood bevestigingsvenster). Migratie 099 vóór gebruik.
+
+## 15/10/2026 — helpartikels en publicatie
+- Gevonden: een `dotnet publish` nam de foto's (`wwwroot/img/help`) wel mee, maar NIET de teksten (`CPMCore/HelpContent/**/*.md`): `.md` is geen Content.
+  Opgelost met `<None Update="HelpContent\**\*.md" CopyToPublishDirectory="PreserveNewest" />` in `CPMCore.csproj` (gecontroleerd: 46 van 46 bestanden in de publish-map).
+- Handmatig kopiëren (zonder publish) = de mappen `CPMCore/HelpContent` én `CPMCore/wwwroot/img/help` naar de server, plus de nieuwe build voor de code.
+- Op de server worden de artikels maar één keer geladen (geheugen). Na het plaatsen de app herstarten (of recyclen) om wijzigingen te zien.
+- Nog uit te voeren op de live DB: `DALCore/Migrations/HelpFeedback.sql` (feedback "Was dit nuttig?" en supportvragen).

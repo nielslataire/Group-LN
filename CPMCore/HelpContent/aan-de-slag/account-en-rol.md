@@ -14,7 +14,7 @@ intro: |
   Hier lees je wat je zelf kunt aanpassen.
 faq:
   - q: Ik zie een onderdeel niet dat mijn collega wel ziet. Waarom?
-    a: Jullie hebben een verschillende rol. Vraag aan iemand met toegang tot **Instellingen** om je rol aan te passen.
+    a: Jullie hebben een verschillende rol. Vraag aan iemand met toegang tot Instellingen om je rol aan te passen.
 ---
 ## Je rol nakijken of laten wijzigen
 

@@ -18,6 +18,7 @@ namespace ServiceCore.Budget
         private const int ActivityIdSecanpalen        = 178;
         private const int ActivityIdFunderingen       = 183;
         private const int ActivityIdGrondwerken       = 173;
+        private const int ActivityIdAfbraak           = 172;   // lot 0 "Algemeen"
         private const int ActivityIdOnderschoeiingen  = 179;
         private const int ActivityIdPlatdak              = 197;
         private const int ActivityIdGroendak             = 202;
@@ -56,7 +57,7 @@ namespace ServiceCore.Budget
 
         private static readonly Dictionary<int, string> StrookBron = new()
         {
-            [ActivityIdGrondwerken] = "stap 1 · Gegevens", [ActivityIdBuitenschrijnwerk] = "stap 4 · Gevels · Ramen", [ActivityIdLeien] = "stap 4 · Gevels",
+            [ActivityIdGrondwerken] = "stap 1 · Gegevens", [ActivityIdAfbraak] = "stap 5 · Dak & afbraak", [ActivityIdBuitenschrijnwerk] = "stap 4 · Gevels · Ramen", [ActivityIdLeien] = "stap 4 · Gevels",
             [ActivityIdKelderRuwbouw] = "stap 2 · Oppervlaktes", [ActivityIdDakBedekking] = "stap 5 · Dak & afbraak", [ActivityIdGevelsluitingCombi] = "stap 4 · Gevels"
         };
 
@@ -113,11 +114,13 @@ namespace ServiceCore.Budget
         /// per woon-/comm. eenheid, met de per-activiteit correctie-% (0 telt als 1).
         /// Enkel lijnen met een bedrag tellen mee.
         /// </summary>
-        public async Task<decimal> GetTotaalGecorrigeerdeBouwAsync(int budgetVersieId)
+        /// <param name="alsPercentageBasis">true = zonder EPB, veiligheidscoordinatie en ventilatieverslaggeving: de basis waarop de percentages van Parameters rekenen.</param>
+        public async Task<decimal> GetTotaalGecorrigeerdeBouwAsync(int budgetVersieId, bool alsPercentageBasis = false)
         {
             var groepen = await GetLotGroepenAsync(budgetVersieId);
             return groepen
                 .SelectMany(g => g.Lijnen)
+                .Where(l => !alsPercentageBasis || !BudgetAlgemeneActiviteit.BuitenPercentageBasis.Contains(l.ActivityId))
                 .Where(l => l.TotaalAlternatief > 0m)
                 .Sum(l => l.TotaalAlternatief * (l.Correctiefactor <= 0m ? 1m : l.Correctiefactor));
         }
@@ -238,6 +241,7 @@ namespace ServiceCore.Budget
             // Gevels netto: ramen (per soort) worden automatisch afgetrokken, nooit onder 0
             decimal GevelSom(string t) => gevelRijen.Where(g => g.ElementType == t).Sum(g => GevelM2(g));
             var totaalGevels  = Math.Max(0m, GevelSom("GevelNieuwbouw") - GevelSom("RaamNieuwbouw")) + Math.Max(0m, GevelSom("GevelBestaand") - GevelSom("RaamBestaand"));
+            var totaalAfbraak = gevelRijen.Where(g => g.ElementType == "Afbraak").Sum(g => GevelM2(g));
             var totaalPlatDak = gevelRijen
                 .Where(g => g.ElementType == "PlatDak")
                 .Sum(g => GevelM2(g));
@@ -381,6 +385,7 @@ namespace ServiceCore.Budget
                             ActivityIdSecanpalen       => (secanPrijsGeind,        lmSecan,        "lm",  "Secanpalen"),
                             ActivityIdFunderingen      => (funderPrijsGeind,       m2Funder,       "m²",  "Funderingen"),
                             ActivityIdGrondwerken      => (grondwerkPrijsGeind,    m3Grondwerk,    "m³",  "Grondwerken"),
+                            ActivityIdAfbraak          => (MatGeind(FormulaSleutels.AlgemeenAfbraak), totaalAfbraak, "m²", "Afbraak"),
                             ActivityIdOnderschoeiingen => (onderschPrijsGeind,     m3Onderschoei,  "m³",  "Onderschoeiingen"),
                             ActivityIdPlatdak          => (platdakPrijsGeind,      totaalPlatDak,  "m²",  "Platdak"),
                             ActivityIdGroendak         => (groendakPrijsGeind,     totaalGroenDak, "m²",  "Groendak"),
@@ -525,6 +530,13 @@ namespace ServiceCore.Budget
                                     $"<td style='padding-left:8px;text-align:right'>= {F(enkel.hoev)} m³</td></tr>";
                             }
                         }
+
+                        // Een automatisch berekende activiteit (formule, ruwbouw, dak, gevelsluiting, enkelvoudig voorstel) zonder hoeveelheid krijgt géén voorstel.
+                        // De opgeslagen prijs (bv. uit een gekopieerd budget waar het dak wel ingevuld was) mag dan niet blijven staan: terug naar 0, tenzij handmatig overschreven.
+                        bool isAutoActiviteit = formuleEvaluaties.ContainsKey(activity.ActivityId) || isRuwbouw || isDaktimmerwerk || isDakBedekking
+                                                || activity.ActivityId == ActivityIdGevelsluitingCombi || !string.IsNullOrEmpty(enkel.label);
+                        if (isAutoActiviteit && heeftBestaandeLijn && !bo.IsManueel && !(bo.VoorgesteldePrijsPerEenheid.HasValue && bo.VoorgesteldePrijsPerEenheid.Value > 0))
+                            bo.AlternatievePrijsPerEenheid = 0m;
 
                         if (!viaFormule) BouwStrookUitVoorstel(bo, activity.ActivityId);
                         groep.Lijnen.Add(bo);

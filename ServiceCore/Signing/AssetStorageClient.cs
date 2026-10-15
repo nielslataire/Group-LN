@@ -29,7 +29,8 @@ public sealed class AssetStorageClient : IAssetStorageClient
         _baseUrl = configuration["StorageApi:BaseUrl"]?.TrimEnd('/');
         _readKey = configuration["StorageApi:ReadApiKey"];
         _writeKey = configuration["StorageApi:WriteApiKey"];
-        if (_http.Timeout == TimeSpan.FromSeconds(100)) _http.Timeout = TimeSpan.FromSeconds(60);
+        // 180 s: een foto-origineel van 50 MB wordt op de server tot alle varianten verwerkt
+        if (_http.Timeout == TimeSpan.FromSeconds(100)) _http.Timeout = TimeSpan.FromSeconds(180);
     }
 
     public bool IsConfigured => !string.IsNullOrWhiteSpace(_baseUrl) && !string.IsNullOrWhiteSpace(_readKey);
@@ -68,6 +69,68 @@ public sealed class AssetStorageClient : IAssetStorageClient
         {
             _logger.LogWarning(ex, "Storage API upload naar map {Folder} faalde.", folder);
             return null;
+        }
+    }
+
+    public async Task<PhotoUploadResult> UploadPhotoAsync(Stream content, string originalFileName, string? contentType, string baseName, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(_baseUrl) || string.IsNullOrWhiteSpace(_writeKey))
+            return new PhotoUploadResult(false, null, 0, 0, "De opslag (Storage API) is niet geconfigureerd.");
+        try
+        {
+            using var form = new MultipartFormDataContent();
+            form.Add(new StringContent(baseName), "name");
+            var file = new StreamContent(content);
+            if (!string.IsNullOrWhiteSpace(contentType))
+                file.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+            form.Add(file, "file", originalFileName);
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/api/assets/photo") { Content = form };
+            request.Headers.Add("X-Api-Key", _writeKey);
+            using var response = await _http.SendAsync(request, ct);
+            var payload = await response.Content.ReadAsStringAsync(ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                string? error = null;
+                try
+                {
+                    using var err = JsonDocument.Parse(payload);
+                    if (err.RootElement.TryGetProperty("error", out var e)) error = e.GetString();
+                }
+                catch (JsonException) { /* geen JSON: algemene melding */ }
+                _logger.LogWarning("Storage API foto-upload faalde: {Status} {Error}.", (int)response.StatusCode, error);
+                return new PhotoUploadResult(false, null, 0, 0, error ?? $"De opslag weigerde de foto (status {(int)response.StatusCode}).");
+            }
+            using var json = JsonDocument.Parse(payload);
+            var root = json.RootElement;
+            return new PhotoUploadResult(true,
+                root.TryGetProperty("fileName", out var n) ? n.GetString() : null,
+                root.TryGetProperty("width", out var w) ? w.GetInt32() : 0,
+                root.TryGetProperty("height", out var h) ? h.GetInt32() : 0,
+                null);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Storage API foto-upload faalde.");
+            return new PhotoUploadResult(false, null, 0, 0, "De foto kon niet naar de opslag verstuurd worden.");
+        }
+    }
+
+    public async Task<bool> DeletePhotoAsync(string fileName, CancellationToken ct = default)
+    {
+        var safeFileName = Path.GetFileName(fileName ?? string.Empty);
+        if (string.IsNullOrWhiteSpace(safeFileName) || string.IsNullOrWhiteSpace(_baseUrl) || string.IsNullOrWhiteSpace(_writeKey)) return false;
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Delete, $"{_baseUrl}/api/assets/photo/{Uri.EscapeDataString(safeFileName)}");
+            request.Headers.Add("X-Api-Key", _writeKey);
+            using var response = await _http.SendAsync(request, ct);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Storage API foto-delete van {File} faalde (best-effort).", safeFileName);
+            return false;
         }
     }
 

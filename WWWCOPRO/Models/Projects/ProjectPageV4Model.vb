@@ -24,6 +24,8 @@ Public Class ProjectPageV4Model
         Buy = New V4BuyBlock
         Faq = New V4FaqBlock
         Contact = New V4ContactBlock
+        Comfort = New V4ComfortBlock
+        Documents = New V4DocumentsBlock
     End Sub
 
     ' ── Identiteit / SEO ──
@@ -34,6 +36,8 @@ Public Class ProjectPageV4Model
     Public Property Gemeente As String
     Public Property Provincie As String
     Public Property Street As String
+    ' Straatnaam zonder huisnummer (label rechtsboven op de foto)
+    Public Property StreetName As String
     Public Property Postcode As String
     Public Property Lat As Double
     Public Property Lng As Double
@@ -56,7 +60,7 @@ Public Class ProjectPageV4Model
 
     ' Volgorde van de sorteerbare blokken (sleutels: story, architecture, homes, location, buildphase, buy, faq).
     ' De intro staat altijd bovenaan, het contactformulier altijd onderaan.
-    Public Property BlockOrder As New List(Of String) From {"story", "architecture", "homes", "location", "buildphase", "buy", "faq"}
+    Public Property BlockOrder As New List(Of String) From {"story", "architecture", "comfort", "homes", "documents", "location", "buildphase", "buy", "faq"}
 
     ' ── Blokken ──
     Public Property Intro As V4IntroBlock
@@ -68,6 +72,8 @@ Public Class ProjectPageV4Model
     Public Property Buy As V4BuyBlock
     Public Property Faq As V4FaqBlock
     Public Property Contact As V4ContactBlock
+    Public Property Comfort As V4ComfortBlock
+    Public Property Documents As V4DocumentsBlock
 
     ' Mobiele CTA-balk (< 1000px)
     Public Property ShowMobileBar As Boolean = True
@@ -75,6 +81,8 @@ Public Class ProjectPageV4Model
     Public Property PhoneHref As String = "+3292164950"
 
     ' Endpoints voor de formulieren. Leeg = formulier toont enkel de bevestiging (geen verzending).
+    ' Brochure-document van het project (ProjectDoc.IsBrochure): de aanvraag loopt via Projects/SendBrochure (zelfde mail als op de gewone pagina)
+    Public Property BrochureDocId As Integer
     Public Property ContactPostUrl As String
     Public Property BrochurePostUrl As String
     Public Property UpdatesPostUrl As String
@@ -89,7 +97,7 @@ Public Class ProjectPageV4Model
     ' "Vanaf"-prijs voor hero, balk en JSON-LD: de hoofdprijs (eerste afwerking) per beschikbaar lot.
     Public ReadOnly Property MinPrice As Decimal?
         Get
-            Dim prices = AvailableLots.Select(Function(l) l.FromPrice.Value).ToList()
+            Dim prices = AvailableLots.Where(Function(l) l.HasPrice).Select(Function(l) l.FromPrice.Value).ToList()
             If prices.Count = 0 Then Return Nothing
             Return prices.Min()
         End Get
@@ -136,6 +144,7 @@ Public Class ProjectPageV4Model
     ' Titel van het contactblok volgens de logica uit de handoff (client-side wordt die live bijgewerkt).
     Public ReadOnly Property ContactTitleDefault As String
         Get
+            If Not String.IsNullOrWhiteSpace(Contact.CustomTitle) Then Return Contact.CustomTitle
             Dim av = AvailableLots
             If av.Count = 1 Then Return av(0).Name & " kan de jouwe zijn."
             Return Contact.TitleMany
@@ -154,7 +163,41 @@ End Class
 
 ' ───────────────────────── bouwstenen ─────────────────────────
 
+' Een projectfoto uit de opslag (Storage API). HasVariants = WebP-varianten op breedte bestaan (nieuwe upload); anders enkel de
+' oude map "pictures". Width/Height = afmetingen van het origineel (voor width/height-attributen, geen layout-verspringing).
+Public Class V4Pic
+    Public Shared ReadOnly Widths As Integer() = {320, 640, 960, 1280, 1920, 2560}
+    Public Property Base As String
+    Public Property Name As String
+    Public Property Width As Integer
+    Public Property Height As Integer
+    Public Property HasVariants As Boolean
+
+    Public Function LegacyUrl() As String
+        Return Base & "pictures/" & Name
+    End Function
+
+    Public Function VariantUrl(w As Integer) As String
+        Return Base & "pictures/w" & w & "/" & Name
+    End Function
+
+    ' Breedtes die bestaan: nooit groter dan het origineel (onbekend: tot 1280)
+    Public Function AvailableWidths() As List(Of Integer)
+        If Not HasVariants Then Return New List(Of Integer)
+        Dim limit As Integer = If(Width > 0, Width, 1280)
+        Return Widths.Where(Function(w) w <= limit).ToList()
+    End Function
+
+    ' Grootste beschikbare variant tot maxWidth (bv. voor og:image); anders de oude map
+    Public Function BestUrl(maxWidth As Integer) As String
+        Dim ok = AvailableWidths().Where(Function(w) w <= maxWidth).ToList()
+        If ok.Count = 0 Then Return LegacyUrl()
+        Return VariantUrl(ok.Max())
+    End Function
+End Class
+
 Public Class V4Media
+    Public Property Pic As V4Pic
     Public Property Key As String
     Public Property Label As String
     Public Property ImageUrl As String
@@ -172,12 +215,14 @@ Public Class V4Fact
 End Class
 
 Public Class V4Figure
+    Public Property Pic As V4Pic
     Public Property ImageUrl As String
     Public Property Alt As String
     Public Property Text As String
 End Class
 
 Public Class V4Material
+    Public Property Pic As V4Pic
     Public Property Title As String
     Public Property Text As String
     Public Property ImageUrl As String
@@ -218,6 +263,9 @@ Public Class V4Milestone
 End Class
 
 Public Class V4Doc
+    Public Property Id As Integer
+    ' De projectbrochure: opent het brochureformulier (zelfde mail met bijlage) i.p.v. het algemene documentformulier
+    Public Property IsBrochure As Boolean
     Public Property Title As String
     Public Property Meta As String
     Public Property Url As String
@@ -248,7 +296,8 @@ Public Class V4Lot
     Public Property Status As String
     Public Property Description As String
     Public Property RenderUrl As String
-    Public Property FloorPlanUrl As String
+    ' Heeft een grondplan: de download loopt via hetzelfde formulier/modal als op de gewone projectpagina (Projects/SendPlan)
+    Public Property HasPlan As Boolean
     ' Perceelcontour in % van de luchtfoto: "x,y x,y x,y"
     Public Property Polygon As String
     Public Property LabelX As Double
@@ -259,7 +308,14 @@ Public Class V4Lot
 
     Public ReadOnly Property IsAvailable As Boolean
         Get
-            Return Status = "Beschikbaar" AndAlso Finishes.Count > 0
+            Return Status = "Beschikbaar"
+        End Get
+    End Property
+
+    ' Prijs bekend en zichtbaar (anders "op aanvraag")
+    Public ReadOnly Property HasPrice As Boolean
+        Get
+            Return Finishes.Count > 0
         End Get
     End Property
 
@@ -319,8 +375,9 @@ Public Class V4StoryBlock
     Public Property Figures As List(Of V4Figure)
     Public Property ShowBrochureCta As Boolean = True
     Public Property BrochureEyebrow As String = "Brochure"
-    Public Property BrochureTitle As String = "Alle plannen, materialen en prijzen in één document."
-    Public Property BrochureButton As String = "Stuur mij de brochure"
+    Public Property BrochureTitle As String = "De brochure met alle materialen, afwerkingen en de volledige beschrijving."
+    Public Property BrochureText As String = "We sturen ze meteen naar je mailbox."
+    Public Property BrochureButton As String = "Vraag de brochure aan"
     Public Property BrochureSuccess As String = "✓ De brochure is onderweg naar je mailbox."
 End Class
 
@@ -355,8 +412,9 @@ Public Class V4HomesBlock
         MediaKey = "homes"
         ShowMap = True
         ShowPriceList = True
-        ShowCalculator = True
-        ShowDocuments = True
+        ' Maandlastcalculator ("Wat betaal je per maand?" + "≈ … / maand" in de prijslijst) is voorlopig verborgen; op True zetten om ze terug te tonen
+        ShowCalculator = False
+        ShowDocuments = False ' vervangen door het eigen blok "Documenten" (V4DocumentsBlock)
         Documents = New List(Of V4Doc)
     End Sub
     Public Property Visible As Boolean
@@ -366,8 +424,11 @@ Public Class V4HomesBlock
     ' Luchtfoto onder de interactieve projectkaart
     Public Property AerialImageUrl As String
     Public Property AerialAlt As String
+    Public Property AerialPic As V4Pic
     Public Property ShowMap As Boolean
     Public Property ShowPriceList As Boolean
+    ' Prijzen tonen (verkoop zichtbaar); anders toont de lijst enkel beschikbaarheid en "op aanvraag"
+    Public Property ShowPrices As Boolean = True
     Public Property PriceListNote As String
     Public Property PriceListUpdated As String
     Public Property ShowCalculator As Boolean
@@ -461,6 +522,8 @@ Public Class V4ContactBlock
     Public Property Visible As Boolean
     Public Property MediaKey As String
     Public Property TitleMany As String = "Welke woning wordt de jouwe?"
+    ' Eigen titel uit CPMCore: vast, de titel past zich dan niet meer aan de gekozen woningen aan
+    Public Property CustomTitle As String
     Public Property Intro As String = "Je ontvangt de brochure, plannen en prijslijst binnen één werkdag. Je contactpersoon belt je enkel als je dat wil."
     Public Property ConsentText As String = "Ik ga akkoord dat Group LN mijn gegevens gebruikt om mij over dit project te contacteren."
     Public Property SubmitLabel As String = "Verstuur aanvraag"
@@ -508,6 +571,82 @@ End Module
 
 ' Kleine HTML-helpers voor de view (afbeelding met placeholder, URL-resolutie).
 Public Module V4Html
+    Private ReadOnly AllowedTags As New HashSet(Of String)(New String() {"p", "br", "strong", "b", "em", "i", "u", "ul", "ol", "li", "a"}, StringComparer.OrdinalIgnoreCase)
+
+    ' Opgemaakte tekst uit CPMCore (bv. FAQ-antwoorden) veilig tonen: enkel eenvoudige opmaak en links, nooit scripts of attributen.
+    ' CPMCore schoont ze al bij het opslaan; dit is een tweede slot voor het geval er toch iets anders in de database staat.
+    ' Platte tekst uit CPMCore: een witregel start een nieuwe alinea, een gewone nieuwe regel wordt een regeleinde.
+    Public Function Paragraphs(text As String, cssClass As String) As IHtmlString
+        If String.IsNullOrWhiteSpace(text) Then Return New HtmlString("")
+        Dim sb As New System.Text.StringBuilder()
+        Dim parts = System.Text.RegularExpressions.Regex.Split(text.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf).Trim(), "\n[ \t]*\n+")
+        For Each part In parts
+            If String.IsNullOrWhiteSpace(part) Then Continue For
+            sb.Append("<p class=""").Append(System.Web.HttpUtility.HtmlAttributeEncode(cssClass)).Append(""">")
+            sb.Append(System.Web.HttpUtility.HtmlEncode(part.Trim()).Replace(vbLf, "<br />"))
+            sb.Append("</p>")
+        Next
+        Return New HtmlString(sb.ToString())
+    End Function
+
+    ' Woorden met een koppelteken ("Sint-Martens-Latem", "half-open") blijven op één regel: elk zo'n woord krijgt white-space: nowrap.
+    Public Function NoBreakHyphens(text As String) As IHtmlString
+        If String.IsNullOrEmpty(text) Then Return New HtmlString("")
+        Dim encoded As String = System.Web.HttpUtility.HtmlEncode(text)
+        Return New HtmlString(System.Text.RegularExpressions.Regex.Replace(encoded, "[^\s-]+(?:-[^\s-]+)+", "<span class=""pdv4-nowrap"">$0</span>"))
+    End Function
+
+    ' Plaatsnaam met hoofdletter per woord en de rest kleine letters ("ERPE-MERE" / "erpe-mere" -> "Erpe-Mere")
+    Public Function ProperName(text As String) As String
+        If String.IsNullOrWhiteSpace(text) Then Return text
+        Dim chars = text.Trim().ToLower(New System.Globalization.CultureInfo("nl-BE")).ToCharArray()
+        Dim startOfWord As Boolean = True
+        For i = 0 To chars.Length - 1
+            If startOfWord AndAlso Char.IsLetter(chars(i)) Then chars(i) = Char.ToUpper(chars(i), New System.Globalization.CultureInfo("nl-BE"))
+            startOfWord = (chars(i) = " "c OrElse chars(i) = "-"c)
+        Next
+        Return New String(chars)
+    End Function
+
+    ' Klinkt de projectnaam als een straatnaam ("Keerstraat", "Dorpslaan")? Dan "aan de Keerstraat", anders "bij Residentie X".
+    Public Function IsStreetName(name As String) As Boolean
+        If String.IsNullOrWhiteSpace(name) Then Return False
+        Return System.Text.RegularExpressions.Regex.IsMatch(name.Trim(), "(straat|laan|weg|plein|dreef|steenweg|lei|kaai|dijk|baan|pad|hof|markt|gracht|park|ring)$", System.Text.RegularExpressions.RegexOptions.IgnoreCase) AndAlso Not name.Trim().Contains(" ")
+    End Function
+
+    Public Function SafeHtml(html As String) As IHtmlString
+        If String.IsNullOrWhiteSpace(html) Then Return New HtmlString("")
+        Dim t = System.Text.RegularExpressions.Regex.Replace(html, "<(script|style|iframe|object|embed)\b[^>]*>.*?</\1\s*>", "", System.Text.RegularExpressions.RegexOptions.Singleline Or System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+        t = System.Text.RegularExpressions.Regex.Replace(t, "<!--.*?-->", "", System.Text.RegularExpressions.RegexOptions.Singleline)
+        t = System.Text.RegularExpressions.Regex.Replace(t, "<(/?)([a-zA-Z][a-zA-Z0-9]*)\b([^>]*)>",
+            Function(m As System.Text.RegularExpressions.Match) As String
+                Dim tag = m.Groups(2).Value.ToLowerInvariant()
+                If Not AllowedTags.Contains(tag) Then Return ""
+                If m.Groups(1).Value = "/" Then Return "</" & tag & ">"
+                If tag = "a" Then
+                    Dim h = System.Text.RegularExpressions.Regex.Match(m.Groups(3).Value, "href\s*=\s*(?:""([^""]*)""|'([^']*)')", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+                    Dim url As String = If(h.Success, If(h.Groups(1).Success, h.Groups(1).Value, h.Groups(2).Value), "")
+                    url = HttpUtility.HtmlDecode(url).Trim()
+                    If url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) OrElse
+                       url.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase) OrElse url.StartsWith("tel:", StringComparison.OrdinalIgnoreCase) OrElse
+                       (url.StartsWith("/") AndAlso Not url.StartsWith("//")) Then
+                        Return "<a href=""" & HttpUtility.HtmlAttributeEncode(url) & """ target=""_blank"" rel=""noopener noreferrer"">"
+                    End If
+                    Return "<a>"
+                End If
+                Return "<" & tag & ">"
+            End Function)
+        Return New HtmlString(t)
+    End Function
+
+    ' Platte tekst van opgemaakte tekst (voor de FAQPage-JSON-LD)
+    Public Function PlainText(html As String) As String
+        If String.IsNullOrWhiteSpace(html) Then Return ""
+        Dim t = System.Text.RegularExpressions.Regex.Replace(html, "</(p|li)>|<br\s*/?>", " ", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+        t = HttpUtility.HtmlDecode(System.Text.RegularExpressions.Regex.Replace(t, "<[^>]+>", ""))
+        Return System.Text.RegularExpressions.Regex.Replace(t, "\s+", " ").Trim()
+    End Function
+
     ' "~/..." -> app-relatieve URL; absolute URL's blijven ongewijzigd.
     Public Function ResolveUrl(url As String) As String
         If String.IsNullOrWhiteSpace(url) Then Return ""
@@ -516,8 +655,13 @@ Public Module V4Html
     End Function
 
     ' <img> als er een URL is, anders een neutrale plaatshouder (zodat de layout nooit breekt).
-    Public Function Img(url As String, alt As String, Optional lazy As Boolean = True) As IHtmlString
-        If String.IsNullOrWhiteSpace(url) Then
+    ' Met een V4Pic die varianten heeft: srcset op breedte (w) + sizes, en width/height van het origineel zodat de browser de ruimte
+    ' reserveert. priority = de belangrijkste foto (hero): niet lazy, fetchpriority="high".
+    Public Function Img(url As String, alt As String, Optional lazy As Boolean = True, Optional pic As V4Pic = Nothing,
+                        Optional sizes As String = Nothing, Optional priority As Boolean = False) As IHtmlString
+        Dim widths As List(Of Integer) = If(pic IsNot Nothing, pic.AvailableWidths(), New List(Of Integer))
+        Dim hasSrc As Boolean = Not String.IsNullOrWhiteSpace(url) OrElse widths.Count > 0
+        If Not hasSrc Then
             Dim ph As New TagBuilder("div")
             ph.AddCssClass("pdv4-ph")
             ph.Attributes("role") = "img"
@@ -525,10 +669,59 @@ Public Module V4Html
             Return New HtmlString(ph.ToString(TagRenderMode.Normal))
         End If
         Dim t As New TagBuilder("img")
-        t.Attributes("src") = ResolveUrl(url)
+        If widths.Count > 0 Then
+            ' standaard-src: 960 breed (of de grootste kleinere), srcset laat de browser kiezen (ook voor retina)
+            Dim def = widths.Where(Function(w) w <= 960).DefaultIfEmpty(widths.Min()).Max()
+            t.Attributes("src") = pic.VariantUrl(def)
+            t.Attributes("srcset") = String.Join(", ", widths.Select(Function(w) pic.VariantUrl(w) & " " & w & "w"))
+            t.Attributes("sizes") = If(sizes, "100vw")
+        Else
+            t.Attributes("src") = ResolveUrl(url)
+        End If
         t.Attributes("alt") = If(alt, "")
-        If lazy Then t.Attributes("loading") = "lazy"
+        If pic IsNot Nothing AndAlso pic.Width > 0 AndAlso pic.Height > 0 Then
+            t.Attributes("width") = pic.Width.ToString()
+            t.Attributes("height") = pic.Height.ToString()
+        End If
+        If priority Then
+            t.Attributes("fetchpriority") = "high"
+        ElseIf lazy Then
+            t.Attributes("loading") = "lazy"
+        End If
         t.Attributes("decoding") = "async"
         Return New HtmlString(t.ToString(TagRenderMode.SelfClosing))
     End Function
 End Module
+
+' Blok "Comfort en energie": titel, subtitel en puntjes; onderaan het blokje "Alle technische details" wanneer er een projectbrochure is.
+Public Class V4ComfortBlock
+    Public Sub New()
+        Visible = True
+        MediaKey = "comfort"
+        Items = New List(Of V4TitleText)
+    End Sub
+    Public Property Visible As Boolean
+    Public Property MediaKey As String
+    Public Property Title As String
+    Public Property Subtitle As String
+    Public Property Items As List(Of V4TitleText)
+    ' Projectbrochure (het lastenboek is dezelfde brochure): 0 = geen brochure, blokje "Alle technische details" niet tonen
+    Public Property SpecDocId As Integer
+    Public Property SpecDocName As String
+    Public Property SpecCtaTitle As String = "Alle technische details"
+    Public Property SpecCtaText As String = "De projectbrochure beschrijft materialen, technieken en afwerking per woning."
+    Public Property SpecCtaLabel As String = "Projectbrochure"
+End Class
+
+' Blok "Documenten": alle verkoopdocumenten van het project die niet aan een klant/eenheid hangen.
+Public Class V4DocumentsBlock
+    Public Sub New()
+        Visible = True
+        MediaKey = "documents"
+        Docs = New List(Of V4Doc)
+    End Sub
+    Public Property Visible As Boolean
+    Public Property MediaKey As String
+    Public Property Title As String = "Documenten"
+    Public Property Docs As List(Of V4Doc)
+End Class

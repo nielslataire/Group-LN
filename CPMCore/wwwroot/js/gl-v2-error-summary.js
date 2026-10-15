@@ -34,6 +34,9 @@
             if (!val) return true;
             var digits = val.replace(/\D/g, "");
             if (!digits) return false;
+            // Nationale voorloopnul telt niet mee (zie BOCore.GlV2PhonePrefixes.IsValid).
+            var prefixCode = field.querySelector('[data-role="phone-prefix"]');
+            if (digits.length > 1 && digits.charAt(0) === "0" && (!prefixCode || prefixCode.value !== "+39")) digits = digits.substring(1);
             var prefixEl = field.querySelector('[data-role="phone-prefix"]');
             var rule = PHONE_DIGIT_RULES[prefixEl ? prefixEl.value : "+32"] || [6, 15];
             return digits.length >= rule[0] && digits.length <= rule[1];

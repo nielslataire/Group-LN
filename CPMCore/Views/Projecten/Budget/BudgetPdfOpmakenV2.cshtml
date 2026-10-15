@@ -1,0 +1,36 @@
+@model CPMCore.Models.Budget.BudgetPdfOpmakenModel
+@using CPMCore.Models.GlV2
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@*
+    gl-v2 — Budget-PDF opmaken (design-handoff 44d intern, 44e bank, 44f klaar): een volle pagina, geen overlay, zoals het werfverslag (44a–c).
+    De pagina vraagt de PDF zelf op (DownloadBudgetPdfV2), toont de hoofdstukken, opent de PDF in een nieuw tabblad en blijft staan met Download PDF en Terug naar stap 9.
+    De stijl komt uit gl-v2-projecten-verslagen.css (.gl-v2-vsprep); de stappen zijn tijdgestuurd, want de server geeft geen voortgang door.
+*@
+@{
+    ViewData["Title"] = Model.Intern ? "Intern budget opmaken" : "Budget voor de bank opmaken";
+    ViewData["PageIcon"] = "ph ph-file-pdf";
+    var terug = Url.Action("BudgetResultaat", "Projecten", new { versieId = Model.BudgetVersieId });
+    ViewData["BackUrl"] = terug;
+    var menu = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · budgetten", Mode = GlV2ProjectMenuMode.Outer };
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-verslagen.css" asp-append-version="true" />
+}
+@section ProjectMenu
+{
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menu)
+}
+@{ var menuPhone = new GlV2ProjectMenuVm { ProjectId = menu.ProjectId, ProjectName = menu.ProjectName, ProjectSubtitle = menu.ProjectSubtitle, Mode = GlV2ProjectMenuMode.Phone }; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhone)
+
+<section id="bw-pdf-prep" class="gl-v2-vsprep" role="status" aria-live="polite"
+         data-url="@Url.Action("BudgetPdfMaken", "Projecten", new { versieId = Model.BudgetVersieId, intern = Model.Intern })"
+         data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken"
+         data-intern="@(Model.Intern ? "1" : "0")" data-terug="@terug"></section>
+
+@section PageScripts
+{
+<script src="~/js/gl-v2-budget-pdf.js" asp-append-version="true"></script>
+}

@@ -31,6 +31,7 @@ namespace ServiceCore.Translators
             bo.FileSizeBytes   = _entity.FileSizeBytes;
             bo.WidthPx         = _entity.WidthPx;
             bo.HeightPx        = _entity.HeightPx;
+            bo.HasVariants     = _entity.HasVariants;
             bo.DurationSeconds = _entity.DurationSeconds;
             bo.AltText         = _entity.AltText;
             bo.Subtitle        = _entity.Subtitle;
@@ -59,6 +60,7 @@ namespace ServiceCore.Translators
             _entity.FileSizeBytes  = bo.FileSizeBytes;
             _entity.WidthPx        = bo.WidthPx;
             _entity.HeightPx       = bo.HeightPx;
+            if (bo.HasVariants) _entity.HasVariants = true; // nooit terugzetten via een BO dat de vlag niet kent
             _entity.DurationSeconds = bo.DurationSeconds;
             _entity.AltText        = bo.AltText;
             _entity.Subtitle       = bo.Subtitle;

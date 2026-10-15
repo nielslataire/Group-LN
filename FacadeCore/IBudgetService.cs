@@ -21,6 +21,10 @@ namespace FacadeCore
         /// <summary>Kopieert de volledige inhoud van een versie (gegevens, oppervlaktes, sanitair, gevels, activiteitenlijnen,
         /// parameters, verkooplijnen) naar een al bestaande, lege doelversie.</summary>
         Response KopieerVersieInhoud(int bronVersieId, int doelVersieId);
+        /// <summary>Kopieert enkel de gekozen stappen (zie <c>BudgetWizardService.KopieStappen</c>); de rest begint leeg.</summary>
+        Response KopieerVersieInhoud(int bronVersieId, int doelVersieId, System.Collections.Generic.ISet<string> stappen);
+        /// <summary>Vult een leeg budget met de eenheden van het project (naam, type, oppervlakte, grond).</summary>
+        Response SeedOppervlaktesUitProject(int versieId, int projectId);
 
         // Versiestatus Concept → Afgerond → Definitief (design-handoff 39a/39j, migratie 078)
         /// <summary>Afronden: status "Afgerond" (blijft bewerkbaar). Faalt op een definitieve versie.</summary>

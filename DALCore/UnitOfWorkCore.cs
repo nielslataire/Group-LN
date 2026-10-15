@@ -91,6 +91,12 @@ namespace DALCore
         public GenericRepository<ProjectWebsiteStoryItem> ProjectWebsiteStoryItems { get; }
         public GenericRepository<ProjectWebsiteQuote>  ProjectWebsiteQuotes  { get; }
         public GenericRepository<ProjectWebsiteDetail> ProjectWebsiteDetails { get; }
+        public GenericRepository<ProjectWebsiteComfortItem> ProjectWebsiteComfortItems { get; }
+        public GenericRepository<ProjectWebsiteFaq> ProjectWebsiteFaqs { get; }
+        public GenericRepository<ProjectWebsiteBuyStep> ProjectWebsiteBuySteps { get; }
+        public GenericRepository<ProjectWebsiteGuideItem> ProjectWebsiteGuideItems { get; }
+        public GenericRepository<ProjectWebsitePoi> ProjectWebsitePois { get; }
+        public GenericRepository<ProjectWebsiteTravel> ProjectWebsiteTravels { get; }
         public GenericRepository<ProjectRegieUur>      ProjectRegieUren      { get; }
         public GenericRepository<IssuerCompanyUserRate> IssuerCompanyUserRates { get; }
         public GenericRepository<ProjectMediaSection> ProjectMediaSections { get; }
@@ -219,6 +225,12 @@ namespace DALCore
             ProjectWebsiteStoryItems = new GenericRepository<ProjectWebsiteStoryItem>(_context);
             ProjectWebsiteQuotes   = new GenericRepository<ProjectWebsiteQuote>(_context);
             ProjectWebsiteDetails  = new GenericRepository<ProjectWebsiteDetail>(_context);
+            ProjectWebsiteComfortItems = new GenericRepository<ProjectWebsiteComfortItem>(_context);
+            ProjectWebsiteFaqs = new GenericRepository<ProjectWebsiteFaq>(_context);
+            ProjectWebsiteBuySteps = new GenericRepository<ProjectWebsiteBuyStep>(_context);
+            ProjectWebsiteGuideItems = new GenericRepository<ProjectWebsiteGuideItem>(_context);
+            ProjectWebsitePois = new GenericRepository<ProjectWebsitePoi>(_context);
+            ProjectWebsiteTravels = new GenericRepository<ProjectWebsiteTravel>(_context);
             ProjectRegieUren       = new GenericRepository<ProjectRegieUur>(_context);
             IssuerCompanyUserRates = new GenericRepository<IssuerCompanyUserRate>(_context);
             ProjectMediaSections   = new GenericRepository<ProjectMediaSection>(_context);

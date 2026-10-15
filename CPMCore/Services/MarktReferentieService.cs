@@ -87,7 +87,7 @@ public class MarktReferentieService : IMarktReferentieService
         var ruw = await unitQuery
             .Select(a => new
             {
-                a.Id, a.PropertyType, a.LivingArea, a.SaleStatus, a.LifecycleStatus, a.IsActive,
+                a.Id, a.PropertyType, a.LivingArea, a.LandArea, a.SaleStatus, a.LifecycleStatus, a.IsActive,
                 a.FirstSeenAt, a.FirstSoldAt, a.LifecycleStatusUpdatedAt, a.StatusChangedAt, a.ParentMarketAssetId
             })
             .ToListAsync();
@@ -123,6 +123,7 @@ public class MarktReferentieService : IMarktReferentieService
             {
                 PropertyType      = r.PropertyType == PropertyType.Apartment ? "Appartement" : "Woning",
                 LivingArea        = r.LivingArea,
+                LandArea          = r.LandArea,
                 Prijs             = prijs,
                 PrijsPerM2        = ppm2,
                 IsVerkocht        = verkocht,
@@ -157,6 +158,7 @@ public class MarktReferentieService : IMarktReferentieService
                 TypeName  = u.Type != null ? u.Type.Name : null,
                 GroupName = u.Type != null && u.Type.Group != null ? u.Type.Group.Name : null,
                 u.Surface,
+                u.GroundSurface,
                 u.LandValueSold,
                 u.LandValue,
                 u.ConstructionValueSold,
@@ -180,6 +182,7 @@ public class MarktReferentieService : IMarktReferentieService
             {
                 PropertyType   = type,
                 LivingArea     = r.Surface,
+                LandArea       = r.GroundSurface > 0 ? r.GroundSurface : null,
                 Prijs          = prijs,
                 PrijsPerM2     = Math.Round(prijs / r.Surface.Value, 0),
                 IsVerkocht     = true,

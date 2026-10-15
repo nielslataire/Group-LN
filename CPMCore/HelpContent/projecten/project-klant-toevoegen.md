@@ -16,7 +16,7 @@ faq:
   - q: Wanneer kies ik "Per eigenaar volgens aandeel" bij facturatie?
     a: Als elke eigenaar zijn eigen deel van elke factuur moet krijgen, in plaats van één factuur voor het hele account.
   - q: Kan ik een factuur naar een ander adres dan het eigen adres sturen?
-    a: Ja. Vink **Afwijkend facturatieadres** aan en vul het adres in, bijvoorbeeld het huidige huuradres van de koper.
+    a: Ja. Vink Afwijkend facturatieadres aan en vul het adres in, bijvoorbeeld het huidige huuradres van de koper.
   - q: Kan ik pas na het opslaan een specifieke eigenaar als facturatieadres kiezen?
     a: Ja. Elke mede-eigenaar krijgt pas een eigen record na de eerste keer opslaan.
 ---

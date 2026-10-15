@@ -42,6 +42,30 @@ public partial class ProjectWebsite
 
     public string ArchText { get; set; }
 
+    // Blok Comfort en energie
+    public string ComfortTitle { get; set; }
+
+    public string ComfortSubtitle { get; set; }
+
+    // Blok Zo verloopt de aankoop
+    public string BuyTitle { get; set; }
+
+    // Contactformulier
+    public string ContactTitle { get; set; }
+
+    public string ContactText { get; set; }
+
+    // Blok Ligging
+    public string LocationTitle { get; set; }
+
+    public string LocationText { get; set; }
+
+    public string LocationMunicipality { get; set; }
+
+    public decimal? LocationLat { get; set; }
+
+    public decimal? LocationLng { get; set; }
+
     public DateTime UpdatedOn { get; set; }
 
     public virtual Project Project { get; set; }
@@ -113,6 +137,76 @@ public partial class ProjectWebsiteDetail
     public string ImageName { get; set; }
     public string Title { get; set; }
     public string Text { get; set; }
+    public int SortOrder { get; set; }
+    public virtual Project Project { get; set; }
+}
+
+// Puntje (titel + tekst) in het blok Comfort en energie.
+public partial class ProjectWebsiteComfortItem
+{
+    public int Id { get; set; }
+    public int ProjectId { get; set; }
+    public string Title { get; set; }
+    public string Text { get; set; }
+    public int SortOrder { get; set; }
+    public virtual Project Project { get; set; }
+}
+
+// Vraag + antwoord (opgeschoonde HTML) in het blok Vragen.
+public partial class ProjectWebsiteFaq
+{
+    public int Id { get; set; }
+    public int ProjectId { get; set; }
+    public string Question { get; set; }
+    public string Answer { get; set; }
+    public int SortOrder { get; set; }
+    public virtual Project Project { get; set; }
+}
+
+// Stap (titel + een zin) in het blok "Zo verloopt de aankoop".
+public partial class ProjectWebsiteBuyStep
+{
+    public int Id { get; set; }
+    public int ProjectId { get; set; }
+    public string Title { get; set; }
+    public string Text { get; set; }
+    public int SortOrder { get; set; }
+    public virtual Project Project { get; set; }
+}
+
+// Puntje (titel + tekst) in het blok Ligging, bv. "Dorpsleven".
+public partial class ProjectWebsiteGuideItem
+{
+    public int Id { get; set; }
+    public int ProjectId { get; set; }
+    public string Title { get; set; }
+    public string Text { get; set; }
+    public int SortOrder { get; set; }
+    public virtual Project Project { get; set; }
+}
+
+// Voorziening in de buurt (badge op de kaart): categorie school/shop/ov/groen/sport.
+public partial class ProjectWebsitePoi
+{
+    public int Id { get; set; }
+    public int ProjectId { get; set; }
+    public string Category { get; set; }
+    public string Name { get; set; }
+    public decimal Lat { get; set; }
+    public decimal Lng { get; set; }
+    public string Distance { get; set; }
+    public string TimeText { get; set; }
+    public int SortOrder { get; set; }
+    public virtual Project Project { get; set; }
+}
+
+// Belangrijke plaats met reistijd, bv. "Aalst" - "12 min".
+public partial class ProjectWebsiteTravel
+{
+    public int Id { get; set; }
+    public int ProjectId { get; set; }
+    public string Place { get; set; }
+    public string Duration { get; set; }
     public int SortOrder { get; set; }
     public virtual Project Project { get; set; }
 }

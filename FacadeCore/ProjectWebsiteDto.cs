@@ -48,6 +48,45 @@ namespace FacadeCore
 
         public string ArchText { get; set; }
 
+        // Blok Comfort en energie
+        public string ComfortTitle { get; set; }
+
+        public string ComfortSubtitle { get; set; }
+
+        public List<ProjectWebsiteComfortItemDto> ComfortItems { get; set; } = new List<ProjectWebsiteComfortItemDto>();
+
+        // Blok Vragen (FAQ)
+        public List<ProjectWebsiteFaqItemDto> FaqItems { get; set; } = new List<ProjectWebsiteFaqItemDto>();
+
+        // Blok Zo verloopt de aankoop (standaardtitel en -stappen tot er iets bewaard is)
+        public string BuyTitle { get; set; }
+
+        // Contactformulier (leeg = standaard)
+        public string ContactTitle { get; set; }
+
+        public string ContactText { get; set; }
+
+        public List<ProjectWebsiteBuyStepDto> BuySteps { get; set; } = new List<ProjectWebsiteBuyStepDto>();
+
+        // Blok Ligging
+        public string LocationTitle { get; set; }
+
+        public string LocationText { get; set; }
+
+        // Gemeente voor "Wil je weten of ... bij je past?"
+        public string LocationMunicipality { get; set; }
+
+        // Kaartpunt van het project, als tekst met punt of komma (bv. 50,9155)
+        public string LocationLat { get; set; }
+
+        public string LocationLng { get; set; }
+
+        public List<ProjectWebsiteGuideItemDto> GuideItems { get; set; } = new List<ProjectWebsiteGuideItemDto>();
+
+        public List<ProjectWebsitePoiDto> Pois { get; set; } = new List<ProjectWebsitePoiDto>();
+
+        public List<ProjectWebsiteTravelDto> TravelTimes { get; set; } = new List<ProjectWebsiteTravelDto>();
+
         public List<ProjectWebsiteQuoteDto> Quotes { get; set; } = new List<ProjectWebsiteQuoteDto>();
 
         public List<ProjectWebsiteDetailDto> Details { get; set; } = new List<ProjectWebsiteDetailDto>();
@@ -116,5 +155,57 @@ namespace FacadeCore
         public string Title { get; set; }
 
         public string Text { get; set; }
+    }
+
+    public class ProjectWebsiteComfortItemDto
+    {
+        public string Title { get; set; }
+
+        public string Text { get; set; }
+    }
+
+    public class ProjectWebsiteFaqItemDto
+    {
+        public string Question { get; set; }
+
+        // Opgemaakte tekst (HTML); wordt in de service opgeschoond (enkel eenvoudige opmaak en links)
+        public string Answer { get; set; }
+    }
+
+    public class ProjectWebsiteBuyStepDto
+    {
+        public string Title { get; set; }
+
+        public string Text { get; set; }
+    }
+
+    public class ProjectWebsiteGuideItemDto
+    {
+        public string Title { get; set; }
+
+        public string Text { get; set; }
+    }
+
+    public class ProjectWebsitePoiDto
+    {
+        // school | shop | ov | groen | sport
+        public string Category { get; set; }
+
+        public string Name { get; set; }
+
+        public string Lat { get; set; }
+
+        public string Lng { get; set; }
+
+        public string Distance { get; set; }
+
+        public string Time { get; set; }
+    }
+
+    public class ProjectWebsiteTravelDto
+    {
+        public string Place { get; set; }
+
+        public string Duration { get; set; }
     }
 }

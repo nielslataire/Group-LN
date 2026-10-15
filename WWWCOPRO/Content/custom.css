@@ -230,6 +230,8 @@ html:not(.sticky-header-active) #header.header-transparent-brand .header-logo {
 #header .header-body {
     display: flex;
     align-items: center;
+    /* het thema zet standaard een lichtgrijze rand van 5px boven de header: dat gaf een witte band boven de groene balk */
+    border-top: 0;
 }
 #header .header-body > .header-container {
     width: 100%;

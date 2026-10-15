@@ -34,14 +34,25 @@
         d.querySelectorAll('[data-zijde="grond"] input, [data-zijde="grond"] .gl-v2-select-trigger').forEach(function (el) { if (el.tagName === "INPUT" && el.type !== "hidden") el.disabled = ruil; else if (el.classList.contains("gl-v2-select-trigger")) el.style.pointerEvents = ruil ? "none" : ""; });
         if (ruil) { setNum(d.querySelector(".grondwaarde"), 0, 0); d.querySelector(".grond-m2").value = ""; } else zijde(tr, d, "grond", grond);
         zijde(tr, d, "bouw", gered);
+        // Tweede grondzone: eigen €/m² per woning; ingevulde prijs blijft, anders volgt ze de eerste zone (relatieve waarde uit Parameters)
+        var opp2 = parseFloat(tr.getAttribute("data-grondopp2")) || 0, z2 = d.querySelector('[data-zijde="grond2"]'), g2 = 0;
+        if (z2) {
+            z2.hidden = !(opp2 > 0);
+            var p2 = d.querySelector(".grond2-m2"), w2 = d.querySelector(".grond2waarde");
+            if (opp2 <= 0 || ruil) { setNum(p2, null, 2); setNum(w2, null, 0); }
+            else {
+                if (!tr._g2Eigen) { var m1 = num(d.querySelector(".grond-m2")), ratio = parseFloat(document.getElementById("bw-vk-tabel").getAttribute("data-agr-ratio")) || 0.2; setNum(p2, m1 !== null ? m1 * ratio : null, 2); }
+                g2 = num(p2) !== null ? num(p2) * opp2 : 0; setNum(w2, num(p2) !== null ? g2 : null, 0);
+            }
+        }
         var g = num(d.querySelector(".grondwaarde")), b = num(d.querySelector(".bouwwaarde")), f = num(d.querySelector(".extra-forfait")), vp = tr.querySelector(".vraagprijs");
-        if (!tr._eigen) setNum(vp, (g === null && b === null && f === null) ? null : (g || 0) + (b || 0) + (f || 0), 0);
+        if (!tr._eigen) setNum(vp, (g === null && b === null && f === null && !g2) ? null : (g || 0) + g2 + (b || 0) + (f || 0), 0);
         var bron = bronVan(tr); d.querySelector(".prijs-bron").value = bron || "";
         var badge = d.querySelector(".bw-bron"); badge.className = "bw-bron bw-bron--" + (bron || 0); badge.textContent = bron ? BRON[bron] : "—";
         var min = parseFloat(tr.getAttribute("data-min")) || 0, v = num(vp), onder = min > 0 && v !== null && v > 0 && v < min;
         tr.classList.toggle("is-onder-min", !!onder);
         var w = tr.nextElementSibling && tr.nextElementSibling.nextElementSibling; if (w && w.classList.contains("bw-vk-waarsch-rij")) w.remove();
-        if (onder) { var wr = document.createElement("tr"); wr.className = "bw-vk-waarsch-rij"; wr.innerHTML = '<td></td><td colspan="10" class="bw-vk-waarsch"><i class="ph ph-warning" aria-hidden="true"></i> ' + tr.getAttribute("data-naam") + ": vraagprijs " + eur(v) + " ligt " + eur(min - v) + " onder de minimale verkoopprijs.</td>"; d.insertAdjacentElement("afterend", wr); }
+        if (onder) { var wr = document.createElement("tr"); wr.className = "bw-vk-waarsch-rij"; wr.innerHTML = '<td></td><td colspan="11" class="bw-vk-waarsch"><i class="ph ph-warning" aria-hidden="true"></i> ' + tr.getAttribute("data-naam") + ": vraagprijs " + eur(v) + " ligt " + eur(min - v) + " onder de minimale verkoopprijs.</td>"; d.insertAdjacentElement("afterend", wr); }
         totalen();
     }
     function totalen() {
@@ -64,10 +75,12 @@
             else if (bron === 2) src = bedrag ? "markt" : null; else if (bron === 1) src = bedrag ? "voorstel" : null; else src = bedrag ? "bedrag" : null;
             if (k === "grond") tr._gSrc = src; else tr._bSrc = src;
         });
-        if (bron === 5) { var g = num(d.querySelector(".grondwaarde")) || 0, b = num(d.querySelector(".bouwwaarde")) || 0, f = num(d.querySelector(".extra-forfait")) || 0, vp = num(tr.querySelector(".vraagprijs")); tr._eigen = vp !== null && Math.abs(vp - (g + b + f)) >= 1; }
+        tr._g2Eigen = num(d.querySelector(".grond2-m2")) !== null;
+        if (bron === 5) { var g = (num(d.querySelector(".grondwaarde")) || 0) + (num(d.querySelector(".grond2waarde")) || 0), b = num(d.querySelector(".bouwwaarde")) || 0, f = num(d.querySelector(".extra-forfait")) || 0, vp = num(tr.querySelector(".vraagprijs")); tr._eigen = vp !== null && Math.abs(vp - (g + b + f)) >= 1; }
         herbereken(tr);
     }
-    body.querySelectorAll(".bw-vk-rij").forEach(initRij);
+    var afwijkt = false;   // initRij herrekent elke lijn met de huidige oppervlaktes: wijkt dat af van wat bewaard was, dan bewaren we het meteen
+    body.querySelectorAll(".bw-vk-rij").forEach(function (tr) { var vp = tr.querySelector(".vraagprijs"), voor = num(vp); initRij(tr); var na = num(vp); if (tr.getAttribute("data-info") === "1" && Math.abs((voor || 0) - (na || 0)) >= 1) afwijkt = true; });
 
     // ── Invoer ────────────────────────────────────────────────────────────────────────────────
     var saveTimer = null;
@@ -78,6 +91,7 @@
         if (t.classList.contains("vraagprijs")) { tr._eigen = num(t) !== null; }
         else if (t.classList.contains("grond-m2")) { tr._gSrc = "m2"; tr._eigen = false; GlV2Select.setItems(d.querySelector('[data-zijde="grond"] .gl-v2-select'), itemsVan(d, "grond"), "", "— geen code —"); }
         else if (t.classList.contains("bouw-m2")) { tr._bSrc = "m2"; tr._eigen = false; GlV2Select.setItems(d.querySelector('[data-zijde="bouw"] .gl-v2-select'), itemsVan(d, "bouw"), "", "— geen code —"); }
+        else if (t.classList.contains("grond2-m2")) { tr._g2Eigen = num(t) !== null; tr._eigen = false; }
         else if (t.classList.contains("grondwaarde")) { tr._gSrc = "bedrag"; tr._eigen = false; }
         else if (t.classList.contains("bouwwaarde")) { tr._bSrc = "bedrag"; tr._eigen = false; }
         else if (t.classList.contains("extra-forfait")) { tr._eigen = false; }
@@ -108,7 +122,12 @@
         var d = detail(tr), vg = parseFloat(tr.getAttribute("data-vgrond")) || 0, vb = parseFloat(tr.getAttribute("data-vbouw")) || 0, markt = parseFloat(tr.getAttribute("data-markt")) || 0;
         var useMarkt = soort === "markt" && markt > 0, bouw = useMarkt ? Math.max(markt - vg, 0) : vb;
         ["grond", "bouw"].forEach(function (k) { GlV2Select.setItems(d.querySelector('[data-zijde="' + k + '"] .gl-v2-select'), itemsVan(d, k), "", "— geen code —"); });
-        setNum(d.querySelector(".grondwaarde"), vg, 0); setNum(d.querySelector(".bouwwaarde"), bouw, 0);
+        var o1 = parseFloat(tr.getAttribute("data-grondopp")) || 0, o2 = parseFloat(tr.getAttribute("data-grondopp2")) || 0, rat = parseFloat(document.getElementById("bw-vk-tabel").getAttribute("data-agr-ratio")) || 0.2;
+        if (o2 > 0 && o1 + o2 * rat > 0) {   // het voorstel verdeelt de grond over beide zones naar relatieve waarde: eerste zone en eigen €/m² van de tweede zone
+            var pu = vg / (o1 + o2 * rat);
+            setNum(d.querySelector(".grondwaarde"), pu * o1, 0); setNum(d.querySelector(".grond2-m2"), pu * rat, 2); tr._g2Eigen = true;
+        } else setNum(d.querySelector(".grondwaarde"), vg, 0);
+        setNum(d.querySelector(".bouwwaarde"), bouw, 0);
         tr._gSrc = tr._bSrc = useMarkt ? "markt" : "voorstel"; tr._eigen = false; herbereken(tr);
         tr.classList.add("is-saving"); setTimeout(function () { tr.classList.remove("is-saving"); }, 900);
         return true;
@@ -126,7 +145,7 @@
             var unit = hidden(".bw-vk-extra .gl-v2-select", d), cg = hidden('[data-zijde="grond"] .gl-v2-select', d), cb = hidden('[data-zijde="bouw"] .gl-v2-select', d);
             if (vp === null && g === null && b === null && f === null && !(unit && unit.value) && tr.getAttribute("data-info") === "1") return;   // onaangeroerde eenheid: geen lijn
             lijnen.push({ eenheidNaam: tr.getAttribute("data-naam"), unitId: unit ? parseInt(unit.value) || null : null, codeGrond: cg ? parseInt(cg.value) || null : null, codeBouw: cb ? parseInt(cb.value) || null : null,
-                grondPrijsPerM2: num(d.querySelector(".grond-m2")), bouwPrijsPerM2: num(d.querySelector(".bouw-m2")), grondwaarde: g, bouwwaarde: b, isRuil: d.querySelector(".is-ruil").checked, extraForfait: f, vraagprijs: vp, prijsBron: parseInt(d.querySelector(".prijs-bron").value) || null });
+                grondPrijsPerM2: num(d.querySelector(".grond-m2")), bouwPrijsPerM2: num(d.querySelector(".bouw-m2")), grondAgrPrijsPerM2: num(d.querySelector(".grond2-m2")), grondwaardeAgrarisch: num(d.querySelector(".grond2waarde")), grondwaarde: g, bouwwaarde: b, isRuil: d.querySelector(".is-ruil").checked, extraForfait: f, vraagprijs: vp, prijsBron: parseInt(d.querySelector(".prijs-bron").value) || null });
         });
         return lijnen;
     }
@@ -146,4 +165,5 @@
         (r.messages || []).forEach(function (m) { GlV2Budget.toast(m.type === "Error" ? "danger" : m.type === "Warning" ? "warning" : m.type === "Info" ? "info" : "success", "Doorzetten", m.text); });
     });
     totalen();
+    if (afwijkt) dirty();
 })();

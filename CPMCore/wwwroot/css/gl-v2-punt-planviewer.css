@@ -6,8 +6,8 @@
 .gl-v2-pv-btn:hover:not(:disabled) { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); }
 .gl-v2-pv-btn:disabled { opacity: .4; cursor: default; }
 .gl-v2-pv-page, .gl-v2-pv-zoom { font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); min-width: 52px; text-align: center; font-variant-numeric: tabular-nums; }
-.gl-v2-pv-scroll { position: relative; flex: 1; min-height: 0; overflow: auto; }
-.gl-v2-pv-stage { position: relative; margin: 0 auto; background: #fff; box-shadow: 0 0 0 1px rgba(44, 59, 42, .08); }
+.gl-v2-pv-scroll { position: relative; flex: 1; min-height: 0; overflow: auto; display: flex; }
+.gl-v2-pv-stage { position: relative; margin: auto; flex: none; background: #fff; box-shadow: 0 0 0 1px rgba(44, 59, 42, .08); }
 .gl-v2-pv-canvas { display: block; }
 .gl-v2-pv-msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; text-align: center; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 .gl-v2-pv-msg[hidden] { display: none; }

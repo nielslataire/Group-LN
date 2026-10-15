@@ -738,3 +738,8 @@ body.gl-v2-dp-is-picking .gl-v2-dp-card:hover { box-shadow: 0 0 0 2px var(--gl-v
     #gl-v2-dp-panel-poster,
     #gl-v2-dp-panel-save { flex: 1; justify-content: center; }
 }
+
+/* Foto's herschikken door te slepen (gl-v2-projecten-detailphotos-sort.js) */
+.gl-v2-dp-grid .js-gl-v2-dp-card[draggable="true"] { cursor: grab; }
+.gl-v2-dp-card.is-dragging { opacity: .45; box-shadow: 0 0 0 2px var(--gl-v2-primary); cursor: grabbing; }
+.gl-v2-dp-grid.is-saving { opacity: .75; transition: opacity .15s; }

@@ -10,6 +10,12 @@ public partial class cpmRunningContext
     public virtual DbSet<ProjectWebsiteStoryItem> ProjectWebsiteStoryItem { get; set; }
     public virtual DbSet<ProjectWebsiteQuote> ProjectWebsiteQuote { get; set; }
     public virtual DbSet<ProjectWebsiteDetail> ProjectWebsiteDetail { get; set; }
+    public virtual DbSet<ProjectWebsiteComfortItem> ProjectWebsiteComfortItem { get; set; }
+    public virtual DbSet<ProjectWebsiteFaq> ProjectWebsiteFaq { get; set; }
+    public virtual DbSet<ProjectWebsiteBuyStep> ProjectWebsiteBuyStep { get; set; }
+    public virtual DbSet<ProjectWebsiteGuideItem> ProjectWebsiteGuideItem { get; set; }
+    public virtual DbSet<ProjectWebsitePoi> ProjectWebsitePoi { get; set; }
+    public virtual DbSet<ProjectWebsiteTravel> ProjectWebsiteTravel { get; set; }
 
     private void ConfigureProjectWebsiteEntities(ModelBuilder modelBuilder)
     {
@@ -25,6 +31,15 @@ public partial class cpmRunningContext
             entity.Property(e => e.StoryTitle).HasMaxLength(250);
             entity.Property(e => e.ArchEyebrow).HasMaxLength(200);
             entity.Property(e => e.ArchTitle).HasMaxLength(250);
+            entity.Property(e => e.ComfortTitle).HasMaxLength(250);
+            entity.Property(e => e.ComfortSubtitle).HasMaxLength(600);
+            entity.Property(e => e.BuyTitle).HasMaxLength(250);
+            entity.Property(e => e.ContactTitle).HasMaxLength(250);
+            entity.Property(e => e.ContactText).HasMaxLength(600);
+            entity.Property(e => e.LocationTitle).HasMaxLength(250);
+            entity.Property(e => e.LocationMunicipality).HasMaxLength(120);
+            entity.Property(e => e.LocationLat).HasColumnType("decimal(9, 6)");
+            entity.Property(e => e.LocationLng).HasColumnType("decimal(9, 6)");
             entity.Property(e => e.UpdatedOn).HasColumnType("datetime2(0)");
             entity.HasOne(d => d.Project).WithMany()
                 .HasForeignKey(d => d.ProjectId).OnDelete(DeleteBehavior.Cascade)
@@ -92,6 +107,76 @@ public partial class cpmRunningContext
             entity.HasIndex(e => new { e.ProjectId, e.SortOrder }, "IX_ProjectWebsiteDetail_Project_Sort");
             entity.HasOne(d => d.Project).WithMany().HasForeignKey(d => d.ProjectId)
                 .OnDelete(DeleteBehavior.Cascade).HasConstraintName("FK_ProjectWebsiteDetail_Project");
+        });
+
+        modelBuilder.Entity<ProjectWebsiteComfortItem>(entity =>
+        {
+            entity.ToTable("ProjectWebsiteComfortItem");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(120);
+            entity.Property(e => e.Text).HasMaxLength(500);
+            entity.HasIndex(e => new { e.ProjectId, e.SortOrder }, "IX_ProjectWebsiteComfortItem_Project_Sort");
+            entity.HasOne(d => d.Project).WithMany().HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade).HasConstraintName("FK_ProjectWebsiteComfortItem_Project");
+        });
+
+        modelBuilder.Entity<ProjectWebsiteFaq>(entity =>
+        {
+            entity.ToTable("ProjectWebsiteFaq");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Question).IsRequired().HasMaxLength(300);
+            entity.Property(e => e.Answer).IsRequired();
+            entity.HasIndex(e => new { e.ProjectId, e.SortOrder }, "IX_ProjectWebsiteFaq_Project_Sort");
+            entity.HasOne(d => d.Project).WithMany().HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade).HasConstraintName("FK_ProjectWebsiteFaq_Project");
+        });
+
+        modelBuilder.Entity<ProjectWebsiteBuyStep>(entity =>
+        {
+            entity.ToTable("ProjectWebsiteBuyStep");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(120);
+            entity.Property(e => e.Text).HasMaxLength(400);
+            entity.HasIndex(e => new { e.ProjectId, e.SortOrder }, "IX_ProjectWebsiteBuyStep_Project_Sort");
+            entity.HasOne(d => d.Project).WithMany().HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade).HasConstraintName("FK_ProjectWebsiteBuyStep_Project");
+        });
+
+        modelBuilder.Entity<ProjectWebsiteGuideItem>(entity =>
+        {
+            entity.ToTable("ProjectWebsiteGuideItem");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(120);
+            entity.Property(e => e.Text).HasMaxLength(600);
+            entity.HasIndex(e => new { e.ProjectId, e.SortOrder }, "IX_ProjectWebsiteGuideItem_Project_Sort");
+            entity.HasOne(d => d.Project).WithMany().HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade).HasConstraintName("FK_ProjectWebsiteGuideItem_Project");
+        });
+
+        modelBuilder.Entity<ProjectWebsitePoi>(entity =>
+        {
+            entity.ToTable("ProjectWebsitePoi");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Category).IsRequired().HasMaxLength(12).IsUnicode(false);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(150);
+            entity.Property(e => e.Lat).HasColumnType("decimal(9, 6)");
+            entity.Property(e => e.Lng).HasColumnType("decimal(9, 6)");
+            entity.Property(e => e.Distance).HasMaxLength(30);
+            entity.Property(e => e.TimeText).HasMaxLength(40);
+            entity.HasIndex(e => new { e.ProjectId, e.SortOrder }, "IX_ProjectWebsitePoi_Project_Sort");
+            entity.HasOne(d => d.Project).WithMany().HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade).HasConstraintName("FK_ProjectWebsitePoi_Project");
+        });
+
+        modelBuilder.Entity<ProjectWebsiteTravel>(entity =>
+        {
+            entity.ToTable("ProjectWebsiteTravel");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Place).IsRequired().HasMaxLength(80);
+            entity.Property(e => e.Duration).IsRequired().HasMaxLength(40);
+            entity.HasIndex(e => new { e.ProjectId, e.SortOrder }, "IX_ProjectWebsiteTravel_Project_Sort");
+            entity.HasOne(d => d.Project).WithMany().HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade).HasConstraintName("FK_ProjectWebsiteTravel_Project");
         });
     }
 }

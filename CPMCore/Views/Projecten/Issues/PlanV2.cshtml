@@ -21,7 +21,7 @@
         canWrite = idx.CanWrite,
         selectedKey = Model.SelectedKey,
         selectedIssueId = Model.SelectedIssueId,
-        plans = Model.Plans.Select(p => new { key = p.Key, unitId = p.UnitId, unitName = p.UnitName, planId = p.PlanId, name = p.Name, url = p.Url }),
+        plans = Model.Plans.Select(p => new { key = p.Key, unitId = p.UnitId, unitName = p.UnitName, planId = p.PlanId, name = p.Name, url = p.Url, kind = p.Kind }),
         pins = Model.Pins.Select(p => new { id = p.Id, nr = p.Nr, title = p.Title, planKey = p.PlanKey, page = p.Page, x = p.X, y = p.Y, status = p.Status, statusLabel = p.StatusLabel, statusTone = p.StatusTone, closed = p.Closed, unit = p.Unit, zone = p.Zone, contractor = p.Contractor, due = p.Due, photos = p.Photos, url = p.Url })
     };
 }
@@ -30,6 +30,7 @@
     <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-punt-planviewer.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-projecten-punten.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-punt-plansheets-m.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-projecten-punten-plan.css" asp-append-version="true" />
 }
 @section PageActions
@@ -108,7 +109,7 @@
                         Items = new[] { new GlV2SelectItem { Value = "0", Text = "Algemeen (inplantingsplan, gevels …)" } }.Concat(idx.Units.Select(u => new GlV2SelectItem { Value = u.Key.ToString(), Text = u.Value })).ToList()
                     })
                     <div class="gl-v2-field gl-v2-field-full"><label class="gl-v2-field-label" for="pp-upload-name">Naam van het plan</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="pp-upload-name" name="planName" maxlength="200" placeholder="bv. Gelijkvloers" autocomplete="off" /></div></div>
-                    <div class="gl-v2-field gl-v2-field-full"><label class="gl-v2-field-label" for="pp-upload-file">PDF-bestand</label><input type="file" id="pp-upload-file" name="planFile" accept="application/pdf,.pdf" class="gl-v2-pp-file" /><span class="gl-v2-field-help gl-v2-pp-err" id="pp-upload-err" hidden></span></div>
+                    <div class="gl-v2-field gl-v2-field-full"><label class="gl-v2-field-label" for="pp-upload-file">PDF-bestand</label><input type="file" id="pp-upload-file" name="planFile" accept="application/pdf,image/png,image/jpeg,.pdf,.png,.jpg,.jpeg" class="gl-v2-pp-file" /><span class="gl-v2-field-help gl-v2-pp-err" id="pp-upload-err" hidden></span></div>
                 </div>
                 <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="pp-upload-submit">Uploaden</button></div>
             </form>
@@ -123,5 +124,6 @@
     <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-punt-planviewer.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-punt-panel.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-punt-plansheets-m.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-projecten-punten-plan.js" asp-append-version="true"></script>
 }

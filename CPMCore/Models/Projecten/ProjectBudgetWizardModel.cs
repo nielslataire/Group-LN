@@ -83,24 +83,70 @@ namespace CPMCore.Models.Projecten
         public BudgetVersieBO DefinitiefVersie { get; set; }
         /// <summary>Totale kostprijs per versie (enkel berekend voor afgeronde/definitieve versies en de huidige).</summary>
         public Dictionary<int, decimal?> Totalen { get; set; } = new();
+        /// <summary>Marge op kostprijs (resultaat / totale kostprijs) en resultaat in euro per versie waarvan alle stappen doorlopen zijn; null = niet te berekenen (geen vraagprijzen).</summary>
+        public Dictionary<int, BudgetMargeVm> Marges { get; set; } = new();
         /// <summary>Aantal eenheden (stap 2) van de huidige versie per budget.</summary>
         public Dictionary<int, int> EenhedenPerMaster { get; set; } = new();
         /// <summary>Versies van alle projecten om een nieuw budget als kopie van te starten (ID = versieId, Display, Group = project · budget).</summary>
         public List<IdNameBO> KopieerOpties { get; set; } = new();
+        /// <summary>Budgetten (met hun versies) waarvan een nieuw budget een kopie kan zijn: eerst die van dit project, dan van andere projecten.</summary>
+        public List<BudgetKopieBronVm> KopieBronnen { get; set; } = new();
+        /// <summary>Aantal eenheden van het project (zonder links): de bron voor een leeg budget.</summary>
+        public int AantalProjectEenheden { get; set; }
+        /// <summary>"S- en I-index 10/2026": de index die een nieuw budget standaard krijgt.</summary>
+        public string ActieveIndexTekst { get; set; } = "";
+    }
+
+    public class BudgetKopieBronVm
+    {
+        public int MasterId { get; set; }
+        public string Naam { get; set; }
+        public string ProjectNaam { get; set; }
+        public bool EigenProject { get; set; }
+        public List<IdNameBO> Versies { get; set; } = new();
+    }
+
+    /// <summary>Pagina "Budgetten vergelijken" (39n): de vergelijking plus de overzichtsgegevens voor de modal "Versie toevoegen".</summary>
+    public class BudgetVergelijkPaginaModel
+    {
+        public int ProjectId { get; set; }
+        public string ProjectName { get; set; }
+        public ServiceCore.Budget.BudgetVergelijking Vergelijking { get; set; }
+        public BudgetIndexModel Index { get; set; }
+        public string Modus { get; set; } = "alles";
+        public List<int> VersieIds { get; set; } = new();
+    }
+
+    public class BudgetMargeVm
+    {
+        public decimal Percentage { get; set; }
+        public decimal Bedrag { get; set; }
     }
 
     public class BudgetMasterAanmakenModel
     {
         public int ProjectId { get; set; }
-        public string ProjectName { get; set; }
+        // Nullable: zonder ? telt een niet-ingevuld veld als "verplicht" (implicit [Required]); het venster Nieuw budget heeft geen omschrijving meer.
+        public string? ProjectName { get; set; }
 
         [Required(ErrorMessage = "Naam is verplicht.")]
-        public string Naam { get; set; }
+        public string Naam { get; set; } = "";
 
-        public string Omschrijving { get; set; }
+        public string? Omschrijving { get; set; }
 
         /// <summary>gl-v2 39a: versie waarvan de inhoud gekopieerd wordt (leeg = leeg budget).</summary>
         public int? KopieVanVersieId { get; set; }
+
+        /// <summary>39l "Overnemen": de stappen die uit de kopie meekomen (gegevens, oppervlaktes, sanitair, gevels, dak, activiteiten, parameters, verkoop, opmerkingen).</summary>
+        public List<string> Overnemen { get; set; } = new();
+        /// <summary>De nieuwe modal stuurt altijd true mee: dan telt de keuze in <see cref="Overnemen"/> (ook als niets aangevinkt is); zonder is het een klassiek formulier en wordt alles gekopieerd.</summary>
+        public bool OvernemenIngevuld { get; set; }
+        /// <summary>39l "Meteen actief budget maken".</summary>
+        public bool ActiefMaken { get; set; }
+        /// <summary>39l EENHEDEN: "project" (eenheden en oppervlaktes uit het project) of "leeg".</summary>
+        public string EenhedenBron { get; set; } = "project";
+        /// <summary>39l INDEX: "actueel" (de nieuwste S- en I-index) of "bron" (die van de gekopieerde versie).</summary>
+        public string IndexBron { get; set; } = "actueel";
     }
 
     public class BudgetOppervlaktesModel
@@ -148,6 +194,7 @@ namespace CPMCore.Models.Projecten
         public decimal GemeenschappelijkeDelen { get; set; }
         public decimal Wegenis { get; set; }
         public decimal Grondopp { get; set; }
+        public decimal GrondoppAgrarisch { get; set; }
     }
 
     public class BudgetSanitairModel

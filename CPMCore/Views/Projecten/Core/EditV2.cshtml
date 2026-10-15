@@ -423,6 +423,41 @@
                 var web = Model.Website ?? new FacadeCore.ProjectWebsiteDto { ProjectId = project.Id };
                 var webKpis = web.Kpis ?? new List<FacadeCore.ProjectWebsiteKpiDto>();
             }
+            @{
+                var webNav = new[]
+                {
+                    (Id: "websitePageCard", Label: "Kop en inleiding", Block: ""),
+                    (Id: "websiteKpiCard", Label: "Kerncijfers", Block: ""),
+                    (Id: "websiteBlocksCard", Label: "Blokken en volgorde", Block: ""),
+                    (Id: "websiteStoryCard", Label: "Verhaal", Block: "story"),
+                    (Id: "websiteArchCard", Label: "Architectuur", Block: "architecture"),
+                    (Id: "websiteComfortCard", Label: "Comfort en energie", Block: "comfort"),
+                    (Id: "websiteDocsCard", Label: "Documenten", Block: "documents"),
+                    (Id: "websiteContactCard", Label: "Contactformulier", Block: ""),
+                    (Id: "websiteBuyCard", Label: "Zo verloopt de aankoop", Block: "buy"),
+                    (Id: "websiteFaqCard", Label: "Vragen", Block: "faq"),
+                    (Id: "websiteLocationCard", Label: "Ligging", Block: "location"),
+                    (Id: "websiteMapCard", Label: "Woningen en projectkaart", Block: "homes"),
+                    (Id: "websiteLegacyCard", Label: "Website-presentatie", Block: ""),
+                    (Id: "websiteSeoCard", Label: "SEO", Block: "")
+                };
+            }
+            <div class="web-layout" id="webLayout">
+            <aside class="web-nav" aria-label="Onderdelen van de projectpagina">
+                <span class="web-nav-label">ONDERDELEN</span>
+                <nav class="web-nav-list">
+                    @foreach (var n in webNav)
+                    {
+                        <a href="#@n.Id" class="web-nav-item" data-web-nav="@n.Id" data-web-nav-block="@n.Block">
+                            <span class="web-nav-item-label">@n.Label</span>
+                            <span class="web-nav-item-off" hidden>uit</span>
+                        </a>
+                    }
+                </nav>
+                <div class="web-nav-rule"></div>
+                <p class="web-nav-hint">Een blok dat uitstaat, is ingeklapt. Klik op de kop om het toch open te zetten.</p>
+            </aside>
+            <div class="web-main">
             <div class="gl-v2-section-card" id="websitePageCard">
                 <div class="gl-v2-section-card-header">
                     <span class="gl-v2-section-card-icon"><i class="ph ph-layout" aria-hidden="true"></i></span>
@@ -519,7 +554,7 @@
                 </div>
             </div>
 
-            <div class="gl-v2-section-card" id="websiteStoryCard">
+            <div class="gl-v2-section-card" id="websiteStoryCard" data-web-block="story">
                 <div class="gl-v2-section-card-header">
                     <span class="gl-v2-section-card-icon"><i class="ph ph-book-open-text" aria-hidden="true"></i></span>
                     <h2 class="gl-v2-section-card-title">Blok “Verhaal”</h2>
@@ -552,7 +587,7 @@
                 </div>
             </div>
 
-            <div class="gl-v2-section-card" id="websiteArchCard">
+            <div class="gl-v2-section-card" id="websiteArchCard" data-web-block="architecture">
                 <div class="gl-v2-section-card-header">
                     <span class="gl-v2-section-card-icon"><i class="ph ph-buildings" aria-hidden="true"></i></span>
                     <h2 class="gl-v2-section-card-title">Blok “Architectuur”</h2>
@@ -599,6 +634,214 @@
                 </div>
             </div>
 
+            <div class="gl-v2-section-card" id="websiteComfortCard" data-web-block="comfort">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-leaf" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Blok “Comfort en energie”</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Titel, subtitel en puntjes met een titel en uitleg.</span>
+                </div>
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-12">@Html.EditorFor(m => m.Website.ComfortTitle, "GlV2Text", new { Label = "Titel", Placeholder = "bv. Comfort en energie", MaxLength = 250 })</div>
+                    <div class="gl-v2-col-12">@Html.EditorFor(m => m.Website.ComfortSubtitle, "GlV2Text", new { Label = "Subtitel", Placeholder = "bv. Alle woningen halen een E-peil van E20 of lager.", MaxLength = 600, Help = "korte inleiding onder de titel" })</div>
+                </div>
+                <div class="gl-v2-pf-rows" data-repeat data-prefix="Website.ComfortItems">
+                    <span class="gl-v2-field-label">Puntjes</span>
+                    <div class="web-rep-list">
+                        @for (int i = 0; i < web.ComfortItems.Count; i++)
+                        {
+                            @await Html.PartialAsync("_WebsiteRow", new WebsiteRowVm { Kind = "comfort", Prefix = "Website.ComfortItems", Index = i.ToString(), Title = web.ComfortItems[i].Title, Text = web.ComfortItems[i].Text })
+                        }
+                    </div>
+                    <template class="web-rep-tpl">@await Html.PartialAsync("_WebsiteRow", new WebsiteRowVm { Kind = "comfort", Prefix = "Website.ComfortItems", Index = "__i__" })</template>
+                    <div class="gl-v2-pf-rows-foot">
+                        <button type="button" class="gl-v2-select-newitem-btn" data-rep-add><i class="ph ph-plus" aria-hidden="true"></i>Puntje toevoegen</button>
+                        <span class="gl-v2-field-help">een puntje heeft een titel nodig · de volgorde is de volgorde op de website</span>
+                    </div>
+                </div>
+                @{
+                    var salesDocs = (Model.Docs ?? new List<ProjectDocBO>()).Where(d => d.Type == ProjectDocType.Sales).ToList();
+                    var lastenboek = salesDocs.FirstOrDefault(d => d.IsBrochure);
+                }
+                <div class="gl-v2-pf-rows">
+                    <span class="gl-v2-field-label">Technische details (projectbrochure)</span>
+                    @if (lastenboek != null)
+                    {
+                        <p class="gl-v2-pf-note"><i class="ph ph-file-pdf" aria-hidden="true"></i> Gevonden: <b>@lastenboek.Name</b>. Onderaan dit blok verschijnt het blokje “Alle technische details” met een link naar de projectbrochure (de bezoeker krijgt de brochure per e-mail).</p>
+                    }
+                    else
+                    {
+                        <p class="gl-v2-pf-note"><i class="ph ph-info" aria-hidden="true"></i> Er is nog geen projectbrochure. Laad een verkoopdocument op en markeer het als brochure; dan verschijnt onderaan dit blok vanzelf het blokje “Alle technische details”.</p>
+                    }
+                </div>
+            </div>
+
+            <div class="gl-v2-section-card" id="websiteDocsCard" data-web-block="documents">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-files" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Blok “Documenten”</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Toont automatisch alle verkoopdocumenten van het project.</span>
+                </div>
+                <div class="gl-v2-pf-rows">
+                    @if (salesDocs.Count == 0)
+                    {
+                        <p class="gl-v2-pf-note"><i class="ph ph-info" aria-hidden="true"></i> Dit project heeft nog geen verkoopdocumenten.</p>
+                    }
+                    else
+                    {
+                        <ul class="web-doc-list">
+                            @foreach (var sd in salesDocs)
+                            {
+                                <li><i class="ph ph-file-pdf" aria-hidden="true"></i><span>@sd.Name</span></li>
+                            }
+                        </ul>
+                    }
+                    <span class="gl-v2-field-help">enkel documenten die niet aan een klant of eenheid hangen · beheer ze bij “Documenten” van het project · de blok verschijnt enkel als de verkoop zichtbaar staat</span>
+                </div>
+            </div>
+
+            <div class="gl-v2-section-card" id="websiteContactCard">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-envelope-simple" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Contactformulier</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Titel en tekst boven het formulier onderaan de pagina. Leeg laten = standaardtekst.</span>
+                </div>
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-12">@Html.EditorFor(m => m.Website.ContactTitle, "GlV2Text", new { Label = "Titel", Placeholder = "Welke woning wordt de jouwe?", MaxLength = 250 })</div>
+                    <div class="gl-v2-col-12">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="Website_ContactText">Tekst</label>
+                            <div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea name="Website.ContactText" id="Website_ContactText" rows="3" maxlength="600" class="gl-v2-field-input" placeholder="Je ontvangt de brochure, plannen en prijslijst binnen één werkdag. Je contactpersoon belt je enkel als je dat wil.">@web.ContactText</textarea></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="gl-v2-section-card" id="websiteBuyCard" data-web-block="buy">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-list-checks" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Blok “Zo verloopt de aankoop”</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Staat standaard ingevuld; pas de titel en de stappen aan naar dit project.</span>
+                </div>
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-12">@Html.EditorFor(m => m.Website.BuyTitle, "GlV2Text", new { Label = "Titel", Placeholder = "Zo verloopt de aankoop", MaxLength = 250 })</div>
+                </div>
+                <div class="gl-v2-pf-rows" data-repeat data-prefix="Website.BuySteps">
+                    <span class="gl-v2-field-label">Stappen</span>
+                    <div class="web-rep-list">
+                        @for (int i = 0; i < web.BuySteps.Count; i++)
+                        {
+                            @await Html.PartialAsync("_WebsiteRow", new WebsiteRowVm { Kind = "buy", Prefix = "Website.BuySteps", Index = i.ToString(), Title = web.BuySteps[i].Title, Text = web.BuySteps[i].Text })
+                        }
+                    </div>
+                    <template class="web-rep-tpl">@await Html.PartialAsync("_WebsiteRow", new WebsiteRowVm { Kind = "buy", Prefix = "Website.BuySteps", Index = "__i__" })</template>
+                    <div class="gl-v2-pf-rows-foot">
+                        <button type="button" class="gl-v2-select-newitem-btn" data-rep-add><i class="ph ph-plus" aria-hidden="true"></i>Stap toevoegen</button>
+                        <span class="gl-v2-field-help">een stap heeft een titel nodig · alle stappen weghalen en opslaan brengt de standaardstappen terug</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="gl-v2-section-card" id="websiteFaqCard" data-web-block="faq">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-question" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Blok “Vragen”</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Veelgestelde vragen met een antwoord. Staat standaard onderaan, boven het formulier.</span>
+                </div>
+                <div class="gl-v2-pf-rows" data-repeat data-prefix="Website.FaqItems">
+                    <div class="web-rep-list">
+                        @for (int i = 0; i < web.FaqItems.Count; i++)
+                        {
+                            @await Html.PartialAsync("_WebsiteRow", new WebsiteRowVm { Kind = "faq", Prefix = "Website.FaqItems", Index = i.ToString(), Title = web.FaqItems[i].Question, Text = web.FaqItems[i].Answer })
+                        }
+                    </div>
+                    <template class="web-rep-tpl">@await Html.PartialAsync("_WebsiteRow", new WebsiteRowVm { Kind = "faq", Prefix = "Website.FaqItems", Index = "__i__" })</template>
+                    <div class="gl-v2-pf-rows-foot">
+                        <button type="button" class="gl-v2-select-newitem-btn" data-rep-add><i class="ph ph-plus" aria-hidden="true"></i>Vraag toevoegen</button>
+                        <span class="gl-v2-field-help">vraag en antwoord zijn allebei nodig · in het antwoord kan je tekst opmaken en een link toevoegen · dezelfde vragen gaan als gestructureerde data naar zoekmachines</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="gl-v2-section-card" id="websiteLocationCard" data-web-block="location" data-project-id="@project.Id" data-geocode-url="@Url.Action("GeocodeWebsiteLocation", "Projecten")" data-poi-url="@Url.Action("SuggestWebsitePois", "Projecten")">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-map-pin-area" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Blok “Ligging”</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Titel, tekst, puntjes, kaart met voorzieningen en belangrijke plaatsen in de buurt.</span>
+                </div>
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-6">@Html.EditorFor(m => m.Website.LocationTitle, "GlV2Text", new { Label = "Titel", Placeholder = "Ligging", MaxLength = 250 })</div>
+                    <div class="gl-v2-col-6">@Html.EditorFor(m => m.Website.LocationMunicipality, "GlV2Text", new { Label = "Gemeente", Placeholder = "bv. Vlekkem", MaxLength = 120, Help = "voor “Wil je weten of … bij je past?” — standaard de gemeente van het project" })</div>
+                    <div class="gl-v2-col-12">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="Website_LocationText">Tekst</label>
+                            <div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea name="Website.LocationText" id="Website_LocationText" rows="4" class="gl-v2-field-input" placeholder=" ">@web.LocationText</textarea></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="gl-v2-pf-rows">
+                    <span class="gl-v2-field-label">Kaartpunt van het project</span>
+                    <div class="web-loc-point">
+                        <div class="gl-v2-field"><div class="gl-v2-field-box"><input type="text" name="Website.LocationLat" id="Website_LocationLat" value="@web.LocationLat" maxlength="12" class="gl-v2-field-input" placeholder="breedtegraad, bv. 50,9155" autocomplete="off" aria-label="Breedtegraad" /></div></div>
+                        <div class="gl-v2-field"><div class="gl-v2-field-box"><input type="text" name="Website.LocationLng" id="Website_LocationLng" value="@web.LocationLng" maxlength="12" class="gl-v2-field-input" placeholder="lengtegraad, bv. 3,9390" autocomplete="off" aria-label="Lengtegraad" /></div></div>
+                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-btn-sm" id="webGeoBtn"><i class="ph ph-crosshair" aria-hidden="true"></i> Zoek via adres</button>
+                    </div>
+                    <span class="gl-v2-field-help" id="webGeoHelp">leeg laten = bij het opslaan wordt het punt automatisch uit het adres van het project gezocht</span>
+                </div>
+
+                <div class="gl-v2-pf-rows" data-repeat data-prefix="Website.GuideItems">
+                    <span class="gl-v2-field-label">Puntjes</span>
+                    <div class="web-rep-list">
+                        @for (int i = 0; i < web.GuideItems.Count; i++)
+                        {
+                            @await Html.PartialAsync("_WebsiteRow", new WebsiteRowVm { Kind = "guide", Prefix = "Website.GuideItems", Index = i.ToString(), Title = web.GuideItems[i].Title, Text = web.GuideItems[i].Text })
+                        }
+                    </div>
+                    <template class="web-rep-tpl">@await Html.PartialAsync("_WebsiteRow", new WebsiteRowVm { Kind = "guide", Prefix = "Website.GuideItems", Index = "__i__" })</template>
+                    <div class="gl-v2-pf-rows-foot">
+                        <button type="button" class="gl-v2-select-newitem-btn" data-rep-add><i class="ph ph-plus" aria-hidden="true"></i>Puntje toevoegen</button>
+                        <span class="gl-v2-field-help">bv. Dorpsleven, Natuur, Onderwijs, Bereikbaarheid</span>
+                    </div>
+                </div>
+
+                <div class="gl-v2-pf-rows" data-repeat data-prefix="Website.Pois" id="webPoiBox">
+                    <span class="gl-v2-field-label">Voorzieningen op de kaart</span>
+                    <div class="web-rep-list">
+                        @for (int i = 0; i < web.Pois.Count; i++)
+                        {
+                            @await Html.PartialAsync("_WebsiteRow", new WebsiteRowVm { Kind = "poi", Prefix = "Website.Pois", Index = i.ToString(), Category = web.Pois[i].Category, Title = web.Pois[i].Name, Distance = web.Pois[i].Distance, Time = web.Pois[i].Time, Lat = web.Pois[i].Lat, Lng = web.Pois[i].Lng })
+                        }
+                    </div>
+                    <template class="web-rep-tpl">@await Html.PartialAsync("_WebsiteRow", new WebsiteRowVm { Kind = "poi", Prefix = "Website.Pois", Index = "__i__", Category = "school" })</template>
+                    <div class="gl-v2-pf-rows-foot">
+                        <button type="button" class="gl-v2-select-newitem-btn" data-rep-add><i class="ph ph-plus" aria-hidden="true"></i>Voorziening toevoegen</button>
+                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-btn-sm" id="webPoiSuggestBtn"><i class="ph ph-magic-wand" aria-hidden="true"></i> Voorzieningen voorstellen</button>
+                        <span class="gl-v2-field-help" id="webPoiHelp">de voorstellen komen uit OpenStreetMap (afstand hemelsbreed, tijd geschat) — controleer ze en pas aan · een voorziening heeft een categorie, naam en positie nodig</span>
+                    </div>
+                </div>
+
+                <div class="gl-v2-pf-rows" data-repeat data-prefix="Website.TravelTimes">
+                    <span class="gl-v2-field-label">Belangrijke plaatsen in de buurt</span>
+                    <div class="web-rep-list">
+                        @for (int i = 0; i < web.TravelTimes.Count; i++)
+                        {
+                            @await Html.PartialAsync("_WebsiteRow", new WebsiteRowVm { Kind = "travel", Prefix = "Website.TravelTimes", Index = i.ToString(), Place = web.TravelTimes[i].Place, Duration = web.TravelTimes[i].Duration })
+                        }
+                    </div>
+                    <template class="web-rep-tpl">@await Html.PartialAsync("_WebsiteRow", new WebsiteRowVm { Kind = "travel", Prefix = "Website.TravelTimes", Index = "__i__" })</template>
+                    <div class="gl-v2-pf-rows-foot">
+                        <button type="button" class="gl-v2-select-newitem-btn" data-rep-add><i class="ph ph-plus" aria-hidden="true"></i>Plaats toevoegen</button>
+                        <span class="gl-v2-field-help">bv. Aalst — 12 min, E40 — 8 min · komt onder de kaart</span>
+                    </div>
+                </div>
+            </div>
+
             <div id="webPhotoPop" class="web-photo-pop" hidden role="dialog" aria-label="Foto kiezen">
                 <button type="button" class="web-photo-none">Geen foto</button>
                 <div class="web-photo-grid">
@@ -622,7 +865,7 @@
                 var shapesJson = System.Text.Json.JsonSerializer.Serialize((web.LotShapes ?? new List<FacadeCore.ProjectWebsiteLotDto>())
                     .Select(l => new { unitId = l.UnitId, polygon = l.Polygon, labelX = l.LabelX, labelY = l.LabelY }));
             }
-            <div class="gl-v2-section-card" id="websiteMapCard" data-image-base="@(imgBase + "pictures/")">
+            <div class="gl-v2-section-card" id="websiteMapCard" data-web-block="homes" data-image-base="@(imgBase + "pictures/")">
                 <div class="gl-v2-section-card-header">
                     <span class="gl-v2-section-card-icon"><i class="ph ph-map-trifold" aria-hidden="true"></i></span>
                     <h2 class="gl-v2-section-card-title">Projectkaart (woningen)</h2>
@@ -701,7 +944,7 @@
                 </div>
             </div>
 
-            <div class="gl-v2-section-card">
+            <div class="gl-v2-section-card" id="websiteLegacyCard">
                 <div class="gl-v2-section-card-header">
                     <span class="gl-v2-section-card-icon"><i class="ph ph-browser" aria-hidden="true"></i></span>
                     <h2 class="gl-v2-section-card-title">Website-presentatie</h2>
@@ -720,7 +963,7 @@
                     </div>
                 </div>
             </div>
-            <div class="gl-v2-section-card">
+            <div class="gl-v2-section-card" id="websiteSeoCard">
                 <div class="gl-v2-section-card-header">
                     <span class="gl-v2-section-card-icon"><i class="ph ph-magnifying-glass" aria-hidden="true"></i></span>
                     <h2 class="gl-v2-section-card-title">SEO</h2>
@@ -757,6 +1000,8 @@
                     </div>
                 </div>
             </div>
+            </div>@* /web-main *@
+            </div>@* /web-layout *@
         </div>
 
         @* ── Tab 7 · Coördinatie ──────────────────────────────────────────────────────────────── *@
@@ -935,5 +1180,7 @@
     <script src="~/js/gl-v2-projecten-form.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-projecten-website.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-projecten-website-map.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-dialog.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-projecten-website-blocks.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-website-nav.js" asp-append-version="true"></script>
 }
