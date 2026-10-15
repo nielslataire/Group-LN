@@ -49,7 +49,7 @@ End Code
     </script>
     <!-- End Consent Mode / GTM-loader -->
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>@ViewData("Title")</title>
     <meta name="keywords" content="bouw appartement ontwikkeling appartementen coordinatie coördinatie opvolging project woning woningen budget controle werfopvolging werf bouwwerf bouwproject appartementsbouw vlaanderen oost-vlaanderen drongen klaverdries bouwteam copro" />
     <meta name="description" content="@_metaDesc" />

@@ -141,6 +141,22 @@ Public Class HomeHeroDataHelper
             Dim isVideo = project.DefaultPicture IsNot Nothing AndAlso
                 (project.DefaultPicture.MediaType = 1 OrElse videoExts.Contains(System.IO.Path.GetExtension(project.DefaultPicture.Name)))
 
+            ' Breedte-varianten (srcset) voor de foto: zelfde ProjectPictureInfoReader/V4Pic-mechanisme
+            ' als Projects/DetailV4, zodat deze foto ook op gsm een gsm-grote download is i.p.v. de
+            ' vaste 800px-versie. Geen varianten gevonden (oude upload) -> Pic blijft Nothing en
+            ' ImageSrc (de vaste 800px-URL hieronder) is dan gewoon de enige bron, zoals voorheen.
+            Dim pic As V4Pic = Nothing
+            If project.DefaultPicture IsNot Nothing AndAlso Not isVideo Then
+                Try
+                    Dim picInfoMap = ProjectPictureInfoReader.Load(heroProjectId)
+                    Dim info As ProjectPictureInfo = Nothing
+                    If picInfoMap.TryGetValue(project.DefaultPicture.Name, info) AndAlso info.HasVariants Then
+                        pic = New V4Pic With {.Base = imgBase, .Name = project.DefaultPicture.Name, .Width = info.Width, .Height = info.Height, .HasVariants = info.HasVariants}
+                    End If
+                Catch
+                End Try
+            End If
+
             Dim model As New HomeHeroFeaturedModel
             model.Kicker = kicker
             model.Titel = titel
@@ -149,6 +165,7 @@ Public Class HomeHeroDataHelper
             model.IsVideo = isVideo
             model.ImageSrc = If(project.DefaultPicture IsNot Nothing AndAlso Not isVideo, urlHelper.Content(imgBase & "pictures/800/" & project.DefaultPicture.Name), urlHelper.Content("~/Content/img/no_image.jpg"))
             model.VideoSrc = If(isVideo, urlHelper.Content(imgBase & "videos/" & project.DefaultPicture.Name), "")
+            model.Pic = pic
             Dim detailRouteName = If(project.ProjectType = ProjectType.Commerciëel, "CommercieelBySlug", "ProjectBySlug")
             model.DetailUrl = urlHelper.RouteUrl(detailRouteName, New With {.slug = project.Slug})
             Return model

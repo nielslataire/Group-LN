@@ -71,4 +71,17 @@ Public Class HomeHeroFeaturedModel
             _detailurl = value
         End Set
     End Property
+    ' Breedte-varianten van ImageSrc (zelfde V4Pic/V4Html.Img-mechanisme als Projects/DetailV4) zodat
+    ' de browser op gsm geen 2560px-foto hoeft te downloaden voor een telefoonbreed scherm. Nothing
+    ' als de foto geen varianten heeft (oude upload) of het een video is — dan blijft ImageSrc gewoon
+    ' de enige bron, zoals voorheen.
+    Private _pic As V4Pic
+    Public Property Pic() As V4Pic
+        Get
+            Return _pic
+        End Get
+        Set(ByVal value As V4Pic)
+            _pic = value
+        End Set
+    End Property
 End Class

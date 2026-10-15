@@ -111,16 +111,13 @@
     window.saveContactInfoToCookie = window.saveContactInfoToCookie || function (contact) {
         try { document.cookie = contactCookie + '=' + encodeURIComponent(JSON.stringify(contact)) + ';path=/;max-age=' + (60 * 60 * 24 * 365); } catch (e) { /* cookies geblokkeerd */ }
     };
-    function applySavedContact($c) {
+    // Eén plek om de opgeslagen contactcookie te lezen — zowel de aanvraagmodals (Firstname/Name/
+    // Email/Phone) als het hoofdcontactformulier (firstName/lastName/email/phone) vullen zichzelf
+    // hiermee aan, elk met hun eigen veldnamen-mapping.
+    function readSavedContact() {
         var m = document.cookie.match(new RegExp('(?:^|; )' + contactCookie + '=([^;]*)'));
-        if (!m) { return; }
-        try {
-            var saved = JSON.parse(decodeURIComponent(m[1]));
-            if (saved.firstname) { $c.find('#txtFirstname').val(saved.firstname); }
-            if (saved.name) { $c.find('#txtName').val(saved.name); }
-            if (saved.email) { $c.find('#txtEmail').val(saved.email); }
-            if (saved.phone) { $c.find('#txtPhone').val(saved.phone); }
-        } catch (e) { /* ongeldige cookie */ }
+        if (!m) { return null; }
+        try { return JSON.parse(decodeURIComponent(m[1])); } catch (e) { return null; }
     }
     // ───── Aanvraagmodals (brochure + grondplan): eigen opmaak, versturen via de bestaande acties Projects/SendBrochure en Projects/SendPlan ─────
     var broAsk = document.getElementById('pdv4BroAsk');
@@ -207,14 +204,11 @@
         }
         function open() {
             lastFocus = document.activeElement;
-            var m = document.cookie.match(new RegExp('(?:^|; )' + contactCookie + '=([^;]*)'));
-            if (m) {
-                try {
-                    var sv = JSON.parse(decodeURIComponent(m[1]));
-                    [['Firstname', 'firstname'], ['Name', 'name'], ['Email', 'email'], ['Phone', 'phone']].forEach(function (p) {
-                        if (sv[p[1]] && !form.elements[p[0]].value) { form.elements[p[0]].value = sv[p[1]]; }
-                    });
-                } catch (e) { /* ongeldige cookie */ }
+            var sv = readSavedContact();
+            if (sv) {
+                [['Firstname', 'firstname'], ['Name', 'name'], ['Email', 'email'], ['Phone', 'phone']].forEach(function (p) {
+                    if (sv[p[1]] && !form.elements[p[0]].value) { form.elements[p[0]].value = sv[p[1]]; }
+                });
             }
             dialog.classList.remove('is-done');
             var err = document.getElementById(cfg.error); if (err) { err.setAttribute('hidden', ''); }
@@ -633,14 +627,22 @@
             renderInterest();
         });
         renderContactTitle();
+        // Zelfde opgeslagen-contact-aanvulling als de aanvraagmodals (brochure/grondplan/document),
+        // nu ook op het eigenlijke contactformulier — de plek waar het eerder ontbrak.
+        var savedContact = readSavedContact();
+        if (savedContact) {
+            var ff = form.elements;
+            if (savedContact.firstname && !ff.firstName.value) { ff.firstName.value = savedContact.firstname; }
+            if (savedContact.name && !ff.lastName.value) { ff.lastName.value = savedContact.name; }
+            if (savedContact.email && !ff.email.value) { ff.email.value = savedContact.email; }
+            if (savedContact.phone && !ff.phone.value) { ff.phone.value = savedContact.phone; }
+        }
     }
     $$('[data-goto-question]').forEach(function (b) { b.addEventListener('click', function () { goContact({ interest: [D.contact.general] }); }); });
     $$('[data-goto-meeting]').forEach(function (b) { b.addEventListener('click', function () { goContact({ message: D.contact.buyMessage }); }); });
 
     /* Validatie + verzenden */
     var emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-    // nationaal (0478 12 34 56) of internationaal (+32 …, +31 …, 0031 …): enkel de vorm toetsen, niet het land
-    var phoneRe = /^(?:(?:\+|00)[1-9]\d{0,2}|0)[\s./-]?[1-9][\d\s./-]{5,13}$/;
     function fieldError(input, msg) {
         var em = input.parentNode.querySelector('.pdv4-field-error');
         input.classList.toggle('has-error', !!msg);
@@ -682,16 +684,19 @@
     if (form) {
         form.addEventListener('submit', function (e) {
             e.preventDefault();
+            // Zelfde validatie als de aanvraagmodals (checkName/checkEmail/checkPhone, incl.
+            // typfout-detectie en de Belgisch/internationaal telefoonformaat-check) — dit is het
+            // echte conversiepunt van de pagina, het mocht niet de zwakkere validatie van de twee hebben.
             var f = form.elements, ok = true;
-            ['firstName', 'lastName'].forEach(function (n) {
-                var v = f[n].value.trim();
-                fieldError(f[n], v ? '' : 'Dit veld is verplicht.'); if (!v) { ok = false; }
-            });
+            var firstMsg = checkName(f.firstName.value, 'Je voornaam');
+            fieldError(f.firstName, firstMsg); if (firstMsg) { ok = false; }
+            var lastMsg = checkName(f.lastName.value, 'Je naam');
+            fieldError(f.lastName, lastMsg); if (lastMsg) { ok = false; }
             var mail = f.email.value.trim();
-            var mailMsg = !mail ? 'Vul je e-mailadres in.' : (!emailRe.test(mail) ? 'Dit e-mailadres lijkt niet te kloppen.' : '');
+            var mailMsg = checkEmail(mail);
             fieldError(f.email, mailMsg); if (mailMsg) { ok = false; }
             var ph = f.phone.value.trim();
-            var phMsg = !ph ? 'Vul je gsm-nummer in.' : (!phoneRe.test(ph) ? 'Controleer je nummer, bv. 0478 12 34 56 of +31 6 12 34 56 78.' : '');
+            var phMsg = checkPhone(ph);
             fieldError(f.phone, phMsg); if (phMsg) { ok = false; }
             var ce = $('#pdv4ConsentError');
             if (!f.consent.checked) { ce.textContent = 'Je toestemming is nodig om je aanvraag te kunnen behandelen.'; ce.removeAttribute('hidden'); ok = false; }
@@ -700,10 +705,12 @@
 
             var btn = form.querySelector('button[type=submit]'); btn.disabled = true;
             var errEl = $('#pdv4FormError'); errEl.setAttribute('hidden', '');
+            var firstName = f.firstName.value.trim(), lastName = f.lastName.value.trim();
             sendContact({
-                firstName: f.firstName.value.trim(), lastName: f.lastName.value.trim(),
+                firstName: firstName, lastName: lastName,
                 email: mail, phone: ph, message: f.message.value.trim()
             }).then(function () {
+                window.saveContactInfoToCookie({ firstname: firstName, name: lastName, email: mail, phone: ph });
                 var thanks = $('#pdv4Thanks'), sec = $('#contact');
                 form.setAttribute('hidden', ''); thanks.removeAttribute('hidden');
                 if (sec) { sec.classList.add('is-sent'); }

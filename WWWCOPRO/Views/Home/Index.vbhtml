@@ -169,7 +169,7 @@ End Section
             @If heroFeatured.IsVideo Then
                 @<video class="featured-project-video" src="@heroFeatured.VideoSrc" muted loop playsinline preload="none"></video>
             Else
-                @<img src="@heroFeatured.ImageSrc" alt="@heroFeatured.ProjectTitel" loading="lazy" decoding="async">
+                @WWWCOPRO.V4Html.Img(heroFeatured.ImageSrc, heroFeatured.ProjectTitel, True, heroFeatured.Pic, "100vw")
             End If
         </div>
         <div class="featured-project-overlay"></div>

@@ -19,11 +19,11 @@
     --pdv4-disabled: #8a948a;
     --pdv4-gold: #C9A96E;
     --pdv4-gold-hover: #B8935A;
-    --pdv4-line: rgba(0, 83, 45, 0.12);
+    --pdv4-line: rgba(0, 83, 45, 0.10);
     --pdv4-line-soft: rgba(0, 83, 45, 0.08);
     --pdv4-line-strong: rgba(0, 83, 45, 0.15);
     --pdv4-error: #B3261E;
-    --pdv4-serif: 'Playfair Display', Georgia, serif;
+    --pdv4-serif: 'Playfair Display', 'Times New Roman', Georgia, serif;
     --pdv4-sans: 'Avenir', 'Open Sans', sans-serif;
     --pdv4-pad-y: clamp(48px, 6vw, 96px);
     --pdv4-pad-x: clamp(24px, 4vw, 80px);
@@ -60,7 +60,7 @@ html { scroll-padding-top: var(--pdv4-anchor-offset); }
 .pdv4-media__name { font-family: var(--pdv4-serif); font-size: clamp(34px, 3.6vw, 54px); line-height: 1.05; }
 .pdv4-media__meta { display: flex; justify-content: space-between; align-items: flex-end; gap: 18px; flex-wrap: wrap; border-top: 1px solid rgba(255, 255, 255, .3); padding-top: 18px; }
 .pdv4-media__line { font-size: 12px; color: rgba(255, 255, 255, .75); }
-.pdv4-media__price { font-family: var(--pdv4-serif); font-size: 28px; white-space: nowrap; }
+.pdv4-media__price { font-family: var(--pdv4-sans); font-weight: 700; font-size: 28px; white-space: nowrap; }
 .pdv4-media__meta .pdv4-btn { pointer-events: auto; }
 
 /* Placeholder voor ontbrekende beelden */
@@ -178,13 +178,15 @@ html { scroll-padding-top: var(--pdv4-anchor-offset); }
 .pdv4-map__stage > img, .pdv4-map__stage > .pdv4-ph { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .pdv4-map__svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .pdv4-zone { cursor: pointer; fill: #fff; fill-opacity: .18; stroke: rgba(255, 255, 255, .8); stroke-width: 1.5; vector-effect: non-scaling-stroke; transition: fill-opacity .25s; outline: none; }
-.pdv4-zone.is-avail { fill: var(--pdv4-gold); fill-opacity: .32; stroke: var(--pdv4-gold); }
+/* .pdv4-zone.is-avail and .pdv4-zonelabel__tag.is-avail fill/background colors are set further
+   down ("Overlays: beschikbaar = goud" block) — that block loads later and always wins at equal
+   specificity, so the color declarations used to live here too were dead. Kept the behavior-only
+   rules here, moved color to the one block that's actually in effect. */
 .pdv4-zone:hover, .pdv4-zone:focus-visible { fill-opacity: .45; }
 .pdv4-map.has-selection .pdv4-zone { fill-opacity: .08; }
 .pdv4-map.has-selection .pdv4-zone.is-selected { fill-opacity: .5; stroke: #fff; stroke-width: 3; }
 .pdv4-zonelabel { position: absolute; transform: translate(-50%, -50%) scale(var(--pdv4-inv, 1)); transition: transform .7s, opacity .3s; pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .pdv4-zonelabel__tag { background: #fff; color: var(--pdv4-ink); font-size: 13px; font-weight: 700; padding: 6px 12px; border-radius: 20px; box-shadow: 0 2px 10px rgba(0, 0, 0, .2); white-space: nowrap; }
-.pdv4-zonelabel__tag.is-avail { background: var(--pdv4-gold); }
 .pdv4-zonelabel__sub { font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px 4px rgba(0, 0, 0, .6); white-space: nowrap; }
 .pdv4-map.has-selection .pdv4-zonelabel { opacity: 0; }
 .pdv4-map.has-selection .pdv4-zonelabel.is-selected { opacity: 1; }
@@ -209,7 +211,7 @@ html { scroll-padding-top: var(--pdv4-anchor-offset); }
 .pdv4-lotcard dt { font-size: 11px; color: var(--pdv4-muted); }
 .pdv4-lotcard dd { margin: 2px 0 0; font-family: var(--pdv4-serif); font-size: 18px; white-space: nowrap; }
 .pdv4-lotcard__foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; border-top: 1px solid var(--pdv4-line); padding-top: 14px; }
-.pdv4-lotcard__price { font-family: var(--pdv4-serif); font-size: 24px; color: var(--pdv4-green); white-space: nowrap; }
+.pdv4-lotcard__price { font-family: var(--pdv4-sans); font-weight: 700; font-size: 24px; color: var(--pdv4-green); white-space: nowrap; }
 .pdv4-lotcard__price.is-sold { color: var(--pdv4-disabled); }
 .pdv4-lotcard__btns { display: flex; gap: 8px; flex-wrap: nowrap; }
 .pdv4-page .pdv4-lotcard__btns a { border-radius: 6px; font-size: 12px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; white-space: nowrap; }
@@ -237,7 +239,7 @@ html { scroll-padding-top: var(--pdv4-anchor-offset); }
 .pdv4-table__row.is-sold { background: #F5F7F2; color: #9aa39a; }
 .pdv4-lotname { min-width: 0; }
 .pdv4-lotname strong { display: block; font-size: 15px; color: var(--pdv4-green); }
-.pdv4-lotname small { display: block; font-size: 12px; color: var(--pdv4-green-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pdv4-lotname small { display: block; font-size: 12px; color: var(--pdv4-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pdv4-bedrooms { display: flex; align-items: center; gap: 4px; }
 .pdv4-bed { width: 7px; height: 7px; border-radius: 50%; border: 1px solid #9cbf8e; }
 .pdv4-bed.is-on { background: var(--pdv4-green-mid); border-color: var(--pdv4-green-mid); }
@@ -245,7 +247,7 @@ html { scroll-padding-top: var(--pdv4-anchor-offset); }
 .pdv4-pricecell { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 .pdv4-priceline { display: flex; align-items: baseline; gap: 8px; white-space: nowrap; }
 .pdv4-priceline__label { font-size: 11px; color: var(--pdv4-muted); }
-.pdv4-priceline__v { font-family: var(--pdv4-serif); font-size: 19px; color: var(--pdv4-green); font-variant-numeric: tabular-nums; }
+.pdv4-priceline__v { font-family: var(--pdv4-sans); font-weight: 700; font-size: 19px; color: var(--pdv4-green); font-variant-numeric: tabular-nums; }
 .pdv4-priceline__v.is-small { font-size: 16px; }
 .pdv4-linkbtn { background: none; border: 0; padding: 2px 0; cursor: pointer; font-family: inherit; font-size: 11px; color: var(--pdv4-green); text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
 .pdv4-linkbtn--l { font-size: 13px; padding: 4px 0; align-self: flex-start; }
@@ -268,8 +270,8 @@ html { scroll-padding-top: var(--pdv4-anchor-offset); }
 
 .pdv4-summary { margin: 12px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); background: #fff; border: 1px solid var(--pdv4-line); border-radius: 4px; overflow: hidden; }
 .pdv4-summary > div { padding: 16px 18px; border-right: 1px solid var(--pdv4-line-soft); }
-.pdv4-summary dt { font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--pdv4-green-soft); }
-.pdv4-summary dd { margin: 6px 0 0; font-family: var(--pdv4-serif); font-size: 17px; line-height: 1.25; }
+.pdv4-summary dt { font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--pdv4-muted); }
+.pdv4-summary dd { margin: 6px 0 0; font-family: var(--pdv4-sans); font-weight: 700; font-size: 17px; line-height: 1.25; }
 .pdv4-summary dd.s { margin: 2px 0 0; font-family: var(--pdv4-sans); font-size: 12px; color: var(--pdv4-muted); }
 
 /* ───────── Maandlast ───────── */
@@ -291,7 +293,7 @@ html { scroll-padding-top: var(--pdv4-anchor-offset); }
 .pdv4-calc__result { background: var(--pdv4-green); color: #fff; padding: clamp(20px, 2.2vw, 28px); display: flex; flex-direction: column; gap: 18px; }
 .pdv4-calc__resulttop { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
 .pdv4-calc__label { font-size: 13px; color: rgba(255, 255, 255, .8); margin-bottom: 6px; }
-.pdv4-calc__amount { font-family: var(--pdv4-serif); font-size: clamp(44px, 4.4vw, 64px); line-height: 1; font-variant-numeric: tabular-nums; }
+.pdv4-calc__amount { font-family: var(--pdv4-sans); font-weight: 700; font-size: clamp(44px, 4.4vw, 64px); line-height: 1; font-variant-numeric: tabular-nums; }
 .pdv4-calc__loan { font-size: 13px; line-height: 1.6; color: rgba(255, 255, 255, .85); text-align: right; }
 .pdv4-calc__cta { display: flex; gap: 12px 16px; flex-wrap: wrap; align-items: center; border-top: 1px solid rgba(255, 255, 255, .2); padding-top: 18px; }
 .pdv4-calc__cta > span { font-size: 13px; color: rgba(255, 255, 255, .85); }
@@ -448,16 +450,18 @@ html { scroll-padding-top: var(--pdv4-anchor-offset); }
 /* Projectkaart: de verhouding blijft altijd 4:3 (zoals in de CPMCore-editor), anders valt de omtrek op de foto naast de juiste plek. */
 .pdv4-map { min-height: 0; }
 
-/* Overlays: beschikbaar = lichtgroen (donkerder groen bij hover), verkocht = grijs. */
-.pdv4-zone { fill: #8a948a; fill-opacity: .38; stroke: rgba(255, 255, 255, .75); stroke-width: 1.5; }
+/* Overlays: beschikbaar = goud (zelfde kleur als de lottabs' .pdv4-dot--avail), verkocht = neutraal
+   grijs (--pdv4-disabled, al een bestaand token). Was eerst lichtgroen/grijs met losse hex-waarden,
+   buiten het palet en in tegenspraak met de goud-markering elders op de pagina — zie kritiek. */
+.pdv4-zone { fill: var(--pdv4-disabled); fill-opacity: .38; stroke: rgba(255, 255, 255, .75); stroke-width: 1.5; }
 .pdv4-zone:hover, .pdv4-zone:focus-visible { fill-opacity: .5; }
-.pdv4-zone.is-avail { fill: #7CC48B; fill-opacity: .42; stroke: #BFE6C7; }
-.pdv4-zone.is-avail:hover, .pdv4-zone.is-avail:focus-visible { fill: #00532D; fill-opacity: .6; stroke: #fff; }
+.pdv4-zone.is-avail { fill: var(--pdv4-gold); fill-opacity: .42; stroke: var(--pdv4-gold-hover); }
+.pdv4-zone.is-avail:hover, .pdv4-zone.is-avail:focus-visible { fill: var(--pdv4-green); fill-opacity: .6; stroke: #fff; }
 .pdv4-map.has-selection .pdv4-zone { fill-opacity: .1; }
 .pdv4-map.has-selection .pdv4-zone.is-selected { fill-opacity: .6; stroke: #fff; stroke-width: 3; }
-.pdv4-map.has-selection .pdv4-zone.is-avail.is-selected { fill: #00532D; }
-.pdv4-map.has-selection .pdv4-zone.is-selected:not(.is-avail) { fill: #5d665c; }
-.pdv4-zonelabel__tag.is-avail { background: #CFEBD5; color: var(--pdv4-green-dark); }
+.pdv4-map.has-selection .pdv4-zone.is-avail.is-selected { fill: var(--pdv4-green); }
+.pdv4-map.has-selection .pdv4-zone.is-selected:not(.is-avail) { fill: var(--pdv4-ink); }
+.pdv4-zonelabel__tag.is-avail { background: var(--pdv4-gold); color: var(--pdv4-ink); }
 
 .pdv4-quote + .pdv4-quote { margin-top: -24px; }
 
@@ -520,6 +524,19 @@ html { scroll-padding-top: var(--pdv4-anchor-offset); }
 .pdv4-modal__submit[disabled] { opacity: .7; cursor: progress; }
 .pdv4-hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 @media (max-width: 520px) { .pdv4-modal__grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Projectbrochure + grondplan + documenten: op gsm volledig scherm i.p.v. een gecentreerd paneel. */
+@media (max-width: 639px) {
+    #pdv4BroModal, #pdv4PlanModal, #pdv4DocModal { padding: 0; align-items: stretch; }
+    #pdv4BroModal .pdv4-modal__dialog, #pdv4PlanModal .pdv4-modal__dialog, #pdv4DocModal .pdv4-modal__dialog {
+        width: 100%; max-width: none; height: 100dvh; max-height: none; border-radius: 0;
+        padding: max(24px, calc(14px + env(safe-area-inset-top))) calc(20px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) calc(20px + env(safe-area-inset-left));
+    }
+    #pdv4BroModal .pdv4-modal__close, #pdv4PlanModal .pdv4-modal__close, #pdv4DocModal .pdv4-modal__close {
+        top: calc(14px + env(safe-area-inset-top));
+        right: calc(14px + env(safe-area-inset-right));
+    }
+}
 
 /* Modal-correcties: label + sterretje op één regel, ronde sluitknop (het thema overschrijft knoppen), scrollen niet doorgeven */
 .pdv4-modal__form label { gap: 6px; }
@@ -589,7 +606,7 @@ html { scroll-padding-top: var(--pdv4-anchor-offset); }
 
 /* Cookie-icoon (linksonder) schuift boven de mobiele balk i.p.v. over de tekst ervan */
 @media (max-width: 999px) {
-    body:has(.pdv4-bar:not([hidden])) .cc-fab { bottom: 106px; }
+    body:has(.pdv4-bar:not([hidden])) .cc-fab { bottom: calc(106px + env(safe-area-inset-bottom)); }
 }
 @media (min-width: 1000px) {
     .pdv4-page .pdv4-h1 { font-size: clamp(30px, 3.4vw, 56px); }
@@ -619,6 +636,44 @@ html { scroll-padding-top: var(--pdv4-anchor-offset); }
     /* ruimte tussen foto en titel bij de materialen (architectuur) */
     .pdv4-materials { gap: 44px 20px; }
     .pdv4-material { gap: 22px; }
+
+    /* Eerste beeld (hero): lichtere kleursetting bovenaan op gsm — de terugknop en badge zitten
+       vaak op het lichtste deel van de foto (lucht/gevel), niet op de donkere onderverloop waar
+       prijs/knop onderaan wél tegen afsteken. Terugknop wit, badge groen, titel donker, de
+       "Informatie aanvragen"-knop goud i.p.v. wit. Prijs/meta onderaan blijven wit (staan op het
+       donkere deel van .pdv4-media__shade). */
+    .pdv4-page .pdv4-media__top .pdv4-back--photo {
+        background: #fff; border-color: rgba(0, 83, 45, .22); color: var(--pdv4-green);
+        -webkit-backdrop-filter: none; backdrop-filter: none;
+    }
+    .pdv4-page .pdv4-media__top .pdv4-back--photo:hover,
+    .pdv4-page .pdv4-media__top .pdv4-back--photo:focus-visible {
+        background: var(--pdv4-bg); border-color: var(--pdv4-green); color: var(--pdv4-green);
+    }
+    .pdv4-page .pdv4-badge { background: var(--pdv4-green); color: #fff; }
+    .pdv4-page .pdv4-badge__dot { background: var(--pdv4-gold); }
+    .pdv4-page .pdv4-media__name { color: var(--pdv4-ink); }
+    .pdv4-page .pdv4-media__meta .pdv4-btn--white {
+        background: var(--pdv4-gold); color: var(--pdv4-ink); border-color: var(--pdv4-gold);
+    }
+    .pdv4-page .pdv4-media__meta .pdv4-btn--white:hover {
+        background: var(--pdv4-gold-hover); border-color: var(--pdv4-gold-hover); color: var(--pdv4-ink);
+    }
+
+    /* Badge + titel verhuizen naar net onder de terugknop i.p.v. onderaan de foto (prijs/knop blijven
+       wel onderaan). .pdv4-media__bottom (badge/titel/meta, flex-column, gap:18px) blijft gewoon
+       position:absolute zoals voorheen (géén display:contents — dat zette alle inhoud zonder eigen
+       "position" terug naar de stapel-laag ONDER de foto, want .pdv4-media__layers/__shade zijn zelf
+       position:absolute en die wint altijd van niet-gepositioneerde inhoud, los van DOM-volgorde).
+       I.p.v. enkel bottom:0 (hoogte = inhoud, dus onderaan opgestapeld) krijgt de box nu ook top:
+       ze beslaat zo de volledige foto onder de terugknop-rij. Badge+titel blijven daardoor gewoon
+       bovenaan in de flex-kolom; margin-top:auto op .pdv4-media__meta duwt enkel prijs/knop naar
+       de onderkant van diezelfde box. */
+    .pdv4-page .pdv4-media__bottom {
+        top: 88px; /* hoogte van .pdv4-media__top: 24px+24px padding + 40px terugknop */
+        padding-top: 0;
+    }
+    .pdv4-page .pdv4-media__meta { margin-top: auto; }
 }
 
 /* Tekstvak bij een locatie op het liggingsplan: leesbare maat (Leaflet staat standaard op 12-13px) */
