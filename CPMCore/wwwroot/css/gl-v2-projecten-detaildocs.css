@@ -209,7 +209,13 @@
     letter-spacing: .04em;
     text-transform: uppercase;
 }
-.gl-v2-dd-ext.is-cad { background: var(--gl-v2-info-tint); color: var(--gl-v2-info); }
+/* Kleur per bestandstype, zelfde palet als de documentenlijst op Projecten/Detail (.gl-doc-badge): effen vlak, witte tekst. */
+.gl-v2-dd-ext.is-pdf, .gl-v2-dd-ext.is-word, .gl-v2-dd-ext.is-excel, .gl-v2-dd-ext.is-cad, .gl-v2-dd-ext.is-img { color: #fff; }
+.gl-v2-dd-ext.is-pdf { background: #B3452F; }
+.gl-v2-dd-ext.is-word { background: #8B6B4A; }
+.gl-v2-dd-ext.is-excel { background: var(--gl-v2-primary); }
+.gl-v2-dd-ext.is-cad { background: #C17D1F; }
+.gl-v2-dd-ext.is-img { background: #8A7967; }
 .gl-v2-dd-ext.is-office { background: var(--gl-v2-gold-tint); color: var(--gl-v2-warning); }
 .gl-v2-dd-ext.is-missing { background: transparent; border: 1.5px dashed var(--gl-v2-dashed); color: var(--gl-v2-muted-light); align-items: center; padding-bottom: 0; font-size: 13px; }
 .gl-v2-dd-doc-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }

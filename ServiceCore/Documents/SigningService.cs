@@ -86,7 +86,8 @@ public class SigningService : ISigningService
         if (existing != null && existing.Status == DocumentStatus.Getekend)
             return fail("Deze wijzigingsopdracht is al ondertekend.");
 
-        var contractenFolder = await _db.DocumentFolders.AsNoTracking().Where(f => f.Code == "contracten").Select(f => f.Id).FirstOrDefaultAsync();
+        // Een wijzigingsopdracht hoort bij "Offertes & bestellingen", niet bij "Contracten" (verkoopcontracten).
+        var offertesFolder = await _db.DocumentFolders.AsNoTracking().Where(f => f.Code == "offertes").Select(f => f.Id).FirstOrDefaultAsync();
         var name = ("Wijzigingsopdracht — " + (co.Description ?? "").Trim()).TrimEnd(' ', '—');
         if (name.Length > 200) name = name[..200];
 
@@ -95,7 +96,7 @@ public class SigningService : ISigningService
         {
             var up = await _docs.Upload(new DocUploadDto
             {
-                ProjectId = projectId, Mode = "new", Name = name, FolderId = contractenFolder == 0 ? null : contractenFolder,
+                ProjectId = projectId, Mode = "new", Name = name, FolderId = offertesFolder == 0 ? null : offertesFolder,
                 DocDate = DateOnly.FromDateTime(DateTime.Today), StoredFilename = dto.StoredFilename, OriginalFilename = dto.OriginalFilename,
                 SizeBytes = dto.SizeBytes, Links = new List<DocLinkRef> { new() { Type = "client", Id = co.ClientAccountId } },
                 Status = DocumentStatus.Goedgekeurd, UserId = dto.UserId, UserName = dto.UserName,

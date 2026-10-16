@@ -7,8 +7,8 @@
     De stijl komt uit gl-v2-projecten-verslagen.css (.gl-v2-vsprep); de stappen zijn tijdgestuurd, want de server geeft geen voortgang door.
 *@
 @{
-    ViewData["Title"] = Model.Intern ? "Intern budget opmaken" : "Budget voor de bank opmaken";
-    ViewData["PageIcon"] = "ph ph-file-pdf";
+    ViewData["Title"] = Model.Excel ? "Excel opmaken" : Model.Intern ? "Intern budget opmaken" : "Budget voor de bank opmaken";
+    ViewData["PageIcon"] = Model.Excel ? "ph ph-file-xls" : "ph ph-file-pdf";
     var terug = Url.Action("BudgetResultaat", "Projecten", new { versieId = Model.BudgetVersieId });
     ViewData["BackUrl"] = terug;
     var menu = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · budgetten", Mode = GlV2ProjectMenuMode.Outer };
@@ -26,7 +26,8 @@
 @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhone)
 
 <section id="bw-pdf-prep" class="gl-v2-vsprep" role="status" aria-live="polite"
-         data-url="@Url.Action("BudgetPdfMaken", "Projecten", new { versieId = Model.BudgetVersieId, intern = Model.Intern })"
+         data-url="@(Model.Excel ? Url.Action("BudgetExcelMaken", "Projecten", new { versieId = Model.BudgetVersieId }) : Url.Action("BudgetPdfMaken", "Projecten", new { versieId = Model.BudgetVersieId, intern = Model.Intern }))"
+         data-excel="@(Model.Excel ? "1" : "0")"
          data-token="@Antiforgery.GetAndStoreTokens(Context).RequestToken"
          data-intern="@(Model.Intern ? "1" : "0")" data-terug="@terug"></section>
 

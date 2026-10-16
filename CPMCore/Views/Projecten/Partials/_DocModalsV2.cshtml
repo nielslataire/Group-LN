@@ -18,6 +18,20 @@
         DisplayValue = value?.ToString("dd/MM/yyyy") ?? ""
     };
     var activeFolderId = ov.ActiveFolderNav?.Id ?? 0;
+
+    // Aangepaste keuzelijsten (GlV2/_SelectList, DESIGN.md "Select / Dropdown") — vervangen de gewone <select>s van deze dialogen.
+    // De verborgen input behoudt het oorspronkelijke id en de naam, dus lezen en insturen blijft ongewijzigd.
+    GlV2SelectListVm Sel(string id, string name, string? label, string? value, IEnumerable<GlV2SelectItem> items, string placeholder = "Kies …", string? emptyText = null, bool required = false, bool bare = false) => new()
+    {
+        Id = id, Name = name, Label = label, Value = value, Items = items.ToList(), Placeholder = placeholder, EmptyText = emptyText, Required = required, Bare = bare
+    };
+    var folderItems = ov.Folders.Select(f => new GlV2SelectItem { Value = f.Id.ToString(), Text = f.Name }).ToList();
+    var unitItems = ov.Units.Select(u => new GlV2SelectItem { Value = u.Id.ToString(), Text = u.Name }).ToList();
+    var companyItems = ov.Companies.Select(c => new GlV2SelectItem { Value = c.Id.ToString(), Text = c.Name }).ToList();
+    var clientItems = ov.Clients.Select(c => new GlV2SelectItem { Value = c.Id.ToString(), Text = c.Name }).ToList();
+    var linkItems = ov.Units.Select(u => new GlV2SelectItem { Value = "unit:" + u.Id, Text = u.Name, Group = "Eenheden" })
+        .Concat(ov.Clients.Select(c => new GlV2SelectItem { Value = "client:" + c.Id, Text = c.Name, Group = "Klanten" }))
+        .Concat(ov.Companies.Select(c => new GlV2SelectItem { Value = "company:" + c.Id, Text = c.Name, Group = "Leveranciers" })).ToList();
 }
 
 @* ── Uploaden (17b): eerst nieuw of revisie ─────────────────────────────────────────────────────── *@
@@ -50,10 +64,7 @@
                     </div>
 
                     <div class="gl-v2-field gl-v2-field-full" id="gl-v2-dd-up-replaces-field" hidden>
-                        <label class="gl-v2-field-label" for="gl-v2-dd-up-replaces">VERVANGT <span style="color:#8B2A2A">*</span></label>
-                        <div class="gl-v2-field-box">
-                            <select class="gl-v2-field-input" id="gl-v2-dd-up-replaces"><option value="">Kies een document …</option></select>
-                        </div>
+                        @await Html.PartialAsync("GlV2/_SelectList", Sel("gl-v2-dd-up-replaces", "replaces", "VERVANGT", "", new List<GlV2SelectItem>(), "Kies een document …", "Kies een document …", required: true))
                         <span class="gl-v2-field-help">Nummer, koppelingen en delen worden overgenomen — je hoeft enkel te bevestigen.</span>
                     </div>
 
@@ -62,16 +73,8 @@
                             <label class="gl-v2-field-label" for="gl-v2-dd-up-name">NAAM <span style="color:#8B2A2A">*</span></label>
                             <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="name" id="gl-v2-dd-up-name" maxlength="200" /></div>
                         </div>
-                        <div class="gl-v2-field" data-dd-new-only>
-                            <label class="gl-v2-field-label" for="gl-v2-dd-up-folder">MAP <span style="color:#8B2A2A">*</span></label>
-                            <div class="gl-v2-field-box">
-                                <select class="gl-v2-field-input" name="folderId" id="gl-v2-dd-up-folder">
-                                    @foreach (var f in ov.Folders)
-                                    {
-                                        <option value="@f.Id" data-kind="@f.ViewKind" selected="@(f.Id == activeFolderId ? "selected" : null)">@f.Name</option>
-                                    }
-                                </select>
-                            </div>
+                        <div data-dd-new-only>
+                            @await Html.PartialAsync("GlV2/_SelectList", Sel("gl-v2-dd-up-folder", "folderId", "MAP", activeFolderId > 0 ? activeFolderId.ToString() : null, folderItems, "Kies een map …", required: true))
                         </div>
                         <div>
                             @await Html.PartialAsync("GlV2/_DateField", DateVm("gl-v2-dd-up-date", "docDate", "DOCUMENTDATUM", today))
@@ -111,28 +114,8 @@
                         <div class="gl-v2-dd-linkpicker" id="gl-v2-dd-up-links">
                             <span class="gl-v2-dd-linkchip is-project"><i class="ph ph-buildings" aria-hidden="true"></i>&nbsp;Project</span>
                             <div id="gl-v2-dd-up-linkchips" style="display:contents"></div>
-                            <div class="gl-v2-field-box" style="min-width:210px">
-                                <select class="gl-v2-field-input" id="gl-v2-dd-up-linkadd" aria-label="Koppelen aan eenheid, klant of leverancier">
-                                    <option value="">+ eenheid, klant of leverancier …</option>
-                                    @if (ov.Units.Count > 0)
-                                    {
-                                        <optgroup label="Eenheden">
-                                            @foreach (var u in ov.Units) { <option value="unit:@u.Id" data-label="@u.Name" data-buyer="@u.Ref" data-buyer-name="@u.Sub">@u.Name</option> }
-                                        </optgroup>
-                                    }
-                                    @if (ov.Clients.Count > 0)
-                                    {
-                                        <optgroup label="Klanten">
-                                            @foreach (var c in ov.Clients) { <option value="client:@c.Id" data-label="@c.Name">@c.Name</option> }
-                                        </optgroup>
-                                    }
-                                    @if (ov.Companies.Count > 0)
-                                    {
-                                        <optgroup label="Leveranciers">
-                                            @foreach (var c in ov.Companies) { <option value="company:@c.Id" data-label="@c.Name">@c.Name</option> }
-                                        </optgroup>
-                                    }
-                                </select>
+                            <div style="min-width:210px">
+                                @await Html.PartialAsync("GlV2/_SelectList", Sel("gl-v2-dd-up-linkadd", "linkadd", null, "", linkItems, "+ eenheid, klant of leverancier …", bare: true))
                             </div>
                         </div>
                         <div class="gl-v2-dd-suggest" id="gl-v2-dd-up-suggest" hidden>
@@ -156,15 +139,13 @@
                         </div>
                     </div>
 
-                    <div class="gl-v2-field gl-v2-field-full">
-                        <label class="gl-v2-field-label" for="gl-v2-dd-up-status">STATUS NA OPSLAAN</label>
-                        <div class="gl-v2-field-box">
-                            <select class="gl-v2-field-input" name="status" id="gl-v2-dd-up-status">
-                                <option value="2" selected>Goedgekeurd</option>
-                                <option value="1">Ter goedkeuring</option>
-                                <option value="0">Concept</option>
-                            </select>
-                        </div>
+                    <div class="gl-v2-field-full">
+                        @await Html.PartialAsync("GlV2/_SelectList", Sel("gl-v2-dd-up-status", "status", "STATUS NA OPSLAAN", "2", new[]
+                        {
+                            new GlV2SelectItem { Value = "2", Text = "Goedgekeurd" },
+                            new GlV2SelectItem { Value = "1", Text = "Ter goedkeuring" },
+                            new GlV2SelectItem { Value = "0", Text = "Concept" }
+                        }))
                     </div>
                     <p class="gl-v2-dd-formerror gl-v2-field-full" id="gl-v2-dd-up-error" role="alert" hidden></p>
                 </div>
@@ -193,51 +174,26 @@
                         <label class="gl-v2-field-label" for="gl-v2-dd-rq-name">DOCUMENT <span style="color:#8B2A2A">*</span></label>
                         <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="name" id="gl-v2-dd-rq-name" maxlength="200" placeholder="bv. Keuringsverslag elektriciteit" /></div>
                     </div>
-                    <div class="gl-v2-field">
-                        <label class="gl-v2-field-label" for="gl-v2-dd-rq-folder">MAP <span style="color:#8B2A2A">*</span></label>
-                        <div class="gl-v2-field-box">
-                            <select class="gl-v2-field-input" name="folderId" id="gl-v2-dd-rq-folder">
-                                @foreach (var f in ov.Folders) { <option value="@f.Id" selected="@(f.Id == activeFolderId ? "selected" : null)">@f.Name</option> }
-                            </select>
-                        </div>
+                    <div>
+                        @await Html.PartialAsync("GlV2/_SelectList", Sel("gl-v2-dd-rq-folder", "folderId", "MAP", activeFolderId > 0 ? activeFolderId.ToString() : null, folderItems, "Kies een map …", required: true))
                     </div>
-                    <div class="gl-v2-field">
-                        <label class="gl-v2-field-label" for="gl-v2-dd-rq-unit">EENHEID</label>
-                        <div class="gl-v2-field-box">
-                            <select class="gl-v2-field-input" name="unitId" id="gl-v2-dd-rq-unit">
-                                <option value="">Heel het project</option>
-                                @foreach (var u in ov.Units) { <option value="@u.Id" selected="@(Model.FilterUnitId == u.Id ? "selected" : null)">@u.Name</option> }
-                            </select>
-                        </div>
+                    <div>
+                        @await Html.PartialAsync("GlV2/_SelectList", Sel("gl-v2-dd-rq-unit", "unitId", "EENHEID", Model.FilterUnitId?.ToString() ?? "", unitItems, "Heel het project", "Heel het project"))
                     </div>
-                    <div class="gl-v2-field">
-                        <label class="gl-v2-field-label" for="gl-v2-dd-rq-kind">GEVRAAGD AAN</label>
-                        <div class="gl-v2-field-box">
-                            <select class="gl-v2-field-input" name="kind" id="gl-v2-dd-rq-kind">
-                                <option value="leverancier">Leverancier</option>
-                                <option value="klant">Klant</option>
-                                <option value="extern">Andere (extern)</option>
-                                <option value="intern">Intern</option>
-                            </select>
-                        </div>
+                    <div>
+                        @await Html.PartialAsync("GlV2/_SelectList", Sel("gl-v2-dd-rq-kind", "kind", "GEVRAAGD AAN", "leverancier", new[]
+                        {
+                            new GlV2SelectItem { Value = "leverancier", Text = "Leverancier" },
+                            new GlV2SelectItem { Value = "klant", Text = "Klant" },
+                            new GlV2SelectItem { Value = "extern", Text = "Andere (extern)" },
+                            new GlV2SelectItem { Value = "intern", Text = "Intern" }
+                        }))
                     </div>
-                    <div class="gl-v2-field" data-rq-who="leverancier">
-                        <label class="gl-v2-field-label" for="gl-v2-dd-rq-company">LEVERANCIER</label>
-                        <div class="gl-v2-field-box">
-                            <select class="gl-v2-field-input" name="companyId" id="gl-v2-dd-rq-company">
-                                <option value="">Kies een leverancier …</option>
-                                @foreach (var c in ov.Companies) { <option value="@c.Id" selected="@(Model.FilterCompanyId == c.Id ? "selected" : null)">@c.Name</option> }
-                            </select>
-                        </div>
+                    <div data-rq-who="leverancier">
+                        @await Html.PartialAsync("GlV2/_SelectList", Sel("gl-v2-dd-rq-company", "companyId", "LEVERANCIER", Model.FilterCompanyId?.ToString() ?? "", companyItems, "Kies een leverancier …", "Kies een leverancier …"))
                     </div>
-                    <div class="gl-v2-field" data-rq-who="klant" hidden>
-                        <label class="gl-v2-field-label" for="gl-v2-dd-rq-client">KLANT</label>
-                        <div class="gl-v2-field-box">
-                            <select class="gl-v2-field-input" name="clientAccountId" id="gl-v2-dd-rq-client">
-                                <option value="">Kies een klant …</option>
-                                @foreach (var c in ov.Clients) { <option value="@c.Id" selected="@(Model.FilterClientId == c.Id ? "selected" : null)">@c.Name</option> }
-                            </select>
-                        </div>
+                    <div data-rq-who="klant" hidden>
+                        @await Html.PartialAsync("GlV2/_SelectList", Sel("gl-v2-dd-rq-client", "clientAccountId", "KLANT", Model.FilterClientId?.ToString() ?? "", clientItems, "Kies een klant …", "Kies een klant …"))
                     </div>
                     <div class="gl-v2-field" data-rq-who="extern intern" hidden>
                         <label class="gl-v2-field-label" for="gl-v2-dd-rq-who">VERANTWOORDELIJKE</label>
@@ -305,14 +261,11 @@
                         <label class="gl-v2-field-label" for="gl-v2-dd-ed-name">NAAM <span style="color:#8B2A2A">*</span></label>
                         <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="name" id="gl-v2-dd-ed-name" maxlength="200" /></div>
                     </div>
-                    <div class="gl-v2-field">
-                        <label class="gl-v2-field-label" for="gl-v2-dd-ed-folder">MAP</label>
-                        <div class="gl-v2-field-box">
-                            <select class="gl-v2-field-input" name="folderId" id="gl-v2-dd-ed-folder">
-                                @foreach (var f in ov.Folders) { <option value="@f.Id">@f.Name</option> }
-                            </select>
-                        </div>
-                    </div>
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                    {
+                        Name = "folderId", Id = "gl-v2-dd-ed-folder", Label = "MAP", Placeholder = "Kies een map …",
+                        Items = ov.Folders.Select(f => new GlV2SelectItem { Value = f.Id.ToString(), Text = f.Name }).ToList()
+                    })
                     <div class="gl-v2-field">
                         <label class="gl-v2-field-label" for="gl-v2-dd-ed-number">DOCUMENTNR.</label>
                         <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="number" id="gl-v2-dd-ed-number" maxlength="50" /></div>
@@ -355,29 +308,7 @@
                 <div class="modal-body">
                     <div class="gl-v2-field gl-v2-field-full">
                         <label class="gl-v2-field-label" for="gl-v2-dd-lk-target">KOPPELEN AAN <span style="color:#8B2A2A">*</span></label>
-                        <div class="gl-v2-field-box">
-                            <select class="gl-v2-field-input" id="gl-v2-dd-lk-target">
-                                <option value="">Kies een eenheid, klant of leverancier …</option>
-                                @if (ov.Units.Count > 0)
-                                {
-                                    <optgroup label="Eenheden">
-                                        @foreach (var u in ov.Units) { <option value="unit:@u.Id" data-buyer="@u.Ref" data-buyer-name="@u.Sub">@u.Name</option> }
-                                    </optgroup>
-                                }
-                                @if (ov.Clients.Count > 0)
-                                {
-                                    <optgroup label="Klanten">
-                                        @foreach (var c in ov.Clients) { <option value="client:@c.Id">@c.Name</option> }
-                                    </optgroup>
-                                }
-                                @if (ov.Companies.Count > 0)
-                                {
-                                    <optgroup label="Leveranciers">
-                                        @foreach (var c in ov.Companies) { <option value="company:@c.Id">@c.Name</option> }
-                                    </optgroup>
-                                }
-                            </select>
-                        </div>
+                        @await Html.PartialAsync("GlV2/_SelectList", Sel("gl-v2-dd-lk-target", "linkTarget", null, "", linkItems, "Kies een eenheid, klant of leverancier …", "Kies een eenheid, klant of leverancier …", bare: true))
                         <span class="gl-v2-field-help">Het document blijft één bestand: het verschijnt ook bij deze koppeling, er komt geen kopie.</span>
                     </div>
                     <div class="gl-v2-field gl-v2-field-full">

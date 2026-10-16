@@ -17,6 +17,8 @@ intro: |
   versies. Hier start je een nieuw budget, vergelijk je versies, open je een versie om aan te werken en zie je in welke
   status elke versie zit.
 faq:
+  - q: Waarom staat bij Verwacht verschil een min?
+    a: Dan is de verwachte eindkost hoger dan het budget. Een of meer activiteiten zijn duurder gecontracteerd of gefactureerd dan begroot. Open de Nacalculatie om te zien welke.
   - q: Wat is het verschil tussen een budget en een versie?
     a: Een budget is een berekening voor het project, bijvoorbeeld een variant met 8 woningen. Elke keer dat je het budget wilt aanpassen en het oude wilt bewaren, maak je een nieuwe versie.
   - q: Wat betekent Huidig bij een versie?
@@ -66,6 +68,16 @@ Het actieve budget gebruikt CPM voor de nacalculatie.
 Bovenaan staat over de volle breedte de kaart **Definitief budget**. Daarop zie je de naam met de versie, het totaal en de marge.
 Daaronder staat wanneer en door wie de versie is vastgezet. Ze is alleen-lezen en de basis voor de vergelijking met facturen en contracten.
 Rechts staan de knoppen **Vergelijking openen** en **Andere versie definitief maken**.
+
+In de kaart staan ook drie tegels die het definitieve budget vergelijken met wat er echt gebeurt. Het gaat enkel om de activiteiten, dus de bouwkosten per activiteit. Grond, financiering en reserves tellen niet mee.
+
+| Tegel | Betekent |
+|---|---|
+| **Gecontracteerd** | de contracten plus de bijbestellingen, met het percentage van het budget |
+| **Gefactureerd** | de ontvangen facturen, inclusief meerwerk maar zonder meerwerk voor klanten, met het percentage van het contract |
+| **Verwacht verschil** | het budget min de verwachte eindkost. Een plus betekent onder budget, een min boven budget |
+
+De verwachte eindkost telt per activiteit het hoogste van het contract en de facturen. Is er voor een activiteit nog niets vastgelegd, dan telt het budget. Klik op een tegel om de pagina Nacalculatie te openen.
 
 Is er nog geen definitieve versie, dan staat er hoe je die maakt:
 rond een versie af op stap 9 en kies **Afronden & definitief maken**. Per project kan er maar één definitieve

@@ -48,8 +48,9 @@ namespace CPMCore.Services.PuntenSpraak
         public async Task<PuntRondgang> CreateAsync(int projectId, string? userId, double duration, int? verslagId, int? unitId,
             byte[] audio, string audioFileName, string audioType, IReadOnlyList<byte[]> photos, IReadOnlyList<double> times, CancellationToken ct = default)
         {
+            audioType = (audioType ?? "audio/webm").Split(';')[0].Trim();
             var audioFile = await _storage.UploadAsync(audio, audioFileName, audioType, Folder, ct);
-            if (string.IsNullOrWhiteSpace(audioFile)) throw new InvalidOperationException("De opname kon niet opgeslagen worden (bestandsopslag).");
+            if (string.IsNullOrWhiteSpace(audioFile)) throw new InvalidOperationException("De opname kon niet opgeslagen worden in de bestandsopslag. Controleer op de server of StorageApi__BaseUrl en StorageApi__WriteApiKey ingesteld zijn (zie het serverlog: \"Storage API upload\").");
             var r = new PuntRondgang
             {
                 ProjectId = projectId, UserId = userId, CreatedAt = DateTime.UtcNow, DurationSeconds = duration, VerslagId = verslagId, DefaultUnitId = unitId is > 0 ? unitId : null,
@@ -118,10 +119,11 @@ namespace CPMCore.Services.PuntenSpraak
                 var ctx = await _ctx.LoadAsync(r.ProjectId, r.DefaultUnitId, ct);
                 ctx.PhotoTimes = r.Fotos.OrderBy(f => f.Volgnr).Select(f => f.AtSeconds).ToList();
                 var hint = "Werfrondgang. " + string.Join(", ", ctx.Units.Take(40).Select(u => u.Name)) + ". " + string.Join(", ", ctx.Contractors.Take(40).Select(c => c.Name));
-                var ext = (r.AudioType ?? "").Contains("mp4") ? ".mp4" : (r.AudioType ?? "").Contains("ogg") ? ".ogg" : ".webm";
+                var ext = (r.AudioType ?? "").Contains("mp4") ? ".m4a" : (r.AudioType ?? "").Contains("ogg") ? ".ogg" : ".webm";
                 var t = await _spraak.TranscribeAsync(audio, "rondgang" + ext, r.AudioType ?? "audio/webm", true, hint, ct);
                 r.Transcript = t.Text; r.Step = "Punten herkennen"; r.Percent = 60; await _db.SaveChangesAsync(ct);
                 var list = await _spraak.ExtractAsync(t, ctx, ct);
+                KoppelFotos(list, ctx.PhotoTimes);
                 r.VoorstellenJson = JsonSerializer.Serialize(list); r.Step = "Klaar"; r.Percent = 100; r.Status = RondgangStatus.Klaar;
             }
             catch (Exception ex)
@@ -132,6 +134,25 @@ namespace CPMCore.Services.PuntenSpraak
             }
             await _db.SaveChangesAsync(ct);
             return true;
+        }
+
+        /// <summary>Elke foto die de AI aan geen enkel punt koppelde, gaat naar het punt dat vlak ervoor (of anders vlak erna) werd genoemd. Zo heeft een punt
+        /// altijd de foto('s) die tijdens het bespreken ervan zijn genomen.</summary>
+        public static void KoppelFotos(List<PuntVoorstel> list, IReadOnlyList<double> times)
+        {
+            var metTijd = list.Where(p => p.AtSeconds.HasValue).ToList();
+            for (var i = 0; i < times.Count; i++)
+            {
+                if (list.Any(p => p.PhotoIndexes.Contains(i))) continue;
+                PuntVoorstel? best = null;
+                if (metTijd.Count > 0)
+                {
+                    var voor = metTijd.Where(p => p.AtSeconds!.Value <= times[i] + 5).OrderByDescending(p => p.AtSeconds).FirstOrDefault();
+                    best = voor ?? metTijd.OrderBy(p => p.AtSeconds).First();
+                }
+                else if (list.Count == 1) best = list[0];
+                best?.PhotoIndexes.Add(i);
+            }
         }
 
         /// <summary>Ruimt rondgangen op die langer dan 14 dagen niet bewaard zijn.</summary>

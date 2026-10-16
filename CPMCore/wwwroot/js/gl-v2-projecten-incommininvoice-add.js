@@ -129,7 +129,7 @@
 
     function laadContractInfo(contractId) {
         if (!contractId || contractId === '0') { toonGeenContract(); return; }
-        fetch(cfg.contractInfoUrl, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'contractId=' + encodeURIComponent(contractId) })
+        fetch(cfg.contractInfoUrl, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'contractId=' + encodeURIComponent(contractId) + '&invoiceId=' + encodeURIComponent(cfg.invoiceId || 0) })
             .then(function (r) { return r.json(); })
             .then(function (d) {
                 if (!d.success) { toonGeenContract(); return; }

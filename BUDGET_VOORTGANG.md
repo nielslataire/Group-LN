@@ -350,3 +350,27 @@ Ook `bin/obj` van de lopende app blokkeert een build zolang de app draait: stop 
 4. **Koppeling budget ↔ contracten/facturen/nacalculatie** (grootste openstaande brok): tegels Gecontracteerd/Gefactureerd/Verwacht verschil op de budgetindex zijn placeholders ("nog niet gekoppeld"). Eerst beslissen op welk niveau vergeleken wordt (per activiteit/lot); bijkomende nacalc-verbeteringen.
 5. Vastloper op de pagina Budgetactiviteiten (nooit gereproduceerd).
 6. Screenshot-recept: zie DESIGN.md "Schermafbeeldingen maken — herbruikbaar Playwright-recept"; script staat in de scratchpad van de sessie (niet in de repo): niet Escape drukken in een open modal, `waitUntil: 'load'` i.p.v. `networkidle`, radio's klikken via hun label.
+- 16/10/2026: Excel-export via dezelfde volle opmaakpagina als de PDF (`BudgetExcelOpmaken`/`BudgetExcelMaken`, bewaard in Documenten; fouten worden zichtbaar met technische melding). Niets gecompileerd tegen de draaiende app; Excel nog te testen — als de oorzaak van 'doet niets' een serverfout was, staat die nu op de foutpagina.
+- 16/10/2026: koppeling budget ↔ contracten/facturen (stap 3): tegels op de budgetindex gevuld (enkel activiteiten; gecontracteerd = contract + bijbestellingen, gefactureerd = incl. meerwerk excl. meerwerk klant; verwacht verschil = begroot − max(contract, factuur) per activiteit, anders budget). Gecompileerd, niet getest. Nog te doen binnen dit thema: koppeling per activiteit/lot op stap 9 of een eigen overzicht, grond en andere posten (aparte bronnen).
+
+---
+## IDEE / VOLGENDE GROTE FEATURE (genoteerd 16/10/2026): Projectresultaat — nacalculatie voor het volledige project
+**Wens van Niels:** de Nacalculatie is nu enkel voor de bouwkost (activiteiten). Op termijn moet ze het volledige project dekken, met de nadruk op de bouwkost, zodat hij op het einde van een project het totale echte rendement kent.
+**Nog niet gestart, geen code.** Dit is een voorstel (bijgewerkt na overleg) en wacht op antwoorden en op de keuze om het op te pakken.
+
+**Stand van zaken (uit de code, niet getest):** de pagina Nacalculatie (gl-v2, `RecalculationV2`) neemt automatisch het definitieve budget als "Begroot" per activiteit (`GetBegrootRegelsV2`), zonder definitief budget valt ze terug op het oude per-activiteit-budget; de oude pagina gebruikt het nieuwe budget niet. De tegels op de budgetindex (Gecontracteerd/Gefactureerd/Verwacht verschil) zijn al gevuld, enkel voor activiteiten.
+Er komt bewust géén vergelijking per activiteit/lot op stap 9: een budget wordt gemaakt vóór de nacalculatie (beslissing Niels 16/10/2026).
+
+**Wat er al is:** budgetgroepen volgen dezelfde activiteitenstructuur als contracten en facturen (ook erelonen, verzekeringen, aansluitingen); facturen zonder contract kunnen aan een activiteit hangen (`IncommingInvoiceDetail.ActId`); opbrengst: verkoopfacturen aan klanten, betalingsschijven, meerwerken voor klanten.
+**Wat ontbreekt:** werkelijke grondkost (aankoop, akte/notaris, registratierechten), financiering (rente/bankkosten), verkoopkosten (werkelijke makelaarscommissie), onvoorzien en publiciteit; alles staat nu alleen als budgetcijfer.
+
+**Voorstel in drie fases (pagina "Projectresultaat"):**
+1. Wat al kan: per budgetgroep budget tegenover werkelijke kost (bouw, erelonen, verzekeringen, aansluitingen) + opbrengst uit de verkoopfacturen → een eerste rendement.
+2. Handmatig invoeren van werkelijke grondkost, financiering en verkoopkosten, zolang er geen bron is.
+3. Die posten automatisch koppelen uit hun eigen bronnen (bankfacturen, akten …).
+**Rendement:** zoals stap 9, resultaat gedeeld door totale kostprijs, zodat budget en werkelijkheid vergelijkbaar zijn.
+
+**Open vragen aan Niels vóór de bouw:**
+- Telt de opbrengst per gefactureerd of per betaald bedrag?
+- Rendement ook per eenheid, of enkel voor het hele project?
+- Grondkost invullen per project, of per aankoop zoals in de grondkaart van het budget?

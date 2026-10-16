@@ -18,7 +18,9 @@ before: |
   de sleutels voor spraak en AI hebben ingesteld.
 faq:
   - q: Neemt CPM een video op?
-    a: Nee. CPM neemt het geluid op. De camera dient om foto's te nemen. Tik op het scherm voor een foto van dat moment.
+    a: Nee. CPM neemt het geluid op. Het beeld van de camera dient om foto's te nemen. Tik op het beeld of op de cameraknop voor een foto van dat moment.
+  - q: Ik tik op het scherm maar er komt geen foto. Wat nu?
+    a: Wacht even tot het beeld van de camera zichtbaar is en probeer opnieuw. Staat de opname op pauze, dan kun je geen foto nemen. Je ziet een melding als het niet lukt.
   - q: Hoe lang mag een rondgang duren?
     a: Ongeveer een uur. Is de opname te groot, dan meldt CPM dat. Splits de rondgang dan in twee delen.
   - q: Wat als ik de pagina verlaat of de app sluit tijdens het verwerken?
@@ -38,7 +40,7 @@ faq:
 ## Opnemen
 
 1. Loop rond en spreek. Zeg eerst de eenheid en de kamer, bijvoorbeeld "lot twee, badkamer". Zeg daarna wat er moet gebeuren en voor wie.
-2. Tik op het scherm voor een foto van dat moment. Onderaan zie je de tijdstippen van je foto's.
+2. Tik op het beeld of op de cameraknop rechtsonder voor een foto van dat moment. De knop toont hoeveel foto's je al hebt. Onderaan zie je de tijdstippen van je foto's.
 3. Met **Pauze** onderbreek je de opname. Met **Hervatten** ga je verder.
 4. Tik op de rode knop om te stoppen.
 
@@ -56,7 +58,8 @@ Staat de balk op **Rondgang verwerkt**, tik er dan op. Je ziet de voorgestelde p
 - Met de knoppen **Alle**, **Nieuw** en **Bestaand** filter je de lijst.
 - Tik op **Beluister** om het stuk uit de opname te horen waar het punt wordt genoemd.
 - Tik op het vakje links om een voorstel aan of uit te zetten.
-- Kies **Wijzigen** om een voorstel aan te passen in het gewone formulier.
+- Kies **Foto** of **Op plan** om nog een foto of een plek op het plan toe te voegen. Kies **Wijzigen** om het voorstel aan te passen in het gewone formulier.
+- Een foto hoort bij het punt dat vlak voor of tijdens de foto werd genoemd.
 
 ## Bewaren
 

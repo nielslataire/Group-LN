@@ -98,6 +98,15 @@ public class RecalcLeverancierKaartV2
     public decimal BorgIngehouden { get; set; }
     public string? BetaaltermijnTekst { get; set; }
 
+    /// <summary>Borg over het héle contract (alle facturen van dit contract, niet enkel deze categorie) — de basis
+    /// voor vrijgave (42e punt 04). Enkel ingevuld bij een financiële waarborg.</summary>
+    public decimal BorgContractTotaal { get; set; }
+    public DateOnly? BorgVoAt { get; set; }
+    public decimal? BorgVoBedrag { get; set; }
+    public DateOnly? BorgDoAt { get; set; }
+    public decimal? BorgDoBedrag { get; set; }
+    public decimal BorgNogIngehouden => BorgContractTotaal - (BorgVoBedrag ?? 0m) - (BorgDoBedrag ?? 0m);
+
     public List<RecalcFactuurGroepV2> FactuurGroepen { get; set; } = new();
 }
 

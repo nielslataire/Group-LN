@@ -49,8 +49,9 @@ public sealed class AssetStorageClient : IAssetStorageClient
             using var form = new MultipartFormDataContent();
             form.Add(new StringContent(folder), "folder");
             var file = new StreamContent(content);
-            if (!string.IsNullOrWhiteSpace(contentType))
-                file.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+            // TryParse: een type met parameters ("audio/webm;codecs=opus") laat de constructor met een uitzondering falen, waardoor de upload stil mislukte
+            if (!string.IsNullOrWhiteSpace(contentType) && MediaTypeHeaderValue.TryParse(contentType, out var mediaType))
+                file.Headers.ContentType = mediaType;
             form.Add(file, "file", originalFileName);
 
             using var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/api/assets/upload") { Content = form };

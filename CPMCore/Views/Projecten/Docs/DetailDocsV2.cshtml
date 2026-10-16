@@ -58,8 +58,12 @@
 
     string ExtClass(string ext) => ext switch
     {
-        "DWG" or "DXF" or "RVT" or "SKP" => "is-cad",
-        "DOC" or "DOCX" or "XLS" or "XLSX" or "PPT" or "PPTX" or "CSV" => "is-office",
+        "PDF" => "is-pdf",
+        "DOC" or "DOCX" or "ODT" or "RTF" => "is-word",
+        "XLS" or "XLSX" or "CSV" or "ODS" => "is-excel",
+        "DWG" or "DXF" or "DWF" or "RVT" or "SKP" => "is-cad",
+        "JPG" or "JPEG" or "PNG" or "GIF" or "WEBP" or "TIF" or "TIFF" or "BMP" => "is-img",
+        "PPT" or "PPTX" => "is-office",
         _ => ""
     };
 
@@ -567,6 +571,12 @@
             filterUnitId: @(Model.FilterUnitId ?? 0),
             filterClientId: @(Model.FilterClientId ?? 0),
             filterCompanyId: @(Model.FilterCompanyId ?? 0),
+            folderKinds: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ov.Folders.ToDictionary(f => f.Id.ToString(), f => f.ViewKind))),
+            linkMeta: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                ov.Units.ToDictionary(u => "unit:" + u.Id, u => new { label = u.Name, buyer = u.Ref, buyerName = u.Sub })
+                    .Concat(ov.Clients.ToDictionary(c => "client:" + c.Id, c => new { label = c.Name, buyer = (int?)null, buyerName = (string?)null }))
+                    .Concat(ov.Companies.ToDictionary(c => "company:" + c.Id, c => new { label = c.Name, buyer = (int?)null, buyerName = (string?)null }))
+                    .ToDictionary(kv => kv.Key, kv => kv.Value))),
             canWrite: @(canWrite ? "true" : "false"),
             canDelete: @(canDelete ? "true" : "false"),
             userName: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(User.GetCpmDisplayName() ?? "")),

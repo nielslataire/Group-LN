@@ -23,8 +23,12 @@
     };
     string ExtClass(string ext) => ext switch
     {
-        "DWG" or "DXF" or "RVT" or "SKP" => "is-cad",
-        "DOC" or "DOCX" or "XLS" or "XLSX" or "PPT" or "PPTX" or "CSV" => "is-office",
+        "PDF" => "is-pdf",
+        "DOC" or "DOCX" or "ODT" or "RTF" => "is-word",
+        "XLS" or "XLSX" or "CSV" or "ODS" => "is-excel",
+        "DWG" or "DXF" or "DWF" or "RVT" or "SKP" => "is-cad",
+        "JPG" or "JPEG" or "PNG" or "GIF" or "WEBP" or "TIF" or "TIFF" or "BMP" => "is-img",
+        "PPT" or "PPTX" => "is-office",
         _ => ""
     };
     var canWrite = Model.CanWrite;

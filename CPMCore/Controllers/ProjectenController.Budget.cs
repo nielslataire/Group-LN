@@ -1664,26 +1664,26 @@ namespace CPMCore.Controllers
             }
             catch { /* paginatelling is enkel voor de klaar-pagina */ }
             Response.Headers["X-Bestandsnaam"] = res.Value.Bestandsnaam;
-            Response.Headers["X-Bewaard"] = await BewaarBudgetPdfAsync(versieId, intern, res.Value.Pdf, res.Value.Bestandsnaam) ? "1" : "0";
+            Response.Headers["X-Bewaard"] = await BewaarBudgetBestandAsync(versieId, intern ? "Budget intern" : "Budget bank", res.Value.Pdf, res.Value.Bestandsnaam, "application/pdf") ? "1" : "0";
             return File(res.Value.Pdf, "application/pdf", res.Value.Bestandsnaam);
         }
 
-        /// <summary>Bewaart de PDF in de documentenmodule (map Budgetten, of Overige als die map nog niet bestaat). Geen koppelingen, dus nooit zichtbaar voor klanten of op de website.</summary>
-        private async Task<bool> BewaarBudgetPdfAsync(int versieId, bool intern, byte[] pdf, string bestandsnaam)
+        /// <summary>Bewaart de PDF of Excel in de documentenmodule (map Budgetten, of Overige als die map nog niet bestaat). Geen koppelingen, dus nooit zichtbaar voor klanten of op de website.</summary>
+        private async Task<bool> BewaarBudgetBestandAsync(int versieId, string soortNaam, byte[] pdf, string bestandsnaam, string contentType)
         {
             try
             {
                 var versie = await _db.BudgetVersie.AsNoTracking().Include(v => v.BudgetMaster).FirstOrDefaultAsync(v => v.Id == versieId);
                 if (versie == null) return false;
                 using var stream = new MemoryStream(pdf);
-                var stored = await UploadAssetToStorageAsync(stream, bestandsnaam, "application/pdf", "docs");
+                var stored = await UploadAssetToStorageAsync(stream, bestandsnaam, contentType, "docs");
                 if (string.IsNullOrWhiteSpace(stored)) return false;
                 try { await GenerateDocThumbnailViaStorageAsync(stored); }
                 catch (Exception ex) { _logger.LogWarning(ex, "Thumbnail voor {File} kon niet gemaakt worden.", stored); }
 
                 var map = await _db.DocumentFolders.AsNoTracking().Where(f => f.Code == "budgetten").Select(f => (int?)f.Id).FirstOrDefaultAsync();
                 var budgetNaam = string.IsNullOrWhiteSpace(versie.BudgetMaster?.Naam) ? "Budget" : versie.BudgetMaster!.Naam;
-                var naam = $"Budget {(intern ? "intern" : "bank")} — {budgetNaam} v{versie.Versienummer}";
+                var naam = $"{soortNaam} — {budgetNaam} v{versie.Versienummer}";
                 var up = await DocsSvc.Upload(new FacadeCore.DocUploadDto
                 {
                     ProjectId = versie.ProjectId, Mode = "new", Name = naam, FolderId = map,
@@ -1722,12 +1722,21 @@ namespace CPMCore.Controllers
         [HttpGet]
         public async Task<IActionResult> DownloadBudgetExcel(int versieId)
         {
+            var res = await BouwBudgetExcelAsync(versieId);
+            if (res is null) return NotFound();
+            return File(res.Value.Bytes, ExcelContentType, res.Value.Bestandsnaam);
+        }
+
+        private const string ExcelContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+        private async Task<(byte[] Bytes, string Bestandsnaam)?> BouwBudgetExcelAsync(int versieId)
+        {
             var versie = _uow.BudgetVersies.GetNoTracking()
                 .Include(v => v.BudgetMaster)
                 .Include(v => v.BudgetGegevens)
                 .FirstOrDefault(v => v.Id == versieId);
 
-            if (versie == null) return NotFound();
+            if (versie == null) return null;
 
             var resultaat = await _berekeningService.BerekenAsync(versieId);
             resultaat.Verkoop = await _verkoopVoorstelService.SamenvattingAsync(versieId);
@@ -1756,9 +1765,40 @@ namespace CPMCore.Controllers
             var bestandsnaam = $"Budget_{versie.VersieNaam}_v{versie.Versienummer}_{DateTime.Now:yyyyMMdd}.xlsx"
                 .Replace(Path.GetInvalidFileNameChars(), '_');
 
-            return File(excelBytes,
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                bestandsnaam);
+            return (excelBytes, bestandsnaam);
+        }
+
+        // ── BudgetExcelOpmaken — dezelfde volle pagina als bij de PDF (design 44d–f), nu voor de Excel ──
+
+        [HttpGet]
+        public IActionResult BudgetExcelOpmaken(int versieId)
+        {
+            var versie = _uow.BudgetVersies.GetNoTracking().Include(v => v.BudgetMaster).Include(v => v.Project).FirstOrDefault(v => v.Id == versieId);
+            if (versie == null) return NotFound();
+            return View("BudgetPdfOpmakenV2", new CPMCore.Models.Budget.BudgetPdfOpmakenModel
+            {
+                BudgetVersieId = versieId, ProjectId = versie.ProjectId, ProjectName = versie.Project?.ProjectName ?? "", Intern = true, Excel = true,
+                BudgetNaam = string.IsNullOrWhiteSpace(versie.BudgetMaster?.Naam) ? "Budget" : versie.BudgetMaster!.Naam, Versienummer = versie.Versienummer
+            });
+        }
+
+        /// <summary>Maakt de Excel op en bewaart hem in Documenten › Budgetten (zoals de PDF). Een fout komt als tekst in de body terug (status 500) zodat de pagina ze kan tonen.</summary>
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> BudgetExcelMaken(int versieId)
+        {
+            try
+            {
+                var res = await BouwBudgetExcelAsync(versieId);
+                if (res is null) return NotFound();
+                Response.Headers["X-Bestandsnaam"] = res.Value.Bestandsnaam;
+                Response.Headers["X-Bewaard"] = await BewaarBudgetBestandAsync(versieId, "Budget Excel", res.Value.Bytes, res.Value.Bestandsnaam, ExcelContentType) ? "1" : "0";
+                return File(res.Value.Bytes, ExcelContentType, res.Value.Bestandsnaam);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Budget-Excel opmaken mislukt voor versie {Versie}", versieId);
+                return StatusCode(500, ex.GetType().Name + ": " + ex.Message);
+            }
         }
     }
 }

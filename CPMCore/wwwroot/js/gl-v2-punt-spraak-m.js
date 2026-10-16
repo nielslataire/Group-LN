@@ -1,6 +1,7 @@
 // gl-v2 — Punten: Inspreken (design-handoff 41c, 40f) en Rondgang (41d, 40g/40h) op gsm, plus het microfoontje bij de titel (41a stap 2).
 // Opnemen gebeurt in de browser (MediaRecorder). Spraak naar tekst (OpenAI) en het herkennen van punten (Anthropic) gebeuren op de server
-// (ProjectsIssuesController.Spraak.cs). Een voorstel bewaren = een concept aanmaken, via dezelfde route als het gewone paneel.
+// (ProjectIssuesController.Spraak.cs). Een voorstel bewaren = een concept aanmaken; foto's (camera/galerij) en een plek op het plan kunnen per voorstel
+// nog toegevoegd worden vóór het bewaren.
 (function () {
     "use strict";
     var root = document.getElementById("gl-v2-pt-root");
@@ -24,6 +25,9 @@
         setTimeout(function () { t.classList.remove("is-in"); setTimeout(function () { t.remove(); }, 300); }, 5200);
     }
     function last() { return (window.PuntLast && window.PuntLast.get()) || {}; }
+    function canWrite() { return root.dataset.canWrite === "1"; }
+    var BACK = '<i class="ph ph-arrow-left" aria-hidden="true"></i>';
+    var CHECK = '<svg viewBox="0 0 16 16"><path d="M3.4 8.4l3 3 6.2-6.8"/></svg>';
 
     // ── is spraak ingesteld? (sleutels op de server) ──
     var configured = null;
@@ -31,7 +35,7 @@
         if (configured === true) return Promise.resolve(true);
         return fetch(base + "/SpraakStatusV2", { credentials: "same-origin" }).then(function (r) { return r.json(); }).then(function (j) {
             configured = !!j.configured;
-            if (!configured) toast("Inspreken is nog niet ingesteld. Vraag een beheerder om de sleutels voor spraak en AI toe te voegen.");
+            if (!configured) toast("Inspreken is nog niet ingesteld: de server mist " + (j.missing || "de sleutels voor spraak en AI") + ". Herstart de server na het toevoegen.");
             return configured;
         }).catch(function () { toast("Kan de spraakdienst nu niet bereiken."); return false; });
     }
@@ -43,143 +47,202 @@
         for (var i = 0; i < list.length; i++) if (MediaRecorder.isTypeSupported(list[i])) return list[i];
         return "";
     }
-    function extOf(mime) { return /mp4/.test(mime) ? "mp4" : /ogg/.test(mime) ? "ogg" : "webm"; }
+    // iPhone (Safari) neemt op als AAC in een mp4-bestand: m4a is de naam die de spraakdienst daarvoor kent
+    function extOf(mime) { return /mp4|aac|m4a/.test(mime) ? "m4a" : /ogg/.test(mime) ? "ogg" : "webm"; }
     // start een opname op een (audio)stream; geeft een handvat met stop() -> Blob, pause(), resume()
     function recordStream(stream) {
         var mime = pickMime(), chunks = [], rec = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 32000 } : { audioBitsPerSecond: 32000 });
         var done = new Promise(function (res) { rec.onstop = function () { res(new Blob(chunks, { type: rec.mimeType || mime || "audio/webm" })); }; });
         rec.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
-        rec.start(1000);
+        // Safari levert met een tijdsinterval stukjes (gefragmenteerde mp4) die samen geen geldig bestand vormen: daar één opname als geheel
+        if (/mp4/.test(rec.mimeType || mime || "")) rec.start(); else rec.start(1000);
         return { rec: rec, stop: function () { if (rec.state !== "inactive") rec.stop(); return done; }, pause: function () { if (rec.state === "recording") rec.pause(); }, resume: function () { if (rec.state === "paused") rec.resume(); } };
     }
     function micStream() { return navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false }); }
     function stopTracks(s) { if (s) s.getTracks().forEach(function (t) { t.stop(); }); }
     function micError() { toast("De microfoon is niet beschikbaar. Controleer of je de microfoon hebt toegestaan voor deze website."); }
 
-    // ── gedeeld scherm (licht) ──
+    // ── gedeeld scherm: groene kop met terugpijl, lichte achtergrond (zoals de ontwerpen 41c/41d) ──
     var screenEl = null;
     function openScreen(html, cls) {
         if (!screenEl) { screenEl = document.createElement("div"); screenEl.className = "gl-v2-ptv"; screenEl.setAttribute("role", "dialog"); screenEl.setAttribute("aria-modal", "true"); document.body.appendChild(screenEl); }
         screenEl.className = "gl-v2-ptv " + (cls || ""); screenEl.innerHTML = html; screenEl.hidden = false; document.body.classList.add("gl-v2-ptcam-on");
         return screenEl;
     }
-    function closeScreen() { if (screenEl) { screenEl.hidden = true; screenEl.innerHTML = ""; } document.body.classList.remove("gl-v2-ptcam-on"); }
-    var CHECK = '<svg viewBox="0 0 16 16"><path d="M3.4 8.4l3 3 6.2-6.8"/></svg>';
-    function head(title, sub, withClose) {
-        return '<header class="gl-v2-ptv-head"><div><b>' + esc(title) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>' +
-            (withClose === false ? '' : '<button type="button" class="gl-v2-ptv-x" data-act="close" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>') + '</header>';
+    function closeScreen() { if (screenEl) { screenEl.hidden = true; screenEl.innerHTML = ""; screenEl.onclick = null; } document.body.classList.remove("gl-v2-ptcam-on"); }
+    function head(title, sub) {
+        return '<header class="gl-v2-ptv-head"><button type="button" class="gl-v2-ptv-back" data-act="close" aria-label="Terug">' + BACK + '</button><div><b>' + esc(title) + '</b>' + (sub ? '<small>' + sub + '</small>' : '') + '</div></header>';
     }
     function unitLabel(id) { var u = units.filter(function (x) { return String(x.id) === String(id); })[0]; return u ? u.name : "Algemeen"; }
 
     // ───────────────────────────── Inspreken (41c) ─────────────────────────────
-    var voice = null;
+    var voice = null, BARS = [8, 48, 18, 45, 28, 40, 36, 33, 42, 24, 46, 14, 48, 12, 47, 22, 43, 31, 37, 39, 29, 44, 20, 47, 10, 48, 17, 46, 26, 41];
     function openVoice() {
         ensureConfigured().then(function (ok) {
             if (!ok) return;
             if (!navigator.mediaDevices || !window.MediaRecorder) { toast("Opnemen wordt niet ondersteund op dit toestel."); return; }
             var l = last(), unitId = l.unitId != null ? String(l.unitId) : "";
             var opts = '<option value="">Algemeen</option>' + units.map(function (u) { return '<option value="' + u.id + '"' + (String(u.id) === unitId ? " selected" : "") + '>' + esc(u.name) + '</option>'; }).join("");
-            var el = openScreen(head("Inspreken", "", true) +
-                '<div class="gl-v2-ptv-body gl-v2-ptv-center"><label class="gl-v2-ptv-unit"><span>Eenheid</span><select id="ptv-unit">' + opts + '</select></label>' +
-                '<p class="gl-v2-ptv-lead">Zeg wat er moet gebeuren, waar, en wie het moet doen. Meerdere punten mag.</p>' +
+            // de eenheid kies je via de ondertitel van de kop ("Lot 2 · laatst gebruikt ▾"), zoals in het ontwerp
+            var sub = '<label class="gl-v2-ptv-unitsub"><span id="ptv-unit-txt">' + esc(unitLabel(unitId)) + (l.unitId != null ? " · laatst gebruikt" : "") + ' ▾</span><select id="ptv-unit" aria-label="Eenheid">' + opts + '</select></label>';
+            var bars = BARS.map(function (h) { return '<span style="height:' + h + 'px"></span>'; }).join("");
+            var el = openScreen(head("Inspreken", sub) +
+                '<div class="gl-v2-ptv-body gl-v2-ptv-center"><p class="gl-v2-ptv-lead">Zeg wat er moet gebeuren, waar, en wie het moet doen. Meerdere punten mag.</p>' +
+                '<div class="gl-v2-ptv-wave" id="ptv-wave" aria-hidden="true">' + bars + '</div>' +
                 '<div class="gl-v2-ptv-timer" id="ptv-timer">0:00</div>' +
                 '<button type="button" class="gl-v2-ptv-mic" id="ptv-mic" aria-label="Opnemen"><i class="ph ph-microphone" aria-hidden="true"></i></button>' +
                 '<p class="gl-v2-ptv-hint" id="ptv-hint">Houd ingedrukt · loslaten = klaar</p></div>', "is-voice");
-            voice = { stream: null, handle: null, started: 0, timer: null, toggle: false };
-            var mic = $("#ptv-mic", el), timer = $("#ptv-timer", el), hint = $("#ptv-hint", el);
+            voice = { stream: null, handle: null, started: 0, timer: null, toggle: false, audio: null };
+            var mic = $("#ptv-mic", el), timer = $("#ptv-timer", el), hint = $("#ptv-hint", el), wave = $("#ptv-wave", el), spans = $$("span", wave);
+            var sel = $("#ptv-unit", el);
+            sel.addEventListener("change", function () { $("#ptv-unit-txt", el).textContent = (sel.value ? unitLabel(sel.value) : "Algemeen") + " ▾"; });
+            function meter(stream) {
+                // het geluidsniveau laat de balken bewegen; lukt dat niet, dan bewegen ze via CSS
+                try {
+                    var AC = window.AudioContext || window.webkitAudioContext, ac = new AC(), an = ac.createAnalyser(), src = ac.createMediaStreamSource(stream), buf = new Uint8Array(256);
+                    an.fftSize = 256; src.connect(an); var lv = new Array(spans.length).fill(0.08);
+                    voice.audio = { ac: ac, tick: setInterval(function () {
+                        an.getByteTimeDomainData(buf); var sum = 0; for (var i = 0; i < buf.length; i++) { var v = (buf[i] - 128) / 128; sum += v * v; }
+                        lv.shift(); lv.push(Math.min(1, Math.sqrt(sum / buf.length) * 5 + 0.08));
+                        spans.forEach(function (s, i) { s.style.transform = "scaleY(" + lv[i].toFixed(2) + ")"; });
+                    }, 80) };
+                } catch (e) { wave.classList.add("is-css"); }
+            }
+            function stopMeter() { if (voice && voice.audio) { clearInterval(voice.audio.tick); try { voice.audio.ac.close(); } catch (e) { /* niets */ } } }
             function begin() {
                 if (voice.handle) return;
                 micStream().then(function (s) {
-                    voice.stream = s; voice.handle = recordStream(s); voice.started = Date.now(); mic.classList.add("is-rec"); hint.textContent = "Aan het opnemen…";
+                    voice.stream = s; voice.handle = recordStream(s); voice.started = Date.now(); mic.classList.add("is-rec"); wave.classList.add("is-rec"); hint.textContent = "Aan het opnemen…"; meter(s);
                     voice.timer = setInterval(function () { timer.textContent = mss((Date.now() - voice.started) / 1000); }, 250);
                 }).catch(micError);
             }
             function finish() {
                 if (!voice || !voice.handle) return;
-                var secs = (Date.now() - voice.started) / 1000; clearInterval(voice.timer);
-                voice.handle.stop().then(function (blob) { stopTracks(voice.stream); var h = voice; voice = null; if (secs < 1.2 || blob.size < 1000) { toast("Dat was te kort. Houd de knop ingedrukt terwijl je spreekt."); closeScreen(); return; } processVoice(blob, secs, $("#ptv-unit", screenEl) ? $("#ptv-unit", screenEl).value : unitId); });
+                var secs = (Date.now() - voice.started) / 1000, uid = sel.value; clearInterval(voice.timer); stopMeter();
+                voice.handle.stop().then(function (blob) {
+                    stopTracks(voice.stream); voice = null;
+                    if (secs < 1.2 || blob.size < 1000) { toast("Dat was te kort. Houd de knop ingedrukt terwijl je spreekt."); closeScreen(); return; }
+                    processVoice(blob, secs, uid);
+                });
             }
             var downAt = 0;
             mic.addEventListener("pointerdown", function (e) { e.preventDefault(); downAt = Date.now(); if (voice.toggle && voice.handle) { finish(); return; } begin(); });
             mic.addEventListener("pointerup", function () { if (!voice || !voice.handle) return; if (Date.now() - downAt < 450) { voice.toggle = true; hint.textContent = "Tik nog eens om te stoppen"; } else finish(); });
             mic.addEventListener("pointercancel", function () { if (voice && voice.handle && !voice.toggle) finish(); });
             mic.addEventListener("contextmenu", function (e) { e.preventDefault(); });
-            el.addEventListener("click", function (e) { if (e.target.closest("[data-act=close]")) { if (voice) { clearInterval(voice.timer); if (voice.handle) voice.handle.stop(); stopTracks(voice.stream); voice = null; } closeScreen(); } });
+            el.onclick = function (e) { if (e.target.closest("[data-act=close]")) { if (voice) { clearInterval(voice.timer); stopMeter(); if (voice.handle) voice.handle.stop(); stopTracks(voice.stream); voice = null; } closeScreen(); } };
         });
     }
-    function stepsHtml(steps) {
-        return '<div class="gl-v2-ptv-steps">' + steps.map(function (s) {
-            var ico = s[1] === "done" ? '<span class="gl-v2-ptv-ico done">' + CHECK + '</span>' : '<span class="gl-v2-ptv-ico ' + s[1] + '"><i></i></span>';
-            return '<div class="gl-v2-ptv-step is-' + s[1] + '">' + ico + '<b>' + esc(s[0]) + '</b><em>' + esc(s[2] || "") + '</em></div>';
-        }).join("") + '</div>';
+    // verwerken: één kaart per stap (afgevinkt / bezig / nog te doen), daaronder het uitgeschreven bericht (41c stap 3)
+    function stepCards(steps) {
+        return steps.map(function (s) {
+            var ico = s[1] === "done" ? '<span class="gl-v2-ptv-sc is-done">' + CHECK + '</span>' : '<span class="gl-v2-ptv-sc is-' + s[1] + '"><i></i></span>';
+            return '<div class="gl-v2-ptv-stepcard is-' + s[1] + '">' + ico + '<b>' + esc(s[0]) + '</b><em>' + esc(s[1] === "done" ? "klaar" : s[1] === "act" ? "bezig…" : "") + '</em></div>';
+        }).join("");
     }
-    function processing(title, sub, steps, quote, extra) {
-        openScreen(head(title, sub, false) + '<div class="gl-v2-ptv-body"><div class="gl-v2-ptv-bar"><i></i></div>' + stepsHtml(steps) +
-            (quote ? '<blockquote class="gl-v2-ptv-quote">' + esc(quote) + '</blockquote>' : '') + (extra ? '<p class="gl-v2-ptv-hint">' + esc(extra) + '</p>' : '') + '</div>', "is-proc");
+    function processing(sub, steps, quote) {
+        openScreen(head("Verwerken", esc(sub)) + '<div class="gl-v2-ptv-body">' + stepCards(steps) +
+            (quote ? '<div class="gl-v2-ptv-quote">“' + esc(quote.length > 220 ? quote.slice(0, 220) + "…" : quote) + '”</div>' : '') +
+            '<p class="gl-v2-ptv-hint2">Meestal binnen 10 seconden.</p></div>', "is-proc");
     }
     function processVoice(blob, secs, unitId) {
-        var STEPS = ["Uitschrijven", "Punten herkennen", "Aannemer voorstellen"];
-        processing("Verwerken", mss(secs) + " · " + unitLabel(unitId), [[STEPS[0], "act"], [STEPS[1], "todo"], [STEPS[2], "todo"]], "", "Meestal binnen 10 seconden.");
+        var STEPS = ["Uitschrijven", "Punten herkennen", "Aannemer voorstellen"], sub = mss(secs) + (unitId ? " · " + unitLabel(unitId) : "");
+        processing(sub, [[STEPS[0], "act"], [STEPS[1], "todo"], [STEPS[2], "todo"]], "");
         var fd = new FormData(); fd.append("audio", blob, "opname." + extOf(blob.type)); if (unitId) fd.append("unitId", unitId);
         post("SpraakTranscribeV2", fd).then(function (j) {
             if (!j.ok) throw new Error(j.error || "Uitschrijven mislukt.");
             if (!j.text) throw new Error("Er is geen spraak herkend. Probeer opnieuw en spreek dichter bij de microfoon.");
-            processing("Verwerken", mss(secs) + " · " + unitLabel(unitId), [[STEPS[0], "done"], [STEPS[1], "act"], [STEPS[2], "todo"]], j.text, "Meestal binnen 10 seconden.");
+            processing(sub, [[STEPS[0], "done"], [STEPS[1], "act"], [STEPS[2], "todo"]], j.text);
             var f2 = new FormData(); f2.append("text", j.text); if (unitId) f2.append("unitId", unitId);
-            return post("SpraakVoorstelV2", f2).then(function (r) { if (!r.ok) throw new Error(r.error || "Punten herkennen mislukt."); return { text: j.text, proposals: r.proposals }; });
+            return post("SpraakVoorstelV2", f2).then(function (r) {
+                if (!r.ok) throw new Error(r.error || "Punten herkennen mislukt.");
+                processing(sub, [[STEPS[0], "done"], [STEPS[1], "done"], [STEPS[2], "done"]], j.text);
+                return { text: j.text, proposals: r.proposals };
+            });
         }).then(function (r) {
             if (!r.proposals.length) throw new Error("Er zijn geen punten herkend in dit bericht.");
             openReview({ kind: "voice", transcript: r.text, seconds: secs, proposals: r.proposals, unitId: unitId });
         }).catch(function (err) {
-            openScreen(head("Inspreken", "", true) + '<div class="gl-v2-ptv-body gl-v2-ptv-center"><p class="gl-v2-ptv-lead">' + esc(err.message) + '</p><button type="button" class="gl-v2-btn gl-v2-btn-primary" data-act="retry">Opnieuw proberen</button></div>', "is-voice");
+            openScreen(head("Inspreken", "") + '<div class="gl-v2-ptv-body gl-v2-ptv-center"><p class="gl-v2-ptv-lead">' + esc(err.message) + '</p><button type="button" class="gl-v2-btn gl-v2-btn-primary" data-act="retry">Opnieuw proberen</button></div>', "is-voice");
             screenEl.onclick = function (e) { if (e.target.closest("[data-act=close]")) closeScreen(); else if (e.target.closest("[data-act=retry]")) openVoice(); };
         });
     }
 
-    // ───────────────────────────── Controleren en bewaren (40f / 40h) ─────────────────────────────
+    // ───────────────────────────── Controleren en bewaren (41c stap 4, 41d stap 4) ─────────────────────────────
     var audioEl = null;
     function openReview(job) {
-        var props = job.proposals.map(function (p, i) { p._i = i; p._on = !p.existingNr; return p; });
+        var props = job.proposals.map(function (p, i) { p._i = i; p._on = !p.existingNr; p._files = []; p._plan = null; return p; });
         var filter = "all";
         function visible() { return props.filter(function (p) { return filter === "all" || (filter === "new" ? !p.existingNr : !!p.existingNr); }); }
         function whereOf(p) { return [p.unitName || "Algemeen", p.zone ? p.zone.charAt(0).toUpperCase() + p.zone.slice(1) : ""].filter(Boolean).join(" · "); }
-        function rowHtml(p) {
-            var photos = (p.photoIndexes || []).map(function (i) { return '<img src="' + base + '/RondgangFotoV2?id=' + encodeURIComponent(job.id) + '&i=' + i + '" alt="" loading="lazy">'; }).join("");
-            return '<div class="gl-v2-ptv-prop' + (p._on ? "" : " is-off") + '" data-i="' + p._i + '">' +
-                '<button type="button" class="gl-v2-ptv-tg' + (p._on ? " is-on" : "") + '" data-act="toggle" aria-pressed="' + p._on + '" aria-label="Dit punt bewaren"><i class="ph ph-check" aria-hidden="true"></i></button>' +
-                '<div class="gl-v2-ptv-prop-main"><b>' + esc(p.title) + '</b><small>' + esc(whereOf(p) + (job.kind === "rondgang" && p.atSeconds != null ? " · " + mmss(p.atSeconds) : "") + " · " + (p.contractorName || "aannemer?")) + '</small>' +
-                (p.existingNr ? '<span class="gl-v2-ptv-tag">bestaat al: P-' + ("00" + p.existingNr).slice(-3) + '</span>' : '') +
-                (photos ? '<div class="gl-v2-ptv-prop-photos">' + photos + '</div>' : '') +
-                '<div class="gl-v2-ptv-prop-act">' + (job.kind === "rondgang" && p.atSeconds != null ? '<button type="button" data-act="play"><i class="ph ph-play" aria-hidden="true"></i>Beluister</button>' : '') +
-                '<button type="button" data-act="edit"><i class="ph ph-camera" aria-hidden="true"></i>Foto toevoegen</button><button type="button" data-act="edit"><i class="ph ph-map-trifold" aria-hidden="true"></i>Op plan</button><button type="button" data-act="edit"><i class="ph ph-pencil-simple" aria-hidden="true"></i>Wijzigen</button></div></div></div>';
+        function attached(p) {
+            var bits = [];
+            if (p._files.length) bits.push('<i class="ph ph-camera" aria-hidden="true"></i>' + p._files.length + (p._files.length === 1 ? " foto" : " foto’s"));
+            if (p._plan) bits.push('<i class="ph ph-map-pin" aria-hidden="true"></i>' + esc(p._plan.name || "op plan"));
+            return bits.length ? '<span class="gl-v2-ptv-att">' + bits.join('<span class="gl-v2-ptv-dot">·</span>') + '</span>' : "";
+        }
+        function links() {
+            return '<span class="gl-v2-ptv-links"><button type="button" data-act="edit">Wijzigen</button><span>·</span><button type="button" data-act="photo">Foto</button><span>·</span><button type="button" data-act="plan">Op plan</button></span>';
+        }
+        function rowVoice(p) {
+            return '<div class="gl-v2-ptv-card' + (p._on ? "" : " is-off") + '" data-i="' + p._i + '">' +
+                '<div class="gl-v2-ptv-card-top"><button type="button" class="gl-v2-ptv-cb' + (p._on ? " is-on" : "") + '" data-act="toggle" aria-pressed="' + p._on + '" aria-label="Dit punt bewaren">' + CHECK + '</button><b>' + esc(p.title) + '</b></div>' +
+                '<span class="gl-v2-ptv-sub">' + esc(whereOf(p) + " · " + (p.contractorName || "aannemer?")) + '</span>' +
+                (p.existingNr ? '<span class="gl-v2-ptv-sub is-note">bestaat al: P-' + ("00" + p.existingNr).slice(-3) + '</span>' : '') + attached(p) + links() + '</div>';
+        }
+        function rowRondgang(p) {
+            var idx = (p.photoIndexes || [])[0], src = idx != null ? base + "/RondgangFotoV2?id=" + encodeURIComponent(job.id) + "&i=" + idx : "";
+            var thumb = '<button type="button" class="gl-v2-ptv-thumb' + (src ? " has-img" : "") + '" data-act="play" aria-label="Beluister" ' + (src ? 'style="background-image:url(' + src + ')"' : "") + '><i class="ph ph-play" aria-hidden="true"></i></button>';
+            var n = (p.photoIndexes || []).length;
+            return '<div class="gl-v2-ptv-row' + (p._on ? "" : " is-off") + '" data-i="' + p._i + '">' + thumb +
+                '<div class="gl-v2-ptv-row-main"><b>' + esc(p.title) + '</b><small>' + esc(whereOf(p) + (p.atSeconds != null ? " · " + mmss(p.atSeconds) : "")) + (n ? " · " + n + (n === 1 ? " foto" : " foto’s") : "") + '</small>' +
+                (p.existingNr ? '<span class="gl-v2-ptv-who">bestaat al: P-' + ("00" + p.existingNr).slice(-3) + '</span>' : (p.contractorName ? '<span class="gl-v2-ptv-who">' + esc(p.contractorName) + '</span>' : '<span class="gl-v2-ptv-who is-warn">aannemer kiezen</span>')) + attached(p) + links() + '</div>' +
+                (p.existingNr ? '<span class="gl-v2-ptv-badge">bestaat al</span>' : '') +
+                '<button type="button" class="gl-v2-ptv-cb sm' + (p._on ? " is-on" : "") + '" data-act="toggle" aria-pressed="' + p._on + '" aria-label="Dit punt bewaren">' + CHECK + '</button></div>';
         }
         function render() {
             var n = props.filter(function (p) { return p._on; }).length, nieuw = props.filter(function (p) { return !p.existingNr; }).length, best = props.length - nieuw;
             var title = job.kind === "rondgang" ? "Rondgang verwerkt" : props.length + (props.length === 1 ? " punt herkend" : " punten herkend");
             var sub = job.kind === "rondgang" ? mmss(job.seconds || 0) + " · " + props.length + " voorstellen" : "controleer en bewaar";
-            var html = head(title, sub, true) + '<div class="gl-v2-ptv-body gl-v2-ptv-review">';
-            if (job.kind === "voice") html += '<div class="gl-v2-ptv-quotecard"><span>JOUW BERICHT · ' + mss(job.seconds) + '</span><p>“' + esc(job.transcript) + '”</p></div>';
-            else if (best) html += '<p class="gl-v2-ptv-note">Transcript en foto’s verwerkt. Ontdubbeld met ' + best + ' bestaande punten.</p>';
-            if (job.kind === "rondgang") html += '<div class="gl-v2-ptv-seg"><button type="button" data-f="all" class="' + (filter === "all" ? "is-on" : "") + '">Alle ' + props.length + '</button><button type="button" data-f="new" class="' + (filter === "new" ? "is-on" : "") + '">Nieuw ' + nieuw + '</button><button type="button" data-f="old" class="' + (filter === "old" ? "is-on" : "") + '">Bestaand ' + best + '</button></div>';
-            html += '<div class="gl-v2-ptv-props">' + visible().map(rowHtml).join("") + '</div></div>' +
+            var html = head(title, esc(sub)) + '<div class="gl-v2-ptv-body gl-v2-ptv-review">';
+            if (job.kind === "rondgang") {
+                if (best) html += '<p class="gl-v2-ptv-note">Transcript en foto’s verwerkt. Ontdubbeld met ' + best + ' bestaande punten.</p>';
+                html += '<div class="gl-v2-ptv-seg"><button type="button" data-f="all" class="' + (filter === "all" ? "is-on" : "") + '">Alle ' + props.length + '</button><button type="button" data-f="new" class="' + (filter === "new" ? "is-on" : "") + '">Nieuw ' + nieuw + '</button><button type="button" data-f="old" class="' + (filter === "old" ? "is-on" : "") + '">Bestaand ' + best + '</button></div>';
+            }
+            html += '<div class="gl-v2-ptv-props">' + visible().map(job.kind === "rondgang" ? rowRondgang : rowVoice).join("") + '</div></div>' +
                 '<footer class="gl-v2-ptv-foot">' + (job.kind === "voice" ? '<button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-act="again">Opnieuw</button>' : '<button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-act="later">Later</button>') +
                 '<button type="button" class="gl-v2-btn gl-v2-btn-primary" data-act="save"' + (n ? "" : " disabled") + '>' + n + (n === 1 ? " punt" : " punten") + (job.kind === "rondgang" ? " als concept bewaren" : " bewaren") + '</button></footer>';
-            var scroll = screenEl && $(".gl-v2-ptv-body", screenEl) ? $(".gl-v2-ptv-body", screenEl).scrollTop : 0;
+            var keep = screenEl && $(".gl-v2-ptv-body", screenEl) ? $(".gl-v2-ptv-body", screenEl).scrollTop : 0;
             openScreen(html, "is-review");
-            var b = $(".gl-v2-ptv-body", screenEl); if (b) b.scrollTop = scroll;
+            var b = $(".gl-v2-ptv-body", screenEl); if (b) b.scrollTop = keep;
+            screenEl.onclick = onClick;
+        }
+        function onClick(e) {
+            var f = e.target.closest("[data-f]"); if (f) { filter = f.dataset.f; render(); return; }
+            var row = e.target.closest("[data-i]"), p = row ? props[parseInt(row.dataset.i, 10)] : null, a = (e.target.closest("[data-act]") || {}).dataset;
+            if (!a) return;
+            var act = a.act;
+            if (act === "close" || act === "later") { if (audioEl) audioEl.pause(); closeScreen(); return; }
+            if (act === "again") { openVoice(); return; }
+            if (act === "toggle" && p) { p._on = !p._on; render(); return; }
+            if (act === "play" && p) { playAt(job, p.atSeconds || 0); return; }
+            if (act === "photo" && p) {   // de camera opent meteen: een nieuwe foto nemen of er een uit de galerij kiezen
+                if (!window.PuntCamera) return;
+                window.PuntCamera.open(function (files) { p._files = p._files.concat(files); render(); }, p.title);
+                return;
+            }
+            if (act === "plan" && p) {    // de plannen van de eenheid komen meteen in beeld; daarna het punt aanduiden
+                if (!window.PuntPanel || !window.PuntPanel.pickPlan) return;
+                window.PuntPanel.pickPlan({ unitId: p.unitId, title: p.title }, function (res, msg) {
+                    if (msg) toast(msg);
+                    if (res) { p._plan = res; render(); }
+                });
+                return;
+            }
+            if (act === "edit" && p) { editInPanel(job, p, function () { props = props.filter(function (x) { return x !== p; }); if (!props.length) { closeScreen(); location.reload(); } else render(); }); return; }
+            if (act === "save") saveAll(job, props);
         }
         render();
-        screenEl.onclick = function (e) {
-            var f = e.target.closest("[data-f]"); if (f) { filter = f.dataset.f; render(); return; }
-            var row = e.target.closest(".gl-v2-ptv-prop"), p = row ? props[parseInt(row.dataset.i, 10)] : null, act = (e.target.closest("[data-act]") || {}).dataset;
-            if (!act) return;
-            if (act.act === "close" || act.act === "later") { if (audioEl) audioEl.pause(); closeScreen(); return; }
-            if (act.act === "again") { openVoice(); return; }
-            if (act.act === "toggle" && p) { p._on = !p._on; render(); return; }
-            if (act.act === "play" && p) { playAt(job, p.atSeconds || 0); return; }
-            if (act.act === "edit" && p) { editInPanel(job, p, function () { props = props.filter(function (x) { return x !== p; }); if (!props.length) { closeScreen(); location.reload(); } else render(); }); return; }
-            if (act.act === "save") saveAll(job, props);
-        };
     }
     function playAt(job, sec) {
         if (!audioEl) audioEl = new Audio();
@@ -187,20 +250,28 @@
         audioEl.addEventListener("loadedmetadata", function once() { audioEl.removeEventListener("loadedmetadata", once); try { audioEl.currentTime = Math.max(0, sec - 1); } catch (e) { /* niet doorspoelbaar */ } audioEl.play(); });
         audioEl.load();
     }
-    // Wijzigen / Foto toevoegen / Op plan: het gewone nieuw-puntformulier, vooraf ingevuld; het voorstel verdwijnt na bewaren
+    // Wijzigen: het gewone nieuw-puntformulier, vooraf ingevuld (met de foto's en het plan die al gekozen zijn); het voorstel verdwijnt na bewaren
     function editInPanel(job, p, onSaved) {
         if (!window.PuntPanel) return;
         var photos = job.kind === "rondgang" ? (p.photoIndexes || []) : [];
         Promise.all(photos.map(function (i) { return fetch(base + "/RondgangFotoV2?id=" + encodeURIComponent(job.id) + "&i=" + i, { credentials: "same-origin" }).then(function (r) { return r.blob(); }).then(function (b) { return new File([b], "foto-" + (i + 1) + ".jpg", { type: "image/jpeg" }); }); }))
             .catch(function () { return []; }).then(function (files) {
-                window.PuntPanel.open("new", 0, { title: p.title, unitId: p.unitId, zone: p.zone, contractorId: p.contractorId, description: p.description, priority: p.priority, files: files, onSaved: onSaved });
+                var pre = { title: p.title, unitId: p.unitId, zone: p.zone, contractorId: p.contractorId, description: p.description, priority: p.priority, files: files.concat(p._files || []), onSaved: onSaved };
+                if (p._plan && p._plan.key) { pre.planKey = p._plan.key; pre.page = p._plan.page; pre.x = p._plan.x; pre.y = p._plan.y; }
+                window.PuntPanel.open("new", 0, pre);
             });
     }
     function saveAll(job, props) {
-        var items = props.filter(function (p) { return p._on; }).map(function (p) { return { title: p.title, unitId: p.unitId, zone: p.zone, contractorId: p.contractorId, description: p.description, priority: p.priority, photoIndexes: p.photoIndexes || [] }; });
-        if (!items.length) return;
+        var chosen = props.filter(function (p) { return p._on; });
+        if (!chosen.length) return;
         var btn = $("[data-act=save]", screenEl); if (btn) { btn.disabled = true; btn.textContent = "Bewaren…"; }
-        var fd = new FormData(); fd.append("items", JSON.stringify(items)); if (job.id) fd.append("jobId", job.id); if (job.verslagId) fd.append("verslagId", job.verslagId);
+        var fd = new FormData();
+        fd.append("items", JSON.stringify(chosen.map(function (p) {
+            return { idx: p._i, title: p.title, unitId: p.unitId, zone: p.zone, contractorId: p.contractorId, description: p.description, priority: p.priority, photoIndexes: p.photoIndexes || [],
+                planId: p._plan ? p._plan.planId : null, planPage: p._plan ? p._plan.page : null, planX: p._plan ? p._plan.x : null, planY: p._plan ? p._plan.y : null };
+        })));
+        chosen.forEach(function (p) { p._files.forEach(function (f) { fd.append("foto_" + p._i, f, f.name || "foto.jpg"); }); });
+        if (job.id) fd.append("jobId", job.id); if (job.verslagId) fd.append("verslagId", job.verslagId);
         post("SpraakBewaarV2", fd).then(function (j) {
             if (!j.ok) throw new Error((j.errors && j.errors[0]) || j.error || "Bewaren mislukt.");
             try { sessionStorage.setItem("pt-toast", j.count + (j.count === 1 ? " punt" : " punten") + " bewaard als concept"); } catch (e) { /* niet erg */ }
@@ -215,10 +286,10 @@
             if (!navigator.mediaDevices || !window.MediaRecorder) { toast("Opnemen wordt niet ondersteund op dit toestel."); return; }
             var chips = '<button type="button" class="gl-v2-ptv-chip is-on" data-u="all">Alle</button>' + units.map(function (u) { return '<button type="button" class="gl-v2-ptv-chip" data-u="' + u.id + '">' + esc(u.name) + '</button>'; }).join("");
             var vopts = '<option value="">Niet koppelen</option>' + verslagen.map(function (v, i) { return '<option value="' + v.id + '"' + (i === 0 ? " selected" : "") + '>' + esc(v.name) + '</option>'; }).join("");
-            openScreen(head("Rondgang starten", root.dataset.projectName || "", true) +
-                '<div class="gl-v2-ptv-body"><span class="gl-v2-ptv-lbl">WELKE EENHEDEN</span><div class="gl-v2-ptv-chips" id="ptv-units">' + chips + '</div><p class="gl-v2-ptv-hint2">helpt om vermeldingen te koppelen</p>' +
-                (verslagen.length ? '<span class="gl-v2-ptv-lbl">KOPPELEN AAN VERSLAG</span><label class="gl-v2-ptv-sel"><select id="ptv-verslag">' + vopts + '</select></label>' : '') +
-                '<div class="gl-v2-ptv-tips"><b>Tips</b><ul><li>Zeg eerst de eenheid en kamer: “lot twee, badkamer”.</li><li>Beschrijf daarna wat er moet gebeuren en voor wie.</li><li>Tik op het scherm voor een foto van dat moment.</li><li>Pauzeren mag.</li></ul></div></div>' +
+            openScreen(head("Rondgang starten", esc(root.dataset.projectName || "")) +
+                '<div class="gl-v2-ptv-body"><div class="gl-v2-ptv-grp"><span class="gl-v2-ptv-lbl">WELKE EENHEDEN</span><div class="gl-v2-ptv-chips" id="ptv-units">' + chips + '</div><span class="gl-v2-ptv-hint3">helpt om vermeldingen te koppelen</span></div>' +
+                (verslagen.length ? '<div class="gl-v2-ptv-grp"><span class="gl-v2-ptv-lbl">KOPPELEN AAN VERSLAG</span><label class="gl-v2-ptv-sel"><select id="ptv-verslag">' + vopts + '</select><i class="ph ph-caret-down" aria-hidden="true"></i></label></div>' : '') +
+                '<div class="gl-v2-ptv-tips"><b>Tips</b><span>• Zeg eerst de eenheid en kamer: “lot twee, badkamer”.<br>• Beschrijf daarna wat er moet gebeuren en voor wie.<br>• Tik op het scherm of op de cameraknop voor een foto van dat moment.<br>• Pauzeren mag; de opname wordt achteraf verwerkt.</span></div></div>' +
                 '<footer class="gl-v2-ptv-foot"><button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-act="close">Annuleren</button><button type="button" class="gl-v2-btn gl-v2-btn-primary" data-act="start"><i class="ph ph-record" aria-hidden="true"></i>Start opname</button></footer>', "is-start");
             screenEl.onclick = function (e) {
                 var c = e.target.closest("[data-u]");
@@ -239,50 +310,63 @@
 
     var rg = null;
     function startRondgang(opt) {
-        var wantVideo = { facingMode: { ideal: "environment" }, width: { ideal: 1280 } };
-        navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: wantVideo }).catch(function () { return micStream(); }).then(function (stream) {
+        // beeld + geluid: het beeld is de zoeker waarmee je foto's neemt (er wordt geen video bewaard, enkel het geluid en je foto's)
+        navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 } } }).catch(function () { return micStream(); }).then(function (stream) {
             var hasVideo = stream.getVideoTracks().length > 0;
-            var el = document.createElement("div"); el.className = "gl-v2-ptcam gl-v2-ptrg"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", "Rondgang opnemen");
-            el.innerHTML = '<div class="gl-v2-ptrg-top"><span class="gl-v2-ptrg-rec"><i></i>OPNAME · ' + esc((root.dataset.projectName || "").toUpperCase()) + '</span><span class="gl-v2-ptrg-time" id="ptrg-time">00:00</span></div>' +
-                (hasVideo ? '<video class="gl-v2-ptcam-video" playsinline muted autoplay></video>' : '<div class="gl-v2-ptrg-novideo"><i class="ph ph-microphone" aria-hidden="true"></i><p>Alleen geluid. De camera is niet beschikbaar, dus foto’s nemen kan niet.</p></div>') +
-                '<div class="gl-v2-ptcam-flash" aria-hidden="true"></div>' +
-                '<div class="gl-v2-ptrg-bottom"><ol class="gl-v2-ptrg-marks" id="ptrg-marks"></ol><p class="gl-v2-ptrg-tip">Zeg de eenheid en de kamer hardop. Tik op het scherm voor een foto.</p>' +
-                '<div class="gl-v2-ptrg-row"><button type="button" class="gl-v2-ptcam-side" data-act="pause"><i class="ph ph-pause" aria-hidden="true"></i><span>Pauze</span></button>' +
+            var el = document.createElement("div"); el.className = "gl-v2-ptrg"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", "Rondgang opnemen");
+            el.innerHTML = '<span class="gl-v2-ptrg-rec"><i></i>OPNAME · ' + esc((root.dataset.projectName || "").toUpperCase()) + '</span><span class="gl-v2-ptrg-time" id="ptrg-time">00:00</span>' +
+                '<div class="gl-v2-ptrg-cam" id="ptrg-cam">' + (hasVideo ? '' : '<div class="gl-v2-ptrg-novideo"><i class="ph ph-microphone" aria-hidden="true"></i><p>Alleen geluid. De camera is niet beschikbaar, dus foto’s nemen kan niet.</p></div>') + '<div class="gl-v2-ptrg-flash" aria-hidden="true"></div>' + (hasVideo ? '<span class="gl-v2-ptrg-taphint">Tik voor een foto</span>' : '') + '</div>' +
+                '<div class="gl-v2-ptrg-marks" id="ptrg-marks"></div>' +
+                '<div class="gl-v2-ptrg-ctl"><button type="button" class="gl-v2-ptrg-circle" data-act="pause" aria-label="Pauze"><i class="ph ph-pause" aria-hidden="true"></i></button>' +
                 '<button type="button" class="gl-v2-ptrg-stop" data-act="stop" aria-label="Opname stoppen"><span></span></button>' +
-                '<span class="gl-v2-ptcam-side"><i class="ph ph-camera" aria-hidden="true"></i><span id="ptrg-n">0</span></span></div></div>';
+                '<button type="button" class="gl-v2-ptrg-circle" data-act="snap" aria-label="Foto nemen"' + (hasVideo ? '' : ' disabled') + '><i class="ph ph-camera" aria-hidden="true"></i><b id="ptrg-n" hidden>0</b></button></div>';
             document.body.appendChild(el); document.body.classList.add("gl-v2-ptcam-on");
-            if (hasVideo) { var v = $("video", el); v.srcObject = stream; v.play().catch(function () { }); }
+            var v = null;
+            if (hasVideo) {
+                v = document.createElement("video"); v.muted = true; v.defaultMuted = true; v.setAttribute("muted", ""); v.setAttribute("playsinline", ""); v.setAttribute("autoplay", ""); v.playsInline = true;
+                v.srcObject = stream; $("#ptrg-cam", el).insertBefore(v, $("#ptrg-cam", el).firstChild); var pl = v.play(); if (pl && pl.catch) pl.catch(function () { /* start na de eerste tik */ });
+            }
             var audioOnly = new MediaStream(stream.getAudioTracks());
-            rg = { el: el, stream: stream, handle: recordStream(audioOnly), t0: Date.now(), pausedAt: 0, pausedTotal: 0, photos: [], times: [], opt: opt, timer: null, wake: null };
-            function elapsed() { return ((rg.pausedAt || Date.now()) - rg.t0 - rg.pausedTotal) / 1000; }
-            rg.elapsed = elapsed;
-            rg.timer = setInterval(function () { $("#ptrg-time", el).textContent = mmss(elapsed()); }, 500);
+            rg = { el: el, v: v, stream: stream, handle: recordStream(audioOnly), t0: Date.now(), pausedAt: 0, pausedTotal: 0, photos: [], times: [], opt: opt, timer: null, wake: null };
+            rg.elapsed = function () { return ((rg.pausedAt || Date.now()) - rg.t0 - rg.pausedTotal) / 1000; };
+            rg.timer = setInterval(function () { $("#ptrg-time", el).textContent = mmss(rg.elapsed()); }, 500);
             try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then(function (w) { rg.wake = w; }).catch(function () { }); } catch (e) { /* geen wake lock */ }
+            // een foto: tik op het beeld (pointerup, werkt ook op iOS waar een tik op een video geen click geeft) of op de cameraknop
+            $("#ptrg-cam", el).addEventListener("pointerup", function (e) { e.preventDefault(); snap(); });
             el.addEventListener("click", function (e) {
-                var b = e.target.closest("[data-act]");
-                if (b && b.dataset.act === "pause") {
-                    if (!rg.pausedAt) { rg.handle.pause(); rg.pausedAt = Date.now(); $("span", b).textContent = "Hervatten"; $("i", b).className = "ph ph-play"; el.classList.add("is-paused"); }
-                    else { rg.handle.resume(); rg.pausedTotal += Date.now() - rg.pausedAt; rg.pausedAt = 0; $("span", b).textContent = "Pauze"; $("i", b).className = "ph ph-pause"; el.classList.remove("is-paused"); }
-                    return;
+                var b = e.target.closest("[data-act]"); if (!b) return;
+                var act = b.dataset.act;
+                if (act === "snap") { snap(); return; }
+                if (act === "stop") { stopRondgang(); return; }
+                if (act === "pause") {
+                    var ic = $("i", b);
+                    if (!rg.pausedAt) { rg.handle.pause(); rg.pausedAt = Date.now(); ic.className = "ph ph-play"; el.classList.add("is-paused"); }
+                    else { rg.handle.resume(); rg.pausedTotal += Date.now() - rg.pausedAt; rg.pausedAt = 0; ic.className = "ph ph-pause"; el.classList.remove("is-paused"); }
                 }
-                if (b && b.dataset.act === "stop") { stopRondgang(); return; }
-                if (hasVideo && !e.target.closest(".gl-v2-ptrg-bottom") && !e.target.closest(".gl-v2-ptrg-top")) snap();
             });
         }).catch(micError);
     }
     function snap() {
-        var v = $("video", rg.el); if (!v || !v.videoWidth || rg.pausedAt) return;
+        if (!rg || !rg.v) return;
+        if (rg.pausedAt) { toast("De opname staat op pauze. Hervat om een foto te nemen."); return; }
+        var v = rg.v;
+        if (!v.videoWidth || v.readyState < 2) { var pl = v.play(); if (pl && pl.catch) pl.catch(function () { }); toast("De camera is nog niet klaar. Probeer het zo meteen opnieuw."); return; }
         var sc = Math.min(1, 1600 / Math.max(v.videoWidth, v.videoHeight)), c = document.createElement("canvas");
-        c.width = Math.round(v.videoWidth * sc); c.height = Math.round(v.videoHeight * sc); c.getContext("2d").drawImage(v, 0, 0, c.width, c.height);
-        var t = rg.elapsed(), fl = $(".gl-v2-ptcam-flash", rg.el); fl.classList.remove("is-on"); void fl.offsetWidth; fl.classList.add("is-on");
+        c.width = Math.round(v.videoWidth * sc); c.height = Math.round(v.videoHeight * sc);
+        try { c.getContext("2d").drawImage(v, 0, 0, c.width, c.height); } catch (e) { toast("Kon geen foto nemen."); return; }
+        var t = rg.elapsed(), fl = $(".gl-v2-ptrg-flash", rg.el); fl.classList.remove("is-on"); void fl.offsetWidth; fl.classList.add("is-on");
+        try { if (navigator.vibrate) navigator.vibrate(30); } catch (e) { /* niets */ }
         c.toBlob(function (b) {
-            if (!b) return; rg.photos.push(b); rg.times.push(t);
-            $("#ptrg-n", rg.el).textContent = rg.photos.length;
-            var li = document.createElement("li"); li.innerHTML = '<b>' + mmss(t) + '</b><span>foto ' + rg.photos.length + '</span>'; $("#ptrg-marks", rg.el).appendChild(li);
+            if (!b) { toast("Kon geen foto nemen."); return; }
+            rg.photos.push(b); rg.times.push(t);
+            var n = $("#ptrg-n", rg.el); n.hidden = false; n.textContent = rg.photos.length;
+            var url = URL.createObjectURL(b), row = document.createElement("div"); row.className = "gl-v2-ptrg-mark";
+            row.innerHTML = '<span class="gl-v2-ptrg-mt">' + mmss(t) + '</span><span class="gl-v2-ptrg-ml">foto ' + rg.photos.length + '</span><img src="' + url + '" alt="">';
+            var list = $("#ptrg-marks", rg.el); list.appendChild(row); list.scrollTop = list.scrollHeight;
         }, "image/jpeg", 0.82);
     }
     function stopRondgang() {
-        var r = rg; rg = null; clearInterval(r.timer); var secs = (r.pausedAt ? r.pausedAt : Date.now()) - r.t0 - r.pausedTotal; secs = secs / 1000;
+        var r = rg; rg = null; clearInterval(r.timer); var secs = ((r.pausedAt ? r.pausedAt : Date.now()) - r.t0 - r.pausedTotal) / 1000;
         try { if (r.wake) r.wake.release(); } catch (e) { /* niets */ }
         r.handle.stop().then(function (blob) {
             stopTracks(r.stream); r.el.remove(); document.body.classList.remove("gl-v2-ptcam-on");
@@ -307,15 +391,18 @@
         xhr.send(fd);
     }
 
-    // ── balk op de lijst: verwerkt in de achtergrond (40h stap 3) ──
+    // ── kaart op de lijst terwijl een rondgang verwerkt wordt (41d stap 3) ──
     var bannerEl = null, lastJob = null, curId = null, curState = "";
     function banner(s) {
         if (!bannerEl) { bannerEl = document.createElement("div"); bannerEl.className = "gl-v2-ptrg-banner"; bannerEl.setAttribute("role", "status"); root.insertBefore(bannerEl, root.firstChild); }
         var html;
-        if (s.state === "upload") html = '<div class="gl-v2-ptrg-b-text"><b>Rondgang ' + mmss(s.duration) + ' wordt geüpload</b><small>Blijf op deze pagina tot het klaar is.</small></div><div class="gl-v2-ptrg-b-bar"><i style="transform:scaleX(' + (s.percent / 100) + ')"></i></div><span class="gl-v2-ptrg-b-pct">' + s.percent + ' %</span>';
-        else if (s.state === "bezig") html = '<div class="gl-v2-ptrg-b-text"><b>Rondgang ' + mmss(s.duration) + ' wordt verwerkt</b><small>' + esc(s.step || "") + ' · je mag verder werken</small></div><div class="gl-v2-ptrg-b-bar"><i style="transform:scaleX(' + (s.percent / 100) + ')"></i></div><span class="gl-v2-ptrg-b-pct">' + s.percent + ' %</span>';
-        else if (s.state === "klaar") html = '<button type="button" class="gl-v2-ptrg-b-open" data-act="open-rondgang"><span class="gl-v2-ptrg-b-text"><b>Rondgang verwerkt</b><small>' + s.count + ' punten voorgesteld · tik om te controleren</small></span><i class="ph ph-caret-right" aria-hidden="true"></i></button>';
-        else html = '<div class="gl-v2-ptrg-b-text is-err"><b>Rondgang niet verwerkt</b><small>' + esc(s.error || "") + '</small></div><button type="button" class="gl-v2-ptrg-b-x" data-act="close-banner" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>';
+        if (s.state === "upload" || s.state === "bezig") {
+            var up = s.state === "upload";
+            html = '<div class="gl-v2-ptrg-b-top"><b>Rondgang ' + mmss(s.duration) + (up ? " wordt geüpload" : " wordt verwerkt") + '</b><span>' + s.percent + ' %</span></div>' +
+                '<div class="gl-v2-ptrg-b-bar"><i style="transform:scaleX(' + (s.percent / 100) + ')"></i></div>' +
+                '<small>' + (up ? "Blijf op deze pagina tot het geüpload is." : "Je mag verder werken of de app sluiten. Open Punten later opnieuw om te controleren.") + '</small>';
+        } else if (s.state === "klaar") html = '<button type="button" class="gl-v2-ptrg-b-open" data-act="open-rondgang"><i class="ph ph-check-circle" aria-hidden="true"></i><span><b>Rondgang verwerkt</b><small>' + s.count + ' punten voorgesteld · tik om te controleren</small></span><i class="ph ph-caret-right" aria-hidden="true"></i></button>';
+        else html = '<div class="gl-v2-ptrg-b-top"><b class="is-err">Rondgang niet verwerkt</b><button type="button" class="gl-v2-ptrg-b-x" data-act="close-banner" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div><small>' + esc(s.error || "") + '</small>';
         bannerEl.className = "gl-v2-ptrg-banner is-" + s.state; bannerEl.innerHTML = html;
     }
     function pollRondgang(id, secs) {
@@ -335,7 +422,7 @@
     document.addEventListener("click", function (e) {
         if (e.target.closest("[data-act=open-rondgang]") && lastJob) { openReview(lastJob); return; }
         if (e.target.closest("[data-act=close-banner]")) {
-            // een mislukte rondgang weggooien, anders blijft de balk bij elk bezoek terugkomen
+            // een mislukte rondgang weggooien, anders blijft de kaart bij elk bezoek terugkomen
             if (curId && curState === "fout") { var fd = new FormData(); fd.append("id", curId); post("RondgangVerwijderV2", fd); }
             if (bannerEl) { bannerEl.remove(); bannerEl = null; }
             return;
@@ -344,9 +431,9 @@
         if (e.target.closest("#pt-qa-rondgang")) { openRondgangStart(); return; }
     });
     // een rondgang die nog niet bewaard is (staat in de database): ook na het sluiten van de app of op een ander toestel
-    if (canWrite) fetch(base + "/RondgangLopendV2", { credentials: "same-origin" }).then(function (r) { return r.json(); }).then(function (j) {
+    if (canWrite()) fetch(base + "/RondgangLopendV2", { credentials: "same-origin" }).then(function (r) { return r.json(); }).then(function (j) {
         if (j && j.ok && !j.none && j.id) pollRondgang(j.id, j.duration || 0);
-    }).catch(function () { /* geen balk */ });
+    }).catch(function () { /* geen kaart */ });
 
     // ───────────────────────────── microfoon bij de titel (41a stap 2) ─────────────────────────────
     var title = document.getElementById("pt-new-title");

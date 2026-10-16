@@ -13,8 +13,9 @@
         // Optioneel: Required (bool) via additionalViewData — voor een veld dat op een pagina verplicht is
         // zonder dat het BO-model het afdwingt (bv. Verkoopdatum op Klanten/AddClientAccountV2).
         Required = ViewData["Required"] as bool? ?? ViewData.ModelMetadata.IsRequired,
-        IsoValue = Model?.ToString("yyyy-MM-dd") ?? "",
-        DisplayValue = Model?.ToString("dd/MM/yyyy") ?? "",
+        // DateOnly.MinValue (een niet-nullable datum die bewust nog leeg is, bv. een gedupliceerde factuur) telt als leeg.
+        IsoValue = Model is { Year: > 1 } ? Model.Value.ToString("yyyy-MM-dd") : "",
+        DisplayValue = Model is { Year: > 1 } ? Model.Value.ToString("dd/MM/yyyy") : "",
     };
     if (ViewContext.ModelState.TryGetValue(name, out var entry) && entry.Errors.Count > 0)
     {

@@ -60,14 +60,6 @@
                             <button type="button" class="gln-ai-segmented-btn @(Model.Type != 0 ? "is-active" : "")" data-contracttype="1">Zonder contract</button>
                         </div>
                     </div>
-                    <div class="gl-v2-col-6">
-                        <label class="gl-v2-field-label">Soort</label>
-                        <div class="gln-ai-segmented" id="gln-ai-kind-segmented">
-                            <button type="button" class="gln-ai-segmented-btn @(kindValue == 0 ? "is-active" : "")" data-kind="0">Vordering</button>
-                            <button type="button" class="gln-ai-segmented-btn @(kindValue == 1 ? "is-active" : "")" data-kind="1">Eindvordering</button>
-                            <button type="button" class="gln-ai-segmented-btn @(kindValue == 2 ? "is-active" : "")" data-kind="2">Creditnota</button>
-                        </div>
-                    </div>
                     <div class="gl-v2-col-6" id="gln-ai-contract-field"@(Model.Type != 0 ? " hidden" : "")>
                         <div class="gl-v2-field">
                             <label class="gl-v2-field-label" for="lstProjectContracts_input">Welk contract</label>
@@ -97,6 +89,7 @@
                             {
                                 Name = "IncommingInvoice.CompanyId", Id = "txtCompanyID",
                                 Value = (Model.IncommingInvoice.CompanyId ?? 0).ToString(), EmptyValue = "0",
+                                DisplayText = string.IsNullOrWhiteSpace(Model.CompanyName) ? null : Model.CompanyName,
                                 Placeholder = "Zoek een leverancier…",
                                 LookupUrl = Url.Action("GetCompanys", "Projecten"), MinChars = 3, Icon = "ph-buildings",
                             })
@@ -104,6 +97,14 @@
                     </div>
                     <div class="gl-v2-col-6">
                         @Html.EditorFor(m => m.IncommingInvoice.InvoiceExternalId, "GlV2Text", new { Label = "Factuurnummer" })
+                    </div>
+                    <div class="gl-v2-col-6">
+                        <label class="gl-v2-field-label">Type</label>
+                        <div class="gln-ai-segmented" id="gln-ai-kind-segmented">
+                            <button type="button" class="gln-ai-segmented-btn @(kindValue == 0 ? "is-active" : "")" data-kind="0">Vordering</button>
+                            <button type="button" class="gln-ai-segmented-btn @(kindValue == 1 ? "is-active" : "")" data-kind="1">Eindvordering</button>
+                            <button type="button" class="gln-ai-segmented-btn @(kindValue == 2 ? "is-active" : "")" data-kind="2">Creditnota</button>
+                        </div>
                     </div>
                     @* Drie gelijke kolommen op desktop (col-4 elk): Factuurdatum, Vervaldatum, Factuurbedrag
                        samen op één rij — niet Factuurdatum alleen op zijn eigen volle rij. *@
@@ -243,6 +244,7 @@
         <span class="gln-ai-somcontrole" id="gln-ai-somcontrole"><i class="ph ph-circle-dashed" aria-hidden="true"></i><span id="gln-ai-somcontrole-tekst">Nog geen regels</span></span>
         <span class="gl-v2-form-actionbar-spacer"></span>
         <a href="@Url.Action("Recalculation", "Projecten", new { projectid = Model.ProjectId })" class="gl-v2-btn gl-v2-btn-text">Annuleren</a>
+        <button type="submit" name="saveAndNew" value="true" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-plus" aria-hidden="true"></i>Opslaan en nieuwe</button>
         <button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-check" aria-hidden="true"></i>Factuur opslaan</button>
     </div>
 </form>

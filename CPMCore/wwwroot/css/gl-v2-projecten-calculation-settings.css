@@ -1,0 +1,51 @@
+/* gl-v2 — Projecten/CalculationSettingsV2 (design-handoff 42d, "Budget instellen"). Page-specifiek,
+   eigen klassen-namespace (gln-cs-*). Sectiekaart/veld/knoppen/actiebalk zijn gedeeld. */
+
+/* flex:1;min-height:0 op het <form> zelf, zodat .gl-v2-form-actionbar (margin-top:auto) onderaan hangt. */
+#gln-cs-form { display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 16px; min-width: 0; }
+#gln-cs-groups { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+/* ── Bronkaart ─────────────────────────────────────────────────────────────────────────────────── */
+.gln-cs-source { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 16px 20px; flex-wrap: wrap; }
+.gln-cs-source-main { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; min-width: 0; }
+.gln-cs-source-label { font: 600 10.5px var(--gl-v2-font-sans); letter-spacing: .06em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gln-cs-source-pill {
+    display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px; border-radius: 17px;
+    background: var(--gl-v2-primary); color: #fff; font: 600 12.5px var(--gl-v2-font-sans);
+}
+.gln-cs-source-pill.is-manual { background: var(--gl-v2-subtle-bg); color: var(--gl-v2-ink); }
+.gln-cs-source-text { margin: 0; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); flex: 1 1 260px; }
+.gln-cs-total { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.gln-cs-total-label { font: 600 10.5px var(--gl-v2-font-sans); letter-spacing: .06em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gln-cs-total-value { font: 650 22px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
+.gln-cs-total-hint { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* ── Toevoegrij ────────────────────────────────────────────────────────────────────────────────── */
+.gln-cs-addrow { display: flex; align-items: flex-start; gap: 10px; }
+.gln-cs-addrow > .gl-v2-field { flex: 1; min-width: 0; }
+.gln-cs-addrow .gl-v2-btn { height: 34px; flex: none; }
+.gln-cs-addrow .gl-v2-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ── Tabel per categorie (CSS-grid) ────────────────────────────────────────────────────────────── */
+.gln-cs-row { display: grid; grid-template-columns: minmax(0, 1fr) 190px; gap: 12px; align-items: center; padding: 6px 20px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gln-cs-row.has-def { grid-template-columns: minmax(0, 1fr) 190px 130px 130px; }
+.gln-cs-row.gln-cs-head { border-top: 0; padding-top: 10px; padding-bottom: 8px; font: 600 10.5px var(--gl-v2-font-sans); letter-spacing: .06em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gln-cs-row .is-num { text-align: right; font-variant-numeric: tabular-nums; }
+.gln-cs-name { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); min-width: 0; overflow-wrap: anywhere; }
+.gln-cs-amount { height: 34px; }
+.gln-cs-amount-input { text-align: right; }
+.gln-cs-def { font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gln-cs-diff { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gln-cs-diff.is-up { color: var(--gl-v2-danger); }
+.gln-cs-diff.is-down { color: var(--gl-v2-primary); }
+.gln-cs-row.is-changed .gln-cs-name { font-weight: 650; }
+.gln-cs-empty { margin: 0 20px 14px; }
+.gln-cs-empty[hidden] { display: none; }
+.gln-cs-status { font: 500 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+@media (max-width: 767.98px) {
+    .gln-cs-row, .gln-cs-row.has-def { grid-template-columns: minmax(0, 1fr) 140px; padding: 8px 16px; }
+    .gln-cs-row.has-def .gln-cs-def, .gln-cs-row.has-def .gln-cs-diff,
+    .gln-cs-row.gln-cs-head.has-def > span:nth-child(n+3) { display: none; }
+    .gln-cs-source { padding: 14px 16px; }
+}

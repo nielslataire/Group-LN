@@ -21,6 +21,31 @@
     function qa(sel, scope) { return Array.prototype.slice.call((scope || document).querySelectorAll(sel)); }
     function byId(id) { return document.getElementById(id); }
 
+    // ── Aangepaste keuzelijsten (GlV2/_SelectList): de verborgen input draagt het oorspronkelijke id, dus .value lezen en
+    //    "change"-luisteraars werken ongewijzigd. Zetten van een waarde moet ook de trigger bijwerken, dus via selSet. ──
+    function selSet(id, value, fireChange) {
+        var wrap = byId(id + "_select");
+        var hidden = byId(id);
+        if (!wrap || !hidden) return;
+        var v = value == null ? "" : String(value);
+        var trigger = wrap.querySelector(".gl-v2-select-trigger");
+        var label = trigger ? trigger.querySelector(".gl-v2-select-trigger-label") : null;
+        var panel = wrap.querySelector(".gl-v2-select-panel");
+        var options = panel ? Array.prototype.slice.call(panel.querySelectorAll(".gl-v2-select-option")) : [];
+        var match = options.filter(function (o) { return o.getAttribute("data-value") === v; })[0];
+        options.forEach(function (o) { o.classList.toggle("is-selected", o === match); });
+        var changed = hidden.value !== (match ? v : "");
+        hidden.value = match ? v : "";
+        if (label) label.textContent = match ? (match.querySelector("span") ? match.querySelector("span").textContent : match.textContent) : (wrap.getAttribute("data-placeholder") || "Kies …");
+        if (trigger) trigger.classList.toggle("is-filled", !!match);
+        if (changed && fireChange) hidden.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    function selText(id) {
+        var wrap = byId(id + "_select");
+        var o = wrap ? wrap.querySelector(".gl-v2-select-option.is-selected span") : null;
+        return o ? o.textContent.trim() : "";
+    }
+
     function token() {
         var input = q('input[name="__RequestVerificationToken"]');
         return input ? input.value : "";
@@ -48,7 +73,7 @@
 
     /** POST (form-encoded of FormData) → { ok, message, id }. Netwerk-/serverfouten worden een gewone fout. */
     function post(url, data) {
-        var body = data instanceof FormData ? data : toParams(data || {});
+        var body = (data instanceof FormData || data instanceof URLSearchParams) ? data : toParams(data || {});
         return fetch(url, {
             method: "POST",
             credentials: "same-origin",
@@ -355,14 +380,20 @@
         upRenderLinks();
     }
 
+    /** Voegt een koppeling toe op basis van de sleutel ("unit:12") als die bekend is; een leeg/0-id doet niets. */
+    function upAddLinkByKey(key, id) {
+        var meta = id ? (cfg.linkMeta || {})[key] : null;
+        if (meta) upAddLink(key, meta.label);
+    }
+
     function upSuggestFor(select, boxId, textId, yesId) {
-        var opt = select.options[select.selectedIndex];
+        var meta = (cfg.linkMeta || {})[select.value];
         var box = byId(boxId);
-        if (!opt || !opt.getAttribute("data-buyer") || opt.value.indexOf("unit:") !== 0) { if (box) box.hidden = true; return null; }
-        var buyerId = opt.getAttribute("data-buyer");
-        var buyerName = opt.getAttribute("data-buyer-name");
+        if (!meta || !meta.buyer || select.value.indexOf("unit:") !== 0) { if (box) box.hidden = true; return null; }
+        var buyerId = meta.buyer;
+        var buyerName = meta.buyerName;
         if (!buyerId || !buyerName) { if (box) box.hidden = true; return null; }
-        byId(textId).textContent = buyerName + " is koper van " + (opt.getAttribute("data-label") || opt.textContent.trim()) + " — ook koppelen?";
+        byId(textId).textContent = buyerName + " is koper van " + (meta.label || selText(select.id)) + " — ook koppelen?";
         if (box) box.hidden = false;
         return { key: "client:" + buyerId, label: buyerName };
     }
@@ -371,13 +402,13 @@
     var upAddSelect = byId("gl-v2-dd-up-linkadd");
     if (upAddSelect) {
         upAddSelect.addEventListener("change", function () {
-            var opt = upAddSelect.options[upAddSelect.selectedIndex];
-            if (!opt || !opt.value) return;
-            upAddLink(opt.value, opt.getAttribute("data-label") || opt.textContent.trim());
+            var meta = (cfg.linkMeta || {})[upAddSelect.value];
+            if (!upAddSelect.value) return;
+            upAddLink(upAddSelect.value, (meta && meta.label) || selText("gl-v2-dd-up-linkadd"));
             var sug = upSuggestFor(upAddSelect, "gl-v2-dd-up-suggest", "gl-v2-dd-up-suggest-text");
             upSuggestion = sug && !up.links.some(function (l) { return l.key === sug.key; }) ? sug : null;
             if (!upSuggestion) byId("gl-v2-dd-up-suggest").hidden = true;
-            upAddSelect.selectedIndex = 0;
+            selSet("gl-v2-dd-up-linkadd", "");
         });
     }
     var upSuggestYes = byId("gl-v2-dd-up-suggest-yes");
@@ -422,9 +453,7 @@
     }
 
     function upApplyFolderKind() {
-        var sel = byId("gl-v2-dd-up-folder");
-        var opt = sel.options[sel.selectedIndex];
-        var offer = (opt && opt.getAttribute("data-kind") === "offertes") || (upModeRadio() === "revision" && !!byId("gl-v2-dd-up-document").value);
+        var offer = ((cfg.folderKinds || {})[byId("gl-v2-dd-up-folder").value] === "offertes") || (upModeRadio() === "revision" && !!byId("gl-v2-dd-up-document").value);
         byId("gl-v2-dd-up-offer").style.display = offer ? "contents" : "none";
         var perceelWrap = byId("gl-v2-dd-up-perceel").closest(".gl-v2-field");
         if (perceelWrap) perceelWrap.hidden = upModeRadio() === "revision" && !!byId("gl-v2-dd-up-document").value;
@@ -440,17 +469,15 @@
 
     function upFillReplaces(selected) {
         return upLoadOptions().then(function (list) {
-            var sel = byId("gl-v2-dd-up-replaces");
-            sel.innerHTML = '<option value="">Kies een document …</option>';
+            var items = [];
+            up.replaceNames = {};
             list.forEach(function (o) {
                 if (o.frozen) return;
-                var opt = document.createElement("option");
-                opt.value = (o.kind === "request" ? "req:" : "doc:") + o.id;
-                opt.textContent = o.name + (o.missing ? " · ontbreekt" : "") + " — " + o.folder + (o.units && o.units.length ? " · " + o.units.join(", ") : "");
-                opt.setAttribute("data-name", o.name);
-                sel.appendChild(opt);
+                var key = (o.kind === "request" ? "req:" : "doc:") + o.id;
+                up.replaceNames[key] = o.name;
+                items.push({ value: key, text: o.name + (o.missing ? " · ontbreekt" : "") + " — " + o.folder + (o.units && o.units.length ? " · " + o.units.join(", ") : "") });
             });
-            if (selected) sel.value = selected;
+            window.GlV2Select.setItems(byId("gl-v2-dd-up-replaces_select"), items, selected || "", "Kies een document …");
         });
     }
 
@@ -462,8 +489,7 @@
         if (v.indexOf("doc:") === 0) byId("gl-v2-dd-up-document").value = v.substring(4);
         if (v.indexOf("req:") === 0) {
             byId("gl-v2-dd-up-request").value = v.substring(4);
-            var opt = upReplaces.options[upReplaces.selectedIndex];
-            byId("gl-v2-dd-up-name").value = opt.getAttribute("data-name") || "";
+            byId("gl-v2-dd-up-name").value = (up.replaceNames || {})[v] || "";
         }
         upApplyMode();
     });
@@ -479,6 +505,11 @@
     function openUpload(opts) {
         opts = opts || {};
         up.form.reset();
+        // form.reset() zet enkel de verborgen waarden terug, niet de tekst in de aangepaste keuzelijsten.
+        selSet("gl-v2-dd-up-folder", cfg.activeFolderId || "");
+        selSet("gl-v2-dd-up-status", "2");
+        selSet("gl-v2-dd-up-linkadd", "");
+        selSet("gl-v2-dd-up-replaces", "");
         up.links = [];
         upSuggestion = null;
         byId("gl-v2-dd-up-suggest").hidden = true;
@@ -491,13 +522,12 @@
         byId("gl-v2-dd-up-document").value = opts.documentId || "";
         byId("gl-v2-dd-up-request").value = opts.requestId || "";
         byId("gl-v2-dd-up-mode").value = opts.documentId ? "revision" : "new";
-        if (cfg.activeFolderId) byId("gl-v2-dd-up-folder").value = String(cfg.activeFolderId);
 
         // Standaard koppelen aan het actieve entiteitsfilter (bv. ?unit=12)
         if (!opts.documentId) {
-            if (cfg.filterUnitId) { var uo = q('#gl-v2-dd-up-linkadd option[value="unit:' + cfg.filterUnitId + '"]'); if (uo) upAddLink(uo.value, uo.getAttribute("data-label")); }
-            if (cfg.filterClientId) { var co = q('#gl-v2-dd-up-linkadd option[value="client:' + cfg.filterClientId + '"]'); if (co) upAddLink(co.value, co.getAttribute("data-label")); }
-            if (cfg.filterCompanyId) { var po = q('#gl-v2-dd-up-linkadd option[value="company:' + cfg.filterCompanyId + '"]'); if (po) upAddLink(po.value, po.getAttribute("data-label")); }
+            upAddLinkByKey("unit:" + cfg.filterUnitId, cfg.filterUnitId);
+            upAddLinkByKey("client:" + cfg.filterClientId, cfg.filterClientId);
+            upAddLinkByKey("company:" + cfg.filterCompanyId, cfg.filterCompanyId);
         }
         upRenderLinks();
 
@@ -509,9 +539,9 @@
         } else if (opts.requestId) {
             byId("gl-v2-dd-upload-title").textContent = "Verwacht document uploaden";
             byId("gl-v2-dd-up-name").value = opts.requestName || "";
-            if (opts.folderId) byId("gl-v2-dd-up-folder").value = String(opts.folderId);
-            if (opts.unitId) { var ro = q('#gl-v2-dd-up-linkadd option[value="unit:' + opts.unitId + '"]'); if (ro) upAddLink(ro.value, ro.getAttribute("data-label")); }
-            if (opts.companyId) { var ro2 = q('#gl-v2-dd-up-linkadd option[value="company:' + opts.companyId + '"]'); if (ro2) upAddLink(ro2.value, ro2.getAttribute("data-label")); }
+            if (opts.folderId) selSet("gl-v2-dd-up-folder", opts.folderId);
+            upAddLinkByKey("unit:" + opts.unitId, opts.unitId);
+            upAddLinkByKey("company:" + opts.companyId, opts.companyId);
             if (opts.expiryYears && opts.dateIso) { /* vervaldatum volgt server-side uit de aanvraag */ }
             upApplyMode();
         } else {
@@ -558,11 +588,11 @@
         byId("gl-v2-dd-rq-id").value = prefill.id || "";
         byId("gl-v2-dd-request-title").textContent = prefill.id ? (sendNow ? "Document aanvragen" : "Aanvraag bewerken") : "Document aanvragen";
         byId("gl-v2-dd-rq-name").value = prefill.name || "";
-        if (prefill.folderId || cfg.activeFolderId) byId("gl-v2-dd-rq-folder").value = String(prefill.folderId || cfg.activeFolderId);
-        byId("gl-v2-dd-rq-unit").value = prefill.unitId || (prefill.id ? "" : (cfg.filterUnitId || ""));
-        byId("gl-v2-dd-rq-kind").value = prefill.kind && prefill.kind !== "" ? prefill.kind : "leverancier";
-        byId("gl-v2-dd-rq-company").value = prefill.companyId || (prefill.id ? "" : (cfg.filterCompanyId || ""));
-        byId("gl-v2-dd-rq-client").value = prefill.clientId || (prefill.id ? "" : (cfg.filterClientId || ""));
+        selSet("gl-v2-dd-rq-folder", prefill.folderId || cfg.activeFolderId || "");
+        selSet("gl-v2-dd-rq-unit", prefill.unitId || (prefill.id ? "" : (cfg.filterUnitId || "")));
+        selSet("gl-v2-dd-rq-kind", prefill.kind && prefill.kind !== "" ? prefill.kind : "leverancier");
+        selSet("gl-v2-dd-rq-company", prefill.companyId || (prefill.id ? "" : (cfg.filterCompanyId || "")));
+        selSet("gl-v2-dd-rq-client", prefill.clientId || (prefill.id ? "" : (cfg.filterClientId || "")));
         byId("gl-v2-dd-rq-who").value = prefill.who || "";
         setDate("gl-v2-dd-rq-due", prefill.due || "");
         byId("gl-v2-dd-rq-duelabel").value = prefill.dueLabel || "";
@@ -597,7 +627,7 @@
     function openEdit(root) {
         byId("gl-v2-dd-ed-id").value = root.getAttribute("data-doc-id");
         byId("gl-v2-dd-ed-name").value = root.getAttribute("data-doc-name") || "";
-        byId("gl-v2-dd-ed-folder").value = root.getAttribute("data-folder-id") || "";
+        selSet("gl-v2-dd-ed-folder", root.getAttribute("data-folder-id") || "");
         byId("gl-v2-dd-ed-number").value = root.getAttribute("data-number") || "";
         byId("gl-v2-dd-ed-author").value = root.getAttribute("data-author") || "";
         byId("gl-v2-dd-ed-perceel").value = root.getAttribute("data-perceel") || "";
@@ -619,7 +649,7 @@
     var lk = { form: byId("gl-v2-dd-link-form") };
     function openLink(docId) {
         byId("gl-v2-dd-lk-doc").value = docId;
-        byId("gl-v2-dd-lk-target").selectedIndex = 0;
+        selSet("gl-v2-dd-lk-target", "");
         byId("gl-v2-dd-lk-share").checked = false;
         byId("gl-v2-dd-lk-suggest").hidden = true;
         showError("gl-v2-dd-lk-error", "");
@@ -627,10 +657,10 @@
     }
     var lkTarget = byId("gl-v2-dd-lk-target");
     if (lkTarget) lkTarget.addEventListener("change", function () {
-        var opt = lkTarget.options[lkTarget.selectedIndex];
+        var meta = (cfg.linkMeta || {})[lkTarget.value];
         var box = byId("gl-v2-dd-lk-suggest");
-        if (opt && opt.value.indexOf("unit:") === 0 && opt.getAttribute("data-buyer-name")) {
-            byId("gl-v2-dd-lk-suggest-text").textContent = opt.getAttribute("data-buyer-name") + " is koper van " + opt.textContent.trim() + ". Koppel het ook aan de klant als de koper het moet kunnen zien.";
+        if (meta && lkTarget.value.indexOf("unit:") === 0 && meta.buyerName) {
+            byId("gl-v2-dd-lk-suggest-text").textContent = meta.buyerName + " is koper van " + meta.label + ". Koppel het ook aan de klant als de koper het moet kunnen zien.";
             box.hidden = false;
         } else box.hidden = true;
     });

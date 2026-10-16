@@ -126,6 +126,25 @@
 </aside>
 
 @* Modals buiten het paneelformulier (geen geneste forms): plan kiezen (40p), nieuw plan (40q) en het plan vergroot om een punt te plaatsen. *@
+@* Foto verwijderen: eigen bevestiging (DESIGN.md "Modals", TYPE 1) i.p.v. de browserdialoog; staat boven het paneel. *@
+<div class="modal fade gl-v2-modal-confirm gl-v2-pt-over" id="pt-photo-delete-modal" tabindex="-1" aria-hidden="true" aria-labelledby="pt-photo-delete-title">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content is-danger">
+            <div class="modal-body">
+                <span class="gl-v2-modal-icon is-danger"><i class="ph ph-trash" aria-hidden="true"></i></span>
+                <div class="gl-v2-modal-text">
+                    <h2 class="gl-v2-modal-title" id="pt-photo-delete-title">Foto verwijderen?</h2>
+                    <p class="gl-v2-modal-desc">De foto wordt definitief van dit punt verwijderd.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-danger" id="pt-photo-delete-confirm">Verwijderen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade gl-v2-modal-form gl-v2-pt-over" id="pt-plan-pick-modal" tabindex="-1" aria-hidden="true" aria-labelledby="pt-pick-title">
     <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
         <div class="modal-content">

@@ -62,28 +62,44 @@
 }
 .gln-rd-fact-grid {
     display: grid;
-    grid-template-columns: 110px 100px minmax(0, 1fr) 130px 150px;
+    grid-template-columns: 110px 100px minmax(0, 1fr) 130px 150px 34px;
     gap: 12px;
     align-items: center;
     padding: 9px 20px;
 }
 .gln-rd-fact-head { background: var(--gl-v2-bg, #F7F9F5); font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--gl-v2-muted); }
 .gln-rd-fact-head span:nth-child(4) { text-align: right; }
-.gln-rd-fact-row { border-top: 1px solid var(--gl-v2-hairline-soft); text-decoration: none; color: inherit; }
+.gln-rd-fact-row { position: relative; border-top: 1px solid var(--gl-v2-hairline-soft); text-decoration: none; color: inherit; }
 .gln-rd-fact-row:hover { background: var(--gl-v2-hover-tint); }
 .gln-rd-fact-nr { font: 500 12px var(--gl-v2-font-mono, 'IBM Plex Mono', monospace); color: var(--gl-v2-primary); }
-.gln-rd-fact-oms { font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Hele rij klikbaar: de link in de nr-cel wordt over de rij uitgerekt; de dupliceerknop ligt erboven. */
+.gln-rd-fact-link { text-decoration: none; }
+.gln-rd-fact-link::after { content: ""; position: absolute; inset: 0; }
+.gln-rd-fact-actie { display: flex; justify-content: flex-end; position: relative; z-index: 1; }
+.gln-rd-fact-dup { width: 28px; height: 28px; }
+/* Datum: zelfde lettertype en grootte als de omschrijving. */
+.gln-rd-fact-datum, .gln-rd-fact-oms { font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 @media (max-width: 1023.98px) {
     .gln-rd-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .gln-rd-strip-cell:nth-child(3) { border-right: 0; }
     .gln-rd-strip-cell { border-bottom: 1px solid var(--gl-v2-hairline-soft); }
     .gln-rd-act-grid { grid-template-columns: minmax(0, 1.3fr) repeat(3, minmax(0, 0.7fr)) minmax(0, 0.8fr) 90px; gap: 8px; }
-    .gln-rd-fact-grid { grid-template-columns: 90px 86px minmax(0, 1fr) 110px 110px; gap: 8px; }
+    .gln-rd-fact-grid { grid-template-columns: 90px 86px minmax(0, 1fr) 110px 110px 34px; gap: 8px; }
 }
 @media (max-width: 767.98px) {
     .gln-rd-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .gln-rd-act-head, .gln-rd-fact-head { display: none; }
     .gln-rd-act-grid { grid-template-columns: minmax(0, 1fr) repeat(3, minmax(0, 60px)) minmax(0, 60px) 80px; gap: 6px; }
-    .gln-rd-fact-grid { grid-template-columns: 80px 74px minmax(0, 1fr) 90px 90px; gap: 6px; }
+    .gln-rd-fact-grid { grid-template-columns: 80px 74px minmax(0, 1fr) 90px 90px 34px; gap: 6px; }
 }
+
+/* ── Borg vrijgeven (42e punt 04): rij onder de contractstrook, één formulier per fase (VO/DO) ───── */
+.gln-rd-borg { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; border: 1px solid var(--gl-v2-hairline-soft); border-radius: 10px; background: var(--gl-v2-subtle-bg-soft); }
+.gln-rd-borg-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.gln-rd-borg-sum { font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gln-rd-borg-fase { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.gln-rd-borg-fase-label { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); width: 160px; flex: none; }
+.gln-rd-borg-input { height: 34px; width: 150px; flex: none; }
+.gln-rd-borg-done { display: inline-flex; align-items: center; gap: 6px; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+@media (max-width: 767.98px) { .gln-rd-borg-fase-label { width: 100%; } }

@@ -58,6 +58,12 @@ namespace CPMCore.Services.PuntenSpraak
         }
 
         public bool Configured => _o.Configured;
+        /// <summary>Welke sleutel er ontbreekt, in gewone woorden (voor de melding in de pagina).</summary>
+        public string Missing => string.Join(" en ", new[]
+        {
+            string.IsNullOrWhiteSpace(_o.OpenAiApiKey) ? "de OpenAI-sleutel (PuntenSpraak__OpenAiApiKey)" : null,
+            string.IsNullOrWhiteSpace(_o.AnthropicApiKey) ? "de Anthropic-sleutel (PuntenSpraak__AnthropicApiKey of QuoteExtraction__AnthropicApiKey)" : null,
+        }.Where(x => x != null));
         public int MaxAudioBytes => _o.MaxAudioMb * 1024 * 1024;
 
         /// <summary>Spraak naar tekst. Met <paramref name="withTimestamps"/> (rondgang) komen er tijdstempels per zin mee.</summary>
@@ -65,11 +71,15 @@ namespace CPMCore.Services.PuntenSpraak
         {
             using var form = new MultipartFormDataContent();
             var file = new ByteArrayContent(audio);
-            file.Headers.ContentType = MediaTypeHeaderValue.TryParse(contentType, out var ct0) ? ct0 : new MediaTypeHeaderValue("application/octet-stream");
+            // "audio/webm;codecs=opus" -> "audio/webm": sommige gsm-browsers sturen extra parameters mee die de dienst niet verwacht
+            var baseType = (contentType ?? "").Split(';')[0].Trim();
+            file.Headers.ContentType = MediaTypeHeaderValue.TryParse(baseType, out var ct0) ? ct0 : new MediaTypeHeaderValue("application/octet-stream");
             form.Add(file, "file", string.IsNullOrWhiteSpace(fileName) ? "opname.webm" : fileName);
             form.Add(new StringContent(withTimestamps ? _o.RondgangTranscribeModel : _o.TranscribeModel), "model");
             form.Add(new StringContent("nl"), "language");
-            if (!string.IsNullOrWhiteSpace(hint)) form.Add(new StringContent(hint.Length > 800 ? hint[..800] : hint), "prompt");
+            // De prompt stuurt de spelling: eerst de namen van dit project (ingekort), dan de bouwtermen die spraakherkenning vaak verkeerd verstaat.
+            var names = string.IsNullOrWhiteSpace(hint) ? "" : (hint.Length > 330 ? hint[..330] : hint) + " ";
+            form.Add(new StringContent(names + Bouwtermen), "prompt");
             if (withTimestamps)
             {
                 form.Add(new StringContent("verbose_json"), "response_format");
@@ -84,7 +94,7 @@ namespace CPMCore.Services.PuntenSpraak
             if (!res.IsSuccessStatusCode)
             {
                 _log.LogWarning("Spraak naar tekst: HTTP {Status}: {Body}", (int)res.StatusCode, body.Length > 300 ? body[..300] : body);
-                throw new InvalidOperationException($"De spraakdienst antwoordde met HTTP {(int)res.StatusCode}.");
+                throw new InvalidOperationException(Uitleg("De spraakdienst (OpenAI)", (int)res.StatusCode, body));
             }
             var json = JsonNode.Parse(body);
             var text = json?["text"]?.GetValue<string>() ?? "";
@@ -93,6 +103,12 @@ namespace CPMCore.Services.PuntenSpraak
                 if (s != null) segs.Add(new SpraakSegment(s["start"]?.GetValue<double>() ?? 0, s["end"]?.GetValue<double>() ?? 0, (s["text"]?.GetValue<string>() ?? "").Trim()));
             return new SpraakTranscript(text.Trim(), segs);
         }
+
+        /// <summary>Vlaamse bouwtermen die als "prompt" aan de spraakherkenning meegaan, zodat bv. "plint" niet als "let" wordt uitgeschreven.</summary>
+        private const string Bouwtermen =
+            "Bouwtermen: plint, plinten, vloerplint, lat, latten, gyproc, plaatwerk, stucwerk, pleisterwerk, chape, dekvloer, raamdorpel, vensterbank, " +
+            "afkitten, kitwerk, silicone, voegen, tegelwerk, schilderwerk, spuitwerk, dakgoot, hemelwaterafvoer, isolatie, dampscherm, luchtdichting, " +
+            "binnendeur, buitenschrijnwerk, scheur, gebarsten, vastzetten, bevestigen, herstellen, sanitair, ventilatie, stopcontact, schakelaar, leidingen.";
 
         private const string SystemPrompt =
             "Je helpt een werfleider van een Belgische bouwpromotor. Je krijgt de uitgeschreven spraak van een werfbezoek en maakt er afzonderlijke werfpunten van " +
@@ -104,7 +120,10 @@ namespace CPMCore.Services.PuntenSpraak
             "- priority: 1 normaal, 2 hoog, 3 kritiek (enkel bij veiligheid, lekkage of als de spreker het zegt).\n" +
             "- Komt een punt overeen met een bestaand open punt uit de lijst, zet dan existingNr op het nummer van dat punt; maak geen nieuw punt aan voor wat al bestaat zonder dit aan te geven.\n" +
             "- atSeconds is het moment in de opname waarop het punt wordt genoemd (enkel als tijdstippen gegeven zijn). photoIndexes zijn de nummers van de foto's die tijdens dat punt genomen zijn.\n" +
-            "- Verzin niets. Geen punten voor opmerkingen die geen actie vragen. Spraakherkenning maakt fouten: corrigeer duidelijke verhoren met behulp van de lijsten.";
+            "- Verzin niets. Geen punten voor opmerkingen die geen actie vragen. Spraakherkenning maakt fouten: corrigeer duidelijke verhoren met behulp van de lijsten.\n" +
+            "- Het transcript bevat vaak verhoren van Vlaamse bouwtermen en cijfers. Voorbeelden: \"let\", \"plin\" of \"blint\" bedoelt meestal \"plint\"; \"gips\" kan \"gyproc\" zijn; een enkele letter \"l\" of \"i\" achter \"slaapkamer\" is het cijfer 1. " +
+            "Kies de bouwterm die in de context van een werf het meest logisch is, ook als het woord in het transcript anders is geschreven, en schrijf die correct in de titel.\n" +
+            "Geef je antwoord altijd door de tool \"voorstellen\" aan te roepen, ook als er geen enkel punt is (lege lijst).";
 
         public async Task<List<PuntVoorstel>> ExtractAsync(SpraakTranscript transcript, SpraakContext ctx, CancellationToken ct = default)
         {
@@ -135,7 +154,9 @@ namespace CPMCore.Services.PuntenSpraak
                 ["max_tokens"] = 4096,
                 ["system"] = SystemPrompt,
                 ["tools"] = new JsonArray(new JsonObject { ["name"] = "voorstellen", ["description"] = "De herkende werfpunten.", ["input_schema"] = schema }),
-                ["tool_choice"] = new JsonObject { ["type"] = "tool", ["name"] = "voorstellen" },
+                // Niet elk model aanvaardt een afgedwongen tool ("tool_choice type tool/any is not supported"): automatisch laten kiezen,
+                // de opdracht zegt dat de tool gebruikt moet worden en een antwoord in gewone tekst wordt hieronder ook begrepen.
+                ["tool_choice"] = new JsonObject { ["type"] = "auto" },
                 ["messages"] = new JsonArray(new JsonObject { ["role"] = "user", ["content"] = sb.ToString() }),
             };
             using var client = _http.CreateClient(HttpClientName);
@@ -148,9 +169,17 @@ namespace CPMCore.Services.PuntenSpraak
             if (!res.IsSuccessStatusCode)
             {
                 _log.LogWarning("Punten herkennen: HTTP {Status}: {Body}", (int)res.StatusCode, body.Length > 300 ? body[..300] : body);
-                throw new InvalidOperationException($"De AI-dienst antwoordde met HTTP {(int)res.StatusCode}.");
+                throw new InvalidOperationException(Uitleg("De AI-dienst (Anthropic)", (int)res.StatusCode, body));
             }
-            var input = JsonNode.Parse(body)?["content"]?.AsArray().FirstOrDefault(c => c?["type"]?.GetValue<string>() == "tool_use")?["input"];
+            var content = JsonNode.Parse(body)?["content"]?.AsArray();
+            var input = content?.FirstOrDefault(c => c?["type"]?.GetValue<string>() == "tool_use")?["input"];
+            if (input == null)
+            {
+                // terugval: het model antwoordde in gewone tekst (met JSON, eventueel in een codeblok)
+                var text = string.Join("\n", (content ?? new JsonArray()).Select(c => c?["text"]?.GetValue<string>()).Where(t => !string.IsNullOrWhiteSpace(t))).Trim();
+                var i0 = text.IndexOf('{'); var i1 = text.LastIndexOf('}');
+                if (i0 >= 0 && i1 > i0) { try { input = JsonNode.Parse(text[i0..(i1 + 1)]); } catch { /* geen json */ } }
+            }
             var result = new List<PuntVoorstel>();
             var units = ctx.Units.ToDictionary(u => u.Id, u => u.Name);
             var contractors = ctx.Contractors.ToDictionary(c => c.Id, c => c.Name);
@@ -175,6 +204,21 @@ namespace CPMCore.Services.PuntenSpraak
             }
             _log.LogInformation("Punten herkennen: {Count} voorstellen, model {Model}.", result.Count, _o.AnthropicModel);
             return result;
+        }
+
+        /// <summary>Een leesbare melding voor een foutantwoord: bij 429 (geen tegoed of te veel aanvragen) en 401 (sleutel ongeldig) met wat de leverancier zelf meldt.</summary>
+        private static string Uitleg(string dienst, int status, string body)
+        {
+            string? detail = null;
+            try { var e = JsonNode.Parse(body)?["error"]; detail = e?["message"]?.GetValue<string>() ?? e?["code"]?.GetValue<string>(); } catch { /* geen json */ }
+            var hint = status switch
+            {
+                429 => " Meestal is het tegoed op of is er nog geen betaalmethode ingesteld voor de API (een ChatGPT- of Claude-abonnement geldt niet voor de API), of er zijn tijdelijk te veel aanvragen.",
+                401 or 403 => " De sleutel is ongeldig of mag deze dienst niet gebruiken.",
+                _ => "",
+            };
+            if (detail != null && detail.Length > 200) detail = detail[..200];
+            return $"{dienst} antwoordde met HTTP {status}.{hint}" + (string.IsNullOrWhiteSpace(detail) ? "" : $" Melding: {detail}");
         }
 
         private static int? ReadInt(JsonNode? n)

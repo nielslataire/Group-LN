@@ -234,6 +234,25 @@
 }
 @if (!ro)
 {
+    @* "Opslaan is niet gelukt": eigen bevestiging (DESIGN.md "Modals", TYPE 1, toon Warning) i.p.v. de browserdialoog. *@
+    <div class="modal fade gl-v2-modal-confirm" id="vs-savefail-modal" tabindex="-1" aria-hidden="true" aria-labelledby="vs-savefail-title">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content is-warning">
+                <div class="modal-body">
+                    <span class="gl-v2-modal-icon is-warning"><i class="ph ph-warning" aria-hidden="true"></i></span>
+                    <div class="gl-v2-modal-text">
+                        <h2 class="gl-v2-modal-title" id="vs-savefail-title">Opslaan is niet gelukt</h2>
+                        <p class="gl-v2-modal-desc">Je laatste wijzigingen konden niet bewaard worden. Als je nu terug naar de lijst gaat, gaan ze verloren.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Blijven</button>
+                    <button type="button" class="gl-v2-btn gl-v2-btn-warning" id="vs-savefail-confirm">Toch terug naar de lijst</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade gl-v2-modal-confirm" id="vs-finish-modal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content is-success">

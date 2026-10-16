@@ -119,6 +119,14 @@ De PDF wordt ook bewaard in **Documenten**, in de map **Budgetten** van het proj
 
 Lukt het opmaken niet, dan staat er een melding met **Opnieuw proberen**. Lukt enkel het bewaren niet, dan zie je dat op de klaarpagina. Download de PDF dan meteen.
 
+## Een Excel maken
+
+1. Klik bovenaan op **Excel**.
+2. Je komt op dezelfde pagina als bij de PDF. Wacht tot de Excel klaar is.
+3. Het bestand wordt vanzelf gedownload. Lukt dat niet, klik dan op **Download Excel**. Het bestand staat ook in **Documenten**, in de map **Budgetten**.
+
+De Excel bevat het kostenoverzicht met de verkoop en het resultaat, de activiteiten per lot, en de oppervlaktes. Bij een fout zie je een melding met een technische tekst. Geef die tekst door.
+
 ## Let op
 
 - Een negatieve marge is een fout. Je kunt dan niet afronden.

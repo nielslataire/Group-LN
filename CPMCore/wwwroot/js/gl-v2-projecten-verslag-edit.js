@@ -66,7 +66,16 @@
     var sb = document.getElementById("vs-save-back");
     if (sb) sb.addEventListener("click", function (ev) {
         ev.preventDefault(); clearTimeout(saveTimer);
-        saveNow().then(function (j) { if (j && j.ok === false) { if (!window.confirm("Opslaan is niet gelukt. Toch terug naar de lijst?")) return; } window.__vsLeaving = true; window.location.href = sb.getAttribute("href"); });
+        function leave() { window.__vsLeaving = true; window.location.href = sb.getAttribute("href"); }
+        saveNow().then(function (j) {
+            if (!(j && j.ok === false)) { leave(); return; }
+            // opslaan mislukt: eigen bevestigingsmodal (geen browserdialoog)
+            var m = document.getElementById("vs-savefail-modal"), c = document.getElementById("vs-savefail-confirm");
+            if (!m || !c || !window.bootstrap) { leave(); return; }
+            var fresh = c.cloneNode(true); c.parentNode.replaceChild(fresh, c);
+            fresh.addEventListener("click", leave);
+            window.bootstrap.Modal.getOrCreateInstance(m).show();
+        });
     });
     ["vs-uur", "vs-weer", "vs-opm", "vs-volgend-uur"].forEach(function (id) { var e = document.getElementById(id); if (e) e.addEventListener("input", saveGeneral); });
     ["vs-datum", "vs-volgend"].forEach(function (id) {

@@ -300,10 +300,38 @@ namespace CPMCore.Controllers
         }
 
         /// <summary>Vult de gl-v2-overzichtsgegevens (39a): definitieve versie, totalen, eenheden per budget, kopieeropties.</summary>
+        /// <summary>Tegels Gecontracteerd / Gefactureerd / Verwacht verschil: het definitieve budget (enkel activiteiten) tegenover contracten (+ bijbestellingen) en
+        /// facturen (incl. meerwerk, excl. meerwerk voor klanten), met dezelfde sommen als de pagina Nacalculatie. Verwachte eindkost per activiteit = het hoogste van
+        /// gecontracteerd en gefactureerd, of het budget zolang er nog niets is vastgelegd.</summary>
+        private async Task<CPMCore.Models.Projecten.BudgetKoppelingVm> BerekenKoppelingAsync(int projectId, int definitiefVersieId)
+        {
+            var contracten = _projectService.GetProjectContracts(projectId).Values ?? new List<ContractBO>();
+            var facturen = _projectService.GetProjectIncommingInvoicesForRecalculation(projectId).Values ?? new List<IncommingInvoiceActivityBO>();
+            var groepen = await _budgetActivityService.GetLotGroepenAsync(definitiefVersieId);
+            var begroot = groepen.SelectMany(g => g.Lijnen).GroupBy(l => l.ActivityId).ToDictionary(g => g.Key, g => g.Sum(l => l.TotaalAlternatief));
+            var contract = contracten.SelectMany(c => c.Activities).GroupBy(a => a.Activity.ID).ToDictionary(g => g.Key, g => g.Sum(a => a.EffectivePrice));
+            var factuur = facturen.Where(f => f.IncommingInvoiceType != IncommingInvoiceType.Meerwerk_Klant).GroupBy(f => f.Activity.ID).ToDictionary(g => g.Key, g => g.Sum(f => f.SignedPrice));
+
+            var vm = new CPMCore.Models.Projecten.BudgetKoppelingVm();
+            foreach (var id in begroot.Keys.Union(contract.Keys).Union(factuur.Keys))
+            {
+                var b = begroot.GetValueOrDefault(id); var c = contract.GetValueOrDefault(id); var f = factuur.GetValueOrDefault(id);
+                var eind = c > 0m || f > 0m ? Math.Max(c, f) : b;
+                vm.Begroot += b; vm.Gecontracteerd += c; vm.Gefactureerd += f; vm.VerwachteEindkost += eind; vm.AantalActiviteiten++;
+                if (eind > b && b > 0m) vm.AantalOverBudget++;
+            }
+            return vm;
+        }
+
         private async Task VulBudgetIndexV2Async(CPMCore.Models.Projecten.BudgetIndexModel model)
         {
             var versies = model.BudgetMasters.SelectMany(m => m.Versies).ToList();
             model.DefinitiefVersie = versies.FirstOrDefault(v => v.Status == BudgetVersie.StatusDefinitief);
+            if (model.DefinitiefVersie != null)
+            {
+                try { model.Koppeling = await BerekenKoppelingAsync(model.ProjectId, model.DefinitiefVersie.Id); }
+                catch (Exception ex) { _logger.LogWarning(ex, "Koppeling budget – contracten/facturen kon niet berekend worden."); }
+            }
             // Totalen komen uit de bewaarde kolom; ontbreekt/veroudert die (filter zet ze op NULL bij elke wijziging), dan lui herberekenen en bewaren.
             var bewaard = await _db.BudgetVersie.AsNoTracking().Where(x => x.ProjectId == model.ProjectId).Select(x => new { x.Id, x.TotaalKosten }).ToDictionaryAsync(x => x.Id, x => x.TotaalKosten);
             foreach (var v in versies.Where(v => v.Status != BudgetVersie.StatusConcept || v.IsHuidig || v.LaatsteStap >= 9))

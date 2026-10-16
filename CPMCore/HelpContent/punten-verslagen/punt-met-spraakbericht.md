@@ -44,7 +44,9 @@ Dit duurt meestal enkele seconden.
 Je ziet je bericht en daaronder de herkende punten met eenheid, kamer en aannemer.
 
 - Tik op het vakje links om een voorstel aan of uit te zetten. Enkel aangezette voorstellen worden bewaard.
-- Kies **Wijzigen**, **Foto toevoegen** of **Op plan** om het voorstel in het gewone formulier te openen. Bewaar je het daar, dan verdwijnt het uit de lijst.
+- Tik op **Foto** om een foto toe te voegen. De camera opent meteen. Neem een nieuwe foto of kies er een uit je **Galerij**.
+- Tik op **Op plan** om het punt aan te duiden. De plannen van de eenheid verschijnen meteen. Kies een plan en tik op de plek van het punt.
+- Tik op **Wijzigen** om het voorstel in het gewone formulier aan te passen. Bewaar je het daar, dan verdwijnt het uit de lijst.
 - Een voorstel dat al bestaat als open punt heeft het label **bestaat al** en staat standaard uit.
 
 Tik op **Opnieuw** om opnieuw in te spreken.

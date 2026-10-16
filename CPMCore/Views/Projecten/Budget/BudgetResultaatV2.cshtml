@@ -75,7 +75,7 @@
     <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-gl-v2-menu-trigger" id="bw-res-pdf-btn" aria-haspopup="true" aria-expanded="false" aria-controls="bw-res-pdf-menu" data-bw-keep>
         <i class="ph ph-file-pdf" aria-hidden="true"></i><span>PDF</span><i class="ph ph-caret-down" aria-hidden="true"></i>
     </button>
-    <a href="@Url.Action("DownloadBudgetExcel", "Projecten", new { versieId = Model.BudgetVersieId })" class="gl-v2-btn gl-v2-btn-secondary" data-bw-plain><i class="ph ph-file-xls" aria-hidden="true"></i>Excel</a>
+    <a href="@Url.Action("BudgetExcelOpmaken", "Projecten", new { versieId = Model.BudgetVersieId })" class="gl-v2-btn gl-v2-btn-secondary" data-bw-plain><i class="ph ph-file-xls" aria-hidden="true"></i>Excel</a>
 }
 
 <div class="gl-v2-bw @(ch.IsLocked ? "is-locked" : "")" id="bw-res" data-versie="@Model.BudgetVersieId">

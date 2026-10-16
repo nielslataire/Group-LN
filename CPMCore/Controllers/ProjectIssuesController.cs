@@ -798,6 +798,8 @@ public partial class ProjectsIssuesController : BaseController
 
     private List<IFormFile>? ResolveMediaFiles(List<IFormFile>? mediaFiles)
     {
+        // SpraakBewaarV2 post de foto's van ALLE voorstellen in één formulier: per punt enkel de eigen foto's gebruiken, nooit alle formulierbestanden
+        if (HttpContext.Items.ContainsKey("pt-geen-formulierfoto-terugval")) return mediaFiles;
         if (mediaFiles is { Count: > 0 })
             return mediaFiles;
 

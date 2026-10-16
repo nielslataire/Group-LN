@@ -1,0 +1,141 @@
+@model CPMCore.Models.Projecten.CalculationSettingsV2Vm
+@using System.Globalization
+@*
+    gl-v2 — Nacalculatie › Budget instellen (design-handoff 42d). Per categorie een sectiekaart met
+    ACTIVITEIT / BUDGET / DEFINITIEF vN / VERSCHIL. Bewaard wordt enkel wat afwijkt van het definitief
+    budget (server: ProjectenController.CalculationSettingsV2Post, hergebruikt de handmatige
+    ProjectBudget-regels). "Handmatig" als aparte, bewaarde bron bestaat niet: zie DESIGN.md.
+*@
+@{
+    ViewData["Title"] = "Budget instellen";
+    ViewData["PageIcon"] = "bx bx-building-house";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Recalculation", "Projecten", new { projectid = Model.ProjectId });
+    var nl = CultureInfo.GetCultureInfo("nl-BE");
+    string Num(decimal v) => v.ToString("N2", nl);
+    string Eur0(decimal v) => "€ " + v.ToString("N0", nl);
+    var groepenMetRijen = Model.Groepen;
+    var i = 0;
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-calculation-settings.css" asp-append-version="true" />
+}
+
+<form method="post" asp-action="CalculationSettingsV2Post" asp-controller="Projecten" id="gln-cs-form" autocomplete="off">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="projectid" value="@Model.ProjectId" />
+
+    <section class="gl-v2-section-card gln-cs-source">
+        <div class="gln-cs-source-main">
+            <div class="gln-cs-source-label">Bron van het budget</div>
+            @if (Model.HeeftDefinitief)
+            {
+                <div class="gln-cs-source-pill"><i class="ph ph-seal-check" aria-hidden="true"></i>Definitief budget (@Model.DefinitiefLabel)</div>
+                <p class="gln-cs-source-text">Bedragen komen uit het definitief budget; een aanpassing hier maakt de afwijking zichtbaar in de kolom Verschil.</p>
+            }
+            else
+            {
+                <div class="gln-cs-source-pill is-manual"><i class="ph ph-pencil-simple" aria-hidden="true"></i>Handmatig</div>
+                <p class="gln-cs-source-text">Er is nog geen definitief budget voor dit project: je vult het budget per activiteit zelf in.</p>
+            }
+        </div>
+        <div class="gln-cs-total">
+            <span class="gln-cs-total-label">Totaal budget</span>
+            <span class="gln-cs-total-value" id="gln-cs-total">€ @Num(Model.TotaalBudget)</span>
+            @if (Model.HeeftDefinitief)
+            {
+                <span class="gln-cs-total-hint" id="gln-cs-total-hint">= definitief</span>
+            }
+        </div>
+    </section>
+
+    <div class="gln-cs-addrow">
+        <div class="gl-v2-field">
+            <div class="gl-v2-select" data-gl-v2-multiselect id="gln-cs-add-multiselect" data-field-name="gln-cs-add">
+                <div class="gl-v2-select-trigger gl-v2-select-trigger-multi" tabindex="0" role="button" aria-haspopup="listbox">
+                    <div class="gl-v2-select-chips" data-role="chips"></div>
+                    <input type="text" class="gl-v2-select-trigger-multi-input" placeholder="Activiteiten toevoegen — zoek en kies er één of meer …" data-role="filter" autocomplete="off" aria-label="Activiteiten toevoegen" />
+                </div>
+                <div class="gl-v2-select-panel gl-v2-select-panel-search">
+                    <div class="gl-v2-select-options" data-role="options">
+                        @foreach (var grp in Model.Opties.GroupBy(o => o.GroepNaam).OrderBy(g => g.Key))
+                        {
+                            <div class="gl-v2-select-group-header" data-group-header>
+                                <span class="gl-v2-select-group-label">@grp.Key.ToUpperInvariant()</span>
+                                <span class="gl-v2-select-group-rule"></span>
+                            </div>
+                            foreach (var o in grp.OrderBy(o => o.Naam))
+                            {
+                                <button type="button" class="gl-v2-select-option is-multi" data-id="@o.ActivityId" data-text="@o.Naam" data-group="@o.GroupId">
+                                    <span class="gl-v2-select-option-check"><i class="ph ph-check" aria-hidden="true"></i></span>
+                                    <span>@o.Naam</span>
+                                </button>
+                            }
+                        }
+                    </div>
+                </div>
+                <div data-role="hidden-inputs"></div>
+            </div>
+        </div>
+        <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gln-cs-add-btn"><i class="ph ph-plus" aria-hidden="true"></i>Toevoegen</button>
+    </div>
+
+    <div id="gln-cs-groups">
+        @foreach (var g in groepenMetRijen)
+        {
+            <section class="gl-v2-section-card gln-cs-group" data-group-id="@g.GroupId">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-stack" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">@g.Naam</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc gln-cs-group-desc">@(g.Rijen.Count == 0 ? "geen activiteiten" : $"{g.Rijen.Count} {(g.Rijen.Count == 1 ? "activiteit" : "activiteiten")} · {Eur0(g.Rijen.Sum(r => r.Budget))}")</span>
+                </div>
+                <div class="gln-cs-table">
+                    <div class="gln-cs-row gln-cs-head@(Model.HeeftDefinitief ? " has-def" : "")">
+                        <span>Activiteit</span><span class="is-num">Budget</span>
+                        @if (Model.HeeftDefinitief) { <span class="is-num">Definitief</span><span class="is-num">Verschil</span> }
+                    </div>
+                    <div class="gln-cs-body">
+                        @foreach (var r in g.Rijen)
+                        {
+                            <div class="gln-cs-row@(Model.HeeftDefinitief ? " has-def" : "")" data-activity-id="@r.ActivityId" data-def="@(r.Definitief.HasValue ? r.Definitief.Value.ToString("0.##", CultureInfo.InvariantCulture) : "")">
+                                <span class="gln-cs-name">@r.Naam</span>
+                                <span class="is-num">
+                                    <input type="hidden" name="rows[@i].ActivityId" value="@r.ActivityId" />
+                                    <input type="hidden" name="rows[@i].GroupId" value="@g.GroupId" />
+                                    <input type="hidden" name="rows[@i].ManueelId" value="@r.ManueelId" />
+                                    <input type="hidden" name="rows[@i].Price" class="gln-cs-price-raw" value="@r.Budget.ToString("0.##", CultureInfo.InvariantCulture)" />
+                                    <span class="gl-v2-field-box gln-cs-amount"><input type="text" class="gl-v2-field-input gln-cs-amount-input" inputmode="decimal" value="@Num(r.Budget)" aria-label="Budget @r.Naam" /><span class="gl-v2-field-suffix">€</span></span>
+                                </span>
+                                @if (Model.HeeftDefinitief)
+                                {
+                                    <span class="is-num gln-cs-def">@(r.Definitief.HasValue ? Eur0(r.Definitief.Value) : "—")</span>
+                                    <span class="is-num gln-cs-diff">—</span>
+                                }
+                            </div>
+                            i++;
+                        }
+                        <div class="gl-v2-notice gl-v2-notice-compact is-warning gln-cs-empty" @(g.Rijen.Count == 0 ? "" : "hidden")>
+                            <i class="ph ph-warning" aria-hidden="true"></i>
+                            <span><strong>Geen budget voor @g.Naam.</strong> Voeg een activiteit toe, of laat leeg als dit niet in het project zit.</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        }
+    </div>
+
+    <div class="gl-v2-form-actionbar">
+        <span class="gln-cs-status" id="gln-cs-status">Geen wijzigingen</span>
+        <span class="gl-v2-form-actionbar-spacer"></span>
+        <a href="@Url.Action("Recalculation", "Projecten", new { projectid = Model.ProjectId })" class="gl-v2-btn gl-v2-btn-text">Annuleren</a>
+        <button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-check" aria-hidden="true"></i>Budget opslaan</button>
+    </div>
+</form>
+
+@section PageScripts
+{
+    <script>window.GlnCalcSettings = { heeftDef: @(Model.HeeftDefinitief ? "true" : "false") };</script>
+    <script src="~/js/gl-v2-projecten-calculation-settings.js" asp-append-version="true"></script>
+}

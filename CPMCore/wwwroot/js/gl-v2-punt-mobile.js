@@ -83,8 +83,9 @@
     }
 
     // ── Foto (41b): camera met meerdere opnames, daarna optioneel markeren, daarna het gewone formulier ──
-    var cam = null, stream = null, shots = [];
+    var cam = null, stream = null, shots = [], cameraCb = null, cameraLabel = "";
     function whereLabel() {
+        if (cameraLabel) return cameraLabel;
         var l = lastGet(); return [l.unitName, l.zone].filter(Boolean).join(" · ") || "Nieuw punt";
     }
     function buildCam() {
@@ -149,7 +150,8 @@
         c.toBlob(function (b) { if (b) addShot(new File([b], "foto-" + Date.now() + ".jpg", { type: "image/jpeg" })); }, "image/jpeg", 0.86);
     }
     function closeCam(discard) {
-        stopStream(); cam.hidden = true; document.body.classList.remove("gl-v2-ptcam-on");
+        stopStream(); cam.hidden = true; if (!document.querySelector(".gl-v2-ptv:not([hidden])")) document.body.classList.remove("gl-v2-ptcam-on");
+        if (discard) { cameraCb = null; cameraLabel = ""; }
         if (discard) { shots.forEach(function (s) { URL.revokeObjectURL(s.url); }); shots = []; }
     }
     function doneCam() {
@@ -249,8 +251,10 @@
     }
     function finishMark() {
         Promise.all(shots.map(function (s, i) { return bake(s, mImgs[i]); })).then(function (files) {
-            mark.hidden = true; document.body.classList.remove("gl-v2-ptcam-on");
+            mark.hidden = true; if (!document.querySelector(".gl-v2-ptv:not([hidden])")) document.body.classList.remove("gl-v2-ptcam-on");
             shots.forEach(function (s) { URL.revokeObjectURL(s.url); }); shots = [];
+            // aangeroepen vanuit een voorstel (Inspreken/Rondgang): de foto's teruggeven in plaats van een nieuw punt te starten
+            if (cameraCb) { var cb = cameraCb; cameraCb = null; cameraLabel = ""; cb(files); return; }
             var l = lastGet();
             if (window.PuntPanel) window.PuntPanel.open("new", 0, { files: files, unitId: l.unitId != null ? l.unitId : null, zone: l.zone || "" });
         });
@@ -258,6 +262,8 @@
 
     document.addEventListener("click", function (e) {
         if (!canWrite) return;
-        if (e.target.closest("#pt-qa-foto")) openCam();
+        if (e.target.closest("#pt-qa-foto")) { cameraCb = null; cameraLabel = ""; openCam(); }
     });
+    // andere schermen (Inspreken/Rondgang) openen dezelfde camera: nieuwe foto nemen of uit de galerij kiezen; cb(files) bij Klaar
+    window.PuntCamera = { open: function (cb, label) { cameraCb = cb; cameraLabel = label || ""; openCam(); } };
 })();

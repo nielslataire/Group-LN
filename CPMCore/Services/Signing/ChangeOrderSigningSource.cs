@@ -193,7 +193,8 @@ public sealed class ChangeOrderSigningSource : ISigningDocumentSource
                 ProjectId = co.ContractActivity?.Contract?.Project?.ProjectId ?? existing?.ProjectId ?? 0,
                 Mode = existing is null ? "new" : "revision",
                 DocumentId = existing?.Id,
-                FolderId = existing is null ? await _db.DocumentFolders.Where(f => f.Code == "contracten").Select(f => (int?)f.Id).FirstOrDefaultAsync(ct) : null,
+                // Een wijzigingsopdracht hoort bij "Offertes & bestellingen", niet bij "Contracten" (verkoopcontracten).
+                FolderId = existing is null ? await _db.DocumentFolders.Where(f => f.Code == "offertes").Select(f => (int?)f.Id).FirstOrDefaultAsync(ct) : null,
                 Name = existing is null ? finalDoc.FileName : null,
                 Number = existing is null ? co.PublicNumber : null,
                 Links = existing is null

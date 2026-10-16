@@ -95,6 +95,22 @@ namespace CPMCore.Models.Projecten
         public int AantalProjectEenheden { get; set; }
         /// <summary>"S- en I-index 10/2026": de index die een nieuw budget standaard krijgt.</summary>
         public string ActieveIndexTekst { get; set; } = "";
+        /// <summary>Het definitieve budget tegenover contracten en facturen (tegels in de kaart Definitief budget); null zonder definitief budget.</summary>
+        public BudgetKoppelingVm Koppeling { get; set; }
+    }
+
+    /// <summary>Het definitieve budget (enkel activiteiten) tegenover contracten (+ bijbestellingen) en facturen (incl. meerwerk, excl. meerwerk voor klanten).</summary>
+    public class BudgetKoppelingVm
+    {
+        public decimal Begroot { get; set; }
+        public decimal Gecontracteerd { get; set; }
+        public decimal Gefactureerd { get; set; }
+        /// <summary>Per activiteit: het hoogste van gecontracteerd en gefactureerd, of het budget zolang er nog niets is vastgelegd.</summary>
+        public decimal VerwachteEindkost { get; set; }
+        /// <summary>Begroot min verwachte eindkost; positief = onder budget.</summary>
+        public decimal VerwachtVerschil => Begroot - VerwachteEindkost;
+        public int AantalActiviteiten { get; set; }
+        public int AantalOverBudget { get; set; }
     }
 
     public class BudgetKopieBronVm

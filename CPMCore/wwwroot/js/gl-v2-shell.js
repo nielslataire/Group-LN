@@ -960,6 +960,7 @@
                 cells.forEach(function (cell) {
                     var btn = document.createElement("button");
                     btn.type = "button";
+                    btn.tabIndex = -1;
                     btn.className = "gl-v2-datepicker-day" + (cell.outside ? " is-outside" : "");
                     btn.textContent = cell.d;
                     if (cell.y === today.getFullYear() && cell.m === today.getMonth() + 1 && cell.d === today.getDate()) {
@@ -1037,6 +1038,9 @@
             textInput.addEventListener("keydown", function (e) {
                 if (e.key === "Enter") { e.preventDefault(); textInput.blur(); closeAll(); }
                 if (e.key === "Escape") { closeAll(); }
+                // Tab: de kalender sluiten vóór de browser het volgende veld kiest — anders valt de focus in de (nog open)
+                // kalenderknoppen die in de DOM direct na dit veld staan en loopt Tab door de maand i.p.v. naar het volgende veld.
+                if (e.key === "Tab") { closeAll(); }
             });
 
             renderCalendar();

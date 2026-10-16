@@ -62,11 +62,16 @@ namespace CPMCore.Controllers
         [HttpGet]
         //[Breadcrumb("Inkomende factuur toevoegen")]
         [Breadcrumb("Inkomende factuur toevoegen", FromAction = "DetailContracts")]
-        public ActionResult AddIncommingInvoice(int projectid, int type, int invoiceid = 0, bool focusUpload = false)
+        public ActionResult AddIncommingInvoice(int projectid, int type, int invoiceid = 0, bool focusUpload = false, int companyId = 0, int contractId = 0, int duplicateFrom = 0)
         {
             //Referrer
-            var referrer = Request.Headers["Referer"].ToString();
-            TempData["Referrer"] = referrer;
+            // Na "Opslaan en nieuwe" blijft de oorspronkelijke herkomst (de nacalculatie) behouden, anders zou
+            // Annuleren/Opslaan naar het zonet gebruikte lege formulier terugkeren.
+            if (TempData["KeepReferrer"] as bool? != true)
+            {
+                var referrer = Request.Headers["Referer"].ToString();
+                TempData["Referrer"] = referrer;
+            }
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
             ViewData["FocusUpload"] = focusUpload;
             var model = new ProjectIncommingInvoiceAddUpdateModel();
@@ -114,6 +119,56 @@ namespace CPMCore.Controllers
             model.IncommingInvoice.ContractID = 0;
             //}
 
+            // Vanuit Nacalculatie > leverancier: leverancier (zonder contract) of contract (met contract) meteen ingevuld.
+            if (contractId > 0 && type == 0) model.IncommingInvoice.ContractID = contractId;
+            if (companyId > 0 && type != 0)
+            {
+                model.IncommingInvoice.CompanyId = companyId;
+                model.CompanyName = _companyService.GetCompanyNameById(companyId);
+            }
+
+            // Dupliceren: alles van de bronfactuur overnemen (leverancier/contract, bedrag, soort, regels) behalve factuurnummer en factuurdatum,
+            // die blijven leeg (datum = DateOnly.MinValue) en moeten ingevuld worden.
+            if (duplicateFrom > 0)
+            {
+                var srcResponse = service2.GetIncommingInvoice(duplicateFrom);
+                var src = srcResponse.Success ? srcResponse.Values.FirstOrDefault() : null;
+                if (src != null && src.ProjectId == projectid)
+                {
+                    var copy = new IncommingInvoiceBO
+                    {
+                        ProjectId = projectid,
+                        ContractID = src.ContractID is > 0 ? src.ContractID : 0,
+                        CompanyId = src.CompanyId,
+                        InvoiceExternalId = "",
+                        InvoicePrice = src.InvoicePrice,
+                        Kind = src.Kind,
+                        IncommingInvoiceDate = DateOnly.MinValue
+                    };
+                    foreach (var d in src.Details)
+                    {
+                        copy.Details.Add(new IncommingInvoiceDetailBO
+                        {
+                            Id = 0,
+                            IncommingInvoiceID = 0,
+                            Description = d.Description,
+                            ContractActivityID = d.ContractActivityID,
+                            ContractActivityText = d.ContractActivityText,
+                            Price = d.Price,
+                            IncommingInvoiceType = d.IncommingInvoiceType,
+                            ChangeOrderId = d.ChangeOrderId,
+                            ChangeOrders = d.ChangeOrders,
+                            ActivityID = d.ActivityID
+                        });
+                    }
+                    model.IncommingInvoice = copy;
+                    model.Type = copy.ContractID is > 0 ? 0 : 1;
+                    if (model.Type == 1 && copy.CompanyId is > 0) model.CompanyName = _companyService.GetCompanyNameById(copy.CompanyId.Value);
+                    model.ListActivities.RemoveAll(a => a.ID == 0);
+                    model.ListActivities.Insert(0, new IdNameBO { Group = model.Type == 0 ? "Contractactiviteiten" : "Bedrijfsactiviteiten" });
+                }
+            }
+
             IncommingInvoiceFillInSelectList(model);
 
 
@@ -145,7 +200,7 @@ namespace CPMCore.Controllers
             return View(model);
         }
         [HttpPost]
-        public ActionResult AddIncommingInvoice(ProjectIncommingInvoiceAddUpdateModel model, List<IncommingInvoiceDetailBO> details)
+        public ActionResult AddIncommingInvoice(ProjectIncommingInvoiceAddUpdateModel model, List<IncommingInvoiceDetailBO> details, bool saveAndNew = false)
         {
 
             if (!ModelState.IsValid)
@@ -217,6 +272,20 @@ namespace CPMCore.Controllers
             if (saveResponse.Success)
             {
                 AddMessage("success", $"De factuur is toegevoegd aan het project {model.ProjectName}", "Geslaagd!");
+                if (saveAndNew && ViewData["UseGlV2Layout"] as bool? == true)
+                {
+                    // Opslaan en nieuwe (design-handoff 42c): leeg formulier voor hetzelfde project en dezelfde
+                    // leverancier/contract; Annuleren/Opslaan keert daarna nog steeds naar de herkomst terug.
+                    TempData["Referrer"] = Referrer;
+                    TempData["KeepReferrer"] = true;
+                    return RedirectToAction("AddIncommingInvoice", "Projecten", new
+                    {
+                        projectid = model.ProjectId,
+                        type = model.Type,
+                        companyId = model.IncommingInvoice.CompanyId ?? 0,
+                        contractId = model.IncommingInvoice.ContractID ?? 0
+                    });
+                }
                 return Redirect(Referrer.ToString());
             }
             else
@@ -233,7 +302,8 @@ namespace CPMCore.Controllers
         [Breadcrumb("Inkomende factuur bewerken", FromAction = "DetailContracts")]
         public ActionResult EditIncommingInvoice(int projectid, int invoiceid)
         {
-            // Referrer bijhouden
+            // Referrer bijhouden: de POST redirect hierheen terug na het opslaan.
+            TempData["Referrer"] = Request.Headers["Referer"].ToString();
 
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
 
@@ -314,6 +384,8 @@ namespace CPMCore.Controllers
 
 
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Factuur bewerken");
+            if (ViewData["UseGlV2Layout"] as bool? == true)
+                return View("EditIncommingInvoiceV2", model);
             return View(model);
         }
         [HttpPost]
@@ -370,6 +442,8 @@ namespace CPMCore.Controllers
                 model.ListActivities.Insert(0, new IdNameBO { Group = label });
 
                 SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Factuur bewerken");
+                if (ViewData["UseGlV2Layout"] as bool? == true)
+                    return View("EditIncommingInvoiceV2", model);
                 return View(model);
             }
             var Referrer = TempData["Referrer"];
@@ -382,12 +456,17 @@ namespace CPMCore.Controllers
             if (saveResponse.Success)
             {
                 AddMessage("success", $"De factuur is aangepast aan het project {model.ProjectName}", "Geslaagd!");
-                return Redirect(Referrer.ToString());
+                var terug = Referrer?.ToString();
+                return string.IsNullOrWhiteSpace(terug)
+                    ? RedirectToAction("Recalculation", "Projecten", new { projectid = model.ProjectId })
+                    : Redirect(terug);
             }
             else
             {
                 AddMessage("error", $"De factuur is NIET aangepast aan het project {model.ProjectName}", "Fout!");
                 SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Factuur bewerken");
+                if (ViewData["UseGlV2Layout"] as bool? == true)
+                    return View("EditIncommingInvoiceV2", model);
                 return View(model);
             }
         }
@@ -576,7 +655,7 @@ namespace CPMCore.Controllers
         /// bijwerkt zodra de gebruiker een ander contract kiest (dat kan daar niet, het contract staat
         /// er al vast).</summary>
         [HttpPost]
-        public ActionResult GetContractInfoForInvoiceFormV2(int contractId)
+        public ActionResult GetContractInfoForInvoiceFormV2(int contractId, int invoiceId = 0)
         {
             if (contractId == 0) return Json(new { success = false });
             var response = _projectService.GetContract(contractId);
@@ -590,7 +669,7 @@ namespace CPMCore.Controllers
             // aan dit contract), "meerwerk (WO)" is daarbinnen het Meerwerk-deel apart.
             var facturenResponse = _projectService.GetProjectIncommingInvoicesForRecalculation(c.ProjectId);
             var facturenContract = facturenResponse.Success
-                ? facturenResponse.Values.Where(f => f.ContractId == contractId).ToList()
+                ? facturenResponse.Values.Where(f => f.ContractId == contractId && (invoiceId == 0 || f.InvoiceId != invoiceId)).ToList() // bij bewerken telt de factuur zelf niet mee: de "deze"-som in de kaart komt van de regels in het formulier
                 : new List<IncommingInvoiceActivityBO>();
             var meerwerkBedrag = facturenContract.Where(f => f.IncommingInvoiceType == IncommingInvoiceType.Meerwerk).Sum(f => f.SignedPrice);
             var gefactureerdBedrag = facturenContract

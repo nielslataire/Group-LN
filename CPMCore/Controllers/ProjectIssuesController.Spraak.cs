@@ -39,7 +39,7 @@ public partial class ProjectsIssuesController
     }
 
     [HttpGet("SpraakStatusV2")]
-    public IActionResult SpraakStatusV2(int projectId) => Json(new { configured = Spraak.Configured });
+    public IActionResult SpraakStatusV2(int projectId) => Json(new { configured = Spraak.Configured, missing = Spraak.Missing });
 
     /// <summary>Stap 1 van inspreken (en het microfoontje bij de titel): de opname naar tekst.</summary>
     [HttpPost("SpraakTranscribeV2")]
@@ -47,7 +47,7 @@ public partial class ProjectsIssuesController
     [RequestSizeLimit(30 * 1024 * 1024)]
     public async Task<IActionResult> SpraakTranscribeV2(int projectId, IFormFile? audio, int? unitId)
     {
-        if (!Spraak.Configured) return Json(new { ok = false, error = "Inspreken is nog niet ingesteld. Vraag een beheerder om de sleutels voor spraak en AI toe te voegen." });
+        if (!Spraak.Configured) return Json(new { ok = false, error = "Inspreken is nog niet ingesteld: de server mist " + Spraak.Missing + "." });
         if (audio == null || audio.Length == 0) return Json(new { ok = false, error = "Er is niets opgenomen." });
         if (audio.Length > Spraak.MaxAudioBytes) return Json(new { ok = false, error = "De opname is te lang. Spreek korter of gebruik Rondgang." });
         try
@@ -65,7 +65,7 @@ public partial class ProjectsIssuesController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SpraakVoorstelV2(int projectId, string? text, int? unitId)
     {
-        if (!Spraak.Configured) return Json(new { ok = false, error = "Inspreken is nog niet ingesteld." });
+        if (!Spraak.Configured) return Json(new { ok = false, error = "Inspreken is nog niet ingesteld: de server mist " + Spraak.Missing + "." });
         if (string.IsNullOrWhiteSpace(text)) return Json(new { ok = false, error = "Er is geen tekst herkend." });
         try
         {
@@ -90,7 +90,7 @@ public partial class ProjectsIssuesController
     [RequestSizeLimit(120 * 1024 * 1024)]
     public async Task<IActionResult> RondgangStartV2(int projectId, IFormFile? audio, List<IFormFile>? photos, string? photoTimes, double duration, int? verslagId, int? unitId)
     {
-        if (!Spraak.Configured) return Json(new { ok = false, error = "Rondgang is nog niet ingesteld. Vraag een beheerder om de sleutels voor spraak en AI toe te voegen." });
+        if (!Spraak.Configured) return Json(new { ok = false, error = "Rondgang is nog niet ingesteld: de server mist " + Spraak.Missing + "." });
         if (audio == null || audio.Length == 0) return Json(new { ok = false, error = "Er is niets opgenomen." });
         if (audio.Length > Spraak.MaxAudioBytes) return Json(new { ok = false, error = "De opname is te groot om te verwerken. Splits de rondgang in twee delen." });
         try
@@ -174,6 +174,12 @@ public partial class ProjectsIssuesController
 
     private sealed class BewaarItem
     {
+        /// <summary>Volgnummer in de lijst; de eigen foto's van dit voorstel staan in het formulier onder "foto_{Idx}".</summary>
+        public int Idx { get; set; }
+        public int? PlanId { get; set; }
+        public int? PlanPage { get; set; }
+        public decimal? PlanX { get; set; }
+        public decimal? PlanY { get; set; }
         public string? Title { get; set; }
         public int? UnitId { get; set; }
         public string? Zone { get; set; }
@@ -195,15 +201,18 @@ public partial class ProjectsIssuesController
         var job = jobId.HasValue ? await Rondgangen.GetAsync(jobId.Value, projectId, CurrentUserId) : null;
 
         var ids = new List<int>(); var fouten = new List<string>();
+        HttpContext.Items["pt-geen-formulierfoto-terugval"] = true;
+        var eigen = Request.HasFormContentType ? Request.Form.Files : null;
         foreach (var it in list.Take(60))
         {
             var files = new List<IFormFile>();
+            if (eigen != null) files.AddRange(eigen.Where(f => f.Name == "foto_" + it.Idx && f.Length > 0));
             foreach (var i in (it.PhotoIndexes ?? new()).Distinct())
             {
                 var bytes = job == null ? null : await Rondgangen.FotoAsync(job, i);
                 if (bytes != null) files.Add(new FormFile(new MemoryStream(bytes), 0, bytes.Length, "mediaFiles", $"foto-{i + 1}.jpg") { Headers = new HeaderDictionary(), ContentType = "image/jpeg" });
             }
-            var r = await CreateV2(projectId, it.Title, it.UnitId, it.Zone, it.ContractorId, it.Description, null, null, null, it.Priority, null, files, null, null, null, null, false);
+            var r = await CreateV2(projectId, it.Title, it.UnitId, it.Zone, it.ContractorId, it.Description, null, null, null, it.Priority, null, files, it.PlanId, it.PlanPage, it.PlanX, it.PlanY, false);
             var node = r is JsonResult jr ? JsonNode.Parse(JsonSerializer.Serialize(jr.Value)) : null;
             if (node?["ok"]?.GetValue<bool>() == true && node["id"] != null) ids.Add(node["id"]!.GetValue<int>());
             else fouten.Add(node?["error"]?.GetValue<string>() ?? "onbekende fout");

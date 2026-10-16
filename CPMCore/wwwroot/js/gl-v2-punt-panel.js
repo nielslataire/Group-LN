@@ -11,6 +11,7 @@
 
     var backdrop = $("#pt-panel-backdrop"), form = $("#pt-new-form");
     var deleteMediaUrl = panelEl.dataset.deleteMediaUrl || "", uploadPlanUrl = panelEl.dataset.uploadPlanUrl || "", createUrl = form.action, editUrl = panelEl.dataset.editUrl || "", editDataUrl = panelEl.dataset.editDataUrl || "", plansUrl = panelEl.dataset.plansUrl || "";
+    var planOnlyCb = null;   // "Op plan" vanuit Inspreken/Rondgang: enkel plan kiezen + punt aanduiden, het formulier blijft verborgen
     var hook = null;   // voorstellen uit Inspreken/Rondgang: na bewaren geen herlaad maar een terugmelding
     var mode = "new", savedCount = 0, saving = false, plans = null, viewer = null, bigViewer = null, currentPlanKey = "", pendingPlace = null;
 
@@ -123,6 +124,10 @@
         $("#pt-plan-page").value = pendingPlace.page; $("#pt-plan-x").value = pendingPlace.x; $("#pt-plan-y").value = pendingPlace.y;
         if (viewer) viewer.setMarker(pendingPlace);
         setHint(pendingPlace);
+        if (planOnlyCb) {
+            var cb = planOnlyCb, pl = planByKey(currentPlanKey); planOnlyCb = null;
+            cb({ planId: parseInt($("#pt-plan-id").value, 10), key: pl ? pl.key : "", page: pendingPlace.page, x: pendingPlace.x, y: pendingPlace.y, name: pl ? planTitle(pl) : "" });
+        }
         var bm = modalOf("pt-plan-big"); if (bm) bm.hide();
     }
 
@@ -170,6 +175,7 @@
         if (changed) { ["pt-plan-page", "pt-plan-x", "pt-plan-y"].forEach(function (i) { $("#" + i).value = ""; }); }
         showPlan(pickKey, changed ? null : (currentMarker()));
         var pm = modalOf("pt-plan-pick-modal"); if (pm) pm.hide();
+        if (planOnlyCb) setTimeout(openBig, 320);   // na het sluiten van de lijst: het plan groot om het punt aan te duiden
     }
     function currentMarker() { return $("#pt-plan-x").value !== "" ? { page: parseInt($("#pt-plan-page").value, 10) || 1, x: parseFloat($("#pt-plan-x").value), y: parseFloat($("#pt-plan-y").value) } : null; }
 
@@ -240,6 +246,7 @@
                 ["pt-plan-page", "pt-plan-x", "pt-plan-y"].forEach(function (i) { $("#" + i).value = ""; });
                 showPlan(j.key, null);
                 var am = modalOf("pt-plan-add-modal"); if (am) am.hide();
+                if (planOnlyCb) setTimeout(openBig, 320);
             });
         }).catch(function () { err.textContent = "Uploaden mislukt."; err.hidden = false; }).then(function () { btn.disabled = false; });
     }
@@ -271,6 +278,16 @@
         }
     }
     // bestaande foto's van het punt (bewerken): miniaturen met verwijderknop
+    // eigen bevestigingsmodal voor "foto verwijderen" (geen browserdialoog); de bevestigingsknop voert de meegegeven actie uit
+    function askDeletePhoto(run) {
+        var m = document.getElementById("pt-photo-delete-modal"), bm = modalOf("pt-photo-delete-modal");
+        if (!m || !bm) { if (window.confirm("Deze foto verwijderen?")) run(function () { }); return; }
+        var btn = document.getElementById("pt-photo-delete-confirm"), fresh = btn.cloneNode(true);   // oude klikhandlers van een vorige foto weg
+        btn.parentNode.replaceChild(fresh, btn);
+        fresh.disabled = false;
+        fresh.addEventListener("click", function () { fresh.disabled = true; run(function () { bm.hide(); }); });
+        bm.show();
+    }
     function renderPhotos(list, issueId) {
         var box = $("#pt-existing-photos"); if (!box) return;
         box.innerHTML = ""; box.hidden = !list || list.length === 0;
@@ -278,10 +295,11 @@
             var w = document.createElement("span"); w.className = "gl-v2-pt-photo";
             w.innerHTML = '<a href="' + esc(m.url) + '" target="_blank" rel="noopener"><img src="' + esc(m.url) + '" alt="" loading="lazy"></a><button type="button" aria-label="Foto verwijderen"><i class="ph ph-x" aria-hidden="true"></i></button>';
             w.querySelector("button").addEventListener("click", function () {
-                if (!window.confirm("Deze foto verwijderen?")) return;
-                var fd = new FormData(); fd.append("__RequestVerificationToken", (form.querySelector("input[name=__RequestVerificationToken]") || {}).value || "");
-                fetch(deleteMediaUrl.replace(/\/0\/0$/, "/" + issueId + "/" + m.id), { method: "POST", body: fd, credentials: "same-origin" }).then(function (r) { return r.json(); }).then(function (j) {
-                    if (j.ok) { w.remove(); savedCount++; box.hidden = !box.children.length; }
+                askDeletePhoto(function (done) {
+                    var fd = new FormData(); fd.append("__RequestVerificationToken", (form.querySelector("input[name=__RequestVerificationToken]") || {}).value || "");
+                    fetch(deleteMediaUrl.replace(/\/0\/0$/, "/" + issueId + "/" + m.id), { method: "POST", body: fd, credentials: "same-origin" }).then(function (r) { return r.json(); }).then(function (j) {
+                        if (j.ok) { w.remove(); savedCount++; box.hidden = !box.children.length; }
+                    }).then(done, done);
                 });
             });
             box.appendChild(w);
@@ -436,7 +454,34 @@
         $("#pt-plan-add-niveau").addEventListener("change", autoName);
         $("#pt-plan-add-unit").addEventListener("change", function () { autoName(); refreshAddInfo(); });
     }
-    ["pt-plan-add-modal", "pt-plan-big", "pt-plan-pick-modal"].forEach(function (id) { var m = document.getElementById(id); if (m) onShowOver(m); });
+    ["pt-plan-add-modal", "pt-plan-big", "pt-plan-pick-modal", "pt-photo-delete-modal"].forEach(function (id) { var m = document.getElementById(id); if (m) onShowOver(m); });
 
-    window.PuntPanel = { open: open };
+    // Enkel een plan kiezen en een punt aanduiden voor een voorstel (Inspreken/Rondgang): toont de plannen van de eenheid (en de algemene); is er precies één plan van
+    // de eenheid zelf, dan opent dat meteen. cb({planId,page,x,y,name}) bij gelukt, cb(null, melding) als er geen plan is, cb(null) als de gebruiker annuleert.
+    function pickPlan(preset, cb) {
+        preset = preset || {};
+        resetPanel(); setMode("new"); hook = null; planOnlyCb = cb;
+        loadPlans().then(function () {
+            if (preset.unitId != null) setSelect("pt-new-unit", String(preset.unitId));
+            if (preset.title) $("#pt-new-title").value = preset.title;
+            var list = unitPlans();
+            if (!list.length) { planOnlyCb = null; cb(null, "Er zijn nog geen plannen voor " + (currentUnitId() === 0 ? "dit project" : currentUnitName()) + ". Voeg er een toe via Op plan."); return; }
+            var own = list.filter(function (x) { return x.unitId != null; });
+            if (own.length === 1 || list.length === 1) { pickKey = (own.length === 1 ? own[0] : list[0]).key; confirmPick(); return; }
+            openPick();
+        });
+    }
+    // geannuleerd (lijst of groot plan gesloten zonder te plaatsen)
+    ["pt-plan-pick-modal", "pt-plan-big"].forEach(function (id) {
+        var m = document.getElementById(id);
+        if (m) m.addEventListener("hidden.bs.modal", function () {
+            if (!planOnlyCb) return;
+            setTimeout(function () {
+                var open = document.querySelector("#pt-plan-pick-modal.show, #pt-plan-big.show, #pt-plan-add-modal.show");
+                if (planOnlyCb && !open) { var cb = planOnlyCb; planOnlyCb = null; cb(null); }
+            }, 450);
+        });
+    });
+
+    window.PuntPanel = { open: open, pickPlan: pickPlan };
 })();

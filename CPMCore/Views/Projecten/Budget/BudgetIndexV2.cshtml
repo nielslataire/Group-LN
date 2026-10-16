@@ -47,6 +47,9 @@
         .bw-ix-def-kpis > div { display: flex; flex-direction: column; gap: 2px; }
         .bw-ix-def-kpis .l { font: 600 9px var(--gl-v2-font-sans); letter-spacing: .1em; color: var(--gl-v2-muted); }
         .bw-ix-def-kpis .v { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
+        .bw-ix-def-kpis > a.bw-ix-kpi { display: flex; flex-direction: column; gap: 2px; text-decoration: none; border-radius: 8px; margin: -4px -6px; padding: 4px 6px; }
+        .bw-ix-def-kpis > a.bw-ix-kpi:hover { background: #F2F5EF; }
+        .bw-ix-def-kpis > a.bw-ix-kpi.is-over .v { color: #8A3B2A; }
         .bw-ix-def-kpis .s { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
         .bw-ix-def-acties { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
         /* Lege kaart "Nieuw budget" (39a): gestreepte rand naast de budgetkaarten */
@@ -99,11 +102,28 @@
                 @if (defMarge != null) { <span class="bw-ix-def-marge"><b>@Pct1(defMarge.Percentage)</b><span>@Eur0(defMarge.Bedrag)</span></span> }
             </div>
             <span class="bw-ix-def-sub">Vastgezet op @(def.VastgezetOp?.ToString("dd/MM/yyyy") ?? "—")@(string.IsNullOrWhiteSpace(def.VastgezetDoor) ? "" : " door " + def.VastgezetDoor) · alleen-lezen · basis voor facturen &amp; contracten</span>
-            <div class="bw-ix-def-kpis">
-                <div><span class="l">GECONTRACTEERD</span><span class="v bw-ix-ph">—</span><span class="s">nog niet gekoppeld aan contracten</span></div>
-                <div><span class="l">GEFACTUREERD</span><span class="v bw-ix-ph">—</span><span class="s">nog niet gekoppeld aan facturen</span></div>
-                <div><span class="l">VERWACHT VERSCHIL</span><span class="v bw-ix-ph">—</span><span class="s">volgt na de koppeling</span></div>
-            </div>
+            @{
+                var kp = Model.Koppeling;
+                var nlk = new System.Globalization.CultureInfo("nl-BE");
+                string Eur(decimal x) => (x < 0m ? "– € " : "€ ") + Math.Abs(x).ToString("N0", nlk);
+                var nacalc = Url.Action("Recalculation", "Projecten", new { projectid = Model.ProjectId });
+            }
+            @if (kp != null)
+            {
+                <div class="bw-ix-def-kpis">
+                    <a class="bw-ix-kpi" href="@nacalc" data-bw-plain><span class="l">GECONTRACTEERD</span><span class="v">@Eur(kp.Gecontracteerd)</span><span class="s">@(kp.Begroot > 0m ? (kp.Gecontracteerd / kp.Begroot * 100m).ToString("0", nlk) + " % van het budget" : "contracten en bijbestellingen")</span></a>
+                    <a class="bw-ix-kpi" href="@nacalc" data-bw-plain><span class="l">GEFACTUREERD</span><span class="v">@Eur(kp.Gefactureerd)</span><span class="s">@(kp.Gecontracteerd > 0m ? (kp.Gefactureerd / kp.Gecontracteerd * 100m).ToString("0", nlk) + " % van het contract" : "incl. meerwerk, excl. meerwerk voor klanten")</span></a>
+                    <a class="bw-ix-kpi @(kp.VerwachtVerschil < 0m ? "is-over" : "")" href="@nacalc" data-bw-plain><span class="l">VERWACHT VERSCHIL</span><span class="v">@(kp.VerwachtVerschil > 0m ? "+ " : "")@Eur(kp.VerwachtVerschil)</span><span class="s">@(kp.VerwachtVerschil < 0m ? "boven budget" : "onder budget") · @(kp.AantalOverBudget == 0 ? "geen activiteit boven budget" : kp.AantalOverBudget + (kp.AantalOverBudget == 1 ? " activiteit" : " activiteiten") + " boven budget")</span></a>
+                </div>
+            }
+            else
+            {
+                <div class="bw-ix-def-kpis">
+                    <div><span class="l">GECONTRACTEERD</span><span class="v bw-ix-ph">—</span><span class="s">niet te berekenen</span></div>
+                    <div><span class="l">GEFACTUREERD</span><span class="v bw-ix-ph">—</span><span class="s">niet te berekenen</span></div>
+                    <div><span class="l">VERWACHT VERSCHIL</span><span class="v bw-ix-ph">—</span><span class="s">niet te berekenen</span></div>
+                </div>
+            }
         </div>
         <div class="bw-ix-def-acties">
             <button type="button" class="gl-v2-btn gl-v2-btn-primary" data-bw-vergelijk="@def.Id" data-bw-basis="@def.Id"@(Model.BudgetMasters.Sum(m => m.Versies.Count) < 2 ? " disabled" : "")><i class="ph ph-git-diff" aria-hidden="true"></i>Vergelijking openen</button>

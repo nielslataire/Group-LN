@@ -117,7 +117,7 @@
                 }
                 @if (Model.CanWrite)
                 {
-                    <a href="@Url.Action("AddIncommingInvoice", "Projecten", new { projectid = Model.ProjectId, type = lev.HasContract ? 0 : 1 })" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-receipt" aria-hidden="true"></i>Factuur</a>
+                    <a href="@Url.Action("AddIncommingInvoice", "Projecten", new { projectid = Model.ProjectId, type = lev.HasContract ? 0 : 1, companyId = lev.CompanyId, contractId = lev.HasContract ? lev.ContractId : 0 })" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-receipt" aria-hidden="true"></i>Factuur</a>
                 }
             </div>
 
@@ -137,16 +137,61 @@
                 </div>
             }
 
+            @if (lev.HasContract && lev.BorgPercentage.HasValue && (lev.BorgContractTotaal > 0 || lev.BorgVoBedrag.HasValue || lev.BorgDoBedrag.HasValue))
+            {
+                <div class="gln-rd-borg">
+                    <div class="gln-rd-borg-head">
+                        <span class="gln-rd-strip-label">Borg vrijgeven</span>
+                        <span class="gln-rd-borg-sum">Ingehouden € @lev.BorgContractTotaal.ToString("N2") · nog ingehouden <strong>€ @lev.BorgNogIngehouden.ToString("N2")</strong> <span class="gln-rd-strip-sub">(over het hele contract)</span></span>
+                    </div>
+                    @foreach (var fase in new[] { "VO", "DO" })
+                    {
+                        var isVo = fase == "VO";
+                        var vrijAt = isVo ? lev.BorgVoAt : lev.BorgDoAt;
+                        var vrijBedrag = isVo ? lev.BorgVoBedrag : lev.BorgDoBedrag;
+                        var voorstel = isVo ? Math.Round(lev.BorgContractTotaal / 2m, 2) : Math.Max(0m, lev.BorgNogIngehouden);
+                        <form method="post" asp-action="ReleaseContractGuaranteeV2" asp-controller="Projecten" class="gln-rd-borg-fase">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="projectId" value="@Model.ProjectId" />
+                            <input type="hidden" name="contractId" value="@lev.ContractId" />
+                            <input type="hidden" name="fase" value="@fase" />
+                            <input type="hidden" name="groupid" value="@Model.GroupId" />
+                            <input type="hidden" name="activityId" value="@(Model.ActivityId ?? 0)" />
+                            <span class="gln-rd-borg-fase-label">@(isVo ? "Voorlopige oplevering" : "Definitieve oplevering")</span>
+                            @if (vrijBedrag.HasValue)
+                            {
+                                <span class="gln-rd-borg-done"><i class="ph ph-check-circle" aria-hidden="true"></i>€ @vrijBedrag.Value.ToString("N2") vrijgegeven op @(vrijAt?.ToString("dd/MM/yyyy"))</span>
+                                @if (Model.CanWrite)
+                                {
+                                    <button type="submit" class="gl-v2-btn gl-v2-btn-text" name="amount" value="">Wissen</button>
+                                }
+                            }
+                            else if (Model.CanWrite)
+                            {
+                                <span class="gl-v2-field-box gln-rd-borg-input"><input type="date" name="date" class="gl-v2-field-input" value="@DateTime.Today.ToString("yyyy-MM-dd")" aria-label="Datum vrijgave" required /></span>
+                                <span class="gl-v2-field-box gln-rd-borg-input"><input type="number" name="amount" class="gl-v2-field-input" step="0.01" min="0.01" value="@(voorstel > 0 ? voorstel.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) : "")" aria-label="Bedrag vrijgave" required /><span class="gl-v2-field-suffix">€</span></span>
+                                <button type="submit" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-lock-key-open" aria-hidden="true"></i>Vrijgeven</button>
+                            }
+                            else
+                            {
+                                <span class="gln-rd-strip-sub">nog niet vrijgegeven</span>
+                            }
+                        </form>
+                    }
+                </div>
+            }
+
             @foreach (var groep in lev.FactuurGroepen)
             {
                 <div class="gln-rd-fact-groepkop"><span>@groep.Label · @groep.Rijen.Count FACTU@(groep.Rijen.Count == 1 ? "UR" : "REN")</span><span class="gln-rd-amount is-strong">@(groep.Totaal < 0 ? "– " : "")€ @Math.Abs(groep.Totaal).ToString("N2")</span></div>
                 <div class="gln-rd-fact-table">
-                    <div class="gln-rd-fact-grid gln-rd-fact-head"><span>Fact nr.</span><span>Datum</span><span>Omschrijving</span><span>Bedrag</span><span></span></div>
+                    <div class="gln-rd-fact-grid gln-rd-fact-head"><span>Fact nr.</span><span>Datum</span><span>Omschrijving</span><span>Bedrag</span><span></span><span></span></div>
                     @foreach (var r in groep.Rijen)
                     {
-                        <a class="gln-rd-fact-grid gln-rd-fact-row" href="@Url.Action("IncommingInvoiceDetail", "Projecten", new { projectid = Model.ProjectId, invoiceid = r.InvoiceId })">
-                            <span class="gln-rd-fact-nr">@r.FactuurNummer</span>
-                            <span>@r.Datum.ToString("dd/MM/yyyy")</span>
+                        @* Rij = div met een uitgerekte link (nr-cel) i.p.v. één <a> om de hele rij: de dupliceerknop mag er niet in genesteld staan. *@
+                        <div class="gln-rd-fact-grid gln-rd-fact-row">
+                            <a class="gln-rd-fact-nr gln-rd-fact-link" href="@Url.Action("IncommingInvoiceDetail", "Projecten", new { projectid = Model.ProjectId, invoiceid = r.InvoiceId })">@r.FactuurNummer</a>
+                            <span class="gln-rd-fact-datum">@r.Datum.ToString("dd/MM/yyyy")</span>
                             <span class="gln-rd-fact-oms">@r.Omschrijving</span>
                             <span class="gln-rd-amount is-strong @(r.Bedrag < 0 ? "is-neg" : "")">@(r.Bedrag < 0 ? "– " : "")€ @Math.Abs(r.Bedrag).ToString("N2")</span>
                             <span>
@@ -154,7 +199,13 @@
                                 else if (r.BetaalLabel != null) { <span class="gl-v2-badge @r.BetaalTone">@r.BetaalLabel</span> }
                                 else if (r.KortingTekst != null) { <span class="gl-v2-badge is-attention">@r.KortingTekst</span> }
                             </span>
-                        </a>
+                            <span class="gln-rd-fact-actie">
+                                @if (Model.CanWrite)
+                                {
+                                    <a class="gl-v2-icon-btn gln-rd-fact-dup" title="Factuur dupliceren" aria-label="Factuur @r.FactuurNummer dupliceren" href="@Url.Action("AddIncommingInvoice", "Projecten", new { projectid = Model.ProjectId, type = lev.HasContract ? 0 : 1, duplicateFrom = r.InvoiceId })"><i class="ph ph-copy" aria-hidden="true"></i></a>
+                                }
+                            </span>
+                        </div>
                     }
                 </div>
             }
