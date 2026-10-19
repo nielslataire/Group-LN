@@ -59,7 +59,14 @@ namespace CPMCore.Services.PuntenSpraak
             for (var i = 0; i < photos.Count; i++)
             {
                 var name = await _storage.UploadAsync(photos[i], $"rondgang-foto-{i + 1}.jpg", "image/jpeg", Folder, ct);
-                if (string.IsNullOrWhiteSpace(name)) continue;   // een foto die niet lukt laat de rest niet vallen
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    // AssetStorageClient logt zelf al de technische reden (status/exception); hier enkel het
+                    // gevolg loggen (welke foto van welke rondgang) — anders is "enkel de eerste foto kwam door"
+                    // niet te onderscheiden van een AI-koppelprobleem (zie KoppelFotos) zonder dit regeltje.
+                    _log.LogWarning("Rondgang-foto {Index} (van {Totaal}) kon niet opgeslagen worden in de bestandsopslag; overgeslagen.", i + 1, photos.Count);
+                    continue;   // een foto die niet lukt laat de rest niet vallen
+                }
                 r.Fotos.Add(new PuntRondgangFoto { Volgnr = r.Fotos.Count, AtSeconds = i < times.Count ? times[i] : 0, FileName = name });
             }
             _db.PuntRondgang.Add(r);
@@ -137,21 +144,43 @@ namespace CPMCore.Services.PuntenSpraak
         }
 
         /// <summary>Elke foto die de AI aan geen enkel punt koppelde, gaat naar het punt dat vlak ervoor (of anders vlak erna) werd genoemd. Zo heeft een punt
-        /// altijd de foto('s) die tijdens het bespreken ervan zijn genomen.</summary>
+        /// altijd de foto('s) die tijdens het bespreken ervan zijn genomen.
+        /// Correctie 17/10/2026: als GEEN enkel voorstel een atSeconds heeft (de AI geeft dat niet altijd consequent voor elk voorstel — gekend risico, zie
+        /// "Kwaliteit van de AI-voorstellen… bijstellen" hierboven) viel "best" vroeger op null zodra er meer dan één voorstel was, en verdween de foto
+        /// helemaal (ze stond dan wel al in de bestandsopslag/database, maar hing aan geen enkel voorstel en was dus in de review onvindbaar). Eerst
+        /// geprobeerd: dan maar altijd het eerste voorstel — bleek fout voor net het geval waar dit vangnet voor bedoeld is (een foto tijdens een LATER punt
+        /// genomen moet niet bij punt 1 belanden). Nu i.p.v. daarvan: de voorstellen worden verondersteld in de volgorde te staan waarin ze ingesproken zijn
+        /// (zo geeft de AI ze ook terug), dus elk voorstel krijgt een "verondersteld tijdstip" door de voorstellen gelijk te verdelen over de tijdspanne van
+        /// de genomen foto's (eerste t/m laatste fototijdstip) — een foto gaat dan naar het voorstel waarvan dat veronderstelde tijdstip het dichtst bij
+        /// (en niet na) het echte fototijdstip ligt, net als bij de normale (wel-atSeconds) tak hierboven.</summary>
         public static void KoppelFotos(List<PuntVoorstel> list, IReadOnlyList<double> times)
         {
+            if (list.Count == 0 || times.Count == 0) return;
             var metTijd = list.Where(p => p.AtSeconds.HasValue).ToList();
+            // Vangnet voor wanneer de AI op GEEN ENKEL voorstel een atSeconds gaf: voorstel i krijgt een
+            // verondersteld tijdstip, de voorstellen gelijk verspreid over het bereik van de fototijdstippen —
+            // zodat een laat genomen foto ook bij een later voorstel in de lijst terechtkomt, niet bij het eerste.
+            List<(PuntVoorstel Punt, double Tijd)>? verondersteld = null;
+            if (metTijd.Count == 0)
+            {
+                var start = times.Min(); var eind = times.Max();
+                verondersteld = list.Select((p, idx) => (Punt: p, Tijd: list.Count == 1 ? start : start + (eind - start) * idx / (list.Count - 1))).ToList();
+            }
             for (var i = 0; i < times.Count; i++)
             {
                 if (list.Any(p => p.PhotoIndexes.Contains(i))) continue;
-                PuntVoorstel? best = null;
+                PuntVoorstel best;
                 if (metTijd.Count > 0)
                 {
                     var voor = metTijd.Where(p => p.AtSeconds!.Value <= times[i] + 5).OrderByDescending(p => p.AtSeconds).FirstOrDefault();
                     best = voor ?? metTijd.OrderBy(p => p.AtSeconds).First();
                 }
-                else if (list.Count == 1) best = list[0];
-                best?.PhotoIndexes.Add(i);
+                else
+                {
+                    var voor = verondersteld!.Where(v => v.Tijd <= times[i] + 5).OrderByDescending(v => v.Tijd).FirstOrDefault();
+                    best = (voor.Punt ?? verondersteld!.OrderBy(v => v.Tijd).First().Punt);
+                }
+                best.PhotoIndexes.Add(i);
             }
         }
 
