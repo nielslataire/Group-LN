@@ -53,7 +53,7 @@
     {
         <div class="gl-v2-field">
             <span class="gl-v2-field-label" id="gl-v2-co-quote-sender-label">Verzenden vanaf</span>
-            <div class="gl-v2-co-seg" role="radiogroup" aria-labelledby="gl-v2-co-quote-sender-label">
+            <div class="gl-v2-segmented is-fill" role="radiogroup" aria-labelledby="gl-v2-co-quote-sender-label">
                 @for (var i = 0; i < Model.Senders.Count; i++)
                 {
                     <label><input type="radio" name="sender" value="@Model.Senders[i].Key" @(i == 0 ? "checked" : "") /><span>@Model.Senders[i].Label</span></label>

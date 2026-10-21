@@ -12,7 +12,7 @@ namespace CPMCore.Documents.GlV2
     public sealed record BudgetPost(string Post, string Basis, decimal Bedrag);
 
     /// <summary>Eén activiteit in "bouwkosten per activiteit".</summary>
-    public sealed record BudgetActiviteitRij(string Naam, string Basis, decimal Bedrag);
+    public sealed record BudgetActiviteitRij(string Naam, string Basis, decimal Bedrag, string? Reden = null);
 
     /// <summary>Een deel (lot) met zijn activiteiten en subtotaal.</summary>
     public sealed record BudgetDeel(string Titel, IReadOnlyList<BudgetActiviteitRij> Lijnen, decimal Subtotaal);
@@ -247,7 +247,11 @@ namespace CPMCore.Documents.GlV2
             {
                 regels.Add(BRegel.Groep(deel.Titel));
                 foreach (var l in deel.Lijnen)
+                {
                     regels.Add(BRegel.Rij(l.Naam, l.Basis, E(l.Bedrag), PerM2(l.Bedrag)));
+                    // Reden van een correctie (stap 6): enkel in het interne budget
+                    if (_m.Intern && !string.IsNullOrWhiteSpace(l.Reden)) regels.Add(BRegel.Rij(new BCel("\u21b3 " + l.Reden, "#8A6A32"), "", "", ""));
+                }
                 regels.Add(BRegel.Subtotaal($"Subtotaal {deel.Titel.ToLowerInvariant()}", "", E(deel.Subtotaal), PerM2(deel.Subtotaal)));
             }
             regels.Add(BRegel.Totaal("Totaal bouwkost", "", E(_m.TotaalBouw), PerM2(_m.TotaalBouw)));

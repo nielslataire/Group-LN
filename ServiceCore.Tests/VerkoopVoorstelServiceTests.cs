@@ -44,11 +44,11 @@ public class VerkoopVoorstelServiceTests
         Assert.Equal(465_000m, bo.GrondKost);          // 400.000 + 50.000 + 10.000 + 5.000
         Assert.Equal(935_000m, bo.BouwKost);           // 1.000.000 − 65.000 grondgebonden
         Assert.Equal(1_400_000m, bo.TotaalKostprijs);  // = TotaalKosten + aankoopprijs grond
-        Assert.Equal(511_500m, bo.Grondwaarde);        // × 1,10
+        Assert.Equal(511_000m, bo.Grondwaarde);        // × 1,10, behalve op de straight loan grond (5.000): daar geen marge
         Assert.Equal(1_075_250m, bo.Bouwwaarde);       // × 1,15
-        Assert.Equal(1_586_750m, bo.TotaalVerkoopwaarde);
-        Assert.Equal(186_750m, bo.MargeBedrag);
-        Assert.Equal(0.1334m, decimal.Round(bo.MargePerc, 4));
+        Assert.Equal(1_586_250m, bo.TotaalVerkoopwaarde);
+        Assert.Equal(186_250m, bo.MargeBedrag);
+        Assert.Equal(0.1330m, decimal.Round(bo.MargePerc, 4));
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public class VerkoopVoorstelServiceTests
         Assert.Equal(0.25m, b.AandeelGrond);
 
         Assert.Equal(645_150m, a.Bouwwaarde);  // 1.075.250 × 0,6
-        Assert.Equal(383_625m, a.Grondwaarde); // 511.500 × 0,75
+        Assert.Equal(383_250m, a.Grondwaarde); // 511.000 × 0,75
         Assert.Equal(a.Bouwwaarde + a.Grondwaarde, a.MinimumVerkoopprijs);
         Assert.Equal(decimal.Round(a.MinimumVerkoopprijs / 100m, 2), decimal.Round(a.PrijsPerM2Bewoonbaar!.Value, 2));
 
@@ -93,6 +93,17 @@ public class VerkoopVoorstelServiceTests
     }
 
     [Fact]
+    public void Financiering_krijgt_geen_marge()
+    {
+        // bouwkost 300.000 waarvan 20.000 financiering, marge 15 %: marge enkel op 280.000
+        var (_, bouw) = VerkoopVoorstelService.Waarden(0m, 300_000m, 0m, 0.15m, 0m, 0m, 0m, 20_000m);
+        Assert.Equal(300_000m + 280_000m * 0.15m, bouw);
+        // zonder financiering blijft het kost × (1 + marge)
+        var (_, zonder) = VerkoopVoorstelService.Waarden(0m, 300_000m, 0m, 0.15m, 0m, 0m);
+        Assert.Equal(345_000m, zonder);
+    }
+
+    [Fact]
     public void Zonder_marges_is_verkoopwaarde_gelijk_aan_kostprijs()
     {
         var bo = VerkoopVoorstelService.Bereken(1, Resultaat(), Params(doel: null, grond: null), new[] { Rij("A", 100m) });
@@ -108,7 +119,7 @@ public class VerkoopVoorstelServiceTests
         var bo = VerkoopVoorstelService.Bereken(1, Resultaat(), Params(), new List<BudgetOppervlaktesBO>());
 
         Assert.False(bo.HeeftEenheden);
-        Assert.Equal(1_586_750m, bo.TotaalVerkoopwaarde);
+        Assert.Equal(1_586_250m, bo.TotaalVerkoopwaarde);
         Assert.Contains(bo.Waarschuwingen, w => w.Contains("Oppervlaktes"));
     }
 

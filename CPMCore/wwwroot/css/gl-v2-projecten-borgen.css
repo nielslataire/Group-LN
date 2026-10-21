@@ -1,0 +1,72 @@
+/* gl-v2 — Projecten/BorgenV2 (design-handoff 42i, 42j). Eigen namespace gln-bg-*. KPI-strip, sectiekaart, badges,
+   notice en knoppen zijn gedeeld; de tabel (CSS-grid) en de selectiebalk zijn hier nieuw. */
+
+#gln-bg-root { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.gln-bg-intro { margin: 0; font: 450 12.5px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted); max-width: 920px; }
+.gln-bg-intro a { color: var(--gl-v2-primary); }
+
+/* Tabs Borgen | Extra inhoudingen */
+.gln-bg-tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--gl-v2-hairline); }
+.gln-bg-tab { padding: 10px 14px; font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.gln-bg-tab.is-active { color: var(--gl-v2-primary); border-bottom-color: var(--gl-v2-primary); }
+.gln-bg-tab-count { display: inline-block; min-width: 20px; padding: 1px 6px; margin-left: 4px; border-radius: 10px; background: var(--gl-v2-subtle-bg); font: 600 11px var(--gl-v2-font-sans); text-align: center; color: var(--gl-v2-ink); }
+
+.gln-bg-search { width: 260px; flex: none; }
+@media (max-width: 767.98px) { .gln-bg-search { width: 100%; order: 10; } }
+
+.gln-bg-chips { display: flex; align-items: center; gap: 8px; padding: 10px 20px; border-bottom: 1px solid var(--gl-v2-hairline-soft); flex-wrap: wrap; }
+.gln-bg-chip { height: 28px; padding: 0 11px; border-radius: 14px; font: 600 11.5px var(--gl-v2-font-sans); background: var(--gl-v2-surface); border: 1px solid var(--gl-v2-hairline); color: var(--gl-v2-ink); cursor: pointer; }
+.gln-bg-chip.is-active { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: #fff; }
+
+.gln-bg-empty { margin: 16px 20px; }
+
+/* Tabel */
+.gln-bg-row {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1.5fr) 56px 118px minmax(0, 1.5fr) 86px 130px 124px;
+    gap: 12px; align-items: center; padding: 11px 20px; border-top: 1px solid var(--gl-v2-hairline-soft);
+    font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink);
+}
+.gln-bg-row[hidden] { display: none; }
+.gln-bg-row.gln-bg-inhrow { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.8fr) 130px 110px 220px; }
+.gln-bg-head { border-top: 0; padding-top: 10px; padding-bottom: 8px; font: 600 10.5px var(--gl-v2-font-sans); letter-spacing: .06em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gln-bg-row .is-num { text-align: right; font-variant-numeric: tabular-nums; }
+.gln-bg-row .is-strong { font-weight: 650; }
+.gln-bg-row .is-act { display: flex; justify-content: flex-end; gap: 6px; }
+.gln-bg-row small { color: var(--gl-v2-muted); font-size: 11px; }
+.gln-bg-naam { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gln-bg-naam strong { font-weight: 600; }
+.gln-bg-naam span { font-size: 11.5px; color: var(--gl-v2-muted); }
+.gln-bg-regel { font-size: 12px; color: var(--gl-v2-muted); }
+.gln-bg-check { width: 16px; height: 16px; accent-color: var(--gl-v2-primary); }
+.gln-bg-nietsgevonden { padding: 18px 20px; border-top: 1px solid var(--gl-v2-hairline-soft); color: var(--gl-v2-muted); font: 450 12.5px var(--gl-v2-font-sans); }
+.gln-bg-nietsgevonden[hidden] { display: none; }
+
+/* Selectiebalk onderaan */
+.gln-bg-selbar {
+    position: sticky; bottom: 0; z-index: 5; display: flex; align-items: center; gap: 12px; padding: 12px 20px;
+    background: var(--gl-v2-surface); border: 1px solid var(--gl-v2-hairline); border-radius: 12px; box-shadow: 0 6px 24px rgba(44, 59, 42, .14);
+}
+.gln-bg-selbar[hidden] { display: none; }
+.gln-bg-selbar-tekst { font: 450 13px var(--gl-v2-font-sans); }
+.gln-bg-puntenwaarschuwing[hidden] { display: none; }
+
+@media (max-width: 991.98px) {
+    .gln-bg-row, .gln-bg-row.gln-bg-inhrow { grid-template-columns: 28px minmax(0, 1fr) auto; row-gap: 4px; }
+    .gln-bg-row > span:nth-child(n+3) { grid-column: 2 / -1; text-align: left; }
+    .gln-bg-head { display: none; }
+}
+
+/* Te nemen bedrag bij een geselecteerde rij (kleiner dan het vrij te geven bedrag mag) */
+.gln-bg-bedrag-box { height: 32px; max-width: 150px; margin-left: auto; }
+.gln-bg-bedrag-box[hidden], .gln-bg-nuvrij-tekst[hidden] { display: none; }
+.gln-bg-bedrag { text-align: right; }
+
+/* Vrijgaves per rij met "Ongedaan maken" */
+.gln-bg-vrijgaves-knop { display: block; margin-top: 4px; padding: 0; border: 0; background: none; color: var(--gl-v2-primary); font: 600 11.5px var(--gl-v2-font-sans); cursor: pointer; text-decoration: underline; }
+.gln-bg-detail { grid-column: 1 / -1; padding: 8px 12px 4px 40px; }
+.gln-bg-detail[hidden] { display: none; }
+.gln-bg-detail strong { font: 600 12px var(--gl-v2-font-sans); }
+.gln-bg-detail ul { list-style: none; margin: 6px 0 0; padding: 0; }
+.gln-bg-detail li { display: grid; grid-template-columns: 92px minmax(0, 1fr) 120px auto; gap: 12px; align-items: center; padding: 4px 0; font: 450 12.5px var(--gl-v2-font-sans); }
+.gln-bg-detail li form { margin: 0; }

@@ -27,7 +27,7 @@ faq:
 
 CPM bewaart eerst alles wat nog wacht, zodat het voorbeeld je laatste wijzigingen toont.
 
-1. Klik rechtsboven op **Voorbeeld PDF**.
+1. Klik rechtsboven op **Voorbeeld PDF**. Ook in de lijst met verslagen staat die knop: die opent het verslag en maakt meteen het voorbeeld.
 2. Wacht op de pagina terwijl CPM de punten verzamelt, de plannen met aanduidingen maakt en de PDF opmaakt.
 3. Klik op **Voorbeeld openen**. De PDF opent in een nieuw tabblad. Met **Terug naar verslag** ga je terug.
 
@@ -37,7 +37,10 @@ Het voorbeeld verandert niets aan de punten en stuurt niets weg.
 
 1. Klik op **Afronden en versturen**.
 2. Lees in het venster wat er gaat gebeuren en bevestig met **Afronden en versturen**.
-3. Blijf op de pagina. CPM bereidt het verslag voor en gaat daarna vanzelf verder naar de lijst met verslagen.
+3. Blijf op de pagina. CPM toont de voortgang: punten verzamelen, plannen met aanduidingen, de PDF opmaken en de mails versturen, met het aantal aanwezigen dat al een mail kreeg.
+4. Daarna toont CPM "Verslag verzonden". Je gaat na enkele seconden vanzelf naar het verslag, of je kiest zelf **Verslag openen** of **Terug naar verslagen**.
+
+Lukt een mail niet, dan meldt CPM hoeveel mails niet vertrokken zijn. Het verslag is dan wel afgerond.
 
 ## Wat er gebeurt
 

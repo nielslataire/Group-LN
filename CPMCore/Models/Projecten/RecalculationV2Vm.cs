@@ -11,6 +11,8 @@ public class RecalculationIndexV2Vm
     public int ProjectId { get; set; }
     public string ProjectName { get; set; } = "";
     public bool CanWrite { get; set; }
+    /// <summary>Aantal contracten waarvan de borg nu vrij te geven is — de badge op de knop "Borgen & inhoudingen" (42a).</summary>
+    public int BorgenNuVrij { get; set; }
     public List<GlV2KpiItemVm> Kpis { get; set; } = new();
     public List<RecalculationCategoryV2> Categorieen { get; set; } = new();
 

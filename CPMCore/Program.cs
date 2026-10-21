@@ -270,6 +270,7 @@ builder.Services.AddHttpClient("SIndexScraper").ConfigurePrimaryHttpMessageHandl
 builder.Services.AddHttpClient("I2021Sync").ConfigurePrimaryHttpMessageHandler(() =>
     new System.Net.Http.HttpClientHandler { AllowAutoRedirect = true });
 builder.Services.AddScoped<ServiceCore.Budget.BudgetActivityService>();
+builder.Services.AddScoped<CPMCore.Services.Borg.BorgService>();
 builder.Services.AddScoped<ServiceCore.Budget.BudgetActivityFormuleService>();
 builder.Services.AddScoped<ServiceCore.Budget.BudgetBerekeningService>();
 builder.Services.AddScoped<ServiceCore.Budget.BudgetVergelijkService>();

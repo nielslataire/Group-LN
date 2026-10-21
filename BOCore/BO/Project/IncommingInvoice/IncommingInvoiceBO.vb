@@ -118,6 +118,28 @@ Public Class IncommingInvoiceBO
     ' Nothing = "niet opgegeven" (legacy Add/Edit-formulier kent dit veld niet) — de translator schrijft
     ' de kolom enkel weg als dit een waarde heeft, anders blijft wat al in de DB stond ongewijzigd. Zie
     ' ServiceCore/Translators/IncommingInvoiceTranslator.cs voor de volledige toelichting.
+    ' -- Borg en extra inhouding (Nacalculatie 42h/42c, migratie 105) --
+    ' FormV2 = True betekent: dit is het gl-v2-formulier, dat de borg-, inhoudings- en vervaldatumvelden altijd
+    ' meestuurt. Alleen dan schrijft de translator ze weg; het legacy formulier (FormV2 = False) laat ze ongemoeid.
+    Public Property FormV2 As Boolean
+
+    ''' <summary>Nothing = factuur van voor deze module (borg wordt afgeleid uit het contractpercentage).</summary>
+    Public Property BorgInhouden As Boolean?
+    Public Property BorgPercentage As Decimal?
+    Public Property BorgBedrag As Decimal?
+    Public Property BorgAfwijkReden As String
+    Public Property BorgVoPercentage As Decimal?
+
+    ''' <summary>Extra inhouding: bedrag Nothing of 0 = geen. Eén inhouding per factuur.</summary>
+    Public Property InhoudingBedrag As Decimal?
+    ''' <summary>1 = creditnota te ontvangen, 2 = werk niet volledig uitgevoerd, 3 = andere.</summary>
+    Public Property InhoudingReden As Byte?
+    Public Property InhoudingToelichting As String
+    ''' <summary>Alleen-lezen: true zodra er al iets van de inhouding is afgehandeld (bedrag en reden zijn dan vergrendeld).</summary>
+    Public Property InhoudingVergrendeld As Boolean
+    Public Property InhoudingAfgehandeld As Decimal
+    Public Property InhoudingId As Integer
+
     Private _kind As IncommingInvoiceKind?
     <Display(Name:="Soort")>
     Public Property Kind() As IncommingInvoiceKind?

@@ -43,6 +43,16 @@ public partial class IncommingInvoices
 
     public byte? InvoiceKind { get; set; }
 
+    /// <summary>Borg op deze factuur (migratie 105). NULL = factuur van vóór deze module: de borg wordt dan afgeleid uit het contractpercentage.</summary>
+    public bool? BorgInhouden { get; set; }
+    public decimal? BorgPercentage { get; set; }
+    public decimal? BorgBedrag { get; set; }
+    /// <summary>Verplicht als het percentage afwijkt van het contract.</summary>
+    public string BorgAfwijkReden { get; set; }
+    /// <summary>Enkel bij een borg zonder contract: % dat bij de voorlopige oplevering vrijkomt (rest bij DO).</summary>
+    public decimal? BorgVoPercentage { get; set; }
+    public virtual ICollection<IncommingInvoiceInhouding> Inhoudingen { get; set; } = new List<IncommingInvoiceInhouding>();
+
     public string Source { get; set; }
 
     public string Notes { get; set; }

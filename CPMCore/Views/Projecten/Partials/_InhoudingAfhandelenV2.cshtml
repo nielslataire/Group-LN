@@ -1,0 +1,86 @@
+@model int
+@*
+    gl-v2 — "Extra inhouding afhandelen" (design-handoff 42j modal / 42l venster rechts). Gedeeld door Nacalculatie › Borgen
+    (tab Extra inhoudingen) en de factuur bewerken. Gevuld en aangestuurd door gl-v2-projecten-inhouding.js via
+    window.GlnInhouding.open({ id, projectId, companyId, bedrijf, factuur, bedrag, open, borgPct }).
+    Posten naar ProjectenController.InhoudingAfhandelen; bedragen als invariante getallen (type=number).
+*@
+<div class="gln-ih-overlay" id="gln-ih-overlay" hidden></div>
+<aside class="gln-ih-drawer" id="gln-ih-drawer" data-cn-url="@Url.Action("InhoudingCreditnotas", "Projecten")" data-intrek-url="@Url.Action("InhoudingAfhandelingIntrekken", "Projecten")" hidden role="dialog" aria-modal="true" aria-labelledby="gln-ih-titel">
+    <form method="post" asp-action="InhoudingAfhandelen" asp-controller="Projecten" id="gln-ih-form" autocomplete="off">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="projectId" value="@Model" />
+        <input type="hidden" name="inhoudingId" id="gln-ih-id" value="0" />
+        <input type="hidden" name="modus" id="gln-ih-modus" value="vrij" />
+        <input type="hidden" name="terug" id="gln-ih-terug" value="" />
+
+        <header class="gln-ih-head">
+            <div>
+                <h2 id="gln-ih-titel">Extra inhouding afhandelen</h2>
+                <p id="gln-ih-sub"></p>
+            </div>
+            <button type="button" class="gl-v2-icon-btn" id="gln-ih-sluit" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+        </header>
+
+        <div class="gln-ih-body">
+            @await Html.PartialAsync("GlV2/_Segmented", new CPMCore.Models.GlV2.GlV2SegmentedVm
+            {
+                Outline = true, CssClass = "gln-ih-seg", AriaLabel = "Wat wil je doen met de inhouding",
+                Items = new()
+                {
+                    new() { Text = "Vrijgeven (betalen)", Active = true, Data = { ["modus"] = "vrij" } },
+                    new() { Text = "Verrekenen met creditnota", Data = { ["modus"] = "verreken" } },
+                },
+            })
+
+            <div id="gln-ih-paneel-vrij" class="gln-ih-paneel">
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="gln-ih-bedrag-vrij">Vrij te geven</label>
+                    <div class="gl-v2-field-box"><input type="number" step="0.01" min="0.01" class="gl-v2-field-input" id="gln-ih-bedrag-vrij" name="bedragVrij" /><span class="gl-v2-field-suffix">€</span></div>
+                    <span class="gl-v2-field-help" id="gln-ih-max-vrij"></span>
+                </div>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="gln-ih-opmerking">Opmerking <span class="gl-v2-field-label-opt">· optioneel</span></label>
+                    <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gln-ih-opmerking" name="opmerking" maxlength="500" placeholder="bv. werk afgewerkt 30/09" /></div>
+                </div>
+            </div>
+
+            <div id="gln-ih-paneel-verreken" class="gln-ih-paneel" hidden>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="gln-ih-cn">Creditnota</label>
+                    <div class="gl-v2-field-box"><select class="gl-v2-field-input" id="gln-ih-cn" name="creditnotaId"><option value="">— kies een creditnota —</option></select></div>
+                    <span class="gl-v2-field-help" id="gln-ih-cn-hint">enkel creditnota’s van deze leverancier die nog niet verrekend zijn</span>
+                </div>
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-6">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="gln-ih-bedrag-verreken">Te verrekenen</label>
+                            <div class="gl-v2-field-box"><input type="number" step="0.01" min="0.01" class="gl-v2-field-input" id="gln-ih-bedrag-verreken" name="bedragVerreken" /><span class="gl-v2-field-suffix">€</span></div>
+                            <span class="gl-v2-field-help" id="gln-ih-max-verreken"></span>
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-6">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="gln-ih-rest-actie" id="gln-ih-rest-label">Rest</label>
+                            <div class="gl-v2-field-box">
+                                <select class="gl-v2-field-input" id="gln-ih-rest-actie" name="restActie">
+                                    <option value="open">Open laten</option>
+                                    <option value="vrij">Rest vrijgeven</option>
+                                    <option value="afboeken">Afboeken (niet betalen)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <dl class="gln-ih-samenvatting" id="gln-ih-samenvatting"></dl>
+            <p class="gln-ih-voet" id="gln-ih-voet"></p>
+        </div>
+
+        <footer class="gln-ih-footer">
+            <button type="button" class="gl-v2-btn gl-v2-btn-text" id="gln-ih-annuleer">Annuleren</button>
+            <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gln-ih-bevestig">Bevestigen</button>
+        </footer>
+    </form>
+</aside>

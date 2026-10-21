@@ -29,6 +29,9 @@ Namespace Budget
         Public Property IsManueel As Boolean
         ''' <summary>Opmerking bij de correctie (39k: correctie ≠ 100 % zonder opmerking is een waarschuwing); bewaard in BudgetActivityLijnen.Omschrijving.</summary>
         Public Property Opmerking As String
+        ''' <summary>Wie de opmerking (reden van de correctie) voor het laatst wijzigde, en wanneer (UTC); leeg bij oudere opmerkingen.</summary>
+        Public Property OpmerkingDoor As String
+        Public Property OpmerkingOp As Date?
 
         ' ── Nacalc-referentie (okt. 2026): gemiddelde werkelijke kost van de gekozen referentieprojecten, niet opgeslagen ──
         ''' <summary>Geïndexeerde referentieprijs per eenheid uit de gekozen referentieprojecten; leeg zonder referentie.</summary>

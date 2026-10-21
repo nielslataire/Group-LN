@@ -1,0 +1,173 @@
+@model CPMCore.Models.Projecten.ProjectIncommingInvoiceAddUpdateModel
+@using System.Globalization
+@*
+    gl-v2 — Borg en extra inhouding op een factuur (design-handoff 42h, 42c, 42k, 42l). Gedeeld door
+    AddIncommingInvoiceV2 en EditIncommingInvoiceV2. De waarden worden live herrekend door
+    gl-v2-projecten-incommininvoice-add.js (blok "Borg en extra inhouding"); de server rekent het borgbedrag
+    bij het opslaan opnieuw (ProjectenController.ValidateBorgInhoudingV2).
+    Percentages en bedragen worden in Nederlandse notatie gepost (komma), zoals de andere bedragvelden.
+*@
+@{
+    var inv = Model.IncommingInvoice;
+    var nl = CultureInfo.GetCultureInfo("nl-BE");
+    string Dut(decimal? v) => v.HasValue ? v.Value.ToString("0.00", nl) : "";
+    var inhoudingAan = inv.InhoudingBedrag.GetValueOrDefault() > 0m;
+    var vergrendeld = inv.InhoudingVergrendeld;
+    // -1 = nog niet beslist (nieuwe factuur of factuur van voor deze module): de JS kiest dan de standaard uit het contract.
+    var borgStart = inv.BorgInhouden.HasValue ? (inv.BorgInhouden.Value ? "1" : "0") : "-1";
+}
+<input type="hidden" name="IncommingInvoice.FormV2" value="true" />
+<input type="hidden" name="IncommingInvoice.BorgInhouden" id="gln-ai-borg-aan" value="@(inv.BorgInhouden == true ? "true" : "false")" data-start="@borgStart" />
+<input type="hidden" name="IncommingInvoice.BorgBedrag" id="gln-ai-borg-bedrag-post" value="@Dut(inv.BorgBedrag)" />
+<input type="hidden" name="IncommingInvoice.DueDate" id="gln-ai-duedate-post" value="@(inv.DueDate?.ToString("yyyy-MM-dd"))" />
+
+<div class="gln-ai-optrows">
+    @* ── Borg inhouden (42h) ─────────────────────────────────────────────────────────────────────── *@
+    <div class="gln-ai-optrow" id="gln-ai-borg-row">
+        <div class="gln-ai-optrow-head">
+            <label class="gl-v2-switch" aria-label="Borg inhouden">
+                <input type="checkbox" id="gln-ai-borg-toggle" class="gln-ai-switch-input" />
+                <span class="gl-v2-switch-track"></span>
+            </label>
+            <div class="gln-ai-optrow-text">
+                <strong>Borg inhouden</strong>
+                <span id="gln-ai-borg-sub">kies eerst een leverancier of contract</span>
+            </div>
+            <span class="gln-ai-optrow-amount" id="gln-ai-borg-amount"></span>
+        </div>
+        <div class="gln-ai-optrow-body" id="gln-ai-borg-body" hidden>
+            <div class="gl-v2-section-grid">
+                <div class="gl-v2-col-3">
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="gln-ai-borg-pct">Percentage</label>
+                        <div class="gl-v2-field-box"><input type="text" inputmode="decimal" class="gl-v2-field-input" id="gln-ai-borg-pct" name="IncommingInvoice.BorgPercentage" value="@Dut(inv.BorgPercentage)" autocomplete="off" /><span class="gl-v2-field-suffix">%</span></div>
+                    </div>
+                </div>
+                <div class="gl-v2-col-3">
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="gln-ai-borg-bedrag">Bedrag</label>
+                        <div class="gl-v2-field-box is-readonly"><input type="text" class="gl-v2-field-input" id="gln-ai-borg-bedrag" readonly tabindex="-1" /><span class="gl-v2-field-suffix">€</span></div>
+                        <span class="gl-v2-field-help" id="gln-ai-borg-basis">op bedrag excl. btw</span>
+                    </div>
+                </div>
+                <div class="gl-v2-col-6">
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label">Vrijgave</label>
+                        <div id="gln-ai-borg-vrijgave-contract">
+                            <div class="gl-v2-field-box is-readonly"><input type="text" class="gl-v2-field-input" id="gln-ai-borg-vrijgave" readonly tabindex="-1" /></div>
+                            <span class="gl-v2-field-help" id="gln-ai-borg-vrijgave-hint">uit contract</span>
+                        </div>
+                        <div id="gln-ai-borg-vrijgave-zelf" hidden>
+                            <div class="gl-v2-field-box">
+                                <select class="gl-v2-field-input" id="gln-ai-borg-vo" name="IncommingInvoice.BorgVoPercentage">
+                                    <option value="100" selected="@(!inv.BorgVoPercentage.HasValue || inv.BorgVoPercentage == 100m)">100 % bij voorlopige oplevering</option>
+                                    <option value="50" selected="@(inv.BorgVoPercentage == 50m)">50 % bij VO · 50 % bij DO</option>
+                                    <option value="0" selected="@(inv.BorgVoPercentage == 0m)">100 % bij definitieve oplevering</option>
+                                </select>
+                            </div>
+                            <span class="gl-v2-field-help">kies zelf — er is geen contract</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="gl-v2-col-12" id="gln-ai-borg-afwijk" hidden>
+                    <div class="gl-v2-notice gl-v2-notice-compact is-warning">
+                        <i class="ph ph-warning" aria-hidden="true"></i>
+                        <span id="gln-ai-borg-afwijk-tekst">Het contract zegt 5 %. Je wijkt af voor deze factuur — reden verplicht bij opslaan.</span>
+                        <button type="button" class="gl-v2-btn gl-v2-btn-text" id="gln-ai-borg-terug">Terug naar contract</button>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="gln-ai-borg-reden">Reden van afwijking <span style="color:#8B2A2A">*</span></label>
+                        <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gln-ai-borg-reden" name="IncommingInvoice.BorgAfwijkReden" value="@inv.BorgAfwijkReden" maxlength="500" autocomplete="off" /></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ── Extra inhouding (42c, 42l) ──────────────────────────────────────────────────────────────── *@
+    <div class="gln-ai-optrow" id="gln-ai-inhouding-row">
+        <div class="gln-ai-optrow-head">
+            <label class="gl-v2-switch" aria-label="Extra inhouding">
+                <input type="checkbox" id="gln-ai-inhouding-toggle" class="gln-ai-switch-input" @(inhoudingAan ? "checked" : null) @(vergrendeld ? "disabled" : null) />
+                <span class="gl-v2-switch-track"></span>
+            </label>
+            <div class="gln-ai-optrow-text">
+                <strong>Extra inhouding</strong>
+                <span id="gln-ai-inhouding-sub">@(vergrendeld ? "er is al iets van afgehandeld — bedrag en reden zijn vergrendeld" : "tijdelijk niet betalen — later vrijgeven of verrekenen")</span>
+            </div>
+            <span class="gln-ai-optrow-amount" id="gln-ai-inhouding-amount"></span>
+        </div>
+        <div class="gln-ai-optrow-body" id="gln-ai-inhouding-body"@(inhoudingAan ? null : " hidden")>
+            <div class="gl-v2-section-grid">
+                <div class="gl-v2-col-3">
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="gln-ai-inhouding-bedrag">Bedrag <span style="color:#8B2A2A">*</span></label>
+                        <div class="gl-v2-field-box@(vergrendeld ? " is-readonly" : "")"><input type="text" inputmode="decimal" class="gl-v2-field-input" id="gln-ai-inhouding-bedrag" name="IncommingInvoice.InhoudingBedrag" value="@Dut(inv.InhoudingBedrag)" @(vergrendeld ? "readonly" : null) autocomplete="off" /><span class="gl-v2-field-suffix">€</span></div>
+                        <span class="gl-v2-field-help">excl. btw</span>
+                    </div>
+                </div>
+                <div class="gl-v2-col-4">
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="gln-ai-inhouding-reden">Reden <span style="color:#8B2A2A">*</span></label>
+                        <div class="gl-v2-field-box@(vergrendeld ? " is-readonly" : "")">
+                            <select class="gl-v2-field-input" id="gln-ai-inhouding-reden" name="IncommingInvoice.InhoudingReden" @(vergrendeld ? "disabled" : null)>
+                                <option value="1" selected="@(!inv.InhoudingReden.HasValue || inv.InhoudingReden == 1)">Creditnota te ontvangen</option>
+                                <option value="2" selected="@(inv.InhoudingReden == 2)">Werk niet volledig uitgevoerd</option>
+                                <option value="3" selected="@(inv.InhoudingReden == 3)">Andere</option>
+                            </select>
+                        </div>
+                        @if (vergrendeld)
+                        {
+                            <input type="hidden" name="IncommingInvoice.InhoudingReden" value="@inv.InhoudingReden" />
+                        }
+                    </div>
+                </div>
+                <div class="gl-v2-col-5">
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="gln-ai-inhouding-toelichting">Toelichting <span class="gl-v2-field-label-opt">· optioneel</span></label>
+                        <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gln-ai-inhouding-toelichting" name="IncommingInvoice.InhoudingToelichting" value="@inv.InhoudingToelichting" maxlength="500" autocomplete="off" /></div>
+                    </div>
+                </div>
+                <div class="gl-v2-col-12">
+                    <span class="gl-v2-field-help" id="gln-ai-inhouding-borgtekst">Geen borg op dit bedrag.</span>
+                </div>
+            </div>
+            @if (Model.InhoudingDetail != null)
+            {
+                var d = Model.InhoudingDetail;
+                <div class="gln-ih-kaart">
+                    <div class="gln-ih-tegels">
+                        <div class="gln-ih-tegel"><span>Ingehouden</span><strong>€ @d.Bedrag.ToString("N2", nl)</strong></div>
+                        <div class="gln-ih-tegel"><span>Afgehandeld</span><strong>€ @d.Afgehandeld.ToString("N2", nl)</strong></div>
+                        <div class="gln-ih-tegel"><span>Nog open</span><strong>€ @d.Open.ToString("N2", nl)</strong></div>
+                    </div>
+                    <ul class="gln-ih-historiek">
+                        <li>
+                            <span>@d.FactuurDatum.ToString("dd/MM/yyyy")</span>
+                            <span>Ingehouden<small>@d.RedenTekst@(string.IsNullOrWhiteSpace(d.Toelichting) ? "" : " — " + d.Toelichting)</small></span>
+                            <span class="is-num">€ @d.Bedrag.ToString("N2", nl)</span>
+                        </li>
+                        @foreach (var a in d.Afhandelingen)
+                        {
+                            <li>
+                                <span>@a.Datum.ToString("dd/MM/yyyy")</span>
+                                <span>
+                                    @(a.Soort == 2 ? "Verrekend met creditnota " + (a.CreditnotaNummer ?? "") : a.Soort == 3 ? "Afgeboekt" : "Vrijgegeven")
+                                    <small>@(a.Soort == 2 ? "geen betaling · niets naar de borg" : a.Soort == 3 ? "niet betaald" : (a.BorgBedrag > 0 ? "borg € " + a.BorgBedrag.ToString("N2", nl) + " ingehouden · te betalen € " + (a.Bedrag - a.BorgBedrag).ToString("N2", nl) : "te betalen € " + a.Bedrag.ToString("N2", nl)))@(string.IsNullOrWhiteSpace(a.Opmerking) ? "" : " · " + a.Opmerking)</small>
+                                </span>
+                                <span class="is-num">– € @a.Bedrag.ToString("N2", nl)@if (Model.KanInhoudingAfhandelen) { <br /><button type="button" class="gln-ih-intrek" data-afhandeling-intrekken="@a.Id" data-project="@Model.ProjectId" data-bevestig="Deze afhandeling van € @a.Bedrag.ToString("N2", nl) ongedaan maken? Het bedrag staat daarna weer open.">Ongedaan maken</button> }</span>
+                            </li>
+                        }
+                    </ul>
+                    @if (d.Open > 0.005m && Model.KanInhoudingAfhandelen)
+                    {
+                        <div class="gln-ih-kaart-actie">
+                            <span>Bedrag en reden zijn vergrendeld zodra er iets is afgehandeld.</span>
+                            <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-terug="@Context.Request.Path@Context.Request.QueryString" data-afhandelen='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { id = d.Id, projectId = Model.ProjectId, companyId = d.CompanyId ?? 0, bedrijf = d.CompanyNaam, factuur = d.FactuurNummer, bedrag = d.Bedrag, open = d.Open, borgPct = d.BorgPercentage }))'>Afhandelen</button>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>

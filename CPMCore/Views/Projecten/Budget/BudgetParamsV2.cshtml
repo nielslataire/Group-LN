@@ -30,6 +30,10 @@
     <link rel="stylesheet" href="~/css/gl-v2-budget.css" asp-append-version="true" />
     <style>
         .bw-par-prev { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); font-variant-numeric: tabular-nums; }
+        /* Financiering: drie paren (percentage + looptijd) en Onvoorzien. In vijf kolommen werd elk veld ±83px breed (looptijd 0px, percentage afgeknipt); nu drie paren naast elkaar. */
+        .bw-par-fin { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        @@media (max-width: 1099.98px) { .bw-par-fin { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @@media (max-width: 639.98px) { .bw-par-fin { grid-template-columns: minmax(0, 1fr); } }
         .bw-par-dual { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }   /* percentage en looptijd even breed: de foutmelding onder de maanden heeft ruimte nodig */
     </style>
 }
@@ -174,7 +178,7 @@
                     <span class="gl-v2-field-divider"></span>
                     <span class="gl-v2-section-card-desc">Wet Breyne en straight loan</span>
                 </div>
-                <div class="gl-v2-bw-grid gl-v2-bw-grid--5">
+                <div class="gl-v2-bw-grid bw-par-fin">
                     <div class="bw-par-dual">@await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", new BwNumVm { Name = "pctWetBreyne", Label = "Wet Breyne", Value = p.WetBreynePerc * 100m, Unit = "%", Decimals = 2 }) @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", new BwNumVm { Name = "Params.WetBreyneMaanden", Label = "Looptijd", Value = p.WetBreyneMaanden, Unit = "mnd", Decimals = 0 })</div>
                     <div class="bw-par-dual">@await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", new BwNumVm { Name = "pctSlGebouw", Label = "Straight loan gebouw", Value = p.StraightloanGebouwPerc * 100m, Unit = "%", Decimals = 2 }) @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", new BwNumVm { Name = "Params.StraightloanGebouwMaanden", Label = "Looptijd", Value = p.StraightloanGebouwMaanden, Unit = "mnd", Decimals = 0 })</div>
                     <div class="bw-par-dual">@await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", new BwNumVm { Name = "pctSlGrond", Label = "Straight loan grond", Value = p.StraightloanGrondPerc * 100m, Unit = "%", Decimals = 2 }) @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwNum.cshtml", new BwNumVm { Name = "Params.StraightloanGrondMaanden", Label = "Looptijd", Value = p.StraightloanGrondMaanden, Unit = "mnd", Decimals = 0 })</div>

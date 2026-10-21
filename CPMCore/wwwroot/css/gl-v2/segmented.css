@@ -1,0 +1,86 @@
+/* gl-v2 component — schakelaar / segmented control (projectbreed). Zie DESIGN.md "Segmented control (schakelaar)".
+   Eén component, twee tekeningen:
+   - standaard = "baan": grijze baan met de gekozen optie als wit vlak (filters, modals, weerverlet, foto's);
+   - .is-outline = omlijnd, de gekozen optie groen gevuld (formulierkeuzes zoals Met/Zonder contract en het factuurtype, 42c).
+   Opties zijn <button type="button"> (JS zet .is-active) of radio's in de vorm <label><input type="radio"><span>…</span></label>
+   (de browser zet :checked). Maten: .is-sm (28px, filterbalken), standaard 34px, .is-compact (kleinere tekst, smalle modals),
+   .is-fill (opties even breed). Gebruik in een formulier altijd binnen .gl-v2-field zodat label en schakelaar dezelfde ruimte (5px) krijgen
+   als een tekstveld; de partial Views/Shared/GlV2/_Segmented.cshtml doet dat niet zelf, het label staat erbuiten. */
+
+.gl-v2-segmented {
+    --gl-v2-seg-h: 34px;
+    display: flex;
+    gap: 3px;
+    padding: 3px;
+    border-radius: 9px;
+    background: var(--gl-v2-neutral-tint);
+}
+.gl-v2-segmented.is-sm { --gl-v2-seg-h: 28px; gap: 2px; }
+
+.gl-v2-segmented > button,
+.gl-v2-segmented > label > input + span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: var(--gl-v2-seg-h);
+    padding: 0 8px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    font: 500 12.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted-soft);
+    cursor: pointer;
+    white-space: nowrap;
+}
+.gl-v2-segmented.is-sm > button { padding: 0 10px; font-size: 12px; }
+.gl-v2-segmented.is-compact > button,
+.gl-v2-segmented.is-compact > label > input + span { padding: 0 6px; font-size: 11.5px; }
+
+/* Radio-variant: label vult de optie, de input zelf is onzichtbaar maar blijft toetsenbord-bereikbaar. */
+.gl-v2-segmented > label { position: relative; min-width: 0; margin: 0; display: flex; cursor: pointer; }
+.gl-v2-segmented > label > input { position: absolute; opacity: 0; pointer-events: none; }
+.gl-v2-segmented > label > input + span { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+
+.gl-v2-segmented.is-fill > button,
+.gl-v2-segmented.is-fill > label { flex: 1; min-width: 0; }
+
+.gl-v2-segmented > button:hover { color: var(--gl-v2-ink); }
+.gl-v2-segmented > button.is-active,
+.gl-v2-segmented > label > input:checked + span {
+    background: var(--gl-v2-surface);
+    color: var(--gl-v2-primary);
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(44, 59, 42, .12);
+}
+.gl-v2-segmented > button:focus-visible,
+.gl-v2-segmented > label > input:focus-visible + span { outline: 2px solid var(--gl-v2-primary); outline-offset: 1px; }
+.gl-v2-segmented > button:disabled,
+.gl-v2-segmented > label > input:disabled + span { color: var(--gl-v2-muted-light); cursor: not-allowed; }
+
+/* Omlijnd (42c): wit met rand, de gekozen optie volledig groen. */
+.gl-v2-segmented.is-outline {
+    --gl-v2-seg-h: 40px;
+    gap: 0;
+    padding: 0;
+    height: var(--gl-v2-seg-h);
+    background: var(--gl-v2-surface);
+    border: 1px solid var(--gl-v2-hairline);
+    border-radius: var(--gl-v2-radius-sm);
+    overflow: hidden;
+}
+.gl-v2-segmented.is-outline > button,
+.gl-v2-segmented.is-outline > label > input + span {
+    flex: 1;
+    height: 100%;
+    padding: 0 12px;
+    border-radius: 0;
+    font-weight: 600;
+    color: #5a6b58;
+}
+.gl-v2-segmented.is-outline > button + button,
+.gl-v2-segmented.is-outline > label + label > input + span { border-left: 1px solid rgba(44, 59, 42, .12); }
+.gl-v2-segmented.is-outline > button.is-active,
+.gl-v2-segmented.is-outline > label > input:checked + span { background: var(--gl-v2-primary); color: #fff; box-shadow: none; }
+.gl-v2-segmented.is-outline > button:focus-visible,
+.gl-v2-segmented.is-outline > label > input:focus-visible + span { outline-offset: -2px; }

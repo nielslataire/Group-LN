@@ -114,7 +114,7 @@ a.gl-v2-co-quote-preview:hover { border-color: var(--gl-v2-primary); color: var(
 .gl-v2-co-tabular { font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* Invoervelden in een tabelcel: het gedeelde veldkader (.gl-v2-field-box), compacter dan in een
    formulier (34px i.p.v. 40px) zodat een rij niet hoger wordt dan nodig. */
-.gl-v2-co-table .gl-v2-field-box { height: 34px; padding: 0 9px; gap: 6px; border-radius: 7px; }
+.gl-v2-co-table .gl-v2-field-box { --gl-v2-field-pad: 9px; height: 34px; padding: 0 9px; gap: 6px; border-radius: 7px; }
 .gl-v2-co-table .gl-v2-field-box .gl-v2-field-input { font-size: 12.5px; width: 100%; }
 .gl-v2-co-table .gl-v2-field-box.gl-v2-co-numbox { width: 84px; margin-left: auto; }
 /* Btw-code: gesloten veld compact ("6 % · CODE"), de open lijst toont de lange tekst en mag breder zijn. */
@@ -263,14 +263,7 @@ a.gl-v2-co-quote-preview:hover { border-color: var(--gl-v2-primary); color: var(
 .gl-v2-modal-form.gl-v2-co-send-modal .modal-footer { align-items: center; }
 .gl-v2-co-send-footnote { flex: 1; min-width: 0; font: 450 11px/1.45 var(--gl-v2-font-sans); color: var(--gl-v2-muted); text-wrap: pretty; }
 
-/* Segmentkeuze (radio's): grijze baan, de gekozen optie als wit vlak. */
-.gl-v2-co-seg { display: flex; gap: 3px; padding: 3px; border-radius: 9px; background: var(--gl-v2-neutral-tint); }
-.gl-v2-co-seg label { position: relative; flex: 1; min-width: 0; margin: 0; display: flex; cursor: pointer; }
-.gl-v2-co-seg input { position: absolute; opacity: 0; pointer-events: none; }
-.gl-v2-co-seg span { flex: 1; height: 34px; display: flex; align-items: center; justify-content: center; padding: 0 8px; border-radius: 7px; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.gl-v2-co-seg input:checked + span { background: var(--gl-v2-surface); color: var(--gl-v2-primary); font-weight: 600; box-shadow: 0 1px 2px rgba(44, 59, 42, .12); }
-.gl-v2-co-seg input:focus-visible + span { outline: 2px solid var(--gl-v2-primary); outline-offset: 1px; }
-.gl-v2-co-seg input:disabled + span { color: var(--gl-v2-muted-light); cursor: not-allowed; }
+/* Segmentkeuze (radio's): projectbreed component .gl-v2-segmented (css/gl-v2/segmented.css). */
 
 /* Ontvangers */
 .gl-v2-co-send-parties { border: 1px solid var(--gl-v2-hairline); border-radius: 10px; overflow: hidden; }

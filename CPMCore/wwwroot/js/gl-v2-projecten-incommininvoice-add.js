@@ -15,12 +15,14 @@
     }
 
     // ── Kind-segmented (Vordering/Eindvordering/Creditnota) ─────────────────────────────────────
-    var kindButtons = document.querySelectorAll('#gln-ai-kind-segmented .gln-ai-segmented-btn');
+    var kindButtons = document.querySelectorAll('#gln-ai-kind-segmented > button');
     kindButtons.forEach(function (btn) {
         btn.addEventListener('click', function () {
             kindButtons.forEach(function (b) { b.classList.remove('is-active'); });
             btn.classList.add('is-active');
             document.getElementById('gln-ai-kind').value = btn.getAttribute('data-kind');
+            updateContractLiveCijfers();
+            refreshBorg();
         });
     });
 
@@ -80,6 +82,7 @@
         laatsteContractInfo = null;
         recomputeVervaldatum();
         updateContractLiveCijfers();
+        refreshBorg();
     }
 
     function geld(v) { return '€ ' + (v || 0).toLocaleString('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
@@ -88,13 +91,19 @@
     // hieronder. Zelfde regels als recomputeSomcontrole() telt, hier apart zodat beide functies
     // onafhankelijk kunnen blijven werken (somcontrole vergelijkt tegen het Factuurbedrag-veld, dit
     // hier telt mee op bij wat het contract al eerder gefactureerd kreeg).
+    // "Deze factuur" = het ingevulde Factuurbedrag (zoals in het ontwerp: deze € 29.435 = het hele factuurbedrag, ook al zijn er nog geen regels);
+    // pas als dat leeg is, de som van de regels. Een creditnota telt negatief.
     function dezeFactuurBedrag() {
         var som = 0;
         document.querySelectorAll('#DetailRows [data-row]').forEach(function (r) {
-            var priceInput = r.querySelector('[data-row-price], .gln-ai-row-price');
+            var priceInput = r.querySelector('.gln-ai-row-price input');
             if (priceInput) som += parseCurrency(priceInput.value);
         });
-        return som;
+        var bedragInput = document.getElementById('IncommingInvoice_InvoicePrice');
+        var bedrag = bedragInput ? Math.abs(parseCurrency(bedragInput.value)) : 0;
+        var basis = bedrag > 0 ? bedrag : Math.abs(som);
+        var kind = document.getElementById('gln-ai-kind');
+        return kind && kind.value === '2' ? -basis : basis;
     }
 
     // Contractkaart (design-handoff 42c) — voortgangsbalk + saldo/borg-hint hangen af van de live
@@ -117,9 +126,7 @@
         document.getElementById('gln-ai-contract-deze').textContent = geld(deze);
         document.getElementById('gln-ai-contract-saldo').textContent = geld(totaalContract - eerder - deze);
 
-        var borgHint = document.getElementById('gln-ai-contract-waarborg-hint');
-        if (borgHint) borgHint.textContent = d.guaranteeType === 'FinancialGuarantee' && d.guaranteePercentage != null
-            ? geld(deze * d.guaranteePercentage / 100) + ' op deze factuur' : '';
+        refreshBorg(); // zet ook de borg-hint in de contractkaart
 
         // Korting-hint ("€X als betaald vóór DD/MM") is zowel datum- als "deze"-afhankelijk — die
         // berekening zit al in recomputeVervaldatum() (heeft de factuurdatum nodig), hier enkel
@@ -127,7 +134,7 @@
         recomputeVervaldatum();
     }
 
-    function laadContractInfo(contractId) {
+    function laadContractInfo(contractId, vanGebruiker) {
         if (!contractId || contractId === '0') { toonGeenContract(); return; }
         fetch(cfg.contractInfoUrl, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'contractId=' + encodeURIComponent(contractId) + '&invoiceId=' + encodeURIComponent(cfg.invoiceId || 0) })
             .then(function (r) { return r.json(); })
@@ -162,8 +169,10 @@
                 var openBtn = document.getElementById('gln-ai-contract-open');
                 if (openBtn) openBtn.href = cfg.contractOpenUrl.replace('contractid=0', 'contractid=' + contractId);
 
-                recomputeVervaldatum();
+                if (vanGebruiker) { borgBeslist = false; borgZelfGezet = false; }
+                recomputeVervaldatum(vanGebruiker);
                 updateContractLiveCijfers();
+                refreshBorg();
             })
             .catch(toonGeenContract);
     }
@@ -172,29 +181,49 @@
     function parseIsoDate(iso) { if (!iso) return null; var p = iso.split('-'); return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])); }
     function fmtDate(d) { return d.getDate().toString().padStart(2, '0') + '/' + (d.getMonth() + 1).toString().padStart(2, '0') + '/' + d.getFullYear(); }
 
-    function recomputeVervaldatum() {
-        var vervaldatumEl = document.getElementById('gln-ai-vervaldatum');
+    // Vervaldatum: met contract (betaaltermijn bekend) berekend en niet bewerkbaar; zonder contract of zonder
+    // betaaltermijn zelf in te vullen. Een bestaande waarde (bewerken) blijft staan tot de gebruiker de
+    // factuurdatum of het contract wijzigt. De waarde wordt gepost via het verborgen veld gln-ai-duedate-post.
+    var vervalEl = document.getElementById('gln-ai-vervaldatum');
+    var duePost = document.getElementById('gln-ai-duedate-post');
+    var dueBehouden = !!(vervalEl && vervalEl.value);
+    function isoDate(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+    function syncDuePost() { if (duePost && vervalEl) duePost.value = vervalEl.value || ''; }
+    if (vervalEl) vervalEl.addEventListener('input', function () { dueBehouden = true; syncDuePost(); });
+
+    function recomputeVervaldatum(vanGebruiker) {
         var kortingHint = document.getElementById('gln-ai-korting-hint');
+        var vervalHint = document.getElementById('gln-ai-vervaldatum-hint');
         var kaartTermijnHint = document.getElementById('gln-ai-contract-termijn-hint');
         var kaartKortingHint = document.getElementById('gln-ai-contract-korting-hint');
         var dateHidden = document.getElementById('IncommingInvoice_IncommingInvoiceDate');
         var factuurdatum = dateHidden ? parseIsoDate(dateHidden.value) : null;
-        if (!factuurdatum || !laatsteContractInfo || laatsteContractInfo.paymentTerm == null) {
-            if (vervaldatumEl) vervaldatumEl.value = '';
+        if (vanGebruiker) dueBehouden = false;
+        var auto = !!(laatsteContractInfo && laatsteContractInfo.paymentTerm != null);
+        if (vervalEl) vervalEl.readOnly = auto;
+        var box = document.getElementById('gln-ai-vervaldatum-box');
+        if (box) box.classList.toggle('is-readonly', auto);
+        if (vervalHint) vervalHint.textContent = auto
+            ? 'automatisch: factuurdatum + ' + laatsteContractInfo.paymentTerm + ' dagen (contract)'
+            : (laatsteContractInfo ? 'dit contract heeft geen betaaltermijn — zelf in te vullen' : 'zelf in te vullen — geen contract');
+        if (!factuurdatum || !auto) {
             if (kortingHint) kortingHint.textContent = '';
             if (kaartTermijnHint) kaartTermijnHint.textContent = '';
             if (kaartKortingHint) kaartKortingHint.textContent = '';
+            syncDuePost();
             return;
         }
         var vervaldatum = new Date(factuurdatum.getTime());
         vervaldatum.setDate(vervaldatum.getDate() + Number(laatsteContractInfo.paymentTerm));
-        if (vervaldatumEl) vervaldatumEl.value = fmtDate(vervaldatum) + ' (automatisch: + ' + laatsteContractInfo.paymentTerm + ' dagen)';
-        if (kaartTermijnHint) kaartTermijnHint.textContent = 'vervalt ' + fmtDate(vervaldatum);
+        if (vervalEl && !dueBehouden) vervalEl.value = isoDate(vervaldatum);
+        syncDuePost();
+        var toon = vervalEl && vervalEl.value ? parseIsoDate(vervalEl.value) : vervaldatum;
+        if (kaartTermijnHint) kaartTermijnHint.textContent = 'vervalt ' + fmtDate(toon);
         if (kaartKortingHint) {
             if (laatsteContractInfo.cashDiscount && laatsteContractInfo.cashDiscountPaymentTerm != null && laatsteContractInfo.cashDiscountPercentage != null) {
                 var kortingDatumKaart = new Date(factuurdatum.getTime());
                 kortingDatumKaart.setDate(kortingDatumKaart.getDate() + Number(laatsteContractInfo.cashDiscountPaymentTerm));
-                var kortingBedrag = dezeFactuurBedrag() * laatsteContractInfo.cashDiscountPercentage / 100;
+                var kortingBedrag = factuurBedrag() * laatsteContractInfo.cashDiscountPercentage / 100;
                 kaartKortingHint.textContent = geld(kortingBedrag) + ' als betaald vóór ' + fmtDate(kortingDatumKaart);
             } else {
                 kaartKortingHint.textContent = '';
@@ -211,7 +240,7 @@
         }
     }
     document.addEventListener('change', function (e) {
-        if (e.target && e.target.id === 'IncommingInvoice_IncommingInvoiceDate') recomputeVervaldatum();
+        if (e.target && e.target.id === 'IncommingInvoice_IncommingInvoiceDate') { recomputeVervaldatum(true); refreshBorg(); }
     });
 
     // ── Rij-type-toggle (WO-kolom enkel actief bij Meerwerk klant, value "3") ───────────────────
@@ -231,7 +260,7 @@
         var rows = document.querySelectorAll('#DetailRows [data-row]');
         if (!rows.length) { el.className = 'gln-ai-somcontrole'; tekstEl.textContent = 'Nog geen regels'; return; }
         var som = 0;
-        rows.forEach(function (r) { var priceInput = r.querySelector('[data-row-price], .gln-ai-row-price'); if (priceInput) som += parseCurrency(priceInput.value); });
+        rows.forEach(function (r) { var priceInput = r.querySelector('.gln-ai-row-price input'); if (priceInput) som += parseCurrency(priceInput.value); });
         var bedragInput = document.getElementById('IncommingInvoice_InvoicePrice');
         var bedrag = bedragInput ? parseCurrency(bedragInput.value) : 0;
         var gelijk = Math.abs(som - bedrag) < 0.01;
@@ -241,7 +270,210 @@
         updateContractLiveCijfers();
     }
     document.addEventListener('input', function (e) {
-        if (e.target && (e.target.classList.contains('gln-ai-row-price') || e.target.id === 'IncommingInvoice_InvoicePrice')) recomputeSomcontrole();
+        if (e.target && ((e.target.closest && e.target.closest('.gln-ai-row-price')) || e.target.id === 'IncommingInvoice_InvoicePrice')) {
+            recomputeSomcontrole();
+            updateContractLiveCijfers(); // balk, saldo en borg-hint van de contractkaart volgen het factuurbedrag, ook zonder regels
+            // De borg hangt af van het factuurbedrag, ook als er nog geen factuurregels zijn (recomputeSomcontrole stopt dan vroeg).
+            refreshBorg();
+            recomputeVervaldatum(); // de korting contant in de contractkaart rekent op het factuurbedrag
+        }
+    });
+
+    // ── Borg en extra inhouding (design-handoff 42h, 42c, 42k) ───────────────────────────────────────
+    // Borg: standaard aan met het contractpercentage (financiële waarborg), standaard uit zonder contract.
+    // Afwijken van het contract kan, met verplichte reden. Extra inhouding: een bedrag dat tijdelijk niet
+    // wordt uitbetaald; de borg wordt berekend op factuurbedrag min extra inhouding.
+    var borgToggle = document.getElementById('gln-ai-borg-toggle');
+    var borgAanHidden = document.getElementById('gln-ai-borg-aan');
+    var borgBody = document.getElementById('gln-ai-borg-body');
+    var borgPct = document.getElementById('gln-ai-borg-pct');
+    var borgBedragEl = document.getElementById('gln-ai-borg-bedrag');
+    var borgBedragPost = document.getElementById('gln-ai-borg-bedrag-post');
+    var inhToggle = document.getElementById('gln-ai-inhouding-toggle');
+    var inhBody = document.getElementById('gln-ai-inhouding-body');
+    var inhBedragEl = document.getElementById('gln-ai-inhouding-bedrag');
+    var betalenEl = document.getElementById('gln-ai-betalen');
+    // true = de server-waarde (bewerken van een factuur die al een borgkeuze heeft) blijft staan tot de gebruiker het contract wijzigt.
+    var borgBeslist = borgAanHidden ? borgAanHidden.getAttribute('data-start') !== '-1' : false;
+    var borgZelfGezet = false;
+    function dutch(n) { return (Math.round(n * 100) / 100).toFixed(2).replace('.', ','); }
+    function parsePct(t) { var v = parseFloat(String(t || '').replace(/[^\d,.-]/g, '').replace(',', '.')); return isNaN(v) ? 0 : v; }
+    function fmtPct(v) { return Number(v).toLocaleString('nl-BE', { maximumFractionDigits: 2 }); }
+    function factuurBedrag() { var el = document.getElementById('IncommingInvoice_InvoicePrice'); return el ? parseCurrency(el.value) : 0; }
+    function inhoudingBedrag() { return inhToggle && inhToggle.checked && inhBedragEl ? parseCurrency(inhBedragEl.value) : 0; }
+    function contractBorgPct() { return laatsteContractInfo && laatsteContractInfo.guaranteeType === 'FinancialGuarantee' && laatsteContractInfo.guaranteePercentage != null ? Number(laatsteContractInfo.guaranteePercentage) : null; }
+    function vrijgaveTekst(vo) {
+        vo = Number(vo);
+        if (vo >= 100) return '100 % bij VO';
+        if (vo <= 0) return '100 % bij DO';
+        return fmtPct(vo) + ' % bij VO · ' + fmtPct(100 - vo) + ' % bij DO';
+    }
+
+    function refreshBorg() {
+        if (!borgToggle) return;
+        var cpct = contractBorgPct();
+        var metContractInfo = !!laatsteContractInfo;
+        var gt = laatsteContractInfo ? laatsteContractInfo.guaranteeType : null;
+
+        // Standaardstand: aan met een financiële waarborg, anders uit — zolang de gebruiker/server niets besliste.
+        if (!borgBeslist) {
+            borgToggle.checked = cpct != null;
+            if (cpct != null && borgPct && !borgZelfGezet) borgPct.value = dutch(cpct);
+            if (cpct == null && borgPct && !borgZelfGezet) borgPct.value = '';
+        } else if (borgBeslist && borgAanHidden.getAttribute('data-start') === '1' && !borgToggle.dataset.init) {
+            borgToggle.checked = true;
+        } else if (!borgToggle.dataset.init) {
+            borgToggle.checked = false;
+        }
+        borgToggle.dataset.init = '1';
+
+        var aan = borgToggle.checked;
+        borgAanHidden.value = aan ? 'true' : 'false';
+        if (borgBody) borgBody.hidden = !aan;
+
+        var netto = factuurBedrag() - inhoudingBedrag();
+        var pct = aan ? parsePct(borgPct.value) : 0;
+        var bedrag = aan ? Math.round(netto * pct) / 100 : 0;
+        if (borgBedragEl) borgBedragEl.value = aan ? bedrag.toLocaleString('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
+        if (borgBedragPost) borgBedragPost.value = aan ? dutch(bedrag) : '';
+        var basis = document.getElementById('gln-ai-borg-basis');
+        if (basis) basis.textContent = inhoudingBedrag() > 0 ? 'op ' + geld(netto) + ' (factuur – extra inhouding)' : 'op bedrag excl. btw';
+        var amountEl = document.getElementById('gln-ai-borg-amount');
+        if (amountEl) amountEl.textContent = aan && bedrag > 0 ? '– ' + geld(bedrag) : '';
+
+        // Afwijking t.o.v. het contract
+        var afwijkt = aan && cpct != null && Math.abs(pct - cpct) > 0.0001;
+        var afwijkBlok = document.getElementById('gln-ai-borg-afwijk');
+        if (afwijkBlok) afwijkBlok.hidden = !afwijkt;
+        var afwijkTekst = document.getElementById('gln-ai-borg-afwijk-tekst');
+        if (afwijkTekst && cpct != null) afwijkTekst.textContent = 'Het contract zegt ' + fmtPct(cpct) + ' %. Je wijkt af voor deze factuur — reden verplicht bij opslaan.';
+        var redenEl = document.getElementById('gln-ai-borg-reden');
+        if (redenEl) { redenEl.required = afwijkt; if (!afwijkt) redenEl.value = ''; }
+
+        // Ondertitel
+        var sub = document.getElementById('gln-ai-borg-sub');
+        if (sub) {
+            var label = laatsteContractInfo && laatsteContractInfo.contractLabel ? laatsteContractInfo.contractLabel : null;
+            if (!metContractInfo) sub.textContent = aan ? 'manueel aangezet — geen contract' : 'geen contract — standaard uit · aanzetten kan';
+            else if (cpct != null) sub.textContent = afwijkt ? 'afwijkend van contract (' + fmtPct(cpct) + ' %)' : 'uit contract' + (label ? ' ' + label : '') + ' — standaard aan';
+            else if (gt === 'BankGuarantee') sub.textContent = 'dit contract heeft een bankwaarborg — er wordt niets ingehouden op de factuur' + (aan ? ' (manueel aangezet)' : '');
+            else sub.textContent = aan ? 'manueel aangezet — dit contract heeft geen waarborg' : 'dit contract heeft geen waarborg — aanzetten kan';
+        }
+
+        // Vrijgave: uit het contract, of zelf te kiezen zonder (financieel) contract
+        var vrijContract = document.getElementById('gln-ai-borg-vrijgave-contract');
+        var vrijZelf = document.getElementById('gln-ai-borg-vrijgave-zelf');
+        var uitContract = cpct != null;
+        if (vrijContract) vrijContract.hidden = !uitContract;
+        if (vrijZelf) vrijZelf.hidden = uitContract;
+        var voSelect = document.getElementById('gln-ai-borg-vo');
+        if (voSelect) voSelect.disabled = uitContract; // niet posten als het uit het contract komt
+        var vrijTxt = document.getElementById('gln-ai-borg-vrijgave');
+        var regel = uitContract ? vrijgaveTekst(laatsteContractInfo.guaranteeReleaseVoPercentage != null ? laatsteContractInfo.guaranteeReleaseVoPercentage : 50) : vrijgaveTekst(voSelect ? voSelect.value : 100);
+        if (vrijTxt) vrijTxt.value = regel;
+
+        // Extra inhouding
+        var inhAan = inhToggle && inhToggle.checked;
+        if (inhBody) inhBody.hidden = !inhAan;
+        var inh = inhoudingBedrag();
+        var inhAmount = document.getElementById('gln-ai-inhouding-amount');
+        if (inhAmount) inhAmount.textContent = inh > 0 ? '– ' + geld(inh) : '';
+        var inhTekst = document.getElementById('gln-ai-inhouding-borgtekst');
+        if (inhTekst) inhTekst.textContent = aan && pct > 0
+            ? 'Geen borg op dit bedrag: de borg wordt berekend op ' + geld(netto) + '. Bij vrijgave gaat er ' + fmtPct(pct) + ' % naar de borg.'
+            : 'Geen borg op dit bedrag.';
+
+        // Contractkaart: borg-hint met de live waarden
+        var borgHint = document.getElementById('gln-ai-contract-waarborg-hint');
+        if (borgHint) borgHint.textContent = cpct != null
+            ? (aan ? geld(bedrag) + ' op deze factuur · vrij: ' + regel.replace(' · ', ', ') : 'niet ingehouden op deze factuur')
+            : '';
+
+        // Kaart "Te betalen" rechts (42c): factuurbedrag, extra inhouding, borg, en de korting contant als de termijn nog loopt
+        var payCard = document.getElementById('gln-ai-betalen-card');
+        if (payCard) {
+            var fbPay = factuurBedrag();
+            payCard.hidden = !(laatsteContractInfo && fbPay > 0);
+            if (!payCard.hidden) {
+                var borgNu = aan ? bedrag : 0;
+                var teBetalen = fbPay - inh - borgNu;
+                document.getElementById('gln-pay-factuur').textContent = geld(fbPay);
+                document.getElementById('gln-pay-inh-row').hidden = !(inh > 0);
+                document.getElementById('gln-pay-inh').textContent = '– ' + geld(inh);
+                document.getElementById('gln-pay-borg-row').hidden = !(aan && borgNu > 0);
+                document.getElementById('gln-pay-borg-label').textContent = 'Borg ' + fmtPct(pct) + ' %';
+                document.getElementById('gln-pay-borg-sub').textContent = 'vrij ' + regel;
+                document.getElementById('gln-pay-borg').textContent = '– ' + geld(borgNu);
+                document.getElementById('gln-pay-totaal').textContent = geld(teBetalen);
+
+                var dk = laatsteContractInfo;
+                var heeftKorting = dk.cashDiscount && dk.cashDiscountPercentage != null && dk.cashDiscountPaymentTerm != null;
+                var kortingBlok = document.getElementById('gln-pay-korting-blok');
+                var datumHidden = document.getElementById('IncommingInvoice_IncommingInvoiceDate');
+                var fd = datumHidden ? parseIsoDate(datumHidden.value) : null;
+                kortingBlok.hidden = !(heeftKorting && fd);
+                if (!kortingBlok.hidden) {
+                    var kd = new Date(fd.getTime()); kd.setDate(kd.getDate() + Number(dk.cashDiscountPaymentTerm));
+                    var vandaag = new Date(); vandaag.setHours(0, 0, 0, 0);
+                    var dagen = Math.round((kd.getTime() - vandaag.getTime()) / 86400000);
+                    var kortingBedrag2 = Math.round(fbPay * Number(dk.cashDiscountPercentage)) / 100;
+                    var verlopen = dagen < 0;
+                    document.getElementById('gln-pay-korting-label').textContent = 'Korting contant ' + fmtPct(dk.cashDiscountPercentage) + ' %';
+                    document.getElementById('gln-pay-korting-sub').textContent = verlopen ? 'termijn verstreken' : (dagen === 0 ? 'laatste dag' : 'nog ' + dagen + (dagen === 1 ? ' dag' : ' dagen'));
+                    document.getElementById('gln-pay-korting-datum').innerHTML = 'korting bij betaling vóór <b>' + fmtDate(kd) + '</b>';
+                    document.getElementById('gln-pay-korting').textContent = '– ' + geld(kortingBedrag2);
+                    document.getElementById('gln-pay-metkorting').textContent = geld(teBetalen - kortingBedrag2);
+                    document.getElementById('gln-pay-korting-rij').classList.toggle('is-verlopen', verlopen);
+                    document.getElementById('gln-pay-korting-sub').classList.toggle('is-verlopen', verlopen);
+                    document.getElementById('gln-pay-metkorting-rij').hidden = verlopen;
+                }
+            }
+        }
+
+        // Actiebalk: wat er netto te betalen is
+        if (betalenEl) {
+            var fb = factuurBedrag();
+            betalenEl.hidden = !(fb > 0);
+            if (fb > 0) {
+                var delen = [];
+                if (inh > 0) delen.push('extra inhouding – ' + geld(inh));
+                if (aan && bedrag > 0) delen.push('borg – ' + geld(bedrag));
+                delen.push('te betalen ' + geld(fb - inh - (aan ? bedrag : 0)) + ' excl. btw');
+                betalenEl.textContent = '· ' + delen.join(' · ');
+            }
+        }
+    }
+
+    if (borgToggle) {
+        borgToggle.addEventListener('change', function () {
+            borgBeslist = true; borgZelfGezet = true;
+            if (borgToggle.checked && borgPct && !parsePct(borgPct.value)) { var c = contractBorgPct(); borgPct.value = c != null ? dutch(c) : ''; }
+            refreshBorg();
+            if (borgToggle.checked && borgPct && !contractBorgPct()) borgPct.focus();
+        });
+        borgPct.addEventListener('input', function () { borgBeslist = true; borgZelfGezet = true; refreshBorg(); });
+        borgPct.addEventListener('blur', function () { if (borgPct.value) borgPct.value = dutch(parsePct(borgPct.value)); });
+        var terugBtn = document.getElementById('gln-ai-borg-terug');
+        if (terugBtn) terugBtn.addEventListener('click', function () { var c = contractBorgPct(); if (c != null) { borgPct.value = dutch(c); refreshBorg(); } });
+        var voSel = document.getElementById('gln-ai-borg-vo');
+        if (voSel) voSel.addEventListener('change', refreshBorg);
+    }
+    if (inhToggle) {
+        inhToggle.addEventListener('change', function () {
+            if (!inhToggle.checked && inhBedragEl) inhBedragEl.value = '';
+            if (inhToggle.checked && inhBedragEl) inhBedragEl.focus();
+            refreshBorg();
+        });
+        inhBedragEl.addEventListener('input', refreshBorg);
+        inhBedragEl.addEventListener('blur', function () { if (inhBedragEl.value && !inhBedragEl.readOnly) inhBedragEl.value = dutch(parseCurrency(inhBedragEl.value)); });
+    }
+    var hoofdForm = document.getElementById('gln-ai-form');
+    if (hoofdForm) hoofdForm.addEventListener('submit', function () {
+        // Netjes in Nederlandse notatie posten (komma, geen duizendtallen) zodat de model binder het niet verkeerd leest.
+        if (borgPct && borgPct.value) borgPct.value = dutch(parsePct(borgPct.value));
+        if (inhBedragEl && inhBedragEl.value) inhBedragEl.value = dutch(parseCurrency(inhBedragEl.value));
+        if (inhToggle && !inhToggle.checked && inhBedragEl) inhBedragEl.value = '';
+        syncDuePost();
     });
 
     // ── Met/zonder contract (design-handoff 42c: "je kiest in het formulier", geen twee aparte
@@ -250,7 +482,7 @@
     // meer nodig voor deze drie velden. ──────────────────────────────────────────────────────────
     var contractField = document.getElementById('gln-ai-contract-field');
     var companyField = document.getElementById('gln-ai-company-field');
-    var contractTypeButtons = document.querySelectorAll('#gln-ai-contracttype-segmented .gln-ai-segmented-btn');
+    var contractTypeButtons = document.querySelectorAll('#gln-ai-contracttype-segmented > button');
     var contractHidden = document.getElementById('lstProjectContracts');
     var companyHidden = document.getElementById('txtCompanyID');
     var activiteitenWrap = document.getElementById('lstActivities_select');
@@ -320,7 +552,7 @@
             refreshActiviteiten(cfg.getContractActivitiesUrl, 'contractid=' + encodeURIComponent(contractId));
             document.getElementById('DetailRows').innerHTML = '';
             recomputeSomcontrole();
-            laadContractInfo(contractId);
+            laadContractInfo(contractId, true);
         });
     }
     if (companyHidden) {
@@ -382,6 +614,7 @@
 
     if (window.CurrencyMask) window.CurrencyMask.init();
     recomputeSomcontrole();
+    refreshBorg();
 
     // "Factuur inlezen (PDF)" uit het 42a-menu (focusUpload=true) — meteen naar de dropzone i.p.v.
     // een aparte intake-pagina: dezelfde bestemming, enkel de aandacht gaat eerst naar de upload.

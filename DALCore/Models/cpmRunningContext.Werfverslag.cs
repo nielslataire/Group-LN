@@ -20,6 +20,7 @@ public partial class cpmRunningContext
             entity.Property(e => e.Naam).IsRequired().HasMaxLength(150);
             entity.Property(e => e.Datum).HasColumnType("date");
             entity.Property(e => e.Uur).HasColumnType("time(0)");
+            entity.Property(e => e.EindUur).HasColumnType("time(0)");
             entity.Property(e => e.Weer).HasMaxLength(100);
             entity.Property(e => e.VolgendBezoek).HasColumnType("datetime2(0)");
             entity.Property(e => e.CreatedBy).HasMaxLength(100);

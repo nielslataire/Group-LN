@@ -31,7 +31,7 @@
 
     <div class="gl-v2-field">
         <span class="gl-v2-field-label" id="gl-v2-co-send-channel-label">Kanaal</span>
-        <div class="gl-v2-co-seg" role="radiogroup" aria-labelledby="gl-v2-co-send-channel-label">
+        <div class="gl-v2-segmented is-fill" role="radiogroup" aria-labelledby="gl-v2-co-send-channel-label">
             <label><input type="radio" name="channel" value="sign" @(Model.CanSign ? "checked" : "disabled") /><span>Online ondertekenen</span></label>
             <label><input type="radio" name="channel" value="pdf" @(Model.CanSign ? "" : "checked") /><span>Alleen PDF</span></label>
         </div>
@@ -84,7 +84,7 @@
             <div class="gl-v2-co-send-grid">
                 <div class="gl-v2-field">
                     <span class="gl-v2-field-label" id="gl-v2-co-send-rule-label">Ondertekening door</span>
-                    <div class="gl-v2-co-seg" role="radiogroup" aria-labelledby="gl-v2-co-send-rule-label">
+                    <div class="gl-v2-segmented is-fill" role="radiogroup" aria-labelledby="gl-v2-co-send-rule-label">
                         <label><input type="radio" name="signingRule" value="@((int)SigningRule.All)" @(Model.SigningRule == (int)SigningRule.All ? "checked" : "") /><span>Alle eigenaars</span></label>
                         <label><input type="radio" name="signingRule" value="@((int)SigningRule.Any)" @(Model.SigningRule == (int)SigningRule.Any ? "checked" : "") /><span>Eén volstaat</span></label>
                     </div>

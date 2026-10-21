@@ -122,7 +122,7 @@ namespace ServiceCore.Budget
                 .SelectMany(g => g.Lijnen)
                 .Where(l => !alsPercentageBasis || !BudgetAlgemeneActiviteit.BuitenPercentageBasis.Contains(l.ActivityId))
                 .Where(l => l.TotaalAlternatief > 0m)
-                .Sum(l => l.TotaalAlternatief * (l.Correctiefactor <= 0m ? 1m : l.Correctiefactor));
+                .Sum(l => l.TotaalAlternatief * (l.Correctiefactor < 0m ? 1m : l.Correctiefactor));
         }
 
         private static decimal GevelLm(DALCore.Models.BudgetGevelElementen e)
@@ -341,6 +341,8 @@ namespace ServiceCore.Budget
                             bo.Correctiefactor             = lijn.Correctiefactor;
                             bo.IsManueel                   = lijn.IsManueel;
                             bo.Opmerking                   = lijn.Omschrijving;
+                            bo.OpmerkingDoor               = lijn.OmschrijvingDoor;
+                            bo.OpmerkingOp                 = lijn.OmschrijvingOp;
                         }
 
                         bool viaFormule = formuleEvaluaties.TryGetValue(activity.ActivityId, out var fEval)
@@ -549,7 +551,7 @@ namespace ServiceCore.Budget
             return groepen;
         }
 
-        public async Task<Response> SaveLijnenAsync(int budgetVersieId, List<BudgetActivityLijnBO> lijnen)
+        public async Task<Response> SaveLijnenAsync(int budgetVersieId, List<BudgetActivityLijnBO> lijnen, string gebruikersnaam = null)
         {
             var response = new Response();
 
@@ -568,7 +570,16 @@ namespace ServiceCore.Budget
                     bestaande.Correctiefactor             = bo.Correctiefactor;
                     bestaande.IsManueel                   = bo.IsManueel;
                     if (bo.Opmerking != null)   // null = niet meegestuurd (klassieke pagina): bestaande opmerking blijft
-                    bestaande.Omschrijving                = string.IsNullOrWhiteSpace(bo.Opmerking) ? null : (bo.Opmerking.Trim().Length > 200 ? bo.Opmerking.Trim()[..200] : bo.Opmerking.Trim());
+                    {
+                        var nieuweReden = string.IsNullOrWhiteSpace(bo.Opmerking) ? null : (bo.Opmerking.Trim().Length > 200 ? bo.Opmerking.Trim()[..200] : bo.Opmerking.Trim());
+                        if (!string.Equals(nieuweReden, bestaande.Omschrijving, StringComparison.Ordinal))
+                        {
+                            // Auteur en tijdstip volgen enkel een gewijzigde reden (design 39g)
+                            bestaande.OmschrijvingDoor = nieuweReden == null ? null : gebruikersnaam;
+                            bestaande.OmschrijvingOp   = nieuweReden == null ? null : DateTime.UtcNow;
+                        }
+                        bestaande.Omschrijving = nieuweReden;
+                    }
                 }
                 else
                 {
@@ -581,6 +592,8 @@ namespace ServiceCore.Budget
                         Correctiefactor             = bo.Correctiefactor,
                         IsManueel                  = bo.IsManueel,
                         Omschrijving               = string.IsNullOrWhiteSpace(bo.Opmerking) ? null : (bo.Opmerking.Trim().Length > 200 ? bo.Opmerking.Trim()[..200] : bo.Opmerking.Trim()),
+                        OmschrijvingDoor           = string.IsNullOrWhiteSpace(bo.Opmerking) ? null : gebruikersnaam,
+                        OmschrijvingOp             = string.IsNullOrWhiteSpace(bo.Opmerking) ? (DateTime?)null : DateTime.UtcNow,
                         VerhogingsPerc             = 0m
                     });
                 }

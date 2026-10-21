@@ -33,6 +33,11 @@ namespace CPMCore.Models.Projecten
                 _type = value;
             }
         }
+        /// <summary>Alleen-lezen: de extra inhouding van deze factuur met haar afhandelhistoriek (42l). Niet gepost.</summary>
+        [Microsoft.AspNetCore.Mvc.ModelBinding.Validation.ValidateNever]
+        public CPMCore.Services.Borg.InhoudingRij? InhoudingDetail { get; set; }
+        /// <summary>Mag de gebruiker de inhouding afhandelen (schrijfrecht nacalculatie)? Niet gepost.</summary>
+        public bool KanInhoudingAfhandelen { get; set; }
         private string? _companyname;
         public string? CompanyName
         {

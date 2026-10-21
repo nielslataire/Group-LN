@@ -30,6 +30,21 @@ namespace ServiceCore.Translators
             bo.DueDate = _entity.DueDate;
             bo.StatusId = _entity.StatusId;
             bo.Kind = _entity.InvoiceKind.HasValue ? (IncommingInvoiceKind)_entity.InvoiceKind.Value : (IncommingInvoiceKind?)null;
+            bo.BorgInhouden = _entity.BorgInhouden;
+            bo.BorgPercentage = _entity.BorgPercentage;
+            bo.BorgBedrag = _entity.BorgBedrag;
+            bo.BorgAfwijkReden = _entity.BorgAfwijkReden;
+            bo.BorgVoPercentage = _entity.BorgVoPercentage;
+            var inhouding = _entity.Inhoudingen?.OrderBy(i => i.Id).FirstOrDefault();
+            if (inhouding != null)
+            {
+                bo.InhoudingId = inhouding.Id;
+                bo.InhoudingBedrag = inhouding.Bedrag;
+                bo.InhoudingReden = inhouding.Reden;
+                bo.InhoudingToelichting = inhouding.Toelichting;
+                bo.InhoudingAfgehandeld = inhouding.Afhandelingen?.Sum(a => a.Bedrag) ?? 0m;
+                bo.InhoudingVergrendeld = bo.InhoudingAfgehandeld > 0m;
+            }
             foreach (var x in _entity.IncommingInvoiceDetail)
             {
                 IncommingInvoiceDetailBO bou = new IncommingInvoiceDetailBO();
@@ -64,6 +79,47 @@ namespace ServiceCore.Translators
             // terugvallen op "Vordering". Enkel het nieuwe V2-formulier stuurt altijd een expliciete waarde.
             if (bo.Kind.HasValue)
                 _entity.InvoiceKind = (byte)bo.Kind.Value;
+            if (bo.FormV2)
+            {
+                // Borg (42h): alleen het gl-v2-formulier stuurt dit mee. BorgInhouden = false wist het bedrag.
+                _entity.BorgInhouden = bo.BorgInhouden ?? false;
+                _entity.BorgPercentage = _entity.BorgInhouden == true ? bo.BorgPercentage : null;
+                _entity.BorgBedrag = _entity.BorgInhouden == true ? bo.BorgBedrag : null;
+                _entity.BorgAfwijkReden = _entity.BorgInhouden == true && !string.IsNullOrWhiteSpace(bo.BorgAfwijkReden) ? bo.BorgAfwijkReden.Trim() : null;
+                _entity.BorgVoPercentage = _entity.BorgInhouden == true ? bo.BorgVoPercentage : null;
+                // Vervaldatum: enkel overschrijven als het formulier er een meestuurt (zonder contract zelf in te vullen,
+                // met contract berekend uit de betaaltermijn); leeg laat een door de verrijkingspijplijn gevulde waarde staan.
+                if (bo.DueDate.HasValue)
+                    _entity.DueDate = bo.DueDate;
+
+                // Extra inhouding (42c/42l): een per factuur. Zodra er iets van afgehandeld is, blijven bedrag en reden vergrendeld.
+                var bestaand = _entity.Inhoudingen.OrderBy(i => i.Id).FirstOrDefault();
+                var heeftAfhandeling = bestaand != null && bestaand.Afhandelingen.Count > 0;
+                var gewenst = bo.InhoudingBedrag.GetValueOrDefault();
+                if (!heeftAfhandeling)
+                {
+                    if (gewenst > 0m)
+                    {
+                        if (bestaand == null)
+                        {
+                            bestaand = new IncommingInvoiceInhouding { CreatedAt = DateTime.UtcNow };
+                            _entity.Inhoudingen.Add(bestaand);
+                        }
+                        bestaand.Bedrag = gewenst;
+                        bestaand.Reden = bo.InhoudingReden ?? IncommingInvoiceInhouding.RedenAndere;
+                        bestaand.Toelichting = string.IsNullOrWhiteSpace(bo.InhoudingToelichting) ? null : bo.InhoudingToelichting.Trim();
+                    }
+                    else if (bestaand != null)
+                    {
+                        _entity.Inhoudingen.Remove(bestaand);
+                    }
+                }
+                else
+                {
+                    // Enkel de toelichting mag nog wijzigen.
+                    bestaand.Toelichting = string.IsNullOrWhiteSpace(bo.InhoudingToelichting) ? null : bo.InhoudingToelichting.Trim();
+                }
+            }
             if (string.IsNullOrEmpty(_entity.CostContextType))
                 _entity.CostContextType = "Unknown";
 

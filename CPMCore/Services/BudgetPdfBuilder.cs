@@ -204,9 +204,12 @@ public sealed class BudgetPdfBuilder
             var rijen = new List<BudgetActiviteitRij>();
             foreach (var l in lot.Lijnen)
             {
-                var bedrag = l.TotaalAlternatief * (l.Correctiefactor <= 0m ? 1m : l.Correctiefactor);
+                var bedrag = l.TotaalAlternatief * (l.Correctiefactor < 0m ? 1m : l.Correctiefactor);
                 if (l.TotaalAlternatief <= 0m) continue;
-                rijen.Add(new BudgetActiviteitRij(l.ActivityOmschrijving ?? "", l.AantalEenheden > 0 ? $"{l.AantalEenheden} × {E(bedrag / l.AantalEenheden)}" : "forfait", bedrag));
+                var corrPct = (l.Correctiefactor < 0m ? 1m : l.Correctiefactor) * 100m - 100m;
+                var reden = corrPct != 0m && !string.IsNullOrWhiteSpace(l.Opmerking)
+                    ? $"Correctie {(corrPct > 0m ? "+" : "−")}{Math.Abs(corrPct).ToString("0.##", NlBe)} %: {l.Opmerking.Trim()}" : null;
+                rijen.Add(new BudgetActiviteitRij(l.ActivityOmschrijving ?? "", l.AantalEenheden > 0 ? $"{l.AantalEenheden} × {E(bedrag / l.AantalEenheden)}" : "forfait", bedrag, reden));
             }
             if (rijen.Count == 0) continue;
             deelNr++;

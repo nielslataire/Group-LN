@@ -175,32 +175,10 @@ body.gl-v2-dp-is-picking .gl-v2-dp-card:hover { box-shadow: 0 0 0 2px var(--gl-v
 .gl-v2-dp-toolbar { flex-wrap: wrap; gap: 10px 12px; }
 .gl-v2-dp-toolbar .gl-v2-toolbar-search { flex: 1; min-width: 200px; }
 
-.gl-v2-dp-segmented {
-    flex: none;
-    display: flex;
-    padding: 3px;
-    gap: 2px;
-    border-radius: var(--gl-v2-radius-md);
-    background: var(--gl-v2-neutral-tint);
-}
-.gl-v2-dp-segment {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    height: 28px;
-    padding: 0 10px;
-    border: 0;
-    border-radius: 7px;
-    background: transparent;
-    font: 500 12px var(--gl-v2-font-sans);
-    color: var(--gl-v2-muted-soft);
-    cursor: pointer;
-    white-space: nowrap;
-}
+/* Basis van de filterschakelaars: projectbreed component .gl-v2-segmented.is-sm (css/gl-v2/segmented.css); hier enkel wat bij de foto's hoort. */
+.gl-v2-dp-segmented { flex: none; }
 .gl-v2-dp-segment i { font-size: 13px; }
 .gl-v2-dp-segment b { font-weight: 600; }
-.gl-v2-dp-segment:hover { color: var(--gl-v2-ink); }
-.gl-v2-dp-segment.is-active { background: var(--gl-v2-surface); color: var(--gl-v2-primary); font-weight: 600; box-shadow: 0 1px 2px rgba(44, 59, 42, .12); }
 
 .gl-v2-dp-sort { flex: none; width: 176px; }
 

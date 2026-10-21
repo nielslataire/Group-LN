@@ -39,6 +39,9 @@ public partial class Contract
 
     public decimal? GuaranteeReleasedDOAmount { get; set; }
 
+    /// <summary>% van de borg dat bij de voorlopige oplevering vrijkomt, de rest bij DO (migratie 105). NULL = 50.</summary>
+    public decimal? GuaranteeReleaseVOPercentage { get; set; }
+
     public bool? ContractSigned { get; set; }
 
     public int? SiteManagerContactId { get; set; }

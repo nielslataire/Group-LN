@@ -374,3 +374,37 @@ Er komt bewust géén vergelijking per activiteit/lot op stap 9: een budget word
 - Telt de opbrengst per gefactureerd of per betaald bedrag?
 - Rendement ook per eenheid, of enkel voor het hele project?
 - Grondkost invullen per project, of per aankoop zoals in de grondkaart van het budget?
+- 21/10/2026: na controle door Niels: (1) financiering krijgt geen marge (`Waarden` met financieringsparameters), (3) straight loan gebouw = helft van de looptijd, (4) Wet Breyne = (bouwkost + erelonen en studies) × 1,1, (2)+(5) correctieveld stap 6 verbeterd (selecteren bij focus, leeg = 100 %, decimalen) en redenveld terug in de markup; migratie 107 (Correctiefactor decimal(9,4)) vóór gebruik. Het niet-opslaan kon zonder draaiende app niet gereproduceerd worden: de bewaarde factor werd wel afgerond op 2 decimalen (95,5 → 96). Unit tests: 47 budgettests slagen (3 niet-budgettests falen al: StructuredReference/Epc).
+- 21/10/2026 (later): een correctie van 0 % werkt nu (voorheen werd 0 overal als 'niet ingevuld' = 100 % gelezen en door EF bij het aanmaken vervangen door de default 1; nu enkel negatief = niet ingevuld, ValueGeneratedNever). Migratie hernummerd naar 107 (106 is BorgZonderContract).
+- 21/10/2026 (later): correctie met reden volgens design 39g (gouden veld, redenkader/invoerveld met auteur en tijdstip, correctie in de formulestrook, reden in PDF intern); migratie 108 (OmschrijvingDoor/OmschrijvingOp) vóór gebruik; interactie getest in een statische harnas (Playwright), niet in de app.
+- 21/10/2026: testbudget "Testbudget (helpbeelden)" (versie 7) aangemaakt bij project 79, definitief gezet; opnames voor help gemaakt. Bij het vullen viel op dat de looptijdvelden in de kaart Financiering op Parameters 0px breed waren (grid-fout), opgelost met `bw-par-fin` (nog niet getest in de app). Ook: de nullable-fout op `OmschrijvingDoor` bleek de stap-6-500 te veroorzaken.
+
+---
+## STAND 21/10/2026 (avond) — Stap 8 Verkoop omgebouwd naar design-handoff 39o; wat nog moet gebeuren
+**Gebouwd maar NIET getest in de app (compileert; de draaiende app heeft deze build nog niet):**
+- `Views/Projecten/Budget/BudgetVerkoopV2.cshtml` (volledig herschreven), `V2/_BwVerkoopDetail.cshtml` (open rij in 4 blokken), `wwwroot/js/gl-v2-budget-verkoop.js` (herschreven, zelfde rekenregels), CSS onderaan `gl-v2-budget.css` ("Stap 8 · Verkoop (design-handoff 39o)", klassen `bw-vp-*`).
+- Inhoud: samenvattingsbalk (kostprijs · minimum · vraagprijzen live · marktwaarde · eenheden onder minimum), prijscodes als chips (groen = in gebruik; Code toevoegen = modal voor een projectcode; Beheren = link naar Instellingen › Prijsreferenties), tabel per eenheid met grond-/bouwcode inline, min. prijs, markt, vraagprijs + bron, open rij (Grond · Bouw · Uitzonderingen · Vraagprijs volgt), bulkbalk bij selectie, waarschuwing onder het minimum (goud) met "Op minimum zetten" / "Zo laten".
+- Keuzes van Niels: onder minimum = **goud** (niet rood zoals 39o), Unit koppelen in de open rij onder "Vraagprijs volgt", "Zo laten" onthoudt de waarschuwing per eenheid, algemene codes beheer je in Instellingen.
+- `BudgetControleService`: code van de melding is nu `onder-minimum-<eenheidsnaam>` (per eenheid te negeren).
+
+**Wat Niels nog moet doen**
+1. Stop de app, bouw opnieuw en start hem.
+2. Test stap 8 op het testbudget van project 79 ("Testbudget (helpbeelden)", versie 7; staat **definitief** → eerst "Niet-definitief maken" op stap 9). Controleer:
+   - de pagina laadt zonder fout en de bedragen/vraagprijzen kloppen met vroeger;
+   - een code kiezen in de rij (grond en bouw), "Eigen waarde" en het chipje EIGEN, €/m² ⇄ bedrag in de open rij, zone 2, Grondruil + forfait;
+   - Vraagprijs volgt: Voorstel / Markt / Eigen; "Alles: vraagprijs = voorstel";
+   - selectie + bulkbalk (codes en voorstel/markt);
+   - een vraagprijs onder het minimum: goud, "Op minimum zetten", "Zo laten" (blijft na herladen genegeerd), live samenvatting bovenaan;
+   - Code toevoegen (modal) en een projectcode verwijderen (×); Doorzetten naar units met een gekoppelde unit;
+   - autosave en "Opslaan & volgende".
+3. Meld wat niet klopt; ik pas het aan.
+
+**Wat ik daarna nog moet doen (Claude)**
+- Test via Playwright op versie 7 en herstel wat niet werkt (niet-definitief maken, daarna weer definitief zetten).
+- Documenteren: DESIGN.md (blok 39o + afwijkingen: goud i.p.v. rood, geen extra afronding, grond-/bouwwaarde-tegels weg), help `budget-stap-verkoop.md` herschrijven volgens `HELP_SCHRIJFGIDS.md` (afbeelding als eerste regel van een stap, `updated` en `newsTag`), nieuwe schermafbeeldingen van stap 8 (bestaande zijn van de oude layout), `HELPCENTRUM_VOORTGANG.md`.
+- Controleren dat Excel/PDF/vergelijking niets gebruiken van de oude `bw-vk-*`-markup (CSS-klassen `bw-vk-*` blijven grotendeels ongebruikt in `gl-v2-budget.css`; opruimen kan later).
+
+**Overige open punten (ongewijzigd)**
+- Migraties 107 (Correctiefactor decimal(9,4)) en 108 (OmschrijvingDoor/Op) moeten op elke database waar de app draait.
+- Niets is gecommit sinds de laatste push: stap 8, Excel-opmaakpagina, tegels, redenkader, financieringsgrid, enz. Commit en push vóór je op een andere pc verder gaat.
+- Projectresultaat (nacalculatie voor het volledige project) staat als idee onderaan dit bestand (3 vragen open).

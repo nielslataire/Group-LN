@@ -4,6 +4,8 @@ public class VerslagAanwezigeV2
 {
     public string Name { get; set; } = "";
     public string? Email { get; set; }
+    /// <summary>Verontschuldigd: niet aanwezig bij dit bezoek, maar krijgt het verslag wel (staat apart in de PDF).</summary>
+    public bool Excused { get; set; }
 }
 
 /// <summary>Een rij in de verslagenlijst (design-handoff 40i).</summary>
@@ -94,6 +96,7 @@ public class VerslagEditV2Vm
     public string? Opmerkingen { get; set; }
     public DateOnly? VolgendDatum { get; set; }
     public string? VolgendUur { get; set; }
+    public string? EindUur { get; set; }
     public List<VerslagAanwezigeV2> Aanwezigen { get; set; } = new();
     public List<VerslagSuggestieV2> Suggesties { get; set; } = new();
     public List<VerslagPuntV2> OpenPunten { get; set; } = new();

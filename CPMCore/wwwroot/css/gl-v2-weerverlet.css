@@ -31,32 +31,9 @@
 
 /* ── "Wat zet je bij een klik" — segmented control (10a punt 4: één schakelaar i.p.v. twee losse
    omlijnde knoppen, zodat het gewapende type altijd zichtbaar is). ─────────────────────────────── */
-.gl-v2-weer-segmented {
-    display: flex;
-    gap: 3px;
-    height: 40px;
-    padding: 3px;
-    border-radius: 9px;
-    background: var(--gl-v2-neutral-tint);
-}
-.gl-v2-weer-segmented-option {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    height: 100%;
-    padding: 0 14px;
-    border: 0;
-    border-radius: 7px;
-    background: transparent;
-    cursor: pointer;
-    font: 500 12.5px var(--gl-v2-font-sans);
-    color: var(--gl-v2-muted);
-}
-.gl-v2-weer-segmented-option.is-active {
-    background: var(--gl-v2-surface);
-    box-shadow: 0 1px 2px rgba(44, 59, 42, .12);
-    font-weight: 600;
-}
+/* Basis (grijze baan, gekozen optie als wit vlak): projectbreed component .gl-v2-segmented (css/gl-v2/segmented.css).
+   Hier enkel wat bij de weerverletdagen hoort: bredere opties met kleurvlak en teller. */
+.gl-v2-segmented > .gl-v2-weer-segmented-option { gap: 8px; padding: 0 14px; }
 .gl-v2-weer-segmented-option[data-type="rain"].is-active .gl-v2-weer-segmented-label,
 .gl-v2-weer-segmented-option[data-type="rain"].is-active .gl-v2-weer-segmented-count { color: #2E5F7E; }
 .gl-v2-weer-segmented-option[data-type="wind"].is-active .gl-v2-weer-segmented-label,

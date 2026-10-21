@@ -34,12 +34,14 @@ Je komt in het verslag terecht. Bovenaan zie je een melding met wat er is overge
 
 ## De algemene gegevens invullen
 
-In de kaart **Algemeen** vul je het weer en de algemene opmerkingen in. De opmerkingen komen als tekstblok in het
+In de kaart **Algemeen** vul je het begin en het einde van het bezoek, het weer en de algemene opmerkingen in. De opmerkingen komen als tekstblok in het
 verslag. Begin een regel met een rubriek en een streepje, bijvoorbeeld "Planning - ruwbouw gestart". De rubriek staat
 dan vetgedrukt in de PDF.
 
 Bij **Aanwezigen** typ je een naam en kies je iemand uit de lijst. Het e-mailadres wordt ingevuld. Iemand die niet in
 de lijst staat, voeg je toe met naam en e-mailadres. Elke aanwezige met een e-mailadres krijgt het verslag per mail.
+
+Kon iemand niet komen, klik dan op het icoon naast de naam. De persoon staat dan in de PDF onder **Verontschuldigd** en krijgt het verslag toch. Bij een nieuw verslag staat iedereen weer als aanwezig.
 
 ## De openstaande punten nakijken
 

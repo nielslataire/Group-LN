@@ -34,6 +34,7 @@
 @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhone)
 @section PageActions
 {
+    <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("Borgen", "Projecten", new { projectid = Model.ProjectId })"><i class="ph ph-vault" aria-hidden="true"></i>Borgen &amp; inhoudingen@(Model.BorgenNuVrij > 0 ? Html.Raw(" <span class=\"gl-v2-badge is-attention\">" + Model.BorgenNuVrij + " vrij te geven</span>") : null)</a>
     @if (Model.CanWrite)
     {
         <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("CalculationSettings", "Projecten", new { projectid = Model.ProjectId })"><i class="ph ph-gear" aria-hidden="true"></i>Budget instellen</a>

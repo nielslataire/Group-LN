@@ -30,8 +30,10 @@ namespace CPMCore.Documents.GlV2
         public string? ProjectAdres { get; init; }
         public DateOnly Datum { get; init; }
         public string? Uur { get; init; }
+        public string? EindUur { get; init; }
         public string? VorigBezoek { get; init; }
         public IReadOnlyList<string> Aanwezigen { get; init; } = Array.Empty<string>();
+        public IReadOnlyList<string> Verontschuldigd { get; init; } = Array.Empty<string>();
         public string? Weer { get; init; }
         public string? Opmerkingen { get; init; }
         public DateTime? VolgendBezoek { get; init; }
@@ -178,18 +180,21 @@ namespace CPMCore.Documents.GlV2
         private void Meta(IContainer c)
         {
             var datum = _m.Datum.ToString("dddd d MMMM yyyy", WerfverslagStijl.Nl);
+            // 35k: onder de datum staat "16:29 – 17:40"; het weer hoort er ook bij
+            var tijd = string.IsNullOrWhiteSpace(_m.Uur) ? null : _m.Uur + (string.IsNullOrWhiteSpace(_m.EindUur) ? "" : " – " + _m.EindUur);
+            var sub = string.Join(" · ", new[] { tijd, string.IsNullOrWhiteSpace(_m.Weer) ? null : _m.Weer }.Where(x => !string.IsNullOrWhiteSpace(x)));
             c.Border(0.25f, Unit.Millimetre).BorderColor(WerfverslagStijl.Rand).Column(g =>
             {
                 g.Item().Row(r =>
                 {
-                    r.RelativeItem().Element(x => Cel(x, "Datum", datum, _m.Uur, true, true));
+                    r.RelativeItem().Element(x => Cel(x, "Datum", datum, sub == "" ? null : sub, true, true));
                     r.RelativeItem().Element(x => Cel(x, "Project", _m.ProjectName, _m.ProjectAdres, true, true));
                     r.RelativeItem().Element(x => Cel(x, "Vorig bezoek", _m.VorigBezoek ?? "—", null, false, true));
                 });
                 g.Item().Row(r =>
                 {
                     r.RelativeItem().Element(x => Cel(x, "Aanwezig", _m.Aanwezigen.Count == 0 ? "—" : string.Join(", ", _m.Aanwezigen), null, true, false));
-                    r.RelativeItem().Element(x => Cel(x, "Weer", string.IsNullOrWhiteSpace(_m.Weer) ? "—" : _m.Weer!, null, true, false));
+                    r.RelativeItem().Element(x => Cel(x, "Verontschuldigd", _m.Verontschuldigd.Count == 0 ? "—" : string.Join(", ", _m.Verontschuldigd), null, true, false));
                     r.RelativeItem().Element(x => Cel(x, "Volgend bezoek",
                         _m.VolgendBezoek.HasValue ? _m.VolgendBezoek.Value.ToString("dddd dd/MM/yyyy", WerfverslagStijl.Nl) + " · " + _m.VolgendBezoek.Value.ToString("HH:mm") : "—", null, false, false));
                 });

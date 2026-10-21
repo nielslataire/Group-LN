@@ -3467,7 +3467,7 @@ public partial class cpmRunningContext : DbContext
 
             entity.Property(e => e.NacalcPrijsPerEenheid).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.AlternatievePrijsPerEenheid).HasColumnType("decimal(10, 2)");
-            entity.Property(e => e.Correctiefactor).HasColumnType("decimal(4, 2)").HasDefaultValue(1m);
+            entity.Property(e => e.Correctiefactor).HasColumnType("decimal(9, 4)").HasDefaultValue(1m).ValueGeneratedNever();   // 0 (geen kost) moet bewaard kunnen worden: zonder ValueGeneratedNever vervangt EF een 0 bij het aanmaken door de default 1
             entity.Property(e => e.VerhogingsPerc).HasColumnType("decimal(5, 2)").HasDefaultValue(0m);
             entity.Property(e => e.IsManueel).HasDefaultValue(false);
             entity.Property(e => e.Omschrijving).HasMaxLength(200);

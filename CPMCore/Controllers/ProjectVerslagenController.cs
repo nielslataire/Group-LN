@@ -88,6 +88,15 @@ public class ProjectVerslagenController : BaseController
         catch { return new(); }
     }
 
+    /// <summary>Wie vorige keer verontschuldigd was, is dat niet automatisch ook nu.</summary>
+    private static string? ZonderVerontschuldigd(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return json;
+        var lijst = ParseAanwezigen(json);
+        foreach (var a in lijst) a.Excused = false;
+        return JsonSerializer.Serialize(lijst);
+    }
+
     private static string AanwezigenTekst(string? json) => string.Join(", ", ParseAanwezigen(json).Select(a => a.Name));
 
     // ── Lijst (40i) ─────────────────────────────────────────────────────────────────────────────────
@@ -147,7 +156,7 @@ public class ProjectVerslagenController : BaseController
             ProjectId = projectId, VerslagType = type, Nummer = nummer,
             Naam = type == 0 ? $"Werfbezoek nr. {nummer}" : (string.IsNullOrWhiteSpace(naam) ? "Oplevering" : naam.Trim()),
             Datum = DateOnly.FromDateTime(DateTime.Today), Uur = TimeOnly.FromDateTime(DateTime.Now),
-            AanwezigenJson = vorig?.AanwezigenJson, Opmerkingen = vorig?.Opmerkingen, HernomenVanId = vorig?.Id,
+            AanwezigenJson = ZonderVerontschuldigd(vorig?.AanwezigenJson), Opmerkingen = vorig?.Opmerkingen, HernomenVanId = vorig?.Id,
             CreatedAt = DateTime.UtcNow, CreatedBy = UserCode,
         };
         _db.Werfverslag.Add(verslag);
@@ -230,7 +239,7 @@ public class ProjectVerslagenController : BaseController
         var vm = new VerslagEditV2Vm
         {
             ProjectId = projectId, ProjectName = name, CanWrite = CanWrite, IsAdmin = await IsAdmin(), Id = v.Id, Naam = v.Naam, Type = v.VerslagType, Status = v.Status,
-            Datum = v.Datum, Uur = v.Uur?.ToString("HH:mm"), Weer = v.Weer, Opmerkingen = v.Opmerkingen,
+            Datum = v.Datum, Uur = v.Uur?.ToString("HH:mm"), EindUur = v.EindUur?.ToString("HH:mm"), Weer = v.Weer, Opmerkingen = v.Opmerkingen,
             VolgendDatum = v.VolgendBezoek.HasValue ? DateOnly.FromDateTime(v.VolgendBezoek.Value) : null, VolgendUur = v.VolgendBezoek?.ToString("HH:mm"),
             Aanwezigen = ParseAanwezigen(v.AanwezigenJson), Suggesties = sugg.DistinctBy(s => s.Name.ToLowerInvariant()).ToList(),
             OpenPunten = open, NieuwePunten = nieuw, VorigId = vorig?.Id, VorigNaam = vorig?.Naam, VorigDatum = vorig?.Datum,
@@ -320,12 +329,13 @@ public class ProjectVerslagenController : BaseController
 
     [HttpPost("{id:int}/Save")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Save(int projectId, int id, DateOnly? datum, string? uur, string? weer, string? opmerkingen, DateOnly? volgendDatum, string? volgendUur, string? aanwezigenJson)
+    public async Task<IActionResult> Save(int projectId, int id, DateOnly? datum, string? uur, string? eindUur, string? weer, string? opmerkingen, DateOnly? volgendDatum, string? volgendUur, string? aanwezigenJson)
     {
         var v = await Concept(projectId, id);
         if (v == null) return Json(new { ok = false, error = "Verslag niet gevonden of al verstuurd." });
         if (datum.HasValue) v.Datum = datum.Value;
         v.Uur = TimeOnly.TryParse(uur, out var u) ? u : null;
+        v.EindUur = TimeOnly.TryParse(eindUur, out var eu) ? eu : null;
         v.Weer = string.IsNullOrWhiteSpace(weer) ? null : weer.Trim();
         v.Opmerkingen = string.IsNullOrWhiteSpace(opmerkingen) ? null : opmerkingen.Trim();
         v.VolgendBezoek = volgendDatum.HasValue ? volgendDatum.Value.ToDateTime(TimeOnly.TryParse(volgendUur, out var vu) ? vu : new TimeOnly(9, 0)) : null;
@@ -524,8 +534,8 @@ public class ProjectVerslagenController : BaseController
         return new WerfverslagPdfModel
         {
             Naam = v.Naam, TypeLabel = v.VerslagType == 1 ? "Voorlopige oplevering" : "Werfverslag", ProjectName = projectName, ProjectAdres = adres == "" ? null : adres,
-            Datum = v.Datum, Uur = v.Uur?.ToString("HH:mm"), VorigBezoek = vorigV == null ? null : vorigV.Naam + " · " + vorigV.Datum.ToString("dd/MM/yyyy"),
-            Aanwezigen = aanwezigen.Select(a => a.Name).ToList(), Weer = v.Weer, Opmerkingen = v.Opmerkingen, VolgendBezoek = v.VolgendBezoek,
+            Datum = v.Datum, Uur = v.Uur?.ToString("HH:mm"), EindUur = v.EindUur?.ToString("HH:mm"), VorigBezoek = vorigV == null ? null : vorigV.Naam + " · " + vorigV.Datum.ToString("dd/MM/yyyy"),
+            Aanwezigen = aanwezigen.Where(a => !a.Excused).Select(a => a.Name).ToList(), Verontschuldigd = aanwezigen.Where(a => a.Excused).Select(a => a.Name).ToList(), Weer = v.Weer, Opmerkingen = v.Opmerkingen, VolgendBezoek = v.VolgendBezoek,
             Nieuwe = nieuwe, Open = open, Afgesloten = afgesloten,
             Kritiek = d.Nieuwe.Count(x => x.I.Priority == 3) + d.Open.Count(x => x.I.Priority == 3 && x.P.TerPlaatse != 2 && !PuntenWeergave.IsClosed(x.I.Status)),
             Verdeling = aanwezigen.Select(a => new WerfverslagPdfVerdeling(a.Name, string.IsNullOrWhiteSpace(a.Email) ? null : a.Email, "volledig verslag")).ToList(),
@@ -582,6 +592,87 @@ public class ProjectVerslagenController : BaseController
         var bytes = await RenderPdfAsync(await BuildPdfModel(v, projectId, PlanImagesFromForm()), projectId);
         Response.Headers["Content-Disposition"] = $"inline; filename=\"{v.Naam.Replace(' ', '_')}.pdf\"";
         return File(bytes, "application/pdf");
+    }
+
+    // ── afronden in stappen (design 44b): de pagina toont echte voortgang ──
+    // FinishStart keurt de punten goed en maakt de PDF (in het geheugen bewaard, 30 min), FinishSend mailt één aanwezige per aanroep, FinishDone sluit het verslag af.
+    private sealed record FinishCacheItem(DateTime At, int ProjectId, int VerslagId, byte[] Pdf, string ProjectName);
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, FinishCacheItem> FinishCache = new();
+
+    private static string VerslagMailHtml(string naamOntvanger, Werfverslag v, string projectName) =>
+        $"<p>Beste {System.Net.WebUtility.HtmlEncode(naamOntvanger)},</p><p>In bijlage het verslag <b>{System.Net.WebUtility.HtmlEncode(v.Naam)}</b> van {v.Datum:dd/MM/yyyy} voor {System.Net.WebUtility.HtmlEncode(projectName)}.</p>" +
+        $"<p>De nieuwe punten zijn goedgekeurd en gaan naar de betrokken aannemers.</p>";
+
+    [HttpPost("{id:int}/FinishStart")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> FinishStart(int projectId, int id)
+    {
+        var v = await Concept(projectId, id);
+        if (v == null) return Json(new { ok = false, error = "Verslag niet gevonden of al verstuurd." });
+        var punten = await _db.WerfverslagPunt.Where(p => p.VerslagId == id).ToListAsync();
+        var issues = await _db.ConstructionIssue.AsNoTracking().Where(i => punten.Select(p => p.IssueId).Contains(i.Id)).ToDictionaryAsync(i => i.Id);
+
+        // 1. wat ter plaatse vastgesteld werd: opgelost → gemeld uitgevoerd (de werfleider heeft het gezien maar sluit nog niet af), afgesloten → afgesloten
+        foreach (var p in punten.Where(p => !p.IsNieuw))
+        {
+            if (!issues.TryGetValue(p.IssueId, out var issue)) continue;
+            if (p.TerPlaatse == 2 && !PuntenWeergave.IsClosed(issue.Status)) await _issues.ChangeStatus(projectId, issue.Id, (int)ConstructionIssueStatus.Closed, $"Afgesloten bij {v.Naam}", UserCode);
+            else if (p.TerPlaatse == 1 && PuntenWeergave.Canon(issue.Status) != (int)ConstructionIssueStatus.Reported && !PuntenWeergave.IsClosed(issue.Status))
+                await _issues.ChangeStatus(projectId, issue.Id, (int)ConstructionIssueStatus.Reported, $"Opgelost vastgesteld bij {v.Naam}", UserCode);
+            if (!string.IsNullOrWhiteSpace(p.Opmerking)) await _issues.AddMessage(projectId, issue.Id, $"{v.Naam}: {p.Opmerking}", isInternal: true, UserCode);
+        }
+        // 2. afronden keurt de nieuwe punten goed (Concept / Ter goedkeuring → Goedgekeurd); ze gaan daarna via de avondmelding of "Doorsturen" naar de aannemer
+        var goedgekeurd = 0;
+        foreach (var p in punten.Where(p => p.IsNieuw))
+            if (issues.TryGetValue(p.IssueId, out var nieuw) && PuntenWeergave.Canon(nieuw.Status) is (int)ConstructionIssueStatus.Concept or (int)ConstructionIssueStatus.PendingApproval)
+            {
+                await _issues.ChangeStatus(projectId, nieuw.Id, (int)ConstructionIssueStatus.Approved, $"Goedgekeurd bij afronden van {v.Naam}", UserCode);
+                goedgekeurd++;
+            }
+
+        // 3. PDF (met foto's en plannen)
+        var model = await BuildPdfModel(v, projectId, PlanImagesFromForm());
+        var pdf = await RenderPdfAsync(model, projectId);
+        foreach (var old in FinishCache.Where(k => k.Value.At < DateTime.UtcNow.AddMinutes(-30)).Select(k => k.Key).ToList()) FinishCache.TryRemove(old, out _);
+        var token = Guid.NewGuid().ToString("N");
+        FinishCache[token] = new FinishCacheItem(DateTime.UtcNow, projectId, id, pdf, model.ProjectName);
+        var ontvangers = ParseAanwezigen(v.AanwezigenJson).Where(a => !string.IsNullOrWhiteSpace(a.Email)).Select((a, i) => new { index = i, name = a.Name }).ToList();
+        return Json(new { ok = true, token, goedgekeurd, sizeKb = pdf.Length / 1024, recipients = ontvangers });
+    }
+
+    [HttpPost("{id:int}/FinishSend")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> FinishSend(int projectId, int id, string token, int index)
+    {
+        if (!FinishCache.TryGetValue(token ?? "", out var item) || item.VerslagId != id || item.ProjectId != projectId) return Json(new { ok = false, error = "De voorbereiding is verlopen. Rond het verslag opnieuw af." });
+        var v = await Concept(projectId, id);
+        if (v == null) return Json(new { ok = false, error = "Verslag niet gevonden of al verstuurd." });
+        var ontvangers = ParseAanwezigen(v.AanwezigenJson).Where(a => !string.IsNullOrWhiteSpace(a.Email)).ToList();
+        if (index < 0 || index >= ontvangers.Count) return Json(new { ok = false, error = "Ontvanger niet gevonden." });
+        var a = ontvangers[index];
+        try
+        {
+            await _email.SendEmailAsync(a.Email!, $"{v.Naam} — {item.ProjectName}", VerslagMailHtml(a.Name, v, item.ProjectName), new[] { new EmailAttachment($"{v.Naam.Replace(' ', '_')}.pdf", item.Pdf, "application/pdf") });
+            return Json(new { ok = true, sent = true });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Verslag {VerslagId} niet verstuurd naar {Email}", v.Id, a.Email);
+            return Json(new { ok = true, sent = false });   // één mislukte mail stopt het afronden niet
+        }
+    }
+
+    [HttpPost("{id:int}/FinishDone")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> FinishDone(int projectId, int id, string token)
+    {
+        if (!FinishCache.TryGetValue(token ?? "", out var item) || item.VerslagId != id || item.ProjectId != projectId) return Json(new { ok = false, error = "De voorbereiding is verlopen. Rond het verslag opnieuw af." });
+        var v = await Concept(projectId, id);
+        if (v == null) return Json(new { ok = false, error = "Verslag niet gevonden of al verstuurd." });
+        v.Status = 1; v.VerzondenOp = DateTime.UtcNow; v.VerzondenDoor = UserCode;
+        await _db.SaveChangesAsync();
+        FinishCache.TryRemove(token!, out _);
+        return Json(new { ok = true, url = Url.Action(nameof(Index), new { projectId, id }), naam = v.Naam, verzonden = v.VerzondenOp.Value.ToLocalTime().ToString("dd/MM/yyyy · HH:mm") });
     }
 
     [HttpPost("{id:int}/Finish")]

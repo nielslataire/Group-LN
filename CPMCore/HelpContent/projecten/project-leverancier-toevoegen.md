@@ -14,7 +14,7 @@ faq:
   - q: Wat is het verschil tussen contract toevoegen en contract bewerken?
     a: Hetzelfde formulier. Bij toevoegen kies je nog een leverancier, bij bewerken ligt die al vast. Bijbestellingen op een lot kan je pas toevoegen nadat het contract minstens één keer opgeslagen is.
   - q: Wanneer verschijnt de waarschuwing bij het waarborgdocument?
-    a: Zodra je Waarborgtype op financiële waarborg zet maar nog geen document toevoegde.
+    a: Zodra je Waarborgtype op bankwaarborg zet maar nog geen document toevoegde.
   - q: Kan ik meerdere loten in één keer toevoegen?
     a: Ja. Kies ze alle drie in het veld Lot toevoegen en klik op Toevoegen.
 ---
@@ -30,9 +30,13 @@ faq:
 ## Voorwaarden invullen
 
 Vul **Btw-percentage** en **Betaaltermijn** in. Zet de schakelaar aan bij **Korting contant** om een
-kortingspercentage binnen een aantal dagen in te stellen. Kies het **Waarborgtype**. Bij een
-financiële waarborg voeg je het **Waarborgdocument** toe (pdf of jpg), anders toont de pagina een
-waarschuwing dat het nog ontbreekt.
+kortingspercentage binnen een aantal dagen in te stellen. Kies het **Waarborgtype**.
+
+Bij een financiële waarborg houd je op elke factuur een percentage in. Vul dat percentage in en kies bij **Borg vrij bij voorlopige oplevering** welk deel bij de voorlopige oplevering vrijkomt. De rest komt vrij bij de definitieve oplevering. Laat je het veld leeg, dan is het 50 %.
+
+Bij een bankwaarborg houd je niets in. Het percentage geeft dan het bedrag van de waarborg, berekend op het contractbedrag. Voeg het **Waarborgdocument** toe (pdf of jpg), anders toont de pagina een waarschuwing dat het nog ontbreekt.
+
+Hoe de borg op facturen wordt ingehouden en vrijgegeven, staat in het artikel "De borgen van een project volgen en vrijgeven".
 
 ## Verzending en veiligheid invullen
 

@@ -11,6 +11,15 @@
         ],
         "createdAt": "2026-09-23T08:11:36.144Z",
         "reason": "Agent: pre-existing .is-active border-left is the system's documented active/selected-state indicator (DESIGN.md: same 3px primary left-border language on mobile-menu-item-expanded and the units-table selected-row stripe), not a decorative AI-slop border"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "CPMCore/wwwroot/css/gl-v2-budget.css"
+        ],
+        "createdAt": "2026-10-21T15:12:42.492Z",
+        "reason": "Agent: de 3px linkerband op het redenkader (.bw-reden-kader, box-shadow inset) staat letterlijk in design-handoff 39g (goudkader met inset 3px #C9A96E); het is het afgesproken kader voor een gecorrigeerde activiteit, geen decoratieve rand."
       }
     ]
   }

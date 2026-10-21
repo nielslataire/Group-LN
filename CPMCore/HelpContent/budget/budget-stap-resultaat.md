@@ -7,7 +7,8 @@ treeLabel: Stap 9 · Resultaat
 role: Projectleider
 device: Desktop · tablet
 minutes: 7
-updated: 2026-10-14
+updated: 2026-10-21
+newsTag: Bijgewerkt
 screens: budget-stap-9
 synonyms: stap 9, resultaat, kostprijs, kostenoverzicht, marge, netto opbrengst, break-even, nacalc, versies vergelijken
 description: de kostprijs, de verkoop tegenover de kost en de marge
@@ -97,27 +98,32 @@ Onderaan staan drie knoppen: **Kopie als nieuwe versie**, **Afronden** en **Afro
 
 Je weet nu wat het project kost, wat het opbrengt en hoeveel marge overblijft. Is die marge te laag, ga dan terug naar stap 6, 7 of 8 en pas de kosten of prijzen aan.
 
-## Een PDF maken
+## Een PDF kiezen
 
-1. Klik bovenaan op **PDF** en kies **PDF intern** of **PDF bank**.
 ![Het menu PDF met PDF intern en PDF bank](/img/help/budget/budget-stap-resultaat/4-pdf-menu.png)
 
-2. Je komt op een pagina die de PDF opmaakt. Dat duurt gemiddeld 10 tot 20 seconden. Je ziet welk hoofdstuk aan de beurt is.
-![De pagina tijdens het opmaken](/img/help/budget/budget-stap-resultaat/5-pdf-opmaken.png)
-
-3. Zodra de PDF klaar is, opent hij vanzelf in een nieuw tabblad. Blokkeert je browser dat tabblad, klik dan op **Download PDF**.
-![De pagina als de PDF klaar is](/img/help/budget/budget-stap-resultaat/6-pdf-klaar.png)
-
-4. Klik op **Terug naar stap 9** om verder te werken.
+Klik bovenaan op **PDF** en kies **PDF intern** of **PDF bank**.
 
 | PDF | Inhoud |
 |---|---|
-| **PDF intern** | Alle kosten, ook financiering, onvoorzien en publiciteit, met verkoop en resultaat per eenheid. Niet te verspreiden. |
-| **PDF bank** | Zonder financieringskosten, onvoorzien en publiciteit, en zonder marge. Geschikt voor de bank. |
+| **PDF intern** | Alle kosten, ook financiering, onvoorzien en publiciteit, met verkoop en resultaat per eenheid. Bij een correctie op stap 6 staat de reden onder de activiteit. Niet te verspreiden. |
+| **PDF bank** | Zonder financieringskosten, onvoorzien en publiciteit, zonder marge en zonder redenen van correcties. Geschikt voor de bank. |
 
-De PDF wordt ook bewaard in **Documenten**, in de map **Budgetten** van het project. Daar vind je elke PDF terug die je gemaakt hebt. Klanten en de website zien deze documenten niet.
+## Wachten tot de PDF klaar is
 
-Lukt het opmaken niet, dan staat er een melding met **Opnieuw proberen**. Lukt enkel het bewaren niet, dan zie je dat op de klaarpagina. Download de PDF dan meteen.
+![De pagina tijdens het opmaken](/img/help/budget/budget-stap-resultaat/5-pdf-opmaken.png)
+
+Je komt op een pagina die de PDF opmaakt. Dat duurt gemiddeld 10 tot 20 seconden. Je ziet welk hoofdstuk aan de beurt is. Blijf op de pagina tot de PDF klaar is.
+
+Lukt het opmaken niet, dan staat er een melding met **Opnieuw proberen**.
+
+## De PDF openen of downloaden
+
+![De pagina als de PDF klaar is](/img/help/budget/budget-stap-resultaat/6-pdf-klaar.png)
+
+Zodra de PDF klaar is, opent hij vanzelf in een nieuw tabblad. Blokkeert je browser dat tabblad, klik dan op **Download PDF**. Met **Terug naar stap 9** ga je verder.
+
+De PDF wordt ook bewaard in **Documenten**, in de map **Budgetten** van het project. Daar vind je elke PDF terug die je gemaakt hebt. Klanten en de website zien deze documenten niet. Lukt enkel het bewaren niet, dan zie je dat op de klaarpagina. Download de PDF dan meteen.
 
 ## Een Excel maken
 

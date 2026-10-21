@@ -33,6 +33,8 @@ faq:
 ---
 ## De vergelijking starten
 
+![Het venster Budgetten vergelijken](/img/help/budget/budgetten-vergelijken/1-modal.png)
+
 1. Open **Budgetten**.
 2. Klik rechtsboven op **Vergelijken**. In de kaart **Definitief budget** kun je ook op **Vergelijking openen** klikken. Het definitieve budget staat dan al aangevinkt.
 3. Vink 2 of 3 versies aan. Bij elke versie zie je de status, het totaal en de marge.
@@ -40,16 +42,14 @@ faq:
 5. Kies bij **Vergelijken op** of je de kostprijs, de verkoop en de marge wilt zien, of enkel de kosten per activiteit.
 6. Klik op **Vergelijken**.
 
-![Het venster Budgetten vergelijken](/img/help/budget/budgetten-vergelijken/1-modal.png)
-
 Onderaan het venster staat hoeveel versies je gekozen hebt. De knop **Vergelijken** werkt vanaf twee versies. Heb je er drie gekozen, dan kun je geen vierde meer aanvinken.
 
 ## De pagina lezen
 
+![De vergelijkingspagina](/img/help/budget/budgetten-vergelijken/2-vergelijkingspagina.png)
+
 Bovenaan staan de gekozen versies als kaarten met een letter. De eerste kaart heeft het label **Basis**.
 Een concept toont tot welke stap het vergeleken is, bijvoorbeeld **vergeleken tot stap 6**.
-
-![De vergelijkingspagina](/img/help/budget/budgetten-vergelijken/2-vergelijkingspagina.png)
 
 Daaronder staan vier kerncijfers voor elke versie, met het verschil ten opzichte van de basis.
 

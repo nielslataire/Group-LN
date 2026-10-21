@@ -1,0 +1,22 @@
+@model CPMCore.Models.GlV2.GlV2SegmentedVm
+@*
+    gl-v2 schakelaar / segmented control (projectbreed; css: css/gl-v2/segmented.css, uitleg: DESIGN.md "Segmented control (schakelaar)").
+    Knoppen, geen radio's: de pagina-JS zet .is-active en leest de data-attributen (zie GlV2SegmentedItem.Data).
+    Het label staat erbuiten, in dezelfde .gl-v2-field als bij een tekstveld.
+*@
+@{
+    var classes = "gl-v2-segmented"
+        + (Model.Outline ? " is-outline" : "")
+        + (Model.Size == "sm" ? " is-sm" : Model.Size == "compact" ? " is-compact" : "")
+        + (Model.Fill ? " is-fill" : "")
+        + (string.IsNullOrWhiteSpace(Model.CssClass) ? "" : " " + Model.CssClass);
+}
+<div class="@classes"@(Model.Id != null ? Html.Raw(" id=\"" + Model.Id + "\"") : null) role="group"@(Model.AriaLabel != null ? Html.Raw(" aria-label=\"" + System.Net.WebUtility.HtmlEncode(Model.AriaLabel) + "\"") : null)>
+    @foreach (var item in Model.Items)
+    {
+        <button type="button" class="@(item.Active ? "is-active" : "")" aria-pressed="@(item.Active ? "true" : "false")" disabled="@(item.Disabled ? "disabled" : null)"
+                @Html.Raw(string.Join(" ", item.Data.Select(kv => "data-" + kv.Key + "=\"" + System.Net.WebUtility.HtmlEncode(kv.Value) + "\"")))>
+            @if (!string.IsNullOrWhiteSpace(item.Icon)) { <i class="ph @item.Icon" aria-hidden="true"></i> }@item.Text
+        </button>
+    }
+</div>

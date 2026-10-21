@@ -6,7 +6,7 @@
     string Eur0(decimal v) => v.ToString("N0", nlBE);
 
     var basis        = Model.TotaalAlternatief;                              // € basis = €/eenheid × aantal eenheden
-    var corr         = Model.Correctiefactor <= 0 ? 1m : Model.Correctiefactor;
+    var corr         = Model.Correctiefactor < 0 ? 1m : Model.Correctiefactor;
     var pct          = corr * 100m;
     var gecorrigeerd = basis * corr;
 

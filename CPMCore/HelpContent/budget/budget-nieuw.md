@@ -6,7 +6,7 @@ treeOrder: 1
 role: Projectleider
 device: Desktop · tablet
 minutes: 4
-updated: 2026-10-14
+updated: 2026-10-21
 screens: budget-index
 synonyms: nieuw budget, nieuwe versie, kopie, kopiëren, leeg budget, versie kopiëren, overnemen, startpunt
 description: een leeg budget starten, een budget kopiëren of een versie dupliceren
@@ -69,8 +69,9 @@ De nieuwe versie is een kopie van de huidige versie. Ze wordt zelf de huidige ve
 
 ## Een versie verwijderen
 
-Heb je het recht om te verwijderen, dan staat in de tabel op de pagina **Budgetten** bij elke versie die niet definitief is een prullenbak. Klik erop en bevestig.
 ![De bevestiging bij het verwijderen](/img/help/budget/budget-nieuw/3-verwijderen.png)
+
+Heb je het recht om te verwijderen, dan staat in de tabel op de pagina **Budgetten** bij elke versie die niet definitief is een prullenbak. Klik erop en bevestig.
 
 Je krijgt eerst een bevestiging in een rood venster. Alle ingevulde stappen van die versie verdwijnen. Is het de enige versie van het budget, dan verdwijnt het hele budget, maar andere budgetten van het project blijven ongewijzigd. Een definitieve versie kun je niet verwijderen; maak eerst een andere versie definitief.
 

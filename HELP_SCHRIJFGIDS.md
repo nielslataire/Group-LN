@@ -70,6 +70,10 @@ niet staat en die je niet zeker kent: vraag het, of zet `[VRAAG: ...]` in de tek
 - Bankwaarborg: een percentage dat een bank waarborgt voor de leverancier, met een attest als bewijs.
   Er wordt niets afgehouden van de facturen, het waarborgdocument (het attest) moet wel toegevoegd
   worden. Zie "Het contract van een leverancier bekijken".
+- Borg: het deel van een factuur dat je inhoudt bij een financiële waarborg (percentage x (factuurbedrag min extra inhouding), zonder btw). De borg komt later vrij. Zeg "borg" tegen de gebruiker, niet "waarborg" (dat is het contracttype). Zie "Borg inhouden op een factuur".
+- Vrijgave van de borg: het deel dat bij de voorlopige oplevering (VO) vrijkomt staat op het contract (leeg is 50 %), de rest komt vrij bij de definitieve oplevering (DO). Open punten van de aannemer blokkeren de vrijgave niet. Zie "De borgen van een project volgen en vrijgeven". [VRAAG: hoe geef je een vrijgave door aan de boekhouding, en moet een foute vrijgave gecorrigeerd kunnen worden?]
+- Extra inhouding: een bedrag dat je bij één factuur tijdelijk niet uitbetaalt (reden: creditnota te ontvangen, werk niet volledig uitgevoerd, andere). Er gaat geen borg op. Je handelt ze af door vrij te geven (het contractpercentage blijft dan als borg ingehouden), te verrekenen met een creditnota of af te boeken. Zie "Een bedrag tijdelijk niet uitbetalen met een extra inhouding".
+- Vrijgeven (borg of inhouding): in CPM leg je enkel vast dat het bedrag mag worden uitbetaald. Er is geen betaalmodule.
 
 ### Opvolging en documenten
 - Punt: [VRAAG: definitie ("issue"/actiepunt?), wie kan het aanmaken, wat doet de status?]

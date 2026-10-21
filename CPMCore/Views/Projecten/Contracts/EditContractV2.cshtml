@@ -186,6 +186,10 @@
                     <div class="gl-v2-ec-col-6">
                         @Html.EditorFor(m => m.Contract.GuaranteePercentage, "GlV2NumberUnit", new { Unit = "%", Max = "Maximaal 100 %" })
                     </div>
+                    <div class="gl-v2-ec-col-6" id="guaranteeReleaseRow" style="@(Model.Contract.GuaranteeType == ContractGuaranteeType.FinancialGuarantee || Model.Contract.GuaranteeType == ContractGuaranteeType.BankGuarantee ? "" : "display:none")">
+                        @Html.EditorFor(m => m.Contract.GuaranteeReleaseVOPercentage, "GlV2NumberUnit", new { Unit = "%", Max = "Maximaal 100 %", Label = "Borg vrij bij voorlopige oplevering", Placeholder = "50" })
+                        <span class="gl-v2-field-help">De rest komt vrij bij de definitieve oplevering. Leeg = 50 %. Bij een bankwaarborg gebeurt de vrijgave via een brief.</span>
+                    </div>
                     <div class="gl-v2-field gl-v2-ec-col-12" id="guaranteeDocRow" style="@(Model.Contract.GuaranteeType == ContractGuaranteeType.BankGuarantee ? "" : "display:none")">
                         <span class="gl-v2-field-label">Waarborgdocument <span class="gl-v2-ec-field-hint">(pdf/jpg)</span></span>
                         @if (string.IsNullOrWhiteSpace(Model.Contract.GuaranteeDocFilename))

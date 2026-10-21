@@ -35,6 +35,7 @@ namespace DALCore.Models
             ConfigureTrajectEntities(modelBuilder);
             ConfigureDossierEntities(modelBuilder);
             ConfigureWerfverslagEntities(modelBuilder);
+            ConfigureBorgEntities(modelBuilder);
             ConfigurePuntRondgangEntities(modelBuilder);
             ConfigureDocumentenEntities(modelBuilder);
             ConfigureTaakEntities(modelBuilder);

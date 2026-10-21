@@ -340,7 +340,12 @@ namespace CPMCore.Controllers
 
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Nacalculatie");
             if (ViewData["UseGlV2Layout"] as bool? == true)
-                return View("RecalculationV2", BuildRecalculationIndexV2Vm(model, canWriteCalc));
+            {
+                var indexVm = BuildRecalculationIndexV2Vm(model, canWriteCalc);
+                indexVm.BorgenNuVrij = BorgSvc.GetOverzichtAsync(projectid).GetAwaiter().GetResult().AantalNuVrij;
+                ViewData["HelpScreenId"] = "nacalculatie-overzicht";
+                return View("RecalculationV2", indexVm);
+            }
             return View(model);
         }
 
@@ -1106,6 +1111,7 @@ namespace CPMCore.Controllers
                 // de group-beperkte model.IncommingInvoicesActivities hierboven (die blijft voor de legacy
                 // view, ongewijzigd qua gedrag/perf).
                 var alleFacturenResponse = projectService.GetProjectIncommingInvoicesForRecalculation(projectId);
+                ViewData["HelpScreenId"] = "nacalculatie-detail";
                 return View("RecalculationDetailV2", BuildRecalculationDetailV2Vm(model, alleFacturenResponse.Values, canWriteCalc2));
             }
             return View(model);
@@ -1116,6 +1122,7 @@ namespace CPMCore.Controllers
         private RecalculationDetailV2Vm BuildRecalculationDetailV2Vm(ProjectRecalculationDetailModel m, List<IncommingInvoiceActivityBO> alleFacturen, bool canWrite)
         {
             var (begrootRegels, bronLabel) = GetBegrootRegelsV2(m.ProjectId, m.BudgetActivities);
+            var borgOverzicht = BorgSvc.GetOverzichtAsync(m.ProjectId).GetAwaiter().GetResult();
             var groep = m.ActivityGroups.FirstOrDefault(g => g.ID == m.GroupID);
             var activiteitenInGroep = (groep?.Activities ?? new List<ActivityBO>())
                 .Where(a => m.Contracts.Any(c => c.Activities.Any(ca => ca.Activity.ID == a.ID))
@@ -1168,14 +1175,11 @@ namespace CPMCore.Controllers
             if (scopeActivityId == null)
             {
                 var contractenInScope = m.Contracts.Where(c => c.Activities.Any(ca => ca.Activity.Group.ID == m.GroupID));
-                decimal borgTotaal = 0m;
-                foreach (var c in contractenInScope.Where(c => c.GuaranteeType == ContractGuaranteeType.FinancialGuarantee && c.GuaranteePercentage.HasValue))
-                {
-                    var compId = c.Company?.ID ?? 0;
-                    var gefactCompany = alleFacturen.Where(f => f.ContractId == c.Id && f.IncommingInvoiceType != IncommingInvoiceType.Meerwerk_Klant).Sum(f => f.SignedPrice);
-                    borgTotaal += gefactCompany * c.GuaranteePercentage.Value / 100m;
-                }
-                kpis.Add(new GlV2KpiItemVm { Label = "Ingehouden borg", Value = RecalcGeld(borgTotaal), IconClass = "ph-vault", Hint = "per leverancier, zie onder", HintInline = true });
+                var borgRijenInScope = borgOverzicht.Rijen.Where(r => !r.IsBankwaarborg && contractenInScope.Any(c => c.Id == r.ContractId)).ToList();
+                var borgTotaal = borgRijenInScope.Sum(r => Math.Max(0m, r.Open));
+                var borgPcts = borgRijenInScope.Select(r => r.Percentage).Where(p => p.HasValue).Distinct().ToList();
+                var borgKpiHint = borgPcts.Count == 1 ? $"{borgPcts[0]!.Value:0.##} % · vrij bij {(borgRijenInScope.Any(r => r.VoPercentage >= 100m) ? "VO" : "VO en DO")}" : "per leverancier, zie onder";
+                kpis.Add(new GlV2KpiItemVm { Label = "Ingehouden borg", Value = RecalcGeld(borgTotaal), IconClass = "ph-vault", Hint = borgKpiHint, HintInline = true });
             }
 
             // 42f se eigen "Activiteiten"-kaart — enkel bij "Alle activiteiten" (en enkel als er een tier-2 is).
@@ -1233,13 +1237,17 @@ namespace CPMCore.Controllers
                     kaart.GefactureerdBedrag = contractFacturenBedrag;
                     kaart.BorgPercentage = contract.GuaranteeType == ContractGuaranteeType.FinancialGuarantee ? contract.GuaranteePercentage : null;
                     kaart.BorgIngehouden = kaart.BorgPercentage.HasValue ? contractFacturenBedrag * kaart.BorgPercentage.Value / 100m : 0m;
-                    if (kaart.BorgPercentage.HasValue)
+                    // Borg over het hele contract uit BorgService (zelfde cijfers als het Borgen-overzicht, 42i).
+                    var borgRij = borgOverzicht.Rijen.FirstOrDefault(r => r.ContractId == contract.Id);
+                    if (borgRij != null)
                     {
-                        var contractTotaal = alleFacturen.Where(f => f.ContractId == contract.Id && (f.IncommingInvoiceType == IncommingInvoiceType.Contract || f.IncommingInvoiceType == IncommingInvoiceType.Meerwerk)).Sum(f => f.SignedPrice);
-                        kaart.BorgContractTotaal = Math.Round(contractTotaal * kaart.BorgPercentage.Value / 100m, 2);
+                        kaart.BorgPercentage = borgRij.Percentage;
+                        kaart.BorgIngehouden = borgRij.Ingehouden;
+                        kaart.BorgVrijgegeven = borgRij.Vrijgegeven;
+                        kaart.BorgNuVrij = borgRij.NuVrij;
+                        kaart.BorgIsBankwaarborg = borgRij.IsBankwaarborg;
+                        kaart.BorgStatus = borgRij.Status;
                     }
-                    kaart.BorgVoAt = contract.GuaranteeReleasedVOAt; kaart.BorgVoBedrag = contract.GuaranteeReleasedVOAmount;
-                    kaart.BorgDoAt = contract.GuaranteeReleasedDOAt; kaart.BorgDoBedrag = contract.GuaranteeReleasedDOAmount;
                     kaart.BetaaltermijnTekst = contract.PaymentTerm.HasValue
                         ? $"{contract.PaymentTerm.Value:0} d" + (contract.CashDiscount == true && contract.CashDiscountPercentage.HasValue && contract.CashDiscountPaymentTerm.HasValue
                             ? $" · {contract.CashDiscountPercentage.Value:0.#}% / {contract.CashDiscountPaymentTerm.Value:0} d" : "")
@@ -1958,7 +1966,10 @@ namespace CPMCore.Controllers
 
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budget instellen");
             if (ViewData["UseGlV2Layout"] as bool? == true)
+            {
+                ViewData["HelpScreenId"] = "nacalculatie-budget";
                 return View("CalculationSettingsV2", BuildCalculationSettingsV2Vm(model));
+            }
             return View(model);
         }
 
@@ -1999,65 +2010,6 @@ namespace CPMCore.Controllers
             TempData["Message"] = "De activiteiten zijn NIET aan het budget toegevoegd.";
             SetPageHeader("bx bx-building-house", $"{(model.ProjectName ?? _projectService.GetProjectNameById(model.ProjectId))} - Budget instellen");
             return View(model);
-        }
-
-        /// <summary>Borg vrijgeven bij voorlopige (VO) of definitieve (DO) oplevering — design-handoff 42e punt 04.
-        /// Schrijft enkel de vier Contract.GuaranteeReleased*-kolommen (migratie 087). Leeg bedrag = vrijgave wissen.</summary>
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public IActionResult ReleaseContractGuaranteeV2(int projectId, int contractId, string fase, string? date, string? amount, int groupid, int activityId)
-        {
-            var ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
-            if (!ps.HasWrite(PermissionCodes.ProjectsPostCalculation)) return Forbid();
-            var terug = RedirectToAction("RecalculationDetail", "Projecten", new { projectId, activityId, groupid });
-            void Melding(bool ok, string tekst)
-            {
-                TempData["MessageType"] = ok ? "success" : "error";
-                TempData["MessageTitle"] = ok ? "Geslaagd!" : "Niet bewaard";
-                TempData["Message"] = tekst;
-            }
-
-            var c = _uow.Contracts.GetById(contractId);
-            if (c == null || c.ProjectId != projectId || (fase != "VO" && fase != "DO")) return NotFound();
-            var vo = fase == "VO";
-
-            if (string.IsNullOrWhiteSpace(amount))
-            {
-                if (vo) { c.GuaranteeReleasedVOAt = null; c.GuaranteeReleasedVOAmount = null; }
-                else { c.GuaranteeReleasedDOAt = null; c.GuaranteeReleasedDOAmount = null; }
-                _uow.SaveChanges();
-                Melding(true, "De vrijgave is gewist.");
-                return terug;
-            }
-
-            var bedrag = Math.Round(ParseInvariantAmount(amount), 2);
-            if (bedrag <= 0 || !DateOnly.TryParseExact(date ?? "", "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var datum))
-            {
-                Melding(false, "Geef een datum en een bedrag groter dan 0 op.");
-                return terug;
-            }
-
-            // Mag nooit meer vrijgegeven worden dan ingehouden is (alle contract-/meerwerkfacturen van dit contract × borg-%).
-            var borgPercentage = c.GuaranteeType == (int)ContractGuaranteeType.FinancialGuarantee ? c.GuaranteePercentage : null;
-            if (!borgPercentage.HasValue)
-            {
-                Melding(false, "Dit contract heeft geen ingehouden borg (geen financiële waarborg).");
-                return terug;
-            }
-            var facturen = _projectService.GetProjectIncommingInvoicesForRecalculation(projectId).Values ?? new List<IncommingInvoiceActivityBO>();
-            var ingehouden = Math.Round(facturen.Where(f => f.ContractId == contractId && (f.IncommingInvoiceType == IncommingInvoiceType.Contract || f.IncommingInvoiceType == IncommingInvoiceType.Meerwerk)).Sum(f => f.SignedPrice) * borgPercentage.Value / 100m, 2);
-            var anderFase = vo ? c.GuaranteeReleasedDOAmount.GetValueOrDefault() : c.GuaranteeReleasedVOAmount.GetValueOrDefault();
-            if (bedrag + anderFase > ingehouden + 0.01m)
-            {
-                Melding(false, $"Je kan niet meer vrijgeven dan er ingehouden is (€ {ingehouden - anderFase:N2} beschikbaar).");
-                return terug;
-            }
-
-            if (vo) { c.GuaranteeReleasedVOAt = datum; c.GuaranteeReleasedVOAmount = bedrag; }
-            else { c.GuaranteeReleasedDOAt = datum; c.GuaranteeReleasedDOAmount = bedrag; }
-            _uow.SaveChanges();
-            Melding(true, vo ? "Borg vrijgegeven bij voorlopige oplevering." : "Borg vrijgegeven bij definitieve oplevering.");
-            return terug;
         }
 
         [HttpPost]

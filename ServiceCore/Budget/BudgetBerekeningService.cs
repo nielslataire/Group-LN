@@ -99,7 +99,12 @@ namespace ServiceCore.Budget
                 });
 
             // D) Financiering
-            decimal wetBreyne = pctBasis * p.WetBreynePerc * ((p.WetBreyneMaanden ?? 0) / 12m);
+            // Wet Breyne: (bouwkost + erelonen en studies) x 1,1. Erelonen en studies = de percentageposten op de bouwkost behalve de verzekeringen (decennale, ABR),
+            // zoals de groep "Erelonen & studies" in PDF en vergelijking.
+            bool IsVerzekeringPost(BudgetKostenPostBO k) => (k.Omschrijving ?? "").StartsWith("Decennale", StringComparison.OrdinalIgnoreCase) || (k.Omschrijving ?? "").StartsWith("ABR", StringComparison.OrdinalIgnoreCase);
+            decimal erelonenEnStudies = result.KostenOpBouw.Where(k => !IsVerzekeringPost(k)).Sum(k => k.Bedrag);
+            decimal breyneBasis = (pctBasis + erelonenEnStudies) * 1.1m;
+            decimal wetBreyne = breyneBasis * p.WetBreynePerc * ((p.WetBreyneMaanden ?? 0) / 12m);
             if (wetBreyne != 0m)
                 result.Financiering.Add(new BudgetKostenPostBO
                 {
@@ -107,15 +112,16 @@ namespace ServiceCore.Budget
                     Bedrag       = wetBreyne,
                     Percentage   = p.WetBreynePerc,
                     IsPerc       = true,
-                    BasisBedrag  = pctBasis,
+                    BasisBedrag  = breyneBasis,
                     ActivityId   = BudgetAlgemeneActiviteit.FinancieringWetBreyne
                 });
 
-            decimal slGebouw = pctBasis * p.StraightloanGebouwPerc * ((p.StraightloanGebouwMaanden ?? 0) / 12m);
+            // Het krediet voor het gebouw wordt geleidelijk opgenomen: rente over de helft van de looptijd.
+            decimal slGebouw = pctBasis * p.StraightloanGebouwPerc * ((p.StraightloanGebouwMaanden ?? 0) / 2m / 12m);
             if (slGebouw != 0m)
                 result.Financiering.Add(new BudgetKostenPostBO
                 {
-                    Omschrijving = $"Straight loan gebouw ({p.StraightloanGebouwMaanden ?? 0} mnd)",
+                    Omschrijving = $"Straight loan gebouw ({p.StraightloanGebouwMaanden ?? 0} mnd, helft)",
                     Bedrag       = slGebouw,
                     Percentage   = p.StraightloanGebouwPerc,
                     IsPerc       = true,
@@ -176,7 +182,7 @@ namespace ServiceCore.Budget
                 decimal grondKost0 = grond + grondExtra0 + grondForf0 + slGrond;
                 decimal bouwKost0 = Math.Max(0m, result.TotaalKosten - result.Grond.Sum(g => g.Bedrag) - grondForf0 - slGrond);
                 decimal com = p.MakelaarsCommissiePerc ?? 0m;
-                var w0 = VerkoopVoorstelService.Waarden(grondKost0, bouwKost0, gm, dm, com, p.OverigeVerkoopkosten ?? 0m);
+                var w0 = VerkoopVoorstelService.Waarden(grondKost0, bouwKost0, gm, dm, com, p.OverigeVerkoopkosten ?? 0m, slGrond, result.Financiering.Sum(f => f.Bedrag) - slGrond);
                 decimal v0 = w0.Grond + w0.Bouw;
                 decimal bouwFactor = (1m + dm) / (com < 1m ? 1m - com : 1m);   // publiciteit zit in de bouwkost: elke euro erbij geeft zoveel verkoopwaarde erbij
                 decimal noemer = 1m - pubPerc * bouwFactor;

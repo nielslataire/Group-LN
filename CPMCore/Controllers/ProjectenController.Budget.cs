@@ -1037,7 +1037,7 @@ namespace CPMCore.Controllers
             ViewData["Referrer"] = Request.Headers["Referer"].ToString();
 
             SetBudgetPageContext(model.ProjectId, model.ProjectName, nameof(BudgetActivityLijnen), "Activiteiten", new { versieId }, versieId: versieId, versieLabel: model.VersieLabel);
-            if (GebruikGlV2) { await PrepareWizardV2(versieId, 6); return View("BudgetActivityLijnenV2", model); }
+            if (GebruikGlV2) { ViewData["BwGebruiker"] = User.GetCpmDisplayName(); await PrepareWizardV2(versieId, 6); return View("BudgetActivityLijnenV2", model); }
             return View(model);
         }
 
@@ -1057,7 +1057,7 @@ namespace CPMCore.Controllers
                 Opmerking                   = dto.Opmerking
             }).ToList() ?? new List<BudgetActivityLijnBO>();
 
-            var response = await _budgetActivityService.SaveLijnenAsync(request.BudgetVersieId, lijnen);
+            var response = await _budgetActivityService.SaveLijnenAsync(request.BudgetVersieId, lijnen, User.GetCpmDisplayName());
 
             return Json(new { success = response.Success, message = response.Messages.FirstOrDefault()?.Message });
         }

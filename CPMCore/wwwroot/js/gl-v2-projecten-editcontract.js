@@ -210,7 +210,9 @@
 
         $("#Contract_GuaranteeType").on("change", function () {
             var val = $(this).val();
-            if (val == 2) { $("#Contract_GuaranteePercentage").removeAttr("disabled"); } else { $("#Contract_GuaranteePercentage").attr("disabled", "disabled"); }
+            // Percentage ook bij een bankwaarborg: het bedrag daarvan is percentage x contractbedrag (Nacalculatie > Borgen).
+            if (val == 2 || val == 3) { $("#Contract_GuaranteePercentage").removeAttr("disabled"); } else { $("#Contract_GuaranteePercentage").attr("disabled", "disabled"); }
+            $("#guaranteeReleaseRow").toggle(val == 2 || val == 3);
             var isBank = val == 3;
             $("#guaranteeDocRow").toggle(isBank);
             var hasDoc = $("#guaranteeDocRow").find('a[href*="GuaranteeDoc"]').length > 0;

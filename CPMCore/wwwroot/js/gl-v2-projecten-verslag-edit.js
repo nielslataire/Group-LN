@@ -12,7 +12,7 @@
     var data = JSON.parse(dataEl.textContent || "{}");
     var base = root.dataset.baseUrl;               // …/Verslagen/{id}
     var token = ($("#vs-token-form input[name=__RequestVerificationToken]") || {}).value || "";
-    var aanwezigen = (data.aanwezigen || []).map(function (a) { return { name: a.name, email: a.email || "" }; });
+    var aanwezigen = (data.aanwezigen || []).map(function (a) { return { name: a.name, email: a.email || "", excused: !!a.excused }; });
     var readOnly = !!data.readOnly;
     // Punten in concept/ter goedkeuring mogen niet onafgewerkt mee in een verstuurd verslag (zie Finish
     // in ProjectVerslagenController). Basisaantal komt van de server (bij page load); elk nieuw punt
@@ -52,7 +52,7 @@
     function saveNow() {
         var rev = editRev;
         return post("Save", {
-            datum: $("#vs-datum").value, uur: $("#vs-uur").value, weer: $("#vs-weer").value, opmerkingen: $("#vs-opm").value,
+            datum: $("#vs-datum").value, uur: $("#vs-uur").value, eindUur: $("#vs-eind") ? $("#vs-eind").value : "", weer: $("#vs-weer").value, opmerkingen: $("#vs-opm").value,
             volgendDatum: $("#vs-volgend").value, volgendUur: $("#vs-volgend-uur").value, aanwezigenJson: JSON.stringify(aanwezigen)
         }).then(function (j) { flash(j.ok ? "Bewaard" : (j.error || "Opslaan mislukt"), !j.ok); if (j.ok) { savedRev = Math.max(savedRev, rev); refreshDirty(); } return j; }).catch(function () { flash("Opslaan mislukt", true); return { ok: false }; });
     }
@@ -77,7 +77,7 @@
             window.bootstrap.Modal.getOrCreateInstance(m).show();
         });
     });
-    ["vs-uur", "vs-weer", "vs-opm", "vs-volgend-uur"].forEach(function (id) { var e = document.getElementById(id); if (e) e.addEventListener("input", saveGeneral); });
+    ["vs-uur", "vs-eind", "vs-weer", "vs-opm", "vs-volgend-uur"].forEach(function (id) { var e = document.getElementById(id); if (e) e.addEventListener("input", saveGeneral); });
     ["vs-datum", "vs-volgend"].forEach(function (id) {
         var h = document.getElementById(id), t = document.getElementById(id + "_text");
         if (h) { h.addEventListener("change", saveGeneral); h.addEventListener("input", saveGeneral); }
@@ -90,7 +90,9 @@
         box.innerHTML = aanwezigen.length ? "" : '<span class="gl-v2-field-help">Nog niemand aangeduid.</span>';
         aanwezigen.forEach(function (a, i) {
             var c = document.createElement("span"); c.className = "gl-v2-vs-chip";
-            c.innerHTML = esc(a.name) + (a.email ? "" : ' <small title="Zonder e-mailadres krijgt deze persoon het verslag niet">geen mail</small>') + (readOnly ? "" : '<button type="button" data-i="' + i + '" aria-label="Verwijder ' + esc(a.name) + '"><i class="ph ph-x" aria-hidden="true"></i></button>');
+            c.className = "gl-v2-vs-chip" + (a.excused ? " is-excused" : "");
+            c.innerHTML = esc(a.name) + (a.excused ? ' <small>verontschuldigd</small>' : "") + (a.email ? "" : ' <small title="Zonder e-mailadres krijgt deze persoon het verslag niet">geen mail</small>') +
+                (readOnly ? "" : '<button type="button" data-x="' + i + '" title="' + (a.excused ? "Toch aanwezig" : "Verontschuldigd") + '" aria-label="' + (a.excused ? "Aanwezig: " : "Verontschuldigd: ") + esc(a.name) + '"><i class="ph ' + (a.excused ? "ph-user-check" : "ph-user-minus") + '" aria-hidden="true"></i></button><button type="button" data-i="' + i + '" aria-label="Verwijder ' + esc(a.name) + '"><i class="ph ph-x" aria-hidden="true"></i></button>');
             box.appendChild(c);
         });
     }
@@ -122,6 +124,8 @@
         $("#vs-add-btn").addEventListener("click", addPerson);
         $("#vs-add-email").addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); addPerson(); } });
         $("#vs-chips").addEventListener("click", function (ev) {
+            var x = ev.target.closest("button[data-x]");
+            if (x) { var k = aanwezigen[parseInt(x.dataset.x, 10)]; if (k) { k.excused = !k.excused; renderChips(); saveGeneral(); } return; }
             var b = ev.target.closest("button[data-i]"); if (!b) return;
             aanwezigen.splice(parseInt(b.dataset.i, 10), 1); renderChips(); saveGeneral();
         });
@@ -308,7 +312,7 @@
 
     // ── voorbeeld PDF: voorbereiden op de pagina zelf; bij klaar een knop om de PDF te openen (design 44a/44c) ──
     var prevBtn = document.getElementById("vs-preview");
-    function prepFail(msg) { prepHide(); if (prevBtn) prevBtn.disabled = false; window.alert(msg || "Het voorbeeld kon niet worden opgemaakt."); }
+    function prepFail(msg) { if (prevBtn) prevBtn.disabled = false; prepShow({ kicker: "Voorbeeld", title: "Het voorbeeld kon niet worden opgemaakt", sub: msg || "Er ging iets mis. Probeer het opnieuw.", steps: [], actions: '<button type="button" class="gl-v2-btn gl-v2-btn-primary" id="vs-prep-back">Terug naar verslag</button>' }); }
     if (prevBtn) prevBtn.addEventListener("click", function () {
         prevBtn.disabled = true;
         prepShow({ kicker: "Voorbeeld · voorbereiden", title: "Het voorbeeld wordt voorbereid", sub: prepCounts() + ". Het voorbeeld verschijnt zodra de PDF klaar is.", steps: prepSteps3(0, false, false) });
@@ -339,15 +343,55 @@
     }
     document.addEventListener("click", function (ev) { if (ev.target.closest(".js-vs-finish") || ev.target.closest("#vs-finish-open")) openFinish(); });
     var finishForm = document.getElementById("vs-finish-form");
+    function finishPost(action, extra) {
+        var fd = new FormData(); fd.append("__RequestVerificationToken", token);
+        Object.keys(extra || {}).forEach(function (k) { fd.append(k, extra[k]); });
+        return fetch(base + "/" + action, { method: "POST", body: fd, credentials: "same-origin" }).then(function (r) { return r.json(); });
+    }
     if (finishForm) finishForm.addEventListener("submit", function (ev) {
-        if (finishForm.dataset.ready === "1") return;
         ev.preventDefault();
         var btn = document.getElementById("vs-finish-submit"); btn.disabled = true;
         var m = document.getElementById("vs-finish-modal"); if (m && window.bootstrap) { var inst = window.bootstrap.Modal.getInstance(m); if (inst) inst.hide(); }
-        prepShow({ kicker: "Stap 1 van 2 · voorbereiden", title: "Het verslag wordt voorbereid", sub: prepCounts() + ". De punten worden goedgekeurd en het verslag gaat daarna naar de aanwezigen.", steps: prepSteps3(0, false, true) });
-        flushAll().then(function () { return buildPlanImages(function (n) { prepUpdateSteps(prepSteps3(n, false, true)); }); }).then(function (map) {
-            fillForm(finishForm, map); prepUpdateSteps(prepSteps3(planPages.length, true, true));
-            finishForm.dataset.ready = "1"; window.__vsLeaving = true; finishForm.submit();
-        }, function () { prepHide(); btn.disabled = false; });
+        var n = planPages.length, nieuw = $("#vs-new-list") ? $("#vs-new-list").children.length : 0, open = $$("#vs-open-body tr[data-issue]").length;
+        function steps(planDone, pdf, mails, mailTotal) {
+            var plansOk = planDone >= n;
+            return [["Punten verzamelen", String(nieuw + open), "done"],
+                ["Plannen met aanduidingen", n ? Math.min(planDone, n) + " / " + n : "geen", plansOk ? "done" : "act"],
+                ["PDF opmaken", "", !plansOk ? "todo" : pdf === "act" ? "act" : pdf === "done" ? "done" : "todo"],
+                ["Naar aanwezigen", mailTotal ? mails + " / " + mailTotal : "", pdf !== "done" ? "todo" : mails >= mailTotal ? "done" : "act"]];
+        }
+        prepShow({ kicker: "Stap 1 van 2 · voorbereiden", title: "Het verslag wordt voorbereid", sub: prepCounts() + ". De punten worden goedgekeurd en het verslag gaat daarna naar de aanwezigen.", steps: steps(0, "todo", 0, 0) });
+        var failed = function (msg) {
+            btn.disabled = false;
+            prepShow({ kicker: "Afronden", title: "Afronden is niet gelukt", sub: msg || "Er ging iets mis. Probeer het opnieuw; er is niets verstuurd.", steps: [],
+                actions: '<button type="button" class="gl-v2-btn gl-v2-btn-primary" id="vs-prep-back">Terug naar verslag</button>' });
+        };
+        flushAll().then(function () { return buildPlanImages(function (k) { prepUpdateSteps(steps(k, "todo", 0, 0)); }); }).then(function (map) {
+            fillForm(finishForm, map); prepUpdateSteps(steps(n, "act", 0, 0));
+            var fd = new FormData(finishForm);   // bevat het token en de plan-afbeeldingen
+            return fetch(base + "/FinishStart", { method: "POST", body: fd, credentials: "same-origin" }).then(function (r) { return r.json(); });
+        }).then(function (j) {
+            if (!j.ok) throw new Error(j.error);
+            var rec = j.recipients || [], sent = 0, done = 0;
+            prepShow({ kicker: "Stap 2 van 2 · verzenden", title: "Het verslag wordt verzonden", sub: j.goedgekeurd + " nieuwe punt(en) goedgekeurd. Elke aanwezige met een e-mailadres krijgt de PDF.", steps: steps(n, "done", 0, rec.length) });
+            var chain = Promise.resolve();
+            rec.forEach(function (r) {
+                chain = chain.then(function () { return finishPost("FinishSend", { token: j.token, index: r.index }); }).then(function (x) { if (!x.ok) throw new Error(x.error); if (x.sent) sent++; done++; prepUpdateSteps(steps(n, "done", done, rec.length)); });
+            });
+            return chain.then(function () { return finishPost("FinishDone", { token: j.token }); }).then(function (d) { if (!d.ok) throw new Error(d.error); return { d: d, sent: sent, total: rec.length, goedgekeurd: j.goedgekeurd }; });
+        }).then(function (r) {
+            window.__vsLeaving = true;
+            var url = r.d.url;
+            prepShow({ klaar: true, kicker: "Verzonden · " + r.d.verzonden, title: "Verslag verzonden",
+                sub: (r.total ? "Naar " + r.sent + " van " + r.total + " aanwezige(n)." + (r.sent < r.total ? " " + (r.total - r.sent) + " mail(s) konden niet verstuurd worden." : "") : "Geen aanwezige heeft een e-mailadres, dus er is niets verstuurd.") + " " + r.goedgekeurd + " nieuwe punt(en) goedgekeurd.",
+                steps: [["Punten goedgekeurd", String(r.goedgekeurd), "done"], ["PDF opgemaakt", "", "done"], ["Naar aanwezigen", r.total ? r.sent + " / " + r.total : "geen", "done"]],
+                actions: '<a class="gl-v2-btn gl-v2-btn-secondary" href="' + url.replace(/\?.*$/, "") + '">Terug naar verslagen</a><a class="gl-v2-btn gl-v2-btn-primary" href="' + url + '">Verslag openen</a>' });
+            setTimeout(function () { window.location.href = url; }, 6000);   // gaat vanzelf verder naar het verslag (44c)
+        }).catch(function (err) { failed(err && err.message); });
     });
+    // "Voorbeeld PDF" vanuit de verslagenlijst: meteen het voorbeeld (met plannen) maken
+    if (/[?&]preview=1/.test(window.location.search) && prevBtn) {
+        try { history.replaceState(null, "", window.location.pathname); } catch (e) { /* niet erg */ }
+        setTimeout(function () { prevBtn.click(); }, 500);
+    }
 })();

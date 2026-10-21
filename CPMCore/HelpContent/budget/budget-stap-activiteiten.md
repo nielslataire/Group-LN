@@ -7,7 +7,8 @@ treeLabel: Stap 6 · Activiteiten
 role: Projectleider
 device: Desktop · tablet
 minutes: 7
-updated: 2026-10-13
+updated: 2026-10-21
+newsTag: Bijgewerkt
 screens: budget-stap-6
 synonyms: stap 6, activiteiten, lot, nacalculatie, referentie, referentieproject, correctie, verschil, toon berekeningen, formule
 description: de bouwkost per activiteit, de vergelijking met afgewerkte projecten en de correctie
@@ -20,6 +21,8 @@ before: |
 faq:
   - q: Waarom is een bedrag grijs en kan ik het niet intikken?
     a: Het bedrag in de kolom Basis is berekend uit de vorige stappen. Je past het niet zelf aan. Gebruik de kolom Correctie om het te verhogen of te verlagen.
+  - q: Kan ik een activiteit op 0 zetten?
+    a: Ja. Zet de correctie op 0. Het gecorrigeerde bedrag is dan € 0 en telt niet meer mee in de bouwkost. Schrijf in de reden waarom.
   - q: Wat betekent de correctie 100 %?
     a: Er is geen correctie. Het gecorrigeerde bedrag is dan gelijk aan het basisbedrag. Bij 120 % wordt het bedrag 20 % hoger, bij 50 % wordt het de helft.
   - q: Wat is het driehoekje bij een activiteit?
@@ -69,12 +72,15 @@ Met de schakelaar **Enkel afwijking > 25 %** zie je alleen de activiteiten die m
 
 ## Een bedrag corrigeren
 
-1. Zoek de activiteit.
-2. Verander de **Correctie**, bijvoorbeeld naar **120** voor 20 % meer.
-3. Vul de **opmerking** in die onder de activiteit verschijnt. Ze is verplicht zodra de correctie niet 100 is.
-4. Klik onderaan op **Opslaan**.
+![Twee gecorrigeerde activiteiten: een met een reden in het goudkader, een met het invoerveld](/img/help/budget/budget-stap-activiteiten/4-correctie-reden.png)
 
-Een correctie zonder opmerking geeft een waarschuwing. Schrijf kort waarom je het bedrag aanpast, bijvoorbeeld dat het project luxueuzer is.
+1. Zoek de activiteit.
+2. Klik in het veld **Correctie**. De waarde staat dan geselecteerd, dus je kunt meteen typen. Vul bijvoorbeeld **120** in voor 20 % meer. Een decimaal mag, bijvoorbeeld **95,5**. Maak je het veld leeg, dan wordt het weer 100.
+3. Het veld **Correctie** krijgt een gouden kleur. Onder de activiteit verschijnt een invoerveld **Reden**. Schrijf kort waarom je het bedrag aanpast, bijvoorbeeld dat het project luxueuzer is. Druk op Enter of klik ergens anders.
+4. De reden verschijnt nu in een goudkleurig kader, met je naam en het tijdstip. Met het potloodje pas je ze aan.
+5. Klik onderaan op **Opslaan**.
+
+De reden is niet verplicht. Laat je ze leeg, dan krijgt het veld een goudkleurige rand met de waarschuwing "Correctie ≠ 100 % zonder reden". Je kunt gewoon verder. Je naam en het tijdstip volgen de laatste wijziging van de reden. De reden staat ook in het interne budget (PDF intern). In de PDF voor de bank staat ze niet. Zet je de correctie terug op 100, dan verdwijnt het kader en de reden.
 
 ## Zien hoe een bedrag is berekend
 

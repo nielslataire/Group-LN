@@ -7,7 +7,8 @@ treeLabel: Stap 7 · Parameters
 role: Projectleider
 device: Desktop · tablet
 minutes: 8
-updated: 2026-10-13
+updated: 2026-10-21
+newsTag: Bijgewerkt
 screens: budget-stap-7
 synonyms: stap 7, parameters, erelonen, architect, ingenieur, decennale, grondkost, aankoop grond, registratierechten, notaris, financiering, breyne, straight loan, onvoorzien, marge, makelaarscommissie
 description: erelonen, verzekeringen, grondkost, financiering, marges en verkoopkosten
@@ -72,7 +73,9 @@ Bij **Financiering** vul je per lening het percentage en de looptijd in maanden 
 
 Vul ook de **Onvoorzien** in, als percentage. Een lening zonder aantal maanden is een fout.
 **Wet Breyne** is de kost die de bank aanrekent voor het stellen van een bankwaarborg van 100 %. Een **straight loan** is een lening van de bank om de grond of het bouwwerk te financieren.
-Wet Breyne en de straight loan voor het gebouw rekenen op de bouwkost. De straight loan voor de grond rekent op de aankoopprijs van de grond.
+De kost van de **Wet Breyne** rekent op de bouwkost plus de erelonen en studies, samen maal 1,1. Zo dekt de waarborg ook de erelonen.
+De **straight loan voor het gebouw** rekent op de bouwkost en telt maar de helft van de looptijd. Het krediet wordt namelijk geleidelijk opgenomen, dus er is gemiddeld maar de helft van het bedrag uitgeleend. Bij 18 maanden rekent CPM dus met 9 maanden rente.
+De straight loan voor de grond rekent op de aankoopprijs van de grond, over de volledige looptijd.
 
 ## De marges invullen
 
@@ -83,6 +86,8 @@ Bij **Verkoop — marges** vul je drie percentages in:
 - **Waarde 2e grondzone**: de waarde van de tweede grondzone tegenover de eerste. CPM gebruikt ze om de grondkost te verdelen over de eenheden. Laat je ze leeg, dan rekent CPM met 20 %.
 
 Een leeg veld volgt de standaard. Onder elk percentage staat het bedrag.
+
+Op de financiering (Wet Breyne en de straight loans) neemt CPM geen marge. De financiering zit tegen kostprijs in de verkoopwaarde en alleen de overige kosten krijgen de marge.
 
 ## De verkoopkosten invullen
 

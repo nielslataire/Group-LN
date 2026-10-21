@@ -2721,6 +2721,7 @@ namespace ServiceCore
                         .ThenInclude(co => co.ChangeOrderDetail)
                 .Include(m => m.Contract)
                     .ThenInclude(c => c.Company)
+                .Include(m => m.Inhoudingen).ThenInclude(i => i.Afhandelingen)
                 .SingleOrDefault();
 
             var bo = new IncommingInvoiceBO();
@@ -2771,6 +2772,7 @@ namespace ServiceCore
                 entity = _uow.IncommingInvoices.GetNormal()
                     .Where(m => m.Id == invoice.Id)
                     .Include(m => m.IncommingInvoiceDetail)
+                    .Include(m => m.Inhoudingen).ThenInclude(i => i.Afhandelingen)
                     .SingleOrDefault();
             }
 

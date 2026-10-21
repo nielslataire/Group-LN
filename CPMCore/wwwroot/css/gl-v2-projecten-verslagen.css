@@ -153,3 +153,5 @@ body.gl-v2-vsprep-on #gl-v2-vs-edit { display: none !important; }
     .gl-v2-vsprep__bar i { animation: none; width: 100%; opacity: .5; }
     .gl-v2-vsprep__ico.act i { animation-duration: 2.4s; }
 }
+.gl-v2-vs-chip.is-excused { background: var(--gl-v2-neutral-tint); color: var(--gl-v2-muted); }
+.gl-v2-vs-chip.is-excused > :first-child { text-decoration: none; }

@@ -152,10 +152,12 @@
             anker.style.cssText = "display:inline-block;width:1px;height:" + Math.max(label.offsetHeight, 24) + "px;margin-left:-1px;visibility:hidden;pointer-events:none;flex:none";
             label.parentNode.insertBefore(anker, label.nextSibling);
             var thuis = label.parentNode, zweeft = false;
+            // Zwevend verhuist de schakelaar naar het .gl-v2-element zelf (niet naar <body>): alle --gl-v2-*-kleuren hangen onder .gl-v2 en zijn daarbuiten leeg.
+            var host = label.closest(".gl-v2") || document.body;
             function zweef(aan) {
                 if (aan === zweeft) return;
                 zweeft = aan;
-                if (aan) { anker.style.width = label.offsetWidth + "px"; document.body.appendChild(label); label.classList.add("is-zwevend"); }
+                if (aan) { anker.style.width = label.offsetWidth + "px"; host.appendChild(label); label.classList.add("is-zwevend"); }
                 else { label.classList.remove("is-zwevend"); thuis.insertBefore(label, anker); anker.style.width = "1px"; }
             }
             new IntersectionObserver(function (items) { zweef(!items[items.length - 1].isIntersecting); }, { threshold: 0 }).observe(anker);

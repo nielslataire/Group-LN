@@ -6,7 +6,8 @@ treeOrder: 10
 role: Projectleider
 device: Desktop · tablet
 minutes: 4
-updated: 2026-10-13
+updated: 2026-10-21
+newsTag: Bijgewerkt
 screens: budget-stap-9
 synonyms: waarschuwing, fout, aandachtspunt, negeren, terugzetten, afronden geblokkeerd, uitroepteken
 description: wat een uitroepteken in de stappenbalk betekent en wat je ermee doet
@@ -57,7 +58,7 @@ Per melding zie je de stap, de tekst en hoeveel keer ze voorkomt. Klik op **Naar
 | 5 Dak & afbraak | geen enkel daktype staat aan | fout |
 | 5 Dak & afbraak | er zijn veluxen bij een plat dak | waarschuwing |
 | 6 Activiteiten | het bedrag wijkt meer dan 50 % af van de referentie | waarschuwing |
-| 6 Activiteiten | de correctie is niet 100 % en er staat geen opmerking | waarschuwing |
+| 6 Activiteiten | de correctie is niet 100 % en er staat geen reden | waarschuwing |
 | 7 Parameters | de decennale staat op 0 % | waarschuwing |
 | 7 Parameters | een percentage wijkt meer dan 50 % af van Instellingen | waarschuwing |
 | 7 Parameters | Wet Breyne of straight loan heeft geen aantal maanden | fout |

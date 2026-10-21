@@ -40,10 +40,6 @@
 }
 
 /* ── Soort — segmented control (Vordering/Eindvordering/Creditnota) ──────────────────────────── */
-.gln-ai-segmented { display: flex; height: 40px; border: 1px solid var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-sm); overflow: hidden; }
-.gln-ai-segmented-btn { flex: 1; border: 0; background: var(--gl-v2-surface); color: var(--gl-v2-muted); font: 500 12.5px var(--gl-v2-font-sans); cursor: pointer; border-right: 1px solid var(--gl-v2-hairline); }
-.gln-ai-segmented-btn:last-child { border-right: 0; }
-.gln-ai-segmented-btn.is-active { background: var(--gl-v2-primary); color: #fff; font-weight: 600; }
 
 /* ── Factuurregels: toevoegrij + tabel ────────────────────────────────────────────────────────── */
 .gln-ai-addrow { display: flex; gap: 8px; align-items: flex-start; padding: 16px 20px 0; }
@@ -59,7 +55,7 @@
    rechtstreeks zonder .gl-v2-field-box, en die klasse is bewust rand-/achtergrondloos (bedoeld om IN
    een .gl-v2-field-box te zitten), dus de velden waren onzichtbaar. */
 .gln-ai-row-type .gl-v2-field-input, .gln-ai-row-wo .gl-v2-field-input { font-size: 12.5px; }
-.gln-ai-row .gl-v2-field-box { height: 34px; padding: 0 10px; }
+.gln-ai-row .gl-v2-field-box { --gl-v2-field-pad: 10px; height: 34px; padding: 0 10px; }
 .gln-ai-row-price .gl-v2-field-input { text-align: right; }
 .gln-ai-row-wo[disabled], .gln-ai-row-wo .gl-v2-field-input:disabled { background: var(--gl-v2-disabled-bg); color: var(--gl-v2-disabled-fg); }
 .gln-ai-row-del { width: 32px; height: 32px; }
@@ -116,3 +112,58 @@
 
 .gln-ai-contract-open-row { border-top: 1px solid var(--gl-v2-hairline-soft); padding-top: 12px; }
 .gln-ai-contract-open { justify-content: center; width: 100%; }
+
+/* ── Borg en extra inhouding (design-handoff 42h/42c): twee schakelrijen onder de velden van Algemene info ── */
+.gln-ai-optrows { display: flex; flex-direction: column; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gln-ai-optrow { padding: 14px 20px; border-bottom: 1px solid var(--gl-v2-hairline-soft); }
+.gln-ai-optrow:last-child { border-bottom: 0; }
+.gln-ai-optrow-head { display: flex; align-items: center; gap: 14px; }
+.gln-ai-optrow-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.gln-ai-optrow-text strong { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gln-ai-optrow-text span { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gln-ai-optrow-amount { font: 650 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gln-ai-optrow-body { margin-top: 12px; padding-left: 54px; }
+.gln-ai-optrow-body[hidden] { display: none; }
+#gln-ai-borg-afwijk[hidden], #gln-ai-borg-vrijgave-contract[hidden], #gln-ai-borg-vrijgave-zelf[hidden] { display: none; }
+#gln-ai-borg-afwijk { display: flex; flex-direction: column; gap: 10px; }
+.gl-v2-field-box.is-readonly { background: var(--gl-v2-subtle-bg-soft); }
+.gl-v2-field-box.is-readonly .gl-v2-field-input { color: var(--gl-v2-muted); cursor: default; }
+.gl-v2-field-label-opt { font-weight: 450; color: var(--gl-v2-muted-light); text-transform: none; letter-spacing: 0; }
+.gln-ai-betalen { font: 500 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); margin-left: 4px; }
+.gln-ai-betalen[hidden] { display: none; }
+@media (max-width: 767.98px) { .gln-ai-optrow { padding: 12px 16px; } .gln-ai-optrow-body { padding-left: 0; } }
+
+/* ── Kaart "Te betalen" onder de contractkaart (design-handoff 42c) ──────────────────────────────────────
+   Borg = oranje waarschuwingskader (tokens --gl-v2-warning / --gl-v2-warning-tint, rand #E6D3A8);
+   korting contant = groen infokader (#E4EEDD, rand #C9DDBE) met een witte rij voor bedrag en datum. */
+.gln-ai-pay { display: flex; flex-direction: column; padding: 10px 20px 4px; }
+.gln-ai-pay-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 7px 0; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gln-ai-pay-row[hidden] { display: none; }
+.gln-ai-pay-label { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.gln-ai-pay-label small { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gln-ai-pay-value { font: 600 13px var(--gl-v2-font-sans); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gln-ai-pay-borg { display: flex; align-items: center; gap: 10px; margin: 2px -10px; padding: 9px 10px; border-radius: 9px; background: var(--gl-v2-warning-tint, #F6EEDC); border: 1px solid #E6D3A8; }
+.gln-ai-pay-borg[hidden] { display: none; }
+.gln-ai-pay-pill { flex: none; padding: 2px 8px; border-radius: 10px; background: #fff; border: 1px solid #E6D3A8; font: 600 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-warning, #8A6A32); white-space: nowrap; }
+.gln-ai-pay-borgsub { flex: 1; min-width: 0; font: 450 11px/1.4 var(--gl-v2-font-sans); color: #6B4F22; }
+.gln-ai-pay-borgwaarde { font: 700 14px var(--gl-v2-font-sans); color: var(--gl-v2-warning, #8A6A32); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gln-ai-pay-totaal { display: flex; align-items: baseline; gap: 10px; padding: 12px 0 10px; margin-top: 6px; border-top: 1.5px solid var(--gl-v2-ink); }
+.gln-ai-pay-totaal > span:first-child { flex: 1; font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gln-ai-pay-totaal > span:last-child { font: 700 20px var(--gl-v2-font-sans); color: var(--gl-v2-primary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gln-ai-pay-korting { margin: 0 12px 12px; padding: 12px 14px; border-radius: 10px; background: #E4EEDD; border: 1px solid #C9DDBE; display: flex; flex-direction: column; gap: 8px; }
+.gln-ai-pay-korting[hidden] { display: none; }
+.gln-ai-pay-korting-kop { display: flex; align-items: center; gap: 8px; }
+.gln-ai-pay-korting-kop > i { flex: none; font-size: 15px; color: #2F6038; }
+.gln-ai-pay-korting-titel { flex: 1; font: 600 12.5px var(--gl-v2-font-sans); color: #24502E; }
+.gln-ai-pay-dagen { padding: 2px 8px; border-radius: 10px; background: var(--gl-v2-primary); font: 600 10.5px var(--gl-v2-font-sans); color: #fff; white-space: nowrap; }
+.gln-ai-pay-dagen.is-verlopen { background: var(--gl-v2-muted, #7a8a78); }
+.gln-ai-pay-korting-wit { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; background: #fff; font: 450 11.5px/1.45 var(--gl-v2-font-sans); color: #24502E; }
+.gln-ai-pay-korting-wit > span:first-child { flex: 1; }
+.gln-ai-pay-korting-wit b { font-weight: 600; }
+.gln-ai-pay-korting-waarde { font: 700 16px var(--gl-v2-font-sans); color: #2F6038; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gln-ai-pay-korting-wit.is-verlopen { opacity: .6; text-decoration: line-through; }
+.gln-ai-pay-korting-tot { display: flex; align-items: baseline; gap: 10px; padding: 0 2px; font: 600 12px var(--gl-v2-font-sans); color: #24502E; }
+.gln-ai-pay-korting-tot > span:first-child { flex: 1; }
+.gln-ai-pay-korting-tot > span:last-child { font: 700 15px var(--gl-v2-font-sans); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gln-ai-pay-korting-tot[hidden] { display: none; }
+

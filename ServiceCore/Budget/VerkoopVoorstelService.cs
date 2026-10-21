@@ -87,9 +87,9 @@ namespace ServiceCore.Budget
         /// <summary>
         /// Grond- en bouwwaarde waarbij de ingevulde marges de effectieve NETTO marges zijn: de verkoopkosten (makelaarscommissie, met btw enkel op het grondaandeel,
         /// plus overige verkoopkosten) zitten al in de prijs. Per deel: waarde = (kost × (1 + marge) + aandeel overige) / (1 − commissie × btw-factor).
-        /// Zonder commissie en overige is dit gewoon kost × (1 + marge).
+        /// Zonder commissie en overige is dit gewoon kost × (1 + marge), met de financiering (straight loan, Wet Breyne) tegen kostprijs: daarop komt geen marge.
         /// </summary>
-        public static (decimal Grond, decimal Bouw) Waarden(decimal grondKost, decimal bouwKost, decimal grondMarge, decimal bouwMarge, decimal commissie, decimal overige)
+        public static (decimal Grond, decimal Bouw) Waarden(decimal grondKost, decimal bouwKost, decimal grondMarge, decimal bouwMarge, decimal commissie, decimal overige, decimal grondFinanciering = 0m, decimal bouwFinanciering = 0m)
         {
             var kost = grondKost + bouwKost;
             var overigeGrond = kost > 0m ? overige * grondKost / kost : 0m;
@@ -98,8 +98,11 @@ namespace ServiceCore.Budget
             var noemerBouw = 1m - commissie;                                           // btw op het bouwaandeel is aftrekbaar: geen kost
             if (noemerGrond <= 0m) noemerGrond = 1m;
             if (noemerBouw <= 0m) noemerBouw = 1m;
-            return (Math.Round((grondKost * (1m + grondMarge) + overigeGrond) / noemerGrond, 2),
-                    Math.Round((bouwKost * (1m + bouwMarge) + overigeBouw) / noemerBouw, 2));
+            // Op de financiering (straight loan, Wet Breyne) wordt geen marge genomen: ze zit tegen kostprijs in de waarde.
+            var grondMetMarge = Math.Max(0m, grondKost - grondFinanciering);
+            var bouwMetMarge = Math.Max(0m, bouwKost - bouwFinanciering);
+            return (Math.Round((grondKost + grondMetMarge * grondMarge + overigeGrond) / noemerGrond, 2),
+                    Math.Round((bouwKost + bouwMetMarge * bouwMarge + overigeBouw) / noemerBouw, 2));
         }
 
         /// <summary>Pure functie (unit-getest): voorstel + verkooplijnen → opbrengst en marge.</summary>
@@ -372,7 +375,7 @@ namespace ServiceCore.Budget
             if (bo.BouwKost < 0m) bo.BouwKost = 0m;
 
             // De ingevulde marges zijn netto: de verkoopkosten (commissie + overige, zie Parameters › Verkoopkosten) zitten al in de waarden
-            (bo.Grondwaarde, bo.Bouwwaarde) = Waarden(bo.GrondKost, bo.BouwKost, bo.GrondMargePerc, bo.DoelMargePerc, p.MakelaarsCommissiePerc ?? 0m, p.OverigeVerkoopkosten ?? 0m);
+            (bo.Grondwaarde, bo.Bouwwaarde) = Waarden(bo.GrondKost, bo.BouwKost, bo.GrondMargePerc, bo.DoelMargePerc, p.MakelaarsCommissiePerc ?? 0m, p.OverigeVerkoopkosten ?? 0m, slGrond, resultaat.Financiering.Sum(f => f.Bedrag) - slGrond);
 
             if (rijen.Count == 0)
             {

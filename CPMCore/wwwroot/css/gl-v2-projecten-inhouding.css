@@ -1,0 +1,42 @@
+/* gl-v2 — "Extra inhouding afhandelen" venster rechts (design-handoff 42j/42l). Namespace gln-ih-*. */
+
+.gln-ih-overlay { position: fixed; inset: 0; background: rgba(20, 31, 20, .38); z-index: 1090; }
+.gln-ih-overlay[hidden], .gln-ih-drawer[hidden] { display: none; }
+.gln-ih-drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; width: min(460px, 100vw); z-index: 1100; background: var(--gl-v2-surface);
+    box-shadow: -12px 0 40px rgba(20, 31, 20, .22); display: flex; flex-direction: column;
+}
+.gln-ih-drawer form { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.gln-ih-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 20px 14px; border-bottom: 1px solid var(--gl-v2-hairline-soft); }
+.gln-ih-head h2 { margin: 0 0 4px; font: 650 16px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gln-ih-head p { margin: 0; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gln-ih-body { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+.gln-ih-paneel { display: flex; flex-direction: column; gap: 14px; }
+.gln-ih-paneel[hidden] { display: none; }
+.gl-v2-segmented.gln-ih-seg { --gl-v2-seg-h: 38px; }
+
+.gln-ih-samenvatting { margin: 0; padding: 12px 14px; border: 1px solid var(--gl-v2-hairline-soft); border-radius: 10px; background: var(--gl-v2-subtle-bg-soft); display: flex; flex-direction: column; gap: 8px; }
+.gln-ih-sam-rij { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gln-ih-sam-rij dt { margin: 0; display: flex; flex-direction: column; font-weight: 450; }
+.gln-ih-sam-rij dt small { font-size: 11px; color: var(--gl-v2-muted); }
+.gln-ih-sam-rij dd { margin: 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gln-ih-sam-rij.is-sterk { padding-top: 8px; border-top: 1px solid var(--gl-v2-hairline-soft); font-weight: 650; }
+.gln-ih-voet { margin: 0; font: 450 11.5px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gln-ih-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gln-ih-footer .gl-v2-btn:disabled { opacity: .5; cursor: not-allowed; }
+body.gln-ih-open { overflow: hidden; }
+
+/* Kaart "Extra inhouding" op de factuur bewerken (42l) */
+.gln-ih-kaart { margin-top: 12px; border: 1px solid var(--gl-v2-hairline-soft); border-radius: 10px; overflow: hidden; }
+.gln-ih-tegels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--gl-v2-hairline-soft); }
+.gln-ih-tegel { padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; border-right: 1px solid var(--gl-v2-hairline-soft); }
+.gln-ih-tegel:last-child { border-right: 0; }
+.gln-ih-tegel span { font: 600 10.5px var(--gl-v2-font-sans); letter-spacing: .06em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gln-ih-tegel strong { font: 650 15px var(--gl-v2-font-sans); font-variant-numeric: tabular-nums; }
+.gln-ih-historiek { list-style: none; margin: 0; padding: 0; }
+.gln-ih-historiek li { display: grid; grid-template-columns: 92px minmax(0, 1fr) auto; gap: 12px; align-items: baseline; padding: 9px 14px; border-bottom: 1px solid var(--gl-v2-hairline-soft); font: 450 12.5px var(--gl-v2-font-sans); }
+.gln-ih-historiek li:last-child { border-bottom: 0; }
+.gln-ih-historiek small { display: block; color: var(--gl-v2-muted); font-size: 11px; }
+.gln-ih-historiek .is-num { font-variant-numeric: tabular-nums; text-align: right; }
+.gln-ih-kaart-actie { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; background: var(--gl-v2-subtle-bg-soft); font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gln-ih-intrek { padding: 0; border: 0; background: none; color: var(--gl-v2-primary); font: 600 11px var(--gl-v2-font-sans); cursor: pointer; text-decoration: underline; }

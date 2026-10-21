@@ -7,7 +7,7 @@
     string Eur0(decimal v) => v.ToString("N0", nlBE);
     string Eur2(decimal v) => v.ToString("N2", nlBE);
 
-    decimal Corr(BOCore.Budget.BudgetActivityLijnBO l) => l.Correctiefactor <= 0 ? 1m : l.Correctiefactor;
+    decimal Corr(BOCore.Budget.BudgetActivityLijnBO l) => l.Correctiefactor < 0 ? 1m : l.Correctiefactor;
     decimal LotGecorrigeerd(BOCore.Budget.BudgetLotGroepBO g) =>
         g.Lijnen.Where(l => l.TotaalAlternatief > 0).Sum(l => l.TotaalAlternatief * Corr(l));
 

@@ -182,7 +182,7 @@ namespace ServiceCore.Budget
                 Groep(id, "Grondkost", "aankoop + registratie + notaris", grond.Sum(k => k.Bedrag), grond.Select(k => (k.Omschrijving ?? "", k.Bedrag)));
                 foreach (var lot in lots.OrderBy(l => l.LotNummer))
                 {
-                    var lijnen = lot.Lijnen.Select(l => (Naam: l.ActivityOmschrijving ?? "", Bedrag: l.TotaalAlternatief * (l.Correctiefactor <= 0m ? 1m : l.Correctiefactor))).Where(x => x.Bedrag > 0m).ToList();
+                    var lijnen = lot.Lijnen.Select(l => (Naam: l.ActivityOmschrijving ?? "", Bedrag: l.TotaalAlternatief * (l.Correctiefactor < 0m ? 1m : l.Correctiefactor))).Where(x => x.Bedrag > 0m).ToList();
                     if (lijnen.Count == 0) continue;
                     Groep(id, lot.LotNaam ?? $"Lot {lot.LotNummer}", "", lijnen.Sum(x => x.Bedrag), lijnen);
                 }

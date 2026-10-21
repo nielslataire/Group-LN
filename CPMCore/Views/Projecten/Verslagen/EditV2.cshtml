@@ -18,7 +18,7 @@
     var menuVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · verslagen" };
     var gemeldCount = Model.OpenPunten.Count(p => CPMCore.Helpers.PuntenWeergave.Canon(p.Status) == (int)BOCore.ConstructionIssueStatus.Reported);
     var nagekeken = Model.OpenPunten.Count(p => p.TerPlaatse != null);
-    var data = new { projectId = Model.ProjectId, id = Model.Id, readOnly = ro, aanwezigen = Model.Aanwezigen.Select(a => new { name = a.Name, email = a.Email }), suggesties = Model.Suggesties.Select(s => new { name = s.Name, email = s.Email, org = s.Org }), openTotaal = Model.OpenPunten.Count, planPages = Model.PlanPages };
+    var data = new { projectId = Model.ProjectId, id = Model.Id, readOnly = ro, aanwezigen = Model.Aanwezigen.Select(a => new { name = a.Name, email = a.Email, excused = a.Excused }), suggesties = Model.Suggesties.Select(s => new { name = s.Name, email = s.Email, org = s.Org }), openTotaal = Model.OpenPunten.Count, planPages = Model.PlanPages };
 }
 @section PageStyle
 {
@@ -101,7 +101,8 @@
             <div class="gl-v2-card-header"><span class="gl-v2-card-header-icon"><i class="ph ph-clipboard-text" aria-hidden="true"></i></span><h2 class="gl-v2-card-header-title">Algemeen</h2><span class="gl-v2-field-divider"></span><span class="gl-v2-card-header-count">datum, aanwezigen, weer</span><span class="gl-v2-vs-saved" id="vs-saved" aria-live="polite"></span></div>
             <div class="gl-v2-vs-cardbody gl-v2-vs-fields">
                 @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "datum", Id = "vs-datum", Label = "Datum", IsoValue = Model.Datum.ToString("yyyy-MM-dd"), DisplayValue = Model.Datum.ToString("dd/MM/yyyy") })
-                <div class="gl-v2-field"><label class="gl-v2-field-label" for="vs-uur">Uur</label><div class="gl-v2-field-box"><input type="time" class="gl-v2-field-input" id="vs-uur" value="@Model.Uur" /></div></div>
+                <div class="gl-v2-field"><label class="gl-v2-field-label" for="vs-uur">Begin</label><div class="gl-v2-field-box"><input type="time" class="gl-v2-field-input" id="vs-uur" value="@Model.Uur" /></div></div>
+                <div class="gl-v2-field"><label class="gl-v2-field-label" for="vs-eind">Einde</label><div class="gl-v2-field-box"><input type="time" class="gl-v2-field-input" id="vs-eind" value="@Model.EindUur" /></div></div>
                 <div class="gl-v2-field gl-v2-vs-half"><label class="gl-v2-field-label" for="vs-weer">Weer</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="vs-weer" maxlength="100" value="@Model.Weer" placeholder="bv. droog, 12 °C" autocomplete="off" /></div></div>
 
                 <div class="gl-v2-field gl-v2-vs-wide">

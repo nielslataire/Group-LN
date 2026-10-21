@@ -15,6 +15,8 @@ public partial class Werfverslag
     public string Naam { get; set; }
     public DateOnly Datum { get; set; }
     public TimeOnly? Uur { get; set; }
+    /// <summary>Einde van het bezoek (migratie 104).</summary>
+    public TimeOnly? EindUur { get; set; }
     /// <summary>JSON: [{"name":"…","email":"…"}].</summary>
     public string AanwezigenJson { get; set; }
     public string Weer { get; set; }

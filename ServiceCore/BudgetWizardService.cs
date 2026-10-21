@@ -369,7 +369,9 @@ namespace ServiceCore
                     Correctiefactor             = l.Correctiefactor,
                     IsManueel                   = l.IsManueel,
                     VerhogingsPerc              = l.VerhogingsPerc,
-                    Omschrijving                = Neem("opmerkingen") ? l.Omschrijving : null
+                    Omschrijving                = Neem("opmerkingen") ? l.Omschrijving : null,
+                    OmschrijvingDoor            = Neem("opmerkingen") ? l.OmschrijvingDoor : null,
+                    OmschrijvingOp              = Neem("opmerkingen") ? l.OmschrijvingOp : null
                 });
 
             var p = _uow.BudgetParams.GetNoTracking().FirstOrDefault(x => x.BudgetVersieId == bronVersieId);

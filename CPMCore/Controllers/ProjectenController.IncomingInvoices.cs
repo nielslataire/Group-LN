@@ -196,7 +196,10 @@ namespace CPMCore.Controllers
 
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Factuur toevoegen");
             if (ViewData["UseGlV2Layout"] as bool? == true)
+            {
+                ViewData["HelpScreenId"] = "nacalculatie-factuur";
                 return View("AddIncommingInvoiceV2", model);
+            }
             return View(model);
         }
         [HttpPost]
@@ -234,6 +237,7 @@ namespace CPMCore.Controllers
             {
                 ModelState.AddModelError("CustomError", "De prijs van de factuur is niet ingegeven");
             }
+            ValidateBorgInhoudingV2(model);
 
             // Als het model ongeldig is, toon de view opnieuw met foutmeldingen
             if (!ModelState.IsValid)
@@ -259,7 +263,10 @@ namespace CPMCore.Controllers
 
                 SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Factuur toevoegen");
                 if (ViewData["UseGlV2Layout"] as bool? == true)
+                {
+                    ViewData["HelpScreenId"] = "nacalculatie-factuur";
                     return View("AddIncommingInvoiceV2", model);
+                }
                 return View(model);
             }
             var Referrer = TempData["Referrer"];
@@ -293,7 +300,10 @@ namespace CPMCore.Controllers
                 AddMessage("error", $"De factuur is NIET toegevoegd aan het project {model.ProjectName}", "Fout!");
                 SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Factuur toevoegen");
                 if (ViewData["UseGlV2Layout"] as bool? == true)
+                {
+                    ViewData["HelpScreenId"] = "nacalculatie-factuur";
                     return View("AddIncommingInvoiceV2", model);
+                }
                 return View(model);
             }
         }
@@ -385,7 +395,11 @@ namespace CPMCore.Controllers
 
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Factuur bewerken");
             if (ViewData["UseGlV2Layout"] as bool? == true)
+            {
+                LaadInhoudingDetailV2(model, invoiceid);
+                ViewData["HelpScreenId"] = "nacalculatie-factuur";
                 return View("EditIncommingInvoiceV2", model);
+            }
             return View(model);
         }
         [HttpPost]
@@ -418,6 +432,7 @@ namespace CPMCore.Controllers
             {
                 ModelState.AddModelError("CustomError", "De prijs van de factuur is niet ingegeven");
             }
+            ValidateBorgInhoudingV2(model);
 
             // Als het model ongeldig is, toon de view opnieuw met foutmeldingen
             if (!ModelState.IsValid)
@@ -443,7 +458,11 @@ namespace CPMCore.Controllers
 
                 SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Factuur bewerken");
                 if (ViewData["UseGlV2Layout"] as bool? == true)
+                {
+                    LaadInhoudingDetailV2(model, model.IncommingInvoice.Id);
+                    ViewData["HelpScreenId"] = "nacalculatie-factuur";
                     return View("EditIncommingInvoiceV2", model);
+                }
                 return View(model);
             }
             var Referrer = TempData["Referrer"];
@@ -466,7 +485,11 @@ namespace CPMCore.Controllers
                 AddMessage("error", $"De factuur is NIET aangepast aan het project {model.ProjectName}", "Fout!");
                 SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Factuur bewerken");
                 if (ViewData["UseGlV2Layout"] as bool? == true)
+                {
+                    LaadInhoudingDetailV2(model, model.IncommingInvoice.Id);
+                    ViewData["HelpScreenId"] = "nacalculatie-factuur";
                     return View("EditIncommingInvoiceV2", model);
+                }
                 return View(model);
             }
         }
@@ -654,6 +677,52 @@ namespace CPMCore.Controllers
         /// read-only kaart op IncommingInvoiceDetailV2.cshtml, hier als JSON zodat de zijbalk live
         /// bijwerkt zodra de gebruiker een ander contract kiest (dat kan daar niet, het contract staat
         /// er al vast).</summary>
+        /// <summary>De extra inhouding van een factuur met haar historiek laden voor het bewerkscherm (42l).</summary>
+        private void LaadInhoudingDetailV2(ProjectIncommingInvoiceAddUpdateModel model, int invoiceId)
+        {
+            if (invoiceId <= 0) return;
+            model.InhoudingDetail = BorgSvc.GetInhoudingenAsync(model.ProjectId, invoiceId).GetAwaiter().GetResult().FirstOrDefault();
+            model.KanInhoudingAfhandelen = HttpContext.RequestServices.GetRequiredService<IPermissionService>().HasWrite(PermissionCodes.ProjectsPostCalculation);
+        }
+
+        /// <summary>Borg en extra inhouding van het gl-v2-formulier (design-handoff 42h/42c) nakijken en het borgbedrag
+        /// server-side herberekenen: percentage × (factuurbedrag − extra inhouding). Doet niets voor het legacy formulier.</summary>
+        private void ValidateBorgInhoudingV2(ProjectIncommingInvoiceAddUpdateModel model)
+        {
+            var inv = model.IncommingInvoice;
+            if (inv == null || !inv.FormV2) return;
+
+            var inhouding = inv.InhoudingBedrag.GetValueOrDefault();
+            if (inhouding < 0m || inhouding > inv.InvoicePrice)
+                ModelState.AddModelError("CustomError", "De extra inhouding mag niet groter zijn dan het factuurbedrag.");
+            if (inhouding > 0m && (!inv.InhoudingReden.HasValue || inv.InhoudingReden.Value < 1 || inv.InhoudingReden.Value > 3))
+                ModelState.AddModelError("CustomError", "Kies een reden voor de extra inhouding.");
+
+            if (inv.BorgInhouden != true) return;
+            var pct = inv.BorgPercentage.GetValueOrDefault();
+            if (pct <= 0m || pct > 100m)
+            {
+                ModelState.AddModelError("CustomError", "Geef een borgpercentage tussen 0 en 100 op.");
+                return;
+            }
+            inv.BorgBedrag = Math.Round((inv.InvoicePrice - inhouding) * pct / 100m, 2);
+
+            decimal? contractPct = null;
+            if (inv.ContractID is > 0)
+            {
+                var contract = _projectService.GetContract(inv.ContractID.Value).Value;
+                if (contract != null && contract.GuaranteeType == ContractGuaranteeType.FinancialGuarantee)
+                    contractPct = contract.GuaranteePercentage;
+            }
+            if (contractPct.HasValue && pct != contractPct.Value)
+            {
+                if (string.IsNullOrWhiteSpace(inv.BorgAfwijkReden))
+                    ModelState.AddModelError("CustomError", $"Het borgpercentage wijkt af van het contract ({contractPct.Value:0.##} %): geef een reden op.");
+            }
+            else inv.BorgAfwijkReden = null;
+            if (!(inv.ContractID is > 0) && !inv.BorgVoPercentage.HasValue) inv.BorgVoPercentage = 100m;
+        }
+
         [HttpPost]
         public ActionResult GetContractInfoForInvoiceFormV2(int contractId, int invoiceId = 0)
         {
@@ -694,6 +763,8 @@ namespace CPMCore.Controllers
                 cashDiscountPaymentTerm = c.CashDiscountPaymentTerm,
                 guaranteeType = c.GuaranteeType.ToString(),
                 guaranteePercentage = c.GuaranteePercentage,
+                guaranteeReleaseVoPercentage = c.GuaranteeReleaseVOPercentageEffective,
+                contractLabel = string.IsNullOrWhiteSpace(c.ContractName) ? null : c.ContractName,
             });
         }
 

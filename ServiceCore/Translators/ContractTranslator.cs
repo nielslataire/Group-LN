@@ -35,6 +35,7 @@ namespace ServiceCore.Translators
             // have a value" (gevonden via het Facturatie-testproject, 2026-09-29).
             bo.GuaranteeType = _entity.GuaranteeType.HasValue ? (ContractGuaranteeType)_entity.GuaranteeType.Value : ContractGuaranteeType.NoGuarantee;
             bo.GuaranteePercentage = _entity.GuaranteePercentage;
+            bo.GuaranteeReleaseVOPercentage = _entity.GuaranteeReleaseVOPercentage;
             bo.GuaranteeDocFilename = _entity.GuaranteeDocFilename;
             bo.GuaranteeDocUploadedAt = _entity.GuaranteeDocUploadedAt;
             // Alleen-lezen — zie TranslateBOToEntity: AddContract/EditContractV2 hebben geen veld voor deze
@@ -85,6 +86,7 @@ namespace ServiceCore.Translators
             _entity.VgmCharter = bo.VgmCharter;
             _entity.PidAttest = bo.PidAttest;
             _entity.GuaranteePercentage = bo.GuaranteePercentage;
+            _entity.GuaranteeReleaseVOPercentage = bo.GuaranteeReleaseVOPercentage;
             _entity.GuaranteeType = (int)bo.GuaranteeType;
             _entity.GuaranteeDocFilename = string.IsNullOrWhiteSpace(bo.GuaranteeDocFilename) ? null : bo.GuaranteeDocFilename.Trim();
             _entity.GuaranteeDocUploadedAt = bo.GuaranteeDocUploadedAt;

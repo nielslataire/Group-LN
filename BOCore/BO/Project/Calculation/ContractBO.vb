@@ -122,6 +122,23 @@ Public Class ContractBO
         End Set
     End Property
 
+    Private _guaranteeReleaseVOPercentage As Decimal?
+    ''' <summary>% van de borg dat bij de voorlopige oplevering vrijkomt, de rest bij de definitieve (design-handoff 42h/42i). Nothing = 50.</summary>
+    <Display(Name:="Borg vrij bij voorlopige oplevering (%)")>
+    Public Property GuaranteeReleaseVOPercentage() As Decimal?
+        Get
+            Return _guaranteeReleaseVOPercentage
+        End Get
+        Set(ByVal value As Decimal?)
+            _guaranteeReleaseVOPercentage = value
+        End Set
+    End Property
+    Public ReadOnly Property GuaranteeReleaseVOPercentageEffective() As Decimal
+        Get
+            Return If(_guaranteeReleaseVOPercentage, 50D)
+        End Get
+    End Property
+
     ''' <summary>True wanneer de waarborg een bankwaarborg is maar het document nog niet toegevoegd is.</summary>
     Public ReadOnly Property GuaranteeDocumentMissing() As Boolean
         Get

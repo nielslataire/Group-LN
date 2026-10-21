@@ -6,7 +6,7 @@ treeLabel: Overzicht
 role: Projectleider
 device: Desktop · tablet
 minutes: 4
-updated: 2026-10-14
+updated: 2026-10-21
 screens: budget-index
 synonyms: budgetten, versies, huidig, concept, afgerond, definitief, actief budget, hernoemen
 description: de pagina Budgetten met alle budgetten en versies van een project
@@ -64,6 +64,8 @@ Een project kan meerdere budgetten hebben. Op de kaart van het actieve budget st
 Het actieve budget gebruikt CPM voor de nacalculatie.
 
 ## Het definitieve budget zien
+
+![De kaart Definitief budget met de drie tegels](/img/help/budget/budget-overzicht/5-definitief-tegels.png)
 
 Bovenaan staat over de volle breedte de kaart **Definitief budget**. Daarop zie je de naam met de versie, het totaal en de marge.
 Daaronder staat wanneer en door wie de versie is vastgezet. Ze is alleen-lezen en de basis voor de vergelijking met facturen en contracten.

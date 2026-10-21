@@ -111,7 +111,7 @@
             </dl>
             <p class="gl-v2-vs-note">Bij versturen: verslag als PDF naar alle aanwezigen met een e-mailadres; nieuwe punten gaan na goedkeuring naar de aannemers.</p>
             <div class="gl-v2-vs-d-actions">
-                <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("Pdf", "ProjectVerslagen", new { projectId = Model.ProjectId, id = sel.Id })" target="_blank" rel="noopener"><i class="ph ph-file-pdf" aria-hidden="true"></i>Voorbeeld PDF</a>
+                <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("Edit", "ProjectVerslagen", new { projectId = Model.ProjectId, id = sel.Id, preview = 1 })"><i class="ph ph-file-pdf" aria-hidden="true"></i>Voorbeeld PDF</a>
                 <a class="gl-v2-btn gl-v2-btn-primary" href="@Url.Action("Edit", "ProjectVerslagen", new { projectId = Model.ProjectId, id = sel.Id })">@(sel.Status == 1 ? "Openen" : "Verder werken")</a>
                 @if (sel.Status == 0 ? Model.CanWrite : Model.IsAdmin)
                 {

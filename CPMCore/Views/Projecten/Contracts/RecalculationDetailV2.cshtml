@@ -132,52 +132,8 @@
                     <div class="gln-rd-strip-cell"><span class="gln-rd-strip-label">Meerwerk</span><span class="gln-rd-strip-value">€ @lev.MeerwerkBedrag.ToString("N0")</span></div>
                     <div class="gln-rd-strip-cell"><span class="gln-rd-strip-label">Gefactureerd</span><span class="gln-rd-strip-value @(lev.VoortgangPercent > 100 ? "is-neg" : "")">€ @lev.GefactureerdBedrag.ToString("N0")</span><span class="gln-rd-strip-sub">@lev.VoortgangPercent.ToString("N1") %</span></div>
                     <div class="gln-rd-strip-cell"><span class="gln-rd-strip-label">Saldo</span><span class="gln-rd-strip-value @(lev.Saldo < 0 ? "is-neg" : "")">@(lev.Saldo < 0 ? "– " : "")€ @Math.Abs(lev.Saldo).ToString("N0")</span>@if (lev.Saldo < 0) { <span class="gln-rd-strip-sub">meer dan contract + WO</span> }</div>
-                    <div class="gln-rd-strip-cell"><span class="gln-rd-strip-label">Borg @(lev.BorgPercentage.HasValue ? lev.BorgPercentage.Value.ToString("N0") + " %" : "")</span><span class="gln-rd-strip-value">€ @lev.BorgIngehouden.ToString("N0")</span><span class="gln-rd-strip-sub">ingehouden</span></div>
+                    <div class="gln-rd-strip-cell"><span class="gln-rd-strip-label">Borg @(lev.BorgPercentage.HasValue ? lev.BorgPercentage.Value.ToString("0.##") + " %" : (lev.BorgIsBankwaarborg ? "bankwaarborg" : ""))</span><span class="gln-rd-strip-value">€ @lev.BorgIngehouden.ToString("N0")</span><span class="gln-rd-strip-sub">@Html.Raw(lev.BorgNuVrij > 0 ? "<a href=\"" + Url.Action("Borgen", "Projecten", new { projectid = Model.ProjectId }) + "\">€ " + lev.BorgNuVrij.ToString("N0") + " vrij te geven</a>" : (lev.BorgVrijgegeven > 0 ? "€ " + lev.BorgVrijgegeven.ToString("N0") + " vrijgegeven" : "ingehouden"))</span></div>
                     <div class="gln-rd-strip-cell is-last"><span class="gln-rd-strip-label">Betaaltermijn</span><span class="gln-rd-strip-value is-small">@(lev.BetaaltermijnTekst ?? "—")</span></div>
-                </div>
-            }
-
-            @if (lev.HasContract && lev.BorgPercentage.HasValue && (lev.BorgContractTotaal > 0 || lev.BorgVoBedrag.HasValue || lev.BorgDoBedrag.HasValue))
-            {
-                <div class="gln-rd-borg">
-                    <div class="gln-rd-borg-head">
-                        <span class="gln-rd-strip-label">Borg vrijgeven</span>
-                        <span class="gln-rd-borg-sum">Ingehouden € @lev.BorgContractTotaal.ToString("N2") · nog ingehouden <strong>€ @lev.BorgNogIngehouden.ToString("N2")</strong> <span class="gln-rd-strip-sub">(over het hele contract)</span></span>
-                    </div>
-                    @foreach (var fase in new[] { "VO", "DO" })
-                    {
-                        var isVo = fase == "VO";
-                        var vrijAt = isVo ? lev.BorgVoAt : lev.BorgDoAt;
-                        var vrijBedrag = isVo ? lev.BorgVoBedrag : lev.BorgDoBedrag;
-                        var voorstel = isVo ? Math.Round(lev.BorgContractTotaal / 2m, 2) : Math.Max(0m, lev.BorgNogIngehouden);
-                        <form method="post" asp-action="ReleaseContractGuaranteeV2" asp-controller="Projecten" class="gln-rd-borg-fase">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="projectId" value="@Model.ProjectId" />
-                            <input type="hidden" name="contractId" value="@lev.ContractId" />
-                            <input type="hidden" name="fase" value="@fase" />
-                            <input type="hidden" name="groupid" value="@Model.GroupId" />
-                            <input type="hidden" name="activityId" value="@(Model.ActivityId ?? 0)" />
-                            <span class="gln-rd-borg-fase-label">@(isVo ? "Voorlopige oplevering" : "Definitieve oplevering")</span>
-                            @if (vrijBedrag.HasValue)
-                            {
-                                <span class="gln-rd-borg-done"><i class="ph ph-check-circle" aria-hidden="true"></i>€ @vrijBedrag.Value.ToString("N2") vrijgegeven op @(vrijAt?.ToString("dd/MM/yyyy"))</span>
-                                @if (Model.CanWrite)
-                                {
-                                    <button type="submit" class="gl-v2-btn gl-v2-btn-text" name="amount" value="">Wissen</button>
-                                }
-                            }
-                            else if (Model.CanWrite)
-                            {
-                                <span class="gl-v2-field-box gln-rd-borg-input"><input type="date" name="date" class="gl-v2-field-input" value="@DateTime.Today.ToString("yyyy-MM-dd")" aria-label="Datum vrijgave" required /></span>
-                                <span class="gl-v2-field-box gln-rd-borg-input"><input type="number" name="amount" class="gl-v2-field-input" step="0.01" min="0.01" value="@(voorstel > 0 ? voorstel.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) : "")" aria-label="Bedrag vrijgave" required /><span class="gl-v2-field-suffix">€</span></span>
-                                <button type="submit" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-lock-key-open" aria-hidden="true"></i>Vrijgeven</button>
-                            }
-                            else
-                            {
-                                <span class="gln-rd-strip-sub">nog niet vrijgegeven</span>
-                            }
-                        </form>
-                    }
                 </div>
             }
 

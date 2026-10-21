@@ -1,0 +1,222 @@
+@model CPMCore.Models.Projecten.BorgenV2Vm
+@using CPMCore.Models.GlV2
+@using System.Globalization
+@*
+    gl-v2 — Nacalculatie › Borgen &amp; inhoudingen (design-handoff 42i, 42j). Tab "Borgen": open borgen per contract met
+    selectie en vrijgeven via de actiebalk. Tab "Extra inhoudingen": lijst met open inhoudingen; afhandelen in het venster
+    rechts (Partials/_InhoudingAfhandelenV2, ook gebruikt op de factuur bewerken, 42l). Alle cijfers komen uit
+    CPMCore.Services.Borg.BorgService.
+*@
+@{
+    ViewData["Title"] = "Borgen";
+    ViewData["PageIcon"] = "bx bx-building-house";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Recalculation", "Projecten", new { projectid = Model.ProjectId });
+    var menu = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName ?? "", ProjectSubtitle = "project · nacalculatie", Mode = GlV2ProjectMenuMode.Outer };
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    string Geld(decimal v) => "€ " + v.ToString("N2", be);
+    var o = Model.Overzicht;
+    var inhTab = Model.Tab == "inhoudingen";
+    var aantalVrijgegeven = o.Rijen.Count(r => r.Vrijgegeven > 0);
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-borgen.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-inhouding.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-incommininvoice-add.css" asp-append-version="true" />
+}
+@section ProjectMenu
+{
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menu)
+}
+@{ var menuPhone = new GlV2ProjectMenuVm { ProjectId = menu.ProjectId, ProjectName = menu.ProjectName, ProjectSubtitle = menu.ProjectSubtitle, Mode = GlV2ProjectMenuMode.Phone }; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhone)
+
+<div id="gln-bg-root">
+    <p class="gln-bg-intro">Alle borgen van @Model.ProjectName — ingehouden op facturen (zie <a href="@Url.Action("AddIncommingInvoice", "Projecten", new { projectid = Model.ProjectId, type = 0 })">factuur toevoegen</a>) of gesteld via bankwaarborg. Vrijgave volgt de regel uit het contract; open punten van de aannemer blokkeren de vrijgave niet, maar worden getoond.</p>
+
+    @await Html.PartialAsync("GlV2/_KpiStrip", Model.Kpis)
+
+    <div class="gln-bg-tabs" role="tablist">
+        <a role="tab" class="gln-bg-tab@(inhTab ? "" : " is-active")" href="@Url.Action("Borgen", "Projecten", new { projectid = Model.ProjectId })" aria-selected="@(inhTab ? "false" : "true")">Borgen <span class="gln-bg-tab-count">@o.AantalOpen</span></a>
+        <a role="tab" class="gln-bg-tab@(inhTab ? " is-active" : "")" href="@Url.Action("Borgen", "Projecten", new { projectid = Model.ProjectId, tab = "inhoudingen" })" aria-selected="@(inhTab ? "true" : "false")">Extra inhoudingen <span class="gln-bg-tab-count">@o.AantalOpenInhoudingen</span></a>
+    </div>
+
+    @if (!inhTab)
+    {
+        <section class="gl-v2-section-card" id="gln-bg-borgen">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-vault" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Borgen per contract</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">vink aan wat je wil vrijgeven</span>
+                <span class="gl-v2-section-card-spacer"></span>
+                <div class="gl-v2-field gln-bg-search">
+                    <div class="gl-v2-field-box">
+                        <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                        <input type="text" class="gl-v2-field-input" id="gln-bg-zoek" placeholder="Zoek leverancier of contract">
+                    </div>
+                </div>
+            </div>
+            <div class="gln-bg-chips">
+                <button type="button" class="gln-bg-chip is-active" data-filter="open">Open @o.AantalOpen</button>
+                <button type="button" class="gln-bg-chip" data-filter="vrij">Vrij te geven @o.AantalNuVrij</button>
+                <button type="button" class="gln-bg-chip" data-filter="vrijgegeven">Vrijgegeven @aantalVrijgegeven</button>
+            </div>
+
+            @if (o.Rijen.Count == 0)
+            {
+                <div class="gl-v2-notice gl-v2-notice-compact is-info gln-bg-empty"><i class="ph ph-info" aria-hidden="true"></i><span>Er zijn nog geen contracten met een waarborg in dit project.</span></div>
+            }
+            else
+            {
+                <div class="gln-bg-table">
+                    <div class="gln-bg-row gln-bg-head">
+                        <span></span><span>Leverancier · contract</span><span class="is-num">%</span><span class="is-num">Ingehouden</span><span>Vrijgave</span><span class="is-num">Open punten</span><span class="is-num">Nu vrij te geven</span><span>Status</span>
+                    </div>
+                    @foreach (var r in o.Rijen)
+                    {
+                        var kanKiezen = Model.CanWrite && r.NuVrij > 0;
+                        var open = r.Open > 0.005m;
+                        <div class="gln-bg-row"
+                             data-row data-sleutel="@r.Sleutel" data-nuvrij="@r.NuVrij.ToString("0.##", CultureInfo.InvariantCulture)"
+                             data-open="@(open ? "1" : "0")" data-vrij="@(r.NuVrij > 0 ? "1" : "0")" data-vrijgegeven="@(r.Vrijgegeven > 0 ? "1" : "0")"
+                             data-zoek="@((r.CompanyNaam + " " + r.ContractLabel + " " + r.Activiteiten).ToLowerInvariant())"
+                             data-bedrijf="@r.CompanyNaam" data-punten="@r.OpenPunten">
+                            <span>
+                                @if (kanKiezen)
+                                {
+                                    <input type="checkbox" class="gln-bg-check" aria-label="Selecteer @r.CompanyNaam" />
+                                }
+                                else
+                                {
+                                    <input type="checkbox" class="gln-bg-check" disabled aria-label="Niet vrij te geven" />
+                                }
+                            </span>
+                            <span class="gln-bg-naam">
+                                <strong>@r.CompanyNaam</strong>
+                                <span>@r.ContractLabel@(string.IsNullOrWhiteSpace(r.Activiteiten) || string.Equals(r.Activiteiten, r.ContractLabel, StringComparison.OrdinalIgnoreCase) ? "" : " · " + r.Activiteiten)</span>
+                            </span>
+                            <span class="is-num">@(r.Percentage.HasValue ? r.Percentage.Value.ToString("0.##", be) + " %" : "—")</span>
+                            <span class="is-num">@Geld(r.Ingehouden)</span>
+                            <span class="gln-bg-regel">@r.RegelTekst@(r.Vrijgaves.Any(v => v.Fase == 3) ? " · " + string.Join(" · ", r.Vrijgaves.Where(v => v.Fase == 3).Select(v => $"€ {v.Bedrag.ToString("N2", be)} vrijgegeven {v.Datum:dd/MM/yyyy}")) : "")</span>
+                            <span class="is-num">@(r.OpenPunten > 0 ? r.OpenPunten.ToString() : "—")</span>
+                            <span class="is-num@(r.NuVrij > 0 ? " is-strong" : "")">
+                                @if (r.NuVrij > 0)
+                                {
+                                    <span class="gln-bg-nuvrij-tekst">@Geld(r.NuVrij)</span>
+                                    <span class="gl-v2-field-box gln-bg-bedrag-box" hidden><input type="number" step="0.01" min="0.01" max="@r.NuVrij.ToString("0.00", CultureInfo.InvariantCulture)" value="@r.NuVrij.ToString("0.00", CultureInfo.InvariantCulture)" class="gl-v2-field-input gln-bg-bedrag" aria-label="Te nemen bedrag @r.CompanyNaam" /><span class="gl-v2-field-suffix">€</span></span>
+                                }
+                                else
+                                {
+                                    @:—
+                                }
+                            </span>
+                            <span><span class="gl-v2-badge @r.StatusTone">@r.Status</span>@if (r.Vrijgaves.Count > 0) { <button type="button" class="gln-bg-vrijgaves-knop" data-vrijgaves aria-expanded="false">@r.Vrijgaves.Count vrijgave@(r.Vrijgaves.Count == 1 ? "" : "s")</button> }</span>
+                            @if (r.Vrijgaves.Count > 0)
+                            {
+                                <div class="gln-bg-detail" hidden>
+                                    <strong>Vrijgaves van @r.CompanyNaam</strong>
+                                    <ul>
+                                        @foreach (var v in r.Vrijgaves)
+                                        {
+                                            <li>
+                                                <span>@v.Datum.ToString("dd/MM/yyyy")</span>
+                                                <span>@(v.Fase == 1 ? "voorlopige oplevering" : v.Fase == 2 ? "definitieve oplevering" : "deelvrijgave")@(string.IsNullOrWhiteSpace(v.Opmerking) ? "" : " · " + v.Opmerking)</span>
+                                                <span class="is-num">@Geld(v.Bedrag)</span>
+                                                @if (Model.CanWrite)
+                                                {
+                                                    <form method="post" asp-action="BorgVrijgaveIntrekken" asp-controller="Projecten" data-bevestig="Deze vrijgave van @Geld(v.Bedrag) ongedaan maken? Het bedrag staat daarna weer als ingehouden borg.">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="projectId" value="@Model.ProjectId" />
+                                                        <input type="hidden" name="id" value="@v.Id" />
+                                                        <button type="submit" class="gl-v2-btn gl-v2-btn-text">Ongedaan maken</button>
+                                                    </form>
+                                                }
+                                            </li>
+                                        }
+                                    </ul>
+                                </div>
+                            }
+                        </div>
+                    }
+                    <div class="gln-bg-nietsgevonden" id="gln-bg-leeg" hidden>Geen contracten voor deze selectie.</div>
+                </div>
+            }
+        </section>
+
+        <div class="gl-v2-notice gl-v2-notice-compact is-warning gln-bg-puntenwaarschuwing" id="gln-bg-punten" hidden>
+            <i class="ph ph-warning" aria-hidden="true"></i>
+            <span><strong id="gln-bg-punten-titel"></strong> <span id="gln-bg-punten-tekst">Open werfpunten bij deze aannemer. Je kan de borg toch vrijgeven of wachten tot de punten afgehandeld zijn.</span></span>
+            <a class="gl-v2-btn gl-v2-btn-text" href="@Url.Action("Index", "ProjectIssues", new { projectId = Model.ProjectId })">Punten bekijken</a>
+        </div>
+
+        @if (Model.CanWrite)
+        {
+            <form method="post" asp-action="BorgenVrijgeven" asp-controller="Projecten" id="gln-bg-form" class="gln-bg-selbar" hidden>
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="projectId" value="@Model.ProjectId" />
+                <div id="gln-bg-ids"></div>
+                <span class="gln-bg-selbar-tekst"><strong id="gln-bg-sel-aantal">0 geselecteerd</strong> · <span id="gln-bg-sel-bedrag">€ 0,00</span> vrij te geven</span>
+                <span class="gl-v2-form-actionbar-spacer"></span>
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" id="gln-bg-sel-wis">Selectie wissen</button>
+                <button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-lock-key-open" aria-hidden="true"></i>Vrijgeven</button>
+            </form>
+        }
+    }
+    else
+    {
+        var lijst = o.Inhoudingen;
+        <section class="gl-v2-section-card" id="gln-bg-inhoudingen">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-hand-coins" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Extra inhoudingen</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">@o.AantalOpenInhoudingen open · @Geld(o.TotaalOpenInhoudingen)</span>
+            </div>
+            @if (lijst.Count == 0)
+            {
+                <div class="gl-v2-notice gl-v2-notice-compact is-info gln-bg-empty"><i class="ph ph-info" aria-hidden="true"></i><span>Er zijn nog geen extra inhoudingen. Je legt ze vast op een factuur, onder “Extra inhouding”.</span></div>
+            }
+            else
+            {
+                <div class="gln-bg-table">
+                    <div class="gln-bg-row gln-bg-inhrow gln-bg-head">
+                        <span>Leverancier</span><span>Reden</span><span class="is-num">Bedrag</span><span>Status</span><span></span>
+                    </div>
+                    @foreach (var i in lijst)
+                    {
+                        var tone = i.Status == "Open" ? "is-attention" : i.Status == "Deels open" ? "is-attention" : "is-positive";
+                        <div class="gln-bg-row gln-bg-inhrow">
+                            <span class="gln-bg-naam">
+                                <strong>@i.CompanyNaam</strong>
+                                <span>factuur @i.FactuurNummer · @i.FactuurDatum.ToString("dd/MM/yyyy")</span>
+                            </span>
+                            <span>@i.RedenTekst@(string.IsNullOrWhiteSpace(i.Toelichting) ? "" : " — " + i.Toelichting)</span>
+                            <span class="is-num">@Geld(i.Bedrag)@(i.Afgehandeld > 0 && i.Open > 0 ? Html.Raw("<br /><small>nog open " + Geld(i.Open) + "</small>") : null)</span>
+                            <span><span class="gl-v2-badge @tone">@i.Status</span></span>
+                            <span class="is-act">
+                                @if (i.Open > 0.005m && Model.CanWrite)
+                                {
+                                    <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-afhandelen='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { id = i.Id, projectId = Model.ProjectId, companyId = i.CompanyId ?? 0, bedrijf = i.CompanyNaam, factuur = i.FactuurNummer, bedrag = i.Bedrag, open = i.Open, borgPct = i.BorgPercentage }))'>Afhandelen</button>
+                                }
+                                <a class="gl-v2-btn gl-v2-btn-text" href="@Url.Action("EditIncommingInvoice", "Projecten", new { projectid = Model.ProjectId, invoiceid = i.InvoiceId })">Factuur</a>
+                            </span>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+        @await Html.PartialAsync("Partials/_InhoudingAfhandelenV2", Model.ProjectId)
+    }
+</div>
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-projecten-borgen.js" asp-append-version="true"></script>
+    @if (inhTab)
+    {
+        <script src="~/js/gl-v2-projecten-inhouding.js" asp-append-version="true"></script>
+    }
+}

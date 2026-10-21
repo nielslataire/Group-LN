@@ -166,8 +166,8 @@ namespace ServiceCore.Budget
                 if (lijn.TotaalAlternatief == 0m) { Add(6, MeldingType.Info, "activiteit-nul", "Activiteit op € 0.", "rij", lijn.ActivityId.ToString()); continue; }
                 var afw = lijn.ReferentieVerschilPerc;
                 if (afw.HasValue && Math.Abs(afw.Value) > 0.5m) Add(6, MeldingType.Waarschuwing, "afwijking-referentie", $"Afwijking van {(afw.Value * 100m):+0;-0} % tegenover de referentie.", "rij", lijn.ActivityId.ToString());
-                var corr = lijn.Correctiefactor <= 0m ? 1m : lijn.Correctiefactor;
-                if (corr != 1m && string.IsNullOrWhiteSpace(lijn.Opmerking)) Add(6, MeldingType.Waarschuwing, "correctie-zonder-opmerking", "Correctie ≠ 100 % zonder opmerking.", "veld", lijn.ActivityId.ToString());
+                var corr = lijn.Correctiefactor < 0m ? 1m : lijn.Correctiefactor;
+                if (corr != 1m && string.IsNullOrWhiteSpace(lijn.Opmerking)) Add(6, MeldingType.Waarschuwing, "correctie-zonder-opmerking", "Correctie ≠ 100 % zonder reden.", "veld", lijn.ActivityId.ToString());
             }
 
             // ── Stap 7 · Parameters ────────────────────────────────────────────────────────────────────
@@ -200,7 +200,7 @@ namespace ServiceCore.Budget
             {
                 var naam = (l.EenheidNaam ?? "").Trim();
                 if ((l.Vraagprijs ?? 0m) <= 0m) Add(8, MeldingType.Waarschuwing, "zonder-vraagprijs", "Eenheid zonder vraagprijs.", "rij", l.Id.ToString());
-                else if (minima.TryGetValue(naam, out var min) && min > 0m && l.Vraagprijs < min) Add(8, MeldingType.Waarschuwing, "onder-minimum", $"Vraagprijs onder de minimumprijs van € {min:N0}.".Replace(',', '.'), "veld", l.Id.ToString());
+                else if (minima.TryGetValue(naam, out var min) && min > 0m && l.Vraagprijs < min) Add(8, MeldingType.Waarschuwing, "onder-minimum-" + naam.Replace("~", "-"), $"Vraagprijs onder de minimumprijs van € {min:N0}.".Replace(',', '.'), "veld", l.Id.ToString());
                 foreach (var (code, type) in new[] { (l.CodeBouw, "Bouw"), (l.CodeGrond, "Grond") })
                 {
                     if (!code.HasValue) continue;

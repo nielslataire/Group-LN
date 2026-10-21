@@ -18,7 +18,7 @@
     var inv = System.Globalization.CultureInfo.InvariantCulture;
     string Eur0(decimal v) => "€ " + v.ToString("N0", nl);
     string Eur2(decimal v) => "€ " + v.ToString("N2", nl);
-    decimal Corr(BudgetActivityLijnBO l) => l.Correctiefactor <= 0 ? 1m : l.Correctiefactor;
+    decimal Corr(BudgetActivityLijnBO l) => l.Correctiefactor < 0 ? 1m : l.Correctiefactor;
     var loten = Model.LotGroepen.Where(g => g.Lijnen.Any(l => l.TotaalAlternatief > 0)).ToList();
     var totaalGecorrigeerd = loten.Sum(g => g.Lijnen.Where(l => l.TotaalAlternatief > 0).Sum(l => l.TotaalAlternatief * Corr(l)));
     var prijsPerM2 = Model.OppervlakteGBA == 0 ? 0m : totaalGecorrigeerd / Model.OppervlakteGBA;
@@ -75,7 +75,7 @@
     @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwTopbar.cshtml", ch)
 }
 
-<div class="gl-v2-bw @(ch.IsLocked ? "is-locked" : "")" id="bw-act" data-versie="@Model.BudgetVersieId" data-url-save="@Url.Action("SaveActivityLijnen", "Projecten")">
+<div class="gl-v2-bw @(ch.IsLocked ? "is-locked" : "")" id="bw-act" data-user="@(ViewData["BwGebruiker"] as string)" data-versie="@Model.BudgetVersieId" data-url-save="@Url.Action("SaveActivityLijnen", "Projecten")">
     @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwStappen.cshtml", ch)
 
     <div class="gl-v2-bw-scroll">
@@ -209,7 +209,45 @@
         var d = (bedrag - ref) / ref * 100; el.classList.add(Math.abs(d) < 0.5 ? 'is-gelijk' : d > 0 ? 'is-hoger' : 'is-lager');
         el.textContent = (d > 0 ? '+' : d < 0 ? '−' : '') + Math.abs(d).toLocaleString('nl-BE', { maximumFractionDigits: 1 }) + ' %';
     }
-    function sig(tr) { var o = tr.querySelector('.act-opm'); return tr.querySelector('.corr-pct').value + '|' + (o ? o.value : ''); }
+    function redenRij(tr) { return tabel.querySelector('.bw-act-reden-rij[data-for="' + tr.getAttribute('data-activity-id') + '"]'); }
+    function redenInput(tr) { var r = redenRij(tr); return r ? r.querySelector('.act-opm') : null; }
+    function sig(tr) { var o = redenInput(tr); return tr.querySelector('.corr-pct').value + '|' + (o ? o.value : ''); }
+    function pctVan(tr) { var p = num(tr.querySelector('.corr-pct').value); return isNaN(p) || p < 0 ? 100 : p; }
+    function corrLabel(pct) { var d = Math.round((pct - 100) * 10) / 10; return 'Correctie ' + (d > 0 ? '+' : d < 0 ? '\u2212' : '') + Math.abs(d).toLocaleString('nl-BE', { maximumFractionDigits: 1 }) + ' %'; }
+    function datumTekst(iso) {
+        var d = iso ? new Date(iso) : new Date(); if (isNaN(d)) return '';
+        var p = function (n) { return (n < 10 ? '0' : '') + n; };
+        return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+    }
+    var gebruiker = root.getAttribute('data-user') || '', bewerken = {};
+    // Gouden veld, redenrij (kader of invoerveld, 39g) en de correctie in de formulestrook; bij 100 % is er niets van dat alles.
+    function toonCorrectie(tr) {
+        var id = tr.getAttribute('data-activity-id'), pct = pctVan(tr), afw = Math.abs(pct - 100) > 0.0001, r = redenRij(tr);
+        var box = tr.querySelector('.corr-pct').closest('.gl-v2-field-box'); if (box) box.classList.toggle('is-gecorrigeerd', afw);
+        var f = tr.nextElementSibling; f = f && f.classList.contains('bw-act-formule') ? f : null;
+        if (f) {
+            var delen = f.querySelector('.bw-fm-delen'), c = f.querySelector('.bw-fm-corr');
+            if (delen && afw) {
+                if (!c) { c = document.createElement('span'); c.className = 'bw-fm-corr'; delen.appendChild(c); }
+                c.innerHTML = '<span class="bw-fm-op">\u00d7</span><span class="bw-fm-chip is-goud"><span class="l">Correctie</span><span class="v">' + pct.toLocaleString('nl-BE', { maximumFractionDigits: 4 }) + ' %</span></span><span class="bw-fm-op">=</span><span class="bw-fm-tot">\u20ac ' + nf2.format(rij(tr)) + '</span>';
+            } else if (c) c.remove();
+        }
+        if (!r) return;
+        r.hidden = !afw; if (!afw) return;
+        var inp = r.querySelector('.act-opm'), tekst = inp.value.trim(), kader = r.querySelector('.bw-reden-kader'), editor = r.querySelector('.bw-reden-editor');
+        var edit = !!bewerken[id] || !tekst;
+        kader.hidden = edit; editor.hidden = !edit;
+        // Meldingen 39k: correctie ≠ 100 % zonder reden = waarschuwing op het veld (tenzij genegeerd); tijdens het typen geldt de gewone invoerstaat
+        var warn = edit && !tekst && !bewerken[id] && r.getAttribute('data-genegeerd') !== '1';
+        editor.classList.toggle('is-warning', warn);
+        var hint = editor.querySelector('.bw-reden-hint-t');
+        if (hint) hint.textContent = warn ? (r.getAttribute('data-melding') || 'Correctie \u2260 100 % zonder reden.') + ' Optioneel \u2014 je mag verder.' : 'Optioneel \u2014 leeg laten mag; een ingevulde reden verschijnt als goudkleurig kader en staat in het interne budget';
+        var label = corrLabel(pct); r.querySelector('.bw-reden-pill').textContent = label; kader.querySelector('.bw-reden-badge').textContent = label;
+        kader.querySelector('.bw-reden-t').textContent = tekst;
+        var ongewijzigd = tekst === (r.getAttribute('data-orig') || '').trim() && !!r.getAttribute('data-op');
+        var door = ongewijzigd ? r.getAttribute('data-door') : gebruiker, op = ongewijzigd ? datumTekst(r.getAttribute('data-op')) : datumTekst(null);
+        kader.querySelector('.bw-reden-m').textContent = [door, op, 'zichtbaar in het interne budget'].filter(Boolean).join(' \u00b7 ');
+    }
     function rij(tr) { var b = parseFloat(tr.getAttribute('data-basis')) || 0, p = num(tr.querySelector('.corr-pct').value); return b * (isNaN(p) ? 1 : p / 100); }
     function recalc() {
         var tot = 0, totRef = 0, groot = 0;
@@ -220,6 +258,7 @@
                 tr.querySelector('.bw-act-gecorrigeerd').textContent = '€ ' + nf2.format(g);
                 som += g; if (r > 0) ref += r; delta(tr.querySelector('.bw-act-delta'), g, r);
                 var isGroot = r > 0 && Math.abs((g - r) / r) > 0.25; tr.classList.toggle('is-groot', isGroot); if (isGroot) { groot++; lotGroot = true; }
+                var rr = redenRij(tr); if (rr) rr.classList.toggle('is-groot', isGroot); toonCorrectie(tr);
             });
             lot.querySelector('.lot-som').textContent = '€ ' + nf2.format(som); delta(lot.querySelector('.lot-delta'), som, ref); lot.classList.toggle('has-groot', lotGroot);
             tot += som; totRef += ref;
@@ -237,22 +276,46 @@
         tabel.querySelectorAll('.bw-act-rij').forEach(function (tr) {
             var p = num(tr.querySelector('.corr-pct').value);
             lijnen.push({ activityId: parseInt(tr.getAttribute('data-activity-id')), alternatievePrijsPerEenheid: parseFloat(tr.getAttribute('data-prijs')) || 0,
-                nacalcPrijsPerEenheid: parseFloat(tr.getAttribute('data-ref')) || parseFloat(tr.getAttribute('data-nacalc')) || 0, correctiefactor: isNaN(p) ? 1 : p / 100, opmerking: (tr.querySelector('.act-opm') || {}).value || '', isManueel: tr.getAttribute('data-manueel') === 'true' });
+                nacalcPrijsPerEenheid: parseFloat(tr.getAttribute('data-ref')) || parseFloat(tr.getAttribute('data-nacalc')) || 0, correctiefactor: isNaN(p) || p < 0 ? 1 : p / 100, opmerking: (Math.abs(pctVan(tr) - 100) > 0.0001 ? ((redenInput(tr) || {}).value || '').trim() : ''), isManueel: tr.getAttribute('data-manueel') === 'true' });
         });
         GlV2Budget.setStatus('saving');
         var r = await GlV2Budget.post(root.getAttribute('data-url-save'), { budgetVersieId: versieId, lijnen: lijnen }, true);
         if (!r.success) { GlV2Budget.setStatus('error', r.message || 'Opslaan mislukt'); return false; }
-        tabel.querySelectorAll('.bw-act-rij').forEach(function (tr) { origineel[tr.getAttribute('data-activity-id')] = sig(tr); });
+        tabel.querySelectorAll('.bw-act-rij').forEach(function (tr) {
+            origineel[tr.getAttribute('data-activity-id')] = sig(tr);
+            var rr = redenRij(tr), v = Math.abs(pctVan(tr) - 100) > 0.0001 ? ((redenInput(tr) || {}).value || '').trim() : '';
+            if (rr && v !== (rr.getAttribute('data-orig') || '').trim()) { rr.setAttribute('data-orig', v); rr.setAttribute('data-door', v ? gebruiker : ''); rr.setAttribute('data-op', v ? new Date().toISOString() : ''); }
+            toonCorrectie(tr);
+        });
         wijzigingen = 0; GlV2Budget.saved(); return true;
     }
     GlV2Budget.register({ save: opslaan, dirty: function () { return wijzigingen > 0; } });
     tabel.addEventListener('input', function (e) {
-        if (e.target.classList.contains('corr-pct')) { var tr = e.target.closest('tr'), opm = tr.querySelector('.bw-act-opm'); if (opm) opm.hidden = !(num(e.target.value) !== 100 || tr.querySelector('.act-opm').value); GlV2Budget.markDirty(); recalc(); }
-        else if (e.target.classList.contains('act-opm')) { GlV2Budget.markDirty(); recalc(); }
+        if (e.target.classList.contains('corr-pct')) { GlV2Budget.markDirty(); recalc(); }
+        else if (e.target.classList.contains('act-opm')) { GlV2Budget.markDirty(); wijzigingenTellen(); }
+    });
+    function wijzigingenTellen() {
+        wijzigingen = 0; tabel.querySelectorAll('.bw-act-rij').forEach(function (tr) { if (sig(tr) !== origineel[tr.getAttribute('data-activity-id')]) wijzigingen++; });
+        if (wijzigingen > 0 && !locked) GlV2Budget.setStatus('dirty', 'Niet opgeslagen \u2014 ' + wijzigingen + ' correctie' + (wijzigingen === 1 ? '' : 's'));
+    }
+    function rijVanReden(el) { var rr = el.closest('.bw-act-reden-rij'); return rr ? tabel.querySelector('.bw-act-rij[data-activity-id="' + rr.getAttribute('data-for') + '"]') : null; }
+    tabel.addEventListener('focusin', function (e) { if (e.target.classList && e.target.classList.contains('act-opm')) { var tr = rijVanReden(e.target); if (tr) bewerken[tr.getAttribute('data-activity-id')] = true; } });
+    tabel.addEventListener('focusout', function (e) {
+        if (!e.target.classList || !e.target.classList.contains('act-opm')) return;
+        var tr = rijVanReden(e.target); if (tr) { bewerken[tr.getAttribute('data-activity-id')] = false; toonCorrectie(tr); }
+    });
+    tabel.addEventListener('keydown', function (e) { if (e.key === 'Enter' && e.target.classList && e.target.classList.contains('act-opm')) { e.preventDefault(); e.target.blur(); } });
+    // Bij het aanklikken wordt de hele waarde geselecteerd (meteen overtypen of wissen); leeg of ongeldig = 100 % (geen correctie); netjes weergeven bij het verlaten.
+    tabel.addEventListener('focusin', function (e) { if (e.target.classList && e.target.classList.contains('corr-pct')) { var el = e.target; el.select(); el.addEventListener('mouseup', function (ev) { ev.preventDefault(); }, { once: true }); } });
+    tabel.addEventListener('focusout', function (e) {
+        if (!e.target.classList || !e.target.classList.contains('corr-pct')) return;
+        var n = num(e.target.value); e.target.value = (isNaN(n) || n < 0 ? 100 : n).toLocaleString('nl-BE', { maximumFractionDigits: 4 }); recalc();
     });
     tabel.addEventListener('click', function (e) {
         var o = e.target.closest('.bw-act-overnemen');
         if (o) { var tr = o.closest('tr'), b = parseFloat(tr.getAttribute('data-basis')) || 0, r = parseFloat(tr.getAttribute('data-ref-totaal')) || 0; if (b > 0 && r > 0) { tr.querySelector('.corr-pct').value = (Math.round(r / b * 1000) / 10).toLocaleString('nl-BE'); GlV2Budget.markDirty(); recalc(); } return; }
+        var pen = e.target.closest('.bw-reden-edit');
+        if (pen) { var rtr = rijVanReden(pen); if (rtr) { bewerken[rtr.getAttribute('data-activity-id')] = true; toonCorrectie(rtr); var inp = redenInput(rtr); if (inp) inp.focus(); } return; }
         var t = e.target.closest('.lot-toggle');
         if (t) { var lot = t.closest('.bw-act-lot'), dicht = lot.classList.toggle('is-dicht'); t.setAttribute('aria-expanded', dicht ? 'false' : 'true'); }
     });

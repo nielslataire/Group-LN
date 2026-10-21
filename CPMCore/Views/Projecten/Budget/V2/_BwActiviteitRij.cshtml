@@ -9,7 +9,7 @@
     var nl = new System.Globalization.CultureInfo("nl-BE");
     string Eur(decimal v) => "€ " + v.ToString("N2", nl);
     var basis = Model.TotaalAlternatief;
-    var corr = Model.Correctiefactor <= 0 ? 1m : Model.Correctiefactor;
+    var corr = Model.Correctiefactor < 0 ? 1m : Model.Correctiefactor;
     var refTotaal = Model.ReferentieTotaal;
     var toonRef = ViewData["HeeftReferenties"] is true;
     var afw = Model.ReferentieVerschilPerc;
@@ -17,6 +17,7 @@
     var chrome = ViewData["Chrome"] as CPMCore.Models.Budget.BudgetWizardChromeVm;   // 39k
     var rijMld = chrome?.Voor(6).FirstOrDefault(m => m.Sleutel == Model.ActivityId.ToString() && m.Plaats == "rij" && !m.Genegeerd);
     var corrMld = chrome?.Voor(6).FirstOrDefault(m => m.Sleutel == Model.ActivityId.ToString() && m.Plaats == "veld" && !m.Genegeerd);
+    var corrAlle = chrome?.Voor(6).FirstOrDefault(m => m.Sleutel == Model.ActivityId.ToString() && m.Plaats == "veld");   // ook een genegeerde: dan geen waarschuwingsstaat
     var nulRij = rijMld?.Type == ServiceCore.Budget.MeldingType.Info;
     var toonOpm = corrMld != null || !string.IsNullOrWhiteSpace(Model.Opmerking) || corr != 1m;
     var refTitel = Model.HeeftReferentie
@@ -49,7 +50,7 @@
         </td>
     }
     <td class="is-num">
-        <div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box" style="width:96px;margin-left:auto"><input type="text" inputmode="decimal" class="gl-v2-field-input is-num is-tabular corr-pct" value="@((corr * 100m).ToString("0.##", nl))" aria-label="Correctie in procent" /><span class="gl-v2-field-unit">%</span></div></div>
+        <div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box@(corr != 1m ? " is-gecorrigeerd" : "")" style="width:96px;margin-left:auto"><input type="text" inputmode="decimal" class="gl-v2-field-input is-num is-tabular corr-pct" value="@((corr * 100m).ToString("0.####", nl))" placeholder="100" autocomplete="off" aria-label="Correctie in procent" /><span class="gl-v2-field-unit">%</span></div></div>
     </td>
     <td class="is-num is-strong bw-act-gecorrigeerd">@Eur(basis * corr)</td>
 </tr>
@@ -73,3 +74,18 @@
         </td>
     </tr>
 }
+@* Reden van de correctie (design-handoff 39g): bij een correctie ≠ 100 % een goudkleurig kader met de reden (door wie en wanneer), of — zolang er geen reden is — een invoerveld.
+   Het script (BudgetActivityLijnenV2.cshtml) toont/verbergt de twee toestanden; de reden staat in het interne budget (PDF intern). *@
+<tr class="bw-act-reden-rij" data-for="@Model.ActivityId" data-genegeerd="@(corrAlle?.Genegeerd == true ? "1" : "0")" data-melding="@(corrMld?.Tekst ?? "Correctie ≠ 100 % zonder reden.")" data-orig="@Model.Opmerking" data-door="@Model.OpmerkingDoor" data-op="@(Model.OpmerkingOp.HasValue ? DateTime.SpecifyKind(Model.OpmerkingOp.Value, DateTimeKind.Utc).ToString("o") : "")" @(corr != 1m ? "" : "hidden")>
+    <td colspan="@(toonRef ? 6 : 4)">
+        <div class="bw-reden-kader" hidden>
+            <span class="bw-reden-badge">Correctie</span>
+            <div class="bw-reden-tekst"><span class="bw-reden-t"></span><span class="bw-reden-m"></span></div>
+            <button type="button" class="bw-reden-edit" data-bw-edit title="Reden aanpassen" aria-label="Reden aanpassen"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>
+        </div>
+        <div class="bw-reden-editor" hidden>
+            <div class="bw-reden-veld"><span class="bw-reden-pill">Correctie</span><input type="text" class="act-opm" maxlength="200" value="@Model.Opmerking" placeholder="Reden (optioneel) — bv. meer door vergelijking, prijsstijging leverancier…" aria-label="Reden van de correctie" /></div>
+            <span class="bw-reden-hint"><i class="ph ph-warning" aria-hidden="true"></i><span class="bw-reden-hint-t">Optioneel — leeg laten mag; een ingevulde reden verschijnt als goudkleurig kader en staat in het interne budget</span></span>
+        </div>
+    </td>
+</tr>
