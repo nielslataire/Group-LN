@@ -244,7 +244,7 @@
                             </select>
                         </div>
                     </div>
-                    @Html.EditorFor(m => m.SelectedPostalcode, "GlV2SearchSelect", new { Label = "Gemeente / postcode", Placeholder = "Zoek een postcode of gemeente …", Icon = "ph-map-pin" })
+                    @Html.EditorFor(m => m.SelectedPostalcode, "GlV2SearchSelect", new { Label = "Gemeente / postcode", Placeholder = "Zoek een postcode of gemeente …", Icon = "ph-map-pin", DisplayText = ViewData["PostalDisplay"] as string })
                 </div>
                 <div class="gl-v2-col-12">
                     <div class="gl-v2-switch-group">

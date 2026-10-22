@@ -49,6 +49,8 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using CPMCore.Models.GlV2;
+using CPMCore.Services.Verzekeringen;
 
 namespace CPMCore.Controllers
 {
@@ -60,7 +62,7 @@ namespace CPMCore.Controllers
         [HttpGet]
         //[Breadcrumb("Verzekeringen")]
         [Breadcrumb("Verzekeringen", FromAction = "Detail")]
-        public IActionResult DetailInsurances(int projectid)
+        public async Task<IActionResult> DetailInsurances(int projectid, string tab = "polissen")
         {
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
 
@@ -97,6 +99,12 @@ namespace CPMCore.Controllers
             ViewBag.CanDeleteProjectInsurances = _ps.HasDelete(PermissionCodes.ProjectsInsurances);
 
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Verzekeringen");
+            if (ViewData["UseGlV2Layout"] as bool? == true)
+            {
+                var vm = await VerzekeringSvc.GetOverzichtAsync(projectid, tab, (bool)ViewBag.CanWriteProjectInsurances, (bool)ViewBag.CanDeleteProjectInsurances);
+                ViewData["HelpScreenId"] = vm.Tab == "attesten" ? "verzekeringen-attesten" : "verzekeringen-overzicht";
+                return View("DetailInsurancesV2", vm);
+            }
             return View(model);
         }
 
@@ -262,6 +270,163 @@ namespace CPMCore.Controllers
 
             // Zelfde partial als Add
             return PartialView("_ModalEditInsurance", viewModel);
+        }
+
+        // ========== gl-v2 (design-handoff 43): verzekering toevoegen/bewerken, beëindigen, attesten van aannemers ==========
+
+        private VerzekeringService VerzekeringSvc => HttpContext.RequestServices.GetRequiredService<VerzekeringService>();
+
+        private async Task<VzPolisFormVm> BouwPolisFormAsync(int projectid, int? id, VzPolisInput? prefill)
+        {
+            var brokers = _companyService.GetCompanyForSelectByActivity(142);
+            var companies = _insuranceService.GetInsuranceCompaniesForSelect();
+            return await VerzekeringSvc.GetFormAsync(projectid, id, prefill, brokers.Success ? brokers.Values : new List<IdNameBO>(), companies.Success ? companies.Values : new List<IdNameBO>());
+        }
+
+        private void ZetPolisFormPagina(VzPolisFormVm vm)
+        {
+            var projectid = vm.Input.ProjectId;
+            vm.LostOp = VerzekeringService.LostOp(vm.Input.Type, vm.Input.Building);
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten") { Parent = Index };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", vm.ProjectName) { Parent = projectenIndex, RouteValues = new { projectid } };
+            var lijst = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailInsurances", "Projecten", "Verzekeringen") { Parent = projectDetail, RouteValues = new { projectid } };
+            ViewData["BreadcrumbNode"] = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("AddInsurance", "Projecten", vm.IsNew ? "Verzekering toevoegen" : "Verzekering bewerken") { Parent = lijst };
+            SetPageHeader("bx bx-building-house", $"{vm.ProjectName} - " + (vm.IsNew ? "Verzekering toevoegen" : "Verzekering bewerken"));
+            ViewData["HelpScreenId"] = "verzekering-toevoegen";
+        }
+
+        [HttpGet]
+        [Breadcrumb("Verzekering toevoegen", FromAction = "DetailInsurances")]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsInsurances)]
+        public async Task<IActionResult> AddInsurance(int projectid, int? id, int type = 1, int? building = null, int? unit = null, string? from = null)
+        {
+            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+            var prefill = new VzPolisInput { ProjectId = projectid, Type = type is >= 1 and <= 5 ? type : 1, Building = building, UnitId = unit, UnitIds = unit.HasValue ? new List<int> { unit.Value } : null, From = from };
+            // Een brandverzekering voor nieuwbouw start standaard bij de voorlopige oplevering.
+            if (prefill.Type == 2 && building != 0) { prefill.Building = 1; prefill.StartAtDelivery = true; }
+            var vm = await BouwPolisFormAsync(projectid, id, prefill);
+            ZetPolisFormPagina(vm);
+            return View("AddInsuranceV2", vm);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsInsurances)]
+        public async Task<IActionResult> SaveInsurance(VzPolisInput input, IFormFile? polisFile)
+        {
+            int? documentId = null;
+            if (polisFile is { Length: > 0 })
+                documentId = await BewaarVerzekeringDocumentAsync(input.ProjectId, polisFile, $"Polis {VerzekeringService.TypeNaam(input.Type)}" + (string.IsNullOrWhiteSpace(input.Polisnummer) ? "" : " " + input.Polisnummer.Trim()));
+            var (ok, fout, newId) = await VerzekeringSvc.SavePolisAsync(input, documentId);
+            if (!ok)
+            {
+                var vm = await BouwPolisFormAsync(input.ProjectId, input.Id > 0 ? input.Id : null, input);
+                vm.Input = input;
+                vm.Fout = fout;
+                ZetPolisFormPagina(vm);
+                return View("AddInsuranceV2", vm);
+            }
+            AddMessage("success", input.Requested && string.IsNullOrWhiteSpace(input.Polisnummer) ? "De verzekering is bewaard als aangevraagd." : "De verzekering is opgeslagen.", "Geslaagd!");
+            return RedirectToAction("DetailInsurances", "Projecten", new { projectid = input.ProjectId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsInsurances)]
+        public async Task<IActionResult> EndInsuranceV2(int projectid, int id, DateOnly? enddate, string? reason)
+        {
+            var ok = await VerzekeringSvc.BeeindigAsync(projectid, id, enddate ?? DateOnly.FromDateTime(DateTime.Today), reason);
+            AddMessage(ok ? "success" : "error", ok ? "De verzekering is beëindigd." : "De verzekering kon niet beëindigd worden.", ok ? "Geslaagd!" : "Fout!");
+            return RedirectToAction("DetailInsurances", "Projecten", new { projectid });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [CPMCore.Filters.PermissionDelete(PermissionCodes.ProjectsInsurances)]
+        public IActionResult DeleteInsuranceV2(int projectid, int id)
+        {
+            var response = _insuranceService.Delete(id);
+            AddMessage(response.Success ? "success" : "error", response.Success ? "De verzekering is verwijderd." : "De verzekering kon niet verwijderd worden.", response.Success ? "Geslaagd!" : "Fout!");
+            return RedirectToAction("DetailInsurances", "Projecten", new { projectid });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsInsurances)]
+        public async Task<IActionResult> InsuranceAttestSave(int projectid, int contractId, int kind, int status, List<int>? unitIds, DateOnly? validUntil,
+            string? insurer, string? policyNumber, string? note, IFormFile? attestFile)
+        {
+            int? documentId = null;
+            if (attestFile is { Length: > 0 })
+                documentId = await BewaarVerzekeringDocumentAsync(projectid, attestFile, kind == VerzekeringService.AttestBa ? "Attest BA-verzekering" : "Attest tienjarige aansprakelijkheid");
+            var (ok, fout, gekoppeld) = await VerzekeringSvc.SaveAttestAsync(projectid, contractId, kind, status, unitIds, validUntil, insurer, policyNumber, note, documentId);
+            var tekst = ok
+                ? (gekoppeld > 0 ? $"Het attest is bijgewerkt en aan {gekoppeld} koppeling{(gekoppeld == 1 ? "" : "en")} in Documenten gehangen." : "Het attest is bijgewerkt.")
+                : (fout ?? "Het attest kon niet bewaard worden.");
+            AddMessage(ok ? "success" : "error", tekst, ok ? "Geslaagd!" : "Fout!");
+            return RedirectToAction("DetailInsurances", "Projecten", new { projectid, tab = "attesten" });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsInsurances)]
+        public async Task<IActionResult> InsuranceTienjarigeSave(int projectid, int? bron, string? opmerking)
+        {
+            var ok = await VerzekeringSvc.SaveProjectTienjarigeAsync(projectid, bron, opmerking);
+            AddMessage(ok ? "success" : "error", ok ? "De keuze voor de tienjarige is bewaard." : "De keuze kon niet bewaard worden.", ok ? "Geslaagd!" : "Fout!");
+            return RedirectToAction("DetailInsurances", "Projecten", new { projectid, tab = "attesten" });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsInsurances)]
+        public async Task<IActionResult> InsuranceAttestKoppelKopers(int projectid)
+        {
+            var n = await VerzekeringSvc.KoppelKopersAsync(projectid);
+            AddMessage("success", n > 0 ? $"De tienjarige attesten zijn gekoppeld aan de kopers ({n} koppeling{(n == 1 ? "" : "en")}) en gedeeld in het klantenportaal." : "Alle attesten waren al aan hun kopers gekoppeld.", "Geslaagd!");
+            return RedirectToAction("DetailInsurances", "Projecten", new { projectid });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsInsurances)]
+        public async Task<IActionResult> InsuranceAttestMails(int projectid, List<int> contractIds)
+        {
+            var mails = await VerzekeringSvc.BouwMailsAsync(projectid, contractIds ?? new List<int>(), DocUserName ?? "");
+            return Json(mails);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsInsurances)]
+        public async Task<IActionResult> InsuranceAttestMarkRequested(int projectid, int contractId)
+        {
+            var n = await VerzekeringSvc.MarkeerOpgevraagdAsync(projectid, new[] { contractId }, DocUserName);
+            return Json(new { ok = true, aantal = n });
+        }
+
+        /// <summary>Bewaart een polis of attest in de documentenmodule (map Verzekeringen, of Overige als die map nog niet bestaat).</summary>
+        private async Task<int?> BewaarVerzekeringDocumentAsync(int projectId, IFormFile file, string naam)
+        {
+            try
+            {
+                using var stream = file.OpenReadStream();
+                var stored = await UploadAssetToStorageAsync(stream, file.FileName, file.ContentType, "docs");
+                if (string.IsNullOrWhiteSpace(stored)) return null;
+                try { await GenerateDocThumbnailViaStorageAsync(stored); }
+                catch (Exception ex) { _logger.LogWarning(ex, "Thumbnail voor {File} kon niet gemaakt worden.", stored); }
+                var map = await _db.DocumentFolders.AsNoTracking().Where(f => f.Code == "verzekeringen").Select(f => (int?)f.Id).FirstOrDefaultAsync();
+                var up = await DocsSvc.Upload(new FacadeCore.DocUploadDto
+                {
+                    ProjectId = projectId, Mode = "new", Name = naam, FolderId = map,
+                    DocDate = DateOnly.FromDateTime(DateTime.Today), UploaderKind = DocumentUploaderKind.Intern,
+                    StoredFilename = stored, OriginalFilename = file.FileName, SizeBytes = file.Length,
+                    Status = DocumentStatus.Goedgekeurd, UserId = DocUserId, UserName = DocUserName
+                });
+                return up.Ok ? up.Id : null;
+            }
+            catch (Exception ex) { _logger.LogWarning(ex, "Document van een verzekering kon niet in Documenten bewaard worden."); return null; }
         }
 
     }

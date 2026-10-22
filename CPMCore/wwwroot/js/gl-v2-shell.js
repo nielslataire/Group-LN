@@ -1012,12 +1012,68 @@
             textInput.addEventListener("focus", function () {
                 if (!panel.classList.contains("is-open")) openPanel();
             });
-            textInput.addEventListener("input", function () {
-                var digits = textInput.value.replace(/[^\d]/g, "").slice(0, 8);
+            // Staat er al een volledige datum, dan overschrijft wat je typt (of plakt) de cijfers vanaf de cursor of selectie, zoals je bij het
+            // wijzigen van enkel de dag verwacht; zonder dit schuiven de overige cijfers door het masker op en klopt de datum niet meer.
+            var stash = null;
+            // Toets-voor-toets (betrouwbaarder dan beforeinput/input, ook bij een dubbelklik-selectie): staat er een volledige datum, dan vervangt het getypte
+            // cijfer het cijfer op de cursorpositie (of het eerste van de selectie) en schuift de cursor één cijfer op.
+            textInput.addEventListener("keydown", function (e) {
+                if (e.ctrlKey || e.metaKey || e.altKey || !/^\d$/.test(e.key)) return;
+                var old = textInput.value, d = old.replace(/[^\d]/g, "");
+                if (d.length !== 8) return;
+                var start = textInput.selectionStart == null ? old.length : textInput.selectionStart;
+                var at = old.slice(0, start).replace(/[^\d]/g, "").length;
+                if (at >= 8) { e.preventDefault(); return; }
+                e.preventDefault();
+                var nd = d.slice(0, at) + e.key + d.slice(at + 1), np = at + 1;
+                var o2 = nd.slice(0, 2) + "/" + nd.slice(2, 4) + "/" + nd.slice(4);
+                var p2 = np <= 2 ? np : np <= 4 ? np + 1 : np + 2;
+                if ((np === 2 || np === 4) && nd.length > np) p2 += 1;
+                textInput.value = o2;
+                textInput.setSelectionRange(Math.min(p2, o2.length), Math.min(p2, o2.length));
+                if (!panel.classList.contains("is-open")) openPanel();
+            });
+            textInput.addEventListener("beforeinput", function (ev) {
+                stash = null;
+                if (!ev.inputType || ev.inputType.indexOf("insert") !== 0) return;
+                var old = textInput.value, oldDigits = old.replace(/[^\d]/g, "");
+                if (oldDigits.length !== 8) return;
+                var start = textInput.selectionStart == null ? old.length : textInput.selectionStart;
+                stash = { digits: oldDigits, at: old.slice(0, start).replace(/[^\d]/g, "").length };
+            });
+            textInput.addEventListener("input", function (ev) {
+                if (stash && ev && ev.data != null) {
+                    var ins = String(ev.data).replace(/[^\d]/g, "").slice(0, 8);
+                    var st = stash; stash = null;
+                    if (ins) {
+                        var nd = (st.digits.slice(0, st.at) + ins + st.digits.slice(st.at + ins.length)).slice(0, 8);
+                        var np = st.at + ins.length;
+                        var o2 = nd.slice(0, 2) + "/" + nd.slice(2, 4) + "/" + nd.slice(4);
+                        var p2 = np <= 2 ? np : np <= 4 ? np + 1 : np + 2;
+                        if ((np === 2 || np === 4) && nd.length > np) p2 += 1;
+                        textInput.value = o2;
+                        if (document.activeElement === textInput && textInput.setSelectionRange) textInput.setSelectionRange(Math.min(p2, o2.length), Math.min(p2, o2.length));
+                        if (!panel.classList.contains("is-open")) openPanel();
+                        return;
+                    }
+                }
+                // Het masker herschrijft de tekst; de cursor moet daarbij op zijn plaats blijven, anders springt hij naar het einde
+                // (enkel de dag aanpassen sprong zo naar het jaar). Typ je in een volledige datum, dan overschrijft de nieuwe
+                // cijfer het volgende cijfer i.p.v. het jaar af te knippen.
+                var caret = textInput.selectionStart == null ? textInput.value.length : textInput.selectionStart;
+                var before = textInput.value.slice(0, caret).replace(/[^\d]/g, "").length;
+                var digits = textInput.value.replace(/[^\d]/g, "");
+                var inserting = !ev || !ev.inputType || ev.inputType.indexOf("insert") === 0;
+                if (digits.length > 8 && inserting && before < digits.length) digits = digits.slice(0, before) + digits.slice(before + 1);
+                digits = digits.slice(0, 8);
+                if (before > digits.length) before = digits.length;
                 var out = digits;
                 if (digits.length > 4) { out = digits.slice(0, 2) + "/" + digits.slice(2, 4) + "/" + digits.slice(4); }
                 else if (digits.length > 2) { out = digits.slice(0, 2) + "/" + digits.slice(2); }
+                var pos = before <= 2 ? before : before <= 4 ? before + 1 : before + 2;
+                if ((before === 2 || before === 4) && digits.length > before && inserting) pos += 1;   // net een dag/maand afgewerkt: voorbij de schuine streep
                 textInput.value = out;
+                if (document.activeElement === textInput && textInput.setSelectionRange) textInput.setSelectionRange(Math.min(pos, out.length), Math.min(pos, out.length));
                 if (!panel.classList.contains("is-open")) openPanel();
             });
             textInput.addEventListener("blur", function () {
@@ -1091,7 +1147,26 @@
             box.dataset.glV2PhoneWired = "1";
             var scheme = action && action.getAttribute("href") && action.getAttribute("href").indexOf("sms:") === 0 ? "sms:" : "tel:";
 
+            // Een geplakt nummer met landcode ("+32472171513", "0032 472 17 15 13") zet het voorvoegsel zelf en laat enkel het nummer staan.
+            function splitPastedPrefix() {
+                var m = /^\s*(?:\+|00)\s*(\d[\d\s().-]*)$/.exec(numberInput.value);
+                if (!m) return;
+                var digits = m[1].replace(/\D/g, "");
+                var codes = Array.prototype.map.call(prefixSelect.options, function (o) { return o.value; })
+                    .filter(function (c) { return /^\+\d+$/.test(c); })
+                    .sort(function (a, b) { return b.length - a.length; });
+                for (var i = 0; i < codes.length; i++) {
+                    var cd = codes[i].slice(1);
+                    if (digits.indexOf(cd) === 0 && digits.length > cd.length) {
+                        prefixSelect.value = codes[i];
+                        numberInput.value = digits.slice(cd.length);
+                        return;
+                    }
+                }
+            }
+
             function sync() {
+                splitPastedPrefix();
                 var number = numberInput.value.trim();
                 var value = number ? (prefixSelect.value + " " + number) : "";
                 hidden.value = value;
@@ -1431,4 +1506,30 @@
         decorate: decorate,
         fit: update
     };
+})();
+
+// ── Spaties vooraan en achteraan weghalen — project-wijd, op elk tekstveld van de gl-v2-layout. Plakken uit Excel, mail of een website
+//    neemt vaak een spatie mee ("Jan "), wat later bij zoeken, dubbelcontrole en exports voor onverklaarbare verschillen zorgt. Zodra je het
+//    veld verlaat (of het formulier indient, ook met Enter) wordt de waarde getrimd; een wachtwoordveld en alles met data-gl-v2-no-trim blijft
+//    ongemoeid. Als er iets verandert, krijgt het veld een gewoon "input"-event, zodat maskers en pagina-JS (bv. het telefoonveld) meelopen. ─────
+(function () {
+    "use strict";
+    function trimField(el) {
+        if (!el || el.readOnly || el.disabled || el.hasAttribute("data-gl-v2-no-trim")) return;
+        var tag = el.tagName;
+        if (tag !== "INPUT" && tag !== "TEXTAREA") return;
+        if (tag === "INPUT" && !/^(text|search|tel|email|url)$/i.test(el.type || "text")) return;
+        var v = el.value;
+        if (typeof v !== "string") return;
+        var t = v.replace(/^[\s ]+|[\s ]+$/g, "");
+        if (t === v) return;
+        el.value = t;
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    document.addEventListener("focusout", function (e) { trimField(e.target); });
+    document.addEventListener("submit", function (e) {
+        var form = e.target;
+        if (form && form.querySelectorAll) Array.prototype.forEach.call(form.querySelectorAll("input, textarea"), trimField);
+    }, true);
 })();

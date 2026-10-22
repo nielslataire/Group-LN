@@ -127,6 +127,10 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<Insurances> Insurances { get; set; }
 
+    public virtual DbSet<InsuranceAttest> InsuranceAttest { get; set; }
+
+    public virtual DbSet<InsuranceAttestUnit> InsuranceAttestUnit { get; set; }
+
     public virtual DbSet<InvoiceAttachments> InvoiceAttachments { get; set; }
 
     public virtual DbSet<InvoiceDunning> InvoiceDunning { get; set; }
@@ -1601,11 +1605,16 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<Insurances>(entity =>
         {
-            entity.HasIndex(e => e.ContractActivityId, "UQ_Insurances_ContractActivity").IsUnique();
+            entity.HasIndex(e => e.ContractActivityId, "UQ_Insurances_ContractActivity").IsUnique().HasFilter("([ContractActivityID] IS NOT NULL)");
 
             entity.Property(e => e.ContractActivityId).HasColumnName("ContractActivityID");
             entity.Property(e => e.InsuranceCompanyId).HasColumnName("InsuranceCompanyID");
             entity.Property(e => e.Polisnummer).HasMaxLength(100);
+            entity.Property(e => e.AppliesTo).HasMaxLength(200);
+            entity.Property(e => e.EndReason).HasMaxLength(200);
+            entity.Property(e => e.Note).HasMaxLength(300);
+            entity.Property(e => e.InsuredValue).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.Premium).HasColumnType("decimal(18, 2)");
 
             entity.HasOne(d => d.ContractActivity).WithOne(p => p.Insurances)
                 .HasForeignKey<Insurances>(d => d.ContractActivityId)
@@ -1615,6 +1624,26 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.InsuranceCompany).WithMany(p => p.Insurances)
                 .HasForeignKey(d => d.InsuranceCompanyId)
                 .HasConstraintName("FK_Insurances_InsuranceCompanies");
+        });
+
+        modelBuilder.Entity<InsuranceAttestUnit>(entity =>
+        {
+            entity.HasKey(e => new { e.AttestId, e.UnitId });
+        });
+
+        modelBuilder.Entity<InsuranceAttest>(entity =>
+        {
+            entity.HasIndex(e => new { e.ContractId, e.Kind }, "UX_InsuranceAttest_Contract_Kind").IsUnique();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.CreatedAt).HasColumnType("datetime2(0)");
+            entity.Property(e => e.UpdatedAt).HasColumnType("datetime2(0)");
+            entity.Property(e => e.LastRequestedAt).HasColumnType("datetime2(0)");
+            entity.Property(e => e.Insurer).HasMaxLength(150);
+            entity.Property(e => e.PolicyNumber).HasMaxLength(100);
+            entity.Property(e => e.Note).HasMaxLength(300);
+            entity.Property(e => e.LastRequestedBy).HasMaxLength(150);
+
+            entity.HasOne(d => d.Contract).WithMany().HasForeignKey(d => d.ContractId).OnDelete(DeleteBehavior.Cascade).HasConstraintName("FK_InsuranceAttest_Contract");
         });
 
         modelBuilder.Entity<InvoiceAttachments>(entity =>

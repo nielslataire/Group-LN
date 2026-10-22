@@ -24,10 +24,14 @@ faq:
     a: Een Eindvordering is de laatste afrekeningsfactuur van het contract. De andere facturen van het contract zijn gewone Vorderingen. Een Creditnota telt negatief in de nacalculatie.
   - q: Waarom zegt de balk onderaan dat het niet klopt?
     a: De som van de regels is niet gelijk aan het factuurbedrag. Pas de regels of het bedrag aan. Opslaan lukt pas als ze gelijk zijn.
+  - q: Waarom verandert het saldo in de contractkaart niet?
+    a: Het saldo rekent met het ingevulde Factuurbedrag. Is dat nog leeg, dan gebruiken we de som van de regels. Vul eerst het bedrag in.
   - q: Hoe wordt de korting contant berekend?
     a: Als het percentage van de korting op het factuurbedrag, zonder btw. De kaart Te betalen toont de datum waarvoor je moet betalen en hoeveel dagen er nog zijn. Is de datum voorbij, dan staat er termijn verstreken en tellen we de korting niet meer mee.
   - q: Waarom staat er geen korting op de kaart Te betalen?
-    a: Het contract heeft geen korting contant, of je hebt nog geen factuurdatum of factuurbedrag ingevuld.
+    a: Het contract heeft geen korting contant, of je hebt nog geen factuurdatum of factuurbedrag ingevuld. Bij een factuur zonder contract moet je Korting contant zelf aanzetten en een percentage en aantal dagen invullen.
+  - q: Wordt de korting contant bij een factuur zonder contract bewaard?
+    a: Ja, het percentage en het aantal dagen worden bij de factuur bewaard. Kies je later toch een contract, dan telt de korting uit het contract en verdwijnt je eigen korting.
   - q: Wat is Opslaan en nieuwe?
     a: Je bewaart de factuur en krijgt meteen een leeg formulier voor dezelfde leverancier. Handig als je er meerdere na elkaar ingeeft. Bij een bestaande factuur staat die knop er niet.
 ---
@@ -45,6 +49,16 @@ faq:
 2. Kies de **Factuurdatum**. De **Vervaldatum** wordt berekend als er een contract is.
 3. Vul het **Factuurbedrag** in, zonder btw.
 4. Zet zo nodig de **Borg** en de **Extra inhouding** aan of uit. Zie de gerelateerde artikels.
+
+## De contractkaart rechts lezen
+
+![De contractkaart naast het formulier](/img/help/projecten/factuur-van-leverancier-toevoegen/5-contractkaart.png)
+
+Zodra je een contract kiest, verschijnt rechts de contractkaart. Ze rekent mee terwijl je het **Factuurbedrag** typt.
+
+1. De balk **Gefactureerd incl. deze factuur** toont wat eerder gefactureerd is en wat deze factuur erbij brengt, ten opzichte van het contract.
+2. **Saldo na deze factuur** is het contractbedrag min wat eerder gefactureerd is en min deze factuur. Een creditnota telt negatief, dus het saldo gaat dan omhoog.
+3. Bij **Borg**, **Korting contant** en **Betaaltermijn** zie je de afspraken uit het contract en wat dat voor deze factuur betekent.
 
 ## De factuurregels verdelen
 
@@ -83,15 +97,18 @@ De korting wordt berekend op het factuurbedrag. De borg en de extra inhouding ve
 
 ![Het infokader bij een factuur zonder contract](/img/help/projecten/factuur-van-leverancier-toevoegen/4-zonder-contract.png)
 
-Rechts verschijnt geen contractkaart maar een infokader. Er is dan geen betaaltermijn en geen borg uit een contract. Vervaldatum en eventuele borg vul je zelf in. De factuur telt niet mee bij gecontracteerd.
+Rechts verschijnt geen contractkaart maar een infokader. Er is dan geen betaaltermijn, geen borg en geen korting uit een contract. Vervaldatum, eventuele borg en eventuele korting vul je zelf in. De factuur telt niet mee bij gecontracteerd.
+
+De kaart **Te betalen** staat er wel. Ze telt de borg, de extra inhouding en de korting mee die jij invult. De korting zet je aan onder **Korting contant**, met een percentage en een aantal dagen. We bewaren de korting bij de factuur. Als je de factuur later opent, staat ze er nog.
+
+![De schakelrij Korting contant bij een factuur zonder contract](/img/help/projecten/factuur-van-leverancier-toevoegen/7-korting-zonder-contract.png)
+
+![De kaart Te betalen bij een factuur zonder contract](/img/help/projecten/factuur-van-leverancier-toevoegen/8-te-betalen-zonder-contract.png)
 
 ## Een bestaande factuur aanpassen
-
-![De contractkaart naast het formulier](/img/help/projecten/factuur-van-leverancier-toevoegen/5-contractkaart.png)
 
 Open de factuur vanuit de nacalculatie. Je ziet hetzelfde formulier. De contractkaart telt de factuur zelf niet dubbel mee.
 
 ## Let op
 Een factuur inlezen vult de leverancier niet in. Dat doen we bewust niet, omdat een fout daar ver doorwerkt.
 
-Bij een factuur zonder contract is er geen kaart **Te betalen**. Onderaan de pagina staat wel wat je netto betaalt.

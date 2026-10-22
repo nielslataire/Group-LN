@@ -59,6 +59,7 @@
                                     }
                                 </select>
                                 <input type="text" id="qc-enterprise-number" class="form-control form-control-modern" placeholder="0123 456 789" />
+                                <button type="button" class="btn btn-outline-primary" id="qc-btn-validate" title="Zoekt naam en gegevens op bij het ondernemingsnummer (Belgische ondernemingen)"><i class="bx bx-check" aria-hidden="true"></i> Controleren</button>
                             </div>
                         </div>
                     </div>
@@ -275,6 +276,26 @@
         $(document.getElementById('qc-use-invoice-address')).off('change.qc').on('change.qc', function () {
             document.getElementById('qc-invoice-address-section').classList.toggle('d-none', !this.checked);
         });
+    });
+
+    // ── Ondernemingsnummer controleren: vult de bedrijfsnaam aan (zonder vennootschapsvorm, met een hoofdletter per woord) ──
+    document.getElementById('qc-btn-validate').addEventListener('click', async function () {
+        const btn = this, errorEl = document.getElementById('qc-error-message');
+        errorEl.classList.add('d-none');
+        const nummer = (document.getElementById('qc-enterprise-number').value || '').trim();
+        const land = document.getElementById('qc-vat-country').value;
+        if (!nummer) { errorEl.textContent = 'Vul eerst het ondernemingsnummer in.'; errorEl.classList.remove('d-none'); return; }
+        if (land && land !== 'BE') { errorEl.textContent = 'De controle werkt enkel voor Belgische ondernemingsnummers.'; errorEl.classList.remove('d-none'); return; }
+        btn.disabled = true;
+        const html = btn.innerHTML; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> Controleren';
+        try {
+            const r = await fetch('@Url.Action("ValidateVat", "Leveranciers")?vatCountryCode=BE&vatNumber=' + encodeURIComponent(nummer), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            const d = r.ok ? await r.json() : null;
+            if (!d || d.valid === false || !d.name) { errorEl.textContent = 'Dit ondernemingsnummer werd niet gevonden.'; errorEl.classList.remove('d-none'); return; }
+            document.getElementById('qc-company-name').value = window.GlV2Bedrijfsnaam ? window.GlV2Bedrijfsnaam.schoon(d.name) : d.name;
+        } catch (e) {
+            errorEl.textContent = 'De controle is mislukt. Probeer het later opnieuw.'; errorEl.classList.remove('d-none');
+        } finally { btn.disabled = false; btn.innerHTML = html; }
     });
 
     // ── Opslaan ────────────────────────────────────────────────────────

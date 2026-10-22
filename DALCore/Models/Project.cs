@@ -33,6 +33,11 @@ public partial class Project
 
     public DateOnly? StartDateConstruction { get; set; }
 
+    /// <summary>Tienjarige aansprakelijkheid voor het hele project (migratie 112): null per aannemer afgeleid, 1 via projectpolis.</summary>
+    public int? TienjarigeBron { get; set; }
+
+    public string TienjarigeOpmerking { get; set; }
+
     public int? DeveloperId { get; set; }
 
     public int? BuilderId { get; set; }

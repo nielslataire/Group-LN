@@ -393,7 +393,7 @@
         var payCard = document.getElementById('gln-ai-betalen-card');
         if (payCard) {
             var fbPay = factuurBedrag();
-            payCard.hidden = !(laatsteContractInfo && fbPay > 0);
+            payCard.hidden = !(fbPay > 0); // ook zonder contract: borg, extra inhouding en een zelf ingevulde korting tellen mee
             if (!payCard.hidden) {
                 var borgNu = aan ? bedrag : 0;
                 var teBetalen = fbPay - inh - borgNu;
@@ -406,8 +406,18 @@
                 document.getElementById('gln-pay-borg').textContent = '– ' + geld(borgNu);
                 document.getElementById('gln-pay-totaal').textContent = geld(teBetalen);
 
-                var dk = laatsteContractInfo;
-                var heeftKorting = dk.cashDiscount && dk.cashDiscountPercentage != null && dk.cashDiscountPaymentTerm != null;
+                // Korting contant: uit het contract, of (zonder contract) uit de eigen velden onder de borg.
+                var kRow = document.getElementById('gln-ai-korting-row');
+                var kToggle = document.getElementById('gln-ai-korting-toggle');
+                var kBody = document.getElementById('gln-ai-korting-body');
+                var dk = null;
+                if (laatsteContractInfo) dk = laatsteContractInfo;
+                else if (kToggle && kToggle.checked) {
+                    var kp = parsePct(document.getElementById('gln-ai-korting-pct').value);
+                    var kdg = parseInt(document.getElementById('gln-ai-korting-dagen').value, 10);
+                    if (kp > 0 && kdg > 0) dk = { cashDiscount: true, cashDiscountPercentage: kp, cashDiscountPaymentTerm: kdg };
+                }
+                var heeftKorting = !!(dk && dk.cashDiscount && dk.cashDiscountPercentage != null && dk.cashDiscountPaymentTerm != null);
                 var kortingBlok = document.getElementById('gln-pay-korting-blok');
                 var datumHidden = document.getElementById('IncommingInvoice_IncommingInvoiceDate');
                 var fd = datumHidden ? parseIsoDate(datumHidden.value) : null;
@@ -427,6 +437,19 @@
                     document.getElementById('gln-pay-korting-sub').classList.toggle('is-verlopen', verlopen);
                     document.getElementById('gln-pay-metkorting-rij').hidden = verlopen;
                 }
+            }
+        }
+
+        var kortingRij = document.getElementById('gln-ai-korting-row');
+        if (kortingRij) {
+            kortingRij.hidden = !!laatsteContractInfo; // met contract komt de korting uit het contract
+            var kTog = document.getElementById('gln-ai-korting-toggle');
+            var kLichaam = document.getElementById('gln-ai-korting-body');
+            if (kLichaam) kLichaam.hidden = !(kTog && kTog.checked);
+            var kBedrag = document.getElementById('gln-ai-korting-amount');
+            if (kBedrag) {
+                var kpct = kTog && kTog.checked ? parsePct(document.getElementById('gln-ai-korting-pct').value) : 0;
+                kBedrag.textContent = kpct > 0 && factuurBedrag() > 0 ? '– ' + geld(Math.round(factuurBedrag() * kpct) / 100) : '';
             }
         }
 
@@ -458,6 +481,11 @@
         var voSel = document.getElementById('gln-ai-borg-vo');
         if (voSel) voSel.addEventListener('change', refreshBorg);
     }
+    var kTogEl = document.getElementById('gln-ai-korting-toggle');
+    if (kTogEl) {
+        kTogEl.addEventListener('change', function () { if (kTogEl.checked) document.getElementById('gln-ai-korting-pct').focus(); refreshBorg(); });
+        ['gln-ai-korting-pct', 'gln-ai-korting-dagen'].forEach(function (id) { document.getElementById(id).addEventListener('input', refreshBorg); });
+    }
     if (inhToggle) {
         inhToggle.addEventListener('change', function () {
             if (!inhToggle.checked && inhBedragEl) inhBedragEl.value = '';
@@ -473,6 +501,14 @@
         if (borgPct && borgPct.value) borgPct.value = dutch(parsePct(borgPct.value));
         if (inhBedragEl && inhBedragEl.value) inhBedragEl.value = dutch(parseCurrency(inhBedragEl.value));
         if (inhToggle && !inhToggle.checked && inhBedragEl) inhBedragEl.value = '';
+        // Korting contant: enkel zonder contract en enkel als ze aanstaat; anders niets posten (met contract komt ze uit het contract).
+        var kTogS = document.getElementById('gln-ai-korting-toggle');
+        var kPctS = document.getElementById('gln-ai-korting-pct');
+        var kDagS = document.getElementById('gln-ai-korting-dagen');
+        if (kPctS && kDagS) {
+            if (laatsteContractInfo || !(kTogS && kTogS.checked)) { kPctS.value = ''; kDagS.value = ''; }
+            else if (kPctS.value) kPctS.value = dutch(parsePct(kPctS.value));
+        }
         syncDuePost();
     });
 

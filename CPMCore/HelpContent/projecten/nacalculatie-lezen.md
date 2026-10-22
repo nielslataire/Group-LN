@@ -4,7 +4,7 @@ topic: projecten
 role: Projectleider
 device: Desktop · tablet
 minutes: 5
-updated: 2026-10-21
+updated: 2026-10-22
 screens: nacalculatie-overzicht, nacalculatie-detail
 synonyms: nacalculatie, begroot, gecontracteerd, gefactureerd, overschrijding, zonder contract, niet begroot, activiteit, categorie
 newsTag: Nieuw
@@ -34,6 +34,15 @@ faq:
 1. Open het project en kies **Nacalculatie**.
 2. Bovenaan zie je de totalen: **Begroot**, **Gecontracteerd**, **Gefactureerd**, **Meerwerk klanten**, **Begroot – contract** en **Nog te factureren**.
 3. Staat er een gele melding, dan vragen een of meer categorieën aandacht. De melding zegt welke en waarom.
+
+## De knoppen bovenaan gebruiken
+
+Rechtsboven op de nacalculatie staan knoppen voor wat je hierna wilt doen.
+
+1. **Borgen & inhoudingen** opent het overzicht van de borgen en de extra inhoudingen. Is er een borg vrij te geven, dan staat er een gele teller op de knop. Zie het artikel over de borgen.
+2. **Budget instellen** opent de pagina om bedragen per activiteit aan te passen. Je ziet de knop alleen als je schrijfrechten hebt.
+3. **Afdrukken** en **Exporteren** geven de nacalculatie op papier of als Excel.
+4. **Toevoegen** opent een keuze: **Contract**, **Inkomende factuur** of **Factuur inlezen (PDF)**. Bij een factuur kies je in het formulier zelf of ze met of zonder contract is.
 
 ## Per categorie lezen
 

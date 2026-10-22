@@ -26,6 +26,8 @@ faq:
     a: Vink je Oppervlaktes aan, dan komen de eenheden mee uit de gekozen versie. Je kiest dan niet meer tussen de eenheden van het project en een lege lijst.
   - q: Wat betekent Meteen actief budget maken?
     a: Het nieuwe budget wordt het actieve budget van het project. Laat je het uit, dan blijft het huidige actieve budget actief. Het definitieve budget verandert nooit.
+  - q: Ik heb Dak & afbraak niet overgenomen, maar de dakactiviteiten staan toch met een bedrag. Hoe komt dat?
+    a: Dat kwam door een prijs die uit de kopie bleef staan. Nu begint een activiteit zonder hoeveelheid op 0, en het aantal veluxen gaat zonder Dak & afbraak niet mee. Eigen prijzen die je zelf aanpaste, blijven wel staan.
   - q: Wat als ik een definitieve versie kopieer?
     a: De kopie is een nieuw budget met de status Concept. De definitieve versie blijft ongewijzigd.
 ---

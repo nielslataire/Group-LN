@@ -209,12 +209,23 @@
                 <span class="gl-v2-section-card-icon"><i class="ph ph-shield-check" aria-hidden="true"></i></span>
                 <h2 class="gl-v2-section-card-title">Veiligheid &amp; attesten</h2>
                 <span class="gl-v2-field-divider"></span>
-                <span class="gl-v2-section-card-desc">Drie afspraken — elk één schakelaar.</span>
+                <span class="gl-v2-section-card-desc">Drie afspraken met één schakelaar en de keuze voor de tienjarige.</span>
             </div>
             <div class="gl-v2-toggle-grid" style="padding:12px 18px 14px">
                 @Html.EditorFor(m => m.Contract.SiteNotification, "GlV2ToggleSwitch", new { Hint = "ingediend" })
                 @Html.EditorFor(m => m.Contract.VgmCharter, "GlV2ToggleSwitch", new { Hint = "ondertekend" })
                 @Html.EditorFor(m => m.Contract.PidAttest, "GlV2ToggleSwitch", new { Hint = "nog niet ontvangen" })
+            </div>
+            <div class="gl-v2-field" style="padding:0 18px 16px">
+                <span class="gl-v2-field-label">TIENJARIGE AANSPRAKELIJKHEID</span>
+                <input type="hidden" name="Contract.TienjarigeBronGepost" value="true" />
+                <div class="gl-v2-segmented is-outline is-fill" role="radiogroup" aria-label="Tienjarige aansprakelijkheid">
+                    <label><input type="radio" name="Contract.TienjarigeBron" value="" checked="@(Model.Contract.TienjarigeBron == null)" /><span>Nog niet bepaald</span></label>
+                    <label><input type="radio" name="Contract.TienjarigeBron" value="0" checked="@(Model.Contract.TienjarigeBron == 0)" /><span>Via de aannemer</span></label>
+                    <label><input type="radio" name="Contract.TienjarigeBron" value="1" checked="@(Model.Contract.TienjarigeBron == 1)" /><span>Via projectpolis</span></label>
+                    <label><input type="radio" name="Contract.TienjarigeBron" value="2" checked="@(Model.Contract.TienjarigeBron == 2)" /><span>Niet vereist</span></label>
+                </div>
+                <span class="gl-v2-field-help">Bepaalt of CPM bij Verzekeringen een attest per woning van deze aannemer verwacht. Via projectpolis: een globale polis van de ontwikkelaar dekt de aannemer, dus geen eigen attest. Bij Nog niet bepaald volgt het contract de keuze voor het hele project (bij Verzekeringen), en anders leidt CPM het af uit de werken in het contract.</span>
             </div>
         </div>
 

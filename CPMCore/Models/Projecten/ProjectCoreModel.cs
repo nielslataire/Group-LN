@@ -92,6 +92,9 @@ namespace CPMCore.Models.Projecten
 
     public class EditProjectDetail : IProjectFormModel
     {
+        /// <summary>Makelaars (bedrijven) van het project, tabblad Partners (migratie 113). BrokersPosted voorkomt dat het oude scherm ze wist.</summary>
+        public List<int> BrokerIds { get; set; } = new();
+        public bool BrokersPosted { get; set; }
         public EditProjectDetail()
         {
             _project = new ProjectBO();

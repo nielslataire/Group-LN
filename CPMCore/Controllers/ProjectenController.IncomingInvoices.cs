@@ -698,6 +698,18 @@ namespace CPMCore.Controllers
             if (inhouding > 0m && (!inv.InhoudingReden.HasValue || inv.InhoudingReden.Value < 1 || inv.InhoudingReden.Value > 3))
                 ModelState.AddModelError("CustomError", "Kies een reden voor de extra inhouding.");
 
+            // Korting contant zonder contract: percentage en aantal dagen horen bij elkaar.
+            if (!(inv.ContractID is > 0) && (inv.KortingPercentage.HasValue || inv.KortingDagen.HasValue))
+            {
+                var kp = inv.KortingPercentage.GetValueOrDefault();
+                var kd = inv.KortingDagen.GetValueOrDefault();
+                if (kp > 0m || kd > 0)
+                {
+                    if (kp <= 0m || kp > 100m) ModelState.AddModelError("CustomError", "Geef een kortingspercentage tussen 0 en 100 op.");
+                    else if (kd <= 0) ModelState.AddModelError("CustomError", "Geef op binnen hoeveel dagen de korting geldt.");
+                }
+            }
+
             if (inv.BorgInhouden != true) return;
             var pct = inv.BorgPercentage.GetValueOrDefault();
             if (pct <= 0m || pct > 100m)

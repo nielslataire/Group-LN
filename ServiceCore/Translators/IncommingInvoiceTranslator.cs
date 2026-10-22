@@ -35,6 +35,8 @@ namespace ServiceCore.Translators
             bo.BorgBedrag = _entity.BorgBedrag;
             bo.BorgAfwijkReden = _entity.BorgAfwijkReden;
             bo.BorgVoPercentage = _entity.BorgVoPercentage;
+            bo.KortingPercentage = _entity.KortingPercentage;
+            bo.KortingDagen = _entity.KortingDagen;
             var inhouding = _entity.Inhoudingen?.OrderBy(i => i.Id).FirstOrDefault();
             if (inhouding != null)
             {
@@ -87,6 +89,11 @@ namespace ServiceCore.Translators
                 _entity.BorgBedrag = _entity.BorgInhouden == true ? bo.BorgBedrag : null;
                 _entity.BorgAfwijkReden = _entity.BorgInhouden == true && !string.IsNullOrWhiteSpace(bo.BorgAfwijkReden) ? bo.BorgAfwijkReden.Trim() : null;
                 _entity.BorgVoPercentage = _entity.BorgInhouden == true ? bo.BorgVoPercentage : null;
+                // Korting contant: enkel zonder contract (met contract komt ze uit het contract zelf).
+                var zonderContract = bo.ContractID.GetValueOrDefault() <= 0;
+                var kortingGeldig = zonderContract && bo.KortingPercentage.GetValueOrDefault() > 0m && bo.KortingDagen.GetValueOrDefault() > 0;
+                _entity.KortingPercentage = kortingGeldig ? bo.KortingPercentage : null;
+                _entity.KortingDagen = kortingGeldig ? bo.KortingDagen : null;
                 // Vervaldatum: enkel overschrijven als het formulier er een meestuurt (zonder contract zelf in te vullen,
                 // met contract berekend uit de betaaltermijn); leeg laat een door de verrijkingspijplijn gevulde waarde staan.
                 if (bo.DueDate.HasValue)

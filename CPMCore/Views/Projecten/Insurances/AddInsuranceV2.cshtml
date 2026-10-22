@@ -1,0 +1,270 @@
+@model CPMCore.Models.Projecten.VzPolisFormVm
+@using CPMCore.Models.GlV2
+@using System.Globalization
+@*
+    gl-v2 — Verzekering toevoegen en bewerken (design-handoff 43c). Eén formulier voor alle types: de velden passen zich aan het gekozen type aan
+    (ABR: termijn, verlenging en waarborgperiode; Brand: bestaand of nieuwbouw; Tienjarige: aantal jaren; BA en Andere: de basisvelden). De zichtbaarheid per
+    type zit in gl-v2-projecten-insurances.js (data-vz-types op elk veld). Opslaan gaat naar SaveInsurance; "Bewaren als aangevraagd" bewaart zonder
+    polisnummer en zet de polis op Aangevraagd tot het polisnummer is ingevuld. Het polisdocument komt in Documenten, map Verzekeringen.
+*@
+@{
+    var i = Model.Input;
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    ViewData["Title"] = Model.IsNew ? "Verzekering toevoegen" : "Verzekering bewerken";
+    ViewData["PageIcon"] = "bx bx-building-house";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("DetailInsurances", "Projecten", new { projectid = i.ProjectId });
+    var menu = new GlV2ProjectMenuVm { ProjectId = i.ProjectId, ProjectName = Model.ProjectName ?? "", ProjectSubtitle = "project · verzekeringen", Mode = GlV2ProjectMenuMode.Outer };
+    var types = new (int Waarde, string Naam, string Sub, string Icoon)[]
+    {
+        (1, "ABR", "alle bouwplaatsrisico's", "ph-hard-hat"),
+        (2, "Brand", "nieuwbouw of bestaand", "ph-fire"),
+        (3, "Tienjarige", "globale polis · per project of eenheid", "ph-house-line"),
+        (4, "BA", "burgerlijke aansprakelijkheid", "ph-user-circle-gear"),
+        (5, "Andere", "vrij type", "ph-shield"),
+    };
+    // Getal met eenheid voor een geheel aantal (de gedeelde template GlV2NumberUnit werkt enkel met decimal?).
+    Microsoft.AspNetCore.Html.IHtmlContent Aantal(string naam, string id, string label, int? waarde, string eenheid) =>
+        new Microsoft.AspNetCore.Html.HtmlString(
+            "<div class=\"gl-v2-field\"><label class=\"gl-v2-field-label\" for=\"" + id + "\">" + System.Net.WebUtility.HtmlEncode(label) + "</label>" +
+            "<div class=\"gl-v2-field-box\"><input type=\"number\" min=\"0\" max=\"999\" class=\"gl-v2-field-input is-num\" name=\"" + naam + "\" id=\"" + id + "\" value=\"" + (waarde?.ToString() ?? "") + "\" placeholder=\" \" autocomplete=\"off\" />" +
+            "<span class=\"gl-v2-field-unit\">" + System.Net.WebUtility.HtmlEncode(eenheid) + "</span></div></div>");
+    string Iso(DateOnly? d) => d?.ToString("yyyy-MM-dd") ?? "";
+    string Disp(DateOnly? d) => d?.ToString("dd/MM/yyyy") ?? "";
+    var budgetHint = Model.BudgetBouwkost.HasValue ? $"voorstel: bouwkost uit {Model.BudgetBron ?? "het definitieve budget"}: € {Model.BudgetBouwkost.Value.ToString("N0", be)}" : null;
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-insurances.css" asp-append-version="true" />
+}
+@section ProjectMenu
+{
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menu)
+}
+@{ var menuPhone = new GlV2ProjectMenuVm { ProjectId = menu.ProjectId, ProjectName = menu.ProjectName, ProjectSubtitle = menu.ProjectSubtitle, Mode = GlV2ProjectMenuMode.Phone }; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhone)
+
+<form method="post" asp-action="SaveInsurance" asp-controller="Projecten" enctype="multipart/form-data" id="gln-vz-form" autocomplete="off" novalidate
+      data-vo="@(Model.VoDatum?.ToString("yyyy-MM-dd"))" data-vo-tekst="@Disp(Model.VoDatum)" data-bouwkost="@(Model.BudgetBouwkost?.ToString("0.00", CultureInfo.InvariantCulture))">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="Input.Id" value="@i.Id" />
+    <input type="hidden" name="Input.ProjectId" value="@i.ProjectId" />
+    <input type="hidden" name="Input.From" value="@i.From" />
+    <input type="hidden" name="Input.Requested" id="gln-vz-requested" value="false" />
+
+    <div class="gln-vz-formgrid">
+        <div class="gln-vz-formmain">
+            @if (!string.IsNullOrWhiteSpace(Model.Fout))
+            {
+                <div class="gl-v2-notice gl-v2-notice-expanded is-danger">
+                    <span class="gl-v2-notice-expanded-icon"><i class="ph ph-x-circle" aria-hidden="true"></i></span>
+                    <div class="gl-v2-notice-body"><span class="gl-v2-notice-title">De verzekering is niet opgeslagen</span><span class="gl-v2-notice-text">@Model.Fout</span></div>
+                </div>
+            }
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-shield-check" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">@(Model.IsNew ? "Verzekering toevoegen" : "Verzekering bewerken")</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">velden passen zich aan het type aan</span>
+                </div>
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-12">
+                        <span class="gl-v2-field-label">TYPE <span style="color:#8B2A2A">*</span></span>
+                        <div class="gln-vz-types" role="radiogroup" aria-label="Type verzekering">
+                            @foreach (var t in types)
+                            {
+                                <label class="gln-vz-typekaart">
+                                    <input type="radio" name="Input.Type" value="@t.Waarde" checked="@(i.Type == t.Waarde)" />
+                                    <span class="gln-vz-typekaart-in"><i class="ph @t.Icoon" aria-hidden="true"></i><strong>@t.Naam</strong><span>@t.Sub</span></span>
+                                </label>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="gl-v2-col-6" data-vz-types="2">
+                        <div class="gl-v2-field">
+                            <span class="gl-v2-field-label">GEBOUW</span>
+                            <div class="gl-v2-segmented is-outline is-fill" role="radiogroup" aria-label="Gebouw">
+                                <label><input type="radio" name="Input.Building" value="0" checked="@(i.Building == 0)" /><span>Bestaand gebouw</span></label>
+                                <label><input type="radio" name="Input.Building" value="1" checked="@(i.Building != 0)" /><span>Nieuwbouw</span></label>
+                            </div>
+                            <span class="gl-v2-field-help" data-vz-nieuwbouw-hint>nieuwbouw: start standaard bij voorlopige oplevering</span>
+                        </div>
+                    </div>
+
+                    <div class="gl-v2-col-6" data-vz-types="@(Model.IsNew ? "1 2 4 5" : "1 2 3 4 5")">
+                        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                        {
+                            Name = "Input.UnitId", Id = "gln-vz-unit", Label = "GELDT VOOR", Value = i.UnitId?.ToString() ?? "", Placeholder = "Heel het project", EmptyText = "Heel het project",
+                            Items = Model.Eenheden, Help = "verkochte eenheden verzekert de koper"
+                        })
+                    </div>
+                    @if (Model.IsNew)
+                    {
+                        @* Tienjarige: één polis voor het hele project, of per woning of appartement een eigen polis (de globale polis geeft per eenheid een attest) *@
+                        <div class="gl-v2-col-12" data-vz-types="3">
+                            <div class="gl-v2-field">
+                                <span class="gl-v2-field-label">GELDT VOOR <a href="#" class="gln-vz-alles" data-vz-eenheden-alles>alles aanvinken</a></span>
+                                <div class="gln-vz-woningen">
+                                    @foreach (var e in Model.Eenheden)
+                                    {
+                                        <label class="gln-vz-woning"><input type="checkbox" name="Input.UnitIds" value="@e.Value" checked="@(i.UnitIds != null && i.UnitIds.Contains(int.Parse(e.Value)))" /><span><strong>@e.Text</strong></span></label>
+                                    }
+                                </div>
+                                <span class="gl-v2-field-help">Vink niets aan voor één polis voor het hele project. Vink eenheden aan voor een eigen polis per eenheid: CPM maakt er dan één per aangevinkte eenheid aan, met dezelfde gegevens. Het polisnummer kan je daarna per eenheid aanpassen.</span>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="gl-v2-col-6" data-vz-types="1 2 3 4 5">
+                        @Html.EditorFor(m => m.Input.InsuredValue, "GlV2Currency", new { Label = "Verzekerde waarde", Help = budgetHint })
+                    </div>
+
+                    <div class="gl-v2-col-6" data-vz-types="1 2 3 4 5">
+                        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                        {
+                            Name = "Input.InsuranceCompanyId", Id = "gln-vz-maatschappij", Label = "MAATSCHAPPIJ", Required = true, Value = i.InsuranceCompanyId?.ToString() ?? "",
+                            Placeholder = "Kies een maatschappij …", Items = Model.Maatschappijen
+                        })
+                    </div>
+
+                    <div class="gl-v2-col-6" data-vz-types="1 2 3 4 5">
+                        @if (Model.HasBroker)
+                        {
+                            <div class="gl-v2-field">
+                                <label class="gl-v2-field-label" for="gln-vz-makelaar-vast">MAKELAAR</label>
+                                <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gln-vz-makelaar-vast" value="@Model.BrokerName" disabled /></div>
+                                <span class="gl-v2-field-help">De makelaar staat vast zodra de polis is aangemaakt.</span>
+                            </div>
+                        }
+                        else
+                        {
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                            {
+                                Name = "Input.BrokerCompanyId", Id = "gln-vz-makelaar", Label = "MAKELAAR · OPTIONEEL", Value = i.BrokerCompanyId?.ToString() ?? "",
+                                Placeholder = "Rechtstreeks, zonder makelaar", EmptyText = "Rechtstreeks, zonder makelaar", Items = Model.Makelaars,
+                                Help = "een makelaar komt als contract met de activiteit Verzekeringen in de nacalculatie"
+                            })
+                        }
+                    </div>
+
+                    <div class="gl-v2-col-6" data-vz-types="1 2 3 4 5">
+                        @Html.EditorFor(m => m.Input.Polisnummer, "GlV2Text", new { Label = "Polisnummer · optioneel", Placeholder = "nog niet gekend", Help = "zonder polisnummer bewaar je de polis als aangevraagd" })
+                    </div>
+                </div>
+            </section>
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-calendar-check" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Looptijd en premie</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">start- en einddatum, termijnen en premie</span>
+                </div>
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-6" id="gln-vz-startveld" data-vz-types="1 2 3 4 5">
+                        @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Id = "gln-vz-start", Name = "Input.Startdate", Label = "STARTDATUM", Required = true, IsoValue = Iso(i.Startdate), DisplayValue = Disp(i.Startdate) })
+                        <label class="gl-v2-toggle-row gln-vz-startvo" data-vz-types="1 2 3">
+                            <input type="checkbox" class="gl-v2-toggle-switch" name="Input.StartAtDelivery" id="gln-vz-startvo" value="true" checked="@i.StartAtDelivery" />
+                            <span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Start bij de voorlopige oplevering</span><span class="gl-v2-toggle-hint">@(Model.VoDatum.HasValue ? "= geplande voorlopige oplevering " + Disp(Model.VoDatum) : "vul eerst de datum van de voorlopige oplevering in bij het project")</span></span>
+                        </label>
+                    </div>
+                    <div class="gl-v2-col-6" data-vz-types="1 2 3 4 5">
+                        @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Id = "gln-vz-einde", Name = "Input.Enddate", Label = "EINDDATUM", IsoValue = Iso(i.Enddate), DisplayValue = Disp(i.Enddate) })
+                        <span class="gl-v2-field-help">leeg = stilzwijgend verlengd, of tot de eenheid verkocht is</span>
+                    </div>
+
+                    <div class="gl-v2-col-4" data-vz-types="1">
+                        @Aantal("Input.Period", "gln-vz-termijn", "TERMIJN", i.Period, "maanden")
+                    </div>
+                    <div class="gl-v2-col-4" data-vz-types="1">
+                        @Aantal("Input.ExtensionPeriod", "gln-vz-verlenging", "VERLENGING", i.ExtensionPeriod, "maanden")
+                    </div>
+                    <div class="gl-v2-col-4" data-vz-types="1">
+                        @Aantal("Input.GuaranteePeriod", "gln-vz-waarborg", "WAARBORGPERIODE", i.GuaranteePeriod, "maanden")
+                    </div>
+                    <div class="gl-v2-col-4" data-vz-types="3">
+                        @Aantal("Input.DurationYears", "gln-vz-duur", "DUUR", i.DurationYears ?? (i.Type == 3 ? 10 : (int?)null), "jaar")
+                    </div>
+
+                    <div class="gl-v2-col-6" data-vz-types="1 2 3 4 5">
+                        @Html.EditorFor(m => m.Input.Premium, "GlV2Currency", new { Label = "Premie · optioneel", Help = "per jaar" })
+                    </div>
+                    <div class="gl-v2-col-6" data-vz-types="1 2 3 4 5">
+                        @Html.EditorFor(m => m.Input.Note, "GlV2Text", new { Label = "Opmerking · optioneel", Placeholder = "bv. jaarlijks, bouwheer" })
+                    </div>
+                </div>
+            </section>
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Polisdocument en herinneringen</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">het document kan ook later</span>
+                </div>
+                <div class="gl-v2-section-grid">
+                    <div class="gl-v2-col-12">
+                        <div class="gln-vz-dropzone" id="gln-vz-dropzone">
+                            <i class="ph ph-upload-simple" aria-hidden="true"></i>
+                            <span id="gln-vz-dropzone-tekst">@(Model.DocumentId.HasValue ? "Er staat al een polisdocument in Documenten. Kies een bestand om een nieuw toe te voegen, of" : "Sleep de polis of het voorstel hierheen of")</span>
+                            <label class="gln-vz-dropzone-link">kies een bestand<input type="file" name="polisFile" id="gln-vz-polisfile" accept="application/pdf,image/*" hidden /></label>
+                            @if (Model.DocumentId.HasValue)
+                            {
+                                <a class="gln-vz-dropzone-open" href="@Url.Action("DetailDocs", "Projecten", new { projectid = i.ProjectId, open = Model.DocumentId })">huidig document openen</a>
+                            }
+                        </div>
+                    </div>
+                    <div class="gl-v2-col-12">
+                        <span class="gl-v2-field-label">HERINNERINGEN</span>
+                        <div class="gln-vz-herinneringen">
+                            <label class="gl-v2-toggle-row"><input type="checkbox" class="gl-v2-toggle-switch" name="Input.RemindStart" value="true" checked="@i.RemindStart" /><input type="hidden" name="Input.RemindStart" value="false" /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">30 dagen vóór de startdatum: polis actief?</span></span></label>
+                            <label class="gl-v2-toggle-row"><input type="checkbox" class="gl-v2-toggle-switch" name="Input.RemindSale" value="true" checked="@i.RemindSale" /><input type="hidden" name="Input.RemindSale" value="false" /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Bij verkoop van de eenheid: polis opzeggen of overdragen</span></span></label>
+                            <label class="gl-v2-toggle-row"><input type="checkbox" class="gl-v2-toggle-switch" name="Input.RemindExpiry" value="true" checked="@i.RemindExpiry" /><input type="hidden" name="Input.RemindExpiry" value="false" /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">30 dagen vóór de vervaldag</span></span></label>
+                        </div>
+                        <span class="gl-v2-field-help">Herinneringen verschijnen als aandachtspunt bovenaan het overzicht van de verzekeringen. CPM stuurt geen mails.</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <aside class="gln-vz-formside">
+            <section class="gl-v2-section-card" id="gln-vz-losop"@(Model.LostOp.Count == 0 ? " hidden" : "")>
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-check-circle" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Dit lost op</h2>
+                </div>
+                <ul class="gln-vz-losop" id="gln-vz-losop-lijst">
+                    @foreach (var l in Model.LostOp) { <li>@l</li> }
+                </ul>
+            </section>
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-info" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Per type</h2>
+                </div>
+                <div class="gln-vz-pertype">
+                    <p><strong>ABR:</strong> waarde van de werken plus de waarborgperiode. De termijn en verlenging bepalen wanneer de polis afloopt.</p>
+                    <p><strong>Tienjarige:</strong> een globale polis voor het project, of per woning of appartement een eigen polis. Ze start bij de voorlopige oplevering en loopt 10 jaar. De aannemers van contracten met Via projectpolis moeten dan geen eigen attest meer afgeven.</p>
+                    <p><strong>Brand nieuwbouw:</strong> nodig voor eenheden die opgeleverd zijn en nog geen koper hebben. Een verkochte eenheid verzekert de koper. <strong>Brand bestaand:</strong> eindigt bij de afbraak of de verkoop.</p>
+                    <p class="gln-vz-pertype-voet">* verplicht · zonder polisnummer bewaar je als "aangevraagd"</p>
+                </div>
+            </section>
+        </aside>
+    </div>
+
+    <div class="gl-v2-form-actionbar">
+        <span class="gl-v2-form-actionbar-spacer"></span>
+        <a href="@Url.Action("DetailInsurances", "Projecten", new { projectid = i.ProjectId })" class="gl-v2-btn gl-v2-btn-text">Annuleren</a>
+        <button type="submit" class="gl-v2-btn gl-v2-btn-secondary" id="gln-vz-aangevraagd">Bewaren als aangevraagd</button>
+        <button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-check" aria-hidden="true"></i>Verzekering opslaan</button>
+    </div>
+</form>
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-projecten-insurances.js" asp-append-version="true"></script>
+}

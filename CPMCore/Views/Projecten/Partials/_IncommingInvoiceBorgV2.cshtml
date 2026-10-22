@@ -170,4 +170,36 @@
             }
         </div>
     </div>
+
+    @* ── Korting contant zonder contract (42k): zelf in te vullen, bewaard bij de factuur (migratie 109) ── *@
+    <div class="gln-ai-optrow" id="gln-ai-korting-row" hidden>
+        <div class="gln-ai-optrow-head">
+            <label class="gl-v2-switch" aria-label="Korting contant">
+                <input type="checkbox" id="gln-ai-korting-toggle" class="gln-ai-switch-input" @(inv.KortingPercentage.GetValueOrDefault() > 0m ? "checked" : null) />
+                <span class="gl-v2-switch-track"></span>
+            </label>
+            <div class="gln-ai-optrow-text">
+                <strong>Korting contant</strong>
+                <span>geen contract: zelf in te vullen, wordt bij de factuur bewaard</span>
+            </div>
+            <span class="gln-ai-optrow-amount" id="gln-ai-korting-amount"></span>
+        </div>
+        <div class="gln-ai-optrow-body" id="gln-ai-korting-body" hidden>
+            <div class="gl-v2-section-grid">
+                <div class="gl-v2-col-3">
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="gln-ai-korting-pct">Percentage</label>
+                        <div class="gl-v2-field-box"><input type="text" inputmode="decimal" class="gl-v2-field-input" id="gln-ai-korting-pct" name="IncommingInvoice.KortingPercentage" value="@Dut(inv.KortingPercentage)" autocomplete="off" placeholder="2" /><span class="gl-v2-field-suffix">%</span></div>
+                    </div>
+                </div>
+                <div class="gl-v2-col-3">
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="gln-ai-korting-dagen">Binnen</label>
+                        <div class="gl-v2-field-box"><input type="text" inputmode="numeric" class="gl-v2-field-input" id="gln-ai-korting-dagen" name="IncommingInvoice.KortingDagen" value="@(inv.KortingDagen)" autocomplete="off" placeholder="10" /><span class="gl-v2-field-suffix">dagen</span></div>
+                        <span class="gl-v2-field-help">na de factuurdatum</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>

@@ -427,17 +427,18 @@
 					</div>
 					<div class="col-md-6">
 						<label class="control-label mb-1" for="nsEnterpriseNumber">Ondernemingsnummer</label>
-						<input type="text" id="nsEnterpriseNumber" class="form-control form-control-modern" placeholder="BE0123456789" inputmode="numeric" spellcheck="false" autocomplete="off" />
-					</div>
-					<div class="col-md-6">
-						<label class="control-label mb-1" for="nsVat">BTW nummer</label>
 						<div class="input-group">
-							<input type="text" id="nsVat" class="form-control form-control-modern" placeholder="BE0123456789" spellcheck="false" autocomplete="off" />
+							<input type="text" id="nsEnterpriseNumber" class="form-control form-control-modern" placeholder="BE0123456789" inputmode="numeric" spellcheck="false" autocomplete="off" />
 							<button type="button" class="btn btn-outline-primary" id="nsBtnValidateVat">
 								<i class="bx bx-check" aria-hidden="true"></i> Controleren
 							</button>
 						</div>
-						<small class="text-muted d-block mt-1">Vult bij een geldig nummer meteen naam en adres aan.</small>
+						<small class="text-muted d-block mt-1">Vult bij een geldig nummer meteen naam, bedrijfsvorm en adres aan.</small>
+					</div>
+					<div class="col-md-6">
+						<label class="control-label mb-1" for="nsVat">BTW nummer</label>
+						<input type="text" id="nsVat" class="form-control form-control-modern" placeholder="BE0123456789" spellcheck="false" autocomplete="off" />
+						<small class="text-muted d-block mt-1">Meestal hetzelfde nummer als het ondernemingsnummer.</small>
 					</div>
 					<div class="col-md-6">
 						<label class="control-label mb-1" for="nsStreet">Straat</label>
@@ -1013,9 +1014,11 @@
 		// MODAL: NIEUWE LEVERANCIER
 		// ==============================
 		$('#nsBtnValidateVat').on('click', function () {
-			const vatNumber = ($('#nsVat').val() || $('#nsEnterpriseNumber').val() || '').toString().trim();
+			// het ondernemingsnummer leidt; ontbreekt het, dan het btw-nummer (voor een Belgische onderneming is het hetzelfde nummer) en we vullen het ondernemingsnummer aan
+			const vatNumber = ($('#nsEnterpriseNumber').val() || $('#nsVat').val() || '').toString().trim();
+			if (vatNumber && !($('#nsEnterpriseNumber').val() || '').toString().trim()) $('#nsEnterpriseNumber').val(vatNumber);
 			if (!vatNumber) {
-				notify('Ongeldig btw-nummer', 'Vul eerst een btw- of ondernemingsnummer in.', 'warning');
+				notify('Ongeldig nummer', 'Vul eerst een ondernemings- of btw-nummer in.', 'warning');
 				return;
 			}
 
@@ -1033,7 +1036,11 @@
 					}
 
 					const address = data.address || {};
-					if (data.name) $('#nsName').val(data.name);
+					if (data.name) {
+						const g = window.GlV2Bedrijfsnaam ? window.GlV2Bedrijfsnaam.splits(data.name) : { naam: data.name, vorm: '' };
+						$('#nsName').val(g.naam);   // zonder vennootschapsvorm, met een hoofdletter per woord
+						if (g.vorm && window.GlV2Bedrijfsnaam) window.GlV2Bedrijfsnaam.kiesVorm(document.getElementById('nsLegalForm'), g.vorm);
+					}
 					if (address.street) $('#nsStreet').val(address.street);
 					if (address.number) $('#nsHouseNumber').val(address.number);
 					const postal = address.zip || address.zip_code || address.postcode;

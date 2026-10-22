@@ -23,9 +23,44 @@ public partial class Insurances
 
     public string Polisnummer { get; set; }
 
-    public int ContractActivityId { get; set; }
+    /// <summary>Null bij een polis die rechtstreeks bij de maatschappij loopt (zonder makelaar/contract) — migratie 110.</summary>
+    public int? ContractActivityId { get; set; }
 
     public int Id { get; set; }
+
+    // Migratie 110 (design-handoff 43): extra gegevens van een polis.
+    public int? ProjectId { get; set; }
+
+    /// <summary>0 bestaand gebouw, 1 nieuwbouw (enkel bij Brand).</summary>
+    public int? Building { get; set; }
+
+    public string AppliesTo { get; set; }
+
+    public int? UnitId { get; set; }
+
+    public decimal? InsuredValue { get; set; }
+
+    public decimal? Premium { get; set; }
+
+    public string Note { get; set; }
+
+    /// <summary>Aangevraagd, polis nog niet ontvangen (bv. zonder polisnummer bewaard).</summary>
+    public bool IsRequested { get; set; }
+
+    /// <summary>De polis start bij de voorlopige oplevering van het project (i.p.v. een vaste startdatum).</summary>
+    public bool StartAtDelivery { get; set; }
+
+    public int? DurationYears { get; set; }
+
+    public string EndReason { get; set; }
+
+    public bool RemindStart { get; set; } = true;
+
+    public bool RemindSale { get; set; } = true;
+
+    public bool RemindExpiry { get; set; } = true;
+
+    public int? DocumentId { get; set; }
 
     public virtual ContractActivity ContractActivity { get; set; }
 

@@ -1496,7 +1496,7 @@ namespace CPMCore.Controllers
             model.LegalForms = _db.CompanyLegalForm
                 .Where(l => l.IsActive)
                 .OrderBy(l => l.Name)
-                .Select(l => new IdNameBO { ID = l.Id, Display = l.Name })
+                .Select(l => new IdNameBO { ID = l.Id, Display = l.Abbreviation != null && l.Abbreviation != "" ? l.Name + " (" + l.Abbreviation + ")" : l.Name })
                 .ToList();
 
             var countriesResponse = _countryService.GetVisibleCountriesForSelect();

@@ -26,7 +26,8 @@ faq:
 1. Open **Bewerken** en kies het tabblad **Partners**.
 2. Kies de architect, de ingenieur, de veiligheidscoördinator, de EPB-verslaggever, de notaris en de verkoopverantwoordelijke.
 3. Staat iemand niet in de lijst, maak hem dan aan als nieuwe leverancier.
-4. Klik op **Wijzigingen opslaan**.
+4. Zoek bij **Makelaars** een bedrijf en voeg het toe. Je kan er meerdere koppelen. Met het kruisje haal je een makelaar weer weg. Deze makelaars kan je bij Contacten als bron kiezen en aan een contact toewijzen.
+5. Klik op **Wijzigingen opslaan**.
 
 De gekozen partners staan daarna in de kaart **Algemene gegevens** op de projectpagina.
 [VRAAG: wie is de verkoopverantwoordelijke, en wat doet CPM met die keuze?]

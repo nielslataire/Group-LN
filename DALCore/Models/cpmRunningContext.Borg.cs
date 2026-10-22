@@ -18,6 +18,7 @@ public partial class cpmRunningContext
             entity.Property(e => e.BorgBedrag).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.BorgAfwijkReden).HasMaxLength(500);
             entity.Property(e => e.BorgVoPercentage).HasColumnType("decimal(5, 2)");
+            entity.Property(e => e.KortingPercentage).HasColumnType("decimal(5, 2)");
         });
         modelBuilder.Entity<Contract>(entity =>
         {

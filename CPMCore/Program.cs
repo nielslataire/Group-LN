@@ -88,6 +88,7 @@ builder.Services.AddControllersWithViews(options =>
     options.ModelBinderProviders.Insert(0, new FlexibleDecimalModelBinderProvider());
     options.Filters.Add<PermissionConventionFilter>();
     options.Filters.Add<CPMCore.Filters.DbUpdateExceptionFilter>();
+    options.Filters.Add<CPMCore.Services.Verzekeringen.BuyerLinkActionFilter>();
 
     // Nederlandse standaardteksten voor model-binding / validatie (i.p.v. de
     // Engelse framework-defaults zoals "The value 'x' is not valid for Y").
@@ -152,10 +153,14 @@ var domainDbOptions = new DbContextOptionsBuilder<cpmRunningContext>()
     .Options;
 
 // ⬇️ JOUW DOMEIN CONTEXT (DALCore) — gebruikt dezelfde connection
-builder.Services.AddDbContext<cpmRunningContext>(options =>
+builder.Services.AddSingleton<CPMCore.Services.Verzekeringen.BuyerLinkInterceptor>();
+builder.Services.AddScoped<CPMCore.Services.Verzekeringen.PendingBuyerLinks>();
+builder.Services.AddDbContext<cpmRunningContext>((sp, options) =>
     options.UseSqlServer(
         connection,
         sqlServerOptions => sqlServerOptions.CommandTimeout(5000))
+        // Verzekeringen: een eenheid die een koper krijgt, krijgt ook de tienjarige polissen en attesten (zie BuyerLinkInterceptor)
+        .AddInterceptors(sp.GetRequiredService<CPMCore.Services.Verzekeringen.BuyerLinkInterceptor>())
 );
 
 // Maak de options ook beschikbaar voor ServiceFactory (gebruik static helpers)
@@ -227,6 +232,7 @@ builder.Services.Configure<CPMCore.Services.PuntenSpraak.PuntenSpraakOptions>(
     builder.Configuration.GetSection(CPMCore.Services.PuntenSpraak.PuntenSpraakOptions.Section));
 builder.Services.AddHttpClient(CPMCore.Services.PuntenSpraak.PuntenSpraakService.HttpClientName);
 builder.Services.AddScoped<CPMCore.Services.PuntenSpraak.PuntenSpraakService>();
+builder.Services.AddScoped<CPMCore.Services.Contacten.CrmContactService>();   // contacten met opvolging (migratie 105)
 builder.Services.AddScoped<CPMCore.Services.PuntenSpraak.SpraakContextLoader>();
 builder.Services.AddScoped<CPMCore.Services.PuntenSpraak.RondgangService>();
 builder.Services.AddHostedService<CPMCore.Services.PuntenSpraak.RondgangHostedService>();   // verwerkt rondgangen op de achtergrond (migratie 100)
@@ -271,6 +277,7 @@ builder.Services.AddHttpClient("I2021Sync").ConfigurePrimaryHttpMessageHandler((
     new System.Net.Http.HttpClientHandler { AllowAutoRedirect = true });
 builder.Services.AddScoped<ServiceCore.Budget.BudgetActivityService>();
 builder.Services.AddScoped<CPMCore.Services.Borg.BorgService>();
+builder.Services.AddScoped<CPMCore.Services.Verzekeringen.VerzekeringService>();
 builder.Services.AddScoped<ServiceCore.Budget.BudgetActivityFormuleService>();
 builder.Services.AddScoped<ServiceCore.Budget.BudgetBerekeningService>();
 builder.Services.AddScoped<ServiceCore.Budget.BudgetVergelijkService>();

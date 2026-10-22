@@ -1,0 +1,37 @@
+@model CPMCore.Models.Contacten.CrmContactsIndexVm
+@* gl-v2 — Contacten exporteren (design-handoff 44d): formaat (Excel, CSV, PDF-lijst), kolommen en een melding over contacten zonder toestemming. Gedrag in gl-v2-projecten-contacten.js. *@
+<form id="ct-export-form" method="post" action="@Url.Action("ContactExportV2", "Projecten", new { projectid = Model.ProjectId })" hidden>
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="ids" id="ct-x-ids" /><input type="hidden" name="format" id="ct-x-format" /><input type="hidden" name="columns" id="ct-x-columns" /><input type="hidden" name="listName" id="ct-x-list" /><input type="hidden" name="newsletter" id="ct-x-newsletter" value="false" />
+</form>
+<div class="modal fade gl-v2-modal-form" id="ct-export-modal" tabindex="-1" aria-hidden="true" aria-labelledby="ct-export-title">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <div class="modal-content">
+            <div class="modal-header"><div><h2 class="modal-title" id="ct-export-title">Exporteren</h2><p class="gl-v2-ct-x-sub" id="ct-export-sub"></p></div><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+            <div class="modal-body">
+                <span class="gl-v2-ct-x-label">FORMAAT</span>
+                <div class="gl-v2-ct-x-formats" id="ct-x-formats" role="radiogroup" aria-label="Formaat">
+                    <button type="button" class="is-on" role="radio" aria-checked="true" data-format="xlsx"><i class="ph ph-file-xls" aria-hidden="true"></i>Excel (.xlsx)</button>
+                    <button type="button" role="radio" aria-checked="false" data-format="csv"><i class="ph ph-file-csv" aria-hidden="true"></i>CSV</button>
+                    <button type="button" role="radio" aria-checked="false" data-format="pdf"><i class="ph ph-file-pdf" aria-hidden="true"></i>PDF-lijst</button>
+                </div>
+                <span class="gl-v2-ct-x-label">KOLOMMEN</span>
+                <div class="gl-v2-ct-x-cols" id="ct-x-cols">
+                    <label><input type="checkbox" value="name" checked /><span>Naam en partner</span></label>
+                    <label><input type="checkbox" value="contact" checked /><span>Telefoon en e-mail</span></label>
+                    <label><input type="checkbox" value="source" checked /><span>Bron en makelaar</span></label>
+                    <label><input type="checkbox" value="interest" checked /><span>Interesse (eenheden)</span></label>
+                    <label><input type="checkbox" value="status" checked /><span>Status en volgende actie</span></label>
+                    <label><input type="checkbox" value="budget" /><span>Budget en financiering</span></label>
+                    <label><input type="checkbox" value="note" /><span>Laatste notitie</span></label>
+                    <label><input type="checkbox" value="full" /><span>Volledige opvolging</span></label>
+                </div>
+                <span class="gl-v2-ct-x-label">WIE</span>
+                <label class="gl-v2-ct-x-news"><input type="checkbox" id="ct-x-news" /><span><b>Enkel contacten met toestemming voor de nieuwsbrief</b><small>voor een mailing: wie alleen mag gecontacteerd worden over dit project, valt weg</small></span></label>
+                <p class="gl-v2-ct-x-hint" id="ct-x-pdfhint" hidden>Een PDF-lijst toont altijd contact, bron, interesse, status, volgende actie en wie; de kolomkeuze geldt voor Excel en CSV.</p>
+                <div class="gl-v2-notice gl-v2-notice-compact is-info"><i class="ph ph-info" aria-hidden="true"></i><span id="ct-x-note"></span></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="button" class="gl-v2-btn gl-v2-btn-primary" id="ct-x-go"><i class="ph ph-export" aria-hidden="true"></i><span id="ct-x-go-text">Exporteren</span></button></div>
+        </div>
+    </div>
+</div>

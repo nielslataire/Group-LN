@@ -50,6 +50,7 @@ namespace ServiceCore.Translators
             bo.SiteNotification = _entity.SiteNotification;
             bo.VgmCharter = _entity.VgmCharter;
             bo.PidAttest = _entity.PidAttest;
+            bo.TienjarigeBron = _entity.TienjarigeBron;
             bo.SiteManagerContactId = _entity.SiteManagerContactId;
             bo.ContractName = _entity.ContractName;
             if (_entity.ContractActivity != null)
@@ -85,6 +86,7 @@ namespace ServiceCore.Translators
             _entity.SiteNotification = bo.SiteNotification;
             _entity.VgmCharter = bo.VgmCharter;
             _entity.PidAttest = bo.PidAttest;
+            if (bo.TienjarigeBronGepost) _entity.TienjarigeBron = bo.TienjarigeBron is >= 0 and <= 2 ? bo.TienjarigeBron : null;
             _entity.GuaranteePercentage = bo.GuaranteePercentage;
             _entity.GuaranteeReleaseVOPercentage = bo.GuaranteeReleaseVOPercentage;
             _entity.GuaranteeType = (int)bo.GuaranteeType;

@@ -1,0 +1,298 @@
+@model CPMCore.Models.Contacten.CrmContactDetailVm
+@*
+    gl-v2 — Contactdetail met opvolging (design-handoff punt 44b): links gegevens, interesse en bron; rechts de statusbalk, een melding over de eerstvolgende bezichtiging of
+    optie en de opvolging (notitie, gesprek, e-mail, bezichtiging, optie + volgende actie) met de tijdlijn. Eigen klassen-namespace gl-v2-cd-* (gl-v2-projecten-contact-detail.css/.js).
+*@
+@using System.Globalization
+@using CPMCore.Helpers
+@using CPMCore.Models.GlV2
+@{
+    ViewData["Title"] = Model.Name;
+    ViewData["HelpScreenId"] = "projecten-contact";
+    ViewData["PageIcon"] = "ph ph-address-book";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("DetailContacts", "Projecten", new { projectid = Model.ProjectId });
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    var menuVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · contacten" };
+    var steps = new[] { 0, 1, 2, 3, 4 };
+    var lost = Model.Status == ContactenWeergave.Afgevallen;
+    var visitLocal = Model.VisitAt.HasValue ? ContactenWeergave.Local(Model.VisitAt.Value) : (DateTime?)null;
+    string Row(string label, string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value!;
+    var unitItems = Model.Units.Select(u => new GlV2SelectItem { Value = u.Value, Text = u.Value }).ToList();
+    var userItems = Model.Users.Select(u => new GlV2SelectItem { Value = u.Key.ToString(), Text = u.Value }).ToList();
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-contact-detail.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge @ContactenWeergave.Tone(Model.Status)">@ContactenWeergave.Label(Model.Status).ToUpperInvariant()</span>
+}
+@section PageActions
+{
+    @if (Model.CanWrite)
+    {
+        <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="cd-option-btn"><i class="ph ph-handshake" aria-hidden="true"></i><span>Optie geven</span></button>
+        <button type="button" class="gl-v2-btn gl-v2-btn-primary" data-bs-toggle="modal" data-bs-target="#cd-convert-modal"><i class="ph ph-user-switch" aria-hidden="true"></i><span>Omzetten naar klant</span></button>
+        <a class="gl-v2-icon-btn" href="@Url.Action("ContactFormV2", "Projecten", new { projectid = Model.ProjectId, id = Model.Id })" aria-label="Gegevens bewerken" title="Gegevens bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></a>
+        @if (Model.CanDelete)
+        {
+            <button type="button" class="gl-v2-icon-btn is-danger" data-bs-toggle="modal" data-bs-target="#cd-delete-modal" aria-label="Contact verwijderen" title="Contact verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+        }
+    }
+}
+@section MobileQuickActions
+{
+    @if (!string.IsNullOrWhiteSpace(Model.Phone))
+    {
+        <a class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary" href="tel:@Model.Phone"><i class="ph ph-phone" aria-hidden="true"></i>Bellen</a>
+    }
+    @if (Model.CanWrite && !string.IsNullOrWhiteSpace(Model.Email))
+    {
+        <button type="button" class="gl-v2-mobile-quickaction" data-bs-toggle="modal" data-bs-target="#cd-mail-modal"><i class="ph ph-envelope-simple" aria-hidden="true"></i>Mailen</button>
+    }
+    @if (Model.CanWrite)
+    {
+        <button type="button" class="gl-v2-mobile-quickaction" id="cd-option-btn-m"><i class="ph ph-handshake" aria-hidden="true"></i>Optie</button>
+        <a class="gl-v2-mobile-quickaction" href="@Url.Action("ContactFormV2", "Projecten", new { projectid = Model.ProjectId, id = Model.Id })"><i class="ph ph-pencil-simple" aria-hidden="true"></i>Bewerken</a>
+    }
+    <a class="gl-v2-mobile-quickaction" href="@ViewData["BackUrl"]"><i class="ph ph-list" aria-hidden="true"></i>Alle contacten</a>
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+@{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+<form id="cd-token-form" hidden>@Html.AntiForgeryToken()</form>
+<div class="gl-v2-cd-grid" id="gl-v2-cd-root" data-project-id="@Model.ProjectId" data-id="@Model.Id" data-can-write="@(Model.CanWrite ? "1" : "0")" data-status="@Model.Status" data-me="@Model.CurrentUserId"
+     data-event-url="@Url.Action("ContactEventV2", "Projecten", new { projectid = Model.ProjectId })" data-status-url="@Url.Action("ContactStatusV2", "Projecten", new { projectid = Model.ProjectId })"
+     data-next-url="@Url.Action("ContactNextV2", "Projecten", new { projectid = Model.ProjectId })" data-assign-url="@Url.Action("ContactAssignV2", "Projecten", new { projectid = Model.ProjectId })"
+     data-mail-url="@Url.Action("ContactMailV2", "Projecten", new { projectid = Model.ProjectId })" data-delete-url="@Url.Action("ContactDeleteV2", "Projecten", new { projectid = Model.ProjectId })"
+     data-resched-url="@Url.Action("ContactRescheduleV2", "Projecten", new { projectid = Model.ProjectId })" data-list-url="@ViewData["BackUrl"]"
+     data-client-url="@Url.Action("AddClientAccount", "Klanten", new { id = Model.ProjectId, contactId = Model.Id })">
+    <div class="gl-v2-cd-left">
+        <section class="gl-v2-card gl-v2-cd-card">
+            <div class="gl-v2-cd-head">
+                <span class="gl-v2-cd-av">@Model.Initials</span>
+                <div class="gl-v2-cd-head-text"><b>@Model.Name</b><small>contact sinds @ContactenWeergave.Local(Model.CreatedAt).ToString("dd/MM/yyyy", be)</small></div>
+            </div>
+            <div class="gl-v2-cd-quick">
+                @if (!string.IsNullOrWhiteSpace(Model.Phone)) { <a class="gl-v2-btn gl-v2-btn-secondary" href="tel:@Model.Phone"><i class="ph ph-phone" aria-hidden="true"></i>Bellen</a> }
+                @if (Model.CanWrite && !string.IsNullOrWhiteSpace(Model.Email)) { <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-bs-toggle="modal" data-bs-target="#cd-mail-modal"><i class="ph ph-envelope-simple" aria-hidden="true"></i>Mailen</button> }
+            </div>
+            <dl class="gl-v2-cd-rows">
+                <div><dt>Telefoon</dt><dd>@if (!string.IsNullOrWhiteSpace(Model.Phone)) { <a href="tel:@Model.Phone">@Model.Phone</a> } else { <text>—</text> }</dd></div>
+                <div><dt>E-mail</dt><dd>@if (!string.IsNullOrWhiteSpace(Model.Email)) { <a href="mailto:@Model.Email">@Model.Email</a> } else { <text>—</text> }</dd></div>
+                <div><dt>Adres</dt><dd>@Row("Adres", Model.Address)</dd></div>
+                <div><dt>Toegewezen</dt><dd>
+                    @if (Model.CanWrite)
+                    {
+                        @await Html.PartialAsync("GlV2/_GlV2Combo", new GlV2ComboVm
+                        {
+                            Name = "assigned", Id = "cd-assigned", Value = Model.AssignedKey, DisplayText = Model.AssignedName, Placeholder = "Niet toegewezen", Icon = "ph-user", EmptyValue = "", MinChars = 0,
+                            ListLabel = "Medewerkers en makelaars van dit project", OptionsJson = System.Text.Json.JsonSerializer.Serialize(Model.Assignees.Select(x => new { id = x.Key, text = x.Text, sub = x.Kind }))
+                        })
+                    }
+                    else { @(string.IsNullOrWhiteSpace(Model.AssignedName) ? "—" : Model.AssignedName) }
+                </dd></div>
+            </dl>
+        </section>
+
+        <section class="gl-v2-card gl-v2-cd-card">
+            <span class="gl-v2-cd-kicker">INTERESSE</span>
+            <dl class="gl-v2-cd-rows">
+                <div><dt>Eenheden</dt><dd>@(Model.UnitNames.Count == 0 ? "—" : string.Join(" · ", Model.UnitNames))</dd></div>
+                <div><dt>Budget</dt><dd>@Row("Budget", Model.Budget)</dd></div>
+                <div><dt>Financiering</dt><dd>@Row("Financiering", Model.Financing)</dd></div>
+                <div><dt>Eigen woning</dt><dd>@Row("Eigen woning", Model.OwnHome)</dd></div>
+                <div><dt>Wens</dt><dd>@Row("Wens", Model.Wish)</dd></div>
+            </dl>
+        </section>
+
+        <section class="gl-v2-card gl-v2-cd-card">
+            <span class="gl-v2-cd-kicker">BRON</span>
+            <dl class="gl-v2-cd-rows">
+                <div><dt>Kanaal</dt><dd><span class="gl-v2-ct-src @ContactenWeergave.SourceClass(Model.Source)"><i class="ph @ContactenWeergave.SourceIcon(Model.Source)" aria-hidden="true"></i>@Model.Source</span></dd></div>
+                @if (Model.Source == "Makelaar") { <div><dt>Makelaar</dt><dd>@Row("Makelaar", Model.BrokerName)</dd></div> }
+                <div><dt>Gezien via</dt><dd>@Row("Gezien via", Model.SeenVia)</dd></div>
+                <div><dt>Toestemming</dt><dd>
+                    @if (Model.ConsentContact || Model.ConsentNewsletter)
+                    {
+                        <span class="gl-v2-cd-consent">@(Model.ConsentNewsletter ? "nieuwsbrief en nieuwe projecten" : "mag gecontacteerd worden")</span>@(Model.ConsentAt.HasValue ? " · " + ContactenWeergave.Local(Model.ConsentAt.Value).ToString("dd/MM/yyyy", be) : "")
+                    }
+                    else { <span class="gl-v2-cd-noconsent">geen toestemming</span> }
+                </dd></div>
+            </dl>
+        </section>
+    </div>
+
+    <div class="gl-v2-cd-right">
+        @* statusbalk: aanklikbaar; Afgevallen staat apart rechts *@
+        <section class="gl-v2-card gl-v2-cd-card gl-v2-cd-pipe">
+            <div class="gl-v2-cd-steps" id="cd-steps" role="group" aria-label="Status">
+                @foreach (var s in steps)
+                {
+                    var cls = s == Model.Status ? "is-current" : (!lost && s < Model.Status ? "is-done" : "");
+                    <button type="button" class="gl-v2-cd-step @cls @(s == 0 ? "is-first" : "")" data-status="@s" @(Model.CanWrite ? "" : "disabled")>@if (s < Model.Status && !lost) { <i class="ph ph-check" aria-hidden="true"></i> }@ContactenWeergave.Label(s)</button>
+                }
+                <span class="gl-v2-cd-step-gap"></span>
+                <button type="button" class="gl-v2-cd-lost @(lost ? "is-current" : "")" data-status="5" @(Model.CanWrite ? "" : "disabled")><i class="ph ph-x-circle" aria-hidden="true"></i>Afgevallen</button>
+            </div>
+            @if (lost && !string.IsNullOrWhiteSpace(Model.StatusReason)) { <p class="gl-v2-cd-reason">Reden: @Model.StatusReason</p> }
+        </section>
+
+        @if (visitLocal.HasValue && Model.Status == ContactenWeergave.Bezichtiging && visitLocal.Value >= DateTime.Now.Date)
+        {
+            var dag = visitLocal.Value.Date == DateTime.Today ? "vandaag" : visitLocal.Value.Date == DateTime.Today.AddDays(1) ? "morgen" : visitLocal.Value.ToString("dd/MM", be);
+            <div class="gl-v2-cd-notice">
+                <i class="ph ph-calendar-check" aria-hidden="true"></i>
+                <div><b>Bezichtiging @dag @visitLocal.Value.ToString("HH:mm", be)@(string.IsNullOrWhiteSpace(Model.VisitUnit) ? "" : " · " + Model.VisitUnit)</b></div>
+                @if (Model.CanWrite) { <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="cd-resched-visit"><i class="ph ph-calendar-blank" aria-hidden="true"></i>Verzetten</button> }
+            </div>
+        }
+        else if (Model.OptionUntil.HasValue && Model.Status == ContactenWeergave.Optie)
+        {
+            <div class="gl-v2-cd-notice">
+                <i class="ph ph-handshake" aria-hidden="true"></i>
+                <div><b>Optie tot @Model.OptionUntil.Value.ToString("dd/MM/yyyy", be)@(string.IsNullOrWhiteSpace(Model.OptionUnit) ? "" : " · " + Model.OptionUnit)</b></div>
+                @if (Model.CanWrite) { <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="cd-resched-option"><i class="ph ph-calendar-blank" aria-hidden="true"></i>Verlengen</button> }
+            </div>
+        }
+
+        <section class="gl-v2-card gl-v2-cd-card gl-v2-cd-follow">
+            <div class="gl-v2-cd-follow-head"><span class="gl-v2-cd-follow-ico"><i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i></span><b>Opvolging</b><span class="gl-v2-cd-sep"></span><small>alles wat met dit contact gebeurde, nieuwste bovenaan</small></div>
+            @if (Model.CanWrite)
+            {
+                <div class="gl-v2-cd-composer" id="cd-composer">
+                    <div class="gl-v2-cd-ktabs" role="tablist">
+                        <button type="button" class="is-on" data-kind="note"><i class="ph ph-note-pencil" aria-hidden="true"></i>Notitie</button>
+                        <button type="button" data-kind="call"><i class="ph ph-phone" aria-hidden="true"></i>Gesprek</button>
+                        <button type="button" data-kind="mail"><i class="ph ph-envelope-simple" aria-hidden="true"></i>E-mail</button>
+                        <button type="button" data-kind="visit"><i class="ph ph-calendar-check" aria-hidden="true"></i>Bezichtiging</button>
+                        <button type="button" data-kind="option"><i class="ph ph-handshake" aria-hidden="true"></i>Optie</button>
+                    </div>
+                    <div class="gl-v2-cd-kbody">
+                        <div class="gl-v2-cd-extra" data-for="call" hidden>
+                            <div class="gl-v2-field"><label class="gl-v2-field-label" for="cd-duration">Duur (minuten)</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="cd-duration" type="number" min="1" max="600" inputmode="numeric" placeholder="12" /></div></div>
+                        </div>
+                        <div class="gl-v2-cd-extra gl-v2-cd-extra-grid" data-for="visit" hidden>
+                            @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "visitDate", Id = "cd-visit-date", Label = "Datum", Required = true })
+                            <div class="gl-v2-field"><label class="gl-v2-field-label" for="cd-visit-time">Uur</label><div class="gl-v2-field-box"><input type="time" class="gl-v2-field-input" id="cd-visit-time" value="10:00" /></div></div>
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "visitUnit", Id = "cd-visit-unit", Label = "Eenheid", Value = Model.UnitNames.Count > 0 ? Model.UnitNames[0] : "", EmptyText = "Geen eenheid", Items = unitItems })
+                        </div>
+                        <div class="gl-v2-cd-extra gl-v2-cd-extra-grid" data-for="option" hidden>
+                            @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "optionUntil", Id = "cd-option-until", Label = "Optie tot", Required = true })
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "optionUnit", Id = "cd-option-unit", Label = "Eenheid", Value = Model.UnitNames.Count > 0 ? Model.UnitNames[0] : "", EmptyText = "Geen eenheid", Items = unitItems })
+                        </div>
+                        <div class="gl-v2-field gl-v2-field-full"><div class="gl-v2-field-box gl-v2-cd-ta"><textarea class="gl-v2-field-input" id="cd-text" rows="3" placeholder="Wat werd er besproken?"></textarea></div><span class="gl-v2-field-help" id="cd-err" hidden></span></div>
+                        <div class="gl-v2-cd-next">
+                            <div class="gl-v2-field gl-v2-cd-next-text"><label class="gl-v2-field-label" for="cd-next-text">Volgende actie</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="cd-next-text" maxlength="200" value="@Model.NextText" placeholder="bv. Terugbellen na bezichtiging" autocomplete="off" /></div></div>
+                            @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "nextDate", Id = "cd-next-date", Label = "Op", IsoValue = Model.NextDate?.ToString("yyyy-MM-dd") ?? "", DisplayValue = Model.NextDate?.ToString("dd/MM/yyyy") ?? "" })
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "nextUser", Id = "cd-next-user", Label = "Wie", Value = (Model.NextUserId ?? (Model.CurrentUserId > 0 ? Model.CurrentUserId : (int?)null))?.ToString() ?? "", EmptyText = "Niemand", Items = userItems })
+                            <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="cd-save"><i class="ph ph-check" aria-hidden="true"></i>Opslaan</button>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <ol class="gl-v2-cd-timeline" id="cd-timeline">
+                @if (Model.NextDate.HasValue || !string.IsNullOrWhiteSpace(Model.NextText))
+                {
+                    var overdue = Model.NextDate.HasValue && Model.NextDate.Value < Model.Today;
+                    <li class="gl-v2-cd-ev is-next @(overdue ? "is-overdue" : "")">
+                        <span class="gl-v2-cd-ev-ico"><i class="ph ph-flag" aria-hidden="true"></i></span>
+                        <div class="gl-v2-cd-ev-main">
+                            <div class="gl-v2-cd-ev-top"><b>Volgende: @(string.IsNullOrWhiteSpace(Model.NextText) ? "actie" : Model.NextText!.ToLowerInvariant())</b><span>@(Model.NextName ?? "")@(Model.NextDate.HasValue ? " · " + ContactenWeergave.Day(Model.NextDate.Value, Model.Today) : "")</span></div>
+                            @if (Model.CanWrite) { <button type="button" class="gl-v2-cd-done" id="cd-next-done"><i class="ph ph-check-circle" aria-hidden="true"></i>Gedaan</button> }
+                        </div>
+                    </li>
+                }
+                @foreach (var e in Model.Events)
+                {
+                    var when = ContactenWeergave.Local(e.OccurredAt);
+                    <li class="gl-v2-cd-ev is-@e.Kind">
+                        <span class="gl-v2-cd-ev-ico"><i class="ph @ContactenWeergave.KindIcon(e.Kind)" aria-hidden="true"></i></span>
+                        <div class="gl-v2-cd-ev-main">
+                            @{ var link = !string.IsNullOrWhiteSpace(e.UserName) && e.UserName.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? e.UserName : null; }
+                            <div class="gl-v2-cd-ev-top"><b>@(string.IsNullOrWhiteSpace(e.Title) ? ContactenWeergave.KindLabel(e.Kind) : e.Title)</b><span>@(e.IsAuto || link != null ? "automatisch" : e.UserName) · @when.ToString("dd/MM · HH:mm", be)</span></div>
+                            @if (link != null) { <a class="gl-v2-cd-ev-link" href="@link" target="_blank" rel="noopener"><i class="ph ph-link-simple" aria-hidden="true"></i><span>@link</span></a> }
+                            @if (!string.IsNullOrWhiteSpace(e.Text)) { <p>@e.Text</p> }
+                        </div>
+                    </li>
+                }
+                @if (Model.Events.Count == 0) { <li class="gl-v2-cd-empty">Nog geen opvolging.</li> }
+            </ol>
+        </section>
+    </div>
+</div>
+
+@if (Model.CanWrite)
+{
+    @* Reden bij Afgevallen *@
+    <div class="modal fade gl-v2-modal-form" id="cd-reason-modal" tabindex="-1" aria-hidden="true" aria-labelledby="cd-reason-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <div class="modal-content">
+                <div class="modal-header"><h2 class="modal-title" id="cd-reason-title">Waarom valt dit contact af?</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body"><div class="gl-v2-field gl-v2-field-full"><label class="gl-v2-field-label" for="cd-reason">Reden</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="cd-reason" maxlength="300" placeholder="bv. te duur, andere woning gekocht" autocomplete="off" /></div><span class="gl-v2-field-help">Optioneel, maar handig voor later.</span></div></div>
+                <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="button" class="gl-v2-btn gl-v2-btn-primary" id="cd-reason-ok">Afgevallen zetten</button></div>
+            </div>
+        </div>
+    </div>
+
+    @* Mailen met een sjabloon *@
+    <div class="modal fade gl-v2-modal-form" id="cd-mail-modal" tabindex="-1" aria-hidden="true" aria-labelledby="cd-mail-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <div class="modal-content">
+                <div class="modal-header"><h2 class="modal-title" id="cd-mail-title">E-mail sturen</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body">
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "templateId", Id = "cd-template", Label = "Sjabloon", Required = true, Value = "", Placeholder = "Kies een sjabloon", Items = Model.Templates.Select(t => new GlV2SelectItem { Value = t.Id.ToString(), Text = t.Name }).ToList(), Help = "Naar " + Model.Email })
+                    <label class="gl-v2-toggle-row" for="cd-signature"><input type="checkbox" id="cd-signature" class="gl-v2-toggle-switch" checked /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Handtekening toevoegen</span></span></label>
+                    <span class="gl-v2-field-help gl-v2-pt-err" id="cd-mail-err" hidden></span>
+                </div>
+                <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="button" class="gl-v2-btn gl-v2-btn-primary" id="cd-mail-send"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>Versturen</button></div>
+            </div>
+        </div>
+    </div>
+
+    @* Verzetten / verlengen *@
+    <div class="modal fade gl-v2-modal-form" id="cd-resched-modal" tabindex="-1" aria-hidden="true" aria-labelledby="cd-resched-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <div class="modal-content">
+                <div class="modal-header"><h2 class="modal-title" id="cd-resched-title">Bezichtiging verzetten</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body">
+                    @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "reschedDate", Id = "cd-resched-date", Label = "Nieuwe datum", Required = true })
+                    <div class="gl-v2-field" id="cd-resched-time-field"><label class="gl-v2-field-label" for="cd-resched-time">Uur</label><div class="gl-v2-field-box"><input type="time" class="gl-v2-field-input" id="cd-resched-time" value="@(visitLocal?.ToString("HH:mm") ?? "10:00")" /></div></div>
+                    <span class="gl-v2-field-help gl-v2-pt-err" id="cd-resched-err" hidden></span>
+                </div>
+                <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="button" class="gl-v2-btn gl-v2-btn-primary" id="cd-resched-ok">Bewaren</button></div>
+            </div>
+        </div>
+    </div>
+
+    @await Html.PartialAsync("GlV2/_ModalConfirm", new GlV2ModalConfirmVm
+    {
+        Id = "cd-convert-modal", Tone = GlV2ModalTone.Success, IconClass = "ph-user-switch", Title = "Omzetten naar klant?",
+        Description = Model.Name + " krijgt de status Verkocht en je gaat naar Klant toevoegen om de klant aan een eenheid te koppelen.",
+        ConfirmLabel = "Omzetten", FormAction = "#"
+    })
+    @if (Model.CanDelete)
+    {
+        @await Html.PartialAsync("GlV2/_ModalConfirm", new GlV2ModalConfirmVm
+        {
+            Id = "cd-delete-modal", Tone = GlV2ModalTone.Danger, IconClass = "ph-trash", Title = "Contact verwijderen?",
+            Description = Model.Name + " en de hele opvolging worden definitief verwijderd.", ConfirmLabel = "Verwijderen", FormAction = "#"
+        })
+    }
+}
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-contact-detail.js" asp-append-version="true"></script>
+}

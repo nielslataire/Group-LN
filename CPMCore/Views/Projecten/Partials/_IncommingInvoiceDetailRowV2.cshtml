@@ -25,7 +25,8 @@
             <input asp-for="Description" class="gl-v2-field-input" placeholder="Omschrijving" />
         </div>
         <div class="gl-v2-field-box gln-ai-row-price">
-            <input asp-for="Price" class="gl-v2-field-input Currencymask" data-currency />
+            @* Bedrag als kaal getal (26224.92): Price heeft een valutaformaat ("€ 26.224,92") dat het geldmasker niet kan lezen, waardoor het veld bij bewerken leeg bleef en een factuur niet meer te bewaren was. *@
+            <input asp-for="Price" class="gl-v2-field-input Currencymask" data-currency value="@(Model.Price.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture))" />
             <span class="gl-v2-field-suffix">€</span>
         </div>
         <div class="gl-v2-field-box gln-ai-row-wo">

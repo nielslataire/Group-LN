@@ -2876,7 +2876,7 @@ namespace ServiceCore
             var response = new GetResponse<InsuranceBO>();
 
             var entities = _uow.Insurances.GetNoTracking()
-                .Where(m => m.ContractActivity.Contract.ProjectId == projectid)
+                .Where(m => m.ProjectId == projectid || (m.ContractActivity != null && m.ContractActivity.Contract.ProjectId == projectid))
                 .Include(m => m.ContractActivity)
                 .ThenInclude(m => m.Contract)
                 .ThenInclude(m => m.Company)

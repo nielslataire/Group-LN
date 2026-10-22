@@ -1,4 +1,4 @@
-﻿using BOCore;
+using BOCore;
 using CPMCore.Helpers;
 using CPMCore.Models;
 using CPMCore.Models.Instellingen;
@@ -44,10 +44,19 @@ namespace CPMCore.Controllers
     /// <summary>Klant op een project (ClientAccount): toevoegen, bewerken, mede-eigenaars/eenheden/schenkingen/volmachten, verwijderen. Opgesplitst uit KlantenController.cs (okt. 2026, structureren) - views in Views/Klanten/ClientAccount/. Zelfde partial class: alle private velden/services van KlantenController.cs blijven gewoon bruikbaar.</summary>
     public partial class KlantenController
     {
+        /// <summary>"Kerkstraat 12 bus 3" wordt straat, huisnummer en bus. Lukt het splitsen niet, dan blijft alles in het straatveld staan.</summary>
+        private static (string Street, string Housenumber, string Busnumber) SplitContactStreet(string? full)
+        {
+            full = (full ?? "").Trim();
+            if (full == "") return ("", "", "");
+            var m = System.Text.RegularExpressions.Regex.Match(full, @"^(?<s>.*?)[\s,]+(?<n>\d+[A-Za-z]?)(?:\s*(?:bus|bte|box|b)\.?\s*(?<b>[\w-]+))?$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            return m.Success && m.Groups["s"].Value.Trim() != "" ? (m.Groups["s"].Value.Trim().TrimEnd(','), m.Groups["n"].Value, m.Groups["b"].Value) : (full, "", "");
+        }
+
         // KLANT TOEVOEGEN
         [HttpGet]
         [CPMCore.Filters.PermissionWrite(PermissionCodes.Customers)]
-        public ActionResult AddClientAccount(int id, int? unitId = null)
+        public async Task<ActionResult> AddClientAccount(int id, int? unitId = null, int? contactId = null)
         {
             var referrer = Request.Headers["Referer"].ToString();
 
@@ -60,6 +69,31 @@ namespace CPMCore.Controllers
             model.ClientAccount.OwnerPercentage = 100;
             model.ClientAccount.OwnerType.Id = 1;
             FillInAddSelectLists(ref model);
+
+            // Omzetten van een contact (Projecten/Contacten): neem over wat het contact al weet, de rest vult de gebruiker aan.
+            if (contactId.HasValue)
+            {
+                var contact = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.Contacten.CrmContactService>().GetAsync(id, contactId.Value);
+                if (contact != null)
+                {
+                    var first = string.Join(" & ", new[] { contact.FirstName, contact.PartnerName }.Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.Trim()));
+                    var last = (contact.LastName ?? "").Trim();
+                    if (last == "") { last = first; first = ""; }   // enkel een naam ingevuld: dat is de naam van de klant
+                    model.ClientAccount.Name = last;
+                    model.ClientAccount.Firstname = first;
+                    model.ClientAccount.Email = contact.Email;
+                    model.ClientAccount.Phone = contact.Phone;
+                    (model.ClientAccount.Street, model.ClientAccount.Housenumber, model.ClientAccount.Busnumber) = SplitContactStreet(contact.Street);
+                    if (contact.PostcodeId.HasValue)
+                    {
+                        model.SelectedPostalcode = contact.PostcodeId.Value;
+                        ViewData["PostalDisplay"] = $"{contact.PostalCode} - {contact.City}";
+                    }
+                    // één eenheid van interesse: die staat meteen in de lijst van de klant
+                    if (!unitId.HasValue && contact.Units.Count == 1) unitId = contact.Units.First().UnitId;
+                    AddMessage("info", $"De gegevens van contact {CPMCore.Helpers.ContactenWeergave.Name(contact.FirstName, contact.PartnerName, contact.LastName)} zijn overgenomen. Controleer ze en vul aan.", "Contact overgenomen");
+                }
+            }
 
             if (unitId.HasValue)
             {

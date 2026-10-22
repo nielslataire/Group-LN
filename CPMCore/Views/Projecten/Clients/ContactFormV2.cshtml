@@ -1,0 +1,159 @@
+@model CPMCore.Models.Contacten.CrmContactFormVm
+@*
+    gl-v2 — Contact toevoegen of bewerken (design-handoff punt 44c): bron eerst (de velden passen zich aan), dubbel-check rechts, toestemming (GDPR).
+    Website-contacten komen automatisch binnen (formulieren op de projectpagina); dit scherm is voor telefoon, e-mail, makelaar en werfbord.
+    Eigen klassen-namespace gl-v2-cf-* (gl-v2-projecten-contact-detail.css, gl-v2-projecten-contact-form.js).
+*@
+@using System.Globalization
+@using CPMCore.Helpers
+@using CPMCore.Models.GlV2
+@{
+    var existing = ViewData["Existing"] as DALCore.Models.CrmContact;
+    var edit = existing != null;
+    ViewData["Title"] = edit ? "Contact bewerken" : "Contact toevoegen";
+    ViewData["HelpScreenId"] = "projecten-contact-nieuw";
+    ViewData["PageIcon"] = "ph ph-address-book";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = edit ? Url.Action("ContactV2", "Projecten", new { projectid = Model.ProjectId, id = existing!.Id }) : Url.Action("DetailContacts", "Projecten", new { projectid = Model.ProjectId });
+    var menuVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · contacten" };
+    var source = existing?.Source ?? "Telefoon";
+    var assigned = existing != null ? (existing.AssignedUserId.HasValue ? "u" + existing.AssignedUserId : existing.AssignedCompanyId.HasValue ? "c" + existing.AssignedCompanyId : "") : (Model.CurrentUserId > 0 ? "u" + Model.CurrentUserId : "");
+    var assignedText = Model.Assignees.FirstOrDefault(a => a.Key == assigned)?.Text;
+    string OptionsJson(IEnumerable<object> items) => System.Text.Json.JsonSerializer.Serialize(items);
+    var brokerKey = existing?.BrokerCompanyId?.ToString() ?? "";
+    var postalText = existing?.PostcodeId != null ? existing.PostalCode + " - " + existing.City : null;
+    var chosenUnits = existing?.Units.Select(u => u.UnitId).ToHashSet() ?? new HashSet<int>();
+    var userItems = Model.Users.Select(u => new GlV2SelectItem { Value = u.Key.ToString(), Text = u.Value }).ToList();
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-contact-detail.css" asp-append-version="true" />
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+@{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+<form id="cf-token-form" hidden>@Html.AntiForgeryToken()</form>
+<form id="cf-form" novalidate onsubmit="return false">
+<div class="gl-v2-cf-grid" id="gl-v2-cf-root" data-project-id="@Model.ProjectId" data-id="@(existing?.Id)" data-save-url="@Url.Action("ContactSaveV2", "Projecten", new { projectid = Model.ProjectId })"
+     data-dup-url="@Url.Action("ContactDuplicatesV2", "Projecten", new { projectid = Model.ProjectId })" data-list-url="@Url.Action("DetailContacts", "Projecten", new { projectid = Model.ProjectId })">
+    <div class="gl-v2-cf-main">
+        @await Html.PartialAsync("GlV2/_ErrorSummaryV2")
+        <section class="gl-v2-card gl-v2-cd-card">
+            <h2 class="gl-v2-cf-title">@(edit ? "Contact bewerken" : "Contact toevoegen")</h2>
+            <p class="gl-v2-cf-sub">@(edit ? "Pas de gegevens aan. De opvolging blijft bewaard." : "website-contacten komen automatisch binnen — dit is voor telefoon, e-mail, makelaar en werfbord")</p>
+
+            <span class="gl-v2-cf-label">Hoe kwam dit contact binnen? <span style="color:#8B2A2A">*</span></span>
+            <div class="gl-v2-cf-sources" id="cf-sources" role="group" aria-label="Bron">
+                @foreach (var b in ContactenWeergave.Bronnen)
+                {
+                    <button type="button" class="gl-v2-cf-source @(b == source ? "is-on" : "")" data-source="@b"><i class="ph @ContactenWeergave.SourceIcon(b)" aria-hidden="true"></i>@b</button>
+                }
+            </div>
+
+            <div class="gl-v2-cf-fields">
+                <div class="gl-v2-field is-wide" id="cf-broker-field" @(source == "Makelaar" ? "" : "hidden")>
+                    <label class="gl-v2-field-label" for="cf-broker_input">Makelaar</label>
+                    @await Html.PartialAsync("GlV2/_GlV2Combo", new GlV2ComboVm
+                    {
+                        Name = "BrokerCompanyId", Id = "cf-broker", Value = brokerKey, DisplayText = existing?.BrokerName, Placeholder = "Kies een makelaar van dit project …", Icon = "ph-handshake", EmptyValue = "", MinChars = 0,
+                        ListLabel = "Makelaars van dit project", OptionsJson = OptionsJson(Model.Brokers.Select(x => (object)new { id = x.Key.ToString(), text = x.Value, sub = "" })),
+                        Help = Model.Brokers.Count == 0 ? "Er is nog geen makelaar aan dit project gekoppeld. Doe dat bij Project bewerken, tabblad Partners." : "Alleen makelaars die aan het project gekoppeld zijn. De commissie volgt later uit het bedrijf."
+                    })
+                </div>
+                <div class="gl-v2-field is-wide" id="cf-seen-field" @(source == "Werfbord" ? "" : "hidden")>
+                    <label class="gl-v2-field-label" for="cf-seen">Gezien via</label>
+                    <div class="gl-v2-field-box"><input class="gl-v2-field-input" id="cf-seen" maxlength="200" value="@existing?.SeenVia" placeholder="bv. werfbord Keerstraat" autocomplete="off" /></div>
+                </div>
+                @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "ContactDate", Id = "cf-date", Label = "Datum contact", IsoValue = (existing != null ? DateOnly.FromDateTime(CPMCore.Helpers.ContactenWeergave.Local(existing.CreatedAt)) : Model.Today).ToString("yyyy-MM-dd"), DisplayValue = (existing != null ? DateOnly.FromDateTime(CPMCore.Helpers.ContactenWeergave.Local(existing.CreatedAt)) : Model.Today).ToString("dd/MM/yyyy") })
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="cf-assigned_input">Toegewezen aan</label>
+                    @await Html.PartialAsync("GlV2/_GlV2Combo", new GlV2ComboVm
+                    {
+                        Name = "Assignee", Id = "cf-assigned", Value = assigned, DisplayText = assignedText, Placeholder = "Zoek een medewerker of makelaar …", Icon = "ph-user", EmptyValue = "", MinChars = 0,
+                        ListLabel = "Medewerkers en makelaars van dit project", OptionsJson = OptionsJson(Model.Assignees.Select(x => (object)new { id = x.Key, text = x.Text, sub = x.Kind }))
+                    })
+                </div>
+
+                <div class="gl-v2-field"><label class="gl-v2-field-label" for="cf-lastname">Naam <span style="color:#8B2A2A">*</span></label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="cf-lastname" maxlength="150" value="@existing?.LastName" autocomplete="off" /></div><span class="gl-v2-field-help" id="cf-lastname-help" hidden></span></div>
+                <div class="gl-v2-field"><label class="gl-v2-field-label" for="cf-firstname">Voornaam</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="cf-firstname" maxlength="100" value="@existing?.FirstName" autocomplete="off" /></div></div>
+                <div class="gl-v2-field"><label class="gl-v2-field-label" for="cf-partner">Partner</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="cf-partner" maxlength="150" value="@existing?.PartnerName" placeholder="optioneel" autocomplete="off" /></div></div>
+                @Html.EditorFor(m => m.Phone, "GlV2Telefoon")
+                @Html.EditorFor(m => m.Email, "GlV2Email")
+                <div class="gl-v2-field"><label class="gl-v2-field-label" for="cf-street">Straat en nummer</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="cf-street" maxlength="200" value="@existing?.Street" placeholder="optioneel" autocomplete="off" /></div></div>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="cf-postcode_input">Gemeente / postcode</label>
+                    <input type="hidden" id="cf-country" value="@Model.BelgiumCountryId" />
+                    @await Html.PartialAsync("GlV2/_GlV2Combo", new GlV2ComboVm
+                    {
+                        Name = "PostcodeId", Id = "cf-postcode", Value = existing?.PostcodeId?.ToString() ?? "", DisplayText = postalText, Placeholder = "Zoek een postcode of gemeente …", Icon = "ph-map-pin", EmptyValue = "", MinChars = 2,
+                        LookupUrl = Url.Action("GetPostcodesByCountry", "Shared"), CountrySelector = "#cf-country",
+                        Help = "Dezelfde lijst als bij Klanten, zodat het contact later zonder opnieuw typen naar een klant kan."
+                    })
+                </div>
+            </div>
+        </section>
+
+        <section class="gl-v2-card gl-v2-cd-card">
+            <span class="gl-v2-cf-label">Interesse in</span>
+            <div class="gl-v2-cf-units" id="cf-units">
+                @foreach (var u in Model.Units)
+                {
+                    <button type="button" class="gl-v2-cf-unit @(chosenUnits.Contains(u.Key) ? "is-on" : "")" data-unit="@u.Key">@u.Value</button>
+                }
+                @if (Model.Units.Count == 0) { <span class="gl-v2-cf-sub">Dit project heeft nog geen eenheden.</span> }
+            </div>
+            <div class="gl-v2-cf-fields" style="margin-top:14px">
+                <div class="gl-v2-field"><label class="gl-v2-field-label" for="cf-budget">Budget</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="cf-budget" maxlength="100" value="@existing?.Budget" placeholder="bv. € 800.000 – 900.000" autocomplete="off" /></div></div>
+                <div class="gl-v2-field"><label class="gl-v2-field-label" for="cf-financing">Financiering</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="cf-financing" maxlength="300" value="@existing?.Financing" placeholder="bv. in orde · KBC" autocomplete="off" /></div></div>
+                <div class="gl-v2-field"><label class="gl-v2-field-label" for="cf-own">Eigen woning</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="cf-own" maxlength="300" value="@existing?.OwnHome" placeholder="bv. te verkopen" autocomplete="off" /></div></div>
+                <div class="gl-v2-field"><label class="gl-v2-field-label" for="cf-wish">Wens</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="cf-wish" maxlength="300" value="@existing?.Wish" placeholder="bv. oplevering vóór zomer 2027" autocomplete="off" /></div></div>
+                @if (!edit)
+                {
+                    <div class="gl-v2-field is-wide"><label class="gl-v2-field-label" for="cf-note">Eerste notitie</label><div class="gl-v2-field-box gl-v2-cd-ta"><textarea class="gl-v2-field-input" id="cf-note" rows="3" placeholder="bv. Wil Woning 5 bezoeken met partner"></textarea></div></div>
+                    <div class="gl-v2-field"><label class="gl-v2-field-label" for="cf-next-text">Volgende actie</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="cf-next-text" maxlength="200" placeholder="bv. Bezichtiging inplannen" autocomplete="off" /></div></div>
+                    @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "NextDate", Id = "cf-next-date", Label = "Op" })
+                }
+            </div>
+        </section>
+
+        <section class="gl-v2-card gl-v2-cd-card">
+            <span class="gl-v2-cf-label">Toestemming (GDPR)</span>
+            <div class="gl-v2-cf-consent">
+                <label class="gl-v2-toggle-row" for="cf-consent-contact"><input type="checkbox" id="cf-consent-contact" class="gl-v2-toggle-switch" @(existing == null || existing.ConsentContact ? "checked" : "") /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Mag gecontacteerd worden over dit project</span></span></label>
+                <label class="gl-v2-toggle-row" for="cf-consent-news"><input type="checkbox" id="cf-consent-news" class="gl-v2-toggle-switch" @(existing != null && existing.ConsentNewsletter ? "checked" : "") /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Nieuwsbrief en nieuwe projecten</span><span class="gl-v2-toggle-hint">zonder toestemming valt het contact weg uit marketinglijsten en exports</span></span></label>
+            </div>
+        </section>
+    </div>
+
+    <div class="gl-v2-cf-side">
+        <div class="gl-v2-cf-dup" id="cf-dup" role="status" hidden>
+            <b><i class="ph ph-warning" aria-hidden="true"></i>Mogelijk bestaand contact</b>
+            <p id="cf-dup-text"></p>
+            <a href="#" id="cf-dup-link"><i class="ph ph-arrow-square-out" aria-hidden="true"></i>Openen</a>
+        </div>
+        <div class="gl-v2-cf-info"><b>Van de website</b><p>Formulieren op de projectpagina maken automatisch een contact aan met bron Website, de gekozen eenheid en het bericht. Dubbels worden op e-mail en telefoon herkend en samengevoegd.</p></div>
+    </div>
+</div>
+
+<div class="gl-v2-form-actionbar">
+    <span class="gl-v2-cf-req"><span id="cf-err" class="gl-v2-cf-err" hidden></span><span id="cf-req">* verplicht · naam en telefoon óf e-mail volstaat</span></span>
+    <span class="gl-v2-form-actionbar-spacer"></span>
+    <div class="gl-v2-form-actionbar-actions">
+        <a href="@ViewData["BackUrl"]" class="gl-v2-btn gl-v2-btn-text">Annuleren</a>
+        @if (!edit) { <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="cf-save-new">Opslaan &amp; nieuw</button> }
+        <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="cf-save">@(edit ? "Wijzigingen opslaan" : "Contact opslaan")</button>
+    </div>
+</div>
+</form>
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-contact-form.js" asp-append-version="true"></script>
+}

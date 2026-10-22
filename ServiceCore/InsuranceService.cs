@@ -26,7 +26,7 @@ namespace ServiceCore
             // Alle verzekeringen die aan dit project hangen (via ContractActivity -> Contract -> ProjectId)
             var entities = _uow.Insurances
                 .GetNoTracking()
-                .Where(m => m.ContractActivity.Contract.ProjectId == projectid);
+                .Where(m => m.ProjectId == projectid || (m.ContractActivity != null && m.ContractActivity.Contract.ProjectId == projectid));
 
             foreach (var e in entities)
             {
@@ -225,11 +225,11 @@ namespace ServiceCore
 
             // De 1-op-1 ContractActivity (activiteit "Verzekeringen") heeft geen bestaansreden
             // zonder verzekering — best-effort opruimen zodat er geen weesregels achterblijven.
-            if (saved > 0 && contractActivityId > 0)
+            if (saved > 0 && contractActivityId.HasValue && contractActivityId.Value > 0)
             {
                 try
                 {
-                    var ca = _uow.ContractActivities.GetById(contractActivityId);
+                    var ca = _uow.ContractActivities.GetById(contractActivityId.Value);
                     if (ca != null)
                     {
                         _uow.ContractActivities.DeleteObject(ca);

@@ -72,6 +72,8 @@ niet staat en die je niet zeker kent: vraag het, of zet `[VRAAG: ...]` in de tek
   worden. Zie "Het contract van een leverancier bekijken".
 - Borg: het deel van een factuur dat je inhoudt bij een financiële waarborg (percentage x (factuurbedrag min extra inhouding), zonder btw). De borg komt later vrij. Zeg "borg" tegen de gebruiker, niet "waarborg" (dat is het contracttype). Zie "Borg inhouden op een factuur".
 - Vrijgave van de borg: het deel dat bij de voorlopige oplevering (VO) vrijkomt staat op het contract (leeg is 50 %), de rest komt vrij bij de definitieve oplevering (DO). Open punten van de aannemer blokkeren de vrijgave niet. Zie "De borgen van een project volgen en vrijgeven". [VRAAG: hoe geef je een vrijgave door aan de boekhouding, en moet een foute vrijgave gecorrigeerd kunnen worden?]
+- Korting contant: een korting als je een factuur snel betaalt, bijvoorbeeld 2 % binnen 10 dagen. Ze komt uit het contract. Bij een factuur zonder contract vul je ze zelf in en wordt ze bij de factuur bewaard. Ze wordt berekend op het factuurbedrag zonder btw, niet op wat er na borg overblijft. Zie "Een factuur van een leverancier toevoegen of aanpassen".
+- Kaart Te betalen: de kaart rechts in het factuurformulier die live uitrekent wat je betaalt: factuurbedrag, min extra inhouding en borg, en daarna eventueel met korting contant.
 - Extra inhouding: een bedrag dat je bij één factuur tijdelijk niet uitbetaalt (reden: creditnota te ontvangen, werk niet volledig uitgevoerd, andere). Er gaat geen borg op. Je handelt ze af door vrij te geven (het contractpercentage blijft dan als borg ingehouden), te verrekenen met een creditnota of af te boeken. Zie "Een bedrag tijdelijk niet uitbetalen met een extra inhouding".
 - Vrijgeven (borg of inhouding): in CPM leg je enkel vast dat het bedrag mag worden uitbetaald. Er is geen betaalmodule.
 
@@ -125,6 +127,16 @@ niet staat en die je niet zeker kent: vraag het, of zet `[VRAAG: ...]` in de tek
 - Marge (op de pagina Budgetten en bij het vergelijken): het resultaat gedeeld door de totale kostprijs. Het resultaat is de verkoopprijs min de verkoopkosten min de kostprijs. Verkoopkosten zijn geen onderdeel van de kostprijs.
 - Overnemen (bij een nieuw budget): de stappen die uit de gekozen versie meekomen. Wat je niet aanvinkt, begint leeg. Een nieuw budget is niet vanzelf actief, tenzij je Meteen actief budget maken aanzet of het het eerste budget van het project is.
 
+### Verzekeringen
+- ABR: de verzekering alle bouwplaatsrisico's. Ze dekt de werken tot de voorlopige oplevering. Termijn en verlenging staan in maanden bij de polis, daarna volgt de waarborgperiode. Zeg "ABR" tegen de gebruiker.
+- Tienjarige (aansprakelijkheid): de verplichte verzekering uit de wet Peeters-Borsus voor werken aan stabiliteit, waterdichtheid of dak. Een aannemer kan per woning een attest afgeven, of de ontwikkelaar neemt een globale polis die alle aannemers dekt (bij woningen én appartementen). Bij een globale polis is er vaak per eenheid een eigen polis. Zeg "tienjarige" zoals het scherm, niet "decennale".
+- BA: de burgerlijke aansprakelijkheid van de aannemer of van het project. Een BA-attest van de aannemer is niet verplicht, maar aanbevolen en op te nemen in het contract.
+- Brand nieuwbouw / bestaand gebouw: de brandverzekering. Tot de voorlopige oplevering dekt de ABR het gebouw. Een verkochte eenheid verzekert de koper. Een opgeleverde eenheid zonder koper verzekert de ontwikkelaar. Een bestaand gebouw is verzekerd tot de afbraak of de verkoop.
+- Attest aannemer: het bewijs dat een aannemer een verzekering heeft. Het staat per contract en per soort (tienjarige, BA) op het tabblad Attesten aannemers.
+- Aandachtspunt (verzekeringen): een melding die CPM zelf afleidt uit de polissen, de contracten, het definitieve budget en de opleveringsdata. Het wordt nergens bewaard en verdwijnt als de oorzaak weg is.
+- Aangevraagd (polis): een polis die je bewaarde zonder polisnummer, in afwachting van de maatschappij.
+- Makelaar (verzekeringen): een leverancier met de activiteit Verzekeringen. Een polis via een makelaar hangt aan een contract met die makelaar. Een polis zonder makelaar loopt rechtstreeks bij de maatschappij.
+
 ### Taal
 - Gebruik: "aanmaken" of "toevoegen", "opslaan", "wijzigen" of "bewerken": [VRAAG: kies één woord per handeling zodat alle artikels gelijk klinken]
 - Vermijd: id, slug, entity, record, DTO, endpoint, API, database, cache, gl-v2, scherm-ID's.
@@ -174,6 +186,17 @@ regel hier staat; anders `[VRAAG: ...]`.
 - Een concept-punt moet door de projectleider goedgekeurd worden. Wie het punt maakte, krijgt geen melding bij goedkeuring.
 - Het dashboard van de projectleider toont nog niet dat er punten goed te keuren zijn (die melding is nog niet gebouwd). Schrijf hier geen belofte over in artikels. Zodra ze er is, het artikel "Een punt inspreken" aanpassen.
 - [VRAAG: wanneer wordt een punt "afgesloten"?]
+
+### Verzekeringen (bedrijfslogica)
+- Een brandverzekering voor nieuwbouw is pas nodig als de voorlopige oplevering van het project bereikt is en een woning of appartement nog geen koper heeft. Dan toont CPM een rood aandachtspunt, tenzij een lopende brandpolis (niet als bestaand gebouw aangeduid) voor die eenheid of voor het hele project bestaat. CPM kent geen opleveringsdatum per eenheid: de voorlopige oplevering van het project geldt.
+- Een tienjarige polis kan voor het hele project gelden (Geldt voor leeg) of per eenheid. Bij een nieuwe polis kan de gebruiker meerdere eenheden aanvinken: CPM maakt dan per eenheid één polis met dezelfde gegevens. Een polis voor het hele project dekt alle eenheden. Contracten met Via projectpolis vragen geen eigen attest van de aannemer; ontbreekt de polis of dekt ze niet alle eenheden, dan komt er een aandachtspunt.
+- Het aandachtspunt dat de oorspronkelijke ABR-termijn voorbij is en de verlenging loopt, is een grijze mededeling. Die telt niet mee op het dashboard.
+- Wie de tienjarige geeft, kiest de gebruiker één keer voor het hele project (tab Attesten aannemers, kaart Tienjarige voor het hele project): per aannemer een attest, of via een globale projectpolis (geen eigen attest van de aannemers, bij woningen én appartementen). Een opmerking erbij (bv. "polis volgt van de notaris") staat bij het aandachtspunt zolang de polis ontbreekt; het aandachtspunt is dan een grijze mededeling. Een contract met een eigen keuze (Veiligheid en attesten, Tienjarige aansprakelijkheid: via de aannemer, via projectpolis of niet vereist) houdt die keuze; Nog niet bepaald volgt het project. Is er nergens iets gekozen, dan leidt CPM het af uit de naam van de activiteitengroep en de activiteit (ruwbouw, onderbouw, bovenbouw, dak, stabiliteit, fundering, structuur, gevel, architect, ingenieur). Het oude contractformulier kent de keuze niet en laat ze ongemoeid.
+- Een tienjarige-attest geldt voor de woningen die de gebruiker bij het vastleggen aanvinkt (eenheden met een woontype). Heeft het attest een bestand, dan koppelt CPM het aan elke aangevinkte woning en aan de koper ervan in Documenten en deelt het meteen in het klantenportaal. Hetzelfde geldt voor het document van een tienjarige polis voor één eenheid, en voor dat van een polis voor het hele project (alle verkochte woningen). Krijgt een eenheid later een klant, waar ook in CPM, dan koppelt CPM de polissen en attesten van die eenheid zelf aan die klant en deelt ze in het klantenportaal. De knop Aan kopers koppelen bij het aandachtspunt blijft als vangnet.
+- Rode en gouden aandachtspunten over verzekeringen komen ook op het dashboard van de projectleider, voor projecten in uitvoering. Grijze mededelingen en opgeloste punten niet.
+- "Opvragen" en "Herinneren" bij attesten openen enkel het e-mailprogramma van de gebruiker. CPM onthoudt de datum waarop hij op E-mail openen klikte, niet of de mail echt verstuurd is.
+- Herinneringen bij een polis zijn geen mails. Ze bepalen enkel of er een aandachtspunt verschijnt 30 dagen vóór de start, bij de verkoop van de eenheid en 30 dagen vóór de vervaldag.
+- Herinneringen over verzekeringen moeten later ook per mail komen (besluit Niels, 22/10/2026). Nog niet gebouwd: schrijf in artikels niets dat een mail belooft en pas de artikels aan zodra het er is.
 
 ### Traject en dossiers
 - [VRAAG: aanvullen]

@@ -1,0 +1,293 @@
+@model CPMCore.Models.Contacten.CrmContactsIndexVm
+@*
+    gl-v2 — Contacten van een project, lijst (design-handoff punt 44a): tabbar per status, KPI-strip, zoekveld + Filters met actieve filters als chips,
+    tabel met bron, interesse, status, laatste en volgende actie (rood als achterstallig) en toegewezen medewerker, selectiebalk onderaan.
+    Gegevens: CrmContact (migratie 105); de oude contactaanvragen en nieuwe website-formulieren worden bij het openen overgenomen (CrmContactService.SyncLegacyAsync).
+    Eigen klassen-namespace gl-v2-ct-* (gl-v2-projecten-contacten.css/.js). Het legacy Clients/DetailContacts.cshtml blijft bestaan (?classic=true).
+*@
+@using System.Globalization
+@using CPMCore.Helpers
+@using CPMCore.Models.GlV2
+@using CPMCore.Models.Contacten
+@{
+    ViewData["Title"] = "Contacten";
+    ViewData["HelpScreenId"] = "projecten-contacten";
+    ViewData["PageIcon"] = "ph ph-address-book";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId });
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    var rows = Model.Rows;
+    var today = Model.Today;
+    int Count(params int[] statuses) => rows.Count(r => statuses.Contains(r.Status));
+    var nieuw7 = rows.Where(r => r.CreatedAt >= DateTime.UtcNow.AddDays(-7)).ToList();
+    var actieVandaag = rows.Where(r => r.NextDate == today && ContactenWeergave.IsOpen(r.Status)).ToList();
+    var achterstallig = rows.Count(r => r.Overdue);
+    var bezichtigingen = rows.Count(r => r.VisitAt.HasValue && ContactenWeergave.Local(r.VisitAt.Value).Date >= DateTime.Today && ContactenWeergave.Local(r.VisitAt.Value).Date <= DateTime.Today.AddDays(14));
+    var conversie = rows.Count == 0 ? 0 : (int)Math.Round(100.0 * Count(ContactenWeergave.Verkocht) / rows.Count);
+    string Broncount() => string.Join(" · ", nieuw7.GroupBy(r => r.Source).OrderByDescending(g => g.Count()).Select(g => g.Count() + " " + g.Key.ToLowerInvariant()));
+    var bellen = actieVandaag.Count(r => (r.NextText ?? "").ToLowerInvariant().Contains("bel"));
+    var mailen = actieVandaag.Count(r => (r.NextText ?? "").ToLowerInvariant().Contains("mail"));
+    var kpis = new List<GlV2KpiItemVm>
+    {
+        new() { Label = "Nieuw · 7 dagen", Value = nieuw7.Count.ToString(), Hint = nieuw7.Count == 0 ? "geen nieuwe contacten" : Broncount(), IconClass = "ph-user-plus" },
+        new() { Label = "Actie vandaag", Value = actieVandaag.Count.ToString(), Hint = actieVandaag.Count == 0 ? "niets gepland" : string.Join(" · ", new[] { bellen > 0 ? bellen + " terugbellen" : null, mailen > 0 ? mailen + " e-mails" : null, actieVandaag.Count - bellen - mailen > 0 ? (actieVandaag.Count - bellen - mailen) + " andere" : null }.Where(x => x != null)), IconClass = "ph-phone-call", FilterKey = "next:today" },
+        new() { Label = "Achterstallig", Value = achterstallig.ToString(), Hint = "volgende actie voorbij", IconClass = "ph-warning", Tone = GlV2KpiTone.Danger, FilterKey = "next:overdue" },
+        new() { Label = "Bezichtigingen", Value = bezichtigingen.ToString(), Hint = "gepland de komende 2 weken", IconClass = "ph-calendar-check", FilterKey = "status:2" },
+        new() { Label = "Conversie", Value = conversie + " %", Hint = Count(ContactenWeergave.Verkocht) + " verkocht uit " + rows.Count + " contacten", IconClass = "ph-chart-line-up" },
+    };
+    var menuVm = new GlV2ProjectMenuVm
+    {
+        ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · contacten",
+        ItemCounts = new Dictionary<string, int> { ["Contacten"] = rows.Count }
+    };
+    GlV2SelectListVm Filter(string id, string empty, IEnumerable<GlV2SelectItem> items, string value = "") => new() { Name = id, Id = id, Bare = true, Value = value, EmptyText = empty, Items = items.ToList() };
+    (string Key, string Label, int Count)[] tabs =
+    {
+        ("all", "Alle", rows.Count), ("new", "Nieuw", Count(0)), ("follow", "In opvolging", Count(1, 2)), ("option", "Optie", Count(3)), ("sold", "Verkocht", Count(4)), ("lost", "Afgevallen", Count(5))
+    };
+    string FirstName(string? n) => (n ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
+}
+@section PageStyle
+{
+    <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-contacten.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @if (Model.CanExport)
+    {
+        <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="ct-export"><i class="ph ph-export" aria-hidden="true"></i><span>Exporteren</span></button>
+    }
+    @if (Model.CanWrite)
+    {
+        <a class="gl-v2-btn gl-v2-btn-primary" href="@Url.Action("ContactFormV2", "Projecten", new { projectid = Model.ProjectId })"><i class="ph ph-plus" aria-hidden="true"></i><span>Contact toevoegen</span></a>
+    }
+}
+@section MobileQuickActions
+{
+    @if (Model.CanWrite)
+    {
+        <a class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary" href="@Url.Action("ContactFormV2", "Projecten", new { projectid = Model.ProjectId })"><i class="ph ph-plus" aria-hidden="true"></i>Contact</a>
+    }
+    @if (Model.CanExport)
+    {
+        <button type="button" class="gl-v2-mobile-quickaction" id="ct-export-m"><i class="ph ph-export" aria-hidden="true"></i>Exporteren</button>
+    }
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+@* De tabbar moet het letterlijke eerste kind van .gl-v2-content zijn (zie Punten). *@
+<div class="gl-v2-tabbar" role="tablist" id="ct-tabs">
+    @foreach (var t in tabs)
+    {
+        <a href="#" class="gl-v2-tabbar-tab @(t.Key == "all" ? "is-active" : "")" role="tab" aria-selected="@(t.Key == "all" ? "true" : "false")" data-ct-tab="@t.Key">@t.Label <span class="gl-v2-tabbar-count">@t.Count</span></a>
+    }
+</div>
+
+@{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+<form id="ct-token-form" hidden>@Html.AntiForgeryToken()</form>
+<div id="gl-v2-ct-root" data-project-id="@Model.ProjectId" data-can-write="@(Model.CanWrite ? "1" : "0")" data-can-delete="@(Model.CanDelete ? "1" : "0")" data-me="u@(Model.CurrentUserId)"
+     data-status-url="@Url.Action("ContactStatusV2", "Projecten", new { projectid = Model.ProjectId })" data-assign-url="@Url.Action("ContactAssignV2", "Projecten", new { projectid = Model.ProjectId })"
+     data-delete-url="@Url.Action("ContactDeleteV2", "Projecten", new { projectid = Model.ProjectId })" data-lists-url="@Url.Action("ContactListsV2", "Projecten", new { projectid = Model.ProjectId })"
+     data-export-url="@Url.Action("ContactExportV2", "Projecten", new { projectid = Model.ProjectId })"
+     data-list-save-url="@Url.Action("ContactListSaveV2", "Projecten", new { projectid = Model.ProjectId })" data-list-delete-url="@Url.Action("ContactListDeleteV2", "Projecten", new { projectid = Model.ProjectId })"
+     data-lists="@System.Text.Json.JsonSerializer.Serialize(Model.Lists.Select(l => new { id = l.Id, name = l.Name, filters = l.FiltersJson }))">
+    @await Html.PartialAsync("GlV2/_KpiStrip", (IReadOnlyList<GlV2KpiItemVm>)kpis)
+
+    <div class="gl-v2-ct-body" id="ct-body-wrap">
+    <aside class="gl-v2-ct-lists gl-v2-card" id="ct-lists" aria-label="Opgeslagen lijsten" hidden>
+        <div class="gl-v2-ct-lists-head"><b>Opgeslagen lijsten</b><small>filters bewaren · lijst blijft automatisch bij</small></div>
+        <div class="gl-v2-ct-lists-items" id="ct-lists-items"></div>
+        <p class="gl-v2-ct-lists-empty" id="ct-lists-empty" hidden>Nog geen lijsten. Stel filters in en kies Opslaan als lijst.</p>
+    </aside>
+    <div class="gl-v2-ct-main">
+    <div class="gl-v2-toolbar-card gl-v2-filters-card">
+        <div class="gl-v2-filters-row">
+            <div class="gl-v2-field gl-v2-toolbar-search">
+                <div class="gl-v2-field-box">
+                    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                    <input type="text" class="gl-v2-field-input" id="ct-search" placeholder="Zoek op naam, e-mail, telefoon of eenheid" autocomplete="off" aria-label="Zoek contacten">
+                    <button type="button" class="gl-v2-field-clear" id="ct-search-clear" aria-label="Zoekterm wissen">&times;</button>
+                </div>
+            </div>
+            <button type="button" class="gl-v2-filters-toggle" id="ct-lists-toggle" aria-expanded="false" aria-controls="ct-lists"><i class="ph ph-bookmark-simple" aria-hidden="true"></i>Lijsten<span class="gl-v2-filters-toggle-count" id="ct-lists-count" @(Model.Lists.Count == 0 ? "hidden" : "")>@Model.Lists.Count</span></button>
+            <button type="button" class="gl-v2-filters-toggle" id="ct-filters-toggle" aria-expanded="false" aria-controls="ct-filters-panel">
+                <i class="ph ph-funnel" aria-hidden="true"></i>Filters<span class="gl-v2-filters-toggle-count" id="ct-filters-count" hidden>0</span>
+            </button>
+        </div>
+        <div class="gl-v2-filters-panel" id="ct-filters-panel" hidden>
+            <div class="gl-v2-filters-grid gl-v2-ct-filters-grid">
+                <div class="gl-v2-filters-field"><span class="gl-v2-filters-field-label">Bron</span>
+                    @await Html.PartialAsync("GlV2/_SelectList", Filter("ct-f-source", "Alle bronnen", ContactenWeergave.Bronnen.Select(b => new GlV2SelectItem { Value = b, Text = b })))
+                </div>
+                <div class="gl-v2-filters-field"><span class="gl-v2-filters-field-label">Interesse</span>
+                    @await Html.PartialAsync("GlV2/_SelectList", Filter("ct-f-unit", "Alle eenheden", Model.Units.Select(u => new GlV2SelectItem { Value = u.Key.ToString(), Text = u.Value })))
+                </div>
+                <div class="gl-v2-filters-field"><span class="gl-v2-filters-field-label">Toegewezen</span>
+                    @await Html.PartialAsync("GlV2/_SelectList", Filter("ct-f-who", "Iedereen", new[] { new GlV2SelectItem { Value = "me", Text = "Mijn contacten" }, new GlV2SelectItem { Value = "none", Text = "Niet toegewezen" } }.Concat(Model.Assignees.Select(u => new GlV2SelectItem { Value = u.Key, Text = u.Text + (u.Kind == "Makelaar" ? " (makelaar)" : "") }))))
+                </div>
+                <div class="gl-v2-filters-field"><span class="gl-v2-filters-field-label">Volgende actie</span>
+                    @await Html.PartialAsync("GlV2/_SelectList", Filter("ct-f-next", "Alle", new[]
+                    {
+                        new GlV2SelectItem { Value = "today", Text = "Vandaag" }, new GlV2SelectItem { Value = "overdue", Text = "Achterstallig" }, new GlV2SelectItem { Value = "week", Text = "Binnen 7 dagen" }, new GlV2SelectItem { Value = "none", Text = "Geen actie gepland" }
+                    }))
+                </div>
+                <div class="gl-v2-filters-field"><span class="gl-v2-filters-field-label">Binnengekomen</span>
+                    @await Html.PartialAsync("GlV2/_SelectList", Filter("ct-f-created", "Altijd", new[]
+                    {
+                        new GlV2SelectItem { Value = "7", Text = "Laatste 7 dagen" }, new GlV2SelectItem { Value = "30", Text = "Laatste 30 dagen" }, new GlV2SelectItem { Value = "90", Text = "Laatste 3 maanden" }
+                    }))
+                </div>
+                <div class="gl-v2-filters-field"><span class="gl-v2-filters-field-label">Toestemming</span>
+                    @await Html.PartialAsync("GlV2/_SelectList", Filter("ct-f-consent", "Maakt niet uit", new[]
+                    {
+                        new GlV2SelectItem { Value = "contact", Text = "Mag gecontacteerd worden" }, new GlV2SelectItem { Value = "news", Text = "Nieuwsbrief en nieuwe projecten" }, new GlV2SelectItem { Value = "none", Text = "Zonder toestemming" }
+                    }))
+                </div>
+            </div>
+            <div class="gl-v2-filters-chips">
+                <div class="gl-v2-filters-chip-list" id="ct-chips"></div>
+                <button type="button" class="gl-v2-filters-clear" id="ct-filters-clear" hidden>Alles wissen</button>
+                @if (Model.CanWrite) { <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="ct-savelist"><i class="ph ph-bookmark-simple" aria-hidden="true"></i>Opslaan als lijst</button> }
+            </div>
+        </div>
+    </div>
+
+    <div class="gl-v2-card gl-v2-detail-table-card gl-v2-ct-card">
+        <div class="gl-v2-card-body">
+            <div class="table-responsive-md">
+                <table class="table table-hover mb-0 w-100 gl-v2-detail-table" id="datatable-contacten">
+                    <thead>
+                        <tr>
+                            <th class="gl-v2-ct-check no-sort"><input type="checkbox" id="ct-check-all" aria-label="Alles selecteren" @(Model.CanWrite ? "" : "hidden")></th>
+                            <th>Contact</th><th>Bron</th><th>Interesse</th><th>Status</th><th>Laatste actie</th><th>Volgende actie</th><th>Wie</th><th class="no-sort"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="ct-body">
+                        @foreach (var r in rows)
+                        {
+                            var sub = string.Join(" · ", new[] { r.Email, r.Phone }.Where(x => !string.IsNullOrWhiteSpace(x)));
+                            if (sub == "" && r.Source == "Makelaar" && !string.IsNullOrWhiteSpace(r.BrokerName)) sub = "via " + r.BrokerName;
+                            if (sub == "" && !string.IsNullOrWhiteSpace(r.SeenVia)) sub = r.SeenVia!;
+                            var lastLocal = r.LastAt.HasValue ? ContactenWeergave.Local(r.LastAt.Value) : (DateTime?)null;
+                            var lastSub = lastLocal == null ? "" : (lastLocal.Value.Date == DateTime.Today ? "vandaag " + lastLocal.Value.ToString("HH:mm", be) : lastLocal.Value.ToString("dd/MM", be)) + " · " + (r.LastAuto ? "automatisch" : FirstName(r.LastBy));
+                            var nextLabel = r.NextDate.HasValue ? ContactenWeergave.Day(r.NextDate.Value, today) + (string.IsNullOrWhiteSpace(r.NextText) ? "" : " · " + r.NextText.ToLowerInvariant()) : (string.IsNullOrWhiteSpace(r.NextText) ? "" : r.NextText);
+                            var nextClass = r.Overdue ? "is-overdue" : (r.NextDate == today ? "is-today" : "");
+                            var interest = r.UnitNames.Count > 0 ? string.Join(" · ", r.UnitNames) : (string.IsNullOrWhiteSpace(r.Budget) ? "" : r.Budget!);
+                            var days = (DateTime.UtcNow - r.CreatedAt).TotalDays;
+                            <tr class="gl-v2-ct-row" data-id="@r.Id" data-status="@r.Status" data-source="@r.Source" data-units=",@string.Join(",", r.UnitIds),"
+                                data-who="@r.AssignedKey" data-next="@(r.NextDate.HasValue ? (r.Overdue ? "overdue" : r.NextDate == today ? "today" : (r.NextDate.Value <= today.AddDays(7) ? "week" : "later")) : "none")"
+                                data-days="@((int)days)" data-consent="@(r.ConsentContact ? 1 : 0)@(r.ConsentNewsletter ? 1 : 0)"
+                                data-href="@Url.Action("ContactV2", "Projecten", new { projectid = Model.ProjectId, id = r.Id })"
+                                data-search="@((r.Name + " " + r.Email + " " + r.Phone + " " + string.Join(" ", r.UnitNames) + " " + r.BrokerName + " " + r.SeenVia).ToLowerInvariant())">
+                                <td class="gl-v2-ct-check"><input type="checkbox" class="js-ct-check" value="@r.Id" aria-label="Selecteer @r.Name" @(Model.CanWrite ? "" : "hidden")></td>
+                                <td class="gl-v2-ct-name" data-order="@r.Name.ToLowerInvariant()"><b>@r.Name</b>@if (sub != "") { <small>@sub</small> }</td>
+                                <td data-order="@r.Source"><span class="gl-v2-ct-src @ContactenWeergave.SourceClass(r.Source)"><i class="ph @ContactenWeergave.SourceIcon(r.Source)" aria-hidden="true"></i>@r.Source</span></td>
+                                <td class="gl-v2-ct-interest">@(interest == "" ? "—" : interest)</td>
+                                <td data-order="@r.Status"><span class="gl-v2-badge @ContactenWeergave.Tone(r.Status)">@ContactenWeergave.Label(r.Status)</span></td>
+                                <td class="gl-v2-ct-last" data-order="@(r.LastAt?.ToString("yyyyMMddHHmm") ?? "0")">@if (!string.IsNullOrWhiteSpace(r.LastTitle)) { <span>@r.LastTitle</span><small>@lastSub</small> } else { <span class="gl-v2-ct-muted">—</span> }</td>
+                                <td class="gl-v2-ct-next @nextClass" data-order="@(r.NextDate?.ToString("yyyyMMdd") ?? "99999999")">@(nextLabel == "" ? "—" : nextLabel)</td>
+                                <td data-order="@(r.AssignedName ?? "zzz")">@if (!string.IsNullOrWhiteSpace(r.AssignedName)) { <span class="gl-v2-ct-av" title="@r.AssignedName">@ContactenWeergave.Initials(r.AssignedName)</span> } else { <span class="gl-v2-ct-av is-empty" title="Niet toegewezen">–</span> }</td>
+                                <td class="gl-v2-ct-actions"><i class="ph ph-caret-right gl-v2-ct-chev" aria-hidden="true"></i></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    </div>
+    </div>
+</div>
+
+@if (Model.CanWrite)
+{
+    @* Selectiebalk (44a): wit, onderaan; Status wijzigen en Toewijzen openen een klein paneel erboven. *@
+    <div class="gl-v2-ct-selbar" id="ct-selbar" hidden>
+        <span class="gl-v2-ct-selbar-count"><b id="ct-sel-n">0</b> geselecteerd</span>
+        <span class="gl-v2-ct-selbar-of">· van <span id="ct-sel-of">@rows.Count</span> in deze lijst</span>
+        <span class="gl-v2-ct-selbar-spacer"></span>
+        <button type="button" class="gl-v2-btn gl-v2-btn-text" id="ct-sel-clear">Selectie wissen</button>
+        <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-ct-pop" data-pop="ct-pop-status"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i>Status wijzigen</button>
+        <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-ct-pop" data-pop="ct-pop-assign"><i class="ph ph-user-plus" aria-hidden="true"></i>Toewijzen</button>
+        <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="ct-sel-savelist"><i class="ph ph-bookmark-simple" aria-hidden="true"></i>Opslaan als lijst</button>
+        @if (Model.CanExport)
+        {
+            <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="ct-sel-export"><i class="ph ph-export" aria-hidden="true"></i>Exporteren</button>
+        }
+
+        <div class="gl-v2-ct-pop" id="ct-pop-status" hidden>
+            <div class="gl-v2-ct-pop-title">STATUS VOOR <span class="js-ct-sel-n"></span> CONTACTEN</div>
+            @foreach (var s in new[] { 0, 1, 2, 3, 4, 5 })
+            {
+                <button type="button" class="gl-v2-ct-pop-item js-ct-do" data-op="status" data-status="@s">@ContactenWeergave.Label(s)</button>
+            }
+            <div class="gl-v2-ct-pop-note">Een afgevallen contact vraagt om een reden, bv. "te duur".</div>
+        </div>
+        <div class="gl-v2-ct-pop" id="ct-pop-assign" hidden>
+            <div class="gl-v2-ct-pop-title">TOEWIJZEN AAN</div>
+            <div class="gl-v2-ct-pop-scroll">
+            @foreach (var u in Model.Assignees)
+            {
+                <button type="button" class="gl-v2-ct-pop-item js-ct-do" data-op="assign" data-user="@u.Key">@u.Text@(u.Kind == "Makelaar" ? " (makelaar)" : "")</button>
+            }
+            </div>
+            <button type="button" class="gl-v2-ct-pop-item js-ct-do" data-op="assign" data-user="">Niemand (toewijzing wissen)</button>
+        </div>
+    </div>
+
+    @* Lijst opslaan (44d) *@
+    <div class="modal fade gl-v2-modal-form" id="ct-savelist-modal" tabindex="-1" aria-hidden="true" aria-labelledby="ct-savelist-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <div class="modal-content">
+                <div class="modal-header"><h2 class="modal-title" id="ct-savelist-title">Opslaan als lijst</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body">
+                    <div class="gl-v2-field gl-v2-field-full"><label class="gl-v2-field-label" for="ct-list-name">Naam van de lijst <span style="color:#8B2A2A">*</span></label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="ct-list-name" maxlength="150" placeholder="bv. Te bellen deze week" autocomplete="off" /></div><span class="gl-v2-field-help" id="ct-list-help">De filters worden bewaard. De lijst blijft automatisch bij: nieuwe contacten die erbij passen, verschijnen er vanzelf in.</span></div>
+                </div>
+                <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="button" class="gl-v2-btn gl-v2-btn-primary" id="ct-list-ok">Lijst opslaan</button></div>
+            </div>
+        </div>
+    </div>
+
+    @* Lijst verwijderen *@
+    <div class="modal fade gl-v2-modal-form" id="ct-list-del-modal" tabindex="-1" aria-hidden="true" aria-labelledby="ct-list-del-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <div class="modal-content">
+                <div class="modal-header"><h2 class="modal-title" id="ct-list-del-title">Lijst verwijderen?</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body"><p>De lijst “<b id="ct-list-del-name"></b>” wordt verwijderd. De contacten zelf blijven bestaan.</p></div>
+                <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="button" class="gl-v2-btn gl-v2-btn-primary" id="ct-list-del-ok">Lijst verwijderen</button></div>
+            </div>
+        </div>
+    </div>
+
+    @* Reden bij Afgevallen *@
+    <div class="modal fade gl-v2-modal-form" id="ct-reason-modal" tabindex="-1" aria-hidden="true" aria-labelledby="ct-reason-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <div class="modal-content">
+                <div class="modal-header"><h2 class="modal-title" id="ct-reason-title">Waarom valt dit contact af?</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body">
+                    <div class="gl-v2-field gl-v2-field-full"><label class="gl-v2-field-label" for="ct-reason">Reden</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="ct-reason" maxlength="300" placeholder="bv. te duur, andere woning gekocht" autocomplete="off" /></div><span class="gl-v2-field-help">Optioneel, maar handig voor later.</span></div>
+                </div>
+                <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="button" class="gl-v2-btn gl-v2-btn-primary" id="ct-reason-ok">Afgevallen zetten</button></div>
+            </div>
+        </div>
+    </div>
+}
+@if (Model.CanExport)
+{
+    @await Html.PartialAsync("~/Views/Projecten/Clients/Partials/_ContactExportModalV2.cshtml", Model)
+}
+
+@section PageScripts
+{
+    <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-contacten.js" asp-append-version="true"></script>
+}

@@ -1,0 +1,518 @@
+@model CPMCore.Models.Projecten.VerzekeringenV2Vm
+@using CPMCore.Models.GlV2
+@using CPMCore.Models.Projecten
+@using System.Globalization
+@*
+    gl-v2 — Verzekeringen van een project (design-handoff 43a en 43b). Twee tabbladen: "Polissen" (aandachtspunten bovenaan, polissen als tabel,
+    dekking in de tijd onderaan) en "Attesten aannemers" (per contract: tienjarige per woning en BA, in bulk opvragen). Alle cijfers komen uit
+    CPMCore.Services.Verzekeringen.VerzekeringService; de aandachtspunten worden telkens opnieuw afgeleid en nergens bewaard.
+    Formulier "Verzekering toevoegen/bewerken" (43c) staat op een eigen pagina: AddInsuranceV2.
+*@
+@{
+    ViewData["Title"] = "Verzekeringen";
+    ViewData["PageIcon"] = "bx bx-building-house";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId });
+    var menu = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName ?? "", ProjectSubtitle = "project · verzekeringen", Mode = GlV2ProjectMenuMode.Outer };
+    var attestTab = Model.Tab == "attesten";
+    var open = Model.Aandachtspunten.Where(a => !a.Opgelost).ToList();
+    var opgelost = Model.Aandachtspunten.Where(a => a.Opgelost).ToList();
+    var aantalAandacht = Model.Polissen.Count(p => p.StatusKey == "aandacht");
+    var aantalLopend = Model.Polissen.Count(p => p.StatusKey == "lopend");
+    var aantalBeeindigd = Model.Polissen.Count(p => p.StatusKey == "beeindigd");
+    var aantalAttest = Model.Polissen.Count(p => p.IsAttest);
+    string PuntIcoon(string tone) => tone switch { "danger" => "ph-x-circle", "warning" => "ph-warning", "success" => "ph-check-circle", _ => "ph-info" };
+    string TypeIcoon(string key) => key switch { "abr" => "ph-hard-hat", "brand" => "ph-fire", "tienjarige" => "ph-house-line", "ba" => "ph-user-circle-gear", _ => "ph-shield" };
+    var jsonOpts = new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-insurances.css" asp-append-version="true" />
+}
+@section ProjectMenu
+{
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menu)
+}
+@{ var menuPhone = new GlV2ProjectMenuVm { ProjectId = menu.ProjectId, ProjectName = menu.ProjectName, ProjectSubtitle = menu.ProjectSubtitle, Mode = GlV2ProjectMenuMode.Phone }; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhone)
+
+<div id="gln-vz-root" data-project="@Model.ProjectId">
+    <p class="gln-vz-intro">Alle polissen van @Model.ProjectName én de attesten die aannemers moeten afgeven. Aandachtspunten worden automatisch aangemaakt uit de polissen, de contracten, het definitieve budget en de opleveringsdatum.</p>
+
+    @await Html.PartialAsync("GlV2/_KpiStrip", Model.Kpis)
+
+    <div class="gln-vz-tabs" role="tablist">
+        <a role="tab" class="gln-vz-tab@(attestTab ? "" : " is-active")" href="@Url.Action("DetailInsurances", "Projecten", new { projectid = Model.ProjectId })" aria-selected="@(attestTab ? "false" : "true")">Polissen en aandachtspunten <span class="gln-vz-tab-count">@Model.AantalOpen</span></a>
+        <a role="tab" class="gln-vz-tab@(attestTab ? " is-active" : "")" href="@Url.Action("DetailInsurances", "Projecten", new { projectid = Model.ProjectId, tab = "attesten" })" aria-selected="@(attestTab ? "true" : "false")">Attesten aannemers <span class="gln-vz-tab-count">@Model.Attesten.Count(a => a.KanOpvragen)</span></a>
+    </div>
+
+    @if (!attestTab)
+    {
+        @* ── 43a · Aandachtspunten ───────────────────────────────────────────────────────────────── *@
+        <section class="gl-v2-section-card" id="gln-vz-punten">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-warning" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Aandachtspunten</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">automatisch afgeleid uit polissen, contracten, budget en oplevering</span>
+                <span class="gl-v2-section-card-spacer"></span>
+                <span class="gln-vz-telling">@Model.AantalOpen open · @Model.AantalOpgelost opgelost</span>
+            </div>
+            <div class="gln-vz-punten">
+                @if (Model.Aandachtspunten.Count == 0)
+                {
+                    <div class="gl-v2-notice gl-v2-notice-compact is-success"><i class="ph ph-check-circle" aria-hidden="true"></i><span>Geen aandachtspunten: alle polissen en attesten zijn in orde.</span></div>
+                }
+                @foreach (var a in open.Concat(opgelost))
+                {
+                    <div class="gln-vz-punt is-@a.Tone@(a.Opgelost ? " is-opgelost" : "")">
+                        <i class="ph @PuntIcoon(a.Tone) gln-vz-punt-icoon" aria-hidden="true"></i>
+                        <div class="gln-vz-punt-body">
+                            <div class="gln-vz-punt-kop"><strong>@a.Titel</strong><span class="gln-vz-punt-kicker">@a.Kicker</span></div>
+                            <p>@a.Tekst</p>
+                        </div>
+                        @if (a.Acties.Count > 0 && Model.CanWrite)
+                        {
+                            <div class="gln-vz-punt-acties">
+                                @foreach (var actie in a.Acties)
+                                {
+                                    @if (actie.Post)
+                                    {
+                                        <form method="post" action="@actie.Href" class="gln-vz-actieform">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="projectid" value="@Model.ProjectId" />
+                                            <button type="submit" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph @actie.Icon" aria-hidden="true"></i>@actie.Label</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <a class="gl-v2-btn gl-v2-btn-secondary" href="@actie.Href"><i class="ph @actie.Icon" aria-hidden="true"></i>@actie.Label</a>
+                                    }
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </section>
+
+        @* ── 43a · Polissen van het project ──────────────────────────────────────────────────────── *@
+        <section class="gl-v2-section-card" id="gln-vz-polissen">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-shield-check" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Polissen van het project</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">@Model.AantalPolissen polis@(Model.AantalPolissen == 1 ? "" : "sen")@(Model.AantalOntbrekend > 0 ? " · " + Model.AantalOntbrekend + " ontbreekt" : "")</span>
+                <span class="gl-v2-section-card-spacer"></span>
+                <div class="gl-v2-field gln-vz-zoek">
+                    <div class="gl-v2-field-box">
+                        <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                        <input type="text" class="gl-v2-field-input" id="gln-vz-zoek" placeholder="Zoek op maatschappij, makelaar of polisnummer" autocomplete="off">
+                    </div>
+                </div>
+                @if (Model.CanWrite)
+                {
+                    <a class="gl-v2-btn gl-v2-btn-primary" href="@Url.Action("AddInsurance", "Projecten", new { projectid = Model.ProjectId })"><i class="ph ph-plus" aria-hidden="true"></i>Verzekering toevoegen</a>
+                }
+            </div>
+            <div class="gln-vz-chips" id="gln-vz-chips">
+                <button type="button" class="gln-vz-chip is-active" data-filter="alle">Alle @Model.Polissen.Count</button>
+                <button type="button" class="gln-vz-chip" data-filter="lopend">Lopend @aantalLopend</button>
+                <button type="button" class="gln-vz-chip" data-filter="aandacht">Aandacht @aantalAandacht</button>
+                <button type="button" class="gln-vz-chip" data-filter="ontbreekt">Ontbreekt @Model.AantalOntbrekend</button>
+                <button type="button" class="gln-vz-chip" data-filter="beeindigd">Beëindigd @aantalBeeindigd</button>
+                <button type="button" class="gln-vz-chip" data-filter="attest">Attest aannemer @aantalAttest</button>
+            </div>
+
+            @if (Model.Polissen.Count == 0)
+            {
+                <div class="gl-v2-notice gl-v2-notice-compact is-info gln-vz-leeg"><i class="ph ph-info" aria-hidden="true"></i><span>Er zijn nog geen verzekeringen bij dit project. Voeg de ABR-polis toe zodra ze is afgesloten.</span></div>
+            }
+            else
+            {
+                <div class="gln-vz-table">
+                    <div class="gln-vz-row gln-vz-head">
+                        <span>Type</span><span>Maatschappij · makelaar</span><span>Polisnummer</span><span class="is-num">Verzekerd</span><span>Dekking</span><span>Waarborgperiode</span><span>Status</span><span></span>
+                    </div>
+                    @foreach (var r in Model.Polissen)
+                    {
+                        var menuId = "gln-vz-menu-" + (r.IsAttest ? "a" : "p") + r.Id;
+                        <div class="gln-vz-row@(r.IsOntbrekend ? " is-ontbrekend" : "")@(r.IsBeeindigd ? " is-beeindigd" : "")" data-row data-status="@r.StatusKey" data-zoek="@r.Zoek">
+                            <span class="gln-vz-type"><i class="ph @TypeIcoon(r.TypeKey)" aria-hidden="true"></i><span>@r.Soort</span></span>
+                            <span class="gln-vz-cel"><strong>@r.Maatschappij</strong><span>@r.MaatschappijSub</span></span>
+                            <span>@r.Polisnummer</span>
+                            <span class="is-num">@r.Waarde</span>
+                            <span class="gln-vz-cel"><strong>@r.Dekking</strong>@if (!string.IsNullOrEmpty(r.DekkingSub)) { <span>@r.DekkingSub</span> }@if (!string.IsNullOrEmpty(r.DekkingSub2)) { <span>@r.DekkingSub2</span> }</span>
+                            <span class="gln-vz-cel"><strong>@r.Waarborg</strong>@if (!string.IsNullOrEmpty(r.WaarborgSub)) { <span>@r.WaarborgSub</span> }</span>
+                            <span><span class="gl-v2-badge @r.StatusTone">@r.Status</span></span>
+                            <span class="gln-vz-act">
+                                @if (r.IsOntbrekend)
+                                {
+                                    @if (Model.CanWrite && r.ToevoegenHref != null)
+                                    {
+                                        <a class="gl-v2-btn gl-v2-btn-secondary" href="@r.ToevoegenHref"><i class="ph ph-plus" aria-hidden="true"></i>Toevoegen</a>
+                                    }
+                                }
+                                else if (r.IsAttest)
+                                {
+                                    @if (r.DocumentId.HasValue)
+                                    {
+                                        <a class="gl-v2-icon-btn" title="Attest openen" aria-label="Attest openen" href="@Url.Action("DetailDocs", "Projecten", new { projectid = Model.ProjectId, open = r.DocumentId })"><i class="ph ph-arrow-square-out" aria-hidden="true"></i></a>
+                                    }
+                                }
+                                else if (Model.CanWrite || Model.CanDelete || r.DocumentId.HasValue)
+                                {
+                                    <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="@menuId" aria-label="Meer acties voor @r.Soort @r.Maatschappij">
+                                        <i class="ph ph-dots-three" aria-hidden="true"></i>
+                                    </button>
+                                    <div class="gl-v2-menu" id="@menuId">
+                                        @if (Model.CanWrite)
+                                        {
+                                            <a class="gl-v2-menu-item" href="@Url.Action("AddInsurance", "Projecten", new { projectid = Model.ProjectId, id = r.Id })"><i class="ph ph-pencil-simple" aria-hidden="true"></i>Bewerken</a>
+                                        }
+                                        @if (r.DocumentId.HasValue)
+                                        {
+                                            <a class="gl-v2-menu-item" href="@Url.Action("DetailDocs", "Projecten", new { projectid = Model.ProjectId, open = r.DocumentId })"><i class="ph ph-file-text" aria-hidden="true"></i>Polis openen</a>
+                                        }
+                                        @if (Model.CanWrite && !r.IsBeeindigd)
+                                        {
+                                            <a href="#" class="gl-v2-menu-item" data-vz-einde="@r.Id" data-naam="@r.Soort · @r.Maatschappij"><i class="ph ph-calendar-x" aria-hidden="true"></i>Beëindigen</a>
+                                        }
+                                        @if (Model.CanDelete)
+                                        {
+                                            <a href="#" class="gl-v2-menu-item is-danger" data-vz-verwijder="@r.Id" data-naam="@r.Soort · @r.Maatschappij"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</a>
+                                        }
+                                    </div>
+                                }
+                            </span>
+                        </div>
+                    }
+                    <div class="gln-vz-nietsgevonden" id="gln-vz-leeg" hidden>Geen polissen voor deze selectie.</div>
+                </div>
+            }
+        </section>
+
+        @* ── 43a · Dekking in de tijd ────────────────────────────────────────────────────────────── *@
+        @if (Model.Tijdlijn.Rijen.Count > 0)
+        {
+            var t = Model.Tijdlijn;
+            <section class="gl-v2-section-card" id="gln-vz-tijd">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-chart-bar-horizontal" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Dekking in de tijd</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">gaten tussen de polissen vallen meteen op</span>
+                </div>
+                <div class="gln-vz-tijd">
+                    <div class="gln-vz-tijd-rij gln-vz-tijd-jaren">
+                        <span></span>
+                        <div class="gln-vz-tijd-spoor" style="--gln-vz-jaren: @t.Jaren.Count">
+                            @foreach (var j in t.Jaren) { <span>@j</span> }
+                        </div>
+                    </div>
+                    @foreach (var rij in t.Rijen)
+                    {
+                        <div class="gln-vz-tijd-rij">
+                            <span class="gln-vz-tijd-label"><strong>@rij.Label</strong>@if (!string.IsNullOrEmpty(rij.Sub)) { <span>@rij.Sub</span> }</span>
+                            <div class="gln-vz-tijd-spoor" style="--gln-vz-jaren: @t.Jaren.Count">
+                                @if (t.VandaagPct >= 0)
+                                {
+                                    <i class="gln-vz-vandaag" style="left: @t.VandaagPct.ToString("0.##", CultureInfo.InvariantCulture)%" title="vandaag"></i>
+                                }
+                                @foreach (var b in rij.Balken)
+                                {
+                                    <span class="gln-vz-balk is-@b.Soort@(b.Pijl ? " is-pijl" : "")" style="left: @b.LinksPct.ToString("0.##", CultureInfo.InvariantCulture)%; width: @b.BreedtePct.ToString("0.##", CultureInfo.InvariantCulture)%">@b.Tekst</span>
+                                }
+                                @foreach (var m in rij.Markers)
+                                {
+                                    <span class="gln-vz-marker" style="left: @m.Pct.ToString("0.##", CultureInfo.InvariantCulture)%"><i></i><em>@m.Label</em></span>
+                                }
+                            </div>
+                        </div>
+                    }
+                    <div class="gln-vz-tijd-rij gln-vz-tijd-voet">
+                        <span></span>
+                        <div class="gln-vz-tijd-spoor"><span class="gln-vz-legende"><i class="gln-vz-vandaag is-legende"></i> vandaag</span></div>
+                    </div>
+                </div>
+            </section>
+        }
+    }
+    else
+    {
+        @* ── Tienjarige voor het hele project ────────────────────────────────────────────────────── *@
+        <section class="gl-v2-section-card" id="gln-vz-tjproject">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-house-line" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Tienjarige voor het hele project</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">geldt voor alle aannemers, behalve contracten met een eigen keuze</span>
+            </div>
+            @if (Model.CanWrite)
+            {
+                <form method="post" asp-action="InsuranceTienjarigeSave" asp-controller="Projecten" class="gln-vz-tjform">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="projectid" value="@Model.ProjectId" />
+                    <div class="gl-v2-field">
+                        <span class="gl-v2-field-label">WIE GEEFT DE TIENJARIGE?</span>
+                        <div class="gl-v2-segmented is-outline is-fill" role="radiogroup" aria-label="Tienjarige voor het hele project">
+                            <label><input type="radio" name="bron" value="" checked="@(Model.TjProjectBron != 1)" /><span>Per aannemer een attest</span></label>
+                            <label><input type="radio" name="bron" value="1" checked="@(Model.TjProjectBron == 1)" /><span>Via een globale projectpolis</span></label>
+                        </div>
+                        <span class="gl-v2-field-help">Bij een globale polis van de ontwikkelaar (woningen en appartementen) hoeven de aannemers geen eigen attest af te geven. Voeg de polis hieronder toe bij Verzekeringen, voor het hele project of per eenheid.</span>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="gln-vz-tjopm">OPMERKING · OPTIONEEL</label>
+                        <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="opmerking" id="gln-vz-tjopm" maxlength="300" value="@Model.TjProjectOpmerking" placeholder="bv. polis volgt eind november van de notaris" autocomplete="off" /></div>
+                        <span class="gl-v2-field-help">Staat bij het aandachtspunt zolang de polis nog niet is toegevoegd. Met een opmerking is het aandachtspunt een gewone mededeling.</span>
+                    </div>
+                    <div class="gln-vz-tjact"><button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-check" aria-hidden="true"></i>Bewaren</button></div>
+                </form>
+            }
+            else
+            {
+                <p class="gln-vz-uitleg">@(Model.TjProjectBron == 1 ? "Via een globale projectpolis." : "Per aannemer een attest.")@(string.IsNullOrWhiteSpace(Model.TjProjectOpmerking) ? "" : " " + Model.TjProjectOpmerking)</p>
+            }
+        </section>
+
+        @* ── 43b · Attesten aannemers ────────────────────────────────────────────────────────────── *@
+        <section class="gl-v2-section-card" id="gln-vz-attesten">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-seal-check" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Attesten aannemers</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">tienjarige en BA per contract</span>
+                <span class="gl-v2-section-card-spacer"></span>
+                <div class="gl-v2-field gln-vz-zoek">
+                    <div class="gl-v2-field-box">
+                        <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                        <input type="text" class="gl-v2-field-input" id="gln-vz-zoek" placeholder="Zoek aannemer of contract" autocomplete="off">
+                    </div>
+                </div>
+            </div>
+            <p class="gln-vz-uitleg">Per contract zie je welke attesten de aannemer afgeeft. De tienjarige is wettelijk verplicht voor werken aan stabiliteit, waterdichtheid of dak (wet Peeters-Borsus). Bij woningen is dat één attest per woning. Een BA-attest is niet verplicht, maar aanbevolen en op te nemen in het contract.</p>
+            <div class="gln-vz-chips" id="gln-vz-chips">
+                <button type="button" class="gln-vz-chip is-active" data-filter="alle">Alle @Model.Attesten.Count</button>
+                <button type="button" class="gln-vz-chip" data-filter="ontbreekt">Er ontbreekt iets @Model.Attesten.Count(a => a.KanOpvragen)</button>
+                <button type="button" class="gln-vz-chip" data-filter="compleet">Compleet @Model.Attesten.Count(a => !a.KanOpvragen)</button>
+            </div>
+
+            @if (Model.Attesten.Count == 0)
+            {
+                <div class="gl-v2-notice gl-v2-notice-compact is-info gln-vz-leeg"><i class="ph ph-info" aria-hidden="true"></i><span>Er zijn nog geen contracten met aannemers in dit project.</span></div>
+            }
+            else
+            {
+                <div class="gln-vz-table gln-vz-attesttabel">
+                    <div class="gln-vz-row gln-vz-head">
+                        <span></span><span>Aannemer · contract</span><span>Lot</span><span>Tienjarige · per woning</span><span>BA-attest · aanbevolen</span><span>Laatst opgevraagd</span><span></span>
+                    </div>
+                    @foreach (var r in Model.Attesten)
+                    {
+                        var prefill = System.Text.Json.JsonSerializer.Serialize(new { contractId = r.ContractId, bedrijf = r.Bedrijf, label = r.ContractLabel, tjVereist = r.TjVereist, tj = r.Tj, ba = r.Ba }, jsonOpts);
+                        <div class="gln-vz-row" data-row data-status="@(r.KanOpvragen ? "ontbreekt" : "compleet")" data-zoek="@r.Zoek" data-contract="@r.ContractId">
+                            <span>
+                                @if (Model.CanWrite && r.KanOpvragen)
+                                {
+                                    <input type="checkbox" class="gln-vz-check" aria-label="Selecteer @r.Bedrijf" />
+                                }
+                                else
+                                {
+                                    <input type="checkbox" class="gln-vz-check" disabled aria-label="Geen attest te vragen" />
+                                }
+                            </span>
+                            <span class="gln-vz-cel"><strong>@r.Bedrijf</strong><span>@r.ContractLabel</span></span>
+                            <span class="gln-vz-lot">@(string.IsNullOrWhiteSpace(r.Lot) ? "—" : r.Lot)</span>
+                            <span class="gln-vz-cel"><span><span class="gl-v2-badge @r.TjTone">@r.TjStatus</span></span>@if (!string.IsNullOrEmpty(r.TjSub)) { <span>@r.TjSub</span> }</span>
+                            <span class="gln-vz-cel"><span><span class="gl-v2-badge @r.BaTone">@r.BaStatus</span></span>@if (!string.IsNullOrEmpty(r.BaSub)) { <span>@r.BaSub</span> }</span>
+                            <span class="gln-vz-laatst@(r.IsOpgevraagd && r.KanOpvragen ? " is-wacht" : "")">@r.Laatst</span>
+                            <span class="gln-vz-act">
+                                @if (Model.CanWrite)
+                                {
+                                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-vz-attest="@prefill">Vastleggen</button>
+                                    @if (r.KanOpvragen)
+                                    {
+                                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-vz-opvragen="@r.ContractId">@(r.IsOpgevraagd ? "Herinneren" : "Opvragen")</button>
+                                    }
+                                }
+                            </span>
+                        </div>
+                    }
+                    <div class="gln-vz-nietsgevonden" id="gln-vz-leeg" hidden>Geen contracten voor deze selectie.</div>
+                </div>
+            }
+        </section>
+
+        <div class="gl-v2-notice gl-v2-notice-expanded is-info">
+            <span class="gl-v2-notice-expanded-icon"><i class="ph ph-info" aria-hidden="true"></i></span>
+            <div class="gl-v2-notice-body">
+                <span class="gl-v2-notice-title">Projectpolis tienjarige?</span>
+                <span class="gl-v2-notice-text">Een globale polis, afgesloten door de ontwikkelaar, dekt alle aannemers. Dat kan voor woningen en voor appartementen. Kies dan bij elk contract Tienjarige aansprakelijkheid: Via projectpolis, en voeg bij Verzekeringen een polis van het type Tienjarige toe. Eén polis voor het hele project, of per eenheid een eigen polis bij Geldt voor. De aannemers moeten dan geen eigen attest meer afgeven.</span>
+            </div>
+        </div>
+
+        @if (Model.CanWrite)
+        {
+            <div class="gln-vz-selbar" id="gln-vz-selbar" hidden>
+                <span class="gln-vz-selbar-tekst"><strong id="gln-vz-sel-aantal">0 geselecteerd</strong> · één mail per aannemer met de ontbrekende attesten</span>
+                <span class="gl-v2-form-actionbar-spacer"></span>
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" id="gln-vz-sel-wis">Selectie wissen</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="gln-vz-sel-opvragen"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>Attesten opvragen (<span id="gln-vz-sel-n">0</span>)</button>
+            </div>
+        }
+    }
+</div>
+
+@if (Model.CanWrite)
+{
+    @* Beëindigen (polis) *@
+    <div class="modal fade gl-v2-modal-form" id="gln-vz-einde-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gln-vz-einde-titel">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="gln-vz-einde-titel">Verzekering beëindigen</h2>
+                    <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+                </div>
+                <form method="post" asp-action="EndInsuranceV2" asp-controller="Projecten" id="gln-vz-einde-form">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="projectid" value="@Model.ProjectId" />
+                    <input type="hidden" name="id" id="gln-vz-einde-id" value="" />
+                    <div class="modal-body">
+                        <p class="gln-vz-modal-tekst" id="gln-vz-einde-naam"></p>
+                        <div>
+                            @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Id = "gln-vz-einde-datum", Name = "enddate", Label = "EINDDATUM", Required = true, IsoValue = DateTime.Today.ToString("yyyy-MM-dd"), DisplayValue = DateTime.Today.ToString("dd/MM/yyyy") })
+                        </div>
+                        <div class="gl-v2-field gl-v2-field-full">
+                            <label class="gl-v2-field-label" for="gln-vz-einde-reden">REDEN</label>
+                            <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="reason" id="gln-vz-einde-reden" maxlength="200" placeholder="bv. opgezegd na de afbraak" autocomplete="off" /></div>
+                            <span class="gl-v2-field-help">De reden komt bij de beëindigde polis te staan, onder de opgeloste aandachtspunten.</span>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                        <button type="submit" class="gl-v2-btn gl-v2-btn-primary">Beëindigen</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @* Attest vastleggen *@
+    <div class="modal fade gl-v2-modal-form" id="gln-vz-attest-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gln-vz-attest-titel">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="gln-vz-attest-titel">Attest vastleggen</h2>
+                    <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+                </div>
+                <form method="post" asp-action="InsuranceAttestSave" asp-controller="Projecten" enctype="multipart/form-data" id="gln-vz-attest-form">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="projectid" value="@Model.ProjectId" />
+                    <input type="hidden" name="contractId" id="gln-vz-at-contract" value="" />
+                    <div class="modal-body">
+                        <p class="gln-vz-modal-tekst" id="gln-vz-at-naam"></p>
+                        <div class="gl-v2-field gl-v2-field-full">
+                            <span class="gl-v2-field-label">SOORT ATTEST</span>
+                            <div class="gl-v2-segmented is-fill is-compact" role="radiogroup" aria-label="Soort attest">
+                                <label><input type="radio" name="kind" value="0" checked /><span>Tienjarige</span></label>
+                                <label><input type="radio" name="kind" value="1" /><span>BA</span></label>
+                            </div>
+                        </div>
+                        <div class="gl-v2-field gl-v2-field-full">
+                            <span class="gl-v2-field-label">STATUS</span>
+                            <div class="gl-v2-segmented is-fill is-compact" role="radiogroup" aria-label="Status van het attest">
+                                <label><input type="radio" name="status" value="1" checked /><span>Ontvangen</span></label>
+                                <label><input type="radio" name="status" value="0" /><span>Ontbreekt</span></label>
+                                <label><input type="radio" name="status" value="2" /><span>Niet vereist</span></label>
+                            </div>
+                        </div>
+                        <div class="gl-v2-field gl-v2-field-full" data-at-veld="woningen">
+                            <span class="gl-v2-field-label">VOOR WELKE WONINGEN GELDT HET ATTEST? @if (Model.Woningen.Count > 1) { <a href="#" class="gln-vz-alles" data-vz-alles>alles aanvinken</a> }</span>
+                            @if (Model.Woningen.Count == 0)
+                            {
+                                <span class="gl-v2-field-help">Dit project heeft geen woningen. Het attest wordt dan zonder woningen vastgelegd.</span>
+                            }
+                            else
+                            {
+                                <div class="gln-vz-woningen">
+                                    @foreach (var w in Model.Woningen)
+                                    {
+                                        <label class="gln-vz-woning"><input type="checkbox" name="unitIds" value="@w.Id" /><span><strong>@w.Naam</strong><em>@(string.IsNullOrWhiteSpace(w.Koper) ? "nog geen koper" : w.Koper)</em></span></label>
+                                    }
+                                </div>
+                                <span class="gl-v2-field-help">Een ontvangen attest met bestand wordt aan de koper van elke aangevinkte woning gekoppeld in Documenten en gedeeld in het klantenportaal.</span>
+                            }
+                        </div>
+                        <div data-at-veld="ontvangen">
+                            @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Id = "gln-vz-at-geldig", Name = "validUntil", Label = "GELDIG TOT", IsoValue = "", DisplayValue = "" })
+                        </div>
+                        <div class="gl-v2-field" data-at-veld="ontvangen">
+                            <label class="gl-v2-field-label" for="gln-vz-at-maatschappij">MAATSCHAPPIJ</label>
+                            <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="insurer" id="gln-vz-at-maatschappij" maxlength="150" autocomplete="off" /></div>
+                        </div>
+                        <div class="gl-v2-field" data-at-veld="ontvangen">
+                            <label class="gl-v2-field-label" for="gln-vz-at-polis">POLISNUMMER</label>
+                            <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="policyNumber" id="gln-vz-at-polis" maxlength="100" autocomplete="off" /></div>
+                        </div>
+                        <div class="gl-v2-field gl-v2-field-full">
+                            <label class="gl-v2-field-label" for="gln-vz-at-opm">OPMERKING</label>
+                            <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" name="note" id="gln-vz-at-opm" maxlength="300" autocomplete="off" /></div>
+                        </div>
+                        <div class="gl-v2-field gl-v2-field-full" data-at-veld="ontvangen">
+                            <label class="gl-v2-field-label" for="gln-vz-at-bestand">ATTEST <span class="gln-vz-optioneel">· optioneel, komt in Documenten</span></label>
+                            <div class="gl-v2-field-box"><input type="file" class="gl-v2-field-input" name="attestFile" id="gln-vz-at-bestand" accept="application/pdf,image/*" /></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                        <button type="submit" class="gl-v2-btn gl-v2-btn-primary">Opslaan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @* Attesten opvragen: één mail per aannemer, geopend in het eigen e-mailprogramma *@
+    <div class="modal fade gl-v2-modal-form" id="gln-vz-mails-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gln-vz-mails-titel">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="gln-vz-mails-titel">Attesten opvragen</h2>
+                    <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+                </div>
+                <div class="modal-body">
+                    <p class="gln-vz-modal-tekst">Per aannemer staat er een mail klaar met de ontbrekende attesten. CPM verstuurt niets zelf: <strong>E-mail openen</strong> opent het bericht in je eigen e-mailprogramma en legt vast dat je het opvroeg.</p>
+                    <div class="gln-vz-mails" id="gln-vz-mails"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="gln-vz-mails-klaar">Klaar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (Model.CanDelete)
+{
+    <form method="post" asp-action="DeleteInsuranceV2" asp-controller="Projecten" id="gln-vz-del-form" data-bv-titel="Verzekering verwijderen?" data-bv-tekst="" data-bv-ok="Verwijderen" data-bv-tone="danger" hidden>
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="projectid" value="@Model.ProjectId" />
+        <input type="hidden" name="id" id="gln-vz-del-id" value="" />
+    </form>
+    @await Html.PartialAsync("GlV2/_BevestigModal")
+}
+
+@section PageScripts
+{
+    <script>
+        window.glV2VerzekeringenConfig = {
+            projectId: @Model.ProjectId,
+            urls: {
+                mails: "@Url.Action("InsuranceAttestMails", "Projecten")",
+                markRequested: "@Url.Action("InsuranceAttestMarkRequested", "Projecten")"
+            }
+        };
+    </script>
+    <script src="~/js/gl-v2-projecten-insurances.js" asp-append-version="true"></script>
+}

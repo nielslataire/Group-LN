@@ -799,6 +799,10 @@ namespace CPMCore.Controllers
                     Percentage = s.Percentage
                 }).ToList() ?? new List<ProjectContractSliceBO>());
 
+                // Makelaars van het project (tabblad Partners van het nieuwe scherm)
+                if (model.BrokersPosted)
+                    await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.Contacten.CrmContactService>().SaveProjectBrokersAsync(projectId, model.BrokerIds ?? new List<int>());
+
                 // Website-inhoud (enkel wanneer het formulier ze meestuurt: het oude scherm wist ze niet)
                 if (model.Website?.Present == true)
                 {

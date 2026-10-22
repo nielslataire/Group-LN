@@ -121,8 +121,10 @@ namespace CPMCore.Controllers
 
         [HttpGet]
         [Breadcrumb("Contacten", FromAction = "Detail")]
-        public ActionResult DetailContacts(int projectid)
+        public async Task<ActionResult> DetailContacts(int projectid)
         {
+            // gl-v2 (design-handoff punt 44): de nieuwe lijst met opvolging; het legacy scherm blijft voor ?classic=true
+            if (ViewData["UseGlV2Layout"] as bool? == true) return await ContactsListV2(projectid);
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
             var service = _projectService;
             var model = new DetailContactsModel
@@ -403,15 +405,28 @@ namespace CPMCore.Controllers
             if (model == null)
                 return RedirectToAction("DetailContacts", new { projectid = model?.ProjectId });
 
+            var (ok, error, templateNaam) = SendContactEmailCore(model);
+            if (!ok)
+            {
+                AddMessage("error", error ?? "Mail kon niet verstuurd worden.", "Fout!");
+                return RedirectToAction("DetailContacts", new { projectid = model.ProjectId });
+            }
+            try { Crm.LogMailAsync(model.ProjectId, model.Email, templateNaam ?? "sjabloon", ContactUserName).GetAwaiter().GetResult(); } catch (Exception ex) { _logger.LogWarning(ex, "Mail niet in de tijdlijn gezet."); }
+            AddMessage("success", "Mail verstuurd.", "Geslaagd!");
+            return RedirectToAction("DetailContacts", new { projectid = model.ProjectId });
+        }
+
+        /// <summary>Verstuurt een sjabloon-mail naar een contact en logt ze; gedeeld door de legacy knop en de gl-v2 contactpagina.</summary>
+        private (bool Ok, string? Error, string? TemplateName) SendContactEmailCore(SendContactEmailInputModel model)
+        {
             var userId = User.GetCpmUserId();
             if (userId == null)
-                return Forbid();
+                return (false, "Geen toegang.", null);
 
             var templateResponse = _emailTemplateService.GetById(model.TemplateId);
             if (templateResponse.HasErrors || templateResponse.Value == null)
             {
-                AddMessage("error", "Template niet gevonden.", "Fout!");
-                return RedirectToAction("DetailContacts", new { projectid = model.ProjectId });
+                return (false, "Template niet gevonden.", null);
             }
 
             var template = templateResponse.Value;
@@ -457,8 +472,7 @@ namespace CPMCore.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Kon mail niet versturen naar {Email} voor project {ProjectId}", model.Email, model.ProjectId);
-                AddMessage("error", "Mail kon niet verstuurd worden.", "Fout!");
-                return RedirectToAction("DetailContacts", new { projectid = model.ProjectId });
+                return (false, "Mail kon niet verstuurd worden.", null);
             }
 
             _emailSendLogService.Log(new EmailSendLogBO
@@ -473,8 +487,7 @@ namespace CPMCore.Controllers
                 VerzondenDoorNaam = userName
             });
 
-            AddMessage("success", "Mail verstuurd.", "Geslaagd!");
-            return RedirectToAction("DetailContacts", new { projectid = model.ProjectId });
+            return (true, null, template.Naam);
         }
 
         [HttpPost]

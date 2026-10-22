@@ -191,15 +191,19 @@
                             @Html.ValidationMessageFor(m => m.SelectedIssuerCompanyIds, "", new { @class = "gl-v2-field-help" })
                         </div>
                     </div>
-                    <div class="gl-v2-col-3">
-                        @Html.EditorFor(m => m.EnterpriseNumber, "GlV2OndernemingsNummer")
-                        @Html.HiddenFor(m => m.EnterpriseNumberCountryCode)
-                    </div>
                     <div class="gl-v2-col-4">
-                        @Html.EditorFor(m => m.VatNumber, "GlV2BtwNummer", new
+                        @Html.EditorFor(m => m.EnterpriseNumber, "GlV2OndernemingsNummer", new
                         {
                             CheckUrl = Url.Action("ValidateVat", "Leveranciers"),
-                            HelpText = "staat ernaast omdat het doorgaans hetzelfde nummer is"
+                            HelpText = "controleer het nummer om naam en adres op te zoeken"
+                        })
+                        @Html.HiddenFor(m => m.EnterpriseNumberCountryCode)
+                    </div>
+                    <div class="gl-v2-col-3">
+                        @Html.EditorFor(m => m.VatNumber, "GlV2BtwNummer", new
+                        {
+                            HideCheck = true,
+                            HelpText = "meestal hetzelfde nummer"
                         })
                     </div>
                     <div class="gl-v2-col-5">

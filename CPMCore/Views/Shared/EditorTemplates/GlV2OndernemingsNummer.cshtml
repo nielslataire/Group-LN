@@ -15,6 +15,8 @@
     var id = name.Replace(".", "_");
     var label = ViewData.ModelMetadata.DisplayName ?? ViewData.ModelMetadata.PropertyName;
     var placeholder = ViewData["Placeholder"] as string ?? " ";
+    var checkUrl = ViewData["CheckUrl"] as string;   // met CheckUrl komt de Controleren-knop naast het veld (design 8f·1: het ondernemingsnummer is het leidende nummer)
+    var helpText = ViewData["HelpText"] as string;
     var hasError = ViewContext.ModelState.TryGetValue(name, out var entry) && entry.Errors.Count > 0;
 }
 <div class="gl-v2-field@(hasError ? " is-error" : "")">
@@ -25,18 +27,31 @@
             <span style="color:#8B2A2A">*</span>
         }
     </label>
-    <div class="gl-v2-field-box">
-        <span class="gl-v2-field-prefix">BE</span>
-        <span class="gl-v2-field-divider"></span>
-        <input type="text" id="@id" name="@name" class="gl-v2-field-input is-tabular"
-               value="@Model" placeholder="@placeholder" autocomplete="off" maxlength="12" />
-        @if (hasError)
+    <div class="@(string.IsNullOrEmpty(checkUrl) ? "gl-v2-field-plain" : "gl-v2-field-attached")" data-gl-v2-btw-check-url="@checkUrl">
+        <div class="gl-v2-field-box">
+            <span class="gl-v2-field-prefix">BE</span>
+            <span class="gl-v2-field-divider"></span>
+            <input type="text" id="@id" name="@name" class="gl-v2-field-input is-tabular"
+                   value="@Model" placeholder="@placeholder" autocomplete="off" maxlength="12" />
+            @if (hasError)
+            {
+                <i class="ph ph-warning-circle gl-v2-field-icon-trailing" aria-hidden="true"></i>
+            }
+        </div>
+        @if (!string.IsNullOrEmpty(checkUrl))
         {
-            <i class="ph ph-warning-circle gl-v2-field-icon-trailing" aria-hidden="true"></i>
+            <button type="button" class="gl-v2-field-attach-btn" data-gl-v2-btw-check-btn>
+                <i class="ph ph-check" aria-hidden="true"></i>
+                <span>Controleren</span>
+            </button>
         }
     </div>
     @if (hasError)
     {
         <span class="gl-v2-field-help">@entry!.Errors[0].ErrorMessage</span>
+    }
+    else if (!string.IsNullOrWhiteSpace(helpText))
+    {
+        <span class="gl-v2-field-help">@helpText</span>
     }
 </div>

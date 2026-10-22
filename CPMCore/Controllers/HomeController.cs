@@ -137,6 +137,18 @@ public class HomeController : BaseController
             if ((iresponse.Success))
                 model.InsuranceWarnings = iresponse.Values;
         }
+        // Verzekeringen (design-handoff 43): rode en gouden aandachtspunten van de lopende projecten, naast de ABR-controle hierboven.
+        try
+        {
+            var vzSvc = HttpContext.RequestServices.GetRequiredService<CPMCore.Services.Verzekeringen.VerzekeringService>();
+            var vzWarnings = await vzSvc.GetDashboardWarningsAsync(User.IsInRole("Admin") ? null : currentUserCode);
+            if (vzWarnings.Count > 0)
+            {
+                model.InsuranceWarnings ??= new List<WarningBO>();
+                model.InsuranceWarnings.AddRange(vzWarnings);
+            }
+        }
+        catch { /* verzekeringen mogen het dashboard nooit blokkeren */ }
         if (!User.IsInRole("Admin"))
         {
             var iresponse = _projectService.CheckProjectFinished(currentUserCode);

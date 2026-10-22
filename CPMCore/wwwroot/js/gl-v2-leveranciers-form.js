@@ -520,7 +520,13 @@
             }
 
             var vatNumber = (input.value || "").trim();
-            if (!vatNumber) return;
+            if (!vatNumber) {
+                // geen ondernemingsnummer, wel een btw-nummer: voor een Belgische onderneming is het hetzelfde nummer, dus controleren we dat en vullen we het ondernemingsnummer aan
+                var vatVeld = document.getElementById("VatNumber");
+                var vatWaarde = vatVeld ? (vatVeld.value || "").trim() : "";
+                if (!vatWaarde) return;
+                vatNumber = vatWaarde; input.value = formatBeNumber(vatWaarde.replace(/\D/g, ""));
+            }
 
             wrapper.classList.add("is-busy");
             var originalHtml = btn.innerHTML;
@@ -552,7 +558,9 @@
     function fillVatModal(data) {
         if (!data) return;
         var address = data.address || {};
-        setVal("gl-v2-vat-lookup-name", data.name);
+        var gesplitst = window.GlV2Bedrijfsnaam ? window.GlV2Bedrijfsnaam.splits(data.name) : { naam: data.name, vorm: "" };
+        setVal("gl-v2-vat-lookup-name", gesplitst.naam);
+        var naamVeld = document.getElementById("gl-v2-vat-lookup-name"); if (naamVeld) naamVeld.setAttribute("data-vorm", gesplitst.vorm || "");   // wordt bij "Gegevens overnemen" de Bedrijfsvorm
         setVal("gl-v2-vat-lookup-street", address.street);
         setVal("gl-v2-vat-lookup-nr", address.number);
         setVal("gl-v2-vat-lookup-postal", address.zip || address.zip_code || address.postcode);
@@ -584,6 +592,8 @@
             var iso = document.getElementById("gl-v2-vat-lookup-country").value;
 
             if (name) document.getElementById("Name").value = name;
+            var vorm = document.getElementById("gl-v2-vat-lookup-name").getAttribute("data-vorm");
+            if (vorm && window.GlV2Bedrijfsnaam) window.GlV2Bedrijfsnaam.kiesVorm(document.getElementById("SelectedLegalFormId"), vorm);
             if (street) document.getElementById("Street").value = street;
             if (nr) document.getElementById("HouseNumber").value = nr;
 

@@ -21,8 +21,8 @@ namespace ServiceCore.Translators
             bo.Id = _entity.Id;
             bo.ExtensionPeriod = _entity.ExtensionPeriod;
             bo.GuaranteePeriod = _entity.GuaranteePeriod;
-            bo.ContractActivityID = _entity.ContractActivityId;
-            bo.InsuranceBrokerName = _entity.ContractActivity.Contract.Company.BedrijfsNaam;
+            bo.ContractActivityID = _entity.ContractActivityId ?? 0;
+            bo.InsuranceBrokerName = _entity.ContractActivity?.Contract?.Company?.BedrijfsNaam;   // null bij een polis zonder makelaar
             if (_entity.InsuranceCompany is not null)
             {
                 var err = InsuranceCompanyTranslator.TranslateEntityToBO(_entity.InsuranceCompany, bo.InsuranceCompany);
@@ -30,7 +30,7 @@ namespace ServiceCore.Translators
                     return err;
             }
             bo.Period = _entity.Period;
-            bo.ProjectID = _entity.ContractActivity.Contract.ProjectId;
+            bo.ProjectID = _entity.ProjectId ?? _entity.ContractActivity?.Contract?.ProjectId ?? 0;
             bo.Startdate = _entity.Startdate;
             bo.Type = (InsuranceType)_entity.Type;
             bo.Polisnummer = _entity.Polisnummer;
@@ -45,7 +45,8 @@ namespace ServiceCore.Translators
             if (bo == null) return ErrorCode.BoNull;
 
             // PK Id NIET aanpassen hier
-            e.ContractActivityId = bo.ContractActivityID;                 // FK (1-op-1 via UNIQUE)
+            e.ContractActivityId = bo.ContractActivityID > 0 ? bo.ContractActivityID : null;   // FK (1-op-1 via gefilterde UNIQUE); null = polis zonder makelaar
+            if (bo.ProjectID > 0) e.ProjectId = bo.ProjectID;
             e.InsuranceCompanyId = bo.InsuranceCompany?.Id;
 
             e.Startdate = bo.Startdate;

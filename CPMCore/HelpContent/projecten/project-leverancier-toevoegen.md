@@ -5,12 +5,17 @@ parent: project-leveranciers-overzicht
 role: Projectleider
 device: Desktop · tablet
 minutes: 5
-updated: 2026-10-13
+updated: 2026-10-23
+newsTag: Bijgewerkt
 screens: projecten-leverancier-toevoegen
-synonyms: contract toevoegen, contract bewerken, loten, bijbestelling, waarborgdocument, werfleider
+synonyms: nieuwe leverancier, ondernemingsnummer controleren, btw controleren, bedrijfsvorm, contract toevoegen, contract bewerken, loten, bijbestelling, waarborgdocument, werfleider
 description: leverancier kiezen, voorwaarden, veiligheid en attesten, loten koppelen
 related: project-leveranciers-overzicht, project-leverancier-detail
 faq:
+  - q: Wat doet de knop Controleren bij een nieuwe leverancier?
+    a: CPM zoekt het ondernemingsnummer op en vult de naam, de bedrijfsvorm en het adres in. De naam komt zonder vennootschapsvorm en met een hoofdletter per woord, bijvoorbeeld Janssens Bouw met de bedrijfsvorm BVBA. Je kunt alles nog aanpassen.
+  - q: Ik heb enkel een btw-nummer. Kan ik toch controleren?
+    a: Ja. Vul het btw-nummer in en klik op Controleren. CPM vult het ondernemingsnummer zelf aan. Voor een Belgische onderneming is het hetzelfde nummer.
   - q: Wat is het verschil tussen contract toevoegen en contract bewerken?
     a: Hetzelfde formulier. Bij toevoegen kies je nog een leverancier, bij bewerken ligt die al vast. Bijbestellingen op een lot kan je pas toevoegen nadat het contract minstens één keer opgeslagen is.
   - q: Wanneer verschijnt de waarschuwing bij het waarborgdocument?
@@ -25,7 +30,18 @@ faq:
 1. Klik op **Leverancier toevoegen** in de leverancierslijst, of op **Contract toevoegen** vanaf een
    bestaande leverancier.
 2. Kies de leverancier bij **Leverancier** als die nog niet vastligt.
-3. Kies optioneel een **Werfleider**, of voeg er met het **+**-icoon een nieuwe toe.
+3. Staat de leverancier er nog niet bij? Kies **Nieuwe leverancier toevoegen** in de lijst. Zie "Een nieuwe leverancier aanmaken" hieronder.
+4. Kies optioneel een **Werfleider**, of voeg er met het **+**-icoon een nieuwe toe.
+
+## Een nieuwe leverancier aanmaken
+
+Kies bij **Leverancier** de keuze **Nieuwe leverancier toevoegen**. Er opent een venster.
+
+1. Vul het **Ondernemingsnummer** in en klik op **Controleren**. Heb je enkel een btw-nummer, vul dat dan in het veld **BTW nummer** in en klik ook op **Controleren**.
+2. CPM vult de **Bedrijfsnaam**, de **Bedrijfsvorm** en het adres in. De naam staat zonder vennootschapsvorm en met een hoofdletter per woord. Pas aan wat niet klopt.
+3. Vul eventueel het e-mailadres in en klik op **Toevoegen**.
+
+De nieuwe leverancier staat meteen geselecteerd in het contract. Het nummer wordt gecontroleerd bij een online dienst. Vind die het nummer niet, dan zie je een melding en vul je de gegevens zelf in.
 
 ## Voorwaarden invullen
 

@@ -51,6 +51,9 @@ public partial class IncommingInvoices
     public string BorgAfwijkReden { get; set; }
     /// <summary>Enkel bij een borg zonder contract: % dat bij de voorlopige oplevering vrijkomt (rest bij DO).</summary>
     public decimal? BorgVoPercentage { get; set; }
+    /// <summary>Korting contant bij een factuur zonder contract (migratie 109): % en aantal dagen na de factuurdatum. Met contract komt de korting uit het contract.</summary>
+    public decimal? KortingPercentage { get; set; }
+    public int? KortingDagen { get; set; }
     public virtual ICollection<IncommingInvoiceInhouding> Inhoudingen { get; set; } = new List<IncommingInvoiceInhouding>();
 
     public string Source { get; set; }

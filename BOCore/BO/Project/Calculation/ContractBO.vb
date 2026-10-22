@@ -254,6 +254,12 @@ Public Class ContractBO
         End Set
     End Property
 
+    ''' <summary>Tienjarige aansprakelijkheid (migratie 111): 0 via de aannemer, 1 via de projectpolis, 2 niet vereist, Nothing = nog niet ingevuld.</summary>
+    Public Property TienjarigeBron() As Integer?
+
+    ''' <summary>Enkel het gl-v2-contractformulier post de keuze (verborgen veld). Het oude formulier kent ze niet en mag ze niet leegmaken.</summary>
+    Public Property TienjarigeBronGepost() As Boolean
+
     Private _pidAttest As Boolean
     <Display(Name:="PID-attesten")>
     Public Property PidAttest() As Boolean

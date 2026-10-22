@@ -58,6 +58,9 @@ public partial class Contract
 
     public bool PidAttest { get; set; }
 
+    /// <summary>Tienjarige aansprakelijkheid (migratie 111): 0 via de aannemer, 1 via de projectpolis, 2 niet vereist, null = nog niet ingevuld.</summary>
+    public int? TienjarigeBron { get; set; }
+
     public virtual CompanyInfo Company { get; set; }
 
     public virtual ICollection<ContractActivity> ContractActivity { get; set; } = new List<ContractActivity>();

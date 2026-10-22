@@ -72,6 +72,9 @@
             var mod = modus(tr, k), src = k === "grond" ? tr._gSrc : tr._bSrc, cel = tr.querySelector('.bw-vp-zijde[data-zijde="' + k + '"]'), blok = D(tr).querySelector('.bw-vp-blok[data-zijde="' + k + '"]');
             var waarde = k === "grond" ? x.g + x.g2 : x.b, m2 = get(tr, k + "-m2");
             cel.classList.toggle("is-eigen", mod === "eigen");
+            // geen code gekozen in de code-modus: de lijst vraagt om een keuze (i.p.v. "Eigen waarde" te tonen)
+            var trig = cel.querySelector(".gl-v2-select-trigger"), lbl = trig ? trig.querySelector(".gl-v2-select-trigger-label") : null;
+            if (lbl && mod === "code" && !codeVan(tr, k)) { lbl.textContent = "Kies code"; trig.classList.remove("is-filled"); }
             cel.querySelector(".bw-vp-chip").textContent = src === "voorstel" ? "VOORSTEL" : src === "markt" ? "MARKT" : "EIGEN";
             var sub = cel.querySelector(".bw-vp-subw");
             sub.textContent = mod === "eigen" ? (k === "bouw" && m2 !== null ? "= € " + nf2.format(m2) + "/m²" : (k === "grond" && x.g2 > 0 ? "incl. zone 2" : "")) : eur(waarde) + (k === "grond" && x.g2 > 0 ? " · incl. zone 2" : "");
@@ -145,7 +148,7 @@
             else if (bron === 2) src = bedrag ? "markt" : null; else if (bron === 1) src = bedrag ? "voorstel" : null; else src = bedrag ? "bedrag" : null;
             if (code && !src) src = "code";
             if (k === "grond") tr._gSrc = src; else tr._bSrc = src;
-            zetModus(tr, k, code ? "code" : "eigen");
+            zetModus(tr, k, (code || !src) ? "code" : "eigen"); if (code) mem(tr)[k].code = code;   // een lege zijde begint met de keuzelijst
         });
         tr._g2Eigen = get(tr, "grond2-m2") !== null;
         if (bron === 5) { var g = (get(tr, "grondwaarde") || 0) + (get(tr, "grond2waarde") || 0), b = get(tr, "bouwwaarde") || 0, f = get(tr, "forfait") || 0, vp = get(tr, "vraagprijs"); tr._eigen = vp !== null && Math.abs(vp - (g + b + f)) > 0.5; }
@@ -172,12 +175,56 @@
         herbereken(tr); dirty();
     });
     // een code kiezen (rij of bulk): €/m² uit de code, bedrag volgt
-    function kiesCode(tr, kant, value) {
-        var prijs = value && refPrijzen[kant] ? refPrijzen[kant][value] : null;
-        zetSelect(sel(tr, kant), value || "");
-        if (value && prijs != null) { put(tr, kant + "-m2", prijs, 2); if (kant === "grond") tr._gSrc = "code"; else tr._bSrc = "code"; zetModus(tr, kant, "code"); }
-        else { var m2 = get(tr, kant + "-m2") !== null ? "m2" : (get(tr, kant === "grond" ? "grondwaarde" : "bouwwaarde") !== null ? "bedrag" : null); if (kant === "grond") tr._gSrc = m2; else tr._bSrc = m2; zetModus(tr, kant, "eigen"); }
+    // Wisselen tussen Code en Eigen is verliesvrij: de stand van de kant die je verlaat wordt onthouden (de gekozen code of de eigen €/m² en het bedrag, en bij grond de tweede zone)
+    // en komt terug als je terugkeert. Dit geldt voor de keuzelijst, het chipje EIGEN en de schakelaar in de open rij.
+    function mem(tr) { return tr._mem || (tr._mem = { grond: { code: "", eigen: null, codeSnap: null }, bouw: { code: "", eigen: null, codeSnap: null } }); }
+    function snapshot(tr, k) {
+        return { m2: get(tr, k + "-m2"), bedrag: get(tr, k === "grond" ? "grondwaarde" : "bouwwaarde"), src: k === "grond" ? tr._gSrc : tr._bSrc, g2m2: k === "grond" ? get(tr, "grond2-m2") : null, g2e: k === "grond" ? !!tr._g2Eigen : false };
+    }
+    function herstel(tr, k, sn) {
+        if (!sn) return;
+        put(tr, k + "-m2", sn.m2, 2); put(tr, k === "grond" ? "grondwaarde" : "bouwwaarde", sn.bedrag, 0);
+        if (k === "grond") { put(tr, "grond2-m2", sn.g2m2, 2); tr._g2Eigen = sn.g2e; }
+    }
+    function wisselModus(tr, k, m, code) {
+        var M = mem(tr)[k], huidig = modus(tr, k), cur = codeVan(tr, k);
+        if (m === huidig && !code) return;
+        if (huidig === "eigen") M.eigen = snapshot(tr, k); else { M.codeSnap = snapshot(tr, k); if (cur) M.code = cur; }
+        if (m === "code") {
+            var c = code || M.code;
+            if (c) {
+                zetSelect(sel(tr, k), c); M.code = c;
+                if (M.codeSnap && M.codeSnap.src === "code" && !code) herstel(tr, k, M.codeSnap);   // dezelfde code als daarvoor: ook de tweede grondzone zoals ze was
+                var prijs = refPrijzen[k] ? refPrijzen[k][c] : null;
+                if (prijs != null) { put(tr, k + "-m2", prijs, 2); if (k === "grond") tr._gSrc = "code"; else tr._bSrc = "code"; }
+            }
+            zetModus(tr, k, "code");
+        } else {
+            zetSelect(sel(tr, k), "");
+            if (M.eigen) { herstel(tr, k, M.eigen); if (k === "grond") tr._gSrc = M.eigen.src && M.eigen.src !== "code" ? M.eigen.src : "bedrag"; else tr._bSrc = M.eigen.src && M.eigen.src !== "code" ? M.eigen.src : "bedrag"; }
+            else {   // eerste keer eigen: de waarden van de code blijven staan en worden de eigen waarden
+                var src = k === "grond" ? tr._gSrc : tr._bSrc;
+                if (src === "code" || !src) { var n = get(tr, k + "-m2") !== null ? "m2" : (get(tr, k === "grond" ? "grondwaarde" : "bouwwaarde") !== null ? "bedrag" : null); if (k === "grond") tr._gSrc = n; else tr._bSrc = n; }
+            }
+            zetModus(tr, k, "eigen");
+        }
         tr._eigen = false; tr._eigenKeuze = false; herbereken(tr);
+    }
+    // Vraagprijs volgt: Voorstel en Markt overschrijven de waarden van de rij; wat je zelf had ingevuld (codes, €/m², bedragen, zone 2, forfait, vraagprijs) wordt onthouden en komt terug bij Eigen.
+    function rijSnap(tr) {
+        var o = { gMod: tr._gMod, bMod: tr._bMod, gSrc: tr._gSrc, bSrc: tr._bSrc, g2Eigen: tr._g2Eigen, eigen: tr._eigen, eigenKeuze: tr._eigenKeuze, codeG: codeVan(tr, "grond"), codeB: codeVan(tr, "bouw"), mem: JSON.parse(JSON.stringify(mem(tr))), v: {} };
+        ["grond-m2", "bouw-m2", "grondwaarde", "bouwwaarde", "grond2-m2", "forfait", "vraagprijs"].forEach(function (n) { o.v[n] = get(tr, n); });
+        return o;
+    }
+    function rijHerstel(tr, o) {
+        tr._gMod = o.gMod; tr._bMod = o.bMod; tr._gSrc = o.gSrc; tr._bSrc = o.bSrc; tr._g2Eigen = o.g2Eigen; tr._eigen = o.eigen; tr._eigenKeuze = o.eigenKeuze; tr._mem = JSON.parse(JSON.stringify(o.mem));
+        zetSelect(sel(tr, "grond"), o.codeG); zetSelect(sel(tr, "bouw"), o.codeB);
+        Object.keys(o.v).forEach(function (n) { put(tr, n, o.v[n], /m2$/.test(n) ? 2 : (n === "forfait" ? 2 : 0)); });
+        herbereken(tr);
+    }
+    function kiesCode(tr, kant, value) {
+        if (value) { mem(tr)[kant].code = value; wisselModus(tr, kant, "code", value); }
+        else wisselModus(tr, kant, "eigen");
     }
     body.addEventListener("change", function (e) {
         var t = e.target, tr = rijVan(t); if (!tr) return;
@@ -194,17 +241,16 @@
         var tg = e.target.closest(".bw-vp-toggle");
         if (tg) { var tr = tg.closest("tr"), d = D(tr), open = d.hidden; d.hidden = !open; tg.setAttribute("aria-expanded", open ? "true" : "false"); tr.classList.toggle("is-open", open); return; }
         var chip = e.target.closest(".bw-vp-chip");   // terug naar een prijscode: de keuzelijst komt in beeld
-        if (chip) { var r = chip.closest(".bw-vp-rij"), k = chip.closest(".bw-vp-zijde").getAttribute("data-zijde"); zetModus(r, k, "code"); herbereken(r); var s = sel(r, k); if (s) { var tr2 = s.querySelector(".gl-v2-select-trigger"); if (tr2) tr2.focus(); } return; }
+        if (chip) { var r = chip.closest(".bw-vp-rij"), k = chip.closest(".bw-vp-zijde").getAttribute("data-zijde"); wisselModus(r, k, "code"); var s = sel(r, k); if (s) { var tr2 = s.querySelector(".gl-v2-select-trigger"); if (tr2) tr2.focus(); } return; }
         var seg = e.target.closest(".bw-seg-knop[data-modus]");
         if (seg) {
             var d2 = seg.closest(".bw-vp-detail"), r2 = d2.previousElementSibling, k2 = seg.closest(".bw-vp-blok").getAttribute("data-zijde"), m = seg.getAttribute("data-modus");
-            if (m === "eigen") { var src = (k2 === "grond" ? r2._gSrc : r2._bSrc); if (src === "code" || !src) { if (k2 === "grond") r2._gSrc = get(r2, "grond-m2") !== null ? "m2" : "bedrag"; else r2._bSrc = get(r2, "bouw-m2") !== null ? "m2" : "bedrag"; } zetSelect(sel(r2, k2), ""); }
-            zetModus(r2, k2, m); r2._eigen = false; herbereken(r2); dirty(); return;
+            wisselModus(r2, k2, m); dirty(); return;
         }
         var vg = e.target.closest("[data-volgt]");
         if (vg) {
             var r3 = vg.closest(".bw-vp-detail").previousElementSibling, w = vg.getAttribute("data-volgt");
-            if (w === "eigen") { r3._eigenKeuze = true; herbereken(r3); var vpi = els(r3, "vraagprijs")[0]; if (vpi) vpi.focus(); }
+            if (w === "eigen") { if (r3._volgtEigen && (bronVan(r3) === 1 || bronVan(r3) === 2)) { rijHerstel(r3, r3._volgtEigen); r3._volgtEigen = null; } r3._eigenKeuze = true; herbereken(r3); var vpi = els(r3, "vraagprijs")[0]; if (vpi) vpi.focus(); }
             else pasToe(r3, w);
             dirty(); return;
         }
@@ -224,6 +270,7 @@
     // vraagprijs = voorstel of markt: grond- en bouwwaarde uit het voorstel (of marktprijs: bouw vult aan)
     function pasToe(tr, soort) {
         if (tr.getAttribute("data-info") !== "1") { GlV2Budget.toast("warning", "Geen voorstel", tr.getAttribute("data-naam") + " staat niet op het tabblad Oppervlaktes."); return false; }
+        var huidigeBron = bronVan(tr); if (huidigeBron === null || huidigeBron >= 3) tr._volgtEigen = rijSnap(tr);   // eigen waarden onthouden voor Vraagprijs volgt › Eigen
         var vg = parseFloat(tr.getAttribute("data-vgrond")) || 0, vb = parseFloat(tr.getAttribute("data-vbouw")) || 0, markt = parseFloat(tr.getAttribute("data-markt")) || 0;
         var useMarkt = soort === "markt" && markt > 0, bouw = useMarkt ? Math.max(markt - vg, 0) : vb;
         zetSelect(sel(tr, "grond"), ""); zetSelect(sel(tr, "bouw"), "");

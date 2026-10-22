@@ -6,5 +6,9 @@ Public Enum InsuranceType As Integer
     Fire = 2
     <Display(Name:="10-jarige Aansprakelijkheid")>
     tenyear = 3
+    <Display(Name:="BA-uitbating")>
+    ba = 4
+    <Display(Name:="Andere")>
+    other = 5
 End Enum
 

@@ -130,6 +130,10 @@ Public Class IncommingInvoiceBO
     Public Property BorgAfwijkReden As String
     Public Property BorgVoPercentage As Decimal?
 
+    ''' <summary>Korting contant bij een factuur zonder contract (migratie 109): percentage en aantal dagen na de factuurdatum.</summary>
+    Public Property KortingPercentage As Decimal?
+    Public Property KortingDagen As Integer?
+
     ''' <summary>Extra inhouding: bedrag Nothing of 0 = geen. Eén inhouding per factuur.</summary>
     Public Property InhoudingBedrag As Decimal?
     ''' <summary>1 = creditnota te ontvangen, 2 = werk niet volledig uitgevoerd, 3 = andere.</summary>

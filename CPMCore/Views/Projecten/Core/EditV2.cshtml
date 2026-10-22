@@ -94,6 +94,7 @@
         .Select(t => new GlV2SelectItem { Value = ((int)t).ToString(), Text = t.ToString() }).ToList();
 
     string CompanyLookup = Url.Action("GetCompanys", "Projecten") ?? "";
+    var projectBrokers = project.Id > 0 ? await Context.RequestServices.GetRequiredService<CPMCore.Services.Contacten.CrmContactService>().BrokersAsync(project.Id) : new List<KeyValuePair<int, string>>();
 
     // Verplichte documenten: (veldnaam, verplicht?, label, datum indien aangeleverd).
     var docDatesByType = (Model.Docs ?? new List<ProjectDocBO>())
@@ -350,6 +351,23 @@
                             Name = "Project.SalesResponsibleUserID", Label = "Verkoopverantwoordelijke", Value = project.SalesResponsibleUserID,
                             Items = userItems, EmptyText = "Geen verkoopverantwoordelijke", Placeholder = "Kies een persoon …"
                         })
+                    </div>
+                    <div class="gl-v2-col-12">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="pf-broker-add_input">Makelaars</label>
+                            @await Html.PartialAsync("GlV2/_GlV2Combo", new GlV2ComboVm
+                            {
+                                Name = "BrokerAdd", Id = "pf-broker-add", Placeholder = "Zoek een bedrijf om als makelaar toe te voegen …", Icon = "ph-handshake", LookupUrl = CompanyLookup, MinChars = 3, EmptyValue = "",
+                                Help = "Makelaars kunnen bij Contacten als bron gekozen en aan een contact toegewezen worden. Later koppelen we er commissies aan."
+                            })
+                            <input type="hidden" name="BrokersPosted" value="true" />
+                            <div class="gl-v2-pf-brokers" id="pf-brokers" data-empty="Nog geen makelaars gekoppeld.">
+                                @foreach (var b in projectBrokers)
+                                {
+                                    <span class="gl-v2-pf-broker" data-id="@b.Key"><input type="hidden" name="BrokerIds" value="@b.Key" /><i class="ph ph-handshake" aria-hidden="true"></i><span>@b.Value</span><button type="button" class="gl-v2-pf-broker-x" aria-label="@b.Value verwijderen"><i class="ph ph-x" aria-hidden="true"></i></button></span>
+                                }
+                            </div>
+                        </div>
                     </div>
                     <div class="gl-v2-col-12">
                         <p class="gl-v2-pf-note">
@@ -1178,6 +1196,7 @@
         };
     </script>
     <script src="~/js/gl-v2-projecten-form.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-brokers.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-projecten-website.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-projecten-website-map.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-dialog.js" asp-append-version="true"></script>

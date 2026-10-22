@@ -17,7 +17,8 @@
     ViewData["BackUrl"] = ch.OverviewUrl;
     var nl = new System.Globalization.CultureInfo("nl-BE");
     var inv = System.Globalization.CultureInfo.InvariantCulture;
-    string Eur0(decimal v) => "€ " + v.ToString("N0", nl);
+    var nlp = (System.Globalization.CultureInfo)nl.Clone(); nlp.NumberFormat.NumberGroupSeparator = ".";   // € 1.139.292 zoals het script en het design
+    string Eur0(decimal v) => "€ " + v.ToString("N0", nlp);
     string Pct(decimal f) => (f * 100m).ToString("0.#", nl) + " %";
     string PctS(decimal f) => (f >= 0 ? "+" : "−") + Math.Abs(f * 100m).ToString("0.#", nl) + " %";
     string F0(decimal? v) => v.HasValue ? Math.Round(v.Value, 0).ToString("F0", nl) : "";
@@ -30,7 +31,7 @@
     bool Genegeerd(string naam) => ch.Voor(8).Any(m => m.Code == OnderSleutel(naam) && m.Genegeerd);
     var onderMin = eenheden.Where(e => lijnenOpNaam.TryGetValue(e.EenheidNaam?.Trim() ?? "", out var l) && l.Vraagprijs is > 0m && l.Vraagprijs < Math.Round(e.MinimumVerkoopprijs, 0) && !Genegeerd(e.EenheidNaam)).ToList();
     string RefTitel(BudgetPrijsReferentie r) => string.Join(" · ", new[] { r.Omschrijving, r.Datum?.ToString("dd/MM/yyyy"), r.Bron, r.ProjectId.HasValue ? "projectcode" : null }.Where(s => !string.IsNullOrWhiteSpace(s)));
-    List<GlV2SelectItem> RefItems(List<BudgetPrijsReferentie> refs) => refs.Select(r => new GlV2SelectItem { Value = r.Code.ToString(), Text = $"{(r.PrijsType == "Grond" ? "G" : "B")}-{r.Code:00} € {r.PrijsPerM2.ToString("N0", nl)}/m²" + (r.ProjectId.HasValue ? " ·P" : ""), Sub = RefTitel(r) }).ToList();
+    List<GlV2SelectItem> RefItems(List<BudgetPrijsReferentie> refs) => refs.Select(r => new GlV2SelectItem { Value = r.Code.ToString(), Text = $"{(r.PrijsType == "Grond" ? "G" : "B")}-{r.Code:00} € {r.PrijsPerM2.ToString("N0", nlp)}/m²" + (r.ProjectId.HasValue ? " ·P" : ""), Sub = RefTitel(r) }).ToList();
     var refBouwItems = RefItems(Model.PrijsReferentiesBouw); var refGrondItems = RefItems(Model.PrijsReferentiesGrond);
     var unitItems = Model.UnitOptions.Where(o => !string.IsNullOrEmpty(o.Value)).Select(o => new GlV2SelectItem { Value = o.Value, Text = o.Text }).ToList();
     var refPrijzen = System.Text.Json.JsonSerializer.Serialize(new { bouw = Model.PrijsReferentiesBouw.ToDictionary(r => r.Code.ToString(), r => r.PrijsPerM2), grond = Model.PrijsReferentiesGrond.ToDictionary(r => r.Code.ToString(), r => r.PrijsPerM2) });
@@ -92,7 +93,7 @@
                 }
                 @if (markt is not null && markt.HeeftData)
                 {
-                    <div class="bw-vp-markt"><i class="ph ph-map-pin" aria-hidden="true"></i><span><strong>Markt @markt.GemeenteNaam</strong> · @markt.PeriodeMaanden m.: @markt.AantalTeKoop te koop, @markt.VerkochtInPeriode verkocht · mediaan @(markt.MediaanPrijsPerM2TeKoop.HasValue ? Eur0(markt.MediaanPrijsPerM2TeKoop.Value) : "—")/m² te koop, @(markt.MediaanPrijsPerM2Verkocht.HasValue ? Eur0(markt.MediaanPrijsPerM2Verkocht.Value) : "—") verkocht · @(markt.MediaanDoorlooptijdDagen?.ToString() ?? "—") dagen@if (markt.EigenVerkopen > 0) { <text> · eigen verkopen in @markt.Postcode: @markt.EigenVerkopen, mediaan @(markt.MediaanPrijsPerM2EigenVerkoop.HasValue ? Eur0(markt.MediaanPrijsPerM2EigenVerkoop.Value) : "—")/m²</text> }</span><a href="@Url.Action("Gemeenteanalyse", "Marktanalyse", new { geoMunicipalityId = markt.GeoMunicipalityId, aanbod = "Alles" })" target="_blank" data-bw-plain>Gemeenteanalyse</a></div>
+                    <div class="bw-vp-markt"><i class="ph ph-map-pin" aria-hidden="true"></i><span><strong>Markt @markt.GemeenteNaam</strong> · @markt.PeriodeMaanden m.: @markt.AantalTeKoop te koop, @markt.VerkochtInPeriode verkocht · mediaan @(markt.MediaanPrijsPerM2TeKoop.HasValue ? Eur0(markt.MediaanPrijsPerM2TeKoop.Value) : "—")/m² te koop, @(markt.MediaanPrijsPerM2Verkocht.HasValue ? Eur0(markt.MediaanPrijsPerM2Verkocht.Value) : "—") verkocht · @(markt.MediaanDoorlooptijdDagen?.ToString() ?? "—") dagen@(markt.EigenVerkopen > 0 ? $" · eigen verkopen in {markt.Postcode}: {markt.EigenVerkopen}, mediaan {(markt.MediaanPrijsPerM2EigenVerkoop.HasValue ? Eur0(markt.MediaanPrijsPerM2EigenVerkoop.Value) : "—")}/m²" : "")</span><a href="@Url.Action("Gemeenteanalyse", "Marktanalyse", new { geoMunicipalityId = markt.GeoMunicipalityId, aanbod = "Alles" })" target="_blank" data-bw-plain>Gemeenteanalyse</a></div>
                 }
             </section>
         }
@@ -109,7 +110,7 @@
                         @foreach (var r in refs)
                         {
                             <span class="bw-vp-code @(gebruikt.Contains(r.Code) ? "is-gebruik" : "")" title="@RefTitel(r)@(gebruikt.Contains(r.Code) ? " · in gebruik" : "")">
-                                <b>@letter-@r.Code.ToString("00")</b> € @r.PrijsPerM2.ToString("N0", nl)@(r.ProjectId.HasValue ? " ·P" : "")
+                                <b>@letter-@r.Code.ToString("00")</b> € @r.PrijsPerM2.ToString("N0", nlp)@(r.ProjectId.HasValue ? " ·P" : "")
                                 @if (r.ProjectId.HasValue)
                                 {
                                     <form method="post" asp-action="BudgetPrijsReferentieVerwijderen" asp-controller="Projecten" data-bw-bevestig="Projectcode @($"{letter}-{r.Code:00}") verwijderen?" data-bw-desc="De code verdwijnt uit de lijst van dit project. Een code die in een verkooplijn gebruikt wordt, kan je enkel archiveren." data-bw-ok="Verwijderen">
@@ -186,7 +187,7 @@
                                     <button type="button" class="bw-vp-toggle" aria-expanded="false" title="Berekening openen" aria-label="Details @naam"><i class="ph ph-caret-right" aria-hidden="true"></i></button>
                                     <span class="bw-vp-naamtekst">
                                         <b>@naam</b> @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwRijIcoon.cshtml", rijMld)@foreach (var lb in labels) { <span class="bw-vk-label" title="@lb.Tekst"><i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i>@lb.Tekst</span> }
-                                        <span class="bw-vp-sub">@e.BewoonbareOpp.ToString("N0", nl) m² bew. · @(e.OppGereduceerd > 0 ? e.OppGereduceerd.ToString("N1", nl) + " m² gered." : "geen gered. opp.") · grond @grondTxt</span>
+                                        <span class="bw-vp-sub">@e.BewoonbareOpp.ToString("N0", nlp) m² bew. · @(e.OppGereduceerd > 0 ? e.OppGereduceerd.ToString("N1", nl) + " m² gered." : "geen gered. opp.") · grond @grondTxt</span>
                                     </span>
                                 </td>
                                 @foreach (var (kant, items, code) in new[] { ("grond", refGrondItems, l?.CodeGrond), ("bouw", refBouwItems, l?.CodeBouw) })
@@ -198,7 +199,7 @@
                                     </td>
                                 }
                                 <td class="is-num bw-vp-min"><b>@Eur0(min)</b><small>kost @Eur0(e.Kostprijs)</small></td>
-                                <td class="is-num bw-vp-markt" title="@(e.MarktAantal > 0 ? e.MarktVergelijking + ", basis: " + e.MarktBasis : "Te weinig vergelijkbare units")">@(e.MarktPrijs.HasValue ? Eur0(e.MarktPrijs.Value) : "—")@if (e.MarktVerschilPerc.HasValue) { <small class="@(e.MarktVerschilPerc.Value >= 0 ? "is-hoger" : "is-lager")">@PctS(e.MarktVerschilPerc.Value)</small> }</td>
+                                <td class="is-num bw-vp-mk" title="@(e.MarktAantal > 0 ? e.MarktVergelijking + ", basis: " + e.MarktBasis : "Te weinig vergelijkbare units")">@(e.MarktPrijs.HasValue ? Eur0(e.MarktPrijs.Value) : "—")@if (e.MarktVerschilPerc.HasValue) { <small class="@(e.MarktVerschilPerc.Value >= 0 ? "is-hoger" : "is-lager")">@PctS(e.MarktVerschilPerc.Value)</small> }</td>
                                 <td class="is-num bw-vp-vp">
                                     <div class="bw-vp-vp-rij">
                                         <div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><span class="gl-v2-field-prefix">€</span><input type="text" inputmode="numeric" class="gl-v2-field-input is-num is-tabular vraagprijs" data-veld="vraagprijs" value="@F0(l?.Vraagprijs)" placeholder="@min.ToString("N0", nl)" aria-label="Vraagprijs @naam" /></div></div>
@@ -224,7 +225,7 @@
                                         <span class="bw-vp-subw"></span>
                                     </td>
                                 }
-                                <td class="is-num bw-vp-min is-muted">—</td><td class="is-num bw-vp-markt is-muted">—</td>
+                                <td class="is-num bw-vp-min is-muted">—</td><td class="is-num bw-vp-mk is-muted">—</td>
                                 <td class="is-num bw-vp-vp"><div class="bw-vp-vp-rij"><div class="gl-v2-field gl-v2-field-bare"><div class="gl-v2-field-box"><span class="gl-v2-field-prefix">€</span><input type="text" inputmode="numeric" class="gl-v2-field-input is-num is-tabular vraagprijs" data-veld="vraagprijs" value="@F0(l.Vraagprijs)" aria-label="Vraagprijs" /></div></div><i class="ph bw-vp-status" aria-hidden="true"></i></div><span class="bw-vp-bron"></span></td>
                             </tr>
                             @await Html.PartialAsync("~/Views/Projecten/Budget/V2/_BwVerkoopDetail.cshtml", new BwVerkoopDetailVm { Naam = l.EenheidNaam, Lijn = l, RefBouw = refBouwItems, RefGrond = refGrondItems, Units = unitItems, Rij = rij })

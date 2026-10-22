@@ -37,6 +37,7 @@ namespace DALCore.Models
             ConfigureWerfverslagEntities(modelBuilder);
             ConfigureBorgEntities(modelBuilder);
             ConfigurePuntRondgangEntities(modelBuilder);
+            ConfigureCrmContactEntities(modelBuilder);
             ConfigureDocumentenEntities(modelBuilder);
             ConfigureTaakEntities(modelBuilder);
             ConfigureMeldingSnoozeEntities(modelBuilder);
