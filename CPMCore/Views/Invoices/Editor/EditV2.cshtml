@@ -1,0 +1,163 @@
+@model CPMCore.Models.Invoicing.InvoiceEditVM
+@using System.Globalization
+@using CPMCore.Models.Invoicing
+@using CPMCore.Models.GlV2
+@*
+    gl-v2 — Factuur bewerken, definitieve factuur (design-handoff punt 11f): vaste velden zichtbaar maar vergrendeld, omschrijvingen en
+    live voorbeeld rechts (A4 volgens documentlayout 35b, gewijzigde blokken gemarkeerd). Twee stappen:
+    Omschrijvingen en Lijnen (omschrijving per lijn). Bedragen, klant en datums liggen vast; de pdf wordt na het bewaren opnieuw opgemaakt.
+    Zelfde model en POST als het oude Edit.cshtml (InvoicesController.Edit). Een conceptfactuur gaat nog naar EditDraft.
+    Eigen klassen-namespace gl-v2-ie-* (gl-v2-invoices-edit.css/.js).
+*@
+@{
+    var culture = CultureInfo.GetCultureInfo("nl-BE");
+    var issuerName = (ViewBag.CompanyName as string) ?? Model.IssuerName ?? "";
+    var docNumber = string.IsNullOrWhiteSpace(Model.PublicId) ? $"[{Model.InvoiceId}]" : Model.PublicId;
+    var issuerId = ViewBag.CompanyId as int? ?? Model.IssuerCompanyId;
+    ViewData["Title"] = "Factuur bewerken";
+    ViewData["HelpScreenId"] = "facturen-bewerken";
+    ViewData["PageIcon"] = "ph ph-receipt";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = !string.IsNullOrWhiteSpace(Model.ReturnUrl) ? Model.ReturnUrl : Url.Action("Detail", "Invoices", new { id = Model.InvoiceId, issuerCompanyId = issuerId });
+    var statusLabel = Model.StatusLabel;
+    GlV2StepsVm Steps(int current) => new()
+    {
+        Id = "ie-steps-" + (current + 1), Current = current, Variant = GlV2StepsVariant.Lijn, ShowSub = false, Clickable = true, EmitStepEvents = true,
+        Steps = new List<GlV2StepItemVm> { new() { Label = "Omschrijvingen" }, new() { Label = "Lijnen" } }
+    };
+    var lines = Model.Lines ?? new List<InvoiceLineEditVM>();
+    var vatRates = lines.Select(l => l.VatRate).Distinct().ToList();
+    var vatLabel = vatRates.Count == 1 ? "Btw " + vatRates[0].ToString("0.#", CultureInfo.InvariantCulture) + " %" : "Btw";
+    string Money(decimal v) => "€ " + v.ToString("N2", culture);
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-invoices-edit.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    <span class="gl-v2-invoice-direction-badge"><i class="ph ph-arrow-right" aria-hidden="true"></i>Verkoop</span>
+    <span class="gl-v2-badge is-neutral">@statusLabel.ToUpperInvariant()</span>
+}
+
+<form asp-action="Edit" method="post" id="invoiceEditForm" class="gl-v2-ie-form" novalidate>
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="InvoiceId" />
+    <input type="hidden" asp-for="IssuerCompanyId" />
+    <input type="hidden" asp-for="ReturnUrl" />
+    <input type="hidden" asp-for="ExpirationDate" />
+    <input type="hidden" asp-for="BankAccount" />
+
+    <div class="gl-v2-ie-grid" id="gl-v2-ie-root">
+        <section class="gl-v2-section-card gl-v2-ie-main">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">@(Model.IsCreditNote ? "Creditnota bewerken" : "Factuur bewerken")</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">definitief · @statusLabel.ToLowerInvariant() @Model.InvoiceDate.ToString("dd/MM/yyyy", culture)</span>
+            </div>
+
+            <div class="gl-v2-ie-steps" id="ie-steps-wrap">
+                <div data-ie-steps="1">@await Html.PartialAsync("GlV2/_Steps", Steps(0))</div>
+                <div data-ie-steps="2" hidden>@await Html.PartialAsync("GlV2/_Steps", Steps(1))</div>
+            </div>
+
+            <div class="gl-v2-ie-body">
+                @await Html.PartialAsync("GlV2/_ErrorSummaryV2")
+
+                @* ─── Stap 1: Omschrijvingen ─── *@
+                <div class="gl-v2-ie-panel" data-ie-panel="1">
+                    <div class="gl-v2-notice gl-v2-notice-expanded is-info">
+                        <span class="gl-v2-notice-expanded-icon"><i class="ph ph-info" aria-hidden="true"></i></span>
+                        <div class="gl-v2-notice-body">
+                            <span class="gl-v2-notice-title">Deze @(Model.IsCreditNote ? "creditnota" : "factuur") is definitief</span>
+                            <span class="gl-v2-notice-text">Bedragen, klant en datums liggen vast. Je kan enkel de omschrijvingen en de bijkomende vermelding nog aanpassen. De pdf wordt opnieuw opgemaakt, het nummer blijft.</span>
+                        </div>
+                        @if (!Model.IsCreditNote)
+                        {
+                            <a class="gl-v2-btn gl-v2-btn-secondary gl-v2-ie-credit" href="@Url.Action("Create", "Invoices", new { issuerId, duplicateInvoiceId = Model.InvoiceId, creditNote = true })"><i class="ph ph-copy" aria-hidden="true"></i>Creditnota maken</a>
+                        }
+                    </div>
+
+                    <div class="gl-v2-ie-locked-grid">
+                        <div class="gl-v2-field"><span class="gl-v2-field-label">KLANT</span><div class="gl-v2-ie-locked"><span>@Model.ClientName</span><i class="ph ph-lock-simple" aria-hidden="true"></i></div></div>
+                        <div class="gl-v2-field"><span class="gl-v2-field-label">FACTUURDATUM</span><div class="gl-v2-ie-locked"><span>@Model.InvoiceDate.ToString("dd/MM/yyyy", culture)</span><i class="ph ph-lock-simple" aria-hidden="true"></i></div></div>
+                        <div class="gl-v2-field"><span class="gl-v2-field-label">VERVALDATUM</span><div class="gl-v2-ie-locked"><span>@(Model.ExpirationDate.HasValue ? Model.ExpirationDate.Value.ToString("dd/MM/yyyy", culture) : "—")</span><i class="ph ph-lock-simple" aria-hidden="true"></i></div></div>
+                        <div class="gl-v2-field"><span class="gl-v2-field-label">TE BETALEN</span><div class="gl-v2-ie-locked"><span>@Money(Model.TotalInclVat)</span><i class="ph ph-lock-simple" aria-hidden="true"></i></div></div>
+                    </div>
+
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="HeaderDescription">OMSCHRIJVING <span class="gl-v2-ie-opt">· optioneel</span></label>
+                        <div class="gl-v2-field-box gl-v2-ie-ta"><textarea asp-for="HeaderDescription" class="gl-v2-field-input" rows="3" data-ie-bind="header"></textarea></div>
+                        <span class="gl-v2-field-help">staat bovenaan de factuur, onder de adressen</span>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="DetailDescription">DETAILOMSCHRIJVING <span class="gl-v2-ie-opt">· optioneel</span></label>
+                        <div class="gl-v2-field-box gl-v2-ie-ta"><textarea asp-for="DetailDescription" class="gl-v2-field-input" rows="2" data-ie-bind="detail"></textarea></div>
+                        <span class="gl-v2-field-help">staat boven de lijnen, bv. de schijf uit het betaalplan</span>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="FooterDescription">BIJKOMENDE VERMELDING <span class="gl-v2-ie-opt">· optioneel</span></label>
+                        <div class="gl-v2-field-box gl-v2-ie-ta"><textarea asp-for="FooterDescription" class="gl-v2-field-input" rows="3" data-ie-bind="footer"></textarea></div>
+                        <span class="gl-v2-field-help">staat onderaan de factuur, boven de betalingsgegevens. De btw-vermelding per tarief komt uit Instellingen en staat vast.</span>
+                    </div>
+                </div>
+
+                @* ─── Stap 2: Lijnen ─── *@
+                <div class="gl-v2-ie-panel" data-ie-panel="2" hidden>
+                    @if (lines.Count > 0)
+                    {
+                        <div class="gl-v2-ie-lines" role="table" aria-label="Factuurlijnen">
+                            <div class="gl-v2-ie-lines-head" role="row"><span>OMSCHRIJVING</span><span class="is-num">BTW</span><span class="is-num">BEDRAG</span></div>
+                            @for (var i = 0; i < lines.Count; i++)
+                            {
+                                <div class="gl-v2-ie-line" role="row">
+                                    <div class="gl-v2-ie-line-text">
+                                        <input type="hidden" asp-for="Lines[i].LineId" />
+                                        <div class="gl-v2-field-box"><input asp-for="Lines[i].Text" class="gl-v2-field-input" autocomplete="off" data-ie-line="@i" aria-label="Omschrijving van lijn @(i + 1)" /></div>
+                                        @if (!string.IsNullOrWhiteSpace(lines[i].GroupName)) { <small>@lines[i].GroupName</small> }
+                                    </div>
+                                    <span class="is-num">@lines[i].VatRate.ToString("0.##", culture) %</span>
+                                    <span class="is-num">@Money(lines[i].NetAmount)</span>
+                                </div>
+                            }
+                        </div>
+                        <div class="gl-v2-ie-totals">
+                            <div><span>Subtotaal</span><b>@Money(Model.TotalExclVat)</b></div>
+                            <div><span>@vatLabel</span><b>@Money(Model.TotalVat)</b></div>
+                            <div class="is-grand"><span>Te betalen</span><b>@Money(Model.TotalInclVat)</b></div>
+                        </div>
+                        <p class="gl-v2-field-help gl-v2-ie-lines-hint"><i class="ph ph-lock-simple" aria-hidden="true"></i>Enkel de omschrijving per lijn kan nog aangepast worden. Bedragen en btw liggen vast.</p>
+                    }
+                    else
+                    {
+                        <p class="gl-v2-field-help">Geen lijnen gevonden voor deze factuur.</p>
+                    }
+                </div>
+            </div>
+        </section>
+
+        @* ─── Live voorbeeld (opmaak volgens 35b) ─── *@
+        <aside class="gl-v2-ie-side" aria-label="Voorbeeld van de factuur">
+            <div class="gl-v2-ie-side-head"><span>VOORBEELD</span><small>gewijzigde blokken gemarkeerd</small></div>
+            @await Html.PartialAsync("Partials/_InvoiceSheetV2", Model)
+            <span class="gl-v2-ie-side-note">opmaak volgens de factuurlayout van @issuerName · eerste pagina · status <b>@statusLabel</b></span>
+        </aside>
+    </div>
+
+    <div class="gl-v2-form-actionbar">
+        <a href="@ViewData["BackUrl"]" class="gl-v2-btn gl-v2-btn-text">Annuleren</a>
+        <span class="gl-v2-form-actionbar-spacer"></span>
+        <span class="gl-v2-ie-stepinfo">Stap <b id="ie-step-now">1</b> van 2</span>
+        <div class="gl-v2-form-actionbar-actions">
+            <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="ie-prev" disabled>Vorige</button>
+            <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="ie-next"><i class="ph ph-caret-right" aria-hidden="true"></i><span>Volgende: Lijnen</span></button>
+            <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="ie-save" hidden><i class="ph ph-floppy-disk" aria-hidden="true"></i><span>Opslaan</span></button>
+        </div>
+    </div>
+</form>
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-invoices-edit.js" asp-append-version="true"></script>
+}

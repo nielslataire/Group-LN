@@ -1,0 +1,223 @@
+@model CPMCore.Services.Verkoop.VerkoopIndexVm
+@*
+    gl-v2 — Te koop (design-handoff punt 45a): kerncijfers, tabbar per status (Alle / Te koop / Optie / Verkocht), tabel met totaalrij, actiebalk bij selectie.
+    Prijzen komen uit het definitieve budget (stap 8); status volgt uit de eenheid zelf (verkocht = koper gekoppeld, optie = optievlag, anders te koop).
+    Nieuwe gegevens (migratie 115): optiedatum, optant, makelaar/herkomst, online sinds. Cijfers komen uit CPMCore.Services.Verkoop.VerkoopService.
+    Eigen klassen-namespace gl-v2-vk-* (gl-v2-projecten-verkoop.css/.js). Het legacy Sales/DetailSales.cshtml blijft bestaan (?classic=true).
+*@
+@using System.Globalization
+@using CPMCore.Models.GlV2
+@using CPMCore.Services.Verkoop
+@{
+    ViewData["Title"] = "Te koop";
+    ViewData["HelpScreenId"] = "projecten-te-koop";
+    ViewData["PageIcon"] = "ph ph-tag";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId });
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    var rijen = Model.Rijen;
+    string Eur(decimal v) => "€ " + v.ToString("N0", be);
+    string Dag(DateOnly? d) => d.HasValue ? d.Value.ToString("dd/MM/yyyy", be) : "";
+    string DagKort(DateOnly? d) => d.HasValue ? d.Value.ToString("dd/MM", be) : "";
+    string Tone(string s) => s == "Verkocht" ? "is-neutral" : s == "Optie" ? "is-attention" : "is-positive";
+    string Num(decimal? v) => v.HasValue && v.Value > 0m ? v.Value.ToString("N0", be) + " m²" : "—";
+    var verkocht = Model.Aantal("Verkocht");
+    var optie = Model.Aantal("Optie");
+    var teKoop = Model.Aantal("Te koop");
+    var totaal = Model.TotaalWaarde;
+    var pctVerkocht = totaal > 0m ? (int)Math.Round(Model.VerkochtWaarde / totaal * 100m) : 0;
+    var teKoopNamen = string.Join(" en ", rijen.Where(r => r.Status != "Verkocht").Select(r => r.Naam));
+    var kpis = new List<GlV2KpiItemVm>
+    {
+        new() { Label = "Eenheden", Value = rijen.Count.ToString(), Hint = string.Join(" · ", new[] { verkocht > 0 ? verkocht + " verkocht" : null, optie > 0 ? optie + " optie" : null, teKoop > 0 ? teKoop + " te koop" : null }.Where(x => x != null)), IconClass = "ph-buildings" },
+        new() { Label = "Verkocht", Value = Eur(Model.VerkochtWaarde), Hint = verkocht + (verkocht == 1 ? " eenheid" : " eenheden") + " · " + pctVerkocht + " % van de totale waarde", IconClass = "ph-handshake" },
+        new() { Label = "Nog te verkopen", Value = Eur(Model.NogTeVerkopen), Hint = rijen.Any(r => r.Status != "Verkocht") ? "vraagprijs " + teKoopNamen : "alles verkocht", IconClass = "ph-tag" },
+        new() { Label = "Gem. prijs / m² wonen", Value = Model.GemPrijsPerM2.HasValue ? Eur(Model.GemPrijsPerM2.Value) : "—", Hint = "grond inbegrepen", IconClass = "ph-ruler" },
+        new() { Label = "T.o.v. budget", Value = Model.TovBudget.HasValue ? (Model.TovBudget.Value >= 0 ? "+ " : "– ") + Eur(Math.Abs(Model.TovBudget.Value)) : "—", Hint = Model.TovBudget.HasValue ? "definitief budget · stap 8" : "geen definitief budget gekoppeld", IconClass = "ph-chart-line-up", Tone = Model.TovBudget.HasValue && Model.TovBudget.Value < 0 ? GlV2KpiTone.Warning : GlV2KpiTone.Primary },
+    };
+    var menuVm = new GlV2ProjectMenuVm
+    {
+        ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · te koop",
+        ItemCounts = new Dictionary<string, int> { ["Te koop"] = teKoop + optie }
+    };
+    (string Key, string Label, int Count)[] tabs = { ("all", "Alle", rijen.Count), ("Te koop", "Te koop", teKoop), ("Optie", "Optie", optie), ("Verkocht", "Verkocht", verkocht) };
+    var sortUrl = Url.Action("SalesListPdf", "Projecten", new { projectid = Model.ProjectId });
+    var eersteRij = rijen.FirstOrDefault(r => r.Status != "Verkocht") ?? rijen.FirstOrDefault();
+    var berekenUrl = eersteRij == null ? null : Url.Action("SalesCalculateV2", "Projecten", new { projectid = Model.ProjectId, unitId = eersteRij.UnitId });
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-verkoop.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @if (berekenUrl != null)
+    {
+        <a class="gl-v2-btn gl-v2-btn-secondary" href="@berekenUrl"><i class="ph ph-calculator" aria-hidden="true"></i><span>Berekenen</span></a>
+    }
+    <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("SalesSettings", "Projecten", new { projectid = Model.ProjectId })"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i><span>Instellingen</span></a>
+}
+@section MobileQuickActions
+{
+    <a class="gl-v2-mobile-quickaction" href="@Url.Action("SalesSettings", "Projecten", new { projectid = Model.ProjectId })"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i>Instellingen</a>
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+@* De tabbar moet het letterlijke eerste kind van .gl-v2-content zijn (zie Punten). *@
+<div class="gl-v2-tabbar" role="tablist" id="vk-tabs">
+    @foreach (var t in tabs)
+    {
+        <a href="#" class="gl-v2-tabbar-tab @(t.Key == "all" ? "is-active" : "")" role="tab" aria-selected="@(t.Key == "all" ? "true" : "false")" data-vk-tab="@t.Key">@t.Label <span class="gl-v2-tabbar-count">@t.Count</span></a>
+    }
+</div>
+
+@{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+<form id="vk-token-form" hidden>@Html.AntiForgeryToken()</form>
+<div id="gl-v2-vk-root" data-project-id="@Model.ProjectId" data-calc-url="@(Url.Action("SalesCalculateV2", "Projecten", new { projectid = Model.ProjectId }))" data-can-write="@(Model.CanWrite ? "1" : "0")" data-bulk-url="@Url.Action("SalesBulkV2", "Projecten", new { projectid = Model.ProjectId })">
+    @await Html.PartialAsync("GlV2/_KpiStrip", (IReadOnlyList<GlV2KpiItemVm>)kpis)
+
+    <div class="gl-v2-notice gl-v2-notice-expanded is-info gl-v2-vk-notice">
+        <span class="gl-v2-notice-expanded-icon"><i class="ph ph-info" aria-hidden="true"></i></span>
+        <div class="gl-v2-notice-body">
+            <span class="gl-v2-notice-title">Prijzen komen uit het definitieve budget</span>
+            <span class="gl-v2-notice-text">Grond- en bouwwaarde volgen stap 8 van het definitieve budget. Een eenheid met optie of verkocht blijft vergrendeld.</span>
+        </div>
+        @if (Model.DefinitiefVersieId.HasValue)
+        {
+            <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("BudgetVerkoop", "Projecten", new { versieId = Model.DefinitiefVersieId.Value })">Open budget</a>
+        }
+    </div>
+
+    <div class="gl-v2-toolbar-card gl-v2-vk-toolbar">
+        <div class="gl-v2-field gl-v2-toolbar-search">
+            <div class="gl-v2-field-box">
+                <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                <input type="text" class="gl-v2-field-input" id="vk-search" placeholder="Zoek op lot, prekad of koper" autocomplete="off" aria-label="Zoek eenheden">
+                <button type="button" class="gl-v2-field-clear" id="vk-search-clear" aria-label="Zoekterm wissen">&times;</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="gl-v2-card gl-v2-detail-table-card gl-v2-vk-card">
+        <div class="gl-v2-card-body">
+            <div class="gl-v2-vk-scroll">
+                <table class="gl-v2-vk-table" id="vk-table">
+                    <thead>
+                        <tr>
+                            <th class="gl-v2-vk-check"><input type="checkbox" id="vk-check-all" aria-label="Alles selecteren" @(Model.CanWrite ? "" : "hidden")></th>
+                            <th>Eenheid</th><th>Status</th><th class="is-num">Grondwaarde</th><th class="is-num">Bouwwaarde</th><th class="is-num">Totaalprijs</th>
+                            <th>Prekad</th><th class="is-num">Perceel</th>
+                            @if (Model.HeeftAppartementen) { <th class="is-num">Tienduizendsten</th> }
+                            <th class="is-num">Wonen</th><th>Koper · akte</th>
+                        </tr>
+                    </thead>
+                    <tbody id="vk-body">
+                        @foreach (var r in rijen)
+                        {
+                            string koperTop, koperSub;
+                            if (r.Status == "Verkocht")
+                            {
+                                koperTop = r.KoperNaam ?? "—";
+                                koperSub = string.Join(" · ", new[] { r.CompromisDatum.HasValue ? "compromis " + DagKort(r.CompromisDatum) : null, r.AkteDatum.HasValue ? "akte " + (r.AkteDatum.Value.Year == Model.Vandaag.Year ? DagKort(r.AkteDatum) : Dag(r.AkteDatum)) : null }.Where(x => x != null));
+                            }
+                            else if (r.Status == "Optie")
+                            {
+                                koperTop = string.IsNullOrWhiteSpace(r.OptionHolder) ? "Optie zonder naam" : r.OptionHolder!;
+                                koperSub = string.IsNullOrWhiteSpace(r.SaleVia) ? "" : "via " + r.SaleVia;
+                            }
+                            else
+                            {
+                                koperTop = "—";
+                                koperSub = string.Join(" · ", new[] { r.Interessenten > 0 ? r.Interessenten + (r.Interessenten == 1 ? " geïnteresseerde" : " geïnteresseerden") : null, r.OnlineSince.HasValue ? "online sinds " + DagKort(r.OnlineSince) : null }.Where(x => x != null));
+                            }
+                            var zoek = string.Join(" ", new[] { r.Naam, r.PreKad, r.KoperNaam, r.OptionHolder, r.SaleVia, r.TypeNaam, r.Status }).ToLowerInvariant();
+                            <tr class="gl-v2-vk-row" data-id="@r.UnitId" data-status="@r.Status" data-online="@(r.OnlineSince.HasValue ? 1 : 0)"
+                                data-grond="@r.Grond.ToString(CultureInfo.InvariantCulture)" data-bouw="@r.Bouw.ToString(CultureInfo.InvariantCulture)" data-totaal="@r.Totaal.ToString(CultureInfo.InvariantCulture)"
+                                data-search="@zoek">
+                                <td class="gl-v2-vk-check"><input type="checkbox" class="js-vk-check" value="@r.UnitId" aria-label="Selecteer @r.Naam" @(Model.CanWrite ? "" : "hidden")></td>
+                                <td class="gl-v2-vk-name"><b>@r.Naam</b><small>@r.TypeNaam@(string.IsNullOrWhiteSpace(r.TypeNaam) ? "" : " · ")@r.Verdieping</small></td>
+                                <td><span class="gl-v2-badge @Tone(r.Status)">@r.Status.ToUpperInvariant()</span></td>
+                                <td class="is-num">@Eur(r.Grond)</td>
+                                <td class="is-num">@Eur(r.Bouw)</td>
+                                <td class="is-num"><b>@Eur(r.Totaal)</b>
+                                    @if (r.Status == "Optie" && r.OptionUntil.HasValue) { <small class="is-warn">optie tot @Dag(r.OptionUntil)</small> }
+                                    else if (r.Totaal > 0m) { <small>grond @r.GrondPct % · bouw @(100 - r.GrondPct) %</small> }</td>
+                                <td class="gl-v2-vk-mono">@(string.IsNullOrWhiteSpace(r.PreKad) ? "—" : r.PreKad)</td>
+                                <td class="is-num">@Num(r.Perceel)@if (r.PrijsPerM2Perceel.HasValue) { <small>@Eur(r.PrijsPerM2Perceel.Value) / m²</small> }</td>
+                                @if (Model.HeeftAppartementen) { <td class="is-num">@(r.IsAppartement && r.Tienduizendsten.HasValue ? r.Tienduizendsten.Value.ToString("N0", be) + " / 10.000" : "—")</td> }
+                                <td class="is-num">@Num(r.Wonen)@if (r.PrijsPerM2Wonen.HasValue) { <small>@Eur(r.PrijsPerM2Wonen.Value) / m²</small> }</td>
+                                <td class="gl-v2-vk-koper"><span>@koperTop</span>@if (koperSub != "") { <small>@koperSub</small> }</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td></td><td><b id="vk-foot-label">Totaal · @rijen.Count eenheden</b></td><td></td>
+                            <td class="is-num" id="vk-foot-grond"></td><td class="is-num" id="vk-foot-bouw"></td><td class="is-num" id="vk-foot-totaal"></td>
+                            <td colspan="@(Model.HeeftAppartementen ? 5 : 4)"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <p class="gl-v2-vk-empty" id="vk-empty" hidden>Geen eenheden gevonden voor deze selectie.</p>
+        </div>
+    </div>
+    @if (Model.HeeftAppartementen)
+    {
+        <p class="gl-v2-vk-hint">De kolom Tienduizendsten verschijnt enkel bij appartementen.</p>
+    }
+</div>
+
+@if (Model.CanWrite)
+{
+    @* Selectiebalk (45a): wit, onderaan; Status wijzigen en Website openen een klein paneel erboven. *@
+    <div class="gl-v2-vk-selbar" id="vk-selbar" hidden>
+        <span class="gl-v2-vk-selbar-count"><b id="vk-sel-n">0</b> geselecteerd</span>
+        <span class="gl-v2-vk-selbar-spacer"></span>
+        <button type="button" class="gl-v2-btn gl-v2-btn-text" id="vk-sel-clear">Selectie wissen</button>
+        <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-vk-pop" data-pop="vk-pop-status"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i>Status wijzigen</button>
+        <a class="gl-v2-btn gl-v2-btn-secondary" id="vk-sel-calc" href="#" hidden><i class="ph ph-calculator" aria-hidden="true"></i>Berekenen</a>
+        <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-vk-pop" data-pop="vk-pop-web"><i class="ph ph-globe" aria-hidden="true"></i>Website</button>
+        <a class="gl-v2-btn gl-v2-btn-primary" href="@sortUrl" target="_blank" rel="noopener"><i class="ph ph-file-pdf" aria-hidden="true"></i>Prijslijst (PDF)</a>
+
+        <div class="gl-v2-vk-pop" id="vk-pop-status" hidden>
+            <div class="gl-v2-vk-pop-title">STATUS VOOR <span class="js-vk-sel-n"></span> EENHEDEN</div>
+            <button type="button" class="gl-v2-vk-pop-item js-vk-do" data-op="tekoop">Te koop zetten<small>optie wordt opgeheven</small></button>
+            <button type="button" class="gl-v2-vk-pop-item js-vk-optie">In optie zetten…<small>met einddatum, optant en makelaar</small></button>
+            <div class="gl-v2-vk-pop-note">Verkochte eenheden blijven ongemoeid: die wijzig je via de koper.</div>
+        </div>
+        <div class="gl-v2-vk-pop" id="vk-pop-web" hidden>
+            <div class="gl-v2-vk-pop-title">WEBSITE</div>
+            <button type="button" class="gl-v2-vk-pop-item js-vk-do" data-op="online">Op website zetten<small>“online sinds” wordt vandaag</small></button>
+            <button type="button" class="gl-v2-vk-pop-item js-vk-do" data-op="offline">Van website halen</button>
+        </div>
+    </div>
+
+    @* In optie zetten *@
+    <div class="modal fade gl-v2-modal-form" id="vk-optie-modal" tabindex="-1" aria-hidden="true" aria-labelledby="vk-optie-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <div class="modal-content">
+                <div class="modal-header"><h2 class="modal-title" id="vk-optie-title">In optie zetten</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body">
+                    <div class="gl-v2-field gl-v2-field-full"><label class="gl-v2-field-label" for="vk-optie-until">Optie tot</label><div class="gl-v2-field-box"><input type="date" class="gl-v2-field-input" id="vk-optie-until" /></div></div>
+                    <div class="gl-v2-field gl-v2-field-full"><label class="gl-v2-field-label" for="vk-optie-holder">Optant</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="vk-optie-holder" maxlength="150" placeholder="Naam van de kandidaat-koper" autocomplete="off" /></div></div>
+                    <div class="gl-v2-field gl-v2-field-full"><label class="gl-v2-field-label" for="vk-optie-via">Via makelaar of herkomst</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="vk-optie-via" maxlength="150" placeholder="bv. Immo Lataire" autocomplete="off" /></div><span class="gl-v2-field-help">Bij meerdere eenheden krijgen ze allemaal dezelfde gegevens.</span></div>
+                </div>
+                <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="button" class="gl-v2-btn gl-v2-btn-primary" id="vk-optie-ok">In optie zetten</button></div>
+            </div>
+        </div>
+    </div>
+}
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-verkoop.js" asp-append-version="true"></script>
+}

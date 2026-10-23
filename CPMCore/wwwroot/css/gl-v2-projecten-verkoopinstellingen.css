@@ -1,0 +1,56 @@
+/* gl-v2 — Verkoopinstellingen (design-handoff 45b). Namespace gl-v2-vs-*. Laadt vóór gl-v2-shell.css: waar een shell-regel overstemd wordt staat .gl-v2 extra in de selector. */
+.gl-v2 .gl-v2-vs-form { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.gl-v2-vs-scroll { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 20px; }
+.gl-v2-vs-cols { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+.gl-v2-vs-main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.gl-v2-vs-aside { position: sticky; top: 0; min-width: 0; }
+@media (max-width: 1199.98px) { .gl-v2-vs-cols { grid-template-columns: 1fr; } .gl-v2-vs-aside { position: static; order: -1; } }
+
+.gl-v2-vs-regime-note { display: block; font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-vs-changes { font: 600 12px var(--gl-v2-font-sans); color: #8A5A00; }
+
+/* ── Kosten koper: eigen posten ── */
+.gl-v2-vs-extra { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.gl-v2-vs-extra:empty { display: none; }
+.gl-v2-vs-extra-row { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1.4fr) auto; gap: 12px; align-items: end; }
+.gl-v2-vs-extra-add { margin-top: 12px; }
+@media (max-width: 767.98px) { .gl-v2-vs-extra-row { grid-template-columns: 1fr; padding-bottom: 10px; border-bottom: 1px solid var(--gl-v2-hairline-soft); } }
+
+/* ── Tekst met opmaakknoppen ── */
+.gl-v2-vs-rte { border: 1px solid var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-sm); background: var(--gl-v2-surface); overflow: hidden; }
+.gl-v2-vs-rte:focus-within { border-color: var(--gl-v2-primary); }
+.gl-v2-vs-rte-bar { display: flex; gap: 4px; padding: 6px; border-bottom: 1px solid var(--gl-v2-hairline-soft); background: #F7F9F5; }
+.gl-v2-vs-rte-bar button { width: 30px; height: 30px; border: 0; border-radius: 6px; background: transparent; color: var(--gl-v2-ink); cursor: pointer; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; }
+.gl-v2-vs-rte-bar button:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-vs-rte-body { min-height: 160px; max-height: 360px; overflow-y: auto; padding: 12px 14px; font: 450 13.5px/1.55 var(--gl-v2-font-sans); color: var(--gl-v2-ink); outline: none; }
+.gl-v2-vs-rte-body p { margin: 0 0 .8em; }
+.gl-v2-vs-rte-body ul { margin: 0 0 .8em; padding-left: 1.3em; }
+
+/* ── Voorbeeld koper ── */
+.gl-v2-vs-preview-sub { margin: 0 0 8px; font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-vs-preview-empty { margin: 0; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-vs-preview-foot { margin: 10px 0 0; font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-vs-pv { margin: 0; display: flex; flex-direction: column; }
+.gl-v2-vs-pv > div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--gl-v2-hairline-soft); font: 500 12.5px var(--gl-v2-font-sans); }
+.gl-v2-vs-pv dt { font-weight: 450; color: var(--gl-v2-muted); }
+.gl-v2-vs-pv dd { margin: 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gl-v2-vs-pv > div.is-total { border-bottom: 0; padding-top: 12px; }
+.gl-v2-vs-pv > div.is-total dt { font-weight: 600; color: var(--gl-v2-ink); }
+.gl-v2-vs-pv > div.is-total dd { font: 700 17px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+.gl-v2-vs-pv > div[hidden] { display: none; }
+
+.gl-v2-vs-toast { position: fixed; z-index: 2500; left: 50%; bottom: calc(var(--gl-v2-qa-bar-h, 64px) + env(safe-area-inset-bottom, 0px) + 84px); transform: translate(-50%, 12px); opacity: 0; max-width: calc(100vw - 32px); padding: 11px 16px; border-radius: 10px; background: var(--gl-v2-ink); color: #fff; font: 550 13px var(--gl-v2-font-sans); box-shadow: 0 12px 30px -12px rgba(44, 59, 42, .6); transition: opacity .2s, transform .2s; }
+.gl-v2-vs-toast.is-in { opacity: 1; transform: translate(-50%, 0); }
+@media (prefers-reduced-motion: reduce) { .gl-v2-vs-toast { transition: none; } }
+
+/* ── binnenmarges van de kaarten (de inhoud staat rechtstreeks in .gl-v2-section-card, zonder eigen wrapper) ── */
+.gl-v2-vs-preview .gl-v2-vs-preview-sub { margin: 14px 20px 4px; }
+.gl-v2-vs-preview .gl-v2-vs-preview-empty { margin: 14px 20px 18px; }
+.gl-v2-vs-preview .gl-v2-vs-pv { margin: 0 20px; padding: 4px 0 6px; }
+.gl-v2-vs-preview .gl-v2-vs-pv-toggle { margin: 10px 20px 0; padding-top: 12px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-vs-preview .gl-v2-vs-preview-foot { margin: 12px 20px 18px; }
+.gl-v2-vs-extra { padding: 0 20px; margin-top: 0; }
+.gl-v2-vs-extra:not(:has(*)) { display: none; }
+.gl-v2-vs-extra-add { padding: 0 20px 18px; margin-top: 0; }
+.gl-v2-vs-extra:has(*) + .gl-v2-vs-extra-add { margin-top: 14px; }
+.gl-v2-vs-regime-note { margin-top: -4px; }

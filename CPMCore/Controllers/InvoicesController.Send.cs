@@ -1,4 +1,4 @@
-﻿using BOCore;
+using BOCore;
 using CPMCore.Documents;
 using CPMCore.Extensions;
 using CPMCore.Models.Invoicing;
@@ -83,7 +83,7 @@ namespace CPMCore.Controllers
             var detailTitle = BuildInvoiceDetailBreadcrumbTitle(detail);
             SetSendBreadcrumb(issuerId, companyDisplay, detail.Id, detailTitle);
             SetPageHeader("bx bx-receipt", "Factuur verzenden");
-            return View(vm);
+            return SendView(vm);
         }
 
         //FACTUUR VERZENDEN (POST)
@@ -127,7 +127,30 @@ namespace CPMCore.Controllers
                 form.AttachPdf = true;
                 form.AttachUbl = false;
                 form.SendToPeppol = false;
+                form.Channel = "email";
+                // "Kopie naar mezelf" (gl-v2): de kopie gaat naar het adres van de ingelogde gebruiker.
+                var me = CurrentUserEmail();
+                if (submitMode == "copy" && Request?.Form?["copyToSelf"].ToString() == "1" && !string.IsNullOrWhiteSpace(me))
+                {
+                    form.To = me;
+                    form.Cc = null;
+                }
             }
+            // gl-v2 (11g): het gekozen kanaal bepaalt wat er gebeurt. Zonder Channel (oud scherm) blijft het zoals voorheen: altijd e-mail, Peppol via de schakelaar.
+            var channel = (form.Channel ?? string.Empty).Trim().ToLowerInvariant();
+            var sendEmail = channel != "peppol";
+            // Peppol gaat altijd via Octopus: dat doorsturen gebeurt hieronder, niet via de rechtstreekse Peppol-verzender van het oude scherm.
+            var viaOctopus = channel == "peppol" || channel == "both";
+            if (channel != string.Empty) form.SendToPeppol = false;
+            // Peppol alleen: de e-mailvelden zijn dan niet nodig. "Kopie naar mezelf": het adres wordt hieronder door dat van de gebruiker vervangen.
+            if (!sendEmail)
+            {
+                ModelState.Remove(nameof(InvoiceSendVM.To));
+                ModelState.Remove(nameof(InvoiceSendVM.Subject));
+                ModelState.Remove(nameof(InvoiceSendVM.Body));
+            }
+            else if (isCopyRequest && Request?.Form?["copyToSelf"].ToString() == "1" && !string.IsNullOrWhiteSpace(CurrentUserEmail()))
+                ModelState.Remove(nameof(InvoiceSendVM.To));
 
             var vm = await CreateSendViewModelAsync(detail, issuer, includeDefaults: false, checkPeppol: true, formMode, ct);
             vm.To = form.To;
@@ -139,6 +162,7 @@ namespace CPMCore.Controllers
             vm.SendToPeppol = form.SendToPeppol && vm.CanSendViaPeppol;
             vm.IsCopyRequest = isCopyRequest;
             vm.ForcePdfOnly = isCopyRequest;
+            vm.Channel = string.IsNullOrEmpty(channel) ? null : channel;
 
             await SetIssuerViewBagsAsync(vm.IssuerCompanyId, ct);
             var companyDisplay = (ViewBag.CompanyName as string) ?? vm.IssuerName;
@@ -147,18 +171,24 @@ namespace CPMCore.Controllers
             SetPageHeader("bx bx-receipt", "Factuur verzenden");
 
             if (!ModelState.IsValid)
-                return View(vm);
+                return SendView(vm);
 
-            if (string.IsNullOrWhiteSpace(vm.To))
+            if (sendEmail && string.IsNullOrWhiteSpace(vm.To))
             {
                 ModelState.AddModelError(nameof(vm.To), "E-mailadres is verplicht.");
-                return View(vm);
+                return SendView(vm);
             }
 
-            if (!vm.AttachPdf && !vm.AttachUbl)
+            if (sendEmail && !vm.AttachPdf && !vm.AttachUbl)
             {
                 ModelState.AddModelError(string.Empty, "Selecteer minstens één bijlage.");
-                return View(vm);
+                return SendView(vm);
+            }
+
+            if (viaOctopus && !vm.CanSendViaOctopus)
+            {
+                ModelState.AddModelError(string.Empty, vm.OctopusNote ?? "Doorsturen naar Octopus is niet mogelijk. Kies e-mail.");
+                return SendView(vm);
             }
 
             var attachments = new List<EmailAttachment>();
@@ -183,6 +213,7 @@ namespace CPMCore.Controllers
                     "application/xml"));
             }
             var sentAtUtc = DateTime.UtcNow;
+            if (sendEmail)
             try
             {
                 await _emailSender.SendEmailAsync(
@@ -211,7 +242,7 @@ namespace CPMCore.Controllers
                 _logger.LogError(ex, "Send invoice email {InvoiceId} failed", detail.Id);
                 AddMessage("error", "E-mail kon niet verzonden worden.", "Factuur");
                 ModelState.AddModelError(string.Empty, "E-mail kon niet verzonden worden. Probeer opnieuw.");
-                return View(vm);
+                return SendView(vm);
             }
 
             await _communication.SaveInvoiceUblAsync(new InvoiceUblBO
@@ -225,7 +256,7 @@ namespace CPMCore.Controllers
                 PeppolDocId = null
             }, ct);
 
-            if (vm.SendToPeppol && vm.CanSendViaPeppol)
+            if (channel == string.Empty && vm.SendToPeppol && vm.CanSendViaPeppol)
             {
                 var participantId = vm.PeppolParticipantId
                     ?? detail.ClientVatNumber
@@ -246,6 +277,7 @@ namespace CPMCore.Controllers
                             SentViaPeppol = true,
                             PeppolDocId = result.DocumentId
                         }, ct);
+                        if (!sendEmail) await _cmd.MarkAsSentAsync(detail.Id, sentAtUtc, ct);
                         AddMessage("success", "Factuur verzonden via Peppol.", "Factuur");
                     }
                     else
@@ -256,6 +288,32 @@ namespace CPMCore.Controllers
                 else
                 {
                     AddMessage("warning", "Geen geldig Peppol-ID beschikbaar.", "Factuur");
+                }
+            }
+
+            if (viaOctopus)
+            {
+                // Doorsturen naar je eigen Octopus, dat de factuur via Peppol naar de klant verstuurt (zoals bij het uitgeven). Een eigen e-mail van CPM is hier niet bij:
+                // wie ook per mail wil versturen, kiest Beide of E-mail.
+                try
+                {
+                    var progress = GetOctopusWorkflowProgress(detail.OctopusWorkflowState);
+                    await SendInvoiceToOctopusAsync(detail.Id, ct,
+                        sendOnly: progress.CreationCompleted && progress.UploadCompleted,
+                        forceSendStep: progress.SendCompleted,
+                        skipClassicEmail: true);
+                    if (!sendEmail) await _cmd.MarkAsSentAsync(detail.Id, sentAtUtc, ct);
+                    AddMessage("success", "Factuur doorgestuurd naar Octopus. Octopus verstuurt ze via Peppol naar de klant.", "Factuur");
+                }
+                catch (InvalidOperationException ex)
+                {
+                    _logger.LogWarning(ex, "Octopus send blocked for invoice {InvoiceId}", detail.Id);
+                    AddMessage("error", ex.Message, "Factuur");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Octopus send failed for invoice {InvoiceId}", detail.Id);
+                    AddMessage("error", "Factuur kon niet naar Octopus doorgestuurd worden.", "Factuur");
                 }
             }
 
@@ -386,6 +444,10 @@ namespace CPMCore.Controllers
                 })
                 .ToList();
             vm.LastEmailSentAt = logs.FirstOrDefault()?.SentAt;
+            vm.ExpirationDate = detail.ExpirationDate;
+            vm.StructuredMessage = detail.StructuredMessage;
+            vm.CurrentUserEmail = CurrentUserEmail();
+            if (string.IsNullOrWhiteSpace(vm.Channel)) vm.Channel = "email";
 
             var ubl = await _communication.GetInvoiceUblAsync(detail.Id, ct);
             if (ubl != null)
@@ -397,6 +459,51 @@ namespace CPMCore.Controllers
                 vm.ExistingUblVersion = ubl.UblVersion;
             }
 
+            // Verzendgeschiedenis met kanaal (11g). Het e-maillogboek bevat ook de Octopus-gebeurtenissen (ToAddress zonder @: "Octopus" of de verzendmethode):
+            // die horen bij kanaal Peppol, want Octopus verstuurt enkel via Peppol. Echte e-mails (met een adres) zijn kanaal E-mail.
+            var history = new List<InvoiceSendHistoryItemVM>();
+            foreach (var log in logs)
+            {
+                var isMail = (log.ToAddress ?? string.Empty).Contains('@');
+                var st = log.Status ?? string.Empty;
+                string statusText, tone;
+                if (isMail) { statusText = string.Equals(st, "Sent", StringComparison.OrdinalIgnoreCase) ? "Verzonden" : st; tone = string.Equals(st, "Sent", StringComparison.OrdinalIgnoreCase) ? "success" : "neutral"; }
+                else if (string.Equals(st, "Error", StringComparison.OrdinalIgnoreCase)) { statusText = "Mislukt"; tone = "danger"; }
+                else if (string.Equals(st, "Uploaded", StringComparison.OrdinalIgnoreCase)) { statusText = "Doorgestuurd"; tone = "neutral"; }
+                else if (string.Equals(st, "Booked", StringComparison.OrdinalIgnoreCase)) { statusText = "Geboekt"; tone = "neutral"; }
+                else if (string.Equals(st, "Sent", StringComparison.OrdinalIgnoreCase)) { statusText = "Verzonden"; tone = "success"; }
+                else { statusText = st; tone = "neutral"; }
+                history.Add(new InvoiceSendHistoryItemVM
+                {
+                    At = log.SentAt,
+                    Recipient = isMail ? log.ToAddress : (log.ToAddress ?? string.Empty).Contains("peppol", StringComparison.OrdinalIgnoreCase) ? "Peppol-netwerk" : "Octopus",
+                    Channel = isMail ? "E-mail" : "Peppol",
+                    Detail = log.Subject,
+                    Status = statusText,
+                    Tone = tone
+                });
+            }
+            // De leveringsstatus die Octopus zelf teruggeeft (enkel Peppol; "EMAILED" is de klassieke mail van CPM en staat al als echte e-mailregel in de lijst).
+            if (detail.OctopusDeliveryDateTime.HasValue && !string.IsNullOrWhiteSpace(detail.OctopusDeliveryState))
+            {
+                var state = detail.OctopusDeliveryState!;
+                var upper = state.ToUpperInvariant();
+                if (upper is not ("EMAILED" or "NONE"))
+                {
+                    var failed = upper is "ERROR" or "PEPPOL_SEND_FAILED";
+                    history.Add(new InvoiceSendHistoryItemVM
+                    {
+                        At = detail.OctopusDeliveryDateTime.Value,
+                        Recipient = "Peppol-netwerk",
+                        Channel = "Peppol",
+                        Detail = string.IsNullOrWhiteSpace(detail.OctopusDeliveryComment) ? "Octopus verzendstatus: " + state : detail.OctopusDeliveryComment!,
+                        Status = failed ? "Mislukt" : upper == "DELIVERED" ? "Afgeleverd" : upper == "PEPPOL_SENDING_IN_PROGRESS" ? "Onderweg" : state,
+                        Tone = failed ? "danger" : upper == "DELIVERED" ? "strong" : "neutral"
+                    });
+                }
+            }
+            vm.History = history.OrderByDescending(h => h.At).ToList();
+
             var octopusProgress = GetOctopusWorkflowProgress(detail.OctopusWorkflowState);
             var hasClientEmail = !string.IsNullOrWhiteSpace(detail.ClientEmail);
             vm.CanRetryOctopusSend = detail.RequiresDigitalInvoice
@@ -404,43 +511,84 @@ namespace CPMCore.Controllers
                 && octopusProgress.CreationCompleted
                 && octopusProgress.UploadCompleted;
 
+            // Doorsturen naar Octopus: enkel als Octopus gekoppeld is en de factuur er nog niet is, of de verzending mislukt is.
+            var deliveryState = (detail.OctopusDeliveryState ?? string.Empty).ToUpperInvariant();
+            var octopusFailed = deliveryState is "ERROR" or "PEPPOL_SEND_FAILED"
+                || logs.Any(l => !(l.ToAddress ?? string.Empty).Contains('@') && string.Equals(l.Status, "Error", StringComparison.OrdinalIgnoreCase)) && deliveryState is not "DELIVERED";
+            if (string.IsNullOrWhiteSpace(issuer.OctopusDossierNumber))
+            {
+                vm.CanSendViaOctopus = false;
+                vm.OctopusNote = "Octopus is niet gekoppeld voor dit facturatiebedrijf.";
+            }
+            else if (octopusProgress.SendCompleted && !octopusFailed)
+            {
+                vm.CanSendViaOctopus = false;
+                vm.OctopusNote = "Deze factuur is al naar Octopus verstuurd.";
+            }
+            else
+            {
+                vm.CanSendViaOctopus = true;
+                vm.OctopusNote = octopusFailed ? "De vorige verzending naar Octopus is mislukt. Je kan ze opnieuw proberen." : null;
+            }
+
             if (checkPeppol)
             {
-                if (issuer.PeppolEnabled && !string.IsNullOrWhiteSpace(issuer.PeppolParticipantId))
+                // Controle in de openbare Peppol-directory: enkel informatief (Octopus beslist zelf hoe het verstuurt). Los van de Peppol-instelling van het bedrijf.
+                var lookupId = detail.ClientVatNumber ?? detail.ClientEnterpriseNumber;
+                if (!string.IsNullOrWhiteSpace(lookupId))
                 {
-                    var lookupId = detail.ClientVatNumber ?? detail.ClientEnterpriseNumber;
-                    if (!string.IsNullOrWhiteSpace(lookupId))
+                    PeppolParticipant? participant = null;
+                    try
                     {
-                        var participant = await _peppolDirectory.FindParticipantAsync(lookupId, ct);
-                        if (participant != null)
-                        {
-                            vm.PeppolAccountFound = true;
-                            vm.PeppolParticipantId = participant.ParticipantId;
-                            vm.PeppolStatusMessage = $"Peppol-account gevonden: {participant.Name ?? participant.ParticipantId}";
-                        }
-                        else
-                        {
-                            vm.PeppolStatusMessage = "Geen Peppol-account gevonden.";
-                        }
+                        participant = await _peppolDirectory.FindParticipantAsync(lookupId, ct);
+                        if (participant == null && !string.IsNullOrWhiteSpace(detail.ClientEnterpriseNumber) && detail.ClientEnterpriseNumber != lookupId)
+                            participant = await _peppolDirectory.FindParticipantAsync(detail.ClientEnterpriseNumber, ct);
+                    }
+                    catch (Exception ex) { _logger.LogWarning(ex, "Peppol-controle mislukt voor factuur {InvoiceId}", detail.Id); }
+                    if (participant != null)
+                    {
+                        vm.PeppolCheck = "found";
+                        vm.PeppolParticipantId = participant.ParticipantId;
+                        vm.PeppolStatusMessage = $"Peppol-account gevonden: {participant.Name ?? participant.ParticipantId}";
                     }
                     else
                     {
-                        vm.PeppolStatusMessage = "Geen ondernemings- of btw-nummer beschikbaar.";
+                        vm.PeppolCheck = "notfound";
+                        vm.PeppolStatusMessage = "Geen Peppol-account gevonden.";
                     }
-
-                    vm.CanSendViaPeppol = vm.PeppolAccountFound;
-                    if (includeDefaults && !vm.IsCopyRequest)
-                        vm.SendToPeppol = vm.PeppolAccountFound;
                 }
                 else
                 {
-                    vm.PeppolStatusMessage = "Peppol is niet geactiveerd voor dit bedrijf.";
+                    vm.PeppolStatusMessage = "Geen ondernemings- of btw-nummer beschikbaar.";
+                }
+
+                // Oude scherm (rechtstreeks Peppol): enkel als het bedrijf Peppol zelf heeft geactiveerd.
+                if (issuer.PeppolEnabled && !string.IsNullOrWhiteSpace(issuer.PeppolParticipantId))
+                {
+                    vm.PeppolAccountFound = vm.PeppolCheck == "found";
+                    vm.CanSendViaPeppol = vm.PeppolAccountFound;
+                    if (includeDefaults && !vm.IsCopyRequest) vm.SendToPeppol = vm.PeppolAccountFound;
+                }
+                else
+                {
                     vm.CanSendViaPeppol = false;
                 }
+
+                // Standaardkanaal (gl-v2): e-mail; staat de klant op Peppol en kan het naar Octopus, dan beide.
+                if (includeDefaults && !vm.IsCopyRequest) vm.Channel = vm.CanSendViaOctopus && vm.PeppolCheck == "found" ? "both" : "email";
             }
 
             return vm;
         }
+
+        /// <summary>E-mailadres van de ingelogde gebruiker (voor "Kopie naar mezelf").</summary>
+        private string? CurrentUserEmail() =>
+            User?.FindFirst(ClaimTypes.Email)?.Value
+            ?? User?.FindFirst("email")?.Value
+            ?? User?.FindFirst("preferred_username")?.Value;
+
+        /// <summary>Factuur verzenden: nieuwe gl-v2-layout (SendV2, 11g) of het oude scherm.</summary>
+        private ViewResult SendView(InvoiceSendVM model) => View(ViewData["UseGlV2Layout"] as bool? == true ? "SendV2" : "Send", model);
 
         private static InvoiceSendFormMode ParseSendMode(string? mode)
         {

@@ -1,0 +1,450 @@
+@using System.Globalization
+@using System.Text.Json
+@using CPMCore.Models.Marktanalyse
+@model CPMCore.Models.Marktanalyse.VergelijkbarePandenViewModel
+@*
+    gl-v2 — Marktanalyse › Vergelijkbare panden (design-handoff punt 46b en 46c, "CRM Marktanalyse.dc.html"): links het zoekprofiel als sectiekaart
+    met velden van 40px (slaapkamers als schakelaar), rechts de lege staat met "Opgeslagen profielen" en "Laatste zoekacties" (46b), of na een
+    zoekopdracht de kerncijfers, de marktconclusie bovenaan en de tabel met Alle/Beschikbaar/Verkocht als schakelaar (46c).
+    Zelfde model en dezelfde acties als VergelijkbarePanden.cshtml (het oude scherm); enkel de presentatie is nieuw.
+    Bewust niet gebouwd: "koppel aan een eenheid" en "Gebruik in budget" uit het ontwerp (er is nog geen koppeling tussen een zoekprofiel en
+    een eenheid of de verkoopstap van het budget). Slaapkamers kent naast 2/3/4+ ook 1, zodat een zoekprofiel voor een kleine woning kan.
+*@
+@{
+    ViewData["GlV2FullHeightBody"] = true;
+
+    var nl = CultureInfo.GetCultureInfo("nl-BE");
+    string Eur(decimal? v) => v.HasValue ? "€ " + v.Value.ToString("N0", nl) : "—";
+    var heeftZoek = Model.HeeftZoekparameters;
+
+    // Wat de keuzelijst met gemeenten toont: de naam, het aantal, of een uitnodiging als er niets gekozen is (leeg = alle gemeenten).
+    var gemeenteNamen = Model.GemeenteIds.Select(id => Model.Locaties.FirstOrDefault(l => l.GeoMunicipalityId == id)?.GemeenteNaam).Where(n => n != null).ToList();
+    var gemeenteLabel = Model.GemeenteIds.Count == 0 ? "Kies een gemeente"
+        : Model.GemeenteIds.Count == 1 ? (gemeenteNamen.FirstOrDefault() ?? "1 gemeente")
+        : Model.GemeenteIds.Count + " gemeenten geselecteerd";
+    var rondLabel = Model.HeeftRondAdresPunt ? Model.RondAdresDropdownLabel : "Kies een adres…";
+
+    var criteriaJson = JsonSerializer.Serialize(new
+    {
+        ZoekgebiedTab = Model.ZoekgebiedTab, GemeenteIds = Model.GemeenteIds, RondAdresPostcode = Model.RondAdresPostcode,
+        RondAdresLat = Model.RondAdresLat, RondAdresLng = Model.RondAdresLng, RondAdresStraal = Model.RondAdresStraal,
+        Type = Model.Type, Oppervlakte = Model.Oppervlakte, Tolerantie = Model.Tolerantie, PrijsMin = Model.PrijsMin,
+        PrijsMax = Model.PrijsMax, Slaapkamers = Model.Slaapkamers, Status = Model.Status
+    });
+
+    var exportUrl = Url.Action("ExportVergelijkbarePanden", "Marktanalyse") + Context.Request.QueryString;
+
+    // Opgeslagen profielen en de snelle starts uit de vorige versie van het scherm worden één lijst: de profielen eerst.
+    var tegels = Model.OpgeslagenProfielen.Select(p => (Item: p, Icoon: "ph-bookmark-simple"))
+        .Concat(Model.SnelStartPresets.Where(s => Model.OpgeslagenProfielen.All(p => p.Url != s.Url)).Select(p => (Item: p, Icoon: "ph-lightning")))
+        .ToList();
+
+    // Resultaat: tellingen, laagste/hoogste met het pand erbij, en de zin van de marktconclusie.
+    var panden = Model.Panden;
+    bool IsVerkocht(string s) => s == "Verkocht" || s == "Vermoedelijk verkocht";
+    var nBeschikbaar = panden.Count(p => p.Status == "Beschikbaar");
+    var nVerkocht = panden.Count(p => IsVerkocht(p.Status));
+    var laagste = Model.Kpi?.LaagstePrijs is { } lg ? panden.FirstOrDefault(p => p.Vraagprijs == lg)?.ProjectNaam : null;
+    var hoogste = Model.Kpi?.HoogstePrijs is { } hg ? panden.FirstOrDefault(p => p.Vraagprijs == hg)?.ProjectNaam : null;
+    var heeftDoorloop = panden.Any(p => p.DoorlooptijdDagen.HasValue);
+    var typeOms = Model.Type == "Appartement" ? "appartementen" : Model.Type == "Woning" ? "woningen" : "panden";
+    var oppOms = Model.Oppervlakte.HasValue ? $" tussen {Model.OppervlakteLaag:N0} en {Model.OppervlakteHoog:N0} m²" : "";
+    var plaatsOms = Model.ZoekgebiedTab == "RondAdres" && Model.HeeftRondAdresPunt
+        ? $"binnen {(Model.RondAdresStraal / 1000.0).ToString("0.#", nl)} km van het gekozen punt"
+        : Model.GemeenteIds.Count == 1 ? "in " + (gemeenteNamen.FirstOrDefault() ?? "de gekozen gemeente")
+        : Model.GemeenteIds.Count > 1 ? $"in {Model.GemeenteIds.Count} gemeenten"
+        : "in alle gemeenten";
+    var bPct = panden.Count > 0 ? (int)Math.Round((double)nBeschikbaar / panden.Count * 100) : 0;
+
+    bool SlpkIs(int? waarde) => Model.Slaapkamers == waarde || (waarde == 4 && Model.Slaapkamers >= 4);
+}
+@section PageStyle
+{
+    <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <link rel="stylesheet" href="~/css/gl-v2-marktanalyse.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @if (heeftZoek)
+    {
+        <a href="@exportUrl" class="gl-v2-btn gl-v2-btn-secondary" id="vpExportBtn"><i class="ph ph-export" aria-hidden="true"></i>Exporteren</a>
+    }
+    <button type="button" class="gl-v2-btn @(heeftZoek ? "gl-v2-btn-primary" : "gl-v2-btn-secondary")" id="vpSaveProfileBtn" data-bs-toggle="modal" data-bs-target="#vpSaveProfileModal" disabled="@(!heeftZoek)">
+        <i class="ph ph-bookmark-simple" aria-hidden="true"></i>Profiel opslaan
+    </button>
+}
+
+<div class="gl-v2-ma" id="gl-v2-ma">
+    @await Html.PartialAsync("_TabsV2", "VergelijkbarePanden")
+
+    <div class="gl-v2-ma-scroll">
+        @Html.AntiForgeryToken()
+        <form id="vpForm" method="get" action="@Url.Action("VergelijkbarePanden", "Marktanalyse")" class="gl-v2-vp-split" autocomplete="off">
+            <input type="hidden" name="zoekgebiedTab" id="hidZoekgebiedTab" value="@Model.ZoekgebiedTab" />
+
+            @* ── Zoekprofiel ── *@
+            <aside class="gl-v2-vp-side" aria-label="Zoekprofiel">
+                <section class="gl-v2-ma-card">
+                    <div class="gl-v2-vp-side-head">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Zoekprofiel</h2>
+                        <a href="@Url.Action("VergelijkbarePanden", "Marktanalyse")" class="gl-v2-vp-reset">Reset</a>
+                    </div>
+                    <div class="gl-v2-vp-form">
+                        <div class="gl-v2-field">
+                            <span class="gl-v2-field-label">Zoekgebied</span>
+                            <div class="gl-v2-vp-zoekstack">
+                                <div class="gl-v2-segmented" role="group" aria-label="Zoekgebied">
+                                    <button type="button" id="tabGemeenten" class="@(Model.ZoekgebiedTab != "RondAdres" ? "is-active" : "")" aria-pressed="@(Model.ZoekgebiedTab != "RondAdres" ? "true" : "false")">Gemeenten</button>
+                                    <button type="button" id="tabRondAdres" class="@(Model.ZoekgebiedTab == "RondAdres" ? "is-active" : "")" aria-pressed="@(Model.ZoekgebiedTab == "RondAdres" ? "true" : "false")">Rond adres</button>
+                                </div>
+
+                                @* Gemeenten: meerdere kiezen, met het aantal panden per gemeente *@
+                                <div id="panelGemeenten" class="gl-v2-vp-pick" @(Model.ZoekgebiedTab == "RondAdres" ? "hidden" : null)>
+                                    <button type="button" id="gemBtn" class="gl-v2-vp-pick-btn @(Model.GemeenteIds.Count > 0 ? "is-filled" : "")" aria-haspopup="listbox" aria-expanded="false" title="Leeg laten = alle gemeenten">
+                                        <i class="ph ph-map-pin" aria-hidden="true"></i>
+                                        <span class="gl-v2-vp-pick-label @(Model.GemeenteIds.Count == 0 ? "is-placeholder" : "")" id="gemBtnLabel">@gemeenteLabel</span>
+                                        <i class="ph ph-caret-down gl-v2-vp-pick-caret" aria-hidden="true"></i>
+                                    </button>
+                                    <div class="gl-v2-vp-panel" id="gemDropdown">
+                                        <div class="gl-v2-vp-panel-search"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input type="text" id="gemSearch" placeholder="Zoek gemeente…" autocomplete="off" aria-label="Zoek gemeente" /></div>
+                                        <div class="gl-v2-vp-panel-head"><span>Gemeenten · leeg = alle</span><a id="gemWissen" role="button" tabindex="0">Wissen</a></div>
+                                        <div class="gl-v2-vp-list" id="gemList"></div>
+                                    </div>
+                                </div>
+
+                                @* Rond adres: middelpunt en straal op een kaart *@
+                                <div id="panelRondAdres" class="gl-v2-vp-pick" @(Model.ZoekgebiedTab != "RondAdres" ? "hidden" : null)>
+                                    <button type="button" id="rondAdresBtn" class="gl-v2-vp-pick-btn @(Model.HeeftRondAdresPunt ? "is-filled" : "")" aria-haspopup="dialog" aria-expanded="false">
+                                        <i class="ph ph-crosshair" aria-hidden="true"></i>
+                                        <span class="gl-v2-vp-pick-label @(Model.HeeftRondAdresPunt ? "" : "is-placeholder")" id="rondAdresBtnLabel">@rondLabel</span>
+                                        <i class="ph ph-caret-down gl-v2-vp-pick-caret" aria-hidden="true"></i>
+                                    </button>
+                                    <div class="gl-v2-vp-panel is-wide" id="rondAdresDropdown">
+                                        <div class="gl-v2-vp-rond-top">
+                                            <span class="gl-v2-vp-rond-title">Middelpunt &amp; straal</span>
+                                            <span class="gl-v2-vp-rond-count"><span id="rondAdresCount">0</span> panden in gebied</span>
+                                        </div>
+                                        <div class="gl-v2-vp-panel-search"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input type="text" id="rondAdresSearch" placeholder="Zoek adres…" autocomplete="off" aria-label="Zoek adres" /></div>
+                                        <div class="gl-v2-vp-rond-slider">
+                                            <input type="range" id="rondAdresStraal" name="rondAdresStraal" class="gl-v2-vp-range" min="250" max="25000" step="250" value="@Model.RondAdresStraal" aria-label="Straal" />
+                                            <output id="straalLabel" for="rondAdresStraal">@((Model.RondAdresStraal / 1000.0).ToString("0.#", nl)) km</output>
+                                        </div>
+                                        <div id="rondAdresMap" class="gl-v2-vp-map"></div>
+                                        <div class="gl-v2-vp-rond-hint"><i class="ph ph-info" aria-hidden="true"></i><span>Klik of sleep op de kaart om het middelpunt te verplaatsen; sleep de greep om de straal aan te passen.</span></div>
+                                    </div>
+                                    <input type="hidden" name="rondAdresLat" id="rondAdresLat" value="@(Model.RondAdresLat?.ToString(CultureInfo.InvariantCulture))" />
+                                    <input type="hidden" name="rondAdresLng" id="rondAdresLng" value="@(Model.RondAdresLng?.ToString(CultureInfo.InvariantCulture))" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="gl-v2-field">
+                            <span class="gl-v2-field-label">Type</span>
+                            <div class="gl-v2-segmented" role="radiogroup" aria-label="Type">
+                                <label><input type="radio" name="type" value="Appartement" checked="@(Model.Type == "Appartement")" /><span>Appartement</span></label>
+                                <label><input type="radio" name="type" value="Woning" checked="@(Model.Type == "Woning")" /><span>Woning</span></label>
+                            </div>
+                        </div>
+
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="oppervlakte">Bewoonbare oppervlakte</label>
+                            <div class="gl-v2-field-box">
+                                <input type="number" name="oppervlakte" id="oppervlakte" class="gl-v2-field-input is-tabular" value="@Model.Oppervlakte" min="10" max="500" step="1" placeholder="bv. 120" inputmode="numeric" />
+                                <span class="gl-v2-field-unit">m²</span>
+                            </div>
+                            <div class="gl-v2-vp-tol">
+                                <div class="gl-v2-vp-tol-row"><span>Tolerantie</span><b id="tolLabel">± @Model.Tolerantie m²</b></div>
+                                <input type="range" name="tolerantie" id="tolerantieSlider" class="gl-v2-vp-range" min="0" max="50" step="5" value="@Model.Tolerantie" aria-label="Tolerantie in m²" />
+                                <span id="oppRangeLabel" class="gl-v2-vp-range-hint" @(Model.Oppervlakte.HasValue ? null : "hidden")>@(Model.Oppervlakte.HasValue ? $"zoekt tussen {(int)(Model.Oppervlakte.Value - Model.Tolerantie)} en {(int)(Model.Oppervlakte.Value + Model.Tolerantie)} m²" : "")</span>
+                            </div>
+                        </div>
+
+                        <div class="gl-v2-field">
+                            <span class="gl-v2-field-label">Prijs</span>
+                            <div class="gl-v2-vp-two">
+                                <div class="gl-v2-field-box"><input type="number" name="prijsMin" class="gl-v2-field-input is-tabular" value="@Model.PrijsMin" placeholder="min" min="0" step="10000" inputmode="numeric" aria-label="Prijs minimum" /><span class="gl-v2-field-unit">€</span></div>
+                                <div class="gl-v2-field-box"><input type="number" name="prijsMax" class="gl-v2-field-input is-tabular" value="@Model.PrijsMax" placeholder="max" min="0" step="10000" inputmode="numeric" aria-label="Prijs maximum" /><span class="gl-v2-field-unit">€</span></div>
+                            </div>
+                        </div>
+
+                        <div class="gl-v2-field">
+                            <span class="gl-v2-field-label">Slaapkamers</span>
+                            <div class="gl-v2-segmented" role="radiogroup" aria-label="Slaapkamers">
+                                <label><input type="radio" name="slaapkamers" value="" checked="@(!Model.Slaapkamers.HasValue)" /><span>Alle</span></label>
+                                @if (Model.Slaapkamers == 0)
+                                {
+                                    <label><input type="radio" name="slaapkamers" value="0" checked="checked" /><span>Studio</span></label>
+                                }
+                                @foreach (var n in new[] { 1, 2, 3, 4 })
+                                {
+                                    <label><input type="radio" name="slaapkamers" value="@n" checked="@SlpkIs(n)" /><span>@(n == 4 ? "4+" : n.ToString())</span></label>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="gl-v2-field">
+                            <span class="gl-v2-field-label">Status</span>
+                            <div class="gl-v2-segmented" role="radiogroup" aria-label="Status">
+                                @foreach (var s in new[] { "Alles", "Beschikbaar", "Verkocht" })
+                                {
+                                    <label><input type="radio" name="status" value="@s" checked="@(Model.Status == s || (s == "Alles" && string.IsNullOrEmpty(Model.Status)))" /><span>@s</span></label>
+                                }
+                            </div>
+                        </div>
+
+                        <button type="submit" class="gl-v2-btn gl-v2-btn-primary" style="width:100%"><i class="ph ph-magnifying-glass" aria-hidden="true"></i>Zoek vergelijkbare panden</button>
+                    </div>
+                </section>
+            </aside>
+
+            @* ── Resultaten ── *@
+            <div class="gl-v2-vp-main">
+                <div class="gl-v2-vp-loading" id="vpLoadingOverlay" role="status" aria-label="Bezig met laden"><span class="gl-v2-vp-spinner"></span></div>
+
+                @if (!heeftZoek)
+                {
+                    <section class="gl-v2-ma-card gl-v2-ma-empty">
+                        <span class="gl-v2-ma-empty-icon"><i class="ph ph-magnifying-glass" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-ma-empty-title">Nog geen zoekprofiel actief</h2>
+                        <p class="gl-v2-ma-empty-text">Stel links je criteria in, of start meteen met een opgeslagen profiel. Je krijgt kerncijfers, de vergelijkbare panden en een automatische marktconclusie.</p>
+                    </section>
+
+                    @if (tegels.Count > 0)
+                    {
+                        <section class="gl-v2-section-card">
+                            <div class="gl-v2-section-card-header">
+                                <span class="gl-v2-section-card-icon"><i class="ph ph-bookmark-simple" aria-hidden="true"></i></span>
+                                <h2 class="gl-v2-section-card-title">Opgeslagen profielen</h2>
+                                <span class="gl-v2-field-divider"></span>
+                                <span class="gl-v2-section-card-desc">één klik om te starten</span>
+                            </div>
+                            <div class="gl-v2-vp-tiles">
+                                @foreach (var t in tegels)
+                                {
+                                    <a class="gl-v2-vp-tile" href="@t.Item.Url">
+                                        <span class="gl-v2-vp-tile-icon"><i class="ph @t.Icoon" aria-hidden="true"></i></span>
+                                        <span class="gl-v2-vp-tile-text"><span class="gl-v2-vp-tile-title">@t.Item.Titel</span><span class="gl-v2-vp-tile-sub">@t.Item.Subtitel</span></span>
+                                    </a>
+                                }
+                            </div>
+                        </section>
+                    }
+
+                    @if (Model.RecenteZoekActies.Count > 0)
+                    {
+                        <section class="gl-v2-section-card">
+                            <div class="gl-v2-section-card-header">
+                                <span class="gl-v2-section-card-icon"><i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i></span>
+                                <h2 class="gl-v2-section-card-title">Laatste zoekacties</h2>
+                            </div>
+                            <div class="gl-v2-vp-actions">
+                                @foreach (var a in Model.RecenteZoekActies)
+                                {
+                                    <a class="gl-v2-vp-action" href="@a.Url">
+                                        <span class="gl-v2-vp-tile-icon"><i class="ph ph-clock" aria-hidden="true"></i></span>
+                                        <span class="gl-v2-vp-tile-text"><span class="gl-v2-vp-tile-title">@a.Titel</span><span class="gl-v2-vp-tile-sub">@a.Subtitel</span></span>
+                                        <span class="gl-v2-vp-action-count">@a.AantalResultaten panden</span>
+                                        <span class="gl-v2-vp-action-time">@a.RelatieveTijd</span>
+                                    </a>
+                                }
+                            </div>
+                        </section>
+                    }
+                }
+                else if (!Model.HeeftResultaten)
+                {
+                    <section class="gl-v2-ma-card gl-v2-ma-empty">
+                        <span class="gl-v2-ma-empty-icon"><i class="ph ph-magnifying-glass" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-ma-empty-title">Geen vergelijkbare panden gevonden</h2>
+                        <p class="gl-v2-ma-empty-text">Voor dit zoekprofiel is niets gevonden. Probeer een grotere tolerantie, een ruimere prijsvork of meer gemeenten.</p>
+                    </section>
+                }
+                else
+                {
+                    var kpi = Model.Kpi;
+                    <section class="gl-v2-ma-card gl-v2-ma-strip" style="--ma-cols:6" aria-label="Kerncijfers">
+                        <div class="gl-v2-ma-strip-grid">
+                            <div class="gl-v2-ma-stat">
+                                <span class="gl-v2-ma-stat-label">Panden</span>
+                                <span class="gl-v2-ma-stat-value is-primary">@(kpi?.Aantal ?? panden.Count)</span>
+                                <span class="gl-v2-ma-stat-sub">@nBeschikbaar beschikbaar · @nVerkocht verkocht</span>
+                            </div>
+                            <div class="gl-v2-ma-stat">
+                                <span class="gl-v2-ma-stat-label">Gem. prijs</span>
+                                <span class="gl-v2-ma-stat-value">@Eur(kpi?.GemPrijs)</span>
+                                <span class="gl-v2-ma-stat-sub">vraagprijs</span>
+                            </div>
+                            <div class="gl-v2-ma-stat">
+                                <span class="gl-v2-ma-stat-label">Gem. €/m²</span>
+                                <span class="gl-v2-ma-stat-value">@Eur(kpi?.GemPrijsPerM2)</span>
+                                <span class="gl-v2-ma-stat-sub">bewoonbaar</span>
+                            </div>
+                            <div class="gl-v2-ma-stat">
+                                <span class="gl-v2-ma-stat-label">Laagste</span>
+                                <span class="gl-v2-ma-stat-value">@Eur(kpi?.LaagstePrijs)</span>
+                                <span class="gl-v2-ma-stat-sub" title="@laagste">@(laagste ?? "")</span>
+                            </div>
+                            <div class="gl-v2-ma-stat">
+                                <span class="gl-v2-ma-stat-label">Hoogste</span>
+                                <span class="gl-v2-ma-stat-value">@Eur(kpi?.HoogstePrijs)</span>
+                                <span class="gl-v2-ma-stat-sub" title="@hoogste">@(hoogste ?? "")</span>
+                            </div>
+                            <div class="gl-v2-ma-stat">
+                                <span class="gl-v2-ma-stat-label">Gem. oppervlakte</span>
+                                <span class="gl-v2-ma-stat-value">@(kpi?.GemOppervlakte is { } o ? o.ToString("N0", nl) + " m²" : "—")</span>
+                                <span class="gl-v2-ma-stat-sub">@(Model.Oppervlakte.HasValue ? $"{Model.OppervlakteLaag:N0} – {Model.OppervlakteHoog:N0} m²" : "")</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="gl-v2-ma-card gl-v2-vp-conclusie" aria-label="Marktconclusie">
+                        <span class="gl-v2-vp-conclusie-icon"><i class="ph ph-chart-bar" aria-hidden="true"></i></span>
+                        <div class="gl-v2-vp-conclusie-body">
+                            <span class="gl-v2-vp-conclusie-title">Marktconclusie</span>
+                            <span class="gl-v2-vp-conclusie-text">
+                                Voor @typeOms@oppOms @plaatsOms zijn er <b>@panden.Count vergelijkbare panden</b>.
+                                Gemiddelde vraagprijs <b>@Eur(kpi?.GemPrijs)</b> of <b>@(kpi?.GemPrijsPerM2 is { } pm ? "€ " + pm.ToString("N0", nl) + "/m²" : "—")</b>@if (kpi?.LaagstePrijs != null && kpi?.HoogstePrijs != null)
+                                {
+                                    <text>, met een prijsvork van @Eur(kpi.LaagstePrijs) tot @Eur(kpi.HoogstePrijs)</text>
+                                }.
+                                <b>@nBeschikbaar van @panden.Count</b> zijn nog beschikbaar (@bPct %).
+                            </span>
+                        </div>
+                    </section>
+
+                    <section class="gl-v2-ma-card gl-v2-ma-table-card">
+                        <div class="gl-v2-ma-table-head">
+                            <span class="gl-v2-ma-table-title">@panden.Count vergelijkbare panden</span>
+                            <span class="gl-v2-ma-table-spacer"></span>
+                            <div class="gl-v2-segmented" id="vpStatusFilter" role="group" aria-label="Status in de tabel">
+                                <button type="button" class="is-active" aria-pressed="true" data-filter="">Alle <span class="gl-v2-ma-count">@panden.Count</span></button>
+                                <button type="button" aria-pressed="false" data-filter="Beschikbaar">Beschikbaar <span class="gl-v2-ma-count">@nBeschikbaar</span></button>
+                                <button type="button" aria-pressed="false" data-filter="Verkocht">Verkocht <span class="gl-v2-ma-count">@nVerkocht</span></button>
+                            </div>
+                            <div class="gl-v2-field gl-v2-ma-table-search">
+                                <div class="gl-v2-field-box">
+                                    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                                    <input type="text" class="gl-v2-field-input" id="vpSearch" placeholder="Zoek project of adres" aria-label="Zoek project of adres" autocomplete="off">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="gl-v2-ma-table-wrap">
+                            <table id="tblVergelijkbaar" class="gl-v2-ma-table gl-v2-vp-table-wide" data-col-status="7" data-col-price="5" data-col-last="@(heeftDoorloop ? 9 : 8)">
+                                <thead>
+                                    <tr>
+                                        <th>Project</th>
+                                        <th>Adres</th>
+                                        <th>Type</th>
+                                        <th class="is-num">Opp.</th>
+                                        <th class="is-num">Slpk.</th>
+                                        <th class="is-num">Prijs</th>
+                                        <th class="is-num">€/m²</th>
+                                        <th>Status</th>
+                                        @if (heeftDoorloop)
+                                        {
+                                            <th class="is-num" title="Dagen van eerste waarneming tot verkoop">Doorlooptijd</th>
+                                        }
+                                        <th>Project verkocht</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var p in panden)
+                                    {
+                                        var regels = (p.AdresRegel ?? "").Split('\n');
+                                        var statusCss = p.Status == "Verkocht" ? "is-sold" : p.Status == "Vermoedelijk verkocht" ? "is-likely" : "is-avail";
+                                        var detailUrl = p.CanonicalProjectId.HasValue ? Url.Action("Projectdetail", "Marktanalyse", new { id = p.ProjectAssetId }) : p.SourceUrl;
+                                        var klikbaar = !string.IsNullOrEmpty(detailUrl);
+                                        <tr class="@(klikbaar ? "is-clickable" : "")" data-url="@detailUrl" data-external="@(p.CanonicalProjectId.HasValue ? "false" : "true")">
+                                            <td><span class="gl-v2-ma-cell-main" title="@p.ProjectNaam">@p.ProjectNaam</span></td>
+                                            <td>
+                                                <span class="gl-v2-ma-cell-line">@regels.FirstOrDefault()</span>
+                                                @if (regels.Length > 1)
+                                                {
+                                                    <span class="gl-v2-ma-cell-sub">@regels.LastOrDefault()</span>
+                                                }
+                                            </td>
+                                            <td><span class="gl-v2-badge is-neutral">@p.TypeLabel</span></td>
+                                            <td class="is-num" data-order="@(p.Oppervlakte?.ToString("0", CultureInfo.InvariantCulture) ?? "0")">@(p.Oppervlakte.HasValue ? p.Oppervlakte.Value.ToString("N0", nl) + " m²" : "—")</td>
+                                            <td class="is-num">@(p.Slaapkamers?.ToString() ?? "—")</td>
+                                            <td class="is-num" data-order="@(p.Vraagprijs?.ToString("0", CultureInfo.InvariantCulture) ?? "0")">
+                                                <span class="gl-v2-ma-cell-main">@Eur(p.Vraagprijs)</span>
+                                                @if (p.Vraagprijs.HasValue && IsVerkocht(p.Status))
+                                                {
+                                                    <span class="gl-v2-ma-cell-sub">laatste vraagprijs</span>
+                                                }
+                                            </td>
+                                            <td class="is-num" data-order="@(p.PrijsPerM2?.ToString("0", CultureInfo.InvariantCulture) ?? "0")">@Eur(p.PrijsPerM2)</td>
+                                            <td><span class="gl-v2-badge @statusCss">@p.Status</span></td>
+                                            @if (heeftDoorloop)
+                                            {
+                                                <td class="is-num is-muted" data-order="@(p.DoorlooptijdDagen ?? -1)">@(p.DoorlooptijdDagen.HasValue ? p.DoorlooptijdDagen.Value + " d" : "—")</td>
+                                            }
+                                            <td data-order="@(p.IsProject && p.Verkoopgraad.HasValue ? p.Verkoopgraad.Value.ToString("0.##", CultureInfo.InvariantCulture) : "-1")">
+                                                @if (p.IsProject && p.Verkoopgraad.HasValue)
+                                                {
+                                                    var vg = Math.Clamp(p.Verkoopgraad.Value, 0, 100);
+                                                    <div class="gl-v2-ma-pct">
+                                                        <div class="gl-v2-ma-pct-track"><div class="gl-v2-ma-pct-fill is-high" style="width:@(vg.ToString("0.#", CultureInfo.InvariantCulture))%"></div></div>
+                                                        <span class="gl-v2-ma-pct-num">@vg.ToString("0", nl) %</span>
+                                                    </div>
+                                                }
+                                                else if (!p.IsProject)
+                                                {
+                                                    <span class="gl-v2-badge is-neutral">losse eenheid</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="is-muted">—</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                }
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Profiel opslaan → fetch naar SaveZoekProfiel (geen eigen pagina) *@
+<div class="modal fade gl-v2-modal-form" id="vpSaveProfileModal" tabindex="-1" aria-hidden="true" aria-labelledby="vpSaveProfileTitle">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <div class="modal-content">
+            <div class="modal-header"><h2 class="modal-title" id="vpSaveProfileTitle">Zoekprofiel opslaan</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+            <div class="modal-body">
+                <div class="gl-v2-field gl-v2-field-full">
+                    <label class="gl-v2-field-label" for="vpProfileNaam">Naam van dit profiel <span style="color:var(--gl-v2-danger)">*</span></label>
+                    <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="vpProfileNaam" maxlength="200" placeholder="bv. Appartementen Gent ±120m²" autocomplete="off" /></div>
+                    <span class="gl-v2-field-help" id="vpProfileNaamErr" style="color:var(--gl-v2-danger)" hidden>Geef het profiel een naam.</span>
+                </div>
+            </div>
+            <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="button" class="gl-v2-btn gl-v2-btn-primary" id="vpProfileOpslaanConfirm">Opslaan</button></div>
+        </div>
+    </div>
+</div>
+
+@section PageScripts
+{
+    <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        window.glV2VpConfig = {
+            gemeenten: @Html.Raw(JsonSerializer.Serialize(Model.Locaties.Select(g => new { id = g.GeoMunicipalityId, naam = g.GemeenteNaam, aantal = Model.AantalPerGemeente.GetValueOrDefault(g.GeoMunicipalityId, 0) }))),
+            geselecteerd: @Html.Raw(JsonSerializer.Serialize(Model.GemeenteIds)),
+            criteria: @Html.Raw(criteriaJson),
+            initLat: @Html.Raw(Model.RondAdresLat.HasValue ? Model.RondAdresLat.Value.ToString(CultureInfo.InvariantCulture) : "null"),
+            initLng: @Html.Raw(Model.RondAdresLng.HasValue ? Model.RondAdresLng.Value.ToString(CultureInfo.InvariantCulture) : "null"),
+            urls: {
+                saveProfile: '@Url.Action("SaveZoekProfiel", "Marktanalyse")',
+                geocode: '@Url.Action("GeocodeAdres", "Marktanalyse")',
+                count: '@Url.Action("TelPandenInStraal", "Marktanalyse")'
+            }
+        };
+    </script>
+    <script src="~/js/gl-v2-marktanalyse-vergelijkbaar.js" asp-append-version="true"></script>
+}

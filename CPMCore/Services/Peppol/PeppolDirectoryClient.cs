@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
@@ -20,7 +21,7 @@ namespace CPMCore.Services.Peppol
 
             if (_httpClient.BaseAddress == null)
             {
-                _httpClient.BaseAddress = new Uri("https://directory.peppol.eu/public/directory/");
+                _httpClient.BaseAddress = new Uri("https://directory.peppol.eu/");
             }
         }
 
@@ -47,7 +48,9 @@ namespace CPMCore.Services.Peppol
 
             try
             {
-                var response = await _httpClient.GetAsync($"v3/participants?participant={Uri.EscapeDataString(normalized)}", ct);
+                // De zoek-API van de Peppol Directory (JSON). Het vroegere pad public/directory/v3/participants bestaat niet en gaf een HTML-pagina terug,
+                // waardoor élke klant als "niet geregistreerd" gold.
+                var response = await _httpClient.GetAsync($"search/1.0/json?participant={Uri.EscapeDataString(normalized)}", ct);
                 if (!response.IsSuccessStatusCode)
                 {
                     _logger.LogDebug("Peppol directory returned {StatusCode} for {Participant}", response.StatusCode, normalized);
@@ -58,32 +61,32 @@ namespace CPMCore.Services.Peppol
                 using var json = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
                 var root = json.RootElement;
 
-                if (root.TryGetProperty("participants", out var participants) && participants.ValueKind == JsonValueKind.Array)
-                {
-                    foreach (var participant in participants.EnumerateArray())
-                    {
-                        var id = participant.GetPropertyOrDefault("participantID")
-                                 ?? participant.GetPropertyOrDefault("participantId");
-                        if (string.IsNullOrWhiteSpace(id))
-                            continue;
-
-                        var name = participant.GetPropertyOrDefault("name");
-                        var country = participant.GetPropertyOrDefault("countryCode");
-                        return new PeppolParticipant(id, name, country);
-                    }
-                }
-                else if (root.TryGetProperty("matches", out var matches) && matches.ValueKind == JsonValueKind.Array)
+                if (root.TryGetProperty("matches", out var matches) && matches.ValueKind == JsonValueKind.Array)
                 {
                     foreach (var match in matches.EnumerateArray())
                     {
-                        var id = match.GetPropertyOrDefault("participantID")
-                                 ?? match.GetPropertyOrDefault("participantId");
-                        if (string.IsNullOrWhiteSpace(id))
-                            continue;
+                        // participantID is een object { scheme, value }; oudere antwoorden hadden een tekst.
+                        string? id = null;
+                        if (match.TryGetProperty("participantID", out var pid))
+                        {
+                            if (pid.ValueKind == JsonValueKind.Object && pid.TryGetProperty("value", out var v) && v.ValueKind == JsonValueKind.String)
+                            {
+                                var scheme = pid.TryGetProperty("scheme", out var sc) && sc.ValueKind == JsonValueKind.String ? sc.GetString() : null;
+                                id = string.IsNullOrWhiteSpace(scheme) ? v.GetString() : $"{scheme}::{v.GetString()}";
+                            }
+                            else if (pid.ValueKind == JsonValueKind.String) id = pid.GetString();
+                        }
+                        if (string.IsNullOrWhiteSpace(id)) continue;
 
-                        var name = match.GetPropertyOrDefault("name");
-                        var country = match.GetPropertyOrDefault("countryCode");
-                        return new PeppolParticipant(id, name, country);
+                        string? name = null, country = null;
+                        if (match.TryGetProperty("entities", out var ents) && ents.ValueKind == JsonValueKind.Array)
+                            foreach (var ent in ents.EnumerateArray())
+                            {
+                                country ??= ent.GetPropertyOrDefault("countryCode");
+                                if (name == null && ent.TryGetProperty("name", out var names) && names.ValueKind == JsonValueKind.Array)
+                                    foreach (var n in names.EnumerateArray()) { name = n.GetPropertyOrDefault("name"); if (!string.IsNullOrWhiteSpace(name)) break; }
+                            }
+                        return new PeppolParticipant(id!, name, country);
                     }
                 }
             }
@@ -119,11 +122,18 @@ namespace CPMCore.Services.Peppol
             if (trimmed.StartsWith("BE", StringComparison.OrdinalIgnoreCase))
             {
                 var upper = trimmed.ToUpperInvariant();
+                // Belgisch ondernemingsnummer in Peppol: 0208 + 10 cijfers (zonder "BE", met voorloopnul).
+                var digits = new string(upper.Where(char.IsDigit).ToArray());
+                if (digits.Length == 9) digits = "0" + digits;
+                if (digits.Length == 10) yield return $"0208:{digits}";
                 yield return $"0208:{upper}";
                 yield return $"0088:{upper}";
             }
             else
             {
+                var bare = new string(trimmed.Where(char.IsDigit).ToArray());
+                if (bare.Length == 9) bare = "0" + bare;
+                if (bare.Length == 10) yield return $"0208:{bare}";
                 yield return $"0208:{trimmed}";
             }
         }

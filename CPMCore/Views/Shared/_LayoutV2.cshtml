@@ -36,7 +36,7 @@
 <head>
     <meta charset="UTF-8">
     <title>@(string.IsNullOrWhiteSpace(pageTitle) ? "CPM - GROUP LN" : pageTitle + " · CPM - GROUP LN")</title>
-    <link rel="icon" href="@Url.Content("~/img/favicon.ico")" type="image/x-icon" />
+    <link rel="icon" href="@Url.Content("~/img/favicon.ico")" type="image/x-icon" sizes="16x16 32x32 48x48" />
     @* Bewust GEEN maximum-scale/user-scalable=no (toegankelijkheid: pinch-zoom blijft mogelijk) — het
        inzoomen bij een tik op een veld wordt bij de bron opgelost: elk invoerveld is op touch ≥16px
        (gl-v2-shell.css, "Mobiele zoekervaring"). interactive-widget=resizes-content: Chrome (Android)

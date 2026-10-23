@@ -1,0 +1,233 @@
+@model CPMCore.Services.Verkoop.VerkoopInstellingenVm
+@*
+    gl-v2 — Verkoopinstellingen (design-handoff punt 45b): drie sectiekaarten (Financieel, Kosten koper, Website) met velden in een raster van 3,
+    links; rechts een live voorbeeld van wat de koper betaalt (rekent mee met wat je typt); vaste actiebalk onderaan.
+    Opslaan gaat via fetch naar ProjectenController.SalesSettingsSaveV2 (VerkoopService.SaveAsync). Het legacy Sales/SalesSettings.cshtml blijft bestaan (?classic=true).
+    Mapping van "Verkoop onder" op het bestaande RegistrationType: Btw-stelsel + Grond = 2 (btw op de bouw, registratierechten op de grond);
+    Btw-stelsel + Enkel btw = 0 (btw op alles); Registratierechten = 1 (bestaand gebouw: registratierechten op alles).
+*@
+@using System.Globalization
+@using CPMCore.Models.GlV2
+@using CPMCore.Services.Verkoop
+@{
+    ViewData["Title"] = "Verkoopinstellingen";
+    ViewData["HelpScreenId"] = "projecten-verkoopinstellingen";
+    ViewData["PageIcon"] = "ph ph-sliders-horizontal";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("DetailSales", "Projecten", new { projectid = Model.ProjectId });
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    var i = Model.Instellingen;
+    var w = Model.Website;
+    string N2(decimal v) => v.ToString("N2", be);
+    var verkoopOnderReg = i.RegistrationType == 1;
+    var typeGrond = i.RegistrationType == 2 || i.MixedVat;
+    var v = Model.Voorbeeld;
+    var menuVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · verkoopinstellingen" };
+    var statusItems = new[]
+    {
+        new GlV2SelectItem { Value = "1", Text = "Beschikbaar" }, new GlV2SelectItem { Value = "2", Text = "Binnenkort" },
+        new GlV2SelectItem { Value = "3", Text = "Lancering" }, new GlV2SelectItem { Value = "8", Text = "Uitverkocht" },
+    }.ToList();
+    var bankItems = Model.BankAccounts.Select(b => new GlV2SelectItem { Value = b.Value, Text = b.Text }).ToList();
+    bankItems.Add(new GlV2SelectItem { Value = "new", Text = "+ Nieuwe rekening toevoegen" });
+    GlV2SegmentedVm Seg(string id, string aria, params (string Text, string Value, bool Active)[] items) => new() { Id = id, Outline = true, AriaLabel = aria, Items = items.Select(x => new GlV2SegmentedItem { Text = x.Text, Active = x.Active, Data = new() { ["value"] = x.Value } }).ToList() };
+    string Veld(string id, string name, string label, decimal val, string unit, string hint = null)
+    {
+        var h = hint == null ? "" : "<span class='gl-v2-field-help'>" + hint + "</span>";
+        return "<div class='gl-v2-field'><label class='gl-v2-field-label' for='" + id + "'>" + label + "</label><div class='gl-v2-field-box'>"
+            + "<input type='text' inputmode='decimal' class='gl-v2-field-input is-num is-tabular vk-num' id='" + id + "' name='" + name + "' value='" + N2(val) + "' autocomplete='off' />"
+            + "<span class='gl-v2-field-unit'>" + unit + "</span></div>" + h + "</div>";
+    }
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-verkoopinstellingen.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge is-attention" id="vs-dirty-badge" hidden>NIET-OPGESLAGEN WIJZIGINGEN</span>
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+@{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+<form id="vs-form" class="gl-v2-vs-form" novalidate data-save-url="@Url.Action("SalesSettingsSaveV2", "Projecten", new { projectid = Model.ProjectId })" data-can-write="@(Model.CanWrite ? "1" : "0")">
+    @Html.AntiForgeryToken()
+    <div class="gl-v2-vs-scroll">
+        <div class="gl-v2-vs-cols">
+            <div class="gl-v2-vs-main">
+                @if (Model.RekeningOntbrak && !Model.MissingBuilder)
+                {
+                    <div class="gl-v2-notice gl-v2-notice-expanded is-warning">
+                        <span class="gl-v2-notice-expanded-icon"><i class="ph ph-warning" aria-hidden="true"></i></span>
+                        <div class="gl-v2-notice-body">
+                            <span class="gl-v2-notice-title">Projectrekening ontbreekt</span>
+                            <span class="gl-v2-notice-text">Er is nog geen rekening gekozen; voorschotfacturen gebruiken anders de algemene rekening.</span>
+                        </div>
+                    </div>
+                }
+                @if (Model.MissingBuilder)
+                {
+                    <div class="gl-v2-notice gl-v2-notice-expanded is-warning">
+                        <span class="gl-v2-notice-expanded-icon"><i class="ph ph-warning" aria-hidden="true"></i></span>
+                        <div class="gl-v2-notice-body">
+                            <span class="gl-v2-notice-title">Geen bouwer gekoppeld</span>
+                            <span class="gl-v2-notice-text">Kies eerst een bouwer bij het project om een projectrekening te kunnen selecteren.</span>
+                        </div>
+                    </div>
+                }
+
+                <section class="gl-v2-section-card">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-coins" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Financieel</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">btw-stelsel, registratie en projectrekening</span>
+                    </div>
+                    <input type="hidden" id="vs-regtype" name="regtype" value="@(verkoopOnderReg ? 1 : typeGrond ? 2 : 0)" />
+                    <div class="gl-v2-section-grid">
+                        <div class="gl-v2-col-4">
+                            <div class="gl-v2-field"><span class="gl-v2-field-label">Verkoop onder</span>
+                                @await Html.PartialAsync("GlV2/_Segmented", Seg("vs-onder", "Verkoop onder", ("Btw-stelsel", "btw", !verkoopOnderReg), ("Registratierechten", "reg", verkoopOnderReg)))
+                            </div>
+                        </div>
+                        <div class="gl-v2-col-4" id="vs-type-wrap" @(verkoopOnderReg ? "hidden" : "")>
+                            <div class="gl-v2-field"><span class="gl-v2-field-label">Type registratie</span>
+                                @await Html.PartialAsync("GlV2/_Segmented", Seg("vs-type", "Type registratie", ("Grond", "2", typeGrond), ("Enkel btw", "0", !typeGrond)))
+                            </div>
+                        </div>
+                        <div class="gl-v2-col-12"><span class="gl-v2-vs-regime-note" id="vs-regime-note"></span></div>
+                        <div class="gl-v2-col-4">@Html.Raw(Veld("vs-reg", "reg", "Registratierechten", i.RegistrationPercentage, "%", "voorstel Vlaanderen 12 % · per koper aan te passen bij enige eigen woning"))</div>
+                        <div class="gl-v2-col-4">@Html.Raw(Veld("vs-vat", "vat", "Btw", i.VatPercentage, "%", "6 % kan bij afbraak en heropbouw"))</div>
+                        <div class="gl-v2-col-4">
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "bankaccount", Id = "vs-bank", Label = "Projectrekening", Value = Model.Website.BankAccountId?.ToString() ?? "", EmptyText = "— kies een rekening —", Items = bankItems, Disabled = Model.MissingBuilder, Help = "rekeningen van de bouwheer" })
+                        </div>
+                        <div class="gl-v2-col-4" id="vs-newiban-wrap" hidden>
+                            <div class="gl-v2-field"><label class="gl-v2-field-label" for="vs-newiban">IBAN van de nieuwe rekening</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="vs-newiban" name="newiban" maxlength="40" placeholder="BE00 0000 0000 0000" autocomplete="off" /></div></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="gl-v2-section-card">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-receipt" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Kosten koper</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">vaste kosten per eenheid bovenop de prijs · het ereloon van de notaris wordt berekend</span>
+                    </div>
+                    <div class="gl-v2-section-grid">
+                        <div class="gl-v2-col-4">@Html.Raw(Veld("vs-mortgage", "mortgage", "Kosten overschrijving", i.MortgageRegistrationCost, "€", "hypotheekkantoor · telt bij de notariskosten"))</div>
+                        <div class="gl-v2-col-4">@Html.Raw(Veld("vs-basecert", "basecert", "Aandeel basisakte", i.BaseCertificateCost, "€", "enkel bij appartementen"))</div>
+                        <div class="gl-v2-col-4">@Html.Raw(Veld("vs-parcel", "parcel", "Aandeel verkavelingsakte", i.ParcelCost, "€"))</div>
+                        <div class="gl-v2-col-4">@Html.Raw(Veld("vs-connection", "connection", "Aansluitkosten", i.ConnectionFees, "€", "water, elektriciteit, riolering"))</div>
+                        <div class="gl-v2-col-4">@Html.Raw(Veld("vs-surveyor", "surveyor", "Landmetingskosten", i.SurveyorCost, "€"))</div>
+                    </div>
+                    <div class="gl-v2-vs-extra" id="vs-extra">
+                        @foreach (var e in i.Extra)
+                        {
+                            <div class="gl-v2-vs-extra-row">
+                                <div class="gl-v2-field"><label class="gl-v2-field-label">Naam</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" name="extraname" maxlength="120" value="@e.Naam" autocomplete="off" /></div></div>
+                                <div class="gl-v2-field"><label class="gl-v2-field-label">Bedrag</label><div class="gl-v2-field-box"><input type="text" inputmode="decimal" class="gl-v2-field-input is-num is-tabular vk-num" name="extraamount" value="@N2(e.Bedrag)" autocomplete="off" /><span class="gl-v2-field-unit">€</span></div></div>
+                                <div class="gl-v2-field"><label class="gl-v2-field-label">Toelichting</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" name="extranote" maxlength="200" value="@e.Toelichting" autocomplete="off" /></div></div>
+                                <button type="button" class="gl-v2-btn gl-v2-btn-text js-vs-extra-del" aria-label="Kost verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+                            </div>
+                        }
+                    </div>
+                    @if (Model.CanWrite)
+                    {
+                        <div class="gl-v2-vs-extra-add"><button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="vs-extra-add"><i class="ph ph-plus" aria-hidden="true"></i>Kost toevoegen</button></div>
+                    }
+                </section>
+
+                <section class="gl-v2-section-card">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-globe" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Website</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">zichtbaarheid en tekst op groupln.be</span>
+                    </div>
+                    <div class="gl-v2-section-grid">
+                        <div class="gl-v2-col-6">
+                            <label class="gl-v2-toggle-row" for="vs-salevisible"><input type="checkbox" id="vs-salevisible" name="salevisible" value="1" class="gl-v2-toggle-switch" @(w.SaleVisible ? "checked" : "") /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Verkoop zichtbaar</span><span class="gl-v2-toggle-hint">project verschijnt bij “Te koop”</span></span></label>
+                        </div>
+                        <div class="gl-v2-col-6">
+                            <label class="gl-v2-toggle-row" for="vs-featured"><input type="checkbox" id="vs-featured" name="featured" value="1" class="gl-v2-toggle-switch" @(w.IsFeatured ? "checked" : "") /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Uitgelicht project</span><span class="gl-v2-toggle-hint">bovenaan de homepage</span></span></label>
+                        </div>
+                        <div class="gl-v2-col-6">
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "displaystatus", Id = "vs-status", Label = "Website status", Value = w.DisplayStatus?.ToString() ?? "", EmptyText = "Automatisch bepalen", Items = statusItems, Help = "automatisch volgt uit de status van de eenheden" })
+                        </div>
+                        <div class="gl-v2-col-12">
+                            <div class="gl-v2-field"><label class="gl-v2-field-label" for="vs-title">Titel</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="vs-title" name="title" value="@w.Title" placeholder="Titel voor de website" autocomplete="off" /></div><span class="gl-v2-field-help" id="vs-title-count"></span></div>
+                        </div>
+                        <div class="gl-v2-col-12">
+                            <div class="gl-v2-field"><span class="gl-v2-field-label">Tekst</span>
+                                <div class="gl-v2-vs-rte">
+                                    <div class="gl-v2-vs-rte-bar" role="toolbar" aria-label="Opmaak">
+                                        <button type="button" data-cmd="bold" title="Vet" aria-label="Vet"><i class="ph ph-text-b" aria-hidden="true"></i></button>
+                                        <button type="button" data-cmd="italic" title="Cursief" aria-label="Cursief"><i class="ph ph-text-italic" aria-hidden="true"></i></button>
+                                        <button type="button" data-cmd="insertUnorderedList" title="Lijst" aria-label="Lijst"><i class="ph ph-list-bullets" aria-hidden="true"></i></button>
+                                    </div>
+                                    <div class="gl-v2-vs-rte-body" id="vs-text-edit" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Tekst voor de website">@Html.Raw(w.Text)</div>
+                                    <input type="hidden" id="vs-text" name="text" />
+                                </div>
+                                <span class="gl-v2-field-help" id="vs-text-count"></span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <aside class="gl-v2-vs-aside">
+                <section class="gl-v2-section-card gl-v2-vs-preview" id="vs-preview" data-grond="@(v?.Grond.ToString(CultureInfo.InvariantCulture) ?? "0")" data-bouw="@(v?.Bouw.ToString(CultureInfo.InvariantCulture) ?? "0")" data-apt="@(v?.IsAppartement == true ? 1 : 0)">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-calculator" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Voorbeeld koper</h2>
+                    </div>
+                    @if (v == null)
+                    {
+                        <p class="gl-v2-vs-preview-empty">Er zijn nog geen eenheden in dit project om mee te rekenen.</p>
+                    }
+                    else
+                    {
+                        <p class="gl-v2-vs-preview-sub">@v.Naam · <span id="vs-pv-vraag"></span></p>
+                        <dl class="gl-v2-vs-pv">
+                            <div><dt>Grond</dt><dd id="vs-pv-grond"></dd></div>
+                            <div><dt id="vs-pv-reg-l">Registratierechten</dt><dd id="vs-pv-reg"></dd></div>
+                            <div><dt>Bouw</dt><dd id="vs-pv-bouw"></dd></div>
+                            <div><dt id="vs-pv-vat-l">Btw</dt><dd id="vs-pv-vat"></dd></div>
+                            <div><dt>Kosten koper (incl. btw)</dt><dd id="vs-pv-kosten"></dd></div>
+                            <div><dt id="vs-pv-not-l">Notaris (schaal Jbis)</dt><dd id="vs-pv-not"></dd></div>
+                            <div class="is-total"><dt>Totaal voor de koper</dt><dd id="vs-pv-totaal"></dd></div>
+                        </dl>
+                        <label class="gl-v2-toggle-row gl-v2-vs-pv-toggle" for="vs-enige"><input type="checkbox" id="vs-enige" class="gl-v2-toggle-switch" checked /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Enige eigen woning</span><span class="gl-v2-toggle-hint">standaard aan: schaal Jbis, uit = schaal J · enkel voor dit voorbeeld</span></span></label>
+                        <p class="gl-v2-vs-preview-foot">rekent live mee met de instellingen links</p>
+                    }
+                </section>
+            </aside>
+        </div>
+    </div>
+
+    <div class="gl-v2-form-actionbar">
+        <span class="gl-v2-vs-changes" id="vs-changes" aria-live="polite"></span>
+        <span class="gl-v2-form-actionbar-spacer"></span>
+        <div class="gl-v2-form-actionbar-actions">
+            <a href="@Url.Action("DetailSales", "Projecten", new { projectid = Model.ProjectId })" class="gl-v2-btn gl-v2-btn-text">Annuleren</a>
+            @if (Model.CanWrite)
+            {
+                <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="vs-save">Instellingen opslaan</button>
+            }
+        </div>
+    </div>
+</form>
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-verkoopinstellingen.js" asp-append-version="true"></script>
+}

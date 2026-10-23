@@ -65,6 +65,12 @@ public partial class Units
 
     public bool IsOption { get; set; }
 
+    /// <summary>Verkoop (migratie 115): tot wanneer de optie loopt, wie de optant is, via wie en sinds wanneer de eenheid online staat.</summary>
+    public DateOnly? OptionUntil { get; set; }
+    public string OptionHolder { get; set; }
+    public string SaleVia { get; set; }
+    public DateOnly? OnlineSince { get; set; }
+
     public virtual Units AttachedUnit { get; set; }
 
     public virtual ClientAccount ClientAccount { get; set; }

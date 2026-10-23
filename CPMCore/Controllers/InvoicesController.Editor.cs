@@ -1,4 +1,4 @@
-﻿using BOCore;
+using BOCore;
 using CPMCore.Documents;
 using CPMCore.Extensions;
 using CPMCore.Models.Invoicing;
@@ -107,7 +107,7 @@ namespace CPMCore.Controllers
         // CREATE (GET)
         [HttpGet]
         [CPMCore.Filters.PermissionWrite(PermissionCodes.Invoicing)]
-        public async Task<IActionResult> Create(int? issuerId = null, int? duplicateInvoiceId = null, CancellationToken ct = default)
+        public async Task<IActionResult> Create(int? issuerId = null, int? duplicateInvoiceId = null, bool creditNote = false, CancellationToken ct = default)
         {
             var writeScope = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Write, ct);
             if (!writeScope.HasAccess)
@@ -233,6 +233,8 @@ namespace CPMCore.Controllers
                 vm.IsCreditNote = duplicateIsCreditNote;
                 vm.IsPrepaid = duplicateDetail.IsPrepaid;
                 vm.Lines = MapLinesForCompose(duplicateDetail.Lines, duplicateIsCreditNote);
+                // "Creditnota maken" vanuit een definitieve factuur: zelfde lijnen, positief ingegeven, de schakelaar Creditnota staat aan.
+                if (creditNote && !duplicateIsCreditNote) { vm.IsCreditNote = true; vm.Lines = MapLinesForCompose(duplicateDetail.Lines, false); }
 
                 if (duplicateDetail.CompanyId.HasValue)
                 {
@@ -1099,7 +1101,8 @@ namespace CPMCore.Controllers
             vm.ReturnUrl = resolvedReturnUrl;
             await ConfigureEditContextAsync(detail, ct);
             SetPageHeader("bx bx-receipt", string.IsNullOrWhiteSpace(vm.IssuerName) ? vm.DisplayId : $"{vm.IssuerName} - {vm.DisplayId}");
-            return View(vm);
+            await AttachPreviewAsync(detail, vm, ct);
+            return EditView(vm);
         }
 
         [HttpPost]
@@ -1147,7 +1150,8 @@ namespace CPMCore.Controllers
                 invalidVm.ReturnUrl = resolvedReturnUrl;
                 await ConfigureEditContextAsync(detail, ct);
                 SetPageHeader("bx bx-receipt", string.IsNullOrWhiteSpace(invalidVm.IssuerName) ? invalidVm.DisplayId : $"{invalidVm.IssuerName} - {invalidVm.DisplayId}");
-                return View(invalidVm);
+                await AttachPreviewAsync(detail, invalidVm, ct);
+                return EditView(invalidVm);
             }
 
             var update = new InvoiceUpdateBO
@@ -1200,7 +1204,8 @@ namespace CPMCore.Controllers
             hydrated.ReturnUrl = resolvedReturnUrl;
             await ConfigureEditContextAsync(detail, ct);
             SetPageHeader("bx bx-receipt", string.IsNullOrWhiteSpace(hydrated.IssuerName) ? hydrated.DisplayId : $"{hydrated.IssuerName} - {hydrated.DisplayId}");
-            return View(hydrated);
+            await AttachPreviewAsync(detail, hydrated, ct);
+            return EditView(hydrated);
         }
 
         [HttpPost]
@@ -1604,6 +1609,26 @@ namespace CPMCore.Controllers
             vm.IsCreditNote = DetermineCreditNote(bo.IsCreditNote, bo.StatusName, bo.TotalInclVat);
             return vm;
         }
+        /// <summary>De beperkte bewerking van een definitieve factuur: nieuwe gl-v2-layout (EditV2, 11f) of het oude scherm.</summary>
+        /// <summary>Gegevens voor het voorbeeld (EditV2): exact wat de pdf gebruikt. Een fout hier mag het bewerken nooit blokkeren.</summary>
+        private async Task AttachPreviewAsync(InvoiceDetailBO detail, InvoiceEditVM model, CancellationToken ct)
+        {
+            if (ViewData["UseGlV2Layout"] as bool? != true) return;
+            try
+            {
+                var issuer = await _ics.GetAsync(detail.IssuerCompanyId, ct);
+                if (issuer == null) return;
+                var vatTypes = await _ics.ListVatTypeAsync(detail.IssuerCompanyId, ct);
+                model.Preview = _pdf.BuildPreview(detail.ToInvoiceDto(vatTypes), issuer);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Voorbeeld voor factuur {InvoiceId} kon niet opgebouwd worden", detail.Id);
+            }
+        }
+
+        private ViewResult EditView(InvoiceEditVM model) => View(ViewData["UseGlV2Layout"] as bool? == true ? "EditV2" : "Edit", model);
+
         private InvoiceEditVM MapEdit(InvoiceDetailBO detail)
         {
             if (detail == null) throw new ArgumentNullException(nameof(detail));
@@ -1617,6 +1642,10 @@ namespace CPMCore.Controllers
                 InvoiceDate = detail.InvoiceDate,
                 ExpirationDate = detail.ExpirationDate,
                 ClientName = detail.ClientName,
+                IssuerAddressLine = string.Join(", ", new[] { detail.IssuerAddressLine1, detail.IssuerAddressLine2 }.Where(x => !string.IsNullOrWhiteSpace(x))),
+                IssuerCityLine = string.Join(" ", new[] { detail.IssuerPostalCode, detail.IssuerCity }.Where(x => !string.IsNullOrWhiteSpace(x))),
+                ClientAddressLine = detail.ClientAddress,
+                ClientCityLine = string.Join(" ", new[] { detail.ClientPostalCode, detail.ClientCity }.Where(x => !string.IsNullOrWhiteSpace(x))),
                 Status = TranslateStatus(detail.StatusName),
                 HeaderDescription = NormalizeMultiline(detail.HeaderText),
                 DetailDescription = NormalizeMultiline(detail.DetailText),

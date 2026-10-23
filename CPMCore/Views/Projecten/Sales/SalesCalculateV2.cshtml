@@ -1,0 +1,207 @@
+@model CPMCore.Services.Verkoop.VerkoopBerekenVm
+@*
+    gl-v2 — Eenheid berekenen (design-handoff punt 45c): eenheid kiezen bovenaan (verkochte eenheden zijn vergrendeld), grond en bouw, kosten koper met de notaris;
+    rechts de prijs voor de koper en (intern) de vergelijking met het definitieve budget. Enkel rekenen en bekijken: alles rekent live in de browser
+    (gl-v2-projecten-verkoopberekenen.js, zelfde regels als VerkoopService.Bereken en NotarisTarief), er wordt niets bewaard en er is geen "Prijs opslaan".
+    Aanpasbaar zijn alleen grondwaarde, bouwwaarde, registratierechten en btw; oppervlaktes, prijzen per m² en kosten koper zijn afgeleid en dus uitgeschakeld.
+    De prijs is altijd een eigen bedrag (Niels): geen Code/Eigen-schakelaar. Prijzen aanpassen blijft in het definitieve budget (stap 8). Afdrukken volgt in 45d.
+*@
+@using System.Globalization
+@using System.Text.Json
+@using CPMCore.Models.GlV2
+@using CPMCore.Services.Verkoop
+@{
+    var u = Model.Unit;
+    var i = Model.Instellingen;
+    var b = Model.Budget;
+    ViewData["Title"] = u.Naam + " berekenen";
+    ViewData["HelpScreenId"] = "projecten-eenheid-berekenen";
+    ViewData["PageIcon"] = "ph ph-calculator";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("DetailSales", "Projecten", new { projectid = Model.ProjectId });
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    string N2(decimal v) => v.ToString("N2", be);
+    string Eur(decimal v) => "€ " + v.ToString("N0", be);
+    var gereduceerd = b != null && b.OppGereduceerd > 0m ? b.OppGereduceerd : (u.Wonen ?? 0m);
+    var perceel = u.Perceel ?? 0m;
+    var menuVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · eenheid berekenen" };
+    var cfg = new
+    {
+        overschrijving = i.MortgageRegistrationCost, perceel, gereduceerd, wonen = u.Wonen ?? 0m, grond = u.Grond, bouw = u.Bouw, apt = u.IsAppartement, rt = i.RegistrationType,
+        budget = b == null ? null : new { b.Kostprijs, b.Minimum, b.Commissie, b.MargePerc },
+    };
+    // Eén invoerveld in de stijl van het ontwerp: label boven, vak met eenheid rechts; uitgeschakeld = grijs.
+    string Veld(string id, string label, decimal val, string unit, string? hint = null, bool uit = false)
+    {
+        var h = hint == null ? "" : "<span class='gl-v2-field-help'>" + hint + "</span>";
+        return "<div class='gl-v2-field'><label class='gl-v2-field-label' for='" + id + "'>" + label + "</label><div class='gl-v2-field-box'>"
+            + "<input type='text' inputmode='decimal' class='gl-v2-field-input is-num is-tabular vb-num' id='" + id + "' value='" + N2(val) + "' autocomplete='off'" + (uit ? " disabled" : "") + " />"
+            + "<span class='gl-v2-field-unit'>" + unit + "</span></div>" + h + "</div>";
+    }
+    // Een rij van de kaart Kosten koper: omschrijving links, bedrag (uitgeschakeld) rechts.
+    string Kost(string id, string label, decimal val, string btw, string? hint = null)
+        => "<div class='gl-v2-vb-krow' data-btw='" + btw + "'><label for='" + id + "'>" + label + (hint == null ? "" : "<small>" + hint + "</small>") + "</label>"
+           + "<div class='gl-v2-field-box'><input type='text' class='gl-v2-field-input is-num is-tabular vb-kost' id='" + id + "' value='" + N2(val) + "' disabled /><span class='gl-v2-field-unit'>€</span></div></div>";
+    string Rij(string key, string label) => "<div class='gl-v2-vb-srow'><span class='gl-v2-vb-slabel' id='vb-pv-" + key + "-l'>" + label + "</span><span class='gl-v2-vb-snote' id='vb-pv-" + key + "-n'></span><span class='gl-v2-vb-samount' id='vb-pv-" + key + "'></span></div>";
+    string BRij(string key, string label) => "<div class='gl-v2-vb-srow' id='vb-b-" + key + "-row'><span class='gl-v2-vb-slabel' id='vb-b-" + key + "-l'>" + label + "</span><span class='gl-v2-vb-snote' id='vb-b-" + key + "-n'></span><span class='gl-v2-vb-samount' id='vb-b-" + key + "'></span></div>";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-verkoopberekenen.css" asp-append-version="true" />
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+@{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+<div class="gl-v2-vb" id="gl-v2-vb-root" data-config="@JsonSerializer.Serialize(cfg)">
+    <div class="gl-v2-vb-scroll">
+        <div class="gl-v2-vb-units">
+            <span class="gl-v2-vb-ulabel">EENHEID</span>
+            @foreach (var r in Model.Units)
+            {
+                if (r.Status == "Verkocht")
+                {
+                    <span class="gl-v2-vb-pill is-disabled" aria-disabled="true" title="Verkochte eenheden zijn vergrendeld"><i class="ph ph-lock-simple" aria-hidden="true"></i>@r.Naam<small>Verkocht</small></span>
+                }
+                else
+                {
+                    <a class="gl-v2-vb-pill @(r.UnitId == u.UnitId ? "is-active" : "")" href="@Url.Action("SalesCalculateV2", "Projecten", new { projectid = Model.ProjectId, unitId = r.UnitId })" @(r.UnitId == u.UnitId ? "aria-current=page" : "")>@r.Naam<small>@r.Status</small></a>
+                }
+            }
+            <span class="gl-v2-vb-uspacer"></span>
+            <span class="gl-v2-vb-unote">verkochte eenheden zijn vergrendeld · je rekent enkel, er wordt niets bewaard</span>
+        </div>
+
+        <div class="gl-v2-vb-cols">
+            <div class="gl-v2-vb-main">
+                <section class="gl-v2-section-card">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-mountains" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Grond</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">perceel @(perceel > 0m ? perceel.ToString("N0", be) + " m²" : "onbekend")@(string.IsNullOrWhiteSpace(u.PreKad) ? "" : " · prekad " + u.PreKad)</span>
+                    </div>
+                    <div class="gl-v2-vb-grid">
+                        @Html.Raw(Veld("vb-grond-m2", "Oppervlakte", perceel, "m²", "uit Eenheden", true))
+                        @Html.Raw(Veld("vb-grond-pm2", "Prijs per m²", perceel > 0m ? Math.Round(u.Grond / perceel, 2) : 0m, "€/m²", "berekend uit de grondwaarde", true))
+                        @Html.Raw(Veld("vb-grond-bedrag", "Grondwaarde", u.Grond, "€", "excl. btw en registratierechten"))
+                        @Html.Raw(Veld("vb-reg", "Registratierechten", i.RegistrationPercentage, "%", "uit Verkoopinstellingen · per koper aan te passen"))
+                    </div>
+                </section>
+
+                <section class="gl-v2-section-card">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-house-line" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Bouw</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">woonopp. @((u.Wonen ?? 0m).ToString("N0", be)) m² · gereduceerd @gereduceerd.ToString("N1", be) m²@(b == null ? " (geen budget gekoppeld, woonopp. gebruikt)" : "")</span>
+                    </div>
+                    <div class="gl-v2-vb-grid">
+                        @Html.Raw(Veld("vb-bouw-m2", "Oppervlakte", gereduceerd, "m²", "gereduceerd, uit het definitieve budget", true))
+                        @Html.Raw(Veld("vb-bouw-pm2", "Prijs per m²", gereduceerd > 0m ? Math.Round(u.Bouw / gereduceerd, 2) : 0m, "€/m²", "berekend uit de bouwwaarde", true))
+                        @Html.Raw(Veld("vb-bouw-bedrag", "Bouwwaarde", u.Bouw, "€", "excl. btw"))
+                        @Html.Raw(Veld("vb-vat", "Btw", i.VatPercentage, "%", "6 % kan bij afbraak en heropbouw"))
+                    </div>
+                </section>
+
+                <section class="gl-v2-section-card">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-receipt" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Kosten koper</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">uit Verkoopinstellingen · notaris berekend</span>
+                        <span class="gl-v2-section-card-spacer"></span>
+                        <a class="gl-v2-vb-link" href="@Url.Action("SalesSettings", "Projecten", new { projectid = Model.ProjectId })">Instellingen openen</a>
+                    </div>
+                    <div class="gl-v2-vb-kbody" id="vb-kosten">
+                        @if (u.IsAppartement) { @Html.Raw(Kost("vb-k-basecert", "Aandeel basisakte", i.BaseCertificateCost, "21")) }
+                        @Html.Raw(Kost("vb-k-parcel", "Aandeel verkavelingsakte", i.ParcelCost, "21"))
+                        @Html.Raw(Kost("vb-k-connection", "Aansluitkosten", i.ConnectionFees, "vat", "water, elektriciteit, riolering"))
+                        @Html.Raw(Kost("vb-k-surveyor", "Landmetingskosten", i.SurveyorCost, "21"))
+                        @foreach (var (e, n) in i.Extra.Select((e, n) => (e, n)))
+                        {
+                            @Html.Raw(Kost("vb-k-extra" + n, System.Net.WebUtility.HtmlEncode(e.Naam), e.Bedrag, "21", string.IsNullOrWhiteSpace(e.Toelichting) ? null : System.Net.WebUtility.HtmlEncode(e.Toelichting)))
+                        }
+                        <div class="gl-v2-vb-krow is-calc"><label for="vb-k-btw">Btw op kosten koper<small>21 %, aansluitkosten aan het btw-percentage van het project</small></label><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input is-num is-tabular" id="vb-k-btw" disabled /><span class="gl-v2-field-unit">€</span></div></div>
+                        <div class="gl-v2-vb-ksub">Notaris <small id="vb-n-schaal">schaal Jbis · tarief 2026</small></div>
+                        <div class="gl-v2-vb-krow is-calc"><label for="vb-n-fee">Ereloon<small id="vb-n-grondslag"></small></label><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input is-num is-tabular" id="vb-n-fee" disabled /><span class="gl-v2-field-unit">€</span></div></div>
+                        <div class="gl-v2-vb-krow is-calc"><label for="vb-n-vac">Administratieve kosten<small>vast bedrag per verkoopakte</small></label><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input is-num is-tabular" id="vb-n-vac" disabled /><span class="gl-v2-field-unit">€</span></div></div>
+                        <div class="gl-v2-vb-krow is-calc"><label for="vb-n-uit">Uitgaven aan derden<small>forfait voor opzoekingen en uittreksels</small></label><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input is-num is-tabular" id="vb-n-uit" disabled /><span class="gl-v2-field-unit">€</span></div></div>
+                        <div class="gl-v2-vb-krow is-calc"><label for="vb-n-ovs">Kosten overschrijving<small>hypotheekkantoor, uit de Verkoopinstellingen</small></label><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input is-num is-tabular" id="vb-n-ovs" disabled /><span class="gl-v2-field-unit">€</span></div></div>
+                        <div class="gl-v2-vb-krow is-calc"><label for="vb-n-rog">Recht op geschriften</label><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input is-num is-tabular" id="vb-n-rog" disabled /><span class="gl-v2-field-unit">€</span></div></div>
+                        <div class="gl-v2-vb-krow is-calc"><label for="vb-n-rob">Registratierecht op bijlagen</label><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input is-num is-tabular" id="vb-n-rob" disabled /><span class="gl-v2-field-unit">€</span></div></div>
+                        <div class="gl-v2-vb-krow is-calc"><label for="vb-n-btw">Btw op notaris<small>21 % op ereloon, administratieve kosten, uitgaven en recht op geschriften</small></label><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input is-num is-tabular" id="vb-n-btw" disabled /><span class="gl-v2-field-unit">€</span></div></div>
+                        <div class="gl-v2-vb-krow is-total"><label for="vb-n-tot">Totaal notaris</label><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input is-num is-tabular" id="vb-n-tot" disabled /><span class="gl-v2-field-unit">€</span></div></div>
+                        <label class="gl-v2-toggle-row gl-v2-vb-toggle" for="vb-enige"><input type="checkbox" id="vb-enige" class="gl-v2-toggle-switch" checked /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Enige eigen woning</span><span class="gl-v2-toggle-hint">standaard aan: de notaris rekent schaal Jbis; zet uit voor schaal J</span></span></label>
+                    </div>
+                </section>
+            </div>
+
+            <aside class="gl-v2-vb-aside">
+                <section class="gl-v2-section-card">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-calculator" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Prijs voor de koper</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">@u.Naam</span>
+                    </div>
+                    <div class="gl-v2-vb-sbody">
+                        @Html.Raw(Rij("grond", "Grond"))
+                        @Html.Raw(Rij("reg", "Registratierechten"))
+                        @Html.Raw(Rij("bouw", "Bouw"))
+                        @Html.Raw(Rij("vat", "Btw"))
+                        @Html.Raw(Rij("kosten", "Kosten koper"))
+                        @Html.Raw(Rij("not", "Notaris"))
+                        <div class="gl-v2-vb-srow is-total"><span class="gl-v2-vb-slabel">Totaal voor de koper</span><span class="gl-v2-vb-snote"></span><span class="gl-v2-vb-samount" id="vb-pv-totaal"></span></div>
+                        <div class="gl-v2-vb-sfoot"><span>Vraagprijs (grond + bouw)</span><b id="vb-pv-vraag"></b></div>
+                    </div>
+                </section>
+
+                <section class="gl-v2-section-card">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-chart-line-up" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Tegenover het budget</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">definitief budget · intern</span>
+                    </div>
+                    <div class="gl-v2-vb-sbody">
+                        @if (b == null)
+                        {
+                            <p class="gl-v2-vb-empty">Voor deze eenheid is geen verkooplijn in het definitieve budget gekoppeld, dus er is niets om mee te vergelijken. Koppel de eenheid in stap 8 van het budget.</p>
+                        }
+                        else
+                        {
+                            @Html.Raw(BRij("kost", "Kostprijs " + u.Naam))
+                            @Html.Raw(BRij("min", "Minimum verkoopwaarde"))
+                            @Html.Raw(BRij("vraag", "Vraagprijs"))
+                            @Html.Raw(BRij("diff", "Boven minimum"))
+                            @Html.Raw(BRij("mak", "Verkoopkosten makelaar"))
+                            <div class="gl-v2-vb-srow is-total"><span class="gl-v2-vb-slabel" id="vb-b-net-l">Netto marge</span><span class="gl-v2-vb-snote"></span><span class="gl-v2-vb-samount" id="vb-b-net"></span></div>
+                            <p class="gl-v2-vb-verdict" id="vb-b-verdict" role="status"></p>
+                        }
+                    </div>
+                </section>
+            </aside>
+        </div>
+    </div>
+
+    <div class="gl-v2-form-actionbar">
+        <span class="gl-v2-vb-changes" id="vb-changes" aria-live="polite"></span>
+        <span class="gl-v2-form-actionbar-spacer"></span>
+        <div class="gl-v2-form-actionbar-actions">
+            <button type="button" class="gl-v2-btn gl-v2-btn-text" id="vb-reset">Terug naar huidige prijs</button>
+            <a href="@Url.Action("DetailSales", "Projecten", new { projectid = Model.ProjectId })" class="gl-v2-btn gl-v2-btn-secondary">Terug naar Te koop</a>
+        </div>
+    </div>
+</div>
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-verkoopberekenen.js" asp-append-version="true"></script>
+}

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -136,6 +136,45 @@ namespace CPMCore.Models.Invoicing
         public bool CanRetryOctopusSend { get; set; }
 
         public bool IsCopyRequest { get; set; }
+
+        /// <summary>gl-v2 (11g): gekozen kanaal. "email" (standaard), "peppol" of "both". Leeg = het oude scherm: altijd e-mail, Peppol enkel via SendToPeppol.</summary>
+        public string? Channel { get; set; }
+
+        /// <summary>Peppol-controle van de klant in de openbare Peppol-directory: "found", "notfound" of "unknown" (geen btw- of ondernemingsnummer).</summary>
+        [BindNever]
+        public string PeppolCheck { get; set; } = "unknown";
+
+        /// <summary>Doorsturen naar Octopus (dat via Peppol naar de klant verstuurt) kan enkel als Octopus gekoppeld is en de factuur nog niet naar Octopus is verstuurd of dat mislukt is.</summary>
+        [BindNever]
+        public bool CanSendViaOctopus { get; set; }
+
+        [BindNever]
+        public string? OctopusNote { get; set; }
+
+        [BindNever]
+        public DateOnly? ExpirationDate { get; set; }
+
+        [BindNever]
+        public string? StructuredMessage { get; set; }
+
+        [BindNever]
+        public string? CurrentUserEmail { get; set; }
+
+        /// <summary>Verzendgeschiedenis met kanaal (e-mail, Peppol), nieuwste eerst.</summary>
+        [BindNever]
+        public IReadOnlyList<InvoiceSendHistoryItemVM> History { get; set; } = Array.Empty<InvoiceSendHistoryItemVM>();
+    }
+
+    public class InvoiceSendHistoryItemVM
+    {
+        public DateTime At { get; set; }
+        public string Recipient { get; set; } = string.Empty;
+        /// <summary>"E-mail" of "Peppol".</summary>
+        public string Channel { get; set; } = "E-mail";
+        public string Detail { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        /// <summary>success · neutral · strong · danger, zie .gl-v2-is-send-status in gl-v2-invoices-send.css.</summary>
+        public string Tone { get; set; } = "neutral";
     }
 
     public class InvoiceEmailLogItemVM

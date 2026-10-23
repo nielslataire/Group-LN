@@ -1,0 +1,448 @@
+@using System.Globalization
+@using System.Text.Json
+@using CPMCore.Models.GlV2
+@using CPMCore.Models.Marktanalyse
+@model CPMCore.Models.Marktanalyse.GemeenteAnalyseViewModel
+@*
+    gl-v2 — Marktanalyse › Gemeenteanalyse (design-handoff punt 46a, "CRM Marktanalyse.dc.html"): tabbar onder de topbar (globale module,
+    geen binnenmenu), filters op één rij in een kaart (gemeente als keuzelijst met zoekveld, type/aanbod/periode als schakelaars), de
+    kerncijfers in twee strips ("Aanbod" en "Prijs en tempo"), de grafieken als sectiekaarten (waarden op de staven, goud voor de grootste
+    klasse; verkoopgraad groen vanaf 50 %, anders lichtgroen) en één tabelkaart met een schakelaar tussen Projecten en Losse eenheden.
+    Zelfde model en dezelfde acties als Gemeenteanalyse.cshtml (het oude scherm): enkel de presentatie is nieuw.
+    "Exporteren" en "+ nieuw"-labels uit het ontwerp ontbreken bewust: er is (nog) geen export van deze pagina en het model weet niet
+    welke units nieuw zijn. Het tijdstip van de laatste crawl staat evenmin in het model, dus de bronregel toont enkel de bronnen.
+*@
+@{
+    ViewData["GlV2FullHeightBody"] = true;
+
+    var nl = CultureInfo.GetCultureInfo("nl-BE");
+    var kpi = Model.Kpi;
+    string Eur(decimal? v) => v.HasValue ? "€ " + v.Value.ToString("N0", nl) : "—";
+    string Pct(decimal v) => v.ToString("0.0", nl) + " %";
+
+    // Eén lijst voor de keuzelijst met zoekveld: eerst de gemeente (met al haar deelgemeenten), daarna elke deelgemeente apart.
+    var locatieOpties = Model.Locaties.SelectMany(g =>
+        new object[] { new { id = "m" + g.GeoMunicipalityId, text = g.GemeenteNaam + " (+ deelgemeenten)", sub = g.Secties.Count + " deelgemeenten" } }
+        .Concat(g.Secties.Select(s => (object)new { id = "s" + s.GeoMunicipalSectionId, text = s.Label, sub = g.GemeenteNaam })));
+    var locatieWaarde = Model.GeselecteerdGeoMunicipalSectionId.HasValue ? "s" + Model.GeselecteerdGeoMunicipalSectionId
+                      : Model.GeselecteerdGeoMunicipalityId.HasValue ? "m" + Model.GeselecteerdGeoMunicipalityId : "";
+
+    var bronnen = Model.Projecten.SelectMany(p => p.BronNamen).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(b => b).ToList();
+
+    // "Vergelijk panden" neemt de filters mee: gemeente, type (Alles blijft op het standaardtype) en status.
+    var vergelijkUrl = Url.Action("VergelijkbarePanden", "Marktanalyse", new
+    {
+        gemeenteIds = Model.GeselecteerdGeoMunicipalityId.HasValue ? new[] { Model.GeselecteerdGeoMunicipalityId.Value } : null,
+        type = Model.GeselecteerdType is "Appartement" or "Woning" ? Model.GeselecteerdType : null,
+        status = Model.GeselecteerdAanbod == "Actueel" ? "Beschikbaar" : Model.GeselecteerdAanbod == "Verkocht" ? "Verkocht" : null
+    });
+
+    string ToggleGekoppeldUrl(bool toon) => Url.Action("Gemeenteanalyse", "Marktanalyse", new
+    {
+        geoMunicipalityId = Model.GeselecteerdGeoMunicipalityId,
+        geoMunicipalSectionId = Model.GeselecteerdGeoMunicipalSectionId,
+        type = Model.GeselecteerdType,
+        aanbodtype = Model.GeselecteerdAanbodtype,
+        aanbod = Model.GeselecteerdAanbod,
+        periodeMaanden = Model.PeriodeMaanden,
+        toonGekoppeld = toon
+    })!;
+
+    // Staafgrafiek met waarden boven de staven: de hoogste klasse krijgt goud (alleen als er iets te zien is).
+    const int BarMax = 120;
+    List<(string Label, int Aantal, int Hoogte, bool Piek)> Staven(List<PrijsBucketViewModel> buckets)
+    {
+        var max = buckets.Count == 0 ? 0 : buckets.Max(b => b.Aantal);
+        var piek = max > 0 ? buckets.FindIndex(b => b.Aantal == max) : -1;
+        return buckets.Select((b, i) => (b.Label, b.Aantal,
+            b.Aantal <= 0 || max <= 0 ? 0 : Math.Max(2, (int)Math.Round((double)b.Aantal / max * BarMax)),
+            i == piek)).ToList();
+    }
+}
+@section PageStyle
+{
+    <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
+    <link rel="stylesheet" href="~/css/gl-v2-marktanalyse.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    <a href="@vergelijkUrl" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-magnifying-glass" aria-hidden="true"></i>Vergelijk panden</a>
+}
+
+<div class="gl-v2-ma" id="gl-v2-ma" data-has-filter="@(Model.HeeftFilter ? "true" : "false")">
+    @await Html.PartialAsync("_TabsV2", "Gemeenteanalyse")
+
+    <div class="gl-v2-ma-scroll">
+        @* ── Filters: alles op één rij ── *@
+        <form id="ma-filter" method="get" action="@Url.Action("Gemeenteanalyse", "Marktanalyse")" class="gl-v2-ma-card gl-v2-ma-filters">
+            <input type="hidden" name="geoMunicipalityId" id="ma-hidden-muni" value="@Model.GeselecteerdGeoMunicipalityId" />
+            <input type="hidden" name="geoMunicipalSectionId" id="ma-hidden-section" value="@Model.GeselecteerdGeoMunicipalSectionId" />
+
+            <div class="gl-v2-field gl-v2-ma-loc">
+                <label class="gl-v2-field-label" for="ma-loc_input">Gemeente</label>
+                @await Html.PartialAsync("GlV2/_GlV2Combo", new GlV2ComboVm
+                {
+                    Name = "", Id = "ma-loc", Placeholder = "Zoek op gemeente of postcode…", Icon = "ph-map-pin", ListLabel = "Locaties",
+                    Value = locatieWaarde, DisplayText = Model.FilterLabel,
+                    OptionsJson = JsonSerializer.Serialize(locatieOpties)
+                })
+            </div>
+
+            <div class="gl-v2-field">
+                <span class="gl-v2-field-label">Type</span>
+                <div class="gl-v2-segmented" role="radiogroup" aria-label="Type">
+                    @foreach (var t in new[] { "Alles", "Appartement", "Woning" })
+                    {
+                        <label><input type="radio" name="type" value="@t" checked="@(Model.GeselecteerdType == t)" /><span>@t</span></label>
+                    }
+                </div>
+            </div>
+
+            <div class="gl-v2-field">
+                <span class="gl-v2-field-label">Aanbod <i class="ph ph-info gl-v2-ma-info" title="Actueel = wat nu online staat. Verkocht = enkel verkopen in de periode, ook uit projecten die niet meer online staan. Alles = beide." aria-hidden="true"></i></span>
+                <div class="gl-v2-segmented" role="radiogroup" aria-label="Aanbod">
+                    @foreach (var a in GemeenteAnalyseViewModel.AanbodOpties)
+                    {
+                        <label><input type="radio" name="aanbod" value="@a" checked="@(Model.GeselecteerdAanbod == a)" /><span>@a</span></label>
+                    }
+                </div>
+            </div>
+
+            <div class="gl-v2-field">
+                <span class="gl-v2-field-label">Periode verkocht <i class="ph ph-info gl-v2-ma-info" title="Periode waarbinnen een verkoop meetelt voor 'verkocht in periode', verkooptempo en doorlooptijd." aria-hidden="true"></i></span>
+                <div class="gl-v2-segmented" role="radiogroup" aria-label="Periode verkocht">
+                    @foreach (var p in GemeenteAnalyseViewModel.PeriodeOpties)
+                    {
+                        <label><input type="radio" name="periodeMaanden" value="@p.Maanden" checked="@(Model.PeriodeMaanden == p.Maanden)" /><span>@(p.Maanden == 0 ? "Alles" : p.Maanden + " m")</span></label>
+                    }
+                </div>
+            </div>
+
+            @if (bronnen.Count > 0)
+            {
+                <span class="gl-v2-ma-source">bron: @string.Join(", ", bronnen)</span>
+            }
+        </form>
+
+        @if (!Model.HeeftFilter)
+        {
+            <section class="gl-v2-ma-card gl-v2-ma-empty">
+                <span class="gl-v2-ma-empty-icon"><i class="ph ph-map-pin" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-ma-empty-title">Kies een gemeente</h2>
+                <p class="gl-v2-ma-empty-text">Zoek hierboven een gemeente of deelgemeente. Je krijgt het aanbod, de prijzen, het verkooptempo en alle projecten en losse eenheden in die zone.</p>
+            </section>
+        }
+        else if (!Model.HeeftData)
+        {
+            <div class="gl-v2-notice gl-v2-notice-compact is-warning">
+                <i class="ph ph-warning" aria-hidden="true"></i>
+                <span>Geen projectdata gevonden voor <strong>@Model.FilterLabel</strong>@(Model.GeselecteerdType != "Alles" ? $" van het type {Model.GeselecteerdType.ToLowerInvariant()}" : "").</span>
+            </div>
+        }
+        else
+        {
+            // ── Kerncijfers: twee strips ──
+            <div class="gl-v2-ma-strips">
+                <section class="gl-v2-ma-card gl-v2-ma-strip" aria-label="Aanbod">
+                    <div class="gl-v2-ma-strip-head">Aanbod</div>
+                    <div class="gl-v2-ma-strip-grid">
+                        <div class="gl-v2-ma-stat">
+                            <span class="gl-v2-ma-stat-label">@(Model.GeselecteerdAanbod == "Actueel" ? "Actieve projecten" : "Projecten")</span>
+                            <span class="gl-v2-ma-stat-value">@kpi!.ActieveProjecten</span>
+                            <span class="gl-v2-ma-stat-sub" title="@(kpi.NietActieveProjecten > 0 ? kpi.NietActieveProjecten + " niet meer online" : "")">+ @kpi.AantalLosseEenheden losse eenhe@(kpi.AantalLosseEenheden == 1 ? "id" : "den")</span>
+                        </div>
+                        <div class="gl-v2-ma-stat">
+                            <span class="gl-v2-ma-stat-label">Actieve units</span>
+                            <span class="gl-v2-ma-stat-value">@kpi.TotaalAnalyseerbaar</span>
+                            <span class="gl-v2-ma-stat-sub">projecten + losse</span>
+                        </div>
+                        <div class="gl-v2-ma-stat">
+                            <span class="gl-v2-ma-stat-label">Beschikbaar</span>
+                            <span class="gl-v2-ma-stat-value">@kpi.BeschikbareUnits</span>
+                            <span class="gl-v2-ma-stat-sub">te koop</span>
+                        </div>
+                        <div class="gl-v2-ma-stat">
+                            <span class="gl-v2-ma-stat-label">Verkocht</span>
+                            <span class="gl-v2-ma-stat-value is-primary">@kpi.VerkochteUnits</span>
+                            <span class="gl-v2-ma-stat-sub" title="@(kpi.SoldConfirmedCount > 0 || kpi.LikelySoldCount > 0 ? $"{kpi.SoldConfirmedCount} bevestigd + {kpi.LikelySoldCount} vermoedelijk" : "")">@Pct(kpi.Verkoopgraad) van @kpi.TotaalAnalyseerbaar</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="gl-v2-ma-card gl-v2-ma-strip" aria-label="Prijs en tempo">
+                    <div class="gl-v2-ma-strip-head">Prijs en tempo</div>
+                    <div class="gl-v2-ma-strip-grid">
+                        <div class="gl-v2-ma-stat">
+                            <span class="gl-v2-ma-stat-label">Gem. vraagprijs</span>
+                            <span class="gl-v2-ma-stat-value">@Eur(kpi.GemiddeldePrijs)</span>
+                            <span class="gl-v2-ma-stat-sub">per unit</span>
+                        </div>
+                        <div class="gl-v2-ma-stat">
+                            <span class="gl-v2-ma-stat-label">Gem. €/m²</span>
+                            <span class="gl-v2-ma-stat-value">@Eur(kpi.GemiddeldePrijsPerM2)</span>
+                            <span class="gl-v2-ma-stat-sub">bewoonbaar</span>
+                        </div>
+                        <div class="gl-v2-ma-stat">
+                            <span class="gl-v2-ma-stat-label">Gem. oppervlakte</span>
+                            <span class="gl-v2-ma-stat-value">@(kpi.GemiddeldeOppervlakte.HasValue ? kpi.GemiddeldeOppervlakte.Value.ToString("N0", nl) + " m²" : "—")</span>
+                            <span class="gl-v2-ma-stat-sub">per unit</span>
+                        </div>
+                        <div class="gl-v2-ma-stat">
+                            <span class="gl-v2-ma-stat-label">Verkooptempo</span>
+                            <span class="gl-v2-ma-stat-value is-primary" title="@kpi.VerkochtInPeriode verkocht, @Model.PeriodeLabel">@(kpi.AbsorptiePerMaand.HasValue ? kpi.AbsorptiePerMaand.Value.ToString("0.0", nl) + " / maand" : "—")</span>
+                            <span class="gl-v2-ma-stat-sub" title="@(kpi.DoorlooptijdAantal > 0 ? $"op {kpi.DoorlooptijdAantal} verkochte units, {Model.PeriodeLabel}" : "")">@(kpi.MediaanDoorlooptijdDagen.HasValue ? $"mediaan {kpi.MediaanDoorlooptijdDagen} dagen" : "nog geen doorlooptijd bekend")</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            // ── Grafieken ──
+            <div class="gl-v2-ma-charts">
+                @foreach (var grafiek in new[]
+                {
+                    (Titel: "Vraagprijzen", Sub: "aantal units per prijsklasse", Icoon: "ph-chart-bar", Staven: Staven(Model.VraagprijsBuckets)),
+                    (Titel: "Prijs per m²", Sub: "aantal units per €/m²", Icoon: "ph-ruler", Staven: Staven(Model.PrijsPerM2Buckets))
+                })
+                {
+                    <section class="gl-v2-section-card">
+                        <div class="gl-v2-section-card-header">
+                            <span class="gl-v2-section-card-icon"><i class="ph @grafiek.Icoon" aria-hidden="true"></i></span>
+                            <h2 class="gl-v2-section-card-title">@grafiek.Titel</h2>
+                            <span class="gl-v2-field-divider"></span>
+                            <span class="gl-v2-section-card-desc">@grafiek.Sub</span>
+                        </div>
+                        <div class="gl-v2-ma-chart-body">
+                            <div class="gl-v2-ma-bars">
+                                @foreach (var s in grafiek.Staven)
+                                {
+                                    <div class="gl-v2-ma-bar @(s.Piek ? "is-peak" : "") @(s.Aantal == 0 ? "is-zero" : "")" title="@s.Label: @s.Aantal">
+                                        <span class="gl-v2-ma-bar-val">@s.Aantal</span>
+                                        <div class="gl-v2-ma-bar-fill" style="height:@(s.Hoogte)px"></div>
+                                    </div>
+                                }
+                            </div>
+                            <div class="gl-v2-ma-bar-labels">
+                                @foreach (var s in grafiek.Staven)
+                                {
+                                    <span>@s.Label</span>
+                                }
+                            </div>
+                        </div>
+                    </section>
+                }
+
+                <section class="gl-v2-section-card">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-trend-up" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Verkoopgraad per project</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">% verkocht</span>
+                    </div>
+                    @if (Model.VerkoopgraadPerProject.Count == 0)
+                    {
+                        <div class="gl-v2-ma-vkg"><span class="gl-v2-ma-table-hint">Geen projecten met bekende units in deze selectie.</span></div>
+                    }
+                    else
+                    {
+                        <div class="gl-v2-ma-vkg">
+                            @foreach (var p in Model.VerkoopgraadPerProject)
+                            {
+                                var w = Math.Clamp(p.Verkoopgraad, 0, 100);
+                                <div class="gl-v2-ma-vkg-row" title="@p.VerkochteUnits van @p.TotaalUnits units verkocht">
+                                    <span class="gl-v2-ma-vkg-name">@p.ProjectNaam</span>
+                                    <div class="gl-v2-ma-vkg-track"><div class="gl-v2-ma-vkg-fill @(w >= 50 ? "is-high" : "")" style="width:@(w.ToString("0.#", CultureInfo.InvariantCulture))%"></div></div>
+                                    <span class="gl-v2-ma-vkg-pct @(w <= 0 ? "is-zero" : "")">@w.ToString("0", nl) %</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </section>
+            </div>
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-chart-line" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Aanbod en verkopen per maand</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">lijn = te koop op het einde van de maand · staven = verkocht in die maand · @Model.PeriodeLabel</span>
+                    <span class="gl-v2-section-card-spacer"></span>
+                    <span class="gl-v2-ma-legend" aria-hidden="true"><span><i class="is-line"></i>Te koop (einde maand)</span><span><i class="is-bar"></i>Verkocht in de maand</span></span>
+                </div>
+                <div class="gl-v2-ma-month-body">
+                    <div class="gl-v2-ma-month-canvas"><canvas id="ma-chart-aanbod" aria-label="Aanbod en verkopen per maand" role="img"></canvas></div>
+                </div>
+            </section>
+
+            // ── Projecten en losse eenheden: één kaart, een schakelaar ──
+            <section class="gl-v2-ma-card gl-v2-ma-table-card" id="ma-table-card">
+                <div class="gl-v2-ma-table-head">
+                    <div class="gl-v2-segmented" id="ma-view-switch" role="group" aria-label="Tabel">
+                        <button type="button" class="is-active" aria-pressed="true" data-view="Projecten">Projecten <span class="gl-v2-ma-count">@Model.Projecten.Count</span></button>
+                        <button type="button" aria-pressed="false" data-view="Losse eenheden">Losse eenheden <span class="gl-v2-ma-count">@Model.LosseEenheden.Count</span></button>
+                    </div>
+                    <span class="gl-v2-ma-table-spacer"></span>
+                    <span class="gl-v2-ma-table-hint" id="ma-table-hint">klik een rij voor het projectdetail</span>
+                    <div class="gl-v2-field gl-v2-ma-table-search">
+                        <div class="gl-v2-field-box">
+                            <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                            <input type="text" class="gl-v2-field-input" id="ma-table-search" placeholder="Zoek project of ontwikkelaar" aria-label="Zoeken in de tabel" autocomplete="off">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="gl-v2-ma-table-wrap" id="ma-pane-projecten">
+                    <table id="ma-tbl-projecten" class="gl-v2-ma-table" style="min-width:860px">
+                        <thead>
+                            <tr>
+                                <th>Project</th>
+                                <th>Ontwikkelaar</th>
+                                <th>Bron</th>
+                                <th class="is-num">Units</th>
+                                <th class="is-num">Verkocht</th>
+                                <th class="is-num">Beschikb.</th>
+                                <th>Verkoopgraad</th>
+                                <th class="is-num">Gem. prijs</th>
+                                <th class="is-num">Gem. €/m²</th>
+                                <th aria-label="Openen"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in Model.Projecten)
+                            {
+                                var detailUrl = Url.Action("Projectdetail", "Marktanalyse", new { id = p.Id });
+                                <tr class="is-clickable" data-url="@detailUrl">
+                                    <td>
+                                        <span class="gl-v2-ma-cell-main">
+                                            <a href="@detailUrl">@p.ProjectNaam</a>
+                                            @if (!p.IsActief)
+                                            {
+                                                <span class="gl-v2-badge is-neutral" title="Project staat niet meer online (uitverkocht of offline gehaald)">niet meer online</span>
+                                            }
+                                        </span>
+                                        @if (!string.IsNullOrEmpty(p.AdresRegel))
+                                        {
+                                            <span class="gl-v2-ma-cell-sub">@p.AdresRegel</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @p.Ontwikkelaar
+                                        @if (p.DeveloperConflict)
+                                        {
+                                            <i class="ph ph-warning" style="color:var(--gl-v2-warning)" title="Ontwikkelaar verschilt per bron" aria-hidden="true"></i>
+                                        }
+                                    </td>
+                                    <td data-order="@p.AantalBronnen">
+                                        <span class="gl-v2-ma-bron">
+                                            @foreach (var bron in p.BronNamen)
+                                            {
+                                                <span class="gl-v2-badge is-neutral">@bron</span>
+                                            }
+                                            @if (!p.BronNamen.Any())
+                                            {
+                                                <span class="is-muted">—</span>
+                                            }
+                                        </span>
+                                    </td>
+                                    <td class="is-num">@p.TotaalUnits</td>
+                                    <td class="is-num">@p.VerkochteUnits</td>
+                                    <td class="is-num">@p.BeschikbareUnits</td>
+                                    <td data-order="@p.Verkoopgraad.ToString("0.##", CultureInfo.InvariantCulture)">
+                                        <div class="gl-v2-ma-pct" @(p.VerkoopgraadGerapporteerd ? Html.Raw("title=\"Verkoopgraad zoals vermeld in de advertentie; er zijn geen units bekend\"") : null)>
+                                            <div class="gl-v2-ma-pct-track"><div class="gl-v2-ma-pct-fill @(p.Verkoopgraad >= 50 ? "is-high" : "")" style="width:@(Math.Clamp(p.Verkoopgraad, 0, 100).ToString("0.#", CultureInfo.InvariantCulture))%"></div></div>
+                                            <span class="gl-v2-ma-pct-num">@p.Verkoopgraad.ToString("0", nl) %</span>
+                                        </div>
+                                    </td>
+                                    <td class="is-num is-strong" data-order="@(p.GemiddeldePrijs?.ToString("0", CultureInfo.InvariantCulture) ?? "0")">@Eur(p.GemiddeldePrijs)</td>
+                                    <td class="is-num" data-order="@(p.GemiddeldePrijsPerM2?.ToString("0", CultureInfo.InvariantCulture) ?? "0")">@Eur(p.GemiddeldePrijsPerM2)</td>
+                                    <td class="is-num"><i class="ph ph-caret-right gl-v2-ma-chevron" aria-hidden="true"></i></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="gl-v2-ma-table-wrap" id="ma-pane-eenheden" hidden>
+                    <table id="ma-tbl-eenheden" class="gl-v2-ma-table" style="min-width:980px">
+                        <thead>
+                            <tr>
+                                <th>Adres</th>
+                                <th>Gemeente</th>
+                                <th>Type</th>
+                                <th class="is-num">Opp.</th>
+                                <th class="is-num">Slpk.</th>
+                                <th class="is-num">Vraagprijs</th>
+                                <th class="is-num">€/m²</th>
+                                <th>Status</th>
+                                <th class="is-num" title="Dagen van eerste waarneming tot verkoop">Doorlooptijd</th>
+                                <th>Aangeboden door</th>
+                                <th aria-label="Openen"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var e in Model.LosseEenheden)
+                            {
+                                var statusClass = e.Status == "Verkocht" ? "is-sold" : e.Status == "Vermoedelijk verkocht" ? "is-likely" : "is-avail";
+                                <tr class="@(string.IsNullOrEmpty(e.SourceUrl) ? "" : "is-clickable is-external")" data-url="@e.SourceUrl">
+                                    <td><span class="gl-v2-ma-cell-main">@(e.Adres ?? "—")</span></td>
+                                    <td>@($"{e.Postcode} {e.Gemeente}".Trim())</td>
+                                    <td><span class="gl-v2-badge is-neutral">@e.TypeLabel</span></td>
+                                    <td class="is-num" data-order="@(e.Oppervlakte?.ToString("0", CultureInfo.InvariantCulture) ?? "0")">@(e.Oppervlakte.HasValue ? e.Oppervlakte.Value.ToString("N0", nl) + " m²" : "—")</td>
+                                    <td class="is-num">@(e.Slaapkamers?.ToString() ?? "—")</td>
+                                    <td class="is-num is-strong" data-order="@(e.Vraagprijs?.ToString("0", CultureInfo.InvariantCulture) ?? "0")">@Eur(e.Vraagprijs)</td>
+                                    <td class="is-num" data-order="@(e.PrijsPerM2?.ToString("0", CultureInfo.InvariantCulture) ?? "0")">@Eur(e.PrijsPerM2)</td>
+                                    <td><span class="gl-v2-badge @statusClass">@e.Status</span></td>
+                                    <td class="is-num" data-order="@(e.DoorlooptijdDagen ?? -1)" title="@(e.VerkochtOp.HasValue ? "Verkocht op " + e.VerkochtOp.Value.ToLocalTime().ToString("dd/MM/yyyy") : "")">@(e.DoorlooptijdDagen.HasValue ? e.DoorlooptijdDagen.Value + " d" : (e.VerkochtOp.HasValue ? "onbekend" : "—"))</td>
+                                    <td>
+                                        @e.AangeboenDoor
+                                        @if (e.IsGekoppeld)
+                                        {
+                                            <span class="gl-v2-badge is-info" title="Gekoppeld aan @(e.GekoppeldProjectNaam ?? "project")"><i class="ph ph-link" aria-hidden="true"></i>project</span>
+                                        }
+                                    </td>
+                                    <td class="is-num">
+                                        @if (!string.IsNullOrEmpty(e.SourceUrl))
+                                        {
+                                            <i class="ph ph-arrow-square-out gl-v2-ma-chevron" aria-hidden="true"></i>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    @if (Model.ToonGekoppeld || Model.AantalGekoppeld > 0)
+                    {
+                        <div class="gl-v2-ma-table-head" style="border-top:1px solid var(--gl-v2-hairline-soft);border-bottom:0">
+                            @if (Model.ToonGekoppeld)
+                            {
+                                <span class="gl-v2-ma-table-hint">Alle losse eenheden, inclusief @Model.AantalGekoppeld gekoppeld aan een project.</span>
+                                <a class="gl-v2-btn gl-v2-btn-text" href="@ToggleGekoppeldUrl(false)">Verberg gekoppelde</a>
+                            }
+                            else
+                            {
+                                <span class="gl-v2-ma-table-hint">Individuele aanbiedingen zonder projectkoppeling.</span>
+                                <a class="gl-v2-btn gl-v2-btn-text" href="@ToggleGekoppeldUrl(true)">+ @Model.AantalGekoppeld gekoppeld aan een project tonen</a>
+                            }
+                        </div>
+                    }
+                </div>
+            </section>
+        }
+    </div>
+</div>
+
+@section PageScripts
+{
+    <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
+    @if (Model.HeeftData)
+    {
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@@4.4.4/dist/chart.umd.min.js"></script>
+        <script>
+            window.glV2MaData = {
+                labels: @Html.Raw(JsonSerializer.Serialize(Model.AanbodPerMaand.Select(m => m.Label))),
+                aanbod: @Html.Raw(JsonSerializer.Serialize(Model.AanbodPerMaand.Select(m => m.Aanbod))),
+                verkocht: @Html.Raw(JsonSerializer.Serialize(Model.AanbodPerMaand.Select(m => m.Verkocht)))
+            };
+        </script>
+    }
+    <script src="~/js/gl-v2-marktanalyse-gemeente.js" asp-append-version="true"></script>
+}

@@ -1,4 +1,4 @@
-﻿using BOCore;
+using BOCore;
 using DALCore.Models;
 using ServiceCore.Invoicing.Pdf;
 using Newtonsoft.Json;
@@ -54,6 +54,24 @@ public sealed class InvoicePdfService : IInvoicePdfService
 
         return document.GeneratePdf();
 
+    }
+
+    public InvoicePreviewData BuildPreview(InvoiceDto invoice, IssuerCompanyBO company)
+    {
+        if (invoice == null) throw new ArgumentNullException(nameof(invoice));
+        if (company == null) throw new ArgumentNullException(nameof(company));
+        var templateKey = company.TemplateKey ?? "layoutA";
+        var layout = LoadLayout(company.TemplateJson, templateKey);
+        ApplyBranding(layout, company);
+        var structuredMessage = NormalizeStructuredMessage(invoice.StructuredMessage);
+        var isProforma = IsProformaStatus(invoice.Status);
+        return new InvoicePreviewData
+        {
+            Vm = Map(invoice, company, structuredMessage, isProforma),
+            Context = BuildContext(invoice, company, layout, structuredMessage, isProforma),
+            TemplateKey = templateKey,
+            IsProforma = isProforma
+        };
     }
 
     private static LayoutConfig LoadLayout(string? templateJson, string templateKey)

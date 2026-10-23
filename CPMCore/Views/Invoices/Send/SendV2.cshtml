@@ -1,0 +1,298 @@
+@model CPMCore.Models.Invoicing.InvoiceSendVM
+@using System.Globalization
+@using CPMCore.Helpers
+@*
+    gl-v2 — Factuur verzenden (design-handoff punt 11g): kanaal kiezen (e-mail, Peppol of beide), één melding in plaats van drie, bericht als opgemaakte
+    tekst met "Veld invoegen", bijlagen als tegels met schakelaar, rechts factuur- en klantgegevens, onderaan de verzendgeschiedenis met kanaal.
+    Zelfde model en POST als het oude Send.cshtml (InvoicesController.Send); het kanaal komt als Channel binnen (email, peppol, both).
+    Eigen klassen-namespace gl-v2-is-* (gl-v2-invoices-send.css/.js).
+*@
+@{
+    var culture = CultureInfo.GetCultureInfo("nl-BE");
+    var issuerId = ViewBag.CompanyId as int? ?? Model.IssuerCompanyId;
+    var docNumber = string.IsNullOrWhiteSpace(Model.PublicId) ? $"[{Model.InvoiceId}]" : Model.PublicId;
+    ViewData["Title"] = "Factuur verzenden";
+    ViewData["HelpScreenId"] = "facturen-verzenden";
+    ViewData["PageIcon"] = "ph ph-receipt";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Detail", "Invoices", new { id = Model.InvoiceId, issuerCompanyId = issuerId });
+    var copyMode = Model.IsCopyRequest;
+    var alreadySent = Model.History.Any(h => h.Tone is "success" or "strong");
+    // Peppol via Octopus = doorsturen naar je eigen Octopus; kan enkel als dat nog niet gebeurd is of mislukt is (zie InvoicesController.Send).
+    var peppolOk = Model.CanSendViaOctopus;
+    var channel = copyMode ? "email" : (Model.Channel is "peppol" or "both" or "email" ? Model.Channel : "email");
+    if (!peppolOk && channel != "email") channel = "email";
+    var hasEnterpriseId = !string.IsNullOrWhiteSpace(Model.ClientVatNumber) || !string.IsNullOrWhiteSpace(Model.ClientEnterpriseNumber);
+    var currency = string.IsNullOrWhiteSpace(Model.Currency) ? "EUR" : Model.Currency;
+    string Money(decimal v) => "€ " + v.ToString("N2", culture);
+    var vatLabel = "Btw";
+    var firstMail = Model.History.FirstOrDefault(h => h.Channel == "E-mail");
+    var viaPeppol = Model.History.Any(h => h.Channel == "Peppol" && h.Tone is "success" or "strong");
+    string Tone(string t) => t switch { "success" => "is-success", "strong" => "is-strong", "danger" => "is-danger", _ => "is-neutral" };
+    var fileBase = string.IsNullOrWhiteSpace(Model.PublicId) ? "Factuur_" + Model.InvoiceId : Model.PublicId;
+    var fields = new (string Key, string Label, string Value)[]
+    {
+        ("nummer", "Factuurnummer", docNumber),
+        ("bedrag", "Bedrag", Money(Model.TotalInclVat)),
+        ("vervaldatum", "Vervaldatum", Model.ExpirationDate.HasValue ? Model.ExpirationDate.Value.ToString("dd/MM/yyyy", culture) : ""),
+        ("mededeling", "Mededeling", Model.StructuredMessage ?? ""),
+        ("rekening", "Rekeningnummer", Model.BankAccount ?? ""),
+        ("klant", "Naam klant", Model.ClientName ?? ""),
+    };
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-invoices-send.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    <span class="gl-v2-invoice-direction-badge"><i class="ph ph-arrow-right" aria-hidden="true"></i>Verkoop</span>
+    <span class="gl-v2-badge is-positive">@(copyMode ? "ENKEL PDF" : "PDF + UBL")</span>
+    @if (Model.PeppolCheck == "found") { <span class="gl-v2-badge is-positive">KLANT OP PEPPOL</span> }
+    else if (Model.PeppolCheck == "notfound") { <span class="gl-v2-badge is-attention">KLANT NIET OP PEPPOL</span> }
+    @if (copyMode) { <span class="gl-v2-badge is-neutral">KOPIE</span> }
+}
+@section PageActions
+{
+    <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("Pdf", "Invoices", new { id = Model.InvoiceId })" target="_blank" rel="noopener"><i class="ph ph-eye" aria-hidden="true"></i>Bekijk PDF</a>
+}
+
+<form asp-action="Send" asp-route-issuerCompanyId="@Model.IssuerCompanyId" method="post" id="invoiceSendForm" class="gl-v2-is-form" novalidate>
+    @Html.AntiForgeryToken()
+    <input asp-for="InvoiceId" type="hidden" />
+    <input asp-for="IssuerCompanyId" type="hidden" />
+    <input asp-for="PublicId" type="hidden" />
+    <input asp-for="PeppolParticipantId" type="hidden" />
+    <input asp-for="PeppolAccountFound" type="hidden" />
+    <input asp-for="ExistingUblProfile" type="hidden" />
+    <input asp-for="ExistingUblVersion" type="hidden" />
+    <input asp-for="IsCopyRequest" type="hidden" />
+    <input type="hidden" name="copyToSelf" id="is-copy-self" value="0" />
+    <input type="hidden" asp-for="To" id="is-to" />
+    <input type="hidden" asp-for="Cc" id="is-cc" />
+    <textarea asp-for="Body" id="is-body" hidden></textarea>
+
+    <div class="gl-v2-is-grid" id="gl-v2-is-root" data-copy="@(copyMode ? "1" : "0")" data-peppol="@(peppolOk ? "1" : "0")" data-me="@Model.CurrentUserEmail">
+        <div class="gl-v2-is-main">
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-envelope-simple" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Verzenden</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">kanaal, ontvangers en bijlagen</span>
+                </div>
+                <div class="gl-v2-is-body">
+                    @await Html.PartialAsync("GlV2/_ErrorSummaryV2")
+
+                    @* Kanaal *@
+                    <div class="gl-v2-field">
+                        <span class="gl-v2-field-label" id="is-channel-label">KANAAL</span>
+                        <div class="gl-v2-is-channels" role="radiogroup" aria-labelledby="is-channel-label">
+                            <label class="gl-v2-is-channel @(channel == "email" ? "is-on" : "")">
+                                <span class="gl-v2-is-channel-top"><input type="radio" name="Channel" value="email" @(channel == "email" ? "checked" : "") /><i class="ph ph-envelope-simple" aria-hidden="true"></i><b>E-mail</b></span>
+                                <small>PDF en UBL als bijlage naar de ontvangers hieronder</small>
+                            </label>
+                            <label class="gl-v2-is-channel @(channel == "peppol" ? "is-on" : "") @(!peppolOk || copyMode ? "is-off" : "")" title="@(peppolOk ? "" : Model.OctopusNote)">
+                                <span class="gl-v2-is-channel-top"><input type="radio" name="Channel" value="peppol" @(channel == "peppol" ? "checked" : "") @(!peppolOk || copyMode ? "disabled" : "") /><i class="ph ph-globe" aria-hidden="true"></i><b>Peppol via Octopus</b>@if (!peppolOk && !copyMode) { <span class="gl-v2-is-soft">Niet beschikbaar</span> }</span>
+                                <small>@(!peppolOk && !copyMode && !string.IsNullOrWhiteSpace(Model.OctopusNote) ? Model.OctopusNote : "doorsturen naar je Octopus, dat de factuur via Peppol naar de klant verstuurt")</small>
+                            </label>
+                            <label class="gl-v2-is-channel @(channel == "both" ? "is-on" : "") @(!peppolOk || copyMode ? "is-off" : "")" title="@(peppolOk ? "" : Model.OctopusNote)">
+                                <span class="gl-v2-is-channel-top"><input type="radio" name="Channel" value="both" @(channel == "both" ? "checked" : "") @(!peppolOk || copyMode ? "disabled" : "") /><i class="ph ph-copy" aria-hidden="true"></i><b>Beide</b></span>
+                                <small>e-mail naar de klant en doorsturen naar Octopus voor Peppol</small>
+                            </label>
+                        </div>
+                    </div>
+
+                    @* Eén melding in plaats van drie *@
+                    @if (copyMode)
+                    {
+                        <div class="gl-v2-notice gl-v2-notice-expanded is-info">
+                            <span class="gl-v2-notice-expanded-icon"><i class="ph ph-copy" aria-hidden="true"></i></span>
+                            <div class="gl-v2-notice-body"><span class="gl-v2-notice-title">Je verstuurt een kopie</span><span class="gl-v2-notice-text">Een kopie bevat enkel de pdf en gaat niet via Peppol.</span></div>
+                        </div>
+                    }
+                    else if (Model.PeppolCheck == "notfound" && Model.RequiresDigitalInvoice)
+                    {
+                        <div class="gl-v2-notice gl-v2-notice-expanded is-warning">
+                            <span class="gl-v2-notice-expanded-icon"><i class="ph ph-warning" aria-hidden="true"></i></span>
+                            <div class="gl-v2-notice-body">
+                                <span class="gl-v2-notice-title">Klant verwacht digitale facturen, maar staat niet in de Peppol-directory</span>
+                                <span class="gl-v2-notice-text">Verstuur via e-mail met UBL-bijlage. Zodra de klant Peppol activeert, kies je hier Peppol via Octopus.@(hasEnterpriseId ? "" : " Vul eerst een ondernemings- of btw-nummer in bij de klant.")</span>
+                            </div>
+                            <a class="gl-v2-btn gl-v2-btn-secondary gl-v2-is-recheck" href="@Url.Action("Send", "Invoices", new { id = Model.InvoiceId, issuerCompanyId = Model.IssuerCompanyId })"><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i>Opnieuw controleren</a>
+                        </div>
+                    }
+                    else if (peppolOk && !string.IsNullOrWhiteSpace(Model.OctopusNote))
+                    {
+                        <div class="gl-v2-notice gl-v2-notice-expanded is-warning">
+                            <span class="gl-v2-notice-expanded-icon"><i class="ph ph-warning" aria-hidden="true"></i></span>
+                            <div class="gl-v2-notice-body"><span class="gl-v2-notice-title">Verzending naar Octopus mislukt</span><span class="gl-v2-notice-text">@Model.OctopusNote</span></div>
+                        </div>
+                    }
+
+                    @* Ontvangers *@
+                    <div class="gl-v2-is-two">
+                        <div class="gl-v2-field" id="is-to-field">
+                            <label class="gl-v2-field-label" for="is-to-input">AAN</label>
+                            <div class="gl-v2-is-tags" data-is-tags="to" data-target="#is-to"><input type="email" id="is-to-input" class="gl-v2-is-tags-input" placeholder="+ adres" autocomplete="off" inputmode="email" /></div>
+                            <span class="gl-v2-field-help" data-is-help="to">uit de klantfiche</span>
+                        </div>
+                        <div class="gl-v2-field" id="is-cc-field">
+                            <label class="gl-v2-field-label" for="is-cc-input">CC <span class="gl-v2-is-opt">· optioneel</span></label>
+                            <div class="gl-v2-is-tags" data-is-tags="cc" data-target="#is-cc"><input type="email" id="is-cc-input" class="gl-v2-is-tags-input" placeholder="+ adres" autocomplete="off" inputmode="email" /></div>
+                            <span class="gl-v2-field-help" data-is-help="cc">komma of Enter om toe te voegen</span>
+                        </div>
+                    </div>
+
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="Subject">ONDERWERP</label>
+                        <div class="gl-v2-field-box"><input asp-for="Subject" class="gl-v2-field-input" autocomplete="off" /></div>
+                    </div>
+
+                    @* Bericht als opgemaakte tekst *@
+                    <div class="gl-v2-field">
+                        <span class="gl-v2-field-label" id="is-body-label">BERICHT</span>
+                        <div class="gl-v2-is-editor">
+                            <div class="gl-v2-is-toolbar" role="toolbar" aria-label="Opmaak">
+                                <button type="button" data-is-cmd="bold" aria-label="Vet" title="Vet"><i class="ph ph-text-b" aria-hidden="true"></i></button>
+                                <button type="button" data-is-cmd="insertUnorderedList" aria-label="Lijst" title="Lijst"><i class="ph ph-list-bullets" aria-hidden="true"></i></button>
+                                <button type="button" data-is-cmd="createLink" aria-label="Link" title="Link"><i class="ph ph-link-simple" aria-hidden="true"></i></button>
+                                <span class="gl-v2-is-toolbar-gap"></span>
+                                <div class="gl-v2-is-fieldmenu">
+                                    <button type="button" class="gl-v2-is-fieldbtn" id="is-field-btn" aria-haspopup="true" aria-expanded="false"><i class="ph ph-tag" aria-hidden="true"></i>Veld invoegen</button>
+                                    <div class="gl-v2-is-fieldlist" id="is-field-list" hidden role="menu">
+                                        @foreach (var f in fields.Where(x => !string.IsNullOrWhiteSpace(x.Value)))
+                                        {
+                                            <button type="button" role="menuitem" data-is-field="@f.Value"><span>@f.Label</span><small>@f.Value</small></button>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="gl-v2-is-bodyedit" id="is-body-edit" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="is-body-label">@Html.Raw(Model.Body)</div>
+                        </div>
+                        <span class="gl-v2-field-help">sjabloon uit Instellingen · velden zoals bedrag, vervaldatum en mededeling worden automatisch ingevuld</span>
+                    </div>
+
+                    @* Bijlagen als tegels *@
+                    <div class="gl-v2-field">
+                        <span class="gl-v2-field-label">BIJLAGEN</span>
+                        <div class="gl-v2-is-attach">
+                            <div class="gl-v2-is-tile @(Model.AttachPdf ? "is-on" : "")" data-is-tile="pdf">
+                                <span class="gl-v2-is-tile-ico"><i class="ph ph-file-pdf" aria-hidden="true"></i></span>
+                                <span class="gl-v2-is-tile-text"><b>PDF</b><small>@(fileBase).pdf</small></span>
+                                <label class="gl-v2-switch"><input type="checkbox" asp-for="AttachPdf" class="gl-v2-is-attach-input" aria-label="PDF bijvoegen" disabled="@(copyMode ? "disabled" : null)" /><span class="gl-v2-switch-track"></span></label>
+                            </div>
+                            <div class="gl-v2-is-tile @(Model.AttachUbl ? "is-on" : "")" data-is-tile="ubl">
+                                <span class="gl-v2-is-tile-ico"><i class="ph ph-file-code" aria-hidden="true"></i></span>
+                                <span class="gl-v2-is-tile-text"><b>UBL (Peppol BIS 3.0)</b><small>@(fileBase).xml · EN 16931@(Model.DefaultAttachUbl ? " · standaard aan voor deze klant" : "")</small></span>
+                                <label class="gl-v2-switch"><input type="checkbox" asp-for="AttachUbl" class="gl-v2-is-attach-input" aria-label="UBL bijvoegen" disabled="@(copyMode ? "disabled" : null)" /><span class="gl-v2-switch-track"></span></label>
+                            </div>
+                        </div>
+                        @if (copyMode)
+                        {
+                            @* uitgeschakelde schakelaars posten niet mee: de pdf blijft aan in kopie-modus *@
+                            <input type="hidden" name="AttachPdf" value="true" />
+                        }
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="gl-v2-is-side">
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Factuur</h2>
+                    <span class="gl-v2-section-card-spacer"></span>
+                    <span class="gl-v2-is-cur">@currency</span>
+                </div>
+                <dl class="gl-v2-is-rows">
+                    <div><dt>Uitgever</dt><dd>@Model.IssuerName</dd></div>
+                    <div><dt>Nummer</dt><dd>@docNumber</dd></div>
+                    <div><dt>Datum</dt><dd>@Model.InvoiceDate.ToString("dd/MM/yyyy", culture)</dd></div>
+                    @if (Model.ExpirationDate.HasValue) { <div><dt>Vervaldatum</dt><dd>@Model.ExpirationDate.Value.ToString("dd/MM/yyyy", culture)</dd></div> }
+                    <div><dt>Excl. btw</dt><dd>@Money(Model.TotalExclVat)</dd></div>
+                    <div><dt>@vatLabel</dt><dd>@Money(Model.TotalVat)</dd></div>
+                    <div><dt>Totaal</dt><dd class="is-total">@Money(Model.TotalInclVat)</dd></div>
+                    @if (!string.IsNullOrWhiteSpace(Model.BankAccount)) { <div><dt>IBAN</dt><dd>@Model.BankAccount</dd></div> }
+                </dl>
+            </section>
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-user" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Klant</h2>
+                    <span class="gl-v2-section-card-spacer"></span>
+                    <span class="gl-v2-badge @(hasEnterpriseId ? "is-positive" : "is-neutral")">@(hasEnterpriseId ? "ONDERNEMING" : "PARTICULIER")</span>
+                </div>
+                <dl class="gl-v2-is-rows">
+                    <div><dt>Naam</dt><dd>@Model.ClientName</dd></div>
+                    <div><dt>E-mail</dt><dd>@(string.IsNullOrWhiteSpace(Model.ClientEmail) ? "—" : Model.ClientEmail)</dd></div>
+                    <div><dt>Btw</dt><dd>@(string.IsNullOrWhiteSpace(Model.ClientVatNumber) ? "—" : Model.ClientVatNumber)</dd></div>
+                    <div><dt>Peppol</dt><dd>@if (Model.PeppolCheck == "found") { <span class="is-ok">geregistreerd</span> } else if (Model.PeppolCheck == "notfound") { <span class="is-warn">niet geregistreerd</span> } else { <span>niet gecontroleerd</span> }</dd></div>
+                    <div><dt>Gecontroleerd</dt><dd>@(Model.PeppolCheck == "unknown" ? "geen btw- of ondernemingsnummer" : "vandaag " + DateTime.Now.ToString("HH:mm", culture))</dd></div>
+                </dl>
+            </section>
+
+            @if (alreadySent)
+            {
+                var sentAt = Model.History.Where(h => h.Tone is "success" or "strong").Select(h => (DateTime?)h.At).FirstOrDefault();
+                <div class="gl-v2-notice gl-v2-notice-expanded is-success">
+                    <span class="gl-v2-notice-expanded-icon"><i class="ph ph-check" aria-hidden="true"></i></span>
+                    <div class="gl-v2-notice-body">
+                        <span class="gl-v2-notice-title">Al verzonden op @(sentAt?.ToString("dd/MM/yyyy HH:mm", culture))</span>
+                        <span class="gl-v2-notice-text">@(firstMail != null ? "Naar " + firstMail.Recipient : "Verstuurd")@(viaPeppol ? (firstMail != null ? " en via Octopus naar Peppol" : " via Octopus naar Peppol") : ""). Opnieuw verzenden maakt een nieuwe regel in de geschiedenis.</span>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    @* Verzendgeschiedenis *@
+    <section class="gl-v2-section-card gl-v2-is-history">
+        <div class="gl-v2-section-card-header">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-section-card-title">Verzendgeschiedenis</h2>
+            <span class="gl-v2-field-divider"></span>
+            <span class="gl-v2-section-card-desc">@(Model.History.Count == 1 ? "1 regel" : Model.History.Count + " regels")</span>
+        </div>
+        @if (Model.History.Count == 0)
+        {
+            <p class="gl-v2-is-empty">Deze factuur is nog niet verzonden.</p>
+        }
+        else
+        {
+            <div class="gl-v2-is-hist" role="table" aria-label="Verzendgeschiedenis">
+                <div class="gl-v2-is-hist-row is-head" role="row"><span>DATUM</span><span>ONTVANGER</span><span>KANAAL</span><span>ONDERWERP / DETAIL</span><span>STATUS</span></div>
+                @foreach (var h in Model.History)
+                {
+                    <div class="gl-v2-is-hist-row" role="row">
+                        <span class="is-date">@h.At.ToString("dd/MM/yyyy HH:mm", culture)</span>
+                        <span class="is-strong">@h.Recipient</span>
+                        <span class="is-chan"><i class="ph @(h.Channel == "Peppol" ? "ph-globe" : "ph-envelope-simple")" aria-hidden="true"></i>@h.Channel</span>
+                        <span class="is-detail" title="@h.Detail">@h.Detail</span>
+                        <span><span class="gl-v2-is-pill @Tone(h.Tone)">@h.Status</span></span>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+
+    <div class="gl-v2-form-actionbar">
+        <a class="gl-v2-btn gl-v2-btn-text" href="@Url.Action("Ubl", "Invoices", new { id = Model.InvoiceId })"><i class="ph ph-download-simple" aria-hidden="true"></i>Download UBL</a>
+        <span class="gl-v2-is-summary" id="is-summary"></span>
+        <span class="gl-v2-form-actionbar-spacer"></span>
+        <div class="gl-v2-form-actionbar-actions">
+            @if (!copyMode)
+            {
+                <button type="submit" class="gl-v2-btn gl-v2-btn-secondary gl-v2-is-copy" id="is-copy-btn" name="submitMode" value="copy"><i class="ph ph-copy" aria-hidden="true"></i>Kopie naar mezelf</button>
+            }
+            <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="is-send-btn"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i><span>@(alreadySent ? "Opnieuw verzenden" : "Verzenden")</span></button>
+        </div>
+    </div>
+</form>
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-invoices-send.js" asp-append-version="true"></script>
+}

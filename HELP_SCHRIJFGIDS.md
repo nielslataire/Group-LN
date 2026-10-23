@@ -187,6 +187,15 @@ regel hier staat; anders `[VRAAG: ...]`.
 - Het dashboard van de projectleider toont nog niet dat er punten goed te keuren zijn (die melding is nog niet gebouwd). Schrijf hier geen belofte over in artikels. Zodra ze er is, het artikel "Een punt inspreken" aanpassen.
 - [VRAAG: wanneer wordt een punt "afgesloten"?]
 
+### Marktanalyse
+- Verkocht (op de Gemeenteanalyse en bij Vergelijkbare panden): de bron toont de unit als verkocht, of de unit is uit het aanbod verdwenen en geldt dan als vermoedelijk verkocht. Vermoedelijk verkocht telt mee als verkocht.
+- Doorlooptijd: dagen tussen de eerste waarneming door CPM en de verkoop. Was een unit al verkocht bij de eerste waarneming, dan is ze onbekend.
+- Verkooptempo: verkochte units per maand over de gekozen periode. Bij de periode Alles is er geen tempo.
+- Vraagprijs: de prijs uit de advertentie, nooit de verkoopprijs. Een verkocht pand toont de laatste vraagprijs.
+- Verkoopgraad van een project: het deel van de units dat verkocht is. Kent CPM de units niet, dan staat het percentage uit de advertentie zelf.
+- Opgeslagen profielen en laatste zoekacties zijn per gebruiker. [VRAAG: kan een gebruiker een profiel hernoemen of verwijderen, en waar?]
+- [VRAAG: hoe vaak worden de marktgegevens bijgewerkt en welke bronnen zijn er?]
+
 ### Verzekeringen (bedrijfslogica)
 - Een brandverzekering voor nieuwbouw is pas nodig als de voorlopige oplevering van het project bereikt is en een woning of appartement nog geen koper heeft. Dan toont CPM een rood aandachtspunt, tenzij een lopende brandpolis (niet als bestaand gebouw aangeduid) voor die eenheid of voor het hele project bestaat. CPM kent geen opleveringsdatum per eenheid: de voorlopige oplevering van het project geldt.
 - Een tienjarige polis kan voor het hele project gelden (Geldt voor leeg) of per eenheid. Bij een nieuwe polis kan de gebruiker meerdere eenheden aanvinken: CPM maakt dan per eenheid één polis met dezelfde gegevens. Een polis voor het hele project dekt alle eenheden. Contracten met Via projectpolis vragen geen eigen attest van de aannemer; ontbreekt de polis of dekt ze niet alle eenheden, dan komt er een aandachtspunt.

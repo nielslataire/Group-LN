@@ -36,6 +36,7 @@ namespace DALCore.Models
             ConfigureDossierEntities(modelBuilder);
             ConfigureWerfverslagEntities(modelBuilder);
             ConfigureBorgEntities(modelBuilder);
+            ConfigureVerkoopEntities(modelBuilder);
             ConfigurePuntRondgangEntities(modelBuilder);
             ConfigureCrmContactEntities(modelBuilder);
             ConfigureDocumentenEntities(modelBuilder);

@@ -1,0 +1,16 @@
+@* gl-v2 — tabbar van de Marktanalyse (design-handoff punt 46: globale module, geen binnenmenu, de tabbar staat onder de topbar).
+   Gebruik: @await Html.PartialAsync("_TabsV2", "Gemeenteanalyse"). Projectdetail staat bewust niet in de tabbar of het menu:
+   het opent enkel vanuit een rij van de Gemeenteanalyse of de Vergelijkbare panden (geef "" mee als geen tab actief is). *@
+@model string
+@{
+    var active = Model ?? string.Empty;
+    string Tab(string name) => string.Equals(name, active, StringComparison.OrdinalIgnoreCase) ? "gl-v2-tabbar-tab is-active" : "gl-v2-tabbar-tab";
+}
+<nav class="gl-v2-tabbar" aria-label="Marktanalyse">
+    <a class="@Tab("Gemeenteanalyse")" href="@Url.Action("Gemeenteanalyse", "Marktanalyse")" aria-current="@(active == "Gemeenteanalyse" ? "page" : null)">
+        <i class="ph ph-map-trifold" aria-hidden="true"></i> Gemeenteanalyse
+    </a>
+    <a class="@Tab("VergelijkbarePanden")" href="@Url.Action("VergelijkbarePanden", "Marktanalyse")" aria-current="@(active == "VergelijkbarePanden" ? "page" : null)">
+        <i class="ph ph-magnifying-glass" aria-hidden="true"></i> Vergelijkbare panden
+    </a>
+</nav>

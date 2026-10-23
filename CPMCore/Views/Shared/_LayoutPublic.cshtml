@@ -16,7 +16,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="robots" content="noindex, nofollow" />
     <title>@(ViewData["Title"] as string ?? "Group LN") · Group LN</title>
-    <link rel="icon" href="@Url.Content("~/img/favicon.ico")" type="image/x-icon" />
+    <link rel="icon" href="@Url.Content("~/img/favicon.ico")" type="image/x-icon" sizes="16x16 32x32 48x48" />
+    <link rel="icon" type="image/png" sizes="192x192" href="@Url.Content("~/icons/icon-192.png")" />
+    <link rel="icon" type="image/png" sizes="512x512" href="@Url.Content("~/icons/icon-512.png")" />
     <link rel="stylesheet" href="~/css/gl-v2-public.css" asp-append-version="true" />
     @RenderSection("PageStyle", required: false)
 </head>

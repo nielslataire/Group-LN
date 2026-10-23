@@ -42,7 +42,7 @@
 	<!-- Basic -->
 	<meta charset="UTF-8">
 	<title>@(string.IsNullOrWhiteSpace(pageTitle) ? "CPM - GROUP LN" : pageTitle + " · CPM - GROUP LN")</title>
-	<link rel="icon" href="@Url.Content("~/img/favicon.ico")" type="image/x-icon" />
+	<link rel="icon" href="@Url.Content("~/img/favicon.ico")" type="image/x-icon" sizes="16x16 32x32 48x48" />
 	<!-- Mobile Metas -->
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 	@await Html.PartialAsync("_PwaHead")

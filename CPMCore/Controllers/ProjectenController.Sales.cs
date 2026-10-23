@@ -60,8 +60,10 @@ namespace CPMCore.Controllers
         [HttpGet]
         //[Breadcrumb("Verkoop")]
         [Breadcrumb("Verkoop", FromAction = "Detail")]
-        public IActionResult DetailSales(int projectid)
+        public async Task<IActionResult> DetailSales(int projectid)
         {
+            // gl-v2 (design-handoff punt 45a): Te koop; het legacy scherm blijft voor ?classic=true
+            if (ViewData["UseGlV2Layout"] as bool? == true) return await VerkoopListV2(projectid);
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
 
             var model = new ProjectSalesModel();
@@ -155,6 +157,7 @@ namespace CPMCore.Controllers
             {
                 TempData["Referrer"] = refHeader;
             }
+            if (ViewData["UseGlV2Layout"] as bool? == true) return await VerkoopSettingsV2(projectid);
             var viewModel = new ProjectSalesSettingsModel();
             if (projectid != 0)
             {

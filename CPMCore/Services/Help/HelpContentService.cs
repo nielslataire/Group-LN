@@ -16,7 +16,7 @@ public class HelpContentService : IHelpContentService
 {
     // Vaste onderwerpen, in de volgorde van het hoofdmenu/de rail (design-handoff 41a
     // "ONDERWERPEN — ZELFDE VOLGORDE ALS HET MENU") — dit zijn geen artikel-frontmatter-velden,
-    // het zijn de acht vaste rubrieken van de app zelf.
+    // het zijn de vaste rubrieken van de app zelf.
     private static readonly List<HelpTopic> FixedTopics = new()
     {
         new HelpTopic { Slug = "aan-de-slag", Name = "Aan de slag", Icon = "ph-rocket-launch" },
@@ -27,6 +27,7 @@ public class HelpContentService : IHelpContentService
         new HelpTopic { Slug = "traject-dossiers", Name = "Traject & dossiers", Icon = "ph-signpost" },
         new HelpTopic { Slug = "documenten", Name = "Documenten", Icon = "ph-files" },
         new HelpTopic { Slug = "instellingen", Name = "Instellingen", Icon = "ph-gear" },
+        new HelpTopic { Slug = "marktanalyse", Name = "Marktanalyse", Icon = "ph-chart-line-up" },
     };
 
     private readonly IWebHostEnvironment _env;

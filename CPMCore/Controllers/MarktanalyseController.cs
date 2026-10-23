@@ -30,7 +30,8 @@ public class MarktanalyseController : BaseController
         int periodeMaanden         = 12,
         CancellationToken ct       = default)
     {
-        SetPageHeader("bx bx-map", "Gemeenteanalyse");
+        var glV2 = ViewData["UseGlV2Layout"] as bool? == true;
+        SetPageHeader(glV2 ? "ph ph-chart-bar" : "bx bx-map", "Gemeenteanalyse");
 
         if (!GemeenteAnalyseViewModel.AanbodOpties.Contains(aanbod)) aanbod = "Actueel";
         if (periodeMaanden < 0) periodeMaanden = 0;
@@ -52,7 +53,8 @@ public class MarktanalyseController : BaseController
         }
 
         vm.Locaties = locaties;
-        return View(vm);
+        ViewData["HelpScreenId"] = "marktanalyse-gemeente";
+        return View(glV2 ? "GemeenteanalyseV2" : "Gemeenteanalyse", vm);
     }
 
     // GET /Marktanalyse/VergelijkbarePanden
@@ -71,7 +73,8 @@ public class MarktanalyseController : BaseController
         string status                  = "Alles",
         CancellationToken ct           = default)
     {
-        SetPageHeader("bx bx-search-alt", "Vergelijkbare panden");
+        var glV2 = ViewData["UseGlV2Layout"] as bool? == true;
+        SetPageHeader(glV2 ? "ph ph-magnifying-glass" : "bx bx-search-alt", "Vergelijkbare panden");
 
         var vm = await _svc.GetVergelijkbarePandenAsync(
             gemeenteIds, rondAdresPostcode, rondAdresLat, rondAdresLng, rondAdresStraal,
@@ -99,7 +102,8 @@ public class MarktanalyseController : BaseController
             }
         }
 
-        return View(vm);
+        ViewData["HelpScreenId"] = "marktanalyse-vergelijkbaar";
+        return View(glV2 ? "VergelijkbarePandenV2" : "VergelijkbarePanden", vm);
     }
 
     private string? BuildVergelijkbarePandenUrl(VergelijkbarePandenZoekCriteria? c)
@@ -274,7 +278,9 @@ public class MarktanalyseController : BaseController
         var vm = await _svc.GetProjectDetailAsync(id, ct);
         if (vm is null) return NotFound();
 
-        SetPageHeader("bx bx-building-house", vm.ProjectNaam);
-        return View(vm);
+        var glV2 = ViewData["UseGlV2Layout"] as bool? == true;
+        SetPageHeader(glV2 ? "ph ph-buildings" : "bx bx-building-house", vm.ProjectNaam);
+        if (glV2) ViewData["BackUrl"] = Url.Action("Gemeenteanalyse", "Marktanalyse");
+        return View(glV2 ? "ProjectdetailV2" : "Projectdetail", vm);
     }
 }

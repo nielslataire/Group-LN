@@ -1,0 +1,200 @@
+@model CPMCore.Models.Invoicing.InvoiceEditVM
+@using System.Globalization
+@using CPMCore.Documents.GlV2
+@using ServiceCore.Invoicing.Pdf
+@*
+    gl-v2 — Voorbeeld van de factuur (Invoices/EditV2, design-handoff 11f). Bouwt de gl-v2-factuurlayout ("layoutA", Documents/GlV2/InvoiceDocumentV2.cs)
+    zo dicht mogelijk na in HTML, uit EXACT dezelfde gegevens als de pdf (InvoicePdfService.BuildPreview: InvoiceVm + logo, EPC-QR, huiskleur): kop met logo,
+    meta en adres, beschrijving, typetabel, btw-vermelding en totalen, bijkomende vermelding, betaalblok met QR, voet. Alle maten zijn de pdf-maten in
+    mm/pt, omgerekend met container-eenheden (gl-v2-invoices-edit.css, .gl-v2-ps), dus de verhoudingen kloppen op elke breedte. Het voorbeeld toont de eerste pagina.
+    De pagina-JS werkt de omschrijvingen, lijnteksten en bijkomende vermelding live bij (id's pv-*).
+*@
+@{
+    var data = Model.Preview;
+    if (data == null) { return; }
+    var vm = data.Vm;
+    var ctx = data.Context;
+    var culture = CultureInfo.GetCultureInfo("nl-BE");
+    var accent = GlV2PdfTheme.IsHex(ctx.PrimaryColorHex) ? ctx.PrimaryColorHex!.Trim() : GlV2PdfTheme.Groen;
+    var status = vm.Invoice.Status?.Trim();
+    var proforma = string.Equals(status, "Draft", StringComparison.OrdinalIgnoreCase) || string.Equals(status, "Concept", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(vm.Invoice.PublicId);
+    var creditNote = vm.Totals.Incl < 0m || (!string.IsNullOrWhiteSpace(status) && status.Contains("credit", StringComparison.OrdinalIgnoreCase));
+    var typeLabel = proforma ? (creditNote ? "Proforma creditnota" : "Proforma factuur") : creditNote ? "Creditnota" : "Factuur";
+    string Datum(DateOnly d) => d.ToString("dd/MM/yyyy", culture);
+    string Euro(decimal v) => GlV2PdfComponents.Euro(v);
+    string DataUri(byte[]? b)
+    {
+        if (b == null || b.Length == 0) return "";
+        var mime = b.Length > 3 && b[0] == 0xFF && b[1] == 0xD8 ? "image/jpeg" : b.Length > 3 && b[0] == 0x3C ? "image/svg+xml" : "image/png";
+        return "data:" + mime + ";base64," + Convert.ToBase64String(b);
+    }
+    string Iban(string? iban)
+    {
+        if (string.IsNullOrWhiteSpace(iban)) return "";
+        var c = new string(iban.Where(ch => !char.IsWhiteSpace(ch)).ToArray()).ToUpperInvariant();
+        return string.Join(" ", Enumerable.Range(0, (c.Length + 3) / 4).Select(i => c.Substring(i * 4, Math.Min(4, c.Length - i * 4))));
+    }
+    string GroepSleutel(InvoiceLineVm l)
+    {
+        var type = l.LineType?.Trim();
+        if (string.Equals(type, "Stages", StringComparison.OrdinalIgnoreCase)) return "S:" + (l.GroupName ?? "");
+        if (string.Equals(type, "ChangeOrders", StringComparison.OrdinalIgnoreCase)) return "C:" + (l.GroupName ?? "");
+        return "O:";
+    }
+    string GroepTitel(InvoiceLineVm l)
+    {
+        var type = l.LineType?.Trim();
+        if (string.Equals(type, "Stages", StringComparison.OrdinalIgnoreCase)) return string.IsNullOrWhiteSpace(l.GroupName) ? "Schijven" : l.GroupName!.Trim();
+        if (string.Equals(type, "ChangeOrders", StringComparison.OrdinalIgnoreCase))
+        {
+            var g = l.GroupName?.Trim();
+            return string.IsNullOrWhiteSpace(g) || string.Equals(g, "Wijzigingsopdrachten", StringComparison.OrdinalIgnoreCase) ? "Wijzigingsopdrachten" : "Wijzigingsopdracht — " + g;
+        }
+        return "Overige";
+    }
+    var due = vm.Payment.UsePaymentTermsText && !string.IsNullOrWhiteSpace(vm.Payment.Terms) ? vm.Payment.Terms! : vm.Invoice.DueDate is DateOnly d ? Datum(d) : "—";
+    var number = string.IsNullOrWhiteSpace(vm.Invoice.PublicId) ? "—" : vm.Invoice.PublicId!;
+    var metaRows = new List<(string Label, string Value)>
+    {
+        ("Type", typeLabel),
+        (creditNote ? "Creditnotanummer" : "Factuurnummer", number),
+        (creditNote ? "Datum" : "Factuurdatum", Datum(vm.Invoice.IssueDate)),
+        ("Vervaldatum", due),
+    };
+    if (!string.IsNullOrWhiteSpace(vm.Project.Name)) metaRows.Add(("Project", vm.Project.Name!));
+    if (!string.IsNullOrWhiteSpace(vm.Unit.Name)) metaRows.Add(("Eenheid", vm.Unit.Name!));
+    var clientName = !string.IsNullOrWhiteSpace(vm.Client.LegalName) ? vm.Client.LegalName! : vm.Client.Name ?? "";
+    var clientLines = new List<string>();
+    if (!string.IsNullOrWhiteSpace(vm.Client.AddressLine)) clientLines.Add(vm.Client.AddressLine!);
+    var clientCity = string.Join(" ", new[] { vm.Client.Postal, vm.Client.City }.Where(s => !string.IsNullOrWhiteSpace(s)));
+    if (clientCity != "") clientLines.Add(clientCity);
+    if (!string.IsNullOrWhiteSpace(vm.Client.VAT)) clientLines.Add(vm.Client.VAT!);
+
+    var groups = vm.Lines.GroupBy(GroepSleutel).ToList();
+    var editLines = Model.Lines ?? new List<CPMCore.Models.Invoicing.InvoiceLineEditVM>();
+    var lineIndex = 0;
+    var rates = vm.VatSummary.OrderBy(v => v.Rate).ToList();
+    var mentions = rates.Where(t => vm.VatMentionsByRate.TryGetValue(t.Rate, out var m) && !string.IsNullOrWhiteSpace(m)).ToList();
+    var hasDesc = !string.IsNullOrWhiteSpace(Model.HeaderDescription) || !string.IsNullOrWhiteSpace(Model.DetailDescription);
+    var beneficiary = string.Join(" ", new[] { vm.IssuerCompany.LegalName ?? vm.IssuerCompany.Name, vm.IssuerCompany.LegalFormAbbreviation }.Where(s => !string.IsNullOrWhiteSpace(s)));
+    var pay = new List<(string Label, string? Value, bool Green)>
+    {
+        ("Bedrag", Euro(vm.Totals.Incl), true), ("Vóór", proforma ? null : due, true), ("Begunstigde", beneficiary, false),
+        ("IBAN", Iban(vm.Payment.Iban), true), ("BIC", vm.Payment.Bic, false), ("Mededeling", proforma ? null : vm.Payment.Structured, true),
+    }.Where(v => !string.IsNullOrWhiteSpace(v.Value)).ToList();
+    var payNote = proforma ? "Proforma factuur — dit is nog geen definitieve factuur en nog niet te betalen."
+        : !string.IsNullOrWhiteSpace(vm.Payment.Structured) ? "Vermeld de gestructureerde mededeling, zo wordt je betaling automatisch gekoppeld." : null;
+    var qr = proforma ? "" : DataUri(ctx.EpcQrPng);
+    var ic = vm.IssuerCompany;
+    var contact1 = string.Join(" · ", new[] { ic.Phone, ic.Email }.Where(s => !string.IsNullOrWhiteSpace(s)));
+    var contact = string.Join("\n", new[] { contact1, ic.Website }.Where(s => !string.IsNullOrWhiteSpace(s)));
+    var legal1 = string.Join(" · ", new[] { string.Join(" ", new[] { ic.LegalName ?? ic.Name, ic.LegalFormAbbreviation }.Where(s => !string.IsNullOrWhiteSpace(s))), string.IsNullOrWhiteSpace(ic.VAT) ? null : "btw " + ic.VAT }.Where(s => !string.IsNullOrWhiteSpace(s)));
+    var legal = string.Join("\n", new[] { legal1, (ic.DefaultIban ?? ic.IBAN) }.Where(s => !string.IsNullOrWhiteSpace(s)));
+    var logo = DataUri(ctx.Logo);
+    var tint = accent == GlV2PdfTheme.Groen ? GlV2PdfTheme.VlakGroepsrij : GlV2PdfTheme.Tint(accent, 0.09);
+    var payTint = accent == GlV2PdfTheme.Groen ? GlV2PdfTheme.VlakGroen : GlV2PdfTheme.Tint(accent, 0.06);
+}
+<div class="gl-v2-ps-wrap" id="ie-sheet" data-layout="@data.TemplateKey">
+    <div class="gl-v2-ps" style="--accent:@accent;--pill6:@tint;--paytint:@payTint">
+        <div class="gl-v2-ps-band"></div>
+        <div class="gl-v2-ps-head">
+            <div class="gl-v2-ps-logo">@if (logo != "") { <img src="@logo" alt="" /> }</div>
+            <div class="gl-v2-ps-title">
+                <span class="gl-v2-ps-kicker">VERKOOP</span>
+                <span class="gl-v2-ps-h1">@typeLabel</span>
+                @if (number != "—") { <span class="gl-v2-ps-number">@number</span> }
+            </div>
+        </div>
+        <div class="gl-v2-ps-content">
+            <div class="gl-v2-ps-meta">
+                <div class="gl-v2-ps-metatable">
+                    @foreach (var r in metaRows) { <b>@r.Label</b><span>@r.Value</span> }
+                </div>
+                <div class="gl-v2-ps-addr">
+                    <b>@clientName.ToUpperInvariant()</b>
+                    @foreach (var l in clientLines) { <span>@l</span> }
+                </div>
+            </div>
+
+            <div class="gl-v2-ps-desc" id="pv-desc" @(hasDesc ? "" : "hidden")>
+                <span class="gl-v2-ps-label">BESCHRIJVING</span>
+                <div class="gl-v2-ps-header" id="pv-header" data-initial="@Model.HeaderDescription">@Model.HeaderDescription</div>
+                <div class="gl-v2-ps-detail" id="pv-detail" data-initial="@Model.DetailDescription">@Model.DetailDescription</div>
+            </div>
+
+            <div class="gl-v2-ps-table">
+                <div class="gl-v2-ps-tr is-head"><span>OMSCHRIJVING</span><span class="r">AANTAL</span><span class="r">EENHEIDSPRIJS</span><span class="r">BTW</span><span class="r">TOTAAL EXCL.</span></div>
+                @foreach (var g in groups)
+                {
+                    if (groups.Count > 1) { <div class="gl-v2-ps-group">@GroepTitel(g.First())</div> }
+                    foreach (var l in g)
+                    {
+                        var qty = l.Quantity == 0m ? 1m : l.Quantity;
+                        var unit = l.UnitPrice == 0m ? l.Total / qty : l.UnitPrice;
+                        var text = lineIndex < editLines.Count ? editLines[lineIndex].Text : l.Description;
+                        <div class="gl-v2-ps-tr">
+                            <span class="d" id="pv-line-@lineIndex" data-initial="@text">@text</span>
+                            <span class="r">@qty.ToString("0.##", culture)</span>
+                            <span class="r">@Euro(unit)</span>
+                            <span class="r"><i class="gl-v2-ps-pill" style="background:@(l.Vat == 6m ? tint : GlV2PdfTheme.VlakWarm)">@GlV2PdfComponents.Btw(l.Vat)</i></span>
+                            <span class="r">@Euro(l.Total)</span>
+                        </div>
+                        lineIndex++;
+                    }
+                }
+            </div>
+
+            <div class="gl-v2-ps-totals">
+                <div class="gl-v2-ps-mentions">
+                    @if (mentions.Count > 0)
+                    {
+                        <span class="gl-v2-ps-label">BTW-VERMELDING</span>
+                        foreach (var t in mentions) { <p><b>@GlV2PdfComponents.Btw(t.Rate)</b><span>@vm.VatMentionsByRate[t.Rate]</span></p> }
+                    }
+                </div>
+                <div class="gl-v2-ps-sums">
+                    @if (rates.Count > 1)
+                    {
+                        <div class="gl-v2-ps-tarief is-head"><span>TARIEF</span><span class="r">MAATSTAF</span><span class="r">BTW</span><span class="r">TOTAAL</span></div>
+                        foreach (var t in rates) { <div class="gl-v2-ps-tarief"><span class="s">@GlV2PdfComponents.Btw(t.Rate)</span><span class="r">@Euro(t.Net)</span><span class="r">@Euro(t.Vat)</span><span class="r">@Euro(t.Net + t.Vat)</span></div> }
+                        <div class="gl-v2-ps-tarief is-total"><span class="s">Totaal</span><span class="r">@Euro(vm.Totals.Excl)</span><span class="r">@Euro(vm.Totals.Vat)</span><span class="r">@Euro(vm.Totals.Incl)</span></div>
+                    }
+                    else
+                    {
+                        <div class="gl-v2-ps-sum"><span>Totaal excl. btw</span><span>@Euro(vm.Totals.Excl)</span></div>
+                        <div class="gl-v2-ps-sum"><span>@(rates.Count == 1 ? "Btw " + GlV2PdfComponents.Btw(rates[0].Rate) : "Btw")</span><span>@Euro(vm.Totals.Vat)</span></div>
+                    }
+                    <div class="gl-v2-ps-grand"><span>Te betalen</span><b>@Euro(vm.Totals.Incl)</b></div>
+                </div>
+            </div>
+
+            <div class="gl-v2-ps-extra" id="pv-extra" @(string.IsNullOrWhiteSpace(Model.FooterDescription) ? "hidden" : "")>
+                <span class="gl-v2-ps-label">BIJKOMENDE VERMELDING</span>
+                <div id="pv-footer" data-initial="@Model.FooterDescription">@Model.FooterDescription</div>
+            </div>
+
+            <span class="gl-v2-ps-fill"></span>
+
+            <div class="gl-v2-ps-pay">
+                <div class="gl-v2-ps-pay-main">
+                    <span class="gl-v2-ps-label">BETALINGSGEGEVENS</span>
+                    <div class="gl-v2-ps-pay-grid">
+                        @foreach (var v in pay) { <div><small>@v.Label.ToUpperInvariant()</small><span class="@(v.Green ? "g" : "")">@v.Value</span></div> }
+                    </div>
+                    @if (payNote != null) { <em>@payNote</em> }
+                </div>
+                @if (qr != "") { <div class="gl-v2-ps-qr"><img src="@qr" alt="" /><small>scan met je bankapp</small></div> }
+            </div>
+        </div>
+        <div class="gl-v2-ps-foot">
+            <div class="gl-v2-ps-footrow">
+                <span class="c1">@ic.AddressLine<br />@string.Join(" ", new[] { ic.Postal, ic.City }.Where(s => !string.IsNullOrWhiteSpace(s)))</span>
+                <span class="c2">@contact</span>
+                <span class="c3">@legal</span>
+                <span class="c4">1 / 1</span>
+            </div>
+            <div class="gl-v2-ps-gap"></div>
+            <div class="gl-v2-ps-band"></div>
+        </div>
+    </div>
+</div>

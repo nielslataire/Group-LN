@@ -1,0 +1,322 @@
+/* gl-v2 — Marktanalyse: Gemeenteanalyse (46a) en Vergelijkbare panden (46b/46c), design-handoff punt 46 ("CRM Marktanalyse.dc.html").
+   Alles wat hier staat is paginaspecifiek; tabbar, sectiekaart, schakelaar (segmented), velden, badges, knoppen, meldingskaders en
+   lege staat komen uit de projectwijde componenten. Let op de laadvolgorde: page-CSS laadt VÓÓR de shell en de componentfiles, dus
+   elke regel die er één moet overschrijven staat onder .gl-v2-ma (twee klassen diep). Namespace: gl-v2-ma-* (gemeente + gedeeld),
+   gl-v2-vp-* (vergelijkbare panden). */
+
+/* ── Schil: tabbar bovenaan, scrollend lichaam (zelfde opbouw als Instellingen/Prijsreferenties) ── */
+.gl-v2-ma { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.gl-v2-ma-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 0 44px; display: flex; flex-direction: column; gap: 16px; }
+.gl-v2-ma-scroll > * { flex: none; }
+
+/* ── Kaarten (zelfde vorm als .gl-v2-section-card, voor wie geen sectiekop heeft) ── */
+.gl-v2-ma .gl-v2-ma-card { background: var(--gl-v2-surface); border-radius: var(--gl-v2-radius-md); box-shadow: var(--gl-v2-shadow-card); }
+
+/* ── Filterkaart (46a): alles op één rij ── */
+.gl-v2-ma .gl-v2-ma-filters { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 14px 20px; padding: 14px 20px; }
+.gl-v2-ma .gl-v2-ma-filters .gl-v2-field { min-width: 0; }
+.gl-v2-ma .gl-v2-ma-loc { width: 300px; max-width: 100%; }
+.gl-v2-ma .gl-v2-ma-filters .gl-v2-segmented { display: inline-flex; width: auto; }
+.gl-v2-ma .gl-v2-ma-filters .gl-v2-segmented > label { flex: none; }
+.gl-v2-ma .gl-v2-ma-filters .gl-v2-segmented > label > input + span { padding: 0 12px; font-size: 12px; font-weight: 600; }
+.gl-v2-ma .gl-v2-ma-source { margin-left: auto; padding-bottom: 10px; font: 450 11px var(--gl-v2-font-sans); color: #7a8a78; }
+.gl-v2-ma .gl-v2-ma-info { color: var(--gl-v2-muted-light); font-size: 12px; vertical-align: -1px; cursor: help; }
+
+/* ── Kerncijfers: strips met een kopje en vier (of zes) cellen ── */
+.gl-v2-ma .gl-v2-ma-strips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.gl-v2-ma .gl-v2-ma-strip { overflow: hidden; min-width: 0; }
+.gl-v2-ma .gl-v2-ma-strip.has-accent { box-shadow: inset 3px 0 0 var(--gl-v2-primary), var(--gl-v2-shadow-card); }
+.gl-v2-ma .gl-v2-ma-strip-head { padding: 9px 18px; border-bottom: 1px solid var(--gl-v2-hairline-soft); font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .14em; text-transform: uppercase; color: var(--gl-v2-primary); }
+.gl-v2-ma .gl-v2-ma-strip-grid { display: grid; grid-template-columns: repeat(var(--ma-cols, 4), minmax(0, 1fr)); }
+.gl-v2-ma .gl-v2-ma-stat { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 14px 18px; border-right: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-ma .gl-v2-ma-stat:last-child { border-right: 0; }
+.gl-v2-ma .gl-v2-ma-stat-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gl-v2-ma .gl-v2-ma-stat-value { font: 600 20px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-ma .gl-v2-ma-stat-value.is-primary { color: var(--gl-v2-primary); }
+.gl-v2-ma .gl-v2-ma-stat-sub { font: 450 11.5px var(--gl-v2-font-sans); color: #7a8a78; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── Grafieken in sectiekaarten ── */
+.gl-v2-ma .gl-v2-ma-charts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.gl-v2-ma .gl-v2-ma-charts > .gl-v2-section-card { min-width: 0; }
+.gl-v2-ma .gl-v2-ma-chart-body { padding: 16px 20px 14px; display: flex; flex-direction: column; gap: 6px; }
+.gl-v2-ma .gl-v2-ma-bars { height: 150px; display: flex; align-items: flex-end; gap: 12px; padding: 0 4px; border-bottom: 1px solid var(--gl-v2-hairline); }
+.gl-v2-ma .gl-v2-ma-bar { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; }
+.gl-v2-ma .gl-v2-ma-bar-val { font: 600 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
+.gl-v2-ma .gl-v2-ma-bar-fill { width: 70%; min-height: 2px; border-radius: 4px 4px 0 0; background: var(--gl-v2-primary); }
+.gl-v2-ma .gl-v2-ma-bar.is-peak .gl-v2-ma-bar-fill { background: var(--gl-v2-gold); }
+.gl-v2-ma .gl-v2-ma-bar.is-zero .gl-v2-ma-bar-val { color: var(--gl-v2-muted-light); }
+.gl-v2-ma .gl-v2-ma-bar.is-zero .gl-v2-ma-bar-fill { min-height: 0; }
+.gl-v2-ma .gl-v2-ma-bar-labels { display: flex; gap: 12px; padding: 0 4px; }
+.gl-v2-ma .gl-v2-ma-bar-labels span { flex: 1; min-width: 0; text-align: center; font: 500 10.5px var(--gl-v2-font-sans); color: #7a8a78; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Verkoopgraad per project: één rij per project, balk van 8px */
+.gl-v2-ma .gl-v2-ma-vkg { padding: 14px 20px 16px; display: flex; flex-direction: column; gap: 7px; max-height: 232px; overflow-y: auto; }
+.gl-v2-ma .gl-v2-ma-vkg-row { display: grid; grid-template-columns: minmax(80px, 150px) minmax(0, 1fr) 36px; gap: 10px; align-items: center; }
+.gl-v2-ma .gl-v2-ma-vkg-name { font: 500 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-ma .gl-v2-ma-vkg-track { height: 8px; border-radius: 4px; background: var(--gl-v2-neutral-tint); overflow: hidden; }
+.gl-v2-ma .gl-v2-ma-vkg-fill { height: 100%; border-radius: 4px; background: var(--gl-v2-accent-sage); }
+.gl-v2-ma .gl-v2-ma-vkg-fill.is-high { background: var(--gl-v2-primary); }
+.gl-v2-ma .gl-v2-ma-vkg-pct { font: 600 11px var(--gl-v2-font-sans); color: var(--gl-v2-ink); text-align: right; font-variant-numeric: tabular-nums; }
+.gl-v2-ma .gl-v2-ma-vkg-pct.is-zero { color: var(--gl-v2-muted-light); }
+
+/* Aanbod en verkopen per maand (Chart.js): legenda staat bovenaan de kaart, rechts in de kop */
+.gl-v2-ma .gl-v2-ma-legend { display: flex; align-items: center; gap: 18px; font: 500 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); flex: none; }
+.gl-v2-ma .gl-v2-ma-legend span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.gl-v2-ma .gl-v2-ma-legend .is-line { width: 12px; height: 3px; border-radius: 2px; background: var(--gl-v2-primary); }
+.gl-v2-ma .gl-v2-ma-legend .is-bar { width: 10px; height: 10px; border-radius: 2px; background: var(--gl-v2-gold); }
+.gl-v2-ma .gl-v2-ma-month-body { padding: 16px 20px 14px; }
+.gl-v2-ma .gl-v2-ma-month-canvas { position: relative; height: 210px; }
+
+/* ── Tabelkaart: schakelaar Projecten / Losse eenheden + zoekveld ── */
+.gl-v2-ma .gl-v2-ma-table-card { overflow: hidden; padding-bottom: 16px; }
+.gl-v2-ma .gl-v2-ma-table-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 20px; border-bottom: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-ma .gl-v2-ma-table-title { font: 700 13px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+.gl-v2-ma .gl-v2-ma-table-head .gl-v2-segmented { width: auto; display: inline-flex; }
+.gl-v2-ma .gl-v2-ma-table-head .gl-v2-segmented > button { padding: 0 14px; font-size: 12.5px; font-weight: 600; }
+.gl-v2-ma .gl-v2-ma-count { font: 600 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
+.gl-v2-ma .gl-v2-ma-table-spacer { flex: 1; }
+.gl-v2-ma .gl-v2-ma-table-search { width: 280px; max-width: 100%; }
+.gl-v2-ma .gl-v2-ma-table-search .gl-v2-field-box { height: 40px; }
+.gl-v2-ma .gl-v2-ma-table-hint { font: 450 11px var(--gl-v2-font-sans); color: #7a8a78; }
+/* Zelfde tabelstijl als Facturen (DESIGN.md "Table"): kop 11px groen op wit met haarlijn, rijen van 54px, hover-tint.
+   Horizontaal scrollen enkel de tabel zelf (.dt-layout-table), nooit de voet met teller en paginering. */
+.gl-v2-ma .gl-v2-ma-table-wrap { overflow: visible; }
+.gl-v2-ma .gl-v2-ma-table-wrap:not(:has(.dt-container)) { overflow-x: auto; }
+.gl-v2-ma .dt-container { padding: 0; width: 100%; }
+.gl-v2-ma .dt-container .dt-layout-row { margin: 0; }
+.gl-v2-ma .dt-container .dt-layout-cell { padding: 0; }
+.gl-v2-ma .dt-container .dt-layout-table { overflow-x: auto; }
+
+.gl-v2-ma table.gl-v2-ma-table { width: 100%; margin: 0; border-collapse: collapse; background: transparent; font-family: var(--gl-v2-font-sans); }
+.gl-v2-ma table.gl-v2-ma-table > thead > tr > th {
+    padding: 0 26px 0 10px; height: 40px; background: var(--gl-v2-surface); border: 0; border-bottom: 1px solid var(--gl-v2-hairline); white-space: nowrap;
+    font: 600 11px var(--gl-v2-font-sans); letter-spacing: .04em; color: var(--gl-v2-primary); text-align: left; box-shadow: none; outline: 0;
+}
+.gl-v2-ma table.gl-v2-ma-table > thead > tr > th:focus-visible { outline: 2px solid var(--gl-v2-gold); outline-offset: -2px; }
+.gl-v2-ma table.gl-v2-ma-table > thead > tr > th:first-child { padding-left: 20px; }
+.gl-v2-ma table.gl-v2-ma-table > thead > tr > th:last-child { padding-right: 20px; }
+.gl-v2-ma table.gl-v2-ma-table > thead > tr > th.dt-orderable-asc,
+.gl-v2-ma table.gl-v2-ma-table > thead > tr > th.dt-orderable-desc { cursor: pointer; }
+.gl-v2-ma table.gl-v2-ma-table > thead > tr > th .dt-column-order { display: none; }
+.gl-v2-ma table.gl-v2-ma-table > thead > tr > th.dt-ordering-asc .dt-column-title::after { content: " ↑"; }
+.gl-v2-ma table.gl-v2-ma-table > thead > tr > th.dt-ordering-desc .dt-column-title::after { content: " ↓"; }
+.gl-v2-ma table.gl-v2-ma-table > tbody > tr > td {
+    height: 54px; padding: 6px 10px; border: 0; border-bottom: 1px solid var(--gl-v2-hairline-soft); background: transparent; box-shadow: none;
+    font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.gl-v2-ma table.gl-v2-ma-table > tbody > tr > td:first-child { padding-left: 20px; }
+.gl-v2-ma table.gl-v2-ma-table > tbody > tr > td:last-child { padding-right: 20px; }
+.gl-v2-ma table.gl-v2-ma-table > tbody > tr.is-clickable { cursor: pointer; }
+.gl-v2-ma table.gl-v2-ma-table > tbody > tr:hover > td { background: var(--gl-v2-hover-tint); }
+.gl-v2-ma table.gl-v2-ma-table .is-num { text-align: right; }
+.gl-v2-ma table.gl-v2-ma-table th.is-num { text-align: right; }
+.gl-v2-ma table.gl-v2-ma-table .is-strong { font-weight: 600; }
+.gl-v2-ma table.gl-v2-ma-table .is-muted { color: #7a8a78; }
+.gl-v2-ma .gl-v2-ma-cell-main { display: block; font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-ma .gl-v2-ma-cell-main a { color: inherit; text-decoration: none; }
+.gl-v2-ma .gl-v2-ma-cell-main a:hover { color: var(--gl-v2-primary); }
+.gl-v2-ma .gl-v2-ma-cell-sub { display: block; margin-top: 2px; font: 450 11px var(--gl-v2-font-sans); color: #7a8a78; }
+.gl-v2-ma .gl-v2-ma-cell-line { display: block; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-ma .gl-v2-ma-new { display: inline-block; margin-left: 6px; font: 600 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+.gl-v2-ma .gl-v2-ma-chevron { color: var(--gl-v2-muted-light); font-size: 14px; }
+tr.is-clickable:hover .gl-v2-ma-chevron { color: var(--gl-v2-primary); }
+
+/* Verkoopgraad in de tabel: smalle balk met percentage */
+.gl-v2-ma .gl-v2-ma-pct { display: flex; align-items: center; gap: 8px; min-width: 100px; }
+.gl-v2-ma .gl-v2-ma-pct-track { flex: 1; height: 6px; border-radius: 3px; background: var(--gl-v2-neutral-tint); overflow: hidden; }
+.gl-v2-ma .gl-v2-ma-pct-fill { height: 100%; background: var(--gl-v2-accent-sage); }
+.gl-v2-ma .gl-v2-ma-pct-fill.is-high { background: var(--gl-v2-primary); }
+.gl-v2-ma .gl-v2-ma-pct-num { font: 600 11px var(--gl-v2-font-sans); color: var(--gl-v2-ink); min-width: 34px; text-align: right; }
+
+/* Status- en bronlabels (badges uit het componentenstelsel, enkel de kleurvarianten van de marktanalyse erbij) */
+.gl-v2-ma .gl-v2-badge.is-avail { background: #E4EEDD; color: #2F6038; }
+.gl-v2-ma .gl-v2-badge.is-sold { background: var(--gl-v2-primary); color: #fff; }
+.gl-v2-ma .gl-v2-badge.is-likely { background: var(--gl-v2-warning-tint); color: var(--gl-v2-warning); }
+.gl-v2-ma .gl-v2-ma-bron { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+
+/* Voet van de tabel: teller links, paginering rechts, haarlijn erboven (zelfde als Facturen) */
+.gl-v2-ma .dt-container .dt-layout-row:first-child { display: none; }
+.gl-v2-ma .dt-container .dt-layout-row:last-child { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0 30px !important; border-top: 1px solid var(--gl-v2-hairline); }
+.gl-v2-ma .dt-info { padding: 0 0 0 20px; color: var(--gl-v2-muted); font: 500 11.5px var(--gl-v2-font-sans); }
+.gl-v2-ma .dt-paging { padding: 0 20px 0 0; }
+.gl-v2-ma .dt-paging .pagination { display: flex; align-items: center; gap: 6px; margin: 0; }
+.gl-v2-ma .dt-paging .page-link {
+    width: 30px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 7px;
+    border: 1px solid var(--gl-v2-hairline); background: var(--gl-v2-surface); color: var(--gl-v2-muted-soft); font: 600 12px var(--gl-v2-font-sans); box-shadow: none;
+}
+.gl-v2-ma .dt-paging .page-link:hover { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); }
+.gl-v2-ma .dt-paging .page-item.active .page-link { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); }
+.gl-v2-ma .dt-paging .page-item.disabled .page-link { color: #C0CABE; background: var(--gl-v2-surface); border-color: var(--gl-v2-hairline-soft); }
+.gl-v2-ma .dt-empty { padding: 28px 20px; text-align: center; color: var(--gl-v2-muted); font: 450 12.5px var(--gl-v2-font-sans); }
+
+/* ── Lege staat ── */
+.gl-v2-ma .gl-v2-ma-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 36px 20px; text-align: center; }
+.gl-v2-ma .gl-v2-ma-empty-icon { width: 52px; height: 52px; border-radius: 14px; background: #EDF2E8; display: flex; align-items: center; justify-content: center; color: var(--gl-v2-primary); font-size: 22px; }
+.gl-v2-ma .gl-v2-ma-empty-title { margin: 0; font: 600 15px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-ma .gl-v2-ma-empty-text { margin: 0; max-width: 460px; font: 450 12.5px/1.55 var(--gl-v2-font-sans); color: var(--gl-v2-muted); text-wrap: pretty; }
+
+/* ═════════════ Vergelijkbare panden (46b/46c) ═════════════ */
+.gl-v2-ma .gl-v2-vp-split { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 16px; align-items: start; }
+.gl-v2-ma .gl-v2-vp-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; position: relative; }
+.gl-v2-ma .gl-v2-vp-side { position: relative; z-index: 5; }
+.gl-v2-ma .gl-v2-vp-side .gl-v2-ma-card { overflow: visible; }
+.gl-v2-ma .gl-v2-vp-side-head { display: flex; align-items: center; gap: 11px; padding: 14px 18px; border-bottom: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-ma .gl-v2-vp-side-head .gl-v2-section-card-icon { flex: none; }
+.gl-v2-ma .gl-v2-vp-reset { margin-left: auto; font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: none; }
+.gl-v2-ma .gl-v2-vp-reset:hover { text-decoration: underline; }
+.gl-v2-ma .gl-v2-vp-form { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 16px; }
+.gl-v2-ma .gl-v2-vp-form .gl-v2-field { min-width: 0; }
+.gl-v2-ma .gl-v2-vp-form .gl-v2-segmented { display: inline-flex; width: auto; max-width: 100%; }
+.gl-v2-ma .gl-v2-vp-form .gl-v2-segmented > label { flex: none; }
+.gl-v2-ma .gl-v2-vp-form .gl-v2-segmented > label > input + span,
+.gl-v2-ma .gl-v2-vp-form .gl-v2-segmented > button { padding: 0 12px; font-size: 12px; font-weight: 600; }
+.gl-v2-ma .gl-v2-vp-form .gl-v2-field-box { width: 100%; box-sizing: border-box; }
+.gl-v2-ma .gl-v2-vp-form .gl-v2-field-box > input.gl-v2-field-input { flex: 1 1 0; width: 100%; min-width: 0; }
+.gl-v2-ma .gl-v2-vp-two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.gl-v2-ma .gl-v2-vp-zoekstack { display: flex; flex-direction: column; gap: 8px; }
+.gl-v2-ma .gl-v2-vp-zoekstack [hidden] { display: none; }
+.gl-v2-ma .gl-v2-vp-link { font: 450 11px var(--gl-v2-font-sans); color: #7a8a78; text-align: center; }
+
+/* Keuzeveld voor gemeenten en rond adres: 40px, zelfde taal als de keuzelijst met zoekveld */
+.gl-v2-ma .gl-v2-vp-pick { position: relative; }
+.gl-v2-ma .gl-v2-vp-pick-btn {
+    width: 100%; height: 40px; box-sizing: border-box; padding: 0 12px; display: flex; align-items: center; gap: 8px; text-align: left;
+    border: 1px solid rgba(44, 59, 42, .14); border-radius: 8px; background: var(--gl-v2-surface); cursor: pointer;
+    font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink);
+}
+.gl-v2-ma .gl-v2-vp-pick-btn:hover { border-color: var(--gl-v2-primary); background: #F7F9F5; }
+.gl-v2-ma .gl-v2-vp-pick-btn.open { border-color: var(--gl-v2-primary); box-shadow: 0 0 0 3px rgba(0, 83, 45, .10); }
+.gl-v2-ma .gl-v2-vp-pick-btn > i:first-child { color: var(--gl-v2-muted); font-size: 14px; flex: none; }
+.gl-v2-ma .gl-v2-vp-pick-btn.is-filled > i:first-child { color: var(--gl-v2-primary); }
+.gl-v2-ma .gl-v2-vp-pick-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-ma .gl-v2-vp-pick-label.is-placeholder { font-weight: 450; color: var(--gl-v2-muted-light); }
+.gl-v2-ma .gl-v2-vp-pick-caret { color: var(--gl-v2-primary); font-size: 13px; flex: none; transition: transform .15s ease; }
+.gl-v2-ma .gl-v2-vp-pick-btn.open .gl-v2-vp-pick-caret { transform: rotate(180deg); }
+.gl-v2-ma .gl-v2-vp-panel {
+    display: none; position: absolute; z-index: 60; top: calc(100% + 4px); left: 0; width: 100%; min-width: 280px;
+    background: var(--gl-v2-surface); border: 1px solid var(--gl-v2-hairline); border-radius: 10px; box-shadow: var(--gl-v2-shadow-flyout);
+}
+.gl-v2-ma .gl-v2-vp-panel.open { display: block; }
+.gl-v2-ma .gl-v2-vp-panel.is-wide { width: 400px; max-width: calc(100vw - 48px); padding: 14px; }
+.gl-v2-ma .gl-v2-vp-panel-search { display: flex; align-items: center; gap: 8px; margin: 10px; padding: 0 10px; height: 36px; border: 1px solid var(--gl-v2-hairline); border-radius: 8px; }
+.gl-v2-ma .gl-v2-vp-panel-search i { color: var(--gl-v2-muted); }
+.gl-v2-ma .gl-v2-vp-panel-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-ma .gl-v2-vp-panel-head { display: flex; justify-content: space-between; align-items: center; padding: 2px 14px 6px; font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gl-v2-ma .gl-v2-vp-panel-head a { color: var(--gl-v2-primary); cursor: pointer; font-weight: 600; text-decoration: none; letter-spacing: 0; text-transform: none; font-size: 12px; }
+.gl-v2-ma .gl-v2-vp-list { max-height: 240px; overflow-y: auto; padding-bottom: 6px; }
+.gl-v2-ma .gl-v2-vp-gem-row { display: flex; align-items: center; gap: 10px; padding: 0 14px; height: 38px; cursor: pointer; }
+.gl-v2-ma .gl-v2-vp-gem-row:hover { background: var(--gl-v2-bg); }
+.gl-v2-ma .gl-v2-vp-gem-row input { accent-color: var(--gl-v2-primary); cursor: pointer; margin: 0; }
+.gl-v2-ma .gl-v2-vp-gem-row label { flex: 1; margin: 0; cursor: pointer; font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-ma .gl-v2-vp-gem-count { font: 600 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); font-variant-numeric: tabular-nums; }
+.gl-v2-ma .gl-v2-vp-rond-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.gl-v2-ma .gl-v2-vp-rond-title { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gl-v2-ma .gl-v2-vp-rond-count { padding: 3px 9px; border-radius: 10px; background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); font: 600 10.5px var(--gl-v2-font-sans); white-space: nowrap; }
+.gl-v2-ma .gl-v2-vp-panel.is-wide .gl-v2-vp-panel-search { margin: 0 0 12px; }
+.gl-v2-ma .gl-v2-vp-rond-slider { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.gl-v2-ma .gl-v2-vp-rond-slider output { min-width: 48px; text-align: right; font: 700 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+.gl-v2-ma .gl-v2-vp-map { height: 200px; border-radius: 8px; border: 1px solid var(--gl-v2-hairline); background: #eef2ea; }
+.gl-v2-ma .gl-v2-vp-rond-hint { display: flex; gap: 6px; margin-top: 10px; font: 450 11px/1.4 var(--gl-v2-font-sans); color: #7a8a78; }
+
+/* Schuifregelaar (tolerantie, straal): dunne baan, ronde knop met groene rand */
+.gl-v2-ma input[type="range"].gl-v2-vp-range { -webkit-appearance: none; appearance: none; width: 100%; height: 16px; margin: 0; background: transparent; cursor: pointer; }
+.gl-v2-ma input[type="range"].gl-v2-vp-range::-webkit-slider-runnable-track { height: 3px; border-radius: 2px; background: var(--gl-v2-neutral-tint); }
+.gl-v2-ma input[type="range"].gl-v2-vp-range::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: -6.5px; border-radius: 50%; background: #fff; border: 2px solid var(--gl-v2-primary); box-sizing: border-box; }
+.gl-v2-ma input[type="range"].gl-v2-vp-range::-moz-range-track { height: 3px; border-radius: 2px; background: var(--gl-v2-neutral-tint); }
+.gl-v2-ma input[type="range"].gl-v2-vp-range::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid var(--gl-v2-primary); box-sizing: border-box; }
+.gl-v2-ma .gl-v2-vp-tol { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.gl-v2-ma .gl-v2-vp-tol-row { display: flex; justify-content: space-between; font: 500 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-ma .gl-v2-vp-tol-row b { color: var(--gl-v2-primary); }
+.gl-v2-ma .gl-v2-vp-range-hint { font: 450 11px var(--gl-v2-font-sans); color: #7a8a78; }
+.gl-v2-ma .gl-v2-vp-range-hint[hidden] { display: none; }
+
+/* Marktconclusie (46c): kaart met groene rand links */
+.gl-v2-ma .gl-v2-vp-conclusie { display: flex; align-items: center; gap: 16px; padding: 16px 20px; box-shadow: inset 3px 0 0 var(--gl-v2-primary), var(--gl-v2-shadow-card); }
+.gl-v2-ma .gl-v2-vp-conclusie-icon { width: 34px; height: 34px; flex: none; border-radius: 9px; background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.gl-v2-ma .gl-v2-vp-conclusie-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.gl-v2-ma .gl-v2-vp-conclusie-title { font: 700 13px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+.gl-v2-ma .gl-v2-vp-conclusie-text { font: 450 12.5px/1.6 var(--gl-v2-font-sans); color: var(--gl-v2-ink); text-wrap: pretty; }
+.gl-v2-ma .gl-v2-vp-conclusie-text b { font-weight: 600; }
+
+/* Opgeslagen profielen (tegels) en laatste zoekacties (rijen) */
+.gl-v2-ma .gl-v2-vp-tiles { padding: 14px 18px; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.gl-v2-ma .gl-v2-vp-tile { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 14px 16px; border: 1px solid var(--gl-v2-hairline); border-radius: 10px; background: var(--gl-v2-surface); text-decoration: none; color: inherit; transition: border-color .12s ease; }
+.gl-v2-ma .gl-v2-vp-tile:hover { border-color: var(--gl-v2-accent-sage); }
+.gl-v2-ma .gl-v2-vp-tile-icon { width: 34px; height: 34px; flex: none; border-radius: 9px; background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.gl-v2-ma .gl-v2-vp-tile-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gl-v2-ma .gl-v2-vp-tile-title { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-ma .gl-v2-vp-tile-sub { font: 450 11.5px var(--gl-v2-font-sans); color: #7a8a78; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-ma .gl-v2-vp-actions { display: flex; flex-direction: column; }
+.gl-v2-ma .gl-v2-vp-action { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 10px 20px; border-top: 1px solid rgba(44, 59, 42, .06); text-decoration: none; color: inherit; }
+.gl-v2-ma .gl-v2-vp-action:first-child { border-top: 0; }
+.gl-v2-ma .gl-v2-vp-action:hover { background: #FAFBF8; }
+.gl-v2-ma .gl-v2-vp-action-count { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
+.gl-v2-ma .gl-v2-vp-action-time { font: 450 11.5px var(--gl-v2-font-sans); color: #7a8a78; min-width: 76px; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Resultaatlijst: laadsluier tijdens het zoeken */
+.gl-v2-ma .gl-v2-vp-loading { display: none; position: absolute; inset: 0; z-index: 10; align-items: flex-start; justify-content: center; padding-top: 80px; background: rgba(247, 249, 245, .7); border-radius: 12px; }
+.gl-v2-ma .gl-v2-vp-loading.show { display: flex; }
+.gl-v2-ma .gl-v2-vp-spinner { width: 28px; height: 28px; border-radius: 50%; border: 3px solid var(--gl-v2-primary-tint); border-top-color: var(--gl-v2-primary); animation: gl-v2-ma-spin .8s linear infinite; }
+@keyframes gl-v2-ma-spin { to { transform: rotate(360deg); } }
+.gl-v2-ma .gl-v2-vp-table-wide { min-width: 880px; }
+
+/* ── Responsief ── */
+@media (max-width: 1399.98px) {
+    .gl-v2-ma .gl-v2-ma-strips { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 1199.98px) {
+    .gl-v2-ma .gl-v2-ma-charts { grid-template-columns: minmax(0, 1fr); }
+    .gl-v2-ma .gl-v2-vp-split { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 1023.98px) {
+    .gl-v2-ma .gl-v2-ma-strip-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gl-v2-ma .gl-v2-ma-stat:nth-child(2n) { border-right: 0; }
+    .gl-v2-ma .gl-v2-ma-stat:nth-child(n+3) { border-top: 1px solid var(--gl-v2-hairline-soft); }
+    .gl-v2-ma .gl-v2-ma-source { margin-left: 0; width: 100%; padding-bottom: 0; }
+}
+@media (max-width: 767.98px) {
+    .gl-v2-ma .gl-v2-ma-filters { padding: 14px 16px; gap: 14px; }
+    .gl-v2-ma .gl-v2-ma-loc { width: 100%; }
+    .gl-v2-ma .gl-v2-ma-filters .gl-v2-field { width: 100%; }
+    .gl-v2-ma .gl-v2-ma-filters .gl-v2-segmented { display: flex; }
+    .gl-v2-ma .gl-v2-ma-filters .gl-v2-segmented > label { flex: 1; }
+    .gl-v2-ma .gl-v2-ma-table-search { width: 100%; }
+    .gl-v2-ma .gl-v2-ma-table-head { padding: 12px 16px; }
+    .gl-v2-ma .gl-v2-ma-stat-value { font-size: 18px; }
+    .gl-v2-ma .gl-v2-vp-conclusie { align-items: flex-start; }
+    .gl-v2-ma .gl-v2-vp-action { grid-template-columns: 34px minmax(0, 1fr) auto; }
+    .gl-v2-ma .gl-v2-vp-action-time { display: none; }
+    .gl-v2-ma .gl-v2-vp-panel.is-wide { width: 100%; }
+    .gl-v2-ma .gl-v2-vp-form .gl-v2-field-input { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .gl-v2-ma .gl-v2-vp-spinner { animation-duration: 2s; }
+}
+
+/* ═════════════ Projectdetail (46d) ═════════════ */
+.gl-v2-ma .gl-v2-ma-strip-grid.is-auto { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.gl-v2-ma .gl-v2-pd-head { display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap; padding: 16px 20px; }
+.gl-v2-ma .gl-v2-pd-head-main { flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 8px; }
+.gl-v2-ma .gl-v2-pd-title { margin: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font: 500 22px var(--gl-v2-font-serif); color: var(--gl-v2-ink); }
+.gl-v2-ma .gl-v2-pd-meta { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-ma .gl-v2-pd-meta i { color: var(--gl-v2-muted-light); margin-right: 4px; }
+.gl-v2-ma .gl-v2-pd-switch { display: flex; flex-direction: column; gap: 5px; width: 320px; max-width: 100%; }
+.gl-v2-ma .gl-v2-pd-switch-row { display: flex; align-items: center; gap: 6px; }
+.gl-v2-ma .gl-v2-pd-switch-row .gl-v2-field-box { flex: 1; min-width: 0; }
+.gl-v2-ma .gl-v2-pd-switch-row select.gl-v2-field-input { appearance: auto; cursor: pointer; background: transparent; }
+.gl-v2-ma .gl-v2-pd-switch-count { font: 600 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); white-space: nowrap; min-width: 34px; text-align: right; }
+.gl-v2-ma .gl-v2-pd-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; padding: 16px 20px 18px; }
+.gl-v2-ma .gl-v2-pd-info-item { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.gl-v2-ma .gl-v2-pd-info-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gl-v2-ma .gl-v2-pd-info-value { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow-wrap: anywhere; }
+.gl-v2-ma .gl-v2-pd-info-value a { color: var(--gl-v2-primary); text-decoration: none; }
+.gl-v2-ma .gl-v2-pd-info-value a:hover { text-decoration: underline; }
+.gl-v2-ma table.gl-v2-ma-table > tbody > tr.is-avail-row > td { background: #F3F8EF; }
+.gl-v2-ma table.gl-v2-ma-table > tbody > tr.is-avail-row:hover > td { background: #ECF4E6; }
+.gl-v2-ma table.gl-v2-ma-table > tbody > tr.is-total > td { background: #F7F9F5; border-top: 1px solid var(--gl-v2-hairline); font-weight: 600; }
+.gl-v2-ma table.gl-v2-ma-table > tbody > tr.is-sources > td { padding: 0; height: auto; background: #FAFBF8; }
+.gl-v2-ma table.gl-v2-ma-table > tbody > tr.is-sources[hidden] { display: none; }
+.gl-v2-ma table.gl-v2-ma-table.is-nested { margin: 0; }
+.gl-v2-ma .gl-v2-pd-expand { color: var(--gl-v2-muted-light); font-size: 12px; margin-left: 4px; transition: transform .15s ease; display: inline-block; }
+tr.is-open .gl-v2-pd-expand { transform: rotate(180deg); }
+.gl-v2-ma .gl-v2-pd-warn { color: var(--gl-v2-warning); margin-left: 4px; }

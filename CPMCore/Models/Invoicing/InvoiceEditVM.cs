@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using BOCore;
 using System.ComponentModel.DataAnnotations;
 
@@ -16,6 +16,16 @@ namespace CPMCore.Models.Invoicing
         public DateOnly? ExpirationDate { get; set; }
 
         public string? ClientName { get; set; }
+
+        // Voor het live voorbeeld rechts (gl-v2 EditV2, design-handoff 11f): adressen zoals op de pdf.
+        /// <summary>Gegevens voor het voorbeeld rechts (EditV2): hetzelfde als de pdf gebruikt.</summary>
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public ServiceCore.Invoicing.Pdf.InvoicePreviewData? Preview { get; set; }
+
+        public string? IssuerAddressLine { get; set; }
+        public string? IssuerCityLine { get; set; }
+        public string? ClientAddressLine { get; set; }
+        public string? ClientCityLine { get; set; }
         public InvoiceStatus Status { get; set; } = InvoiceStatus.Unknown;
         public string StatusLabel => Status.GetDisplayName();
         public bool IsCreditNote { get; set; }
