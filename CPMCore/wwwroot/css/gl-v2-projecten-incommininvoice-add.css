@@ -11,24 +11,6 @@
 #gln-ai-form { display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 16px; min-width: 0; }
 
 /* ── Upload-dropzone ───────────────────────────────────────────────────────────────────────────── */
-.gln-ai-dropzone {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    height: 56px;
-    padding: 0 20px;
-    border: 1.5px dashed var(--gl-v2-accent-sage);
-    border-radius: var(--gl-v2-radius-md);
-    background: var(--gl-v2-surface);
-    color: var(--gl-v2-muted);
-    font: 450 12.5px var(--gl-v2-font-sans);
-}
-.gln-ai-dropzone.is-dragover { background: var(--gl-v2-primary-tint); border-color: var(--gl-v2-primary); }
-.gln-ai-dropzone > i { font-size: 20px; color: #2F6038; flex: none; }
-.gln-ai-dropzone-link { color: var(--gl-v2-primary); font-weight: 600; text-decoration: underline; cursor: pointer; }
-.gln-ai-dropzone-status { margin-left: auto; font-weight: 600; }
-.gln-ai-dropzone-status.is-error { color: var(--gl-v2-danger); }
-.gln-ai-dropzone-status.is-success { color: #2F6038; }
 
 /* ── Layout: formulier links, contract-zijbalk rechts vast ───────────────────────────────────── */
 .gln-ai-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: start; }

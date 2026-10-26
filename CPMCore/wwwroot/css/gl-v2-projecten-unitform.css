@@ -150,7 +150,10 @@
    2-koloms-lay-out in de rest van de app breken. */
 #gl-v2-sec-docs .gl-v2-col-6 { display: flex; flex-direction: column; }
 #gl-v2-sec-docs .gl-v2-unit-doc { flex: 1; }
-#gl-v2-sec-docs .gl-v2-unit-drop { flex: 1; }
+/* de gedeelde dropzone vult de resterende hoogte, zodat de twee kolommen onderaan gelijk staan */
+#gl-v2-sec-docs .gl-v2-dropzone { flex: 1; display: flex; flex-direction: column; }
+#gl-v2-sec-docs .gl-v2-dropzone[hidden] { display: none; }
+#gl-v2-sec-docs .gl-v2-dropzone-empty { flex: 1; min-height: 68px; }
 
 .gl-v2-unit-doc { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
 .gl-v2-unit-exec-list { display: flex; flex-direction: column; gap: 8px; }
@@ -158,7 +161,7 @@
     display: flex; align-items: center; gap: 12px; padding: 10px 12px;
     border: 1px solid var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-sm); background: var(--gl-v2-surface);
 }
-.gl-v2-unit-doc-row[hidden], .gl-v2-unit-drop[hidden], .gl-v2-field-help[hidden] { display: none; }
+.gl-v2-unit-doc-row[hidden], .gl-v2-field-help[hidden] { display: none; }
 .gl-v2-unit-doc-type {
     flex: none; width: 34px; height: 34px; border-radius: 8px; background: var(--gl-v2-danger-tint); color: var(--gl-v2-danger);
     display: flex; align-items: center; justify-content: center; font: 700 9.5px var(--gl-v2-font-sans); letter-spacing: .05em;
@@ -169,22 +172,6 @@
 .gl-v2-unit-doc-open { font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: none; }
 .gl-v2-unit-doc-open:hover { text-decoration: underline; }
 .gl-v2-unit-doc-name-input { flex: 1; min-width: 0; }
-/* min-height: het verkoopplan-vak heeft één regel tekst ("Sleep het verkoopplan hierheen of klik"),
-   het uitvoeringsplan-vak twee stukjes tekst naast elkaar (hoofd- + .gl-v2-unit-drop-sub) dat op een
-   smallere breedte (gl-v2-col-6, samen met AddUnit se lege eenhedenlijst dus zonder iets erboven dat
-   het verschil camoufleert) als eerste naar een tweede regel omslaat — zonder min-height stond het
-   uitvoeringsplan-vak daardoor hoger dan het verkoopplan-vak ernaast. Twee regels + icoon + padding
-   passen ruim in 68px, ook wanneer het verkoopplan-vak zelf maar één regel nodig heeft. */
-.gl-v2-unit-drop {
-    display: flex; align-items: center; justify-content: center; gap: 9px; padding: 16px; width: 100%;
-    min-height: 68px;
-    border: 1.5px dashed var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-md); background: transparent;
-    font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); cursor: pointer;
-}
-.gl-v2-unit-drop i { font-size: 17px; color: var(--gl-v2-primary); }
-.gl-v2-unit-drop:hover, .gl-v2-unit-drop.is-dragover { border-color: var(--gl-v2-primary); background: var(--gl-v2-hover-tint); color: var(--gl-v2-primary); }
-.gl-v2-unit-drop-sub { color: var(--gl-v2-muted-light); font-weight: 450; }
-.gl-v2-unit-file { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; pointer-events: none; }
 
 /* ── Vaste actiebalk: statusregel ───────────────────────────────────────────────────────────────── */
 .gl-v2-form-actionbar-status.is-ok { color: var(--gl-v2-muted); }

@@ -711,6 +711,9 @@ namespace ServiceCore
                         LineType = string.IsNullOrWhiteSpace(l.LineType) ? null : l.LineType.Trim(),
                         GroupName = string.IsNullOrWhiteSpace(l.GroupName) ? null : l.GroupName.Trim(),
                         UtilityCost = l.UtilityCost,
+                        // zoals CreateWithLinesAsync: aantal en eenheidsprijs mee bewaren (anders waren ze na elke bewerking van een concept weg)
+                        Quantity = l.UnitPrice.HasValue ? l.Quantity : (decimal?)null,
+                        UnitPrice = l.UnitPrice,
                         ChangeOrderDetailId = l.ChangeOrderDetailId
                     });
                 }

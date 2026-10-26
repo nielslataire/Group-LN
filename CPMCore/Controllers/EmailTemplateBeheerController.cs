@@ -20,16 +20,33 @@ public class EmailTemplateBeheerController : BaseController
     }
 
     [HttpGet]
-    public IActionResult Index()
+    public IActionResult Index(bool classic = false)
     {
         SetPageHeader("bx bx-envelope", "E-mailtemplates");
+        if (classic) ViewData["UseGlV2Layout"] = false;
 
         var result = _emailTemplateService.GetAll(alleenActief: false);
         var vm = new EmailTemplateListVM { Templates = result.Values ?? new() };
 
         ViewData["BreadcrumbNode"] = BuildIndexBreadcrumb();
 
+        // gl-v2 (punt 55f): lijst en editor op één scherm; zonder gekozen template opent de eerste.
+        if (IsV2)
+        {
+            var eerste = vm.Templates.FirstOrDefault();
+            return RenderV2(eerste == null ? null : MapBoToVm(eerste));
+        }
+
         return View(vm);
+    }
+
+    private bool IsV2 => ViewData["UseGlV2Layout"] as bool? == true;
+
+    // Eén scherm voor lijst en editor. edit = null: nog geen templates, of niets gekozen.
+    private IActionResult RenderV2(EmailTemplateEditVM? edit)
+    {
+        var result = _emailTemplateService.GetAll(alleenActief: false);
+        return View("IndexV2", new EmailTemplateV2Vm { Templates = result.Values ?? new(), Edit = edit, Afzender = User.Identity?.Name ?? "" });
     }
 
     [HttpGet]
@@ -45,6 +62,7 @@ public class EmailTemplateBeheerController : BaseController
             Parent = indexNode
         };
 
+        if (IsV2) return RenderV2(vm);
         return View("Bewerken", vm);
     }
 
@@ -68,6 +86,7 @@ public class EmailTemplateBeheerController : BaseController
             Parent = indexNode
         };
 
+        if (IsV2) return RenderV2(vm);
         return View(vm);
     }
 
@@ -91,6 +110,8 @@ public class EmailTemplateBeheerController : BaseController
         if (!ModelState.IsValid)
         {
             SetPageHeader("bx bx-envelope", vm.ID == 0 ? "Nieuwe e-mailtemplate" : "E-mailtemplate bewerken");
+            ViewData["BreadcrumbNode"] = BuildIndexBreadcrumb();
+            if (IsV2) return RenderV2(vm);
             return View(vm);
         }
 
@@ -109,6 +130,8 @@ public class EmailTemplateBeheerController : BaseController
         {
             foreach (var msg in response.Messages.Where(m => m.Type == MessageType.Error))
                 ModelState.AddModelError(string.Empty, msg.Message);
+            ViewData["BreadcrumbNode"] = BuildIndexBreadcrumb();
+            if (IsV2) return RenderV2(vm);
             return View(vm);
         }
 

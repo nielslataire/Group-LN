@@ -90,27 +90,16 @@
     function warn(e) { var db = document.getElementById("ice-dirty-badge"); /* verborgen = de eigen bevestigingsmodal is al doorlopen (gl-v2-leave-guard.js) */ if (isDirty() && !(db && db.hidden)) { e.preventDefault(); e.returnValue = ""; } }
     window.addEventListener("beforeunload", warn);
 
-    // ── Logo: sleepvak + voorbeeld ────────────────────────────────────────────────────────────────
-    var dropZone = $(".gl-v2-ice-logo-drop"), fileInput = document.getElementById("LogoUpload");
-    if (dropZone && fileInput) {
-        var titleEl = $(".gl-v2-ice-logo-drop-title", dropZone), preview = document.getElementById("ice-logo-preview");
-        function showFile(file) {
-            if (!file) return;
-            if (titleEl) titleEl.textContent = file.name;
-            if (preview && /^image\//.test(file.type)) {
-                var r = new FileReader();
-                r.onload = function () { preview.innerHTML = '<img alt="Nieuw logo" src="' + r.result + '">'; };
-                r.readAsDataURL(file);
-            }
+    // ── Logo: het gedeelde Dropzone-component (GlV2/_Dropzone) regelt slepen, kiezen en de bestandsnaam; wij tonen enkel het voorbeeld ──────────────
+    document.addEventListener("gl-v2:dropzone-change", function (e) {
+        if (e.target.id !== "LogoUpload_zone") return;
+        var file = e.detail.file, preview = document.getElementById("ice-logo-preview");
+        if (file && preview && /^image\//.test(file.type)) {
+            var r = new FileReader();
+            r.onload = function () { preview.innerHTML = '<img alt="Nieuw logo" src="' + r.result + '">'; };
+            r.readAsDataURL(file);
         }
-        fileInput.addEventListener("change", function () { if (fileInput.files && fileInput.files[0]) showFile(fileInput.files[0]); });
-        dropZone.addEventListener("dragover", function (e) { e.preventDefault(); dropZone.classList.add("is-dragover"); });
-        dropZone.addEventListener("dragleave", function () { dropZone.classList.remove("is-dragover"); });
-        dropZone.addEventListener("drop", function (e) {
-            e.preventDefault(); dropZone.classList.remove("is-dragover");
-            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) { fileInput.files = e.dataTransfer.files; showFile(e.dataTransfer.files[0]); fire(fileInput, "change"); }
-        });
-    }
+    });
 
     // ── Bankrekeningen ────────────────────────────────────────────────────────────────────────────
     var bankModalEl = document.getElementById("ice-bank-modal");

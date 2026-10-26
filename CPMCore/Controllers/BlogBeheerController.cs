@@ -20,7 +20,7 @@ namespace CPMCore.Controllers;
 
 [Authorize]
 [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsBlogBeheer)]
-public class BlogBeheerController : BaseController
+public partial class BlogBeheerController : BaseController
 {
     private readonly IBlogArtikelService _blogService;
     private readonly ILogger<BlogBeheerController> _logger;
@@ -38,12 +38,14 @@ public class BlogBeheerController : BaseController
     // ── LIST ────────────────────────────────────────────────────────────
 
     [HttpGet]
-    public IActionResult Index()
+    public IActionResult Index(bool classic = false)
     {
         SetPageHeader("bx bx-news", "Blogartikelen");
+        if (classic) ViewData["UseGlV2Layout"] = false;
 
         var result = _blogService.GetArtikelen(alleenGepubliceerd: false);
         var vm = new BlogArtikelListVM { Artikelen = result.Values ?? new() };
+        if (IsV2) return IndexV2(vm);
         return View(vm);
     }
 
@@ -56,6 +58,7 @@ public class BlogBeheerController : BaseController
 
         var vm = new BlogArtikelEditVM { Datum = DateTime.Today };
         VulLinkDropdowns(vm);
+        if (IsV2) return BewerkenV2(vm);
         return View("Bewerken", vm);
     }
 
@@ -84,6 +87,7 @@ public class BlogBeheerController : BaseController
 
         var vm = MapBoToVm(result.Value);
         VulLinkDropdowns(vm);
+        if (IsV2) return BewerkenV2(vm);
         return View(vm);
     }
 
@@ -94,6 +98,7 @@ public class BlogBeheerController : BaseController
         if (!ModelState.IsValid)
         {
             SetPageHeader("bx bx-news", vm.ID == 0 ? "Nieuw blogartikel" : "Blogartikel bewerken");
+            if (IsV2) { VulLinkDropdowns(vm); return BewerkenV2(HervulLijsten(vm)); }
             return View(vm);
         }
 
@@ -143,6 +148,7 @@ public class BlogBeheerController : BaseController
             foreach (var msg in response.Messages.Where(m => m.Type == MessageType.Error))
                 ModelState.AddModelError(string.Empty, msg.Message);
             VulLinkDropdowns(vm);
+            if (IsV2) return BewerkenV2(HervulLijsten(vm));
             return View(vm);
         }
 

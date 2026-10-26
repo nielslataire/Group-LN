@@ -1,0 +1,39 @@
+@model List<CPMCore.Models.IssueNotification.RunRowVm>
+@*
+    gl-v2 — Instellingen › Puntmeldingen › Uitvoeringslogboek: dezelfde tabel als de recente uitvoeringen (punt 56a), met paginering. Zelfde actie en gegevens als de klassieke pagina.
+*@
+@{
+    ViewData["Title"] = "Uitvoeringslogboek";
+    ViewData["PageIcon"] = "ph ph-bell-ringing";
+    ViewData["HelpScreenId"] = "instellingen-puntmeldingen";
+    ViewData["BackUrl"] = Url.Action("Index");
+    var page = (int)ViewBag.Page;
+    var totalPages = (int)ViewBag.TotalPages;
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-automatisatie.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    <a href="@Url.Action("Index")" class="gl-v2-btn gl-v2-btn-text"><i class="ph ph-arrow-left" aria-hidden="true"></i>Terug naar schema’s</a>
+}
+<div class="gl-v2-auto">
+    <section class="gl-v2-section-card">
+        <div class="gl-v2-section-card-header">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-section-card-title">Uitvoeringslogboek</h2>
+            <span class="gl-v2-field-divider"></span>
+            <span class="gl-v2-section-card-desc">Alle uitgevoerde meldingsbatches, nieuwste eerst. Tijden in Brussels-tijd.</span>
+        </div>
+        @await Html.PartialAsync("_RunsV2", Model)
+        @if (totalPages > 1)
+        {
+            <div class="gl-v2-auto-foot gl-v2-auto-pager">
+                @if (page > 1) { <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("Logs", new { page = page - 1 })"><i class="ph ph-caret-left" aria-hidden="true"></i>Vorige</a> }
+                <span>Pagina @(page) van @totalPages</span>
+                @if (page < totalPages) { <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("Logs", new { page = page + 1 })">Volgende<i class="ph ph-caret-right" aria-hidden="true"></i></a> }
+            </div>
+        }
+    </section>
+</div>

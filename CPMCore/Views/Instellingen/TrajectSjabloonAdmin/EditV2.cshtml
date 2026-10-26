@@ -1,0 +1,281 @@
+@using BOCore
+@using System.Text.Json
+@using CPMCore.Models.GlV2
+@using FacadeCore
+@model CPMCore.Models.Traject.TrajectSjabloonEditVm
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen › Trajectsjablonen › Sjabloon bewerken (design-handoff punt 56e): de fases links als boom, de mijlpaal rechts in vijf genummerde stappen ("wanneer bereikt" als twee
+    keuzekaarten, streefdatum met berekende datum). Drie tabs: Structuur, Tijdlijn & simulatie, Controle. Dezelfde opslag als de klassieke editor (payloadJson naar Opslaan) en dezelfde
+    opties; de logica staat in wwwroot/js/gl-v2-instellingen-trajectsjabloon.js.
+*@
+@{
+    var s0 = Model.Sjabloon;
+    var s0Titel = Model.IsNieuw ? "Nieuw sjabloon" : (s0!.Naam ?? "Sjabloon");
+    ViewData["PageIcon"] = "ph ph-git-branch";
+    ViewData["HelpScreenId"] = "instellingen-trajectsjablonen-bewerken";
+    ViewData["BackUrl"] = Url.Action("Index");
+    var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsTrajectSjablonen);
+    var projectTypeItems = new List<GlV2SelectItem> { new() { Value = "1", Text = "Woonproject" }, new() { Value = "2", Text = "Commercieel" } };
+    ViewData["Title"] = s0Titel;
+    var s = Model.Sjabloon;
+
+    var initial = new
+    {
+        id = s?.Id ?? 0,
+        naam = s?.Naam ?? "",
+        projectType = s?.ProjectType,
+        isStandaard = s?.IsStandaard ?? false,
+        isActief = s?.IsActief ?? true,
+        omschrijving = s?.Omschrijving ?? "",
+        fases = (s?.Fases.OrderBy(f => f.Volgorde) ?? Enumerable.Empty<DALCore.Models.TrajectSjabloonFase>())
+            .Select(f => new
+            {
+                naam = f.Naam,
+                code = f.Code,
+                volgorde = f.Volgorde,
+                kleurCode = f.KleurCode,
+                standaardProjectStatusId = f.StandaardProjectStatusId,
+                mijlpalen = f.Mijlpalen.OrderBy(m => m.Volgorde).Select(m => new
+                {
+                    naam = m.Naam,
+                    code = m.Code,
+                    volgorde = m.Volgorde,
+                    mijlpaalType = m.MijlpaalType,
+                    scope = m.Scope,
+                    verantwoordelijkeRol = m.VerantwoordelijkeRol,
+                    doeldatumAnkerCode = m.DoeldatumAnkerCode,
+                    doeldatumOffsetDagen = m.DoeldatumOffsetDagen,
+                    isVerplicht = m.IsVerplicht,
+                    bronBinding = m.BronBinding,
+                    bronParam = m.BronParam,
+                    dossierKind = m.DossierKind,
+                    omschrijving = m.Omschrijving,
+                    triggers = m.Triggers.Select(t => new
+                    {
+                        triggerEvent = t.TriggerEvent,
+                        triggerActie = t.TriggerActie,
+                        offsetDagen = t.OffsetDagen,
+                        actieParametersJson = t.ActieParametersJson,
+                        magProjectWijzigen = t.MagProjectWijzigen,
+                        isActief = t.IsActief,
+                        omschrijving = t.Omschrijving
+                    })
+                })
+            })
+    };
+
+    var typeOpties = Enum.GetValues(typeof(MijlpaalType)).Cast<MijlpaalType>()
+        .Select(x => new { v = (int)x, n = x.GetDisplayName() });
+    var rolOpties = Enum.GetValues(typeof(InterneRol)).Cast<InterneRol>().Where(x => (int)x != 0)
+        .Select(x => new { v = (int)x, n = x.GetDisplayName() });
+    var bindingOpties = Enum.GetValues(typeof(ComputedBinding)).Cast<ComputedBinding>()
+        .Select(x => new { v = (int)x, n = x.GetDisplayName() });
+    var triggerEventOpties = Enum.GetValues(typeof(TriggerEvent)).Cast<TriggerEvent>()
+        .Select(x => new { v = (int)x, n = x.GetDisplayName() });
+    var triggerActieOpties = Enum.GetValues(typeof(TriggerActie)).Cast<TriggerActie>()
+        .Select(x => new { v = (int)x, n = x.GetDisplayName() });
+    var dossierKindOpties = Enum.GetValues(typeof(DossierKind)).Cast<DossierKind>()
+        .Select(x => new { v = (int)x, n = x.GetDisplayName() });
+
+    // Zelfde vaste 7 vlagnamen als hieronder bij ComputedBinding.ProjectVlag — ook nodig voor de
+    // "Zet projectvlag"-triggeractie (ZetProjectVlagAction.cs) z'n eigen "vlag"-parameter, dus als
+    // gedeelde variabele i.p.v. de lijst twee keer te definiëren.
+    var projectVlagOpties = new[]
+    {
+        new { v = "DocPid", n = "PID aanwezig" },
+        new { v = "DocElectricalInspection", n = "Elektrische keuring OK" },
+        new { v = "DocWaterInspection", n = "Waterkeuring OK" },
+        new { v = "DocSewerInspection", n = "Rioolkeuring OK" },
+        new { v = "DocFireInspection", n = "Brandkeuring OK" },
+        new { v = "DocDelivery", n = "Voorlopige oplevering OK" },
+        new { v = "DocDefDelivery", n = "Definitieve oplevering OK" },
+    };
+
+    // Substap-codes over alle DossierKind-checklists heen, met het dossiertype vóór de naam zodat
+    // een admin niet hoeft te raden welke checklist een code hoort — gedeeld door DossierSubstap
+    // (één gekoppeld dossier) én AlleGekoppeldeDossierSubstappen (elk gekoppeld dossier moet de
+    // stap gehaald hebben, bv. één nutsaanvraag per eenheid).
+    var dossierSubstapOpties = VergunningChecklistDefaults.Stappen.OrderBy(x => x.Volgorde)
+        .Select(x => new { v = x.Code, n = $"Vergunning — {x.Naam}" })
+        .Concat(NutsChecklistDefaults.Stappen.OrderBy(x => x.Volgorde)
+            .Select(x => new { v = x.Code, n = $"Nutsaansluiting — {x.Naam}" }))
+        .ToList();
+    var nutsSubstapOpties = NutsChecklistDefaults.Stappen.OrderBy(x => x.Volgorde)
+        .Select(x => new { v = x.Code, n = x.Naam }).ToList();
+
+    // Bron-parameter: per binding ofwel een vaste keuzelijst (leesbare labels i.p.v. vrije tekst),
+    // ofwel "numeriek" (verwijst naar een record van één specifiek project — kan pas zinvol gekozen
+    // worden ná instantiatie, op de mijlpaal zelf, niet hier in het projectonafhankelijke sjabloon),
+    // ofwel "hidden" (binding heeft geen parameter nodig). Zie ook MijlpaalBindingResolver.cs — de
+    // vaste stringwaarden hieronder moeten exact overeenkomen met de switch-cases daar.
+    var bronParamOptiesByBinding = new Dictionary<int, object>
+    {
+        [(int)ComputedBinding.ProjectDoc] = Enum.GetValues(typeof(ProjectDocType)).Cast<ProjectDocType>()
+            .Select(x => new { v = ((int)x).ToString(), n = x.GetDisplayName() })
+            .OrderBy(x => x.n).ToList(),
+        [(int)ComputedBinding.ProjectDatum] = new[]
+        {
+            new { v = "StartDateConstruction", n = "Startdatum bouw" },
+            new { v = "DeliveryDate", n = "Opleverdatum (voorlopig)" },
+            new { v = "DeliveryDateDef", n = "Opleverdatum (definitief)" },
+            new { v = "WerfmeldingDate", n = "Werfmelding — startdatum" },
+            new { v = "WerfmeldingEndDate", n = "Werfmelding — einddatum" },
+        },
+        [(int)ComputedBinding.ProjectVlag] = projectVlagOpties,
+        [(int)ComputedBinding.ClientAccountDatum] = new[]
+        {
+            new { v = "DateSalesAgreement", n = "Compromis getekend" },
+            new { v = "DateDeedOfSale", n = "Akte verleden" },
+            new { v = "DeedOfSaleExpDate", n = "Uiterste aktedatum" },
+            new { v = "DeliveryDate", n = "Oplevering (voorlopig)" },
+            new { v = "DeliveryDateDef", n = "Oplevering (definitief)" },
+        },
+        [(int)ComputedBinding.ConstructionIssue] = Enum.GetValues(typeof(ConstructionIssuePhase)).Cast<ConstructionIssuePhase>()
+            .Select(x => new { v = ((int)x).ToString(), n = x.GetDisplayName() }).ToList(),
+        [(int)ComputedBinding.ProjectVoortgangFase] = Enum.GetValues(typeof(VoortgangFase)).Cast<VoortgangFase>()
+            .Select(x => new { v = ((int)x).ToString(), n = x.GetDisplayName() }).ToList(),
+        [(int)ComputedBinding.DossierSubstap] = dossierSubstapOpties,
+        [(int)ComputedBinding.AlleGekoppeldeDossierSubstappen] = dossierSubstapOpties,
+        [(int)ComputedBinding.AlleNutsaanvragenSubstap] = nutsSubstapOpties,
+    };
+
+    var bronParamModeByBinding = new Dictionary<int, string>
+    {
+        [(int)ComputedBinding.Handmatig] = "hidden",
+        [(int)ComputedBinding.ProjectDoc] = "select",
+        [(int)ComputedBinding.ProjectDatum] = "select",
+        [(int)ComputedBinding.ProjectVlag] = "select",
+        [(int)ComputedBinding.PlanningTaak] = "numeriek",
+        [(int)ComputedBinding.PlanningSectie] = "numeriek",
+        [(int)ComputedBinding.InvoicingPaymentStage] = "numeriek",
+        [(int)ComputedBinding.ClientAccountDatum] = "select",
+        [(int)ComputedBinding.ConnectionSettlement] = "hidden",
+        [(int)ComputedBinding.ConstructionIssue] = "select",
+        [(int)ComputedBinding.ProjectVoortgangFase] = "select",
+        [(int)ComputedBinding.Dossier] = "hidden",
+        [(int)ComputedBinding.DossierSubstap] = "select",
+        [(int)ComputedBinding.AlleGekoppeldeDossierSubstappen] = "select",
+        [(int)ComputedBinding.AlleNutsaanvragenSubstap] = "select",
+    };
+
+    var bronParamHintByBinding = new Dictionary<int, string>
+    {
+        [(int)ComputedBinding.Handmatig] = "Geen bron-parameter nodig — de datum wordt manueel ingevuld op de mijlpaal.",
+        [(int)ComputedBinding.PlanningTaak] = "Numeriek ID van een planningstaak van één specifiek project — pas zinvol in te vullen op de mijlpaal zelf ná instantiatie, niet hier in het sjabloon.",
+        [(int)ComputedBinding.PlanningSectie] = "Numeriek ID van een planningssectie van één specifiek project — pas zinvol in te vullen op de mijlpaal zelf ná instantiatie, niet hier in het sjabloon.",
+        [(int)ComputedBinding.InvoicingPaymentStage] = "Numeriek ID van een facturatieschijf van één specifiek project — pas zinvol in te vullen op de mijlpaal zelf ná instantiatie, niet hier in het sjabloon.",
+        [(int)ComputedBinding.ConnectionSettlement] = "Geen bron-parameter nodig — bereikt zodra de nutsafrekening van het project is afgerond.",
+        [(int)ComputedBinding.Dossier] = "Geen bron-parameter nodig — bereikt zodra het gekoppelde dossier is afgehandeld (koppeling gebeurt op de mijlpaal zelf).",
+        [(int)ComputedBinding.AlleGekoppeldeDossierSubstappen] = "Voor een mijlpaal met méérdere gekoppelde dossiers (bv. één nutsaanvraag per eenheid): bereikt zodra élk gekoppeld dossier deze stap heeft afgerond. Koppel eerst alle betrokken dossiers aan deze mijlpaal via 'Koppel' op de dossierpagina — dat gebeurt op de mijlpaal zelf, niet hier in het sjabloon.",
+        [(int)ComputedBinding.AlleNutsaanvragenSubstap] = "Geen koppelstap nodig: bereikt zodra élk nutsaansluitingsdossier van het project (nu en later aangemaakt) deze stap heeft afgerond. De eenvoudigste keuze wanneer je gewoon wil dat 'alle nutsaanvragen zijn klaar' automatisch een mijlpaal afvinkt.",
+    };
+}
+
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-automatisatie.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge is-attention" id="tsaDirty" hidden>NIET-OPGESLAGEN WIJZIGINGEN</span>
+}
+@section PageActions
+{
+    @if (!Model.IsNieuw && canWrite)
+    {
+        <button type="submit" form="duplicerenForm" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-copy" aria-hidden="true"></i>Dupliceren</button>
+    }
+    <a href="@Url.Action("Index")" class="gl-v2-btn gl-v2-btn-text">Annuleren</a>
+    @if (canWrite)
+    {
+        <button type="submit" form="sjabloonForm" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-floppy-disk" aria-hidden="true"></i>Sjabloon opslaan</button>
+    }
+}
+
+@if (!Model.IsNieuw)
+{
+    <form method="post" asp-action="Dupliceren" asp-route-id="@s!.Id" id="duplicerenForm" hidden>@Html.AntiForgeryToken()</form>
+}
+<form method="post" asp-action="Opslaan" id="sjabloonForm" hidden>
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="payloadJson" id="payloadJson" />
+</form>
+
+<div class="gl-v2-auto gl-v2-tsa">
+    <div class="gl-v2-tabbar" role="tablist" aria-label="Trajectsjabloon" id="tsaTabs">
+        <button type="button" class="gl-v2-tabbar-tab is-active" role="tab" aria-selected="true" data-tab="structuur">Structuur</button>
+        <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" tabindex="-1" data-tab="tijdlijn">Tijdlijn &amp; simulatie</button>
+        <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" tabindex="-1" data-tab="controle">Controle <span class="gl-v2-tabbar-count" id="tsaControleBadge" hidden>0</span></button>
+    </div>
+
+    <div id="tab-structuur" role="tabpanel">
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-tsa-meta">
+                <div class="gl-v2-field gl-v2-tsa-meta-naam">
+                    <label class="gl-v2-field-label" for="sj-naam">Naam <span class="gl-v2-inh-req">*</span></label>
+                    <div class="gl-v2-field-box"><input type="text" id="sj-naam" class="gl-v2-field-input" value="@s?.Naam" required aria-describedby="sj-naam-error" @(canWrite ? "" : "disabled") /></div>
+                    <span class="gl-v2-field-help is-error" id="sj-naam-error" role="alert" hidden>Vul een naam in. Dit is verplicht om het sjabloon op te slaan.</span>
+                </div>
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "sj-type-x", Id = "sj-type", Label = "Projecttype", Value = s?.ProjectType?.ToString() ?? "", EmptyText = "Alle", Items = projectTypeItems, Disabled = !canWrite })
+                <div class="gl-v2-field gl-v2-tsa-meta-oms">
+                    <label class="gl-v2-field-label" for="sj-omschrijving">Korte omschrijving</label>
+                    <div class="gl-v2-field-box"><input type="text" id="sj-omschrijving" class="gl-v2-field-input" value="@s?.Omschrijving" @(canWrite ? "" : "disabled") /></div>
+                </div>
+                <label class="gl-v2-toggle-row" for="sj-standaard"><input type="checkbox" id="sj-standaard" class="gl-v2-toggle-switch" @(s?.IsStandaard == true ? "checked" : "") @(canWrite ? "" : "disabled") /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Standaard voor dit type</span></span></label>
+                <label class="gl-v2-toggle-row" for="sj-actief"><input type="checkbox" id="sj-actief" class="gl-v2-toggle-switch" @(s == null || s.IsActief ? "checked" : "") @(canWrite ? "" : "disabled") /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Actief</span></span></label>
+            </div>
+        </section>
+
+        <div class="gl-v2-tsa-split">
+            <section class="gl-v2-section-card gl-v2-tsa-tree-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-git-branch" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Fases &amp; mijlpalen</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">sleep om te herschikken, of Alt + pijl</span>
+                </div>
+                <div id="faseTree" class="gl-v2-tsa-tree"></div>
+                <div class="gl-v2-tsa-tree-foot">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="btnAddFase" @(canWrite ? "" : "disabled")><i class="ph ph-plus" aria-hidden="true"></i>Fase toevoegen</button>
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" id="btnToggleAll">Alles openen</button>
+                </div>
+            </section>
+            <section class="gl-v2-section-card gl-v2-tsa-detail" id="detailPane" aria-live="polite"></section>
+        </div>
+    </div>
+
+    <div id="tab-tijdlijn" role="tabpanel" hidden>
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-tsa-tl-toolbar">
+                @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "sim", Id = "tsaSimStart", Label = "Fictieve projectstart", IsoValue = DateTime.Today.ToString("yyyy-MM-dd"), DisplayValue = DateTime.Today.ToString("dd/MM/yyyy") })
+                <div class="gl-v2-field"><span class="gl-v2-field-label" id="tsaTlModeLabel">Weergave</span>
+                    <div class="gl-v2-segmented is-sm" id="tsaTlMode" role="group" aria-labelledby="tsaTlModeLabel"><button type="button" data-mode="dagen" aria-pressed="true" class="is-active">Dagen na start</button><button type="button" data-mode="datums" aria-pressed="false">Datums</button></div></div>
+                <p class="gl-v2-tsa-hint">De streefdatums worden berekend door de ankerketen te volgen. Een mijlpaal zonder geldig anker valt terug op de projectstart. Dit is enkel een voorbeeld; er wordt niets bewaard.</p>
+            </div>
+            <div id="tijdlijnContainer" class="gl-v2-tsa-tl-host"></div>
+        </section>
+    </div>
+
+    <div id="tab-controle" role="tabpanel" hidden>
+        <section class="gl-v2-section-card"><div id="controleContainer" class="gl-v2-tsa-controle"></div></section>
+    </div>
+</div>
+
+@await Html.PartialAsync("GlV2/_BevestigModal")
+
+@section PageScripts
+{
+    <script id="sjabloonData" type="application/json">@Html.Raw(JsonSerializer.Serialize(initial))</script>
+        <script id="typeOpties" type="application/json">@Html.Raw(JsonSerializer.Serialize(typeOpties))</script>
+        <script id="rolOpties" type="application/json">@Html.Raw(JsonSerializer.Serialize(rolOpties))</script>
+        <script id="bindingOpties" type="application/json">@Html.Raw(JsonSerializer.Serialize(bindingOpties))</script>
+        <script id="triggerEventOpties" type="application/json">@Html.Raw(JsonSerializer.Serialize(triggerEventOpties))</script>
+        <script id="triggerActieOpties" type="application/json">@Html.Raw(JsonSerializer.Serialize(triggerActieOpties))</script>
+        <script id="dossierKindOpties" type="application/json">@Html.Raw(JsonSerializer.Serialize(dossierKindOpties))</script>
+        <script id="projectVlagOpties" type="application/json">@Html.Raw(JsonSerializer.Serialize(projectVlagOpties))</script>
+        <script id="bronParamOptiesByBinding" type="application/json">@Html.Raw(JsonSerializer.Serialize(bronParamOptiesByBinding))</script>
+        <script id="bronParamModeByBinding" type="application/json">@Html.Raw(JsonSerializer.Serialize(bronParamModeByBinding))</script>
+        <script id="bronParamHintByBinding" type="application/json">@Html.Raw(JsonSerializer.Serialize(bronParamHintByBinding))</script>
+    <script src="~/js/gl-v2-instellingen-trajectsjabloon.js" asp-append-version="true"></script>
+}

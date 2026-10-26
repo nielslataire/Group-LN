@@ -184,7 +184,8 @@
    (data-gl-v2-datepicker), zelfde open/sluit-discipline als initGlV2Select() maar los ervan (eigen
    closeAll()/eigen [data-gl-v2-dp-owned]-marker), want de trigger heeft geen .gl-v2-select-trigger-
    klasse om op te herkennen. */
-.gl-v2-select.gl-v2-datepicker { display: flex; width: 100%; }
+.gl-v2-select.gl-v2-datepicker { display: flex; width: 100%; min-width: 0; }
+.gl-v2-select.gl-v2-datepicker > .gl-v2-field-box { flex: 1 1 auto; width: 100%; min-width: 0; }
 .gl-v2-datepicker-panel.gl-v2-select-panel { width: 252px; padding: 10px 12px 12px; overflow: visible; display: none; flex-direction: column; gap: 8px; }
 .gl-v2-datepicker-panel.gl-v2-select-panel.is-open { display: flex; }
 .gl-v2-datepicker-nav-row { display: flex; align-items: center; gap: 8px; }

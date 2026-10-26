@@ -9,17 +9,24 @@
     align-items: flex-start;
     gap: 22px;
 }
+/* .gl-v2-body (shell) heeft overflow:hidden voor de afgeronde hoeken; dat maakt van de kaart de
+   dichtstbijzijnde scroll-container, waardoor position:sticky hieronder tegen die (niet-scrollende)
+   kaart plakt en het menu nooit meeschuift met het scrollen van de pagina. overflow:clip knipt de
+   hoeken even goed af zonder scroll-container te zijn — enkel op deze pagina (:has), de shell blijft
+   voor alle andere pagina's ongewijzigd. */
+.gl-v2-body:has(.gl-v2-set-layout) { overflow: clip; }
+
 .gl-v2-set-nav {
     width: 210px;
     flex: none;
     position: sticky;
-    top: 0;
+    top: 16px;
     display: flex;
     flex-direction: column;
     gap: 2px;
 }
 .gl-v2-set-nav-label {
-    font: 600 9px var(--gl-v2-font-sans);
+    font: 600 10px var(--gl-v2-font-sans);
     color: var(--gl-v2-muted);
     letter-spacing: .14em;
     padding: 0 10px 8px;
@@ -40,9 +47,9 @@
 .gl-v2-set-nav-item.is-active { background: var(--gl-v2-primary-tint); border-left-color: var(--gl-v2-primary); }
 .gl-v2-set-nav-item-label { flex: 1; font: 500 13px var(--gl-v2-font-sans); }
 .gl-v2-set-nav-item.is-active .gl-v2-set-nav-item-label { color: var(--gl-v2-primary); font-weight: 600; }
-.gl-v2-set-nav-item-count { font: 600 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-set-nav-item-count { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 .gl-v2-set-nav-rule { height: 1px; background: var(--gl-v2-hairline); margin: 12px 10px; }
-.gl-v2-set-nav-hint { font: 450 11px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted); padding: 0 10px; text-wrap: pretty; margin: 0; }
+.gl-v2-set-nav-hint { font: 450 12px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted); padding: 0 10px; text-wrap: pretty; margin: 0; }
 
 .gl-v2-set-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 26px; }
 
@@ -57,12 +64,12 @@
     text-align: center;
 }
 .gl-v2-set-empty-title { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
-.gl-v2-set-empty-sub { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-set-empty-sub { font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 
 .gl-v2-set-group { display: flex; flex-direction: column; gap: 12px; }
 .gl-v2-set-group-head { display: flex; align-items: baseline; gap: 10px; }
-.gl-v2-set-group-title { font: 600 10px var(--gl-v2-font-sans); color: var(--gl-v2-primary); letter-spacing: .14em; }
-.gl-v2-set-group-count { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-set-group-title { font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); letter-spacing: .14em; }
+.gl-v2-set-group-count { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 
 /* Vast raster van drie (24a se eigen regel — Website had vroeger vijf naast elkaar, de rest drie;
    nu overal hetzelfde), op de referentiebreedte. Zie de media queries onderaan voor de bewuste,
@@ -81,10 +88,19 @@
     gap: 9px;
     min-width: 0;
     cursor: pointer;
+    position: relative;
     transition: border-color .12s ease;
 }
-.gl-v2-set-card:hover, .gl-v2-set-card:focus-visible { border-color: rgba(0, 83, 45, .35); }
-.gl-v2-set-card:focus-visible { outline: 2.5px solid var(--gl-v2-gold); outline-offset: 1px; }
+.gl-v2-set-card:hover, .gl-v2-set-card:has(.gl-v2-set-card-link:focus-visible) { border-color: rgba(0, 83, 45, .35); }
+.gl-v2-set-card:has(.gl-v2-set-card-link:focus-visible) { outline: 2.5px solid var(--gl-v2-gold); outline-offset: 1px; }
+.gl-v2-set-card-link { color: inherit; text-decoration: none; }
+.gl-v2-set-card-link:focus-visible { outline: none; }
+/* Stretched link: de titel-link spant over de hele kaart, chips staan erboven (eigen klikzone). */
+.gl-v2-set-card-link::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+.gl-v2-set-card-chip { position: relative; z-index: 1; }
+/* Dagelijks gebruikt (SettingsItemVm.Featured): gevuld icoon, verder dezelfde kaart. */
+.gl-v2-set-card.is-featured .gl-v2-set-card-icon { background: var(--gl-v2-primary); color: var(--gl-v2-surface); }
+.gl-v2-set-nav-item[hidden] { display: none; }
 .gl-v2-set-card-head { display: flex; align-items: center; gap: 11px; }
 .gl-v2-set-card-icon {
     width: 32px;
@@ -100,23 +116,23 @@
 }
 .gl-v2-set-card-title { flex: 1; min-width: 0; font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
 .gl-v2-set-card-chevron { flex: none; font-size: 14px; color: var(--gl-v2-muted); }
-.gl-v2-set-card-desc { font: 450 12px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted); text-wrap: pretty; min-height: 36px; }
+.gl-v2-set-card-desc { font: 450 12.5px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted); text-wrap: pretty; min-height: 36px; }
 
 .gl-v2-set-card-foot { display: flex; align-items: center; gap: 8px; min-height: 22px; flex-wrap: wrap; }
 .gl-v2-set-card-foot-spacer { flex: 1; }
 /* Kleurtaal gedeeld met Meldingskaders (punt 25) se type-klassen — geen aparte kleurtaal verzinnen
    voor "wat er op een kaart-statuslabel staat" versus "wat er in een meldingskader staat". */
-.gl-v2-set-card-meta { display: flex; align-items: center; gap: 6px; font: 500 11px var(--gl-v2-font-sans); }
+.gl-v2-set-card-meta { display: flex; align-items: center; gap: 6px; font: 500 12px var(--gl-v2-font-sans); }
 .gl-v2-set-card-meta-dot { width: 6px; height: 6px; border-radius: 3px; background: currentColor; flex: none; }
 .gl-v2-set-card-meta.is-success { color: #2F6038; }
 .gl-v2-set-card-meta.is-warning { color: var(--gl-v2-warning); }
 .gl-v2-set-card-meta.is-danger { color: var(--gl-v2-danger); }
 .gl-v2-set-card-meta.is-info { color: var(--gl-v2-info); }
 .gl-v2-set-card-chip {
-    padding: 3px 9px;
+    padding: 5px 11px;
     border-radius: 11px;
     border: 1px solid rgba(0, 83, 45, .25);
-    font: 600 11px var(--gl-v2-font-sans);
+    font: 600 12px var(--gl-v2-font-sans);
     color: var(--gl-v2-primary);
     text-decoration: none;
 }
@@ -141,7 +157,7 @@
     }
     .gl-v2-set-nav-label { display: none; }
     .gl-v2-set-nav-list { flex-direction: row; flex-wrap: wrap; gap: 6px; }
-    .gl-v2-set-nav-item { height: 30px; border-left: 0; border: 1px solid var(--gl-v2-hairline); }
+    .gl-v2-set-nav-item { height: 40px; border-left: 0; border: 1px solid var(--gl-v2-hairline); }
     .gl-v2-set-nav-item.is-active { border-color: var(--gl-v2-primary); }
     .gl-v2-set-nav-rule, .gl-v2-set-nav-hint { display: none; }
     .gl-v2-set-grid { grid-template-columns: 1fr; }

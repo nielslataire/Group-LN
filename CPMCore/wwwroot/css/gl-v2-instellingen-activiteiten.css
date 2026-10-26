@@ -1,0 +1,130 @@
+/* gl-v2 — Instellingen › Activiteiten en Activiteitgroepen (design-handoff punt 51a/51b). Paginaspecifiek (.gl-v2-act-*); tabbar, sectiekaart,
+   velden, badges, meldingskaders, rij-acties en knoppen komen uit de gedeelde gl-v2-CSS. Page-CSS laadt vóór de shell: regels die een shell-regel
+   moeten overschrijven staan onder .gl-v2-act. */
+
+.gl-v2-act { display: flex; flex-direction: column; gap: 16px; }
+.gl-v2-act-panel { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 16px; align-items: start; }
+.gl-v2-act-panel.is-single { grid-template-columns: minmax(0, 1fr); }
+.gl-v2-act-panel[hidden] { display: none; }
+
+/* ── Loten als filter (links) ── */
+.gl-v2-act-lots { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 8px; }
+.gl-v2-act-lots-label { font: 600 10px var(--gl-v2-font-sans); letter-spacing: .14em; color: var(--gl-v2-muted); padding: 0 10px; }
+.gl-v2-act-lots-list { display: flex; flex-direction: column; gap: 2px; }
+.gl-v2-act-lot {
+    display: flex; align-items: center; gap: 9px; min-height: 36px; padding: 0 10px; border: 0; border-left: 3px solid transparent; border-radius: 8px;
+    background: transparent; color: var(--gl-v2-ink); text-align: left; cursor: pointer;
+}
+.gl-v2-act-lot:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-act-lot:focus-visible { outline: 3px solid var(--gl-v2-gold); outline-offset: -2px; }
+.gl-v2-act-lot.is-active { background: var(--gl-v2-primary-tint); border-left-color: var(--gl-v2-primary); }
+.gl-v2-act-lot .l { flex: none; min-width: 20px; font: 600 12px var(--gl-v2-font-mono, 'IBM Plex Mono', monospace); color: var(--gl-v2-primary); font-variant-numeric: tabular-nums; }
+.gl-v2-act-lot .n { flex: 1; min-width: 0; font: 500 13px var(--gl-v2-font-sans); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-act-lot.is-active .n { color: var(--gl-v2-primary); font-weight: 600; }
+.gl-v2-act-lot .c { flex: none; font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); font-variant-numeric: tabular-nums; }
+
+/* ── Kaart, toolbar ── */
+.gl-v2-act-card { min-width: 0; }
+.gl-v2-act-toolbar { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-bottom: 1px solid var(--gl-v2-hairline-soft); flex-wrap: wrap; }
+.gl-v2-act-search { width: 340px; max-width: 100%; }
+.gl-v2-act-toolbar .gl-v2-field-box { height: 40px; }
+.gl-v2-act-lot-select { display: none; width: 260px; max-width: 100%; }
+
+/* ── Rijen ── */
+.gl-v2-act-head, .gl-v2-act-row { display: grid; gap: 12px; align-items: center; padding: 0 20px; }
+.gl-v2-act-grid--act { grid-template-columns: 110px minmax(0, 1fr) 300px 72px; }
+.gl-v2-act-grid--grp { grid-template-columns: 110px minmax(0, 1fr) 220px 72px; }
+.gl-v2-act-head { height: 36px; background: var(--gl-v2-surface); border-bottom: 1px solid var(--gl-v2-hairline); font: 600 11px var(--gl-v2-font-sans); letter-spacing: .04em; color: var(--gl-v2-primary); text-transform: uppercase; }
+.gl-v2-act-row { min-height: 46px; padding-top: 4px; padding-bottom: 4px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+#act-rows > .gl-v2-act-row:first-child, #grp-rows > .gl-v2-act-row:first-child { border-top: 0; }
+.gl-v2-act-row:hover { background: #FAFBF8; }
+.gl-v2-act-row.is-add { background: #F7F9F5; border-top: 0; border-bottom: 1px solid var(--gl-v2-hairline-soft); min-height: 58px; }
+.gl-v2-act-row.is-edit { background: #FBF6EA; }
+.gl-v2-act-row.is-add.gl-v2-act-grid--act { grid-template-columns: 110px minmax(0, 1fr) 300px auto; }
+.gl-v2-act-row.is-add.gl-v2-act-grid--grp { grid-template-columns: 110px minmax(0, 1fr) 220px auto; }
+.gl-v2-act-nr { font: 500 12.5px var(--gl-v2-font-mono, 'IBM Plex Mono', monospace); color: var(--gl-v2-primary); font-variant-numeric: tabular-nums; }
+.gl-v2-act-nr.is-preview { color: var(--gl-v2-muted); }
+.gl-v2-act-nr.is-lot { font-weight: 600; }
+.gl-v2-act-name { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-act-group { min-width: 0; overflow: hidden; }
+.gl-v2-act-group .gl-v2-badge { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-act-hint { font: 450 12px var(--gl-v2-font-sans); color: #7a8a78; }
+.gl-v2-act-actions { display: flex; justify-content: flex-end; gap: 2px; }
+.gl-v2-act-prefix { font: 500 12.5px var(--gl-v2-font-mono, 'IBM Plex Mono', monospace); color: var(--gl-v2-primary); }
+.gl-v2-act-count { border: 0; background: transparent; padding: 0; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.gl-v2-act-count:hover { color: var(--gl-v2-ink); }
+.gl-v2-act-count:focus-visible { outline: 3px solid var(--gl-v2-gold); outline-offset: 2px; border-radius: 3px; }
+
+/* Sorteerkoppen */
+.gl-v2-act-sort { display: inline-flex; align-items: center; gap: 4px; border: 0; background: transparent; padding: 0; font: inherit; letter-spacing: inherit; color: inherit; text-transform: inherit; cursor: pointer; text-align: left; }
+.gl-v2-act-sort:hover, .gl-v2-act-sort.is-active { color: var(--gl-v2-ink); }
+.gl-v2-act-sort:focus-visible { outline: 3px solid var(--gl-v2-gold); outline-offset: 2px; border-radius: 3px; }
+.gl-v2-act-sort i { font-size: 12px; }
+
+/* Velden vullen exact hun kolom (een <input> heeft anders een eigen intrinsieke breedte) */
+.gl-v2-act .gl-v2-field { min-width: 0; }
+.gl-v2-act .gl-v2-field-box { width: 100%; min-width: 0; box-sizing: border-box; height: 38px; }
+.gl-v2-act .gl-v2-field-box > input.gl-v2-field-input, .gl-v2-act .gl-v2-field-box > select.gl-v2-field-input { flex: 1 1 0; width: 100%; min-width: 0; }
+
+/* Rij-acties: 26×26 bare, primair = bewerken, danger = verwijderen (recept uit DESIGN.md "Table (Facturen)") */
+.gl-v2-act .gl-v2-row-action {
+    display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 7px; border: 1px solid transparent;
+    background: transparent; color: var(--gl-v2-muted); padding: 0; cursor: pointer; transition: background-color .12s ease, color .12s ease;
+}
+.gl-v2-act .gl-v2-row-action:hover { background: var(--gl-v2-hover-tint); color: var(--gl-v2-ink); }
+.gl-v2-act .gl-v2-row-action-primary { color: var(--gl-v2-primary); }
+.gl-v2-act .gl-v2-row-action-primary:hover { background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); }
+.gl-v2-act .gl-v2-row-action-danger:hover { background: var(--gl-v2-danger-tint); color: var(--gl-v2-danger); }
+.gl-v2-act .gl-v2-row-action:disabled { opacity: .35; cursor: not-allowed; background: transparent; }
+.gl-v2-act .gl-v2-row-action:focus-visible { outline: 3px solid var(--gl-v2-gold); outline-offset: 1px; }
+
+/* Lege staat, voet, paginering, noot */
+.gl-v2-act-empty { padding: 36px 20px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-act-empty[hidden] { display: none; }
+.gl-v2-act-empty .t { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-act-empty .s button { border: 0; background: transparent; padding: 0; font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.gl-v2-act-foot { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-top: 1px solid var(--gl-v2-hairline-soft); flex-wrap: wrap; }
+.gl-v2-act-foot-text { flex: 1; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); min-width: 140px; }
+.gl-v2-act-pager { display: flex; align-items: center; gap: 4px; }
+.gl-v2-act-pager button {
+    min-width: 30px; height: 28px; padding: 0 6px; border-radius: 7px; border: 1px solid var(--gl-v2-hairline); background: var(--gl-v2-surface);
+    font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; cursor: pointer;
+}
+.gl-v2-act-pager button:hover:not(:disabled) { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); }
+.gl-v2-act-pager button.is-active { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); }
+.gl-v2-act-pager button:disabled { opacity: .4; cursor: not-allowed; }
+.gl-v2-act-pager button:focus-visible { outline: 3px solid var(--gl-v2-gold); outline-offset: 1px; }
+.gl-v2-act-pager .gap { padding: 0 4px; color: var(--gl-v2-muted); }
+.gl-v2-act-note { padding: 12px 20px 16px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+
+/* ── Tablet (< 1024px): loten worden een keuzelijst boven de lijst ── */
+@media (max-width: 1023.98px) {
+    .gl-v2-act-panel { grid-template-columns: minmax(0, 1fr); }
+    .gl-v2-act-lots { display: none; }
+    .gl-v2-act-lot-select { display: block; }
+    .gl-v2-act-grid--act { grid-template-columns: 90px minmax(0, 1fr) 220px 64px; }
+    .gl-v2-act-row.is-add.gl-v2-act-grid--act { grid-template-columns: 90px minmax(0, 1fr) 220px auto; }
+    .gl-v2-act-grid--grp, .gl-v2-act-row.is-add.gl-v2-act-grid--grp { grid-template-columns: 90px minmax(0, 1fr) 150px auto; }
+    .gl-v2-act-head, .gl-v2-act-row { padding-left: 16px; padding-right: 16px; }
+}
+
+/* ── Telefoon (< 768px): groep onder de naam, nieuwe rij stapelt ── */
+@media (max-width: 767.98px) {
+    .gl-v2-act-search { width: 100%; }
+    .gl-v2-act-lot-select { width: 100%; }
+    .gl-v2-act-head.gl-v2-act-grid--act { grid-template-columns: 70px minmax(0, 1fr) 64px; }
+    .gl-v2-act-head.gl-v2-act-grid--act > :nth-child(3) { display: none; }
+    .gl-v2-act-row.gl-v2-act-grid--act:not(.is-edit):not(.is-add) { grid-template-columns: 70px minmax(0, 1fr) 64px; row-gap: 2px; }
+    .gl-v2-act-row.gl-v2-act-grid--act:not(.is-edit):not(.is-add) > .gl-v2-act-group { grid-column: 2; grid-row: 2; }
+    .gl-v2-act-row.gl-v2-act-grid--act:not(.is-edit):not(.is-add) > .gl-v2-act-actions { grid-column: 3; grid-row: 1 / span 2; }
+    .gl-v2-act-row.is-add.gl-v2-act-grid--act, .gl-v2-act-row.is-edit.gl-v2-act-grid--act { grid-template-columns: 80px minmax(0, 1fr); row-gap: 8px; padding-top: 10px; padding-bottom: 10px; }
+    .gl-v2-act-row.is-add.gl-v2-act-grid--act > :nth-child(3), .gl-v2-act-row.is-edit.gl-v2-act-grid--act > :nth-child(3) { grid-column: 1 / -1; }
+    .gl-v2-act-row.is-add.gl-v2-act-grid--act > :nth-child(4), .gl-v2-act-row.is-edit.gl-v2-act-grid--act > :nth-child(4) { grid-column: 1 / -1; justify-content: flex-end; }
+    .gl-v2-act-head.gl-v2-act-grid--grp, .gl-v2-act-row.gl-v2-act-grid--grp:not(.is-edit):not(.is-add) { grid-template-columns: 60px minmax(0, 1fr) 64px; }
+    .gl-v2-act-head.gl-v2-act-grid--grp > :nth-child(3) { display: none; }
+    .gl-v2-act-row.gl-v2-act-grid--grp:not(.is-edit):not(.is-add) > :nth-child(3) { grid-column: 2; grid-row: 2; }
+    .gl-v2-act-row.gl-v2-act-grid--grp:not(.is-edit):not(.is-add) > .gl-v2-act-actions { grid-column: 3; grid-row: 1 / span 2; }
+    .gl-v2-act-row.is-add.gl-v2-act-grid--grp, .gl-v2-act-row.is-edit.gl-v2-act-grid--grp { grid-template-columns: 80px minmax(0, 1fr); row-gap: 8px; padding-top: 10px; padding-bottom: 10px; }
+    .gl-v2-act-row.is-add.gl-v2-act-grid--grp > :nth-child(3), .gl-v2-act-row.is-edit.gl-v2-act-grid--grp > :nth-child(3) { display: none; }
+    .gl-v2-act-row.is-add.gl-v2-act-grid--grp > :nth-child(4), .gl-v2-act-row.is-edit.gl-v2-act-grid--grp > :nth-child(4) { grid-column: 1 / -1; justify-content: flex-end; }
+}

@@ -46,3 +46,33 @@
 .gl-v2-vk-toast { position: fixed; z-index: 2500; left: 50%; bottom: calc(var(--gl-v2-qa-bar-h, 64px) + env(safe-area-inset-bottom, 0px) + 84px); transform: translate(-50%, 12px); opacity: 0; max-width: calc(100vw - 32px); padding: 11px 16px; border-radius: 10px; background: var(--gl-v2-ink); color: #fff; font: 550 13px var(--gl-v2-font-sans); box-shadow: 0 12px 30px -12px rgba(44, 59, 42, .6); transition: opacity .2s, transform .2s; }
 .gl-v2-vk-toast.is-in { opacity: 1; transform: translate(-50%, 0); }
 @media (prefers-reduced-motion: reduce) { .gl-v2-vk-toast { transition: none; } }
+
+/* Exporteren (45f) */
+#vk-export-modal .modal-dialog, #vk-print-modal .modal-dialog { width: 600px; max-width: calc(100vw - 32px); }
+#vk-export-modal .modal-body, #vk-print-modal .modal-body { display: block; padding: 18px 22px 8px; }
+.gl-v2-vk-x-sub { margin: 2px 0 0; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-vk-x-label { display: block; margin: 2px 0 8px; font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; color: var(--gl-v2-muted); }
+.gl-v2-vk-x-formats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 18px; }
+.gl-v2-vk-x-formats button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; height: 84px; padding: 0 10px; border: 1px solid var(--gl-v2-hairline); border-radius: 10px; background: var(--gl-v2-surface); color: var(--gl-v2-ink); font: 600 12.5px var(--gl-v2-font-sans); cursor: pointer; }
+.gl-v2-vk-x-formats button i { font-size: 22px; color: var(--gl-v2-muted); }
+.gl-v2-vk-x-formats button small { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-vk-x-formats button.is-on { border: 1.5px solid #00532D; background: #F2F5EF; color: #00532D; }
+.gl-v2-vk-x-formats button.is-on i { color: #00532D; }
+.gl-v2-vk-x-formats button:disabled { opacity: .5; cursor: not-allowed; }
+.gl-v2-vk-x-opts { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.gl-v2-vk-x-checks { display: grid; gap: 8px; margin-bottom: 18px; }
+.gl-v2-vk-x-opts label, .gl-v2-vk-x-checks label { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--gl-v2-hairline); border-radius: 9px; background: var(--gl-v2-surface); font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); cursor: pointer; }
+.gl-v2-vk-x-opts label:has(input:checked), .gl-v2-vk-x-checks label:has(input:checked) { border-color: #00532D; background: #F2F5EF; }
+.gl-v2-vk-x-opts label.is-disabled { opacity: .5; cursor: not-allowed; }
+.gl-v2-vk-x-opts input, .gl-v2-vk-x-checks input { flex: none; width: 16px; height: 16px; margin: 0; accent-color: var(--gl-v2-primary); }
+.gl-v2-vk-x-checks label { align-items: flex-start; }
+.gl-v2-vk-x-checks input { margin-top: 2px; }
+.gl-v2-vk-x-checks span { display: flex; flex-direction: column; gap: 2px; }
+.gl-v2-vk-x-checks small { font: 450 12px/1.45 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-vk-x-opts b { font-weight: 600; color: var(--gl-v2-muted); }
+#vk-export-modal .gl-v2-notice, #vk-print-modal .gl-v2-notice { margin-bottom: 14px; }
+#vk-export-modal label.is-disabled, #vk-print-modal label.is-disabled { opacity: .5; cursor: not-allowed; background: var(--gl-v2-surface); border-color: var(--gl-v2-hairline); }
+
+/* Kop- en totaalrij lopen over de volle kaartbreedte (45a): geen zijpadding en geen onderrand van de gedeelde detail-tabelkaart */
+.gl-v2.gl-v2 .gl-v2-vk-card { padding-bottom: 0; overflow: hidden; }
+.gl-v2.gl-v2 .gl-v2-vk-card .gl-v2-card-body { padding: 0; }

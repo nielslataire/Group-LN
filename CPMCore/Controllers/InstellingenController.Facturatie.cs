@@ -211,7 +211,7 @@ public partial class InstellingenController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> IssuerCompaniesCreate(IssuerCompanyVM vm)
     {
-        ValidateTemplateJson(vm.TemplateJson);
+        if (string.Equals(vm.TemplateKey, "layoutB", StringComparison.OrdinalIgnoreCase)) ValidateTemplateJson(vm.TemplateJson); // de JSON telt enkel nog voor layoutB
         if (!ModelState.IsValid)
         {
             ViewBag.PaymentTerms = await _issuers.GetPaymentTermOptionsAsync();
@@ -490,7 +490,7 @@ public partial class InstellingenController
     public async Task<IActionResult> IssuerCompaniesEdit(int id, IssuerCompanyVM vm, CancellationToken ct)
     {
         if (id != vm.Id) return BadRequest();
-        ValidateTemplateJson(vm.TemplateJson);
+        if (string.Equals(vm.TemplateKey, "layoutB", StringComparison.OrdinalIgnoreCase)) ValidateTemplateJson(vm.TemplateJson); // de JSON telt enkel nog voor layoutB
         if (!ModelState.IsValid)
         {
             ViewBag.PaymentTerms = await _issuers.GetPaymentTermOptionsAsync(id, ct);
@@ -676,189 +676,6 @@ public partial class InstellingenController
 
         AddMessage("success", "Mijn bedrijf " +vm.Name + " opgeslagen.", "Geslaagd!");
         return RedirectToAction(nameof(IssuerCompanies));
-    }
-
-    // GET /Admin/InvoiceTemplates
-    [HttpGet("InvoiceTemplates")]
-    [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsInvoiceTemplates)]
-    public async Task<IActionResult> InvoiceTemplates(CancellationToken ct)
-    {
-        await _invoiceTemplates.EnsureDefaultsAsync(ct);
-        var templates = await _invoiceTemplates.ListAsync(ct);
-        var vms = templates.Select(t => new InvoiceLayoutTemplateVM
-        {
-            Id = t.Id,
-            Key = t.Key,
-            Name = t.Name,
-            Description = t.Description,
-            TemplateJson = t.TemplateJson,
-            IsSystem = t.IsSystem
-        }).ToList();
-
-        var index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
-        var instellingenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Instellingen", "Instellingen")
-        {
-            Parent = index
-        };
-        var templatesNode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("InvoiceTemplates", "Instellingen", "Factuurtemplates")
-        {
-            Parent = instellingenIndex
-        };
-        ViewData["BreadcrumbNode"] = templatesNode;
-
-        SetPageHeader("bx bx-cog", "Factuurtemplates");
-        return View(vms);
-    }
-
-    // GET /Admin/InvoiceTemplates/Create
-    [HttpGet("InvoiceTemplates/Create")]
-    public IActionResult InvoiceTemplatesCreate()
-    {
-        var index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
-        var instellingenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Instellingen", "Instellingen")
-        {
-            Parent = index
-        };
-        var templatesNode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("InvoiceTemplates", "Instellingen", "Factuurtemplates")
-        {
-            Parent = instellingenIndex
-        };
-        var createNode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("InvoiceTemplatesCreate", "Instellingen", "Nieuw template")
-        {
-            Parent = templatesNode
-        };
-        ViewData["BreadcrumbNode"] = createNode;
-
-        SetPageHeader("bx bx-cog", "Nieuw factuurtemplate");
-        return View(new InvoiceLayoutTemplateVM
-        {
-            TemplateJson = DefaultLayouts.LayoutA
-        });
-    }
-
-    // POST /Admin/InvoiceTemplates/Create
-    [HttpPost("InvoiceTemplates/Create")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> InvoiceTemplatesCreate(InvoiceLayoutTemplateVM vm, CancellationToken ct)
-    {
-        ValidateTemplateJson(vm.TemplateJson, nameof(InvoiceLayoutTemplateVM.TemplateJson));
-        if (!ModelState.IsValid)
-        {
-            SetPageHeader("bx bx-cog", "Nieuw factuurtemplate");
-            return View(vm);
-        }
-
-        try
-        {
-            await _invoiceTemplates.CreateAsync(new InvoiceLayoutTemplateBO
-            {
-                Key = vm.Key,
-                Name = vm.Name,
-                Description = vm.Description,
-                TemplateJson = vm.TemplateJson,
-                IsSystem = false
-            }, ct);
-        }
-        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
-        {
-            ModelState.AddModelError(nameof(InvoiceLayoutTemplateVM.Key), "Deze sleutel bestaat al.");
-            return View(vm);
-        }
-
-        AddMessage("success", $"Template {vm.Name} toegevoegd.", "Geslaagd!");
-        return RedirectToAction(nameof(InvoiceTemplates));
-    }
-
-    // GET /Admin/InvoiceTemplates/Edit/5
-    [HttpGet("InvoiceTemplates/Edit/{id:int}")]
-    public async Task<IActionResult> InvoiceTemplatesEdit(int id, CancellationToken ct)
-    {
-        var template = await _invoiceTemplates.GetAsync(id, ct);
-        if (template == null)
-            return NotFound();
-
-        var index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
-        var instellingenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Instellingen", "Instellingen")
-        {
-            Parent = index
-        };
-        var templatesNode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("InvoiceTemplates", "Instellingen", "Factuurtemplates")
-        {
-            Parent = instellingenIndex
-        };
-        var editNode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("InvoiceTemplatesEdit", "Instellingen", "Bewerk template")
-        {
-            Parent = templatesNode
-        };
-        ViewData["BreadcrumbNode"] = editNode;
-
-        SetPageHeader("bx bx-cog", $"Factuurtemplate bewerken — {template.Name}");
-        return View(new InvoiceLayoutTemplateVM
-        {
-            Id = template.Id,
-            Key = template.Key,
-            Name = template.Name,
-            Description = template.Description,
-            TemplateJson = template.TemplateJson,
-            IsSystem = template.IsSystem
-        });
-    }
-
-    // POST /Admin/InvoiceTemplates/Edit/5
-    [HttpPost("InvoiceTemplates/Edit/{id:int}")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> InvoiceTemplatesEdit(int id, InvoiceLayoutTemplateVM vm, CancellationToken ct)
-    {
-        if (id != vm.Id)
-            return BadRequest();
-
-        ValidateTemplateJson(vm.TemplateJson, nameof(InvoiceLayoutTemplateVM.TemplateJson));
-        if (!ModelState.IsValid)
-        {
-            SetPageHeader("bx bx-cog", $"Factuurtemplate bewerken — {vm.Name}");
-            return View(vm);
-        }
-
-        try
-        {
-            await _invoiceTemplates.UpdateAsync(new InvoiceLayoutTemplateBO
-            {
-                Id = vm.Id,
-                Key = vm.Key,
-                Name = vm.Name,
-                Description = vm.Description,
-                TemplateJson = vm.TemplateJson,
-                IsSystem = vm.IsSystem
-            }, ct);
-        }
-        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
-        {
-            ModelState.AddModelError(nameof(InvoiceLayoutTemplateVM.Key), "Deze sleutel bestaat al.");
-            return View(vm);
-        }
-
-        AddMessage("success", $"Template {vm.Name} opgeslagen.", "Geslaagd!");
-        return RedirectToAction(nameof(InvoiceTemplates));
-    }
-
-    // POST /Admin/InvoiceTemplates/Delete/5
-    [HttpPost("InvoiceTemplates/Delete/{id:int}")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> InvoiceTemplatesDelete(int id, CancellationToken ct)
-    {
-        var template = await _invoiceTemplates.GetAsync(id, ct);
-        if (template == null)
-            return NotFound();
-
-        if (template.IsSystem)
-        {
-            AddMessage("warning", "Standaard templates kunnen niet verwijderd worden.", "Niet toegelaten");
-            return RedirectToAction(nameof(InvoiceTemplates));
-        }
-
-        await _invoiceTemplates.DeleteAsync(id, ct);
-        AddMessage("success", $"Template {template.Name} verwijderd.", "Geslaagd!");
-        return RedirectToAction(nameof(InvoiceTemplates));
     }
 
     [HttpPost("IssuerCompanies/{issuerId:int}/Octopus/authenticate")]

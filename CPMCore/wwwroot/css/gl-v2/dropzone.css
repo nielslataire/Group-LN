@@ -1,0 +1,86 @@
+/* gl-v2 — Dropzone: bestanden slepen of kiezen (projectbreed component, GlV2/_Dropzone + gl-v2-dropzone.js). Alles onder .gl-v2-dropzone.
+   Vormen: .is-box (standaard), .is-bar (één regel), .is-compact (laag vak). Na het kiezen: .is-mode-row | -inline | -select. */
+.gl-v2 .gl-v2-dropzone { position: relative; }
+.gl-v2 .gl-v2-dropzone:not(.is-custom) { border: 1.5px dashed rgba(122, 158, 110, .6); border-radius: var(--gl-v2-radius-md, 10px); background: var(--gl-v2-surface, #fff); transition: border-color .15s, background-color .15s; }
+.gl-v2 .gl-v2-dropzone:not(.is-custom):hover { background: var(--gl-v2-hover-tint, #F2F5EF); }
+.gl-v2 .gl-v2-dropzone:not(.is-custom).is-over { border-color: var(--gl-v2-primary); background: var(--gl-v2-primary-tint, #F2F7EE); }
+/* eigen inhoud (Content): de pagina geeft de zone zelf opmaak via CssClass; .is-over is de sleepstatus */
+.gl-v2 .gl-v2-dropzone.is-custom { cursor: pointer; }
+.gl-v2 .gl-v2-dropzone.is-custom .gl-v2-dropzone-empty { display: contents; }
+/* tekst voor tablet en gsm: slepen bestaat daar niet (zelfde drempel als de MobileQuickActions-balk) */
+.gl-v2 .gl-v2-dz-touch { display: none; }
+@media (max-width: 1023.98px) { .gl-v2 .gl-v2-dz-desk { display: none; } .gl-v2 .gl-v2-dz-touch { display: inline; } }
+.gl-v2 .gl-v2-dropzone.has-error:not(.is-custom) { border-color: var(--gl-v2-danger, #A2432F); background: #FBF3F0; }
+.gl-v2 .gl-v2-dropzone:focus-within { box-shadow: 0 0 0 3px rgba(0, 83, 45, .10); border-color: var(--gl-v2-primary); }
+.gl-v2 .gl-v2-dropzone.is-droponly .gl-v2-dropzone-input { display: none; }
+.gl-v2 .gl-v2-dropzone.is-droponly.is-custom { cursor: auto; }
+.gl-v2 .gl-v2-dropzone-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 1; font-size: 0; }
+.gl-v2 .gl-v2-dropzone.is-mode-row.has-file .gl-v2-dropzone-input,
+.gl-v2 .gl-v2-dropzone.has-current:not(.is-current-removed):not(.has-file) .gl-v2-dropzone-input { display: none; }
+.gl-v2 .gl-v2-dropzone.has-current:not(.is-current-removed) { cursor: default; }
+.gl-v2 .gl-v2-dropzone.has-current:not(.is-current-removed):hover { background: var(--gl-v2-surface, #fff); }
+
+/* vak (standaard) */
+.gl-v2 .gl-v2-dropzone-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 20px 16px; text-align: center; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-muted); pointer-events: none; }
+.gl-v2 .gl-v2-dropzone-empty > i { font-size: 22px; color: var(--gl-v2-primary); }
+.gl-v2 .gl-v2-dropzone-title { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow-wrap: anywhere; }
+.gl-v2 .gl-v2-dropzone-title u { color: var(--gl-v2-primary); }
+.gl-v2 .gl-v2-dropzone-sub { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2 .gl-v2-dropzone-status { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2 .gl-v2-dropzone-status.is-error { color: var(--gl-v2-danger, #A2432F); }
+.gl-v2 .gl-v2-dropzone-status.is-ok { color: var(--gl-v2-primary); }
+
+/* balk: één regel (pictogram, tekst, link, status) */
+.gl-v2 .gl-v2-dropzone.is-bar .gl-v2-dropzone-empty { flex-direction: row; flex-wrap: wrap; justify-content: flex-start; gap: 10px; min-height: 54px; padding: 8px 20px; text-align: left; }
+.gl-v2 .gl-v2-dropzone.is-bar .gl-v2-dropzone-empty > i { font-size: 20px; color: #2F6038; flex: none; }
+.gl-v2 .gl-v2-dropzone.is-bar .gl-v2-dropzone-title { font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2 .gl-v2-dropzone.is-bar .gl-v2-dropzone-title u { font-weight: 600; }
+.gl-v2 .gl-v2-dropzone.is-bar .gl-v2-dropzone-status { margin-left: auto; }
+
+/* compact: laag vak (bv. logo) */
+.gl-v2 .gl-v2-dropzone.is-compact { border-color: rgba(0, 83, 45, .3); }
+.gl-v2 .gl-v2-dropzone.is-compact .gl-v2-dropzone-empty { min-height: 72px; padding: 8px 14px; gap: 3px; }
+.gl-v2 .gl-v2-dropzone.is-compact .gl-v2-dropzone-empty > i { display: none; }
+.gl-v2 .gl-v2-dropzone.is-compact .gl-v2-dropzone-title { color: var(--gl-v2-primary); }
+
+/* na het kiezen */
+.gl-v2 .gl-v2-dropzone.has-picked { border-style: solid; }
+.gl-v2 .gl-v2-dropzone-aside { position: relative; z-index: 2; pointer-events: auto; margin-left: auto; color: var(--gl-v2-primary); font: 600 12.5px var(--gl-v2-font-sans); text-decoration: underline; }
+.gl-v2 .gl-v2-dropzone.is-mode-inline.has-file { border-style: solid; border-color: var(--gl-v2-primary); background: var(--gl-v2-hover-tint, #F2F5EF); }
+.gl-v2 .gl-v2-dropzone-file { position: relative; z-index: 2; display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+.gl-v2 .gl-v2-dropzone-file > i { flex: none; font-size: 26px; color: var(--gl-v2-primary); }
+.gl-v2 .gl-v2-dropzone-file > span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2 .gl-v2-dropzone-file > span b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2 .gl-v2-dropzone-file small { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2 .gl-v2-dropzone [hidden], .gl-v2 .gl-v2-dropzone-error[hidden] { display: none !important; }
+.gl-v2 .gl-v2-dropzone-error { color: var(--gl-v2-danger, #A2432F); font-weight: 600; }
+
+/* ── lijst (Mode list), miniatuur, voortgang bij uploaden, camera, toegankelijkheid ───────────────────────────── */
+.gl-v2 .gl-v2-dropzone.is-mode-list { padding-bottom: 0; }
+.gl-v2 .gl-v2-dropzone-list { position: relative; z-index: 2; display: flex; flex-direction: column; gap: 8px; padding: 0 12px 12px; }
+.gl-v2 .gl-v2-dropzone-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--gl-v2-hairline, rgba(44, 59, 42, .12)); border-radius: var(--gl-v2-radius-sm, 8px); background: var(--gl-v2-surface, #fff); flex-wrap: wrap; }
+.gl-v2 .gl-v2-dropzone-type { flex: none; width: 34px; height: 34px; border-radius: 8px; background: var(--gl-v2-danger-tint, #F6E3DE); color: var(--gl-v2-danger, #A2432F); display: flex; align-items: center; justify-content: center; font: 700 9.5px var(--gl-v2-font-sans); letter-spacing: .05em; }
+.gl-v2 .gl-v2-dropzone-item-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2 .gl-v2-dropzone-item-text b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2 .gl-v2-dropzone-item-text small, .gl-v2 .gl-v2-dropzone-item-meta { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2 .gl-v2-dropzone-item-name { flex: 1 1 200px; min-width: 0; }
+.gl-v2 .gl-v2-dropzone-item-meta { flex: 0 0 100%; margin: -4px 0 0 46px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2 .gl-v2-dropzone-thumb { flex: none; width: 44px; height: 44px; border-radius: 8px; overflow: hidden; background: var(--gl-v2-bg, #F2F5EF); display: flex; align-items: center; justify-content: center; }
+.gl-v2 .gl-v2-dropzone-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.gl-v2 .gl-v2-dropzone-file .gl-v2-dropzone-thumb + i { display: none; }
+
+.gl-v2 .gl-v2-dropzone-progress { position: absolute; left: 12px; right: 12px; bottom: 10px; z-index: 3; height: 18px; border-radius: 9px; background: #E2ECDA; overflow: hidden; }
+.gl-v2 .gl-v2-dropzone-progress > i { position: absolute; inset: 0; background: var(--gl-v2-primary); transform: scaleX(0); transform-origin: left center; transition: transform .15s linear; }
+.gl-v2 .gl-v2-dropzone-progress > span { position: relative; display: block; text-align: center; font: 600 10.5px/18px var(--gl-v2-font-sans); color: #fff; mix-blend-mode: normal; text-shadow: 0 0 2px rgba(0, 0, 0, .35); }
+.gl-v2 .gl-v2-dropzone.is-uploading { pointer-events: none; opacity: .92; padding-bottom: 28px; }
+.gl-v2 .gl-v2-dropzone.is-uploading .gl-v2-dropzone-input { display: none; }
+
+/* camera: enkel op toestellen zonder muis (tablet en gsm) */
+.gl-v2 .gl-v2-dropzone-camera { display: none; position: relative; z-index: 2; margin: 0 14px 12px; height: 36px; padding: 0 14px; border: 1px solid var(--gl-v2-primary); border-radius: 8px; background: var(--gl-v2-surface, #fff); color: var(--gl-v2-primary); font: 600 12.5px var(--gl-v2-font-sans); cursor: pointer; align-items: center; justify-content: center; gap: 8px; }
+.gl-v2 .gl-v2-dropzone-camera:hover { background: var(--gl-v2-hover-tint, #F2F5EF); }
+@media (hover: none) and (pointer: coarse) { .gl-v2 .gl-v2-dropzone-camera { display: inline-flex; } }
+
+/* toegankelijkheid: duidelijke focus op de zone, ook wanneer het bestandsveld erboven focus heeft */
+.gl-v2 .gl-v2-dropzone:has(.gl-v2-dropzone-input:focus-visible) { box-shadow: 0 0 0 3px rgba(0, 83, 45, .25); border-color: var(--gl-v2-primary); }
+.gl-v2 .gl-v2-dropzone-error { display: block; margin-top: 4px; }
+@media (prefers-reduced-motion: reduce) { .gl-v2 .gl-v2-dropzone-progress > i { transition: none; } }

@@ -27,4 +27,15 @@
         End Set
     End Property
 
+    Private _kind As Byte
+    ''' <summary>0 = bouwverlof, 1 = feestdag.</summary>
+    Public Property Kind() As Byte
+        Get
+            Return _kind
+        End Get
+        Set(ByVal value As Byte)
+            _kind = value
+        End Set
+    End Property
+
 End Class

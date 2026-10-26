@@ -32,7 +32,7 @@
 .gl-v2-qi-pagenav { display: inline-flex; align-items: center; gap: 4px; }
 .gl-v2-qi-pagenav[hidden] { display: none; }
 .gl-v2-qi-pagelabel { font: 500 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; padding: 0 4px; }
-.gl-v2-qi-canvas-wrap.is-dragover { background: var(--gl-v2-primary-tint); outline: 2px dashed var(--gl-v2-primary); outline-offset: -8px; }
+.gl-v2-qi-canvas-wrap.is-over { background: var(--gl-v2-primary-tint); outline: 2px dashed var(--gl-v2-primary); outline-offset: -8px; }
 
 /* ── Canvas ────────────────────────────────────────────────────────────────────────────────────────── */
 .gl-v2-qi-canvas-wrap { position: relative; min-height: 360px; display: flex; align-items: center; justify-content: center; background: #F2F5EF; overflow: auto; padding: 12px; }

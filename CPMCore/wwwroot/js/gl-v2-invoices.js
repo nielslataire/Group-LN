@@ -63,6 +63,13 @@
 
     $("#confirmIssueInvoice").on("click", function () {
         if (!issueTarget) return;
+        // Punt 48c–f: voortgangsscherm op volle pagina (gl-v2-invoices-flow.js). Zonder dat script (of config) blijft de oude navigatie werken.
+        var flowCfg = config.flow, invoiceId = issueTarget.data("invoice-id");
+        if (window.GlV2InvoiceFlow && flowCfg && invoiceId) {
+            if (issueModal) issueModal.hide();
+            window.GlV2InvoiceFlow.issue({ invoiceId: invoiceId, issuerCompanyId: config.issuerCompanyId, urls: flowCfg });
+            return;
+        }
         var href = issueTarget.attr("href");
         var message = issueTarget.data("processing-message");
         if (issueModal) issueModal.hide();
@@ -78,7 +85,16 @@
         if (href) window.location = href;
     });
 
-    $(document).on("submit", ".js-invoice-processing-form", function () {
+    $(document).on("submit", ".js-invoice-processing-form", function (ev) {
+        // Punt 48a–b: het boeken van de aangevinkte facturen krijgt het voortgangsscherm (gl-v2-invoices-flow.js).
+        if (this.id === "invoice-book-form" && window.GlV2InvoiceFlow && config.flow) {
+            var fd = new FormData(this), ids = fd.getAll("invoiceIds");
+            if (ids.length) {
+                ev.preventDefault();
+                window.GlV2InvoiceFlow.book({ issuerCompanyId: fd.get("issuerCompanyId"), invoiceIds: ids, urls: config.flow });
+                return;
+            }
+        }
         showProcessingModal($(this).data("processing-message"));
     });
 

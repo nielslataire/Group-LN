@@ -338,12 +338,14 @@
     var up = {
         form: byId("gl-v2-dd-upload-form"),
         file: byId("gl-v2-dd-up-file"),
-        drop: byId("gl-v2-dd-up-dropzone"),
+        drop: byId("gl-v2-dd-up-file_zone"),
         links: [],           // [{ key: "unit:12", label: "Lot 1", type: "unit" }]
         options: null        // cache van DocumentReplaceOptionsV2
     };
 
-    function upModeRadio() { var r = q('input[name="whatIsThis"]:checked', up.form); return r ? r.value : "new"; }
+    // "Wat is dit?": het gedeelde GlV2/_Segmented (knoppen, data-mode); de gekozen waarde gaat via het verborgen veld "mode" mee
+    function upModeRadio() { var b = q("#gl-v2-dd-up-what button.is-active", up.form); return b ? b.getAttribute("data-mode") : "new"; }
+    function upSetMode(v) { qa("#gl-v2-dd-up-what button", up.form).forEach(function (b) { var on = b.getAttribute("data-mode") === v; b.classList.toggle("is-active", on); b.setAttribute("aria-pressed", on ? "true" : "false"); }); }
 
     function upRenderLinks() {
         var host = byId("gl-v2-dd-up-linkchips");
@@ -418,25 +420,12 @@
         byId("gl-v2-dd-up-suggest").hidden = true;
     });
 
-    function upSetFile(file) {
-        if (!file) return;
-        var dt;
-        try { dt = new DataTransfer(); dt.items.add(file); up.file.files = dt.files; } catch (err) { /* oudere browsers: enkel via klik */ }
-        up.drop.classList.add("has-file");
-        byId("gl-v2-dd-up-filename").textContent = file.name;
-        byId("gl-v2-dd-up-filesize").textContent = file.size >= 1048576 ? (file.size / 1048576).toFixed(1).replace(".", ",") + " MB · klik om een ander bestand te kiezen" : Math.max(1, Math.round(file.size / 1024)) + " kB · klik om een ander bestand te kiezen";
+    // Bestand kiezen of slepen: het gedeelde GlV2/_Dropzone (inline) toont naam en grootte en controleert; wij vullen de naam van het document in.
+    if (up.drop) up.drop.addEventListener("gl-v2:dropzone-change", function (e) {
+        var file = e.detail.file; if (!file) return;
         var name = byId("gl-v2-dd-up-name");
         if (name && !name.value.trim() && upModeRadio() === "new" && !byId("gl-v2-dd-up-request").value) name.value = file.name.replace(/\.[^.]+$/, "");
-    }
-
-    if (up.drop) {
-        up.drop.addEventListener("click", function () { up.file.click(); });
-        up.drop.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); up.file.click(); } });
-        up.file.addEventListener("change", function () { if (up.file.files && up.file.files[0]) upSetFile(up.file.files[0]); });
-        ["dragenter", "dragover"].forEach(function (ev) { up.drop.addEventListener(ev, function (e) { e.preventDefault(); up.drop.classList.add("is-drag-over"); }); });
-        ["dragleave", "drop"].forEach(function (ev) { up.drop.addEventListener(ev, function (e) { e.preventDefault(); up.drop.classList.remove("is-drag-over"); }); });
-        up.drop.addEventListener("drop", function (e) { if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) upSetFile(e.dataTransfer.files[0]); });
-    }
+    });
 
     /** Toont/verbergt velden naargelang nieuw / revisie / vervulling van een verwacht document. */
     function upApplyMode() {
@@ -493,8 +482,9 @@
         }
         upApplyMode();
     });
-    qa('input[name="whatIsThis"]', up.form).forEach(function (r) {
-        r.addEventListener("change", function () {
+    qa("#gl-v2-dd-up-what button", up.form).forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            upSetMode(btn.getAttribute("data-mode"));
             if (upModeRadio() === "revision") upFillReplaces(); else { byId("gl-v2-dd-up-document").value = ""; byId("gl-v2-dd-up-request").value = ""; }
             upApplyMode();
         });
@@ -513,9 +503,7 @@
         up.links = [];
         upSuggestion = null;
         byId("gl-v2-dd-up-suggest").hidden = true;
-        up.drop.classList.remove("has-file");
-        byId("gl-v2-dd-up-filename").textContent = "Sleep een bestand hierheen of klik om te kiezen";
-        byId("gl-v2-dd-up-filesize").textContent = "PDF, DWG, Word, Excel, afbeeldingen …";
+        if (window.GlV2Dropzone) window.GlV2Dropzone.reset(up.drop);
         showError("gl-v2-dd-up-error", "");
         setDate("gl-v2-dd-up-date", new Date().getFullYear() + "-" + pad2(new Date().getMonth() + 1) + "-" + pad2(new Date().getDate()));
         setDate("gl-v2-dd-up-expires", "");
@@ -531,8 +519,7 @@
         }
         upRenderLinks();
 
-        var revisionRadio = q('input[name="whatIsThis"][value="' + (opts.documentId ? "revision" : "new") + '"]', up.form);
-        if (revisionRadio) revisionRadio.checked = true;
+        upSetMode(opts.documentId ? "revision" : "new");
         if (opts.documentId) {
             byId("gl-v2-dd-upload-title").textContent = "Nieuwe revisie uploaden";
             upFillReplaces("doc:" + opts.documentId).then(upApplyMode);
@@ -564,7 +551,14 @@
         fd.delete("whatIsThis");
         up.links.forEach(function (l) { fd.append("links", l.key); });
         var btn = byId("gl-v2-dd-up-submit");
-        withLoading(btn, function () { return post(cfg.urls.upload, fd); }).then(function (res) {
+        // Uploaden met voortgangsbalk (het gedeelde GlV2/_Dropzone); zelfde url, zelfde antwoord (JSON) als voorheen
+        var uploadCall = function () {
+            if (!window.GlV2Dropzone || !up.drop) return post(cfg.urls.upload, fd);
+            return window.GlV2Dropzone.upload(up.drop, { url: cfg.urls.upload, formData: fd, headers: { "RequestVerificationToken": token() } }).then(function (r) {
+                try { return JSON.parse(r.text); } catch (err) { return { ok: false, message: "De actie is mislukt (netwerk- of serverfout). Probeer opnieuw." }; }
+            }, function () { return { ok: false, message: "De actie is mislukt (netwerk- of serverfout). Probeer opnieuw." }; });
+        };
+        withLoading(btn, uploadCall).then(function (res) {
             if (res.ok) reload({ open: res.id });
             else showError("gl-v2-dd-up-error", res.message);
         });

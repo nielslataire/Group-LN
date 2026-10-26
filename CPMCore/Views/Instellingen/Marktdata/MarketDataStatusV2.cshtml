@@ -1,0 +1,132 @@
+@model CPMCore.Models.Instellingen.MarketDataStatusModel
+@*
+    gl-v2 — Instellingen › Marktdata-status (design-handoff punt 56c, "CRM Instellingen.dc.html"): actieve bronnen groot met cijfers, inactieve bronnen compact, daaronder de recente runs.
+    Alles wordt afgeleid uit dezelfde gegevens als de klassieke pagina (MarketDataStatusService); er is niets bij te stellen. Afgeleide toestanden (zonder wijziging aan de worker):
+      · Vastgelopen: een run die al meer dan 6 uur op "Bezig" staat zonder einde (bron krijgt het label "Vastgelopen").
+      · Geblokkeerd: een als voltooid gemelde run met 0 gevonden advertenties (bv. Zimmo, 403 op de zoekpagina's). "Al N runs op rij" telt de recentste opeenvolgende runs van de bron.
+    Bewust anders dan het mockup: de knop "Bron nu crawlen" ontbreekt, want de worker kan niet vanuit CPM gestart worden.
+*@
+@{
+    ViewData["Title"] = "Marktdata-status";
+    ViewData["PageIcon"] = "ph ph-radar";
+    ViewData["HelpScreenId"] = "instellingen-marktdata";
+    var nl = new System.Globalization.CultureInfo("nl-BE");
+    string FmtDt(DateTime? dt) => dt.HasValue ? dt.Value.ToLocalTime().ToString("dd/MM HH:mm", nl) : "—";
+    string FmtDuration(int? seconds)
+    {
+        if (!seconds.HasValue) return "—";
+        var ts = TimeSpan.FromSeconds(seconds.Value);
+        return ts.TotalHours >= 1 ? ts.ToString(@"h\:mm\:ss") : ts.ToString(@"m\:ss");
+    }
+    var vastgelopenNa = TimeSpan.FromHours(6);
+    bool IsVastgelopen(CPMCore.Models.Instellingen.MarketDataRunVM r) => r.Status == "Bezig" && !r.FinishedAt.HasValue && DateTime.UtcNow - r.StartedAt.ToUniversalTime() > vastgelopenNa;
+    string RunStatus(CPMCore.Models.Instellingen.MarketDataRunVM r) =>
+        IsVastgelopen(r) ? "Vastgelopen" : (r.Status == "Voltooid" && r.ListingsFound == 0) ? "Geblokkeerd" : r.Status;
+    string RunTone(string status) => status switch
+    {
+        "Voltooid" => "is-positive", "Mislukt" => "is-danger", "Gedeeltelijk" => "is-attention", "Bezig" => "is-info",
+        "Geblokkeerd" => "is-attention", "Vastgelopen" => "is-danger", _ => "is-neutral"
+    };
+    var actief = Model.Sources.Where(s => s.IsActive).ToList();
+    var inactief = Model.Sources.Where(s => !s.IsActive).ToList();
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-automatisatie.css" asp-append-version="true" />
+}
+
+<div class="gl-v2-auto">
+    @if (!Model.Sources.Any())
+    {
+        <div class="gl-v2-notice gl-v2-notice-compact is-info"><i class="ph ph-info" aria-hidden="true"></i><span>Geen crawler-bronnen gevonden.</span></div>
+    }
+    else
+    {
+        <div class="gl-v2-auto-sources">
+            @foreach (var s in actief)
+            {
+                var runs = Model.RecenteRuns.Where(r => r.SourceName == s.SourceName).ToList();
+                var laatste = runs.FirstOrDefault();
+                var vastgelopen = laatste != null && IsVastgelopen(laatste);
+                var geblokkeerd = !s.IsRunning && !s.LastRunFailed && s.LastResultFound == 0 && s.HasEverRun;
+                var rijen = runs.TakeWhile(r => r.Status == "Voltooid" && r.ListingsFound == 0).Count();
+                var (label, tone) = vastgelopen ? ("Vastgelopen", "is-danger") : s.IsRunning ? ("Bezig", "is-info") : !s.HasEverRun ? ("Nog niet gedraaid", "is-neutral")
+                    : s.LastRunFailed ? ("Mislukt", "is-danger") : geblokkeerd ? ("Geblokkeerd", "is-attention") : ("Geslaagd", "is-positive");
+                <section class="gl-v2-section-card gl-v2-auto-source">
+                    <div class="gl-v2-section-card-header">
+                        <h2 class="gl-v2-section-card-title">@s.SourceName</h2>
+                        <span class="gl-v2-section-card-spacer"></span>
+                        <span class="gl-v2-badge @tone">@label</span>
+                    </div>
+                    <div class="gl-v2-auto-source-body">
+                        @if (s.IsRunning && !string.IsNullOrEmpty(s.CurrentPhase))
+                        {
+                            <div class="gl-v2-auto-phase"><i class="ph ph-circle-notch gl-v2-spin" aria-hidden="true"></i>@s.CurrentPhase@(string.IsNullOrEmpty(s.CurrentProgress) ? "" : " (" + s.CurrentProgress + ")")</div>
+                        }
+                        <dl class="gl-v2-auto-stats">
+                            <div><dt>Laatste run</dt><dd>@FmtDt(s.LastAttemptedCrawlAt)</dd></div>
+                            <div><dt>Duur</dt><dd>@FmtDuration(s.LastDurationSeconds)</dd></div>
+                            <div><dt>Gevonden</dt><dd>@(s.LastResultFound?.ToString("N0", nl) ?? "—")</dd></div>
+                            <div><dt>Nieuw</dt><dd>@(s.LastResultNew?.ToString("N0", nl) ?? "—")</dd></div>
+                            <div><dt>Bijgewerkt</dt><dd>@(s.LastResultUpdated?.ToString("N0", nl) ?? "—")</dd></div>
+                            <div><dt>Fouten</dt><dd>@(s.LastResultErrors?.ToString("N0", nl) ?? "—")</dd></div>
+                        </dl>
+                        @if (vastgelopen)
+                        {
+                            <div class="gl-v2-notice gl-v2-notice-compact is-danger" role="alert"><i class="ph ph-warning-circle" aria-hidden="true"></i><span>Een run staat al sinds @FmtDt(laatste!.StartedAt) op “Bezig” en is waarschijnlijk vastgelopen.</span></div>
+                        }
+                        else if (s.LastRunFailed && !string.IsNullOrEmpty(s.LastErrorMessage))
+                        {
+                            <div class="gl-v2-notice gl-v2-notice-compact is-danger" role="alert"><i class="ph ph-warning-circle" aria-hidden="true"></i><span>@s.LastErrorMessage</span></div>
+                        }
+                        else if (geblokkeerd)
+                        {
+                            <div class="gl-v2-notice gl-v2-notice-compact is-warning" role="alert"><i class="ph ph-warning" aria-hidden="true"></i>
+                                <span>De run eindigt zonder resultaten@(string.IsNullOrWhiteSpace(laatste?.LogMessage) ? "" : ": " + laatste!.LogMessage)@(rijen > 1 ? $". Al {rijen} runs op rij." : "")</span></div>
+                        }
+                    </div>
+                </section>
+            }
+        </div>
+
+        @if (inactief.Any())
+        {
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header"><h2 class="gl-v2-section-card-title">Inactieve bronnen</h2></div>
+                <ul class="gl-v2-auto-inactive">
+                    @foreach (var s in inactief)
+                    {
+                        <li><span class="n">@s.SourceName</span><span class="m">@(s.HasEverRun ? "laatste run " + FmtDt(s.LastAttemptedCrawlAt) : "nog niet gedraaid")</span></li>
+                    }
+                </ul>
+            </section>
+        }
+
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <h2 class="gl-v2-section-card-title">Recente runs</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">Laatste @Model.RecenteRuns.Count runs, nieuwste eerst.</span>
+            </div>
+            <div class="gl-v2-auto-head gl-v2-auto-grid--runs"><span>Bron</span><span>Gestart</span><span>Afgerond</span><span>Status</span><span class="r">Gevonden</span><span class="r">Nieuw</span><span class="r">Bijgewerkt</span><span>Melding</span></div>
+            @if (!Model.RecenteRuns.Any())
+            {
+                <div class="gl-v2-auto-none">Nog geen runs geregistreerd.</div>
+            }
+            @foreach (var r in Model.RecenteRuns)
+            {
+                var st = RunStatus(r);
+                <div class="gl-v2-auto-row gl-v2-auto-grid--runs">
+                    <span class="gl-v2-auto-strong">@r.SourceName</span>
+                    <span class="gl-v2-auto-cell">@FmtDt(r.StartedAt)</span>
+                    <span class="gl-v2-auto-cell">@FmtDt(r.FinishedAt)</span>
+                    <span><span class="gl-v2-badge @RunTone(st)">@st</span></span>
+                    <span class="gl-v2-auto-cell r">@r.ListingsFound.ToString("N0", nl)</span>
+                    <span class="gl-v2-auto-cell r">@r.ListingsCreated.ToString("N0", nl)</span>
+                    <span class="gl-v2-auto-cell r">@r.ListingsUpdated.ToString("N0", nl)</span>
+                    <span class="gl-v2-auto-cell is-muted" title="@r.LogMessage">@(string.IsNullOrWhiteSpace(r.LogMessage) ? "—" : r.LogMessage)</span>
+                </div>
+            }
+        </section>
+    }
+</div>

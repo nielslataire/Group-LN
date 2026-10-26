@@ -599,6 +599,15 @@ namespace CPMCore.Controllers
 
         private async Task TrySendClassicEmailAfterIssueAsync(int invoiceId, CancellationToken ct)
         {
+            if (await TrySendClassicEmailAfterIssueCoreAsync(invoiceId, ct) == ClassicEmailOutcome.Failed)
+                AddMessage("warning", "Factuur werd uitgegeven, maar klassieke e-mailverzending is mislukt.", "Factuur");
+        }
+
+        private enum ClassicEmailOutcome { NotSent, Sent, Failed }
+
+        /// <summary>De klassieke e-mail na het nummeren, zonder melding: geeft terug of ze verzonden werd, niet nodig was of mislukte (gedeeld met het gl-v2-scherm).</summary>
+        private async Task<ClassicEmailOutcome> TrySendClassicEmailAfterIssueCoreAsync(int invoiceId, CancellationToken ct)
+        {
             try
             {
                 var postIssueContext = await BuildOctopusInvoiceContextAsync(invoiceId, ct, forceFinalPdf: true);
@@ -617,11 +626,12 @@ namespace CPMCore.Controllers
                         },
                         ct);
                 }
+                return classicSent ? ClassicEmailOutcome.Sent : ClassicEmailOutcome.NotSent;
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Post-issue classic email failed for invoice {InvoiceId}", invoiceId);
-                AddMessage("warning", "Factuur werd uitgegeven, maar klassieke e-mailverzending is mislukt.", "Factuur");
+                return ClassicEmailOutcome.Failed;
             }
         }
 

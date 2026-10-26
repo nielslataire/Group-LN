@@ -1,0 +1,323 @@
+@model CPMCore.Models.Invoicing.InvoiceComposeVM
+@using System.Globalization
+@using System.Text.Json
+@using CPMCore.Models.GlV2
+@using CPMCore.Models.Invoicing
+@using ServiceCore.Invoicing
+@using BOCore
+@*
+    gl-v2 — Nieuwe factuur (design-handoff punt 47a–d): vier stappen (Partijen, Instellingen, Lijnen, Tekst) met een live A4-voorbeeld rechts.
+    Het formulier post via fetch naar InvoicesController.SaveDraftV2 (altijd eerst een concept, zelfde model InvoiceComposeVM als het oude
+    Save). Hier wordt nooit genummerd: een factuur wordt altijd eerst als concept bewaard en daarna genummerd via Invoices/Index (voortgangsscherm van punt 48, gl-v2-invoices-flow.js).
+    Het oude scherm (Create.cshtml) blijft bestaan voor de oude layout en via ?classic=true (o.a. voor nutsaansluitingen en creditnota's van
+    schijven of wijzigingsopdrachten). Eigen klassen-namespace gl-v2-ic-* (gl-v2-invoices-create.css/.js).
+*@
+@{
+    var culture = CultureInfo.GetCultureInfo("nl-BE");
+    var issuerId = Model.IssuerCompanyId;
+    // Dezelfde pagina bewerkt ook een concept (Invoices/Edit bij een conceptfactuur): dan is het model een InvoiceDraftEditVM.
+    var edit = Model as InvoiceDraftEditVM;
+    var isEdit = edit != null;
+    var lockStages = isEdit && Model.Mode == InvoiceMode.Stages; // zoals het oude EditDraft: bij een concept uit schijven liggen bedrijf, klant, project, opbouw, btw en de schijven vast
+    var backUrl = isEdit && !string.IsNullOrWhiteSpace(edit!.ReturnUrl)
+        ? edit.ReturnUrl
+        : isEdit ? Url.Action("Detail", "Invoices", new { id = edit!.InvoiceId, issuerCompanyId = issuerId }) : Url.Action("Index", "Invoices", new { issuerCompanyId = issuerId });
+    ViewData["Title"] = isEdit ? "Factuur bewerken" : "Nieuwe factuur";
+    ViewData["HelpScreenId"] = isEdit ? "facturen-concept-bewerken" : "facturen-nieuw";
+    ViewData["PageIcon"] = "ph ph-receipt";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = backUrl;
+
+
+    GlV2StepsVm Steps(int current) => new()
+    {
+        Id = "ic-steps-" + (current + 1), Current = current, Variant = GlV2StepsVariant.Lijn, ShowSub = true, Clickable = true, EmitStepEvents = true,
+        Steps = new List<GlV2StepItemVm>
+        {
+            new() { Label = "Partijen", Sub = "van en aan" },
+            new() { Label = "Instellingen", Sub = "data, opbouw, verzenden" },
+            new() { Label = "Lijnen", Sub = "omschrijving en bedragen" },
+            new() { Label = "Tekst", Sub = "teksten en bijlage" }
+        }
+    };
+
+    var issuerOptions = Model.Issuers.Select(i => new GlV2SelectItem { Value = i.Id.ToString(), Text = i.Name }).ToList();
+    var bankOptions = Model.IssuerBankAccounts.Select(b => new GlV2SelectItem { Value = b.Value ?? "", Text = b.Text ?? "" }).ToList();
+    var termOptions = Model.PaymentTerms.Select(t => new GlV2SelectItem { Value = t.Id.ToString(), Text = t.Name }).ToList();
+    var vatOptions = Model.VatTypes.Select(v => new GlV2SelectItem { Value = v.Id.ToString(), Text = v.Code + " · " + v.Description + " (" + v.BasePercentage.ToString("0.##", culture) + " %)" }).ToList();
+
+    var cfg = new
+    {
+        urls = new
+        {
+            save = Url.Action(isEdit ? "UpdateDraftV2" : "SaveDraftV2", "Invoices"),
+            partyLookup = Url.Action("PartyLookup", "Invoices"),
+            partyDetails = Url.Action("PartyDetails", "Invoices"),
+            partyDelivery = Url.Action("PartyDeliveryV2", "Invoices"),
+            recentParties = Url.Action("RecentPartiesV2", "Invoices"),
+            projectLookup = Url.Action("ProjectLookup", "Invoices"),
+            projectName = Url.Action("ProjectNameV2", "Invoices"),
+            contractLookup = Url.Action("SupplierContractLookup", "Invoices"),
+            stageLines = Url.Action("ComposeStageLinesJson", "Invoices"),
+            changeOrderLines = Url.Action("ComposeChangeOrderLinesJson", "Invoices"),
+            issuerSheet = Url.Action("IssuerSheetV2", "Invoices"),
+            newCustomer = Url.Action("AddClientAccount", "Klanten"),
+            quickCreate = Url.Action("QuickCreate", "Klanten"),
+            validateVat = Url.Action("ValidateVat", "Klanten"),
+            findPostal = Url.Action("FindPostalMatch", "Klanten"),
+            postcodes = Url.Action("GetPostcodesByCountry", "Shared"),
+            countries = Url.Action("NewPartyCountriesV2", "Invoices"),
+            peppolCheck = Url.Action("PeppolCheckV2", "Invoices"),
+            index = backUrl,
+            detail = Url.Action("Detail", "Invoices"),
+            edit = Url.Action("Edit", "Invoices"),
+            send = Url.Action("Send", "Invoices"),
+            create = Url.Action("Create", "Invoices", new { issuerId })
+        },
+        issuerId,
+        issuerName = (ViewBag.CompanyName as string) ?? "",
+        issuers = Model.Issuers.Select(i => new { id = i.Id, name = i.Name }),
+        terms = Model.PaymentTerms.Select(t => new { id = t.Id, name = t.Name, days = t.Days, type = (int)t.TermType }),
+        vatTypes = Model.VatTypes.Select(v => new { id = v.Id, code = v.Code, description = v.Description, pct = v.BasePercentage }),
+        invoiceDate = Model.InvoiceDate.ToString("yyyy-MM-dd"),
+        paymentTermId = Model.PaymentTermId,
+        vatTypeId = Model.VatTypeId,
+        bankAccountId = Model.IssuerBankAccountId,
+        isCreditNote = Model.IsCreditNote,
+        isPrepaid = Model.IsPrepaid,
+        mode = (int)Model.Mode,
+        edit = isEdit ? new
+        {
+            invoiceId = edit!.InvoiceId,
+            displayId = edit.DisplayId,
+            locked = lockStages,
+            returnUrl = edit.ReturnUrl,
+            currentAppendix = edit.CurrentPdfAppendixFileName,
+            status = edit.StatusLabel
+        } : null,
+        // een kopie of creditnota van een factuur: de lijnen zijn overgenomen (opbouw uit schijven of wijzigingsopdrachten blijft behouden)
+        duplicate = ViewBag.DuplicateInvoiceJson != null,
+        partyName = isEdit ? edit!.PartyDisplayName : null,
+        partyType = Model.PartyType?.ToString(),
+        partyId = Model.PartyId,
+        projectId = Model.ProjectId,
+        contractId = Model.SupplierContractId,
+        header = Model.HeaderDescription ?? "",
+        detail = Model.DetailDescription ?? "",
+        footer = Model.FooterDescription ?? "",
+        lines = (Model.Lines ?? new List<InvoiceLineVM>()).Where(l => !string.IsNullOrWhiteSpace(l.Text) || l.UnitPrice != 0 || l.Price != 0).Select(l => new
+        {
+            text = l.Text,
+            quantity = l.Quantity,
+            unitPrice = l.UnitPrice != 0 ? l.UnitPrice : (l.Quantity != 0 ? l.Price / l.Quantity : l.Price),
+            price = l.Price,
+            vatTypeId = l.VatTypeId,
+            vatPct = l.VatPercentage,
+            lineType = l.LineType,
+            groupName = l.GroupName,
+            unitName = l.UnitName,
+            unitId = l.UnitId,
+            paymentStageId = l.PaymentStageId,
+            changeOrderId = l.ChangeOrderId,
+            changeOrderDetailId = l.ChangeOrderDetailId,
+            stagePercentage = l.StagePercentage
+        })
+    };
+    var cfgJson = JsonSerializer.Serialize(cfg, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-invoices-edit.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-invoices-create.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    <span class="gl-v2-invoice-direction-badge"><i class="ph ph-arrow-right" aria-hidden="true"></i>Verkoop</span>
+    <span class="gl-v2-badge is-neutral">@(isEdit ? edit!.StatusLabel.ToUpperInvariant() : "CONCEPT")</span>
+}
+
+<form id="ic-form" method="post" action="@Url.Action("SaveDraftV2", "Invoices")" enctype="multipart/form-data" class="gl-v2-ic-form" novalidate>
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="PartyId" id="ic-party-id" value="@Model.PartyId" />
+    <input type="hidden" name="PartyType" id="ic-party-type" value="@Model.PartyType" />
+    <input type="hidden" name="IsCreditNote" id="ic-credit" value="@(Model.IsCreditNote ? "true" : "false")" />
+    <input type="hidden" name="Mode" id="ic-mode" value="@((int)Model.Mode)" />
+    @if (isEdit)
+    {
+        <input type="hidden" name="InvoiceId" value="@edit!.InvoiceId" />
+        <input type="hidden" name="ReturnUrl" value="@edit.ReturnUrl" />
+        <input type="hidden" name="RemovePdfAppendix" id="ic-remove-appendix" value="false" />
+    }
+
+    <div class="gl-v2-ic-grid" id="gl-v2-ic-root">
+        <section class="gl-v2-section-card gl-v2-ic-main">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">@(isEdit ? "Factuur bewerken" : "Nieuwe factuur")</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">@(isEdit ? "concept " + edit!.DisplayId + " · je nummert het daarna in de lijst met facturen" : "concept · je nummert het daarna in de lijst met facturen")</span>
+            </div>
+
+            <div class="gl-v2-ic-steps">
+                @for (var s = 0; s < 4; s++)
+                {
+                    <div data-ic-steps="@(s + 1)" hidden="@(s != 0)">@await Html.PartialAsync("GlV2/_Steps", Steps(s))</div>
+                }
+            </div>
+
+            <div class="gl-v2-ic-body">
+                @await Html.PartialAsync("GlV2/_ErrorSummaryV2")
+
+                @* ─── Stap 1: Partijen (47a) ─── *@
+                <div class="gl-v2-ic-panel" data-ic-panel="1">
+                    <div class="gl-v2-ic-row2">
+                        <div class="gl-v2-field">
+                            <span class="gl-v2-field-label">SOORT</span>
+                            @await Html.PartialAsync("GlV2/_Segmented", new GlV2SegmentedVm { Id = "ic-kind", Fill = true, AriaLabel = "Soort", Items = new List<GlV2SegmentedItem> {
+                                new() { Text = "Factuur", Active = !Model.IsCreditNote, Data = new() { ["kind"] = "invoice" } },
+                                new() { Text = "Creditnota", Active = Model.IsCreditNote, Data = new() { ["kind"] = "credit" } } } })
+                        </div>
+                        <div class="gl-v2-field">
+                            <span class="gl-v2-field-label">BETALING</span>
+                            @Html.EditorFor(x => x.IsPrepaid, "GlV2ToggleSwitch", new { Label = "Al betaald", Hint = "bv. contant of vooraf" })
+                        </div>
+                    </div>
+
+                    <div class="gl-v2-ic-block">
+                        <div class="gl-v2-ic-block-head"><b>Van</b><span>standaard voor @((ViewBag.CompanyName as string) ?? "dit bedrijf") · enkel aanpassen indien nodig</span></div>
+                        <div class="gl-v2-ic-row2">
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "IssuerCompanyId", Id = "IssuerCompanyId", Label = "FACTURATIEBEDRIJF", Value = issuerId.ToString(), Items = issuerOptions, Disabled = issuerOptions.Count < 2 || isEdit })
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "IssuerBankAccountId", Id = "IssuerBankAccountId", Label = "REKENINGNUMMER", Value = Model.IssuerBankAccountId?.ToString(), Items = bankOptions, Placeholder = "Kies een rekening", Disabled = bankOptions.Count == 0 })
+                        </div>
+                    </div>
+
+                    <div class="gl-v2-ic-block">
+                        <div class="gl-v2-ic-block-head"><b>Aan</b><span>klant of leverancier</span></div>
+                        <div class="gl-v2-field" id="ic-party-field">
+                            <label class="gl-v2-field-label" for="ic-party-sel_input">KLANT / LEVERANCIER <span style="color:#8B2A2A">*</span></label>
+                            <div id="ic-party-pick">
+                                @await Html.PartialAsync("GlV2/_GlV2Combo", new GlV2ComboVm { Name = "ic_party_sel", Id = "ic-party-sel", Placeholder = "Zoek op naam, e-mail of btw-nummer", LookupUrl = Url.Action("PartyComboV2", "Invoices"), MinChars = 1, AllowNew = true, NewLabel = "Nieuwe klant", NewEntity = "klant", Avatar = true, ListLabel = "Klanten en leveranciers", Icon = "ph-magnifying-glass" })
+                            </div>
+                            <div class="gl-v2-ic-party-card" id="ic-party-card" hidden></div>
+                            <div class="gl-v2-ic-recent" id="ic-recent" hidden><small>Recent:</small><span id="ic-recent-items"></span></div>
+                        </div>
+                        <div class="gl-v2-field" id="ic-project-field">
+                            <label class="gl-v2-field-label" for="ic-project-id_input">PROJECT <span class="gl-v2-ie-opt">· optioneel</span></label>
+                            <div id="ic-project-pick">
+                                @await Html.PartialAsync("GlV2/_GlV2Combo", new GlV2ComboVm { Name = "ProjectId", Id = "ic-project-id", Value = Model.ProjectId?.ToString(), Placeholder = "Zoek een project", LookupUrl = Url.Action("ProjectComboV2", "Invoices"), MinChars = 1, CountrySelector = "#ic-party-id", ListLabel = "Projecten", Icon = "ph-buildings" })
+                            </div>
+                            <span class="gl-v2-field-help">de factuur verschijnt ook in het project onder Facturatie</span>
+                        </div>
+                        <div class="gl-v2-field" id="ic-contract-field" hidden>
+                            <label class="gl-v2-field-label" for="ic-contract-id_input">LEVERANCIERSCONTRACT <span class="gl-v2-ie-opt">· optioneel</span></label>
+                            <div id="ic-contract-pick">
+                                @await Html.PartialAsync("GlV2/_GlV2Combo", new GlV2ComboVm { Name = "SupplierContractId", Id = "ic-contract-id", Value = Model.SupplierContractId?.ToString(), Placeholder = "Zoek een contract", LookupUrl = Url.Action("ContractComboV2", "Invoices"), MinChars = 1, CountrySelector = "#ic-party-id", ListLabel = "Contracten", Icon = "ph-file-text" })
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @* ─── Stap 2: Instellingen (47b) ─── *@
+                <div class="gl-v2-ic-panel" data-ic-panel="2" hidden>
+                    <div class="gl-v2-ic-block">
+                        <div class="gl-v2-ic-block-head"><b>Data</b><span>vervaldatum wordt berekend</span></div>
+                        <div class="gl-v2-ic-row2">
+                            @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "InvoiceDate", Id = "ic-date", Label = "FACTUURDATUM", Required = true, IsoValue = Model.InvoiceDate.ToString("yyyy-MM-dd"), DisplayValue = Model.InvoiceDate.ToString("dd/MM/yyyy") })
+                            <div>
+                                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "PaymentTermId", Id = "PaymentTermId", Label = "BETAALTERMIJN", Value = Model.PaymentTermId?.ToString(), Items = termOptions, Placeholder = "Kies een termijn" })
+                                <span class="gl-v2-field-help" id="ic-due-help">&nbsp;</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="gl-v2-ic-block">
+                        <div class="gl-v2-ic-block-head"><b>Opbouw</b><span>hoe worden de lijnen gevuld</span></div>
+                        @await Html.PartialAsync("GlV2/_Segmented", new GlV2SegmentedVm { Id = "ic-modes", Fill = true, AriaLabel = "Opbouw", Items = new List<GlV2SegmentedItem> {
+                                new() { Text = "Vrije lijnen", Active = Model.Mode == InvoiceMode.Free || (int)Model.Mode == 4, Data = new() { ["mode"] = "1" } },
+                                new() { Text = "Uit openstaande posten", Active = Model.Mode == InvoiceMode.Stages, Data = new() { ["mode"] = "2" } },
+                                new() { Text = "Uit offerte", Active = Model.Mode == InvoiceMode.ChangeOrders, Data = new() { ["mode"] = "3" } } } })
+                        <span class="gl-v2-field-help" id="ic-mode-help">Openstaande posten en offertes zijn er enkel voor klanten. Kies eerst een klant.</span>
+                        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "VatTypeId", Id = "VatTypeId", Label = "BTW-TARIEF (STANDAARD)", Value = Model.VatTypeId?.ToString(), Items = vatOptions, Placeholder = "Kies een tarief", Help = lockStages ? "vast bij een concept uit schijven" : "per lijn aanpasbaar", Disabled = lockStages })
+                    </div>
+
+                    <div class="gl-v2-ic-block">
+                        <div class="gl-v2-ic-block-head"><b>Verzenden</b><span>gebeurt pas bij nummeren</span></div>
+                        <ul class="gl-v2-ic-channels" id="ic-channels">
+                            <li class="is-muted"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i><span>Kies eerst een klant om te zien hoe de factuur verstuurd wordt.</span></li>
+                        </ul>
+                        <p class="gl-v2-field-help"><i class="ph ph-info" aria-hidden="true"></i> De factuur wordt bij het nummeren doorgestuurd naar Octopus (dat via Peppol verstuurt als de klant bereikbaar is) en per e-mail naar de klant. Het kanaal kies je niet hier: dat volgt de gegevens van de klant.</p>
+                    </div>
+                </div>
+
+                @* ─── Stap 3: Lijnen (47c) ─── *@
+                <div class="gl-v2-ic-panel" data-ic-panel="3" hidden>
+                    @if ((int)Model.Mode == 4)
+                    {
+                        <div class="gl-v2-notice gl-v2-notice-compact is-info"><span class="gl-v2-notice-icon"><i class="ph ph-info" aria-hidden="true"></i></span><span class="gl-v2-notice-text">Deze factuur is opgebouwd uit nutsaansluitingen. De lijnen zijn als vrije lijnen overgenomen: bedragen en btw kan je hier nog aanpassen.</span></div>
+                    }
+                    <div class="gl-v2-ic-block-head"><b id="ic-lines-title">Lijnen</b><span id="ic-lines-sub">sleep om te herschikken · Tab springt naar het volgende veld</span></div>
+                    <div id="ic-lines-free">
+                        <div class="gl-v2-ic-lines" role="table" aria-label="Factuurlijnen">
+                            <div class="gl-v2-ic-lines-head" role="row"><span></span><span>OMSCHRIJVING</span><span class="is-num">AANTAL</span><span class="is-num">EENHEIDSPRIJS</span><span>BTW</span><span class="is-num">TOTAAL</span><span></span></div>
+                            <div id="ic-lines-body"></div>
+                        </div>
+                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-ic-addline" id="ic-add-line"><i class="ph ph-plus" aria-hidden="true"></i>Lijn toevoegen</button>
+                    </div>
+                    <div id="ic-lines-pick" hidden></div>
+                    <div class="gl-v2-ic-totals" id="ic-totals" aria-live="polite"></div>
+                </div>
+
+                @* ─── Stap 4: Tekst (47d) ─── *@
+                <div class="gl-v2-ic-panel" data-ic-panel="4" hidden>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="HeaderDescription">OMSCHRIJVING <span class="gl-v2-ie-opt">· optioneel</span></label>
+                        <div class="gl-v2-field-box gl-v2-ie-ta"><textarea id="HeaderDescription" name="HeaderDescription" class="gl-v2-field-input" rows="3" data-ic-bind="header">@Model.HeaderDescription</textarea></div>
+                        <span class="gl-v2-field-help">staat bovenaan de factuur, onder de adressen</span>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="DetailDescription">DETAILOMSCHRIJVING <span class="gl-v2-ie-opt">· optioneel</span></label>
+                        <div class="gl-v2-field-box gl-v2-ie-ta"><textarea id="DetailDescription" name="DetailDescription" class="gl-v2-field-input" rows="2" data-ic-bind="detail" placeholder="bv. periode, referentie van de bestelbon, contactpersoon …">@Model.DetailDescription</textarea></div>
+                        <span class="gl-v2-field-help">staat boven de lijnen</span>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="FooterDescription">BIJKOMENDE VERMELDING <span class="gl-v2-ie-opt">· optioneel</span></label>
+                        <div class="gl-v2-field-box gl-v2-ie-ta"><textarea id="FooterDescription" name="FooterDescription" class="gl-v2-field-input" rows="3" data-ic-bind="footer">@Model.FooterDescription</textarea></div>
+                        <span class="gl-v2-field-help">staat onderaan de factuur, boven de betalingsgegevens. De btw-vermelding per tarief komt uit Instellingen en staat vast.</span>
+                    </div>
+                    <div class="gl-v2-field">
+                        <span class="gl-v2-field-label">PDF-BIJLAGE <span class="gl-v2-ie-opt">· optioneel</span></span>
+                        @await Html.PartialAsync("GlV2/_Dropzone", new GlV2DropzoneVm { Name = "PdfAppendix", Id = "PdfAppendix", Accept = "application/pdf,.pdf", Title = "Sleep een PDF hierheen of", LinkText = "kies een bestand", Sub = "komt achter de factuur en gaat ook mee via Peppol", CurrentName = isEdit ? edit!.CurrentPdfAppendixFileName : null, CurrentSub = "huidige bijlage · komt achter de factuur, gaat ook mee via Peppol", AriaLabel = "PDF-bijlage kiezen" })
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        @* ─── Live voorbeeld (opmaak volgens 35b) ─── *@
+        <aside class="gl-v2-ic-side" aria-label="Voorbeeld van de factuur">
+            <div class="gl-v2-ie-side-head"><span>VOORBEELD</span><small>Layout A · werkt live bij</small></div>
+            <div class="gl-v2-ps-wrap" id="ic-sheet"></div>
+            <span class="gl-v2-ie-side-note">opmaak volgens de factuurlayout van @((ViewBag.CompanyName as string) ?? "het facturatiebedrijf") · proforma tot het nummeren</span>
+        </aside>
+    </div>
+
+    <div class="gl-v2-form-actionbar">
+        <a href="@backUrl" class="gl-v2-btn gl-v2-btn-text" id="ic-cancel">Annuleren</a>
+        <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="ic-save-draft">@(isEdit ? "Opslaan" : "Opslaan als draft")</button>
+        <span class="gl-v2-form-actionbar-spacer"></span>
+        <span class="gl-v2-ie-stepinfo">Stap <b id="ic-step-now">1</b> van 4</span>
+        <div class="gl-v2-form-actionbar-actions">
+            <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="ic-prev" disabled>Vorige</button>
+            <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="ic-next"><span>Volgende</span><i class="ph ph-caret-right" aria-hidden="true"></i></button>
+        </div>
+    </div>
+</form>
+
+@* Nieuwe klant snel aanmaken (47e–g): de modal staat klaar, gl-v2-invoices-newparty.js opent hem *@
+@await Html.PartialAsync("Partials/_NewPartyModalV2")
+
+@section PageScripts
+{
+    <script>window.GlV2InvoiceCreate = @Html.Raw(cfgJson);</script>
+    <script src="~/js/gl-v2-invoices-newparty.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-invoices-create.js" asp-append-version="true"></script>
+}

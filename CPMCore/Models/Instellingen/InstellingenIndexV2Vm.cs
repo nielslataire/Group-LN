@@ -48,6 +48,11 @@ public class SettingsItemVm
     public string MetaTone { get; set; } = "is-info";
 
     public List<SettingsChipVm> Chips { get; set; } = new();
+
+    /// <summary>Dagelijks gebruikt onderdeel: de kaart krijgt een gevuld icoon zodat ze opvalt tussen de
+    /// overige kaarten (critique 24/10: alle kaarten wogen even zwaar). Enkel visuele nadruk, de volgorde
+    /// binnen een groep verandert er niet door.</summary>
+    public bool Featured { get; set; }
 }
 
 /// <summary>Een "tweede ingang" op een kaart (24a: Rollen/Groepen) — eigen link, eigen klikzone, moet de

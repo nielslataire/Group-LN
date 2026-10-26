@@ -484,32 +484,14 @@
 .gl-v2-dd-panel-foot .gl-v2-dd-foot-spacer { flex: 1; }
 
 /* ── Modals ─────────────────────────────────────────────────────────────────────────────────────── */
-.gl-v2-dd-dropzone {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    padding: 22px 16px;
-    border-radius: var(--gl-v2-radius-sm);
-    border: 1.5px dashed rgba(122, 158, 110, .6);
-    background: var(--gl-v2-surface);
-    cursor: pointer;
-    text-align: center;
-    transition: background .12s ease, border-color .12s ease;
-}
-.gl-v2-dd-dropzone:hover, .gl-v2-dd-dropzone.is-drag-over { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); }
-.gl-v2-dd-dropzone > i { font-size: 22px; color: var(--gl-v2-primary); }
-.gl-v2-dd-dropzone-title { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow-wrap: anywhere; }
-.gl-v2-dd-dropzone-sub { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
-.gl-v2-dd-dropzone.has-file { border-style: solid; border-color: var(--gl-v2-primary); background: var(--gl-v2-hover-tint); }
 
-.gl-v2-dd-seg { display: inline-flex; padding: 3px; border-radius: var(--gl-v2-radius-sm); background: var(--gl-v2-neutral-tint); gap: 2px; }
-.gl-v2-dd-seg label { margin: 0; }
-.gl-v2-dd-seg input { position: absolute; opacity: 0; pointer-events: none; }
-.gl-v2-dd-seg span { display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: 6px; font: 500 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); cursor: pointer; white-space: nowrap; }
-.gl-v2-dd-seg input:checked + span { background: var(--gl-v2-surface); color: var(--gl-v2-ink); font-weight: 600; box-shadow: 0 1px 2px rgba(44, 59, 42, .15); }
-.gl-v2-dd-seg input:focus-visible + span { outline: 2px solid var(--gl-v2-primary); outline-offset: 1px; }
+/* Upload-dialoog (17b): breed genoeg voor twee kolommen met datums, koppelingen en de twee deelschakelaars (het standaard formuliermodaal is 500px) */
+.gl-v2-modal-form.gl-v2-dd-upload-modal .modal-dialog { width: 760px; max-width: calc(100vw - 32px); }
+.gl-v2-dd-upload-modal .modal-body { column-gap: 16px; row-gap: 16px; align-items: start; }
+.gl-v2-dd-upload-modal .gl-v2-toggle-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 24px; align-items: start; }
+.gl-v2-dd-upload-modal .gl-v2-toggle-row { align-items: flex-start; }
+.gl-v2-dd-upload-modal .gl-v2-toggle-hint { display: block; }
+@media (max-width: 767.98px) { .gl-v2-dd-upload-modal .gl-v2-toggle-grid { grid-template-columns: 1fr; } }
 
 .gl-v2-dd-linkpicker { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .gl-v2-dd-linkpicker select { max-width: 200px; }

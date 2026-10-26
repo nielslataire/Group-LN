@@ -1,0 +1,356 @@
+@model CPMCore.Models.Instellingen.BlogEditV2Vm
+@using BOCore
+@using CPMCore.Models.GlV2
+@using FacadeCore
+@using System.Text.Json
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen › Blogartikelen › Bewerken (design-handoff punt 55b): één Opslaan voor alle secties (in de klassieke pagina had elke kaart er één), publicatie, omslagfoto en
+    zoekmachines met Google-voorbeeld in de zijkolom. Eén form (Bewerken) voor de velden van het artikel zelf. Inhoudsblokken en vragen hebben elk hun eigen, ongewijzigde actie
+    (BlokOpslaan, BlokVerwijderen, BlokVolgorde, FaqOpslaan, FaqVerwijderen, FaqVolgorde): de knoppen in de lijst openen één gedeelde modal of bevestiging en posten dan naar die
+    actie, buiten dit form. Daardoor zijn blokken en vragen pas beschikbaar nadat het artikel een eerste keer is opgeslagen (zoals in de klassieke pagina).
+    Bewust anders dan het mockup: geen "Gewijzigd … · Niels" (de gebruiker wordt niet bewaard); de blokken staan in een modal i.p.v. uitklapbaar in de lijst.
+*@
+@{
+    var edit = Model.Edit;
+    var isNieuw = edit.ID == 0;
+    var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsBlogBeheer);
+    ViewData["Title"] = isNieuw ? "Nieuw artikel" : (string.IsNullOrWhiteSpace(edit.Titel) ? "Artikel" : edit.Titel);
+    ViewData["PageIcon"] = "ph ph-newspaper";
+    ViewData["HelpScreenId"] = "instellingen-blog-bewerken";
+    ViewData["BackUrl"] = Url.Action("Index");
+    var fouten = ViewData.ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).Where(m => !string.IsNullOrWhiteSpace(m)).Distinct().ToList();
+    var blokken = edit.Blokken.OrderBy(b => b.SortOrder).ToList();
+    var faqs = edit.FaqItems.OrderBy(f => f.SortOrder).ToList();
+    var typeLabels = new Dictionary<string, string> { ["tekst"] = "TEKST", ["quote"] = "QUOTE", ["tip"] = "TIP", ["foto"] = "FOTO", ["knop"] = "KNOP" };
+    var data = JsonSerializer.Serialize(new
+    {
+        blokken = blokken.Select(b => new { id = b.ID, type = b.BlokType, titel = b.Titel, tekst = b.RijkeTekst, foto = b.FotoBestand, knopTekst = b.KnopTekst, knopUrl = b.KnopUrl, sort = b.SortOrder }),
+        faq = faqs.Select(f => new { id = f.ID, vraag = f.Vraag, antwoord = f.Antwoord, sort = f.SortOrder }),
+        artikelen = edit.ArtikelOpties.Where(o => o.Value != edit.ID.ToString()).Select(o => new { value = o.Value, text = o.Text }),
+        projecten = edit.ProjectOpties.Select(o => new { value = o.Value, text = o.Text })
+    }, new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }).Replace("</", "<\\/");
+    var linkTypes = new List<GlV2SelectItem> { new() { Value = "artikel", Text = "Artikel" }, new() { Value = "project", Text = "Project" } };
+    List<GlV2SelectItem> LinkItems(string? type) => (type == "artikel" ? edit.ArtikelOpties.Where(o => o.Value != edit.ID.ToString()) : type == "project" ? edit.ProjectOpties : Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>())
+        .Select(o => new GlV2SelectItem { Value = o.Value ?? "", Text = o.Text }).ToList();
+    var links = new[] { (1, edit.Link1Type, edit.Link1Id), (2, edit.Link2Type, edit.Link2Id), (3, edit.Link3Type, edit.Link3Id) };
+}
+@section PageStyle
+{
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/gl-v2-richtext.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-inhoud.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    @if (!isNieuw)
+    {
+        <span class="gl-v2-badge @(edit.IsGepubliceerd ? "is-positive" : "is-neutral")">@(edit.IsGepubliceerd ? "GEPUBLICEERD" : "CONCEPT")</span>
+    }
+    <span class="gl-v2-badge is-attention" id="bl-dirty" hidden>NIET-OPGESLAGEN WIJZIGINGEN</span>
+}
+@section PageActions
+{
+    @if (!isNieuw && !string.IsNullOrEmpty(Model.PreviewUrl))
+    {
+        <a href="@Model.PreviewUrl" target="_blank" rel="noopener" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-eye" aria-hidden="true"></i>Voorvertoning</a>
+    }
+    <a href="@Url.Action("Index")" class="gl-v2-btn gl-v2-btn-text">Annuleren</a>
+    @if (canWrite)
+    {
+        <button type="submit" form="bl-form" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-floppy-disk" aria-hidden="true"></i>Opslaan</button>
+    }
+}
+
+<form method="post" action="@Url.Action("Bewerken")" id="bl-form" enctype="multipart/form-data" novalidate class="gl-v2-inh gl-v2-inh-edit" data-artikel="@edit.ID" data-can-write="@(canWrite ? "1" : "0")"
+      data-url-blok="@Url.Action("BlokOpslaan")" data-url-blok-del="@Url.Action("BlokVerwijderen")" data-url-blok-ord="@Url.Action("BlokVolgorde")"
+      data-url-faq="@Url.Action("FaqOpslaan")" data-url-faq-del="@Url.Action("FaqVerwijderen")" data-url-faq-ord="@Url.Action("FaqVolgorde")">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="ID" value="@edit.ID" />
+    <script type="application/json" id="bl-data">@Html.Raw(data)</script>
+
+    @if (fouten.Any())
+    {
+        <div class="gl-v2-notice gl-v2-notice-expanded is-danger" role="alert">
+            <span class="gl-v2-notice-expanded-icon"><i class="ph ph-x-circle" aria-hidden="true"></i></span>
+            <div class="gl-v2-notice-body"><span class="gl-v2-notice-title">Het artikel is niet opgeslagen</span><span class="gl-v2-notice-text">@string.Join(" ", fouten)</span></div>
+        </div>
+    }
+
+    <div class="gl-v2-inh-split">
+        <div class="gl-v2-inh-main">
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-newspaper" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Artikel</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Overzichtskaart en kop van de detailpagina.</span>
+                </div>
+                <div class="gl-v2-inh-fields">
+                    <div class="gl-v2-field gl-v2-inh-full">
+                        <label class="gl-v2-field-label" for="bl-titel">Titel <span class="gl-v2-inh-req">*</span></label>
+                        <div class="gl-v2-field-box"><input class="gl-v2-field-input" id="bl-titel" name="Titel" value="@edit.Titel" maxlength="250" required @(canWrite ? "" : "disabled") /></div>
+                    </div>
+                    <div class="gl-v2-field gl-v2-inh-full">
+                        <label class="gl-v2-field-label gl-v2-inh-lbl" for="bl-preview"><span>Previewtekst</span><span class="gl-v2-inh-tel" data-tel="bl-preview" data-max="500"></span></label>
+                        <div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea class="gl-v2-field-input" id="bl-preview" name="PreviewTekst" rows="4" maxlength="500" placeholder="Korte samenvatting voor de blogpagina…" @(canWrite ? "" : "disabled")>@edit.PreviewTekst</textarea></div>
+                        <span class="gl-v2-field-help">Getoond in de kaart op de overzichtspagina.</span>
+                    </div>
+                    <div class="gl-v2-field gl-v2-inh-full">
+                        <label class="gl-v2-field-label" for="bl-dtitel">Detailpagina, titel <span class="gl-v2-inh-opt">optioneel</span></label>
+                        <div class="gl-v2-field-box"><input class="gl-v2-field-input" id="bl-dtitel" name="DetailTitel" value="@edit.DetailTitel" maxlength="250" placeholder="Titel op de detailpagina" @(canWrite ? "" : "disabled") /></div>
+                        <span class="gl-v2-field-help">Leeg = de gewone titel.</span>
+                    </div>
+                    <div class="gl-v2-field gl-v2-inh-full">
+                        <label class="gl-v2-field-label gl-v2-inh-lbl" for="bl-dtekst"><span>Detailpagina, intro <span class="gl-v2-inh-opt">optioneel</span></span><span class="gl-v2-inh-tel" data-tel="bl-dtekst" data-max="1000"></span></label>
+                        <div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea class="gl-v2-field-input" id="bl-dtekst" name="DetailTitelTekst" rows="3" maxlength="1000" placeholder="Inleiding onder de hoofdtitel" @(canWrite ? "" : "disabled")>@edit.DetailTitelTekst</textarea></div>
+                        <span class="gl-v2-field-help">Leeg = de previewtekst.</span>
+                    </div>
+                </div>
+            </section>
+
+            @if (isNieuw)
+            {
+                <div class="gl-v2-notice gl-v2-notice-compact is-info"><i class="ph ph-info" aria-hidden="true"></i><span>Bewaar het artikel eerst. Daarna kun je inhoudsblokken en veelgestelde vragen toevoegen.</span></div>
+            }
+            else
+            {
+                <section class="gl-v2-section-card gl-v2-inh-list" data-bl-list="blok">
+                    <div class="gl-v2-section-card-header">
+                        <h2 class="gl-v2-section-card-title">Inhoudsblokken</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">De volgorde hier is de volgorde op de website. Sleep om te herschikken.</span>
+                        <span class="gl-v2-section-card-spacer"></span>
+                        @if (canWrite)
+                        {
+                            <span class="gl-v2-inh-addset">
+                                @foreach (var t in new[] { ("tekst", "Tekst", "ph-text-align-left"), ("quote", "Quote", "ph-quotes"), ("tip", "Tip", "ph-lightbulb"), ("foto", "Foto", "ph-image"), ("knop", "Knop", "ph-cursor-click") })
+                                {
+                                    <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-bl-add="@t.Item1"><i class="ph @t.Item3" aria-hidden="true"></i>@t.Item2</button>
+                                }
+                            </span>
+                        }
+                    </div>
+                    <ul class="gl-v2-inh-items" data-bl-items>
+                        @foreach (var b in blokken)
+                        {
+                            <li class="gl-v2-inh-item" data-id="@b.ID" @(canWrite ? "draggable=true" : "")>
+                                @if (canWrite) { <span class="gl-v2-inh-grip" aria-hidden="true"><i class="ph ph-dots-six-vertical"></i></span> }
+                                <span class="gl-v2-inh-item-text">
+                                    <span class="gl-v2-badge is-info">@(typeLabels.TryGetValue(b.BlokType ?? "tekst", out var tl) ? tl : "BLOK")</span>
+                                    <span class="t">@(b.BlokType == "knop" ? (string.IsNullOrEmpty(b.KnopTekst) ? "(zonder knoptekst)" : b.KnopTekst) : (string.IsNullOrEmpty(b.Titel) ? "(zonder titel)" : b.Titel))</span>
+                                </span>
+                                @if (canWrite)
+                                {
+                                    <span class="gl-v2-inh-item-acts">
+                                        <button type="button" class="gl-v2-row-action" data-bl-edit title="Bewerken" aria-label="Blok bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>
+                                        <button type="button" class="gl-v2-row-action gl-v2-row-action-danger" data-bl-del title="Verwijderen" aria-label="Blok verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+                                    </span>
+                                }
+                            </li>
+                        }
+                    </ul>
+                    <div class="gl-v2-inh-list-empty" data-bl-empty @(blokken.Any() ? "hidden" : "")>Nog geen inhoudsblokken. Voeg een blok toe met de knoppen hierboven.</div>
+                </section>
+
+                <section class="gl-v2-section-card gl-v2-inh-list" data-bl-list="faq">
+                    <div class="gl-v2-section-card-header">
+                        <h2 class="gl-v2-section-card-title">FAQ</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">Veelgestelde vragen onderaan de detailpagina.</span>
+                        <span class="gl-v2-section-card-spacer"></span>
+                        @if (canWrite) { <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-bl-add="faq"><i class="ph ph-plus" aria-hidden="true"></i>Vraag toevoegen</button> }
+                    </div>
+                    <ul class="gl-v2-inh-items" data-bl-items>
+                        @foreach (var f in faqs)
+                        {
+                            <li class="gl-v2-inh-item" data-id="@f.ID" @(canWrite ? "draggable=true" : "")>
+                                @if (canWrite) { <span class="gl-v2-inh-grip" aria-hidden="true"><i class="ph ph-dots-six-vertical"></i></span> }
+                                <span class="gl-v2-inh-item-text"><span class="t">@(string.IsNullOrEmpty(f.Vraag) ? "(zonder vraag)" : f.Vraag)</span></span>
+                                @if (canWrite)
+                                {
+                                    <span class="gl-v2-inh-item-acts">
+                                        <button type="button" class="gl-v2-row-action" data-bl-edit title="Bewerken" aria-label="Vraag bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>
+                                        <button type="button" class="gl-v2-row-action gl-v2-row-action-danger" data-bl-del title="Verwijderen" aria-label="Vraag verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+                                    </span>
+                                }
+                            </li>
+                        }
+                    </ul>
+                    <div class="gl-v2-inh-list-empty" data-bl-empty @(faqs.Any() ? "hidden" : "")>Nog geen vragen.</div>
+                </section>
+            }
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <h2 class="gl-v2-section-card-title">Ontdek meer</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Tot 3 gerelateerde artikels of projecten onderaan het artikel.</span>
+                </div>
+                <div class="gl-v2-inh-links">
+                    @foreach (var (nr, type, id) in links)
+                    {
+                        <div class="gl-v2-inh-link-row">
+                            <span class="gl-v2-inh-link-nr">LINK @nr</span>
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "Link" + nr + "Type", Id = "bl-l" + nr + "t", Bare = true, Value = type ?? "", EmptyText = "Geen", Items = linkTypes, Disabled = !canWrite })
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "Link" + nr + "Id", Id = "bl-l" + nr + "i", Bare = true, Value = id?.ToString() ?? "", Placeholder = "Artikel of project kiezen", Items = LinkItems(type), Disabled = !canWrite || string.IsNullOrEmpty(type) })
+                        </div>
+                    }
+                </div>
+            </section>
+        </div>
+
+        <aside class="gl-v2-inh-side">
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <h2 class="gl-v2-section-card-title">Publicatie</h2>
+                    <span class="gl-v2-section-card-spacer"></span>
+                    <span class="gl-v2-badge @(edit.IsGepubliceerd ? "is-positive" : "is-neutral")" id="bl-pub-badge">@(edit.IsGepubliceerd ? "Gepubliceerd" : "Concept")</span>
+                </div>
+                <div class="gl-v2-inh-side-body">
+                    <label class="gl-v2-toggle-row" for="bl-pub">
+                        <input type="checkbox" id="bl-pub" name="IsGepubliceerd" value="true" class="gl-v2-toggle-switch" @(edit.IsGepubliceerd ? "checked" : "") @(canWrite ? "" : "disabled") />
+                        <input type="hidden" name="IsGepubliceerd" value="false" />
+                        <span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Zichtbaar op de website</span></span>
+                    </label>
+                    @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "Datum", Id = "bl-datum", Label = "Datum", Required = true, IsoValue = edit.Datum.ToString("yyyy-MM-dd"), DisplayValue = edit.Datum.ToString("dd/MM/yyyy"),
+                        HasError = ViewData.ModelState["Datum"]?.Errors.Any() == true, ErrorMessage = ViewData.ModelState["Datum"]?.Errors.FirstOrDefault()?.ErrorMessage })
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="bl-sort">Volgorde</label>
+                        <div class="gl-v2-field-box"><input class="gl-v2-field-input is-tabular" id="bl-sort" name="SortOrder" type="number" value="@edit.SortOrder" @(canWrite ? "" : "disabled") /></div>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="bl-slug">URL</label>
+                        <div class="gl-v2-field-box"><span class="gl-v2-inh-prefix">/blog/</span><input class="gl-v2-field-input gl-v2-inh-mono" id="bl-slug" name="Slug" value="@edit.Slug" placeholder="automatisch uit de titel" @(canWrite ? "" : "disabled") /></div>
+                        <span class="gl-v2-field-help">Leeg = automatisch uit de titel.</span>
+                    </div>
+                    @if (canWrite && !isNieuw)
+                    {
+                        <div class="gl-v2-inh-side-foot"><button type="button" class="gl-v2-btn gl-v2-btn-danger" id="bl-delete"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</button></div>
+                    }
+                </div>
+            </section>
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <h2 class="gl-v2-section-card-title">Omslagfoto</h2>
+                    <span class="gl-v2-section-card-desc">Kaart op het overzicht en bovenaan het artikel.</span>
+                </div>
+                <div class="gl-v2-inh-side-body">
+                    <input type="hidden" name="FotoBestand" id="bl-foto-cur" value="@edit.FotoBestand" />
+                    @await Html.PartialAsync("GlV2/_Dropzone", new GlV2DropzoneVm
+                    {
+                        Name = "FotoUpload", Id = "bl-foto", Accept = "image/*", MaxMb = 20, Layout = "compact", Mode = "row", Preview = true,
+                        Title = "Sleep een afbeelding hierheen of", LinkText = "kies een bestand",
+                        CurrentName = string.IsNullOrEmpty(edit.FotoBestand) ? null : System.IO.Path.GetFileName(edit.FotoBestand), AriaLabel = "Omslagfoto kiezen"
+                    })
+                    @if (!string.IsNullOrEmpty(edit.FotoBestand))
+                    {
+                        <img class="gl-v2-inh-poster" id="bl-foto-pv" src="@edit.FotoBestand" alt="Huidige omslagfoto" />
+                    }
+                </div>
+            </section>
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <h2 class="gl-v2-section-card-title">Zoekmachines</h2>
+                </div>
+                <div class="gl-v2-inh-side-body">
+                    <div class="gl-v2-inh-google" aria-label="Voorbeeld in Google">
+                        <span class="u" id="bl-g-url"></span><span class="t" id="bl-g-titel"></span><span class="d" id="bl-g-tekst"></span>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label gl-v2-inh-lbl" for="bl-mtitel"><span>Meta titel</span><span class="gl-v2-inh-tel" data-tel="bl-mtitel" data-max="60"></span></label>
+                        <div class="gl-v2-field-box"><input class="gl-v2-field-input" id="bl-mtitel" name="MetaTitel" value="@edit.MetaTitel" maxlength="250" @(canWrite ? "" : "disabled") /></div>
+                        <span class="gl-v2-field-help">Leeg = artikeltitel. Optimaal tot 60 tekens.</span>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label gl-v2-inh-lbl" for="bl-momschr"><span>Meta omschrijving</span><span class="gl-v2-inh-tel" data-tel="bl-momschr" data-max="160"></span></label>
+                        <div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea class="gl-v2-field-input" id="bl-momschr" name="MetaOmschrijving" rows="3" maxlength="500" @(canWrite ? "" : "disabled")>@edit.MetaOmschrijving</textarea></div>
+                        <span class="gl-v2-field-help">Leeg = previewtekst. Optimaal 140 tot 160 tekens.</span>
+                    </div>
+                    <details class="gl-v2-inh-more" @((!string.IsNullOrWhiteSpace(edit.MetaKeywords) || !string.IsNullOrWhiteSpace(edit.GeoRegio) || !string.IsNullOrWhiteSpace(edit.GeoPlaatsnaam) || !string.IsNullOrWhiteSpace(edit.GeoPositie)) ? "open" : "")>
+                        <summary>Keywords en geo-locatie</summary>
+                        <div class="gl-v2-inh-more-body">
+                            <div class="gl-v2-field"><label class="gl-v2-field-label" for="bl-kw">Meta keywords</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="bl-kw" name="MetaKeywords" value="@edit.MetaKeywords" maxlength="500" placeholder="nieuwbouw, gent, vastgoed" @(canWrite ? "" : "disabled") /></div></div>
+                            <div class="gl-v2-field"><label class="gl-v2-field-label" for="bl-georegio">Geo regio</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="bl-georegio" name="GeoRegio" value="@edit.GeoRegio" maxlength="50" placeholder="BE-VOV" @(canWrite ? "" : "disabled") /></div></div>
+                            <div class="gl-v2-field"><label class="gl-v2-field-label" for="bl-geoplaats">Geo plaatsnaam</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="bl-geoplaats" name="GeoPlaatsnaam" value="@edit.GeoPlaatsnaam" maxlength="100" placeholder="Gent, Oost-Vlaanderen" @(canWrite ? "" : "disabled") /></div></div>
+                            <div class="gl-v2-field"><label class="gl-v2-field-label" for="bl-geopos">Geo positie <span class="gl-v2-inh-opt">lat;long</span></label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="bl-geopos" name="GeoPositie" value="@edit.GeoPositie" maxlength="50" placeholder="51.0682;3.6566" @(canWrite ? "" : "disabled") /></div></div>
+                        </div>
+                    </details>
+                </div>
+            </section>
+        </aside>
+    </div>
+</form>
+
+@if (!isNieuw && canWrite)
+{
+    @* Gedeelde formulieren buiten het hoofdform: verwijderen van een blok of vraag, van het hele artikel, en de twee bewerk-modals (elk met hun eigen POST). *@
+    <form method="post" id="bl-del-form" hidden>@Html.AntiForgeryToken()<input type="hidden" name="artikelId" value="@edit.ID" /><input type="hidden" id="bl-del-id" /></form>
+    <form method="post" action="@Url.Action("Verwijderen")" id="bl-del-art" hidden>@Html.AntiForgeryToken()<input type="hidden" name="id" value="@edit.ID" /></form>
+
+    <div class="modal fade gl-v2-modal-form" id="bl-blok-modal" tabindex="-1" aria-hidden="true" aria-labelledby="bl-blok-title">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-fullscreen-md-down">
+            <form class="modal-content" method="post" enctype="multipart/form-data" novalidate id="bl-blok-form" action="@Url.Action("BlokOpslaan")">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="ID" value="0" />
+                <input type="hidden" name="ArtikelId" value="@edit.ID" />
+                <input type="hidden" name="SortOrder" value="0" />
+                <input type="hidden" name="BlokType" value="tekst" />
+                <input type="hidden" name="FotoBestand" id="bl-blok-foto-cur" value="" />
+                <div class="modal-header"><h2 class="modal-title" id="bl-blok-title">Nieuw blok</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body gl-v2-inh-modal-body">
+                    <div class="gl-v2-field" data-veld="titel">
+                        <label class="gl-v2-field-label" for="bl-blok-titel" id="bl-blok-titel-label">Bloktitel</label>
+                        <div class="gl-v2-field-box"><input class="gl-v2-field-input" id="bl-blok-titel" name="Titel" maxlength="250" placeholder="Optionele bloktitel" autocomplete="off" /></div>
+                    </div>
+                    <div class="gl-v2-field" data-veld="tekst">
+                        <span class="gl-v2-field-label" id="bl-blok-tekst-label">Tekst</span>
+                        <div class="gl-v2-rte" aria-labelledby="bl-blok-tekst-label"><div id="bl-blok-quill"></div></div>
+                        <textarea id="bl-blok-tekst" name="RijkeTekst" hidden></textarea>
+                    </div>
+                    <div class="gl-v2-field" data-veld="foto">
+                        <span class="gl-v2-field-label">Foto</span>
+                        @await Html.PartialAsync("GlV2/_Dropzone", new GlV2DropzoneVm { Name = "FotoUpload", Id = "bl-blok-foto", Accept = "image/*", MaxMb = 20, Layout = "compact", Mode = "row", Preview = true, Title = "Sleep een afbeelding hierheen of", LinkText = "kies een bestand", AriaLabel = "Foto kiezen" })
+                        <img class="gl-v2-inh-poster" id="bl-blok-foto-pv" alt="" hidden />
+                    </div>
+                    <div class="gl-v2-field" data-veld="knop">
+                        <label class="gl-v2-field-label" for="bl-blok-knoptekst">Knoptekst</label>
+                        <div class="gl-v2-field-box"><input class="gl-v2-field-input" id="bl-blok-knoptekst" name="KnopTekst" maxlength="100" placeholder="bv. Ontdek het project" autocomplete="off" /></div>
+                    </div>
+                    <div class="gl-v2-field" data-veld="knop">
+                        <label class="gl-v2-field-label" for="bl-blok-knopurl">Knop-URL</label>
+                        <div class="gl-v2-field-box"><input class="gl-v2-field-input" id="bl-blok-knopurl" name="KnopUrl" maxlength="500" placeholder="https://… of /woonprojecten" autocomplete="off" /></div>
+                    </div>
+                </div>
+                <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="submit" class="gl-v2-btn gl-v2-btn-primary">Opslaan</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal fade gl-v2-modal-form" id="bl-faq-modal" tabindex="-1" aria-hidden="true" aria-labelledby="bl-faq-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <form class="modal-content" method="post" novalidate id="bl-faq-form" action="@Url.Action("FaqOpslaan")">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="ID" value="0" />
+                <input type="hidden" name="ArtikelId" value="@edit.ID" />
+                <input type="hidden" name="SortOrder" value="0" />
+                <div class="modal-header"><h2 class="modal-title" id="bl-faq-title">Vraag toevoegen</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body">
+                    <div class="gl-v2-field"><label class="gl-v2-field-label" for="bl-faq-vraag">Vraag <span class="gl-v2-inh-req">*</span></label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="bl-faq-vraag" name="Vraag" maxlength="500" required autocomplete="off" /></div></div>
+                    <div class="gl-v2-field"><label class="gl-v2-field-label" for="bl-faq-antwoord">Antwoord</label><div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea class="gl-v2-field-input" id="bl-faq-antwoord" name="Antwoord" rows="5" placeholder=" "></textarea></div></div>
+                </div>
+                <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="submit" class="gl-v2-btn gl-v2-btn-primary">Opslaan</button></div>
+            </form>
+        </div>
+    </div>
+}
+
+@await Html.PartialAsync("GlV2/_BevestigModal")
+
+@section PageScripts
+{
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+    <script src="~/js/gl-v2-instellingen-blog.js" asp-append-version="true"></script>
+}

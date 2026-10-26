@@ -233,18 +233,9 @@
         "Hardhoed op, het verslag wordt opgemaakt…",
         "Nog even de waterpas erover…"
     ], prepTimer = null, prepUrl = null, prepFoot = 0;
-    var CHECK = '<svg viewBox="0 0 16 16"><path d="M3.4 8.4l3 3 6.2-6.8"/></svg>';
-    function prepArt(klaar) {
-        if (klaar) return '<div class="gl-v2-vsprep__ok"><span class="ring"></span><span class="disc">' + CHECK + '</span></div>';
-        var ln = [[100, 0, 82], [84, .25, 94], [96, .5, 112], [70, .75, 124], [90, 1, 142]].map(function (l) { return '<span class="ln" style="width:' + l[0] + 'px;top:' + l[2] + 'px;animation-delay:' + l[1] + 's"></span>'; }).join("");
-        return '<div class="gl-v2-vsprep__float"><div class="gl-v2-vsprep__sheet back"></div><div class="gl-v2-vsprep__sheet front"><span class="top"></span><span class="ttl"></span><span class="ph1"></span><span class="ph2"></span>' + ln + '<span class="scan"></span></div></div>';
-    }
-    function prepSteps(steps) {
-        return steps.map(function (s) {
-            var ico = s[2] === "done" ? '<span class="gl-v2-vsprep__ico done">' + CHECK + '</span>' : '<span class="gl-v2-vsprep__ico ' + s[2] + '"><i></i></span>';
-            return '<div class="gl-v2-vsprep__step is-' + s[2] + '">' + ico + '<b>' + s[0] + '</b><em>' + (s[1] || "") + '</em></div>';
-        }).join("");
-    }
+    // De inhoud van het scherm bouwt het gedeelde GlV2ProgressScreen (gl-v2-progress-screen.js); [tekst, meta, status] → { t, m, s }
+    function prepMap(steps) { return (steps || []).map(function (s) { return { t: s[0], m: s[1], s: s[2] }; }); }
+    function prepSteps(steps) { return window.GlV2ProgressScreen.stepsHtml(prepMap(steps)); }
     // o: { klaar, kicker, title, sub, steps:[[tekst, meta, done|act|todo]], actions }
     function prepShow(o) {
         var host = document.getElementById("vs-prep");
@@ -252,24 +243,12 @@
             host = document.createElement("section"); host.id = "vs-prep"; host.className = "gl-v2-vsprep"; host.setAttribute("role", "status"); host.setAttribute("aria-live", "polite");
             var form = document.getElementById("gl-v2-vs-edit"); form.parentNode.insertBefore(host, form.nextSibling);
         }
-        host.innerHTML = '<div class="gl-v2-vsprep__col"><div class="gl-v2-vsprep__art">' + prepArt(o.klaar) + '</div>' +
-            '<div class="gl-v2-vsprep__head"><span class="gl-v2-vsprep__kicker">' + o.kicker + '</span><h2 class="gl-v2-vsprep__title">' + o.title + '</h2><p class="gl-v2-vsprep__sub">' + o.sub + '</p></div>' +
-            (o.klaar ? '' : '<div class="gl-v2-vsprep__bar"><i></i></div>') +
-            '<div class="gl-v2-vsprep__steps">' + prepSteps(o.steps) + '</div>' +
-            (o.klaar ? '' : '<p class="gl-v2-vsprep__foot"><span></span></p>') +
-            (o.actions ? '<div class="gl-v2-vsprep__actions">' + o.actions + '</div>' : '') + '</div>';
+        window.GlV2ProgressScreen.render(host, { art: o.klaar ? "ok" : "report", kicker: o.kicker, title: o.title, sub: o.sub, steps: prepMap(o.steps), stepsAlways: true, busy: !o.klaar, foot: PREP_MSG, actions: o.actions });
         host.hidden = false; document.body.classList.add("gl-v2-vsprep-on");
-        clearInterval(prepTimer);
-        var span = host.querySelector(".gl-v2-vsprep__foot span");
-        if (span) {
-            var next = function () { span.textContent = PREP_MSG[prepFoot++ % PREP_MSG.length]; var c = span.cloneNode(true); span.replaceWith(c); span = c; };
-            next(); prepTimer = setInterval(next, 2800);
-        }
         window.scrollTo(0, 0);
     }
     function prepHide() {
-        clearInterval(prepTimer);
-        var host = document.getElementById("vs-prep"); if (host) host.hidden = true;
+        var host = document.getElementById("vs-prep"); if (host) { window.GlV2ProgressScreen.stop(host); host.hidden = true; }
         document.body.classList.remove("gl-v2-vsprep-on");
         if (prepUrl) { URL.revokeObjectURL(prepUrl); prepUrl = null; }
     }

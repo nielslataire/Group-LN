@@ -1,0 +1,96 @@
+@model CPMCore.Models.Instellingen.HomeHeroProjectVM
+@using BOCore
+@using CPMCore.Models.GlV2
+@using FacadeCore
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen › Website › Home hero (design-handoff punt 55g, "CRM Instellingen.dc.html"): formulier links, live voorbeeld van de hero rechts, zodat
+    lengte en toon meteen zichtbaar zijn. Dezelfde POST-actie als de klassieke pagina (HomeHeroProject/Index) en dezelfde velden; "Overnemen uit project" gebruikt
+    de bestaande GET ProjectTekst. Het voorbeeld toont de standaardfoto of -video van het project, met dezelfde bron als de homepage van de website.
+*@
+@{
+    ViewData["Title"] = "Home hero";
+    ViewData["PageIcon"] = "ph ph-monitor-play";
+    ViewData["HelpScreenId"] = "instellingen-homehero";
+    ViewData["BackUrl"] = Url.Action("Index", "Instellingen");
+    var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsHomeHeroProject);
+    var items = Model.ProjectOpties.Select(o => new GlV2SelectItem { Value = o.Value ?? "", Text = o.Text }).ToList();
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-homehero.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    <a href="@Url.Action("Index", "Instellingen")" class="gl-v2-btn gl-v2-btn-text">Annuleren</a>
+    @if (canWrite)
+    {
+        <button type="submit" form="hh-form" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-floppy-disk" aria-hidden="true"></i>Bewaren</button>
+    }
+}
+
+<form method="post" asp-action="Index" asp-controller="HomeHeroProject" id="hh-form" class="gl-v2-hh" data-url-tekst="@Url.Action("ProjectTekst", "HomeHeroProject")" novalidate>
+    @Html.AntiForgeryToken()
+
+    <section class="gl-v2-section-card">
+        <div class="gl-v2-section-card-header">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-monitor-play" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-section-card-title">Uitgelicht project</h2>
+            <span class="gl-v2-section-card-desc">Enkel projecten met “Verkoop zichtbaar” zijn te kiezen.</span>
+        </div>
+        <div class="gl-v2-hh-grid">
+            <div class="gl-v2-hh-form">
+                <div class="gl-v2-hh-project">
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                    {
+                        Name = "ProjectId", Id = "hh-project", Label = "Project", Required = true, Placeholder = "Kies een project",
+                        Value = Model.ProjectId > 0 ? Model.ProjectId.ToString() : "", Items = items, Disabled = !canWrite,
+                        Error = ViewData.ModelState["ProjectId"]?.Errors.FirstOrDefault()?.ErrorMessage
+                    })
+                    @if (canWrite)
+                    {
+                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="hh-overnemen"><i class="ph ph-download-simple" aria-hidden="true"></i>Overnemen uit project</button>
+                    }
+                </div>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="hh-kicker">Kicker <span class="gl-v2-hh-hint">kort, boven de titel</span></label>
+                    <div class="gl-v2-field-box"><input class="gl-v2-field-input" id="hh-kicker" name="Kicker" value="@Model.Kicker" placeholder="bv. Koksijde · Nu in verkoop" maxlength="120" @(canWrite ? "" : "disabled") /></div>
+                </div>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="hh-titel">Titel</label>
+                    <div class="gl-v2-field-box"><input class="gl-v2-field-input" id="hh-titel" name="Titel" value="@Model.Titel" @(canWrite ? "" : "disabled") /></div>
+                </div>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="hh-tekst">Tekst</label>
+                    <div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea class="gl-v2-field-input" id="hh-tekst" name="Tekst" rows="4" placeholder=" " @(canWrite ? "" : "disabled")>@Model.Tekst</textarea></div>
+                </div>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="hh-ptitel">Projecttitel</label>
+                    <div class="gl-v2-field-box"><input class="gl-v2-field-input" id="hh-ptitel" name="ProjectTitelOverride" value="@Model.ProjectTitelOverride" placeholder="bv. Villa Cauxyde" @(canWrite ? "" : "disabled") /></div>
+                    <span class="gl-v2-field-help">Naam van het project in de kaart onder de tekst.</span>
+                </div>
+            </div>
+
+            <div class="gl-v2-hh-preview" aria-label="Voorbeeld op de website">
+                <div class="gl-v2-hh-preview-head"><span class="gl-v2-hh-eyebrow">VOORBEELD OP DE WEBSITE</span></div>
+                <div class="gl-v2-hh-hero" id="hh-pv-hero" data-media="@(ViewData["HeroMedia"] == null ? "" : System.Text.Json.JsonSerializer.Serialize(ViewData["HeroMedia"]))">
+                    <div class="gl-v2-hh-hero-media" id="hh-pv-media" aria-hidden="true"></div>
+                    <div class="gl-v2-hh-hero-inner">
+                        <p class="gl-v2-hh-hero-kicker" id="hh-pv-kicker"></p>
+                        <h3 class="gl-v2-hh-hero-title" id="hh-pv-titel"></h3>
+                        <p class="gl-v2-hh-hero-text" id="hh-pv-tekst"></p>
+                        <span class="gl-v2-hh-hero-btn">Ontdek <span id="hh-pv-project"></span> <i class="ph ph-arrow-right" aria-hidden="true"></i></span>
+                    </div>
+                </div>
+                <p class="gl-v2-field-help">Zo staat het blok “Uitgelicht project” op de homepage van de website: schermbrede projectfoto of -video met de tekst linksonder. De foto of video is de standaardfoto van het gekozen project.</p>
+            </div>
+        </div>
+    </section>
+</form>
+
+@await Html.PartialAsync("GlV2/_BevestigModal")
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-instellingen-homehero.js" asp-append-version="true"></script>
+}

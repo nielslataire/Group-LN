@@ -1,0 +1,32 @@
+/* gl-v2 — Instellingen › Home hero (punt 55g): formulier links, voorbeeld rechts. Kaart, velden, keuzelijst en knoppen komen uit de gedeelde gl-v2-CSS. */
+
+.gl-v2-hh-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; padding: 20px 24px 24px; align-items: start; }
+.gl-v2-hh-form { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.gl-v2-hh-project { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.gl-v2-hh-project .gl-v2-field { width: 100%; }
+.gl-v2-hh-hint { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--gl-v2-muted); margin-left: 6px; }
+
+.gl-v2-hh-preview { display: flex; flex-direction: column; gap: 10px; min-width: 0; position: sticky; top: 16px; }
+.gl-v2-hh-eyebrow { font: 600 10px var(--gl-v2-font-sans); letter-spacing: .14em; color: var(--gl-v2-muted); }
+/* Zoals het blok "uitgelicht project" op de homepage van WWWCOPRO (home-featured-project.css): donkergroene vlak met verloop, tekst linksonder. */
+.gl-v2-hh-hero {
+    position: relative; display: flex; align-items: flex-end; min-height: 380px; border-radius: 12px; overflow: hidden;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 40%, rgba(0, 20, 10, .75) 100%), #00532D; color: #fff;
+}
+.gl-v2-hh-hero-inner { width: 100%; padding: 40px 32px 36px; }
+.gl-v2-hh-hero p { margin: 0; }
+.gl-v2-hh-hero-kicker { margin-bottom: 16px !important; text-transform: uppercase; letter-spacing: 2.6px; font: 700 11px var(--gl-v2-font-sans); color: #C9A96E; }
+.gl-v2-hh-hero-title { margin: 0 0 16px; max-width: 640px; font: 500 28px/1.2 "Playfair Display", "Times New Roman", Georgia, serif; color: #fff; overflow-wrap: anywhere; }
+.gl-v2-hh-hero-text { margin-bottom: 24px !important; max-width: 520px; font: 400 15px/1.6 var(--gl-v2-font-sans); color: rgba(255, 255, 255, .85); overflow-wrap: anywhere; }
+.gl-v2-hh-hero-btn { display: inline-flex; align-items: center; gap: 10px; padding: 12px 20px; border-radius: 6px; background: #fff; color: #2C3B2A; text-transform: uppercase; letter-spacing: 1px; font: 700 12px var(--gl-v2-font-sans); }
+.gl-v2-hh-hero .is-placeholder { opacity: .5; font-style: italic; }
+.gl-v2-hh-hero-btn .is-placeholder { opacity: .6; }
+
+@media (max-width: 1024px) {
+    .gl-v2-hh-grid { grid-template-columns: minmax(0, 1fr); gap: 20px; padding: 16px; }
+    .gl-v2-hh-preview { position: static; }
+}
+.gl-v2-hh-hero-media { position: absolute; inset: 0; z-index: 0; }
+.gl-v2-hh-hero-media img, .gl-v2-hh-hero-media video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gl-v2-hh-hero::after { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 40%, rgba(0, 20, 10, .75) 100%); pointer-events: none; }
+.gl-v2-hh-hero-inner { position: relative; z-index: 2; }

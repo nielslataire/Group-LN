@@ -1,0 +1,80 @@
+@model CPMCore.Models.Instellingen.VacatureSollicitatieListVM
+@using BOCore
+@using FacadeCore
+@using System.Text.Json
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen › Vacatures › Sollicitaties (design-handoff punt 55e): een lijst links, klik een rij om de kandidaat rechts te openen (contact, cv, motivatie). Dubbele
+    sollicitaties (zelfde e-mailadres voor dezelfde vacature) zijn gemarkeerd. Een sollicitatie openen markeert ze als gelezen (nieuwe actie SollicitatieGelezenV2);
+    cv downloaden en verwijderen gebruiken de bestaande acties.
+    Bewust anders dan het mockup: de status is enkel Nieuw of Gelezen en er is geen interne notitie. De pijplijn (In behandeling · Gesprek · Afgewezen) en de notitie
+    vragen een nieuw veld in de database en zijn dus nog niet gebouwd.
+*@
+@{
+    ViewData["Title"] = "Sollicitaties";
+    ViewData["PageIcon"] = "ph ph-paper-plane-tilt";
+    ViewData["HelpScreenId"] = "instellingen-sollicitaties";
+    ViewData["BackUrl"] = Model.VacatureId.HasValue ? Url.Action("Bewerken", new { id = Model.VacatureId }) : Url.Action("Index");
+    var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsVacatureBeheer);
+    var dubbels = Model.Sollicitaties.GroupBy(s => ((s.VacatureId ?? 0), (s.Email ?? "").Trim().ToLowerInvariant())).Where(g => g.Count() > 1 && g.Key.Item2 != "").SelectMany(g => g.Select(s => s.ID)).ToHashSet();
+    var json = JsonSerializer.Serialize(Model.Sollicitaties.Select(s => new
+    {
+        id = s.ID, naam = s.FullName, email = s.Email, telefoon = s.Telefoon, motivatie = s.Motivatie, vacature = s.VacatureTitelSnapshot, vacatureId = s.VacatureId,
+        cv = s.CvBestandsnaam, gelezen = s.IsGelezen, datum = s.AangemaaktOp.ToString("dd/MM/yyyy"), tijd = s.AangemaaktOp.ToString("HH:mm"), dubbel = dubbels.Contains(s.ID)
+    }), new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }).Replace("</", "<\\/");
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-inhoud.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @if (Model.VacatureId.HasValue)
+    {
+        <a href="@Url.Action("Sollicitaties")" class="gl-v2-btn gl-v2-btn-secondary">Alle sollicitaties</a>
+        <a href="@Url.Action("Bewerken", new { id = Model.VacatureId })" class="gl-v2-btn gl-v2-btn-text"><i class="ph ph-arrow-left" aria-hidden="true"></i>Terug naar vacature</a>
+    }
+}
+
+<div class="gl-v2-inh gl-v2-inh-sol" id="gl-v2-sol" data-url-gelezen="@Url.Action("SollicitatieGelezenV2")" data-url-cv="@Url.Action("SollicitatieCvDownloaden")" data-url-del="@Url.Action("SollicitatieVerwijderen")"
+     data-vacature-id="@Model.VacatureId" data-can-write="@(canWrite ? "1" : "0")">
+    @Html.AntiForgeryToken()
+    <script type="application/json" id="sol-data">@Html.Raw(json)</script>
+
+    @if (!Model.Sollicitaties.Any())
+    {
+        <section class="gl-v2-section-card gl-v2-inh-empty">
+            <i class="ph ph-paper-plane-tilt" aria-hidden="true"></i><b>Nog geen sollicitaties</b>
+            <span>@(string.IsNullOrWhiteSpace(Model.VacatureTitel) ? "Er zijn nog geen sollicitaties ontvangen." : "Er zijn nog geen sollicitaties ontvangen voor " + Model.VacatureTitel + ".")</span>
+        </section>
+    }
+    else
+    {
+        <div class="gl-v2-inh-sol-grid">
+            <section class="gl-v2-section-card gl-v2-inh-sol-list" aria-label="Sollicitaties">
+                <div class="gl-v2-inh-sol-top">
+                    <div class="gl-v2-segmented" role="group" aria-label="Status" id="sol-filter">
+                        <button type="button" class="is-active" aria-pressed="true" data-f="">Alle <span id="sol-c-all"></span></button>
+                        <button type="button" aria-pressed="false" data-f="nieuw">Nieuw <span id="sol-c-nieuw"></span></button>
+                        <button type="button" aria-pressed="false" data-f="gelezen">Gelezen <span id="sol-c-gelezen"></span></button>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(Model.VacatureTitel))
+                    {
+                        <span class="gl-v2-inh-sol-for">Vacature <b>@Model.VacatureTitel</b></span>
+                    }
+                </div>
+                <div class="gl-v2-inh-sol-head"><span>Kandidaat</span><span>Ontvangen</span><span>Status</span></div>
+                <div id="sol-rows"></div>
+            </section>
+
+            <aside class="gl-v2-section-card gl-v2-inh-sol-detail" id="sol-detail" aria-live="polite"></aside>
+        </div>
+    }
+</div>
+
+@await Html.PartialAsync("GlV2/_BevestigModal")
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-instellingen-sollicitaties.js" asp-append-version="true"></script>
+}

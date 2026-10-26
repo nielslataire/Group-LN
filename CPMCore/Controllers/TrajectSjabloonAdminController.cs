@@ -14,7 +14,7 @@ namespace CPMCore.Controllers;
 [Authorize]
 [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsTrajectSjablonen)]
 [Route("Instellingen/Trajectsjablonen")]
-public class TrajectSjabloonAdminController : BaseController
+public partial class TrajectSjabloonAdminController : BaseController
 {
     private readonly cpmRunningContext _db;
     private readonly ITrajectSjabloonService _service;
@@ -30,8 +30,9 @@ public class TrajectSjabloonAdminController : BaseController
     private string? UserId => User.FindFirst(CpmClaims.UserId)?.Value;
 
     [HttpGet("")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(bool classic = false)
     {
+        if (classic) ViewData["UseGlV2Layout"] = false;
         SetBreadcrumbs();
         SetPageHeader("bx bx-git-branch", "Trajectsjablonen", "Instellingen",
             "Beheer de standaardtrajecten met fases en mijlpalen per projecttype.");
@@ -43,11 +44,12 @@ public class TrajectSjabloonAdminController : BaseController
             .Select(g => new { g.Key, Count = g.Count() })
             .ToListAsync();
 
-        return View(new TrajectSjabloonListVm
+        var lijst = new TrajectSjabloonListVm
         {
             Sjablonen = sjablonen,
             AantalTrajectenPerSjabloon = counts.ToDictionary(x => x.Key, x => x.Count)
-        });
+        };
+        return IsV2 ? View("IndexV2", lijst) : View(lijst);
     }
 
     [HttpGet("Nieuw")]
@@ -55,7 +57,7 @@ public class TrajectSjabloonAdminController : BaseController
     {
         SetBreadcrumbs("Nieuw sjabloon");
         SetPageHeader("bx bx-git-branch", "Nieuw trajectsjabloon", "Instellingen");
-        return View("Edit", new TrajectSjabloonEditVm { Sjabloon = null });
+        return View(IsV2 ? "EditV2" : "Edit", new TrajectSjabloonEditVm { Sjabloon = null });
     }
 
     [HttpGet("{id:int}/Bewerken")]
@@ -67,7 +69,7 @@ public class TrajectSjabloonAdminController : BaseController
         SetBreadcrumbs(sjabloon.Naam);
         SetPageHeader("bx bx-git-branch", $"Sjabloon — {sjabloon.Naam}", "Instellingen");
 
-        return View("Edit", new TrajectSjabloonEditVm { Sjabloon = sjabloon });
+        return View(IsV2 ? "EditV2" : "Edit", new TrajectSjabloonEditVm { Sjabloon = sjabloon });
     }
 
     [HttpPost("{id:int}/Dupliceren")]

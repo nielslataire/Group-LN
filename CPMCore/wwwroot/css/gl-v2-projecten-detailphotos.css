@@ -448,27 +448,8 @@ body.gl-v2-dp-is-picking .gl-v2-dp-card:hover { box-shadow: 0 0 0 2px var(--gl-v
 .gl-v2-dp-card[hidden] { display: none; }
 
 /* ── Dropzones (15a punt 8: "Sleep hierheen", geldt voor foto én video) ─────────────────────── */
-.gl-v2-dp-dropzone {
-    border-radius: var(--gl-v2-radius-md);
-    border: 1.5px dashed var(--gl-v2-accent-sage);
-    background: var(--gl-v2-surface);
-    min-height: 150px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    padding: 12px;
-    text-align: center;
-    cursor: pointer;
-    transition: background .12s ease, border-color .12s ease;
-}
-.gl-v2-dp-dropzone:hover,
-.gl-v2-dp-dropzone.is-drag-over { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); }
-.gl-v2-dp-dropzone i { font-size: 20px; color: var(--gl-v2-primary); }
-.gl-v2-dp-dropzone-title { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
-.gl-v2-dp-dropzone-sub { font: 450 10.5px/1.4 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
-.gl-v2-dp-dropzone-modal { min-height: 120px; margin-bottom: 2px; }
+.gl-v2-dp-dropzone-tile .gl-v2-dropzone-empty { min-height: 150px; padding: 12px; gap: 7px; }
+.gl-v2-dp-dropzone-modal .gl-v2-dropzone-empty { min-height: 120px; }
 
 /* Slepen bestaat niet op een touchscreen — tablet en gsm (<1024px, zelfde drempel als de
    MobileQuickActions-balk) tonen daarom de "klik"-tekst i.p.v. de "sleep"-tekst; desktop andersom.
@@ -501,7 +482,7 @@ body.gl-v2-dp-is-picking .gl-v2-dp-card:hover { box-shadow: 0 0 0 2px var(--gl-v
     transition: background .12s ease, border-color .12s ease;
 }
 .gl-v2-dp-empty-section-row:hover,
-.gl-v2-dp-empty-section-row.is-drag-over { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); }
+.gl-v2-dp-empty-section-row.is-over { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); }
 .gl-v2-dp-empty-section-row > i:first-child { font-size: 14px; color: var(--gl-v2-muted-light); flex: none; }
 .gl-v2-dp-empty-section-name { font: 700 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); flex: none; }
 .gl-v2-dp-empty-section-count { font: 500 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); flex: none; }

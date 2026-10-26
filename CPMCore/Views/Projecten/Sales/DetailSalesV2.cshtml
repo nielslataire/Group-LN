@@ -41,7 +41,7 @@
         ItemCounts = new Dictionary<string, int> { ["Te koop"] = teKoop + optie }
     };
     (string Key, string Label, int Count)[] tabs = { ("all", "Alle", rijen.Count), ("Te koop", "Te koop", teKoop), ("Optie", "Optie", optie), ("Verkocht", "Verkocht", verkocht) };
-    var sortUrl = Url.Action("SalesListPdf", "Projecten", new { projectid = Model.ProjectId });
+    var sortUrl = Url.Action("SalesListPdfV2", "Projecten", new { projectid = Model.ProjectId });
     var eersteRij = rijen.FirstOrDefault(r => r.Status != "Verkocht") ?? rijen.FirstOrDefault();
     var berekenUrl = eersteRij == null ? null : Url.Action("SalesCalculateV2", "Projecten", new { projectid = Model.ProjectId, unitId = eersteRij.UnitId });
 }
@@ -56,10 +56,12 @@
     {
         <a class="gl-v2-btn gl-v2-btn-secondary" href="@berekenUrl"><i class="ph ph-calculator" aria-hidden="true"></i><span>Berekenen</span></a>
     }
+    <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-vk-export"><i class="ph ph-export" aria-hidden="true"></i><span>Exporteren</span></button>
     <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("SalesSettings", "Projecten", new { projectid = Model.ProjectId })"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i><span>Instellingen</span></a>
 }
 @section MobileQuickActions
 {
+    <button type="button" class="gl-v2-mobile-quickaction js-vk-export"><i class="ph ph-export" aria-hidden="true"></i>Exporteren</button>
     <a class="gl-v2-mobile-quickaction" href="@Url.Action("SalesSettings", "Projecten", new { projectid = Model.ProjectId })"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i>Instellingen</a>
 }
 @section ProjectMenu
@@ -175,6 +177,56 @@
     }
 </div>
 
+@* Exporteren (45f/45g): PDF-prijslijst met opnemen- en opmaakkeuze, of Excel met kolommen en tabbladen. Gedrag in gl-v2-projecten-verkoop.js. *@
+<div class="modal fade gl-v2-modal-form" id="vk-export-modal" tabindex="-1" aria-hidden="true" aria-labelledby="vk-export-title" data-url="@sortUrl" data-xlsx-url="@Url.Action("SalesExportXlsxV2", "Projecten", new { projectid = Model.ProjectId })">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <div class="modal-content">
+            <div class="modal-header"><div><h2 class="modal-title" id="vk-export-title">Exporteren</h2><p class="gl-v2-vk-x-sub">Prijslijst van @Model.ProjectName</p></div><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+            <div class="modal-body">
+                <span class="gl-v2-vk-x-label">FORMAAT</span>
+                <div class="gl-v2-vk-x-formats" role="radiogroup" aria-label="Formaat">
+                    <button type="button" class="is-on" role="radio" aria-checked="true" data-vk-format="pdf"><i class="ph ph-file-pdf" aria-hidden="true"></i>PDF<small>prijslijst voor kopers en makelaars</small></button>
+                    <button type="button" role="radio" aria-checked="false" data-vk-format="xlsx"><i class="ph ph-file-xls" aria-hidden="true"></i>Excel<small>alle kolommen, om verder te rekenen</small></button>
+                </div>
+                <span class="gl-v2-vk-x-label">WELKE EENHEDEN</span>
+                <div class="gl-v2-vk-x-opts" id="vk-x-scope">
+                    <label><input type="radio" name="vk-x-scope" value="all" checked /><span>Alle <b id="vk-x-n-all"></b></span></label>
+                    <label><input type="radio" name="vk-x-scope" value="selection" /><span>Selectie <b id="vk-x-n-sel"></b></span></label>
+                    <label><input type="radio" name="vk-x-scope" value="filter" /><span>Huidige filter <b id="vk-x-n-filter"></b></span></label>
+                </div>
+                <span class="gl-v2-vk-x-label" data-vk-for="pdf">OPNEMEN</span>
+                <div class="gl-v2-vk-x-checks" data-vk-for="pdf">
+                    <label><input type="checkbox" id="vk-x-sold" checked /><span><b>Verkochte eenheden tonen zonder prijs</b><small>met het label “verkocht”</small></span></label>
+                    <label><input type="checkbox" id="vk-x-total" checked /><span><b>Totaal voor de koper</b><small>incl. registratierechten, btw en kosten koper</small></span></label>
+                    <label><input type="checkbox" id="vk-x-option" /><span><b>Optie als “te koop” tonen</b><small>voor externe makelaars</small></span></label>
+                </div>
+                <span class="gl-v2-vk-x-label" data-vk-for="pdf">OPMAAK</span>
+                <div class="gl-v2-vk-x-opts" id="vk-x-layout" data-vk-for="pdf">
+                    <label><input type="radio" name="vk-x-layout" value="1" checked /><span>A4 liggend</span></label>
+                    <label><input type="radio" name="vk-x-layout" value="0" /><span>A4 staand</span></label>
+                </div>
+                <span class="gl-v2-vk-x-label" data-vk-for="xlsx" hidden>KOLOMMEN</span>
+                <div class="gl-v2-vk-x-checks" data-vk-for="xlsx" hidden>
+                    <label><input type="checkbox" id="vk-x-prekad" checked /><span><b>Prekad</b><small>kadastrale omschrijving van de eenheid</small></span></label>
+                    <label><input type="checkbox" id="vk-x-koper" checked /><span><b>Koper en akte</b><small>naam van de koper, compromis- en aktedatum</small></span></label>
+                    <label><input type="checkbox" id="vk-x-xtotaal" checked /><span><b>Totaal voor de koper</b><small>incl. registratierechten, btw en kosten koper</small></span></label>
+                </div>
+                <span class="gl-v2-vk-x-label" data-vk-for="xlsx" hidden>TABBLADEN</span>
+                <div class="gl-v2-vk-x-checks" data-vk-for="xlsx" hidden>
+                    <label><input type="checkbox" checked disabled /><span><b>Eenheden</b><small>één rij per eenheid, met totaalrij</small></span></label>
+                    <label><input type="checkbox" id="vk-x-berekening" checked /><span><b>Berekening per eenheid</b><small>één rij per post: grond, rechten, bouw, btw, kosten</small></span></label>
+                    <label><input type="checkbox" id="vk-x-kosten" checked /><span><b>Kosten koper</b><small>aktekosten, aansluitingen, landmeting en de notaris opgesplitst</small></span></label>
+                </div>
+                <div class="gl-v2-notice gl-v2-notice-compact is-info"><i class="ph ph-info" aria-hidden="true"></i><span id="vk-x-note"></span></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="button" class="gl-v2-btn gl-v2-btn-primary" id="vk-x-go"><i class="ph ph-file-pdf" aria-hidden="true" id="vk-x-go-icon"></i><span id="vk-x-go-text">Download PDF</span></button></div>
+        </div>
+    </div>
+</div>
+
+@{ ViewData["PrintUrl"] = Url.Action("SalesCalculationPdfV2", "Projecten", new { projectid = Model.ProjectId }); }
+@await Html.PartialAsync("~/Views/Projecten/Sales/_BerekeningAfdrukkenModalV2.cshtml", (IReadOnlyList<VerkoopRijVm>)Model.Rijen)
+
 @if (Model.CanWrite)
 {
     @* Selectiebalk (45a): wit, onderaan; Status wijzigen en Website openen een klein paneel erboven. *@
@@ -184,8 +236,9 @@
         <button type="button" class="gl-v2-btn gl-v2-btn-text" id="vk-sel-clear">Selectie wissen</button>
         <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-vk-pop" data-pop="vk-pop-status"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i>Status wijzigen</button>
         <a class="gl-v2-btn gl-v2-btn-secondary" id="vk-sel-calc" href="#" hidden><i class="ph ph-calculator" aria-hidden="true"></i>Berekenen</a>
+        <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-vk-print"><i class="ph ph-printer" aria-hidden="true"></i>Berekening afdrukken</button>
         <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-vk-pop" data-pop="vk-pop-web"><i class="ph ph-globe" aria-hidden="true"></i>Website</button>
-        <a class="gl-v2-btn gl-v2-btn-primary" href="@sortUrl" target="_blank" rel="noopener"><i class="ph ph-file-pdf" aria-hidden="true"></i>Prijslijst (PDF)</a>
+        <button type="button" class="gl-v2-btn gl-v2-btn-primary js-vk-export" data-vk-export-scope="selection"><i class="ph ph-file-pdf" aria-hidden="true"></i>Prijslijst (PDF)</button>
 
         <div class="gl-v2-vk-pop" id="vk-pop-status" hidden>
             <div class="gl-v2-vk-pop-title">STATUS VOOR <span class="js-vk-sel-n"></span> EENHEDEN</div>
@@ -220,4 +273,5 @@
 {
     <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-projecten-verkoop.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-verkoop-print.js" asp-append-version="true"></script>
 }

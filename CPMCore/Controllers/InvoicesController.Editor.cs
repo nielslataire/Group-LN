@@ -53,7 +53,40 @@ namespace CPMCore.Controllers
                 return RedirectToAction(nameof(Index), new { issuerCompanyId });
             }
 
-            // ISSUE FLOW (van draft naar definitief + verzending via Octopus)
+            // ISSUE FLOW (van draft naar definitief + verzending via Octopus): de eigenlijke stappen staan in IssueInvoiceCoreAsync
+            // (gedeeld met het gl-v2-scherm, InvoicesController.FlowV2.cs); deze actie vertaalt het resultaat naar dezelfde meldingen als voorheen.
+            var result = await IssueInvoiceCoreAsync(id, DateOnly.FromDateTime(DateTime.Today), ct);
+            if (!result.Ok)
+            {
+                AddMessage("error", result.Error!, "Factuur");
+            }
+            else
+            {
+                if (result.EmailFailed)
+                    AddMessage("warning", "Factuur werd uitgegeven, maar klassieke e-mailverzending is mislukt.", "Factuur");
+                if (!string.IsNullOrWhiteSpace(result.PublicId))
+                    AddMessage("success", $"Factuur uitgegeven: {result.PublicId}", "Factuur");
+                else
+                    AddMessage("success", "Factuur definitief gemaakt.", "Factuur");
+            }
+
+            return RedirectToAction(nameof(Index), new { issuerCompanyId });
+        }
+
+        /// <summary>Resultaat van IssueInvoiceCoreAsync: de stappen van "nummeren" zonder meldingen of redirect, zodat de oude actie (Issue) en het gl-v2-scherm (IssueV2) dezelfde logica gebruiken.</summary>
+        private sealed class IssueFlowResult
+        {
+            public bool Ok { get; set; }
+            public string? Error { get; set; }
+            public string? PublicId { get; set; }
+            /// <summary>De klassieke e-mail na het nummeren is mislukt (de factuur zelf is wel genummerd).</summary>
+            public bool EmailFailed { get; set; }
+            /// <summary>De klassieke e-mail is verzonden.</summary>
+            public bool EmailSent { get; set; }
+        }
+
+        private async Task<IssueFlowResult> IssueInvoiceCoreAsync(int id, DateOnly issueDate, CancellationToken ct)
+        {
             // Volgorde:
             // 1) Verzend eerst via Octopus met de voorziene nummering en payload.
             // 2) Zet pas daarna definitief in eigen database (IssueDraftAsync).
@@ -62,53 +95,43 @@ namespace CPMCore.Controllers
             var invoice = await _db.Invoices
                .FirstOrDefaultAsync(i => i.Id == id, ct);
             if (invoice == null)
-            {
-                AddMessage("error", "Factuur niet gevonden.", "Factuur");
-                return RedirectToAction(nameof(Index), new { issuerCompanyId });
-            }
+                return new IssueFlowResult { Error = "Factuur niet gevonden." };
 
             if (InvoiceStatusExtensions.FromId(invoice.StatusId) == InvoiceStatus.Generating)
-            {
-                AddMessage("error", "Deze factuur wordt momenteel gegenereerd. Probeer later opnieuw.", "Factuur");
-                return RedirectToAction(nameof(Index), new { issuerCompanyId });
-            }
+                return new IssueFlowResult { Error = "Deze factuur wordt momenteel gegenereerd. Probeer later opnieuw." };
 
             var previousStatusId = invoice.StatusId;
             invoice.StatusId = (byte)InvoiceStatus.Generating;
             await _db.SaveChangesAsync(ct);
             try
             {
-                var issueDate = DateOnly.FromDateTime(DateTime.Today);
                 await SendInvoiceToOctopusAsync(id, ct, forceFinalPdf: true, skipClassicEmail: true, forcedIssueDate: issueDate);
                 var publicId = await _cmd.IssueDraftAsync(id, issueDate: issueDate, ct: ct);
 
-                await TrySendClassicEmailAfterIssueAsync(id, ct);
-                if (!string.IsNullOrWhiteSpace(publicId))
-                    AddMessage("success", $"Factuur uitgegeven: {publicId}", "Factuur");
-                else
-                    AddMessage("success", "Factuur definitief gemaakt.", "Factuur");
+                var email = await TrySendClassicEmailAfterIssueCoreAsync(id, ct);
+                return new IssueFlowResult { Ok = true, PublicId = publicId, EmailSent = email == ClassicEmailOutcome.Sent, EmailFailed = email == ClassicEmailOutcome.Failed };
             }
             catch (InvalidOperationException ex)
             {
                 await RestoreDraftStateAsync(id, previousStatusId, ct);
                 _logger.LogWarning(ex, "Issue invoice {InvoiceId} blocked", id);
-                AddMessage("error", ex.Message, "Factuur");
+                return new IssueFlowResult { Error = ex.Message };
             }
             catch (Exception ex)
             {
                 await RestoreDraftStateAsync(id, previousStatusId, ct);
                 _logger.LogError(ex, "Issue invoice {InvoiceId} failed", id);
-                AddMessage("error", "Factuur kon niet definitief gemaakt worden.", "Factuur");
+                return new IssueFlowResult { Error = "Factuur kon niet definitief gemaakt worden." };
             }
-
-            return RedirectToAction(nameof(Index), new { issuerCompanyId });
         }
 
         // CREATE (GET)
         [HttpGet]
         [CPMCore.Filters.PermissionWrite(PermissionCodes.Invoicing)]
-        public async Task<IActionResult> Create(int? issuerId = null, int? duplicateInvoiceId = null, bool creditNote = false, CancellationToken ct = default)
+        public async Task<IActionResult> Create(int? issuerId = null, int? duplicateInvoiceId = null, bool creditNote = false, bool classic = false, CancellationToken ct = default)
         {
+            // gl-v2 (punt 47): CreateV2 bij de gl-v2-layout; ?classic=true houdt het oude scherm (o.a. voor nutsaansluitingen).
+            if (classic) ViewData["UseGlV2Layout"] = false;
             var writeScope = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Write, ct);
             if (!writeScope.HasAccess)
             {
@@ -261,7 +284,7 @@ namespace CPMCore.Controllers
             SetCreateBreadcrumb(selectedIssuerId, ViewBag.CompanyName as string);
             SetPageHeader("bx bx-receipt", "Nieuwe factuur");
 
-            return View(vm);
+            return View(ViewData["UseGlV2Layout"] as bool? == true ? "CreateV2" : "Create", vm);
         }
 
         // PARTY LOOKUP (AJAX Select2)
@@ -1057,8 +1080,10 @@ namespace CPMCore.Controllers
 
         [HttpGet]
         [CPMCore.Filters.PermissionWrite(PermissionCodes.Invoicing)]
-        public async Task<IActionResult> Edit(int id, int? issuerCompanyId = null, string? returnUrl = null, CancellationToken ct = default)
+        public async Task<IActionResult> Edit(int id, int? issuerCompanyId = null, string? returnUrl = null, bool classic = false, CancellationToken ct = default)
         {
+            // gl-v2 (punt 47): een concept bewerkt met dezelfde pagina als Nieuwe factuur (CreateV2); ?classic=true houdt het oude EditDraft.
+            if (classic) ViewData["UseGlV2Layout"] = false;
             var writeScope = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Write, ct);
             if (!writeScope.HasAccess)
             {
@@ -1094,7 +1119,7 @@ namespace CPMCore.Controllers
                 var draftVm = await BuildDraftEditViewModelAsync(detail, null, resolvedReturnUrl, ct);
                 await ConfigureEditContextAsync(detail, ct);
                 SetPageHeader("bx bx-receipt", $"Factuur bewerken - {draftVm.DisplayId}");
-                return View("EditDraft", draftVm);
+                return ViewData["UseGlV2Layout"] as bool? == true ? View("CreateV2", draftVm) : View("EditDraft", draftVm);
             }
 
             var vm = MapEdit(detail);
@@ -1430,6 +1455,9 @@ namespace CPMCore.Controllers
                 // (niet zomaar Math.Abs — anders verliest een bewust negatieve lijn op een gewone (niet-
                 // credit) factuur, bv. een kortingslijn, zijn minteken bij het bewerken/dupliceren).
                 Price = isCreditNote ? -l.Price : l.Price,
+                // aantal en eenheidsprijs zoals bewaard (de eenheidsprijs staat ongetekend in de database); zonder deze twee kwam het lijnbedrag als prijs en 1 als aantal terug
+                Quantity = l.Quantity > 0 ? l.Quantity : 1m,
+                UnitPrice = l.UnitPrice ?? 0m,
                 VatPercentage = l.VatPercentage,
                 VatTypeId = l.VatTypeId,
                 VatCode = l.VatCode,

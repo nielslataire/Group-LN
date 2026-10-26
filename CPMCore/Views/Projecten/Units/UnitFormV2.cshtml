@@ -446,11 +446,7 @@
                                     <button type="button" class="gl-v2-btn gl-v2-btn-text" data-plan-replace>Vervangen</button>
                                     <button type="button" class="gl-v2-icon-btn is-warning" data-plan-remove title="Verkoopplan verwijderen" aria-label="Verkoopplan verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
                                 </div>
-                                <button type="button" class="gl-v2-unit-drop" data-plan-drop @(hasPlan ? "hidden" : null)>
-                                    <i class="ph ph-upload-simple" aria-hidden="true"></i>
-                                    <span>Sleep het verkoopplan hierheen of klik</span>
-                                </button>
-                                <input type="file" name="file" id="gl-v2-unit-plan-file" accept="application/pdf,.pdf" class="gl-v2-unit-file" tabindex="-1" />
+                                @await Html.PartialAsync("GlV2/_Dropzone", new GlV2DropzoneVm { Name = "file", Id = "gl-v2-unit-plan-file", Accept = "application/pdf,.pdf", Layout = "box", Mode = "select", Title = "Sleep het verkoopplan hierheen of klik", LinkText = null, Hidden = hasPlan, Data = new() { ["plan-drop"] = "" }, AriaLabel = "Verkoopplan kiezen" })
                                 <span class="gl-v2-field-help">één bestand · zichtbaar voor de klant in het portaal</span>
                                 @if (ErrorFor("file") is { } fileError)
                                 {
@@ -478,12 +474,7 @@
                                         </div>
                                     }
                                 </div>
-                                <button type="button" class="gl-v2-unit-drop" data-exec-drop>
-                                    <i class="ph ph-upload-simple" aria-hidden="true"></i>
-                                    <span>Sleep plannen hierheen of klik</span>
-                                    <span class="gl-v2-unit-drop-sub">— per plan een naam</span>
-                                </button>
-                                <input type="file" id="gl-v2-unit-exec-files" name="executionPlanFiles" accept="application/pdf,.pdf" multiple class="gl-v2-unit-file" tabindex="-1" />
+                                @await Html.PartialAsync("GlV2/_Dropzone", new GlV2DropzoneVm { Name = "executionPlanFiles", Id = "gl-v2-unit-exec-files", Accept = "application/pdf,.pdf", Multiple = true, Layout = "box", Mode = "list", ItemNameField = "executionPlanNames", ItemNamePlaceholder = "Naam van het plan", Title = "Sleep plannen hierheen of klik", LinkText = null, Sub = "per plan een naam", Data = new() { ["exec-drop"] = "" }, AriaLabel = "Uitvoeringsplannen kiezen" })
                                 <span class="gl-v2-field-help" id="gl-v2-unit-exec-empty" @(Model.ExecutionPlans.Count > 0 ? "hidden" : null)>nog geen uitvoeringsplannen · de werfleider ziet ze in de app</span>
                             </div>
                         </div>

@@ -4,7 +4,7 @@
     rechts de prijs voor de koper en (intern) de vergelijking met het definitieve budget. Enkel rekenen en bekijken: alles rekent live in de browser
     (gl-v2-projecten-verkoopberekenen.js, zelfde regels als VerkoopService.Bereken en NotarisTarief), er wordt niets bewaard en er is geen "Prijs opslaan".
     Aanpasbaar zijn alleen grondwaarde, bouwwaarde, registratierechten en btw; oppervlaktes, prijzen per m² en kosten koper zijn afgeleid en dus uitgeschakeld.
-    De prijs is altijd een eigen bedrag (Niels): geen Code/Eigen-schakelaar. Prijzen aanpassen blijft in het definitieve budget (stap 8). Afdrukken volgt in 45d.
+    De prijs is altijd een eigen bedrag (Niels): geen Code/Eigen-schakelaar. Prijzen aanpassen blijft in het definitieve budget (stap 8). Afdrukken: knop Afdrukken (45d).
 *@
 @using System.Globalization
 @using System.Text.Json
@@ -48,6 +48,7 @@
 @section PageStyle
 {
     <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-verkoop.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-projecten-verkoopberekenen.css" asp-append-version="true" />
 }
 @section ProjectMenu
@@ -195,13 +196,18 @@
         <span class="gl-v2-form-actionbar-spacer"></span>
         <div class="gl-v2-form-actionbar-actions">
             <button type="button" class="gl-v2-btn gl-v2-btn-text" id="vb-reset">Terug naar huidige prijs</button>
+            <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-vk-print" data-vk-print-ids="@u.UnitId"><i class="ph ph-printer" aria-hidden="true"></i>Afdrukken</button>
             <a href="@Url.Action("DetailSales", "Projecten", new { projectid = Model.ProjectId })" class="gl-v2-btn gl-v2-btn-secondary">Terug naar Te koop</a>
         </div>
     </div>
 </div>
 
+@{ ViewData["PrintUrl"] = Url.Action("SalesCalculationPdfV2", "Projecten", new { projectid = Model.ProjectId }); }
+@await Html.PartialAsync("~/Views/Projecten/Sales/_BerekeningAfdrukkenModalV2.cshtml", (IReadOnlyList<VerkoopRijVm>)Model.Units)
+
 @section PageScripts
 {
+    <script src="~/js/gl-v2-projecten-verkoop-print.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-projecten-verkoopberekenen.js" asp-append-version="true"></script>
 }

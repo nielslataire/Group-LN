@@ -13,5 +13,8 @@ public partial class VacationDays
 
     public int? ProjectId { get; set; }
 
+    /// <summary>0 = bouwverlof, 1 = feestdag (migratie 116).</summary>
+    public byte Kind { get; set; }
+
     public virtual Project Project { get; set; }
 }

@@ -16,7 +16,7 @@ namespace CPMCore.Controllers;
 
 [Authorize(Policy = "CpmAdmin")]
 [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsUsers)]
-public class UserAdminController : BaseController
+public partial class UserAdminController : BaseController
 {
     private const string CustomerCompanyPermissionPrefix = "Customers.Company.";
     private const string SupplierCompanyPermissionPrefix = "Suppliers.Company.";
@@ -41,6 +41,7 @@ public class UserAdminController : BaseController
     [AuthorizeForScopes(ScopeKeySection = "Graph:Scopes")]
     public async Task<IActionResult> Index()
     {
+        if (ViewData["UseGlV2Layout"] as bool? == true) return await IndexV2();
         var permissionsByUser = await _db.PermissionPerUser
             .AsNoTracking()
             .Include(p => p.PermissionNavigation)
@@ -708,6 +709,11 @@ public class UserAdminController : BaseController
     [CPMCore.Filters.PermissionDelete(PermissionCodes.SettingsUsers)]
     public async Task<IActionResult> Delete(int id)
     {
+        if (User.GetCpmUserId() == id)
+        {
+            TempData["Error"] = "Je kunt jezelf niet verwijderen.";
+            return RedirectToAction(nameof(Index));
+        }
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == id);
         if (user == null)
             return NotFound();

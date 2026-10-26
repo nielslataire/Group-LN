@@ -1,0 +1,133 @@
+@model string
+@using BOCore
+@using FacadeCore
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen › Gebruikers en rollen › Gebruiker · rechten (design-handoff punt 49b): links het account (rol kiezen, bedrijfstoegang,
+    toegang aan/uit, Entra-koppeling, uitnodiging), rechts de effectieve rechten = rol + afwijkingen als rechtenboom (GlV2RightsTree): één niveau per
+    functie (Geen · Lezen · Bewerken · Verwijderen). Groen = uit de rol, goud = afwijking met het oorspronkelijke rolniveau erbij; een niveau wijzigen maakt
+    automatisch een afwijking, de resetknop zet die functie terug, "Alles terug naar rol" doet ze allemaal. Een afwijking die gelijk wordt aan de rol
+    verdwijnt vanzelf (UserAdminController.V2Acties.cs). Het model is de JSON als tekst.
+
+    Bewust anders dan het mockup: geen tabs Rechten · Account · Activiteit (het account staat links, een activiteitenlog bestaat niet); "Rechten kopiëren
+    van…" neemt rol + afwijkingen over; de rol kiezen zet de afwijkingen terug (zoals het oude scherm).
+*@
+@{
+    ViewData["Title"] = "Gebruiker";
+    ViewData["PageIcon"] = "ph ph-shield-check";
+    ViewData["HelpScreenId"] = "instellingen-gebruiker-rechten";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-useradmin.css" asp-append-version="true" />
+}
+
+<div class="gl-v2-ua" id="gl-v2-ua-r"
+     data-url-rol="@Url.Action("GebruikerRolV2", "UserAdmin")" data-url-niveau="@Url.Action("GebruikerNiveauV2", "UserAdmin")" data-url-reset="@Url.Action("GebruikerResetV2", "UserAdmin")"
+     data-url-bedrijf="@Url.Action("GebruikerBedrijfV2", "UserAdmin")" data-url-toegang="@Url.Action("GebruikerToegangV2", "UserAdmin")" data-url-uitnodiging="@Url.Action("UitnodigingV2", "UserAdmin")"
+     data-url-kopieren="@Url.Action("GebruikerKopierenV2", "UserAdmin")" data-url-kandidaten="@Url.Action("GebruikerKandidatenV2", "UserAdmin")">
+    @Html.AntiForgeryToken()
+    <script type="application/json" id="ua-r-data">@Html.Raw(Model)</script>
+
+    <div class="gl-v2-ua-two">
+        <aside class="gl-v2-section-card gl-v2-ua-account" aria-label="Account">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-identification-card" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Account</h2>
+            </div>
+            <div class="gl-v2-ua-card-body">
+                <div class="gl-v2-ua-who">
+                    <span class="gl-v2-ua-avatar is-lg" id="ur-avatar"></span>
+                    <div>
+                        <div class="gl-v2-ua-who-name" id="ur-naam"></div>
+                        <div class="gl-v2-ua-who-mail" id="ur-mail"></div>
+                        <div class="gl-v2-ua-badges" id="ur-badges"></div>
+                    </div>
+                </div>
+
+                <div class="gl-v2-ua-block">
+                    <label class="gl-v2-ua-block-label" for="ur-rol_trigger">Rol</label>
+                    @await Html.PartialAsync("GlV2/_SelectList", new CPMCore.Models.GlV2.GlV2SelectListVm { Name = "rol", Id = "ur-rol", Value = "", EmptyText = "Geen rol", Items = new List<CPMCore.Models.GlV2.GlV2SelectItem>() })
+                    <span class="gl-v2-ua-help" id="ur-rol-help">De gebruiker volgt de rechten van zijn rol. Een andere rol zet de afwijkingen terug.</span>
+                </div>
+
+                <div class="gl-v2-ua-block">
+                    <span class="gl-v2-ua-block-label">Bedrijfstoegang</span>
+                    <div class="gl-v2-ua-chips" id="ur-chips" role="group" aria-label="Bedrijfstoegang"></div>
+                    <span class="gl-v2-ua-help" id="ur-chips-help"></span>
+                </div>
+
+                <div class="gl-v2-ua-block">
+                    <span class="gl-v2-ua-block-label">Account</span>
+                    <label class="gl-v2-toggle-row" for="ur-actief">
+                        <input type="checkbox" id="ur-actief" class="gl-v2-toggle-switch" />
+                        <span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Toegang actief</span><span class="gl-v2-toggle-hint" id="ur-actief-hint"></span></span>
+                    </label>
+                    <dl class="gl-v2-ua-kv">
+                        <dt>Entra</dt><dd id="ur-entra"></dd>
+                        <dt>Laatste login</dt><dd id="ur-login"></dd>
+                    </dl>
+                </div>
+
+                <div class="gl-v2-ua-rowbtns">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="ur-invite" hidden><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>Uitnodiging opnieuw sturen</button>
+                    <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="ur-copy" hidden><i class="ph ph-copy" aria-hidden="true"></i>Rechten kopiëren van…</button>
+                </div>
+            </div>
+        </aside>
+
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-shield-check" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Effectieve rechten</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">wat deze gebruiker effectief mag: rol + afwijkingen</span>
+            </div>
+            <div class="gl-v2-ua-summary">
+                <i class="ph ph-info" aria-hidden="true" style="color:var(--gl-v2-muted);font-size:18px;margin-top:1px"></i>
+                <div class="gl-v2-ua-summary-text" id="ur-summary"></div>
+                <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="ur-reset-all" hidden><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i>Alles terug naar rol</button>
+            </div>
+            <div class="gl-v2-rt-toolbar">
+                <div class="gl-v2-segmented is-sm" id="ur-filter" role="group" aria-label="Filter">
+                    <button type="button" class="is-active" data-f="all">Alle</button>
+                    <button type="button" data-f="dev">Enkel afwijkingen <span class="gl-v2-ua-typecount" id="ur-dev-count">0</span></button>
+                </div>
+                <div class="gl-v2-field gl-v2-rt-search">
+                    <div class="gl-v2-field-box"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input type="text" class="gl-v2-field-input" id="ur-search" placeholder="Zoek functie" autocomplete="off" /></div>
+                </div>
+                <span class="gl-v2-ua-toolbar-spacer"></span>
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" id="ur-expand">Alles openklappen</button>
+            </div>
+            <div id="ur-tree" role="table" aria-label="Rechten per functie"></div>
+            <div class="gl-v2-rt-legend">
+                <span class="l-rol"><i></i>uit rol</span>
+                <span class="l-afw"><i></i>afwijking voor deze gebruiker</span>
+                <span>Elk niveau bevat het vorige: Verwijderen = lezen + bewerken + verwijderen</span>
+                <span>Groep klikken = alle onderliggende functies instellen</span>
+            </div>
+        </section>
+    </div>
+</div>
+
+<div class="modal fade gl-v2-modal-form gl-v2-ua-modal" id="ur-copy-modal" tabindex="-1" aria-hidden="true" aria-labelledby="ur-copy-title">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <form class="modal-content" novalidate>
+            <div class="modal-header"><h2 class="modal-title" id="ur-copy-title">Rechten kopiëren van…</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+            <div class="modal-body">
+                <p class="gl-v2-ua-help" style="margin:0">Neemt de rol en alle afwijkingen van de gekozen gebruiker over. De huidige rol en afwijkingen van deze gebruiker worden vervangen.</p>
+                <div class="gl-v2-field"><div class="gl-v2-field-box"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input type="text" class="gl-v2-field-input" id="ur-copy-search" placeholder="Zoek op naam of e-mail" autocomplete="off" /></div></div>
+                <div class="gl-v2-ua-pick" id="ur-copy-list"><div class="gl-v2-ua-pick-empty">Laden…</div></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="ur-copy-submit" disabled>Rechten kopiëren</button></div>
+        </form>
+    </div>
+</div>
+
+@await Html.PartialAsync("GlV2/_BevestigModal")
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-rechtenboom.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-useradmin-rechten.js" asp-append-version="true"></script>
+}

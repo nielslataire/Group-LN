@@ -1,0 +1,171 @@
+@model string
+@using BOCore
+@using FacadeCore
+@using CPMCore.Models.GlV2
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen › Gebruikers en rollen › Gebruikers (design-handoff punt 49a, "CRM Instellingen.dc.html"): één lijst voor interne gebruikers,
+    aannemers en gasten, gefilterd op type, rol en status i.p.v. aparte tabbladen. Per gebruiker: rol, aantal afwijkingen, bedrijven, Entra-koppeling,
+    status (Actief · Uitgenodigd · Uitgeschakeld) en laatste login. Entra is een koppeling, geen aparte lijst: niet-gekoppelde Entra-accounts staan in
+    "Koppelingen nakijken". De lijst wordt in JS getekend uit één JSON-blok (gl-v2-useradmin.js); de schermen Gebruiker · rechten (RechtenV2) en Rollen
+    (RollenV2) horen erbij. Het model van deze view is de JSON als tekst (UserAdminController.V2.cs).
+
+    Bewust anders dan het mockup: "Laatste login" bestaat enkel voor gasten en aannemers met een uitnodiging (daar wordt ze bijgehouden); voor interne
+    gebruikers staat een streepje. "Enkel portaal" staat niet in de lijst: de app kent geen gebruikers zonder Entra-account én zonder portaaltoegang.
+*@
+@{
+    ViewData["Title"] = "Gebruikers en rollen";
+    ViewData["PageIcon"] = "ph ph-users-three";
+    ViewData["HelpScreenId"] = "instellingen-gebruikers";
+    var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsUsers);
+    var canRoles = PermissionService.HasRead(PermissionCodes.SettingsRoles);
+    var canDelete = PermissionService.HasDelete(PermissionCodes.SettingsUsers);
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-useradmin.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @if (canWrite)
+    {
+        <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="ua-import-open"><i class="ph ph-microsoft-outlook-logo" aria-hidden="true"></i>Importeren uit Entra</button>
+        <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="ua-invite-open"><i class="ph ph-user-plus" aria-hidden="true"></i>Gebruiker uitnodigen</button>
+    }
+}
+
+<div class="gl-v2-ua" id="gl-v2-ua" data-can-write="@(canWrite ? "1" : "0")" data-can-delete="@(canDelete ? "1" : "0")"
+     data-rechten-url="@Url.Action("Rechten", "UserAdmin")" data-rollen-url="@Url.Action("Rollen", "UserAdmin")"
+     data-url-toegang="@Url.Action("GebruikerToegangV2", "UserAdmin")" data-url-uitnodiging="@Url.Action("UitnodigingV2", "UserAdmin")"
+     data-url-uitnodigen="@Url.Action("GebruikerUitnodigenV2", "UserAdmin")" data-url-delete="@Url.Action("Delete", "UserAdmin")"
+     data-url-entra-kandidaten="@Url.Action("EntraKandidatenV2", "UserAdmin")" data-url-entra-import="@Url.Action("EntraImporterenV2", "UserAdmin")"
+     data-url-koppelingen="@Url.Action("KoppelingenV2", "UserAdmin")" data-url-koppelen="@Url.Action("KoppelenV2", "UserAdmin")">
+    @Html.AntiForgeryToken()
+    <script type="application/json" id="ua-data">@Html.Raw(Model)</script>
+
+    <div class="gl-v2-tabbar" role="tablist">
+        <a class="gl-v2-tabbar-tab is-active" role="tab" aria-selected="true" href="@Url.Action("Index", "UserAdmin")">Gebruikers <span class="gl-v2-tabbar-count" id="ua-count-users">0</span></a>
+        @if (canRoles)
+        {
+            <a class="gl-v2-tabbar-tab" role="tab" aria-selected="false" href="@Url.Action("Rollen", "UserAdmin")">Rollen <span class="gl-v2-tabbar-count" id="ua-count-roles">0</span></a>
+        }
+    </div>
+
+    <div class="gl-v2-notice gl-v2-notice-expanded is-warning" id="ua-link-notice" hidden>
+        <span class="gl-v2-notice-expanded-icon"><i class="ph ph-link-break" aria-hidden="true"></i></span>
+        <div class="gl-v2-notice-body">
+            <span class="gl-v2-notice-title" id="ua-link-title"></span>
+            <span class="gl-v2-notice-text" id="ua-link-text"></span>
+        </div>
+        <div class="gl-v2-notice-actions"><button type="button" class="gl-v2-notice-action" id="ua-link-open">Koppelingen nakijken</button></div>
+    </div>
+
+    <section class="gl-v2-section-card">
+        <div class="gl-v2-section-card-header">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-users" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-section-card-title">Gebruikers</h2>
+            <span class="gl-v2-field-divider"></span>
+            <span class="gl-v2-section-card-desc">intern, aannemers en gasten in één lijst</span>
+        </div>
+
+        <div class="gl-v2-ua-toolbar">
+            <div class="gl-v2-field gl-v2-ua-search">
+                <div class="gl-v2-field-box">
+                    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                    <input type="text" class="gl-v2-field-input" id="ua-search" placeholder="Zoek op naam, e-mail of bedrijf" autocomplete="off" />
+                    <button type="button" class="gl-v2-field-clear" id="ua-search-clear" aria-label="Zoekterm wissen">&times;</button>
+                </div>
+            </div>
+            <div class="gl-v2-segmented is-sm" id="ua-types" role="group" aria-label="Soort gebruiker"></div>
+            <div class="gl-v2-ua-select">
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "rol", Id = "ua-role", Value = "", Bare = true, Icon = "ph-identification-badge", EmptyText = "Alle rollen", Items = new List<GlV2SelectItem>() })
+            </div>
+            <div class="gl-v2-ua-select">
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                {
+                    Name = "status", Id = "ua-status", Value = "", Bare = true, Icon = "ph-funnel", EmptyText = "Alle statussen",
+                    Items = new List<GlV2SelectItem> { new() { Value = "actief", Text = "Actief" }, new() { Value = "uitgenodigd", Text = "Uitgenodigd" }, new() { Value = "uitgeschakeld", Text = "Uitgeschakeld" } }
+                })
+            </div>
+            <span class="gl-v2-ua-toolbar-spacer"></span>
+            <label class="gl-v2-ua-switch"><input type="checkbox" class="gl-v2-toggle-switch" id="ua-dev" /> Enkel met afwijkingen</label>
+        </div>
+
+        <div class="gl-v2-ua-head gl-v2-ua-grid--u">
+            <span>Gebruiker</span><span>Type</span><span>Rol</span><span>Afwijkingen</span><span>Bedrijven</span><span>Entra</span><span>Status</span><span>Laatste login</span><span></span>
+        </div>
+        <div id="ua-rows"></div>
+        <div class="gl-v2-ua-empty" id="ua-empty" hidden>
+            <span class="t">Geen gebruikers voor dit filter</span>
+            <span class="s"><button type="button" class="gl-v2-ua-linkbtn" id="ua-reset">Wis de filters</button></span>
+        </div>
+        <div class="gl-v2-ua-foot">
+            <span class="gl-v2-ua-foot-text" id="ua-foot">—</span>
+            <button type="button" class="gl-v2-ua-linkbtn" id="ua-more" hidden></button>
+        </div>
+    </section>
+</div>
+
+@if (canWrite)
+{
+    @* Gebruiker uitnodigen *@
+    <div class="modal fade gl-v2-modal-form gl-v2-ua-modal" id="ua-invite-modal" tabindex="-1" aria-hidden="true" aria-labelledby="ua-invite-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <form class="modal-content" novalidate autocomplete="off">
+                <div class="modal-header"><h2 class="modal-title" id="ua-invite-title">Gebruiker uitnodigen</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body">
+                    <div class="gl-v2-field"><label class="gl-v2-field-label" for="ua-inv-voornaam">Voornaam</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="ua-inv-voornaam" name="voornaam" maxlength="100" /></div></div>
+                    <div class="gl-v2-field"><label class="gl-v2-field-label" for="ua-inv-naam">Naam</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="ua-inv-naam" name="naam" maxlength="100" /></div></div>
+                    <div class="gl-v2-field gl-v2-field-full"><label class="gl-v2-field-label" for="ua-inv-email">E-mailadres <span style="color:var(--gl-v2-danger)">*</span></label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="ua-inv-email" name="email" type="email" maxlength="200" required /></div><span class="gl-v2-field-help gl-v2-ua-err" id="ua-inv-err" role="alert" hidden></span></div>
+                    <div class="gl-v2-field gl-v2-field-full">
+                        <span class="gl-v2-field-label">Type</span>
+                        <div class="gl-v2-segmented is-fill" id="ua-inv-type" role="group" aria-label="Type gebruiker">
+                            <button type="button" class="is-active" data-type="intern">Intern</button>
+                            <button type="button" data-type="gast">Gast</button>
+                        </div>
+                        <span class="gl-v2-field-help" id="ua-inv-type-help">Een medewerker van Group LN. De gebruiker wordt aangemaakt; er gaat geen uitnodiging uit.</span>
+                    </div>
+                    <div class="gl-v2-field-full">@await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "roleId", Id = "ua-inv-rol", Label = "Rol", Value = "", EmptyText = "Geen rol", Items = new List<GlV2SelectItem>() })</div>
+                </div>
+                <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="ua-inv-submit">Toevoegen</button></div>
+            </form>
+        </div>
+    </div>
+
+    @* Importeren uit Entra *@
+    <div class="modal fade gl-v2-modal-form gl-v2-ua-modal" id="ua-import-modal" tabindex="-1" aria-hidden="true" aria-labelledby="ua-import-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <form class="modal-content" novalidate>
+                <div class="modal-header"><h2 class="modal-title" id="ua-import-title">Importeren uit Entra</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body">
+                    <p class="gl-v2-ua-help" style="margin:0">Accounts uit Entra die nog geen gebruiker in CPM hebben. Vink aan wie je wilt toevoegen; de koppeling met Entra wordt meteen gelegd.</p>
+                    <div class="gl-v2-field"><div class="gl-v2-field-box"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input type="text" class="gl-v2-field-input" id="ua-import-search" placeholder="Zoek op naam of e-mail" autocomplete="off" /></div></div>
+                    <div class="gl-v2-ua-pick" id="ua-import-list" aria-live="polite"><div class="gl-v2-ua-pick-empty">Entra laden…</div></div>
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "importRol", Id = "ua-import-rol", Label = "Rol voor de geïmporteerde gebruikers", Value = "", EmptyText = "Geen rol", Items = new List<GlV2SelectItem>() })
+                </div>
+                <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="ua-import-submit" disabled>Importeren</button></div>
+            </form>
+        </div>
+    </div>
+
+    @* Koppelingen nakijken *@
+    <div class="modal fade gl-v2-modal-form gl-v2-ua-modal" id="ua-link-modal" tabindex="-1" aria-hidden="true" aria-labelledby="ua-link-modal-title">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-fullscreen-md-down">
+            <div class="modal-content">
+                <div class="modal-header"><h2 class="modal-title" id="ua-link-modal-title">Koppelingen nakijken</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body">
+                    <p class="gl-v2-ua-help" style="margin:0">Entra-gasten die nog aan geen gebruiker hangen. Is er een gebruiker met hetzelfde e-mailadres, dan staat die als voorstel. Controleer het voorstel voor je koppelt: een aannemer en een gast met hetzelfde adres zijn niet altijd dezelfde persoon.</p>
+                    <div class="gl-v2-ua-pick" id="ua-link-list" aria-live="polite"><div class="gl-v2-ua-pick-empty">Entra laden…</div></div>
+                </div>
+                <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Sluiten</button></div>
+            </div>
+        </div>
+    </div>
+}
+
+@await Html.PartialAsync("GlV2/_BevestigModal")
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-useradmin.js" asp-append-version="true"></script>
+}

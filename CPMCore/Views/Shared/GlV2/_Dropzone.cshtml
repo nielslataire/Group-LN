@@ -1,0 +1,90 @@
+@model CPMCore.Models.GlV2.GlV2DropzoneVm
+@*
+    gl-v2 — Dropzone: bestanden slepen of kiezen (projectbreed component; opmaak css/gl-v2/dropzone.css, gedrag wwwroot/js/gl-v2-dropzone.js dat elke
+    [data-gl-v2-dropzone] vanzelf bedraadt). Het echte <input type="file"> ligt over de zone, dus kiezen werkt zonder code en de bestanden worden gewoon
+    met het formulier verstuurd (of via GlV2Dropzone.upload met voortgang). Vormen: Layout box | bar | compact. Na het kiezen: Mode row (bestandsrij met
+    Verwijderen), inline (naam en grootte op de plaats van de tekst), select (de pagina toont zelf wat gekozen is) of list (meerdere bestanden met een kruisje
+    en eventueel een naam per bestand). Events (bubbelen vanaf de zone): gl-v2:dropzone-change { root, file, files }, gl-v2:dropzone-remove-current,
+    gl-v2:dropzone-progress, gl-v2:dropzone-uploaded, gl-v2:dropzone-upload-error. Contract + API: DESIGN.md "Dropzone (bestand slepen of kiezen)".
+*@
+@{
+    var id = Model.Id ?? Model.Name.Replace(".", "_");
+    var hasCurrent = !string.IsNullOrWhiteSpace(Model.CurrentName);
+    var layout = Model.Layout is "bar" or "compact" ? Model.Layout : "box";
+    var mode = Model.Mode is "inline" or "select" or "list" ? Model.Mode : "row";
+    var custom = Model.Content != null;
+    var subLines = (Model.Sub ?? "").Split('\n');
+    var subTouchLines = (Model.SubTouch ?? "").Split('\n');
+    var wrap = !string.IsNullOrWhiteSpace(Model.Label) || !string.IsNullOrWhiteSpace(Model.RequiredMessage);
+}
+@functions {
+    private static Microsoft.AspNetCore.Html.IHtmlContent Lines(string[] lines) => new Microsoft.AspNetCore.Html.HtmlString(string.Join("<br />", lines.Select(System.Net.WebUtility.HtmlEncode)));
+}
+@if (wrap)
+{
+    @Html.Raw("<div class=\"gl-v2-field\"" + (string.IsNullOrWhiteSpace(Model.RequiredMessage) ? "" : " data-gl-v2-required=\"" + System.Net.WebUtility.HtmlEncode(Model.RequiredMessage) + "\"") + ">")
+    if (!string.IsNullOrWhiteSpace(Model.Label))
+    {
+        <span class="gl-v2-field-label">@Model.Label@if (!string.IsNullOrWhiteSpace(Model.RequiredMessage)) { <span style="color:#8B2A2A"> *</span> }</span>
+    }
+}
+<div class="gl-v2-dropzone is-@layout is-mode-@mode@(custom ? " is-custom" : "")@(Model.DropOnly ? " is-droponly" : "")@(hasCurrent ? " has-current" : "")@(string.IsNullOrWhiteSpace(Model.CssClass) ? "" : " " + Model.CssClass)" data-gl-v2-dropzone data-mode="@mode"
+     data-accept="@Model.Accept" data-max-mb="@Model.MaxMb" data-change-text="@Model.ChangeText" id="@(id)_zone" hidden="@Model.Hidden"
+     data-preview="@(Model.Preview ? "true" : null)" data-paste="@(Model.AcceptPaste ? "true" : null)" data-item-name-field="@Model.ItemNameField" data-item-name-placeholder="@Model.ItemNamePlaceholder"
+     @Html.Raw(string.Join(" ", Model.Data.Select(kv => "data-" + kv.Key + "=\"" + System.Net.WebUtility.HtmlEncode(kv.Value) + "\"")))>
+    <input type="file" id="@id" @(string.IsNullOrEmpty(Model.Name) ? null : Html.Raw("name=\"" + System.Net.WebUtility.HtmlEncode(Model.Name) + "\"")) class="gl-v2-dropzone-input" accept="@Model.Accept" multiple="@(Model.Multiple || mode == "list")" required="@Model.Required"
+           aria-label="@(Model.AriaLabel ?? (Model.Title + " " + Model.LinkText).Trim())" aria-describedby="@(id)_error" />
+    <div class="gl-v2-dropzone-empty" data-role="empty" hidden="@hasCurrent">
+        @if (custom)
+        {
+            @Model.Content
+        }
+        else
+        {
+            <i class="ph @Model.Icon" aria-hidden="true"></i>
+            <span class="gl-v2-dropzone-title" data-role="title">
+                @if (!string.IsNullOrWhiteSpace(Model.TitleTouch)) { <span class="gl-v2-dz-desk">@Model.Title</span><span class="gl-v2-dz-touch">@Model.TitleTouch</span> } else { @Model.Title }
+                @if (!string.IsNullOrWhiteSpace(Model.LinkText)) { <text> </text><u data-role="link">@Model.LinkText</u> }
+            </span>
+            @if (!string.IsNullOrWhiteSpace(Model.Sub))
+            {
+                <small class="gl-v2-dropzone-sub" data-role="sub">
+                    @if (!string.IsNullOrWhiteSpace(Model.SubTouch)) { <span class="gl-v2-dz-desk">@Lines(subLines)</span><span class="gl-v2-dz-touch">@Lines(subTouchLines)</span> } else { @Lines(subLines) }
+                </small>
+            }
+            @if (Model.StatusSlot) { <span class="gl-v2-dropzone-status" data-role="status" hidden></span> }
+            @if (!string.IsNullOrWhiteSpace(Model.AsideText) && !string.IsNullOrWhiteSpace(Model.AsideHref)) { <a class="gl-v2-dropzone-aside" href="@Model.AsideHref">@Model.AsideText</a> }
+        }
+    </div>
+    @if (Model.Camera)
+    {
+        <button type="button" class="gl-v2-dropzone-camera" data-role="camera"><i class="ph ph-camera" aria-hidden="true"></i>@Model.CameraText</button>
+        <input type="file" accept="image/*" capture="environment" hidden data-role="camera-input" aria-label="@Model.CameraText" />
+    }
+    @if (hasCurrent)
+    {
+        <div class="gl-v2-dropzone-file" data-role="current">
+            <i class="ph @Model.Icon" aria-hidden="true"></i>
+            <span><b>@Model.CurrentName</b>@if (!string.IsNullOrWhiteSpace(Model.CurrentSub)) { <small>@Model.CurrentSub</small> }</span>
+            <button type="button" class="gl-v2-btn gl-v2-btn-text" data-role="remove-current" aria-label="Verwijderen: @Model.CurrentName">Verwijderen</button>
+        </div>
+    }
+    @if (mode == "row")
+    {
+        <div class="gl-v2-dropzone-file" data-role="file" hidden>
+            @if (Model.Preview) { <span class="gl-v2-dropzone-thumb" data-role="thumb" hidden><img alt="" /></span> }
+            <i class="ph @Model.Icon" aria-hidden="true" data-role="file-icon"></i>
+            <span><b data-role="file-name"></b><small data-role="file-meta"></small></span>
+            <button type="button" class="gl-v2-btn gl-v2-btn-text" data-role="remove">Verwijderen</button>
+        </div>
+    }
+    @if (mode == "list")
+    {
+        <div class="gl-v2-dropzone-list" data-role="list" hidden></div>
+    }
+</div>
+<span class="gl-v2-field-help gl-v2-dropzone-error" id="@(id)_error" data-role="dropzone-error" role="alert" hidden></span>
+@if (wrap)
+{
+    @Html.Raw("</div>")
+}

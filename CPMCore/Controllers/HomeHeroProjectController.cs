@@ -1,4 +1,7 @@
 using BOCore;
+using CPMCore.Attributes;
+using SmartBreadcrumbs.Nodes;
+using CPMCore.Attributes;
 using CPMCore.Models.Instellingen;
 using DALCore.Models;
 using FacadeCore;
@@ -6,6 +9,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using SmartBreadcrumbs.Nodes;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -18,17 +23,22 @@ public class HomeHeroProjectController : BaseController
 {
     private readonly IHomeHeroProjectService _heroService;
     private readonly cpmRunningContext _db;
+    private readonly IConfiguration _configuration;
 
-    public HomeHeroProjectController(IHomeHeroProjectService heroService, cpmRunningContext db)
+    public HomeHeroProjectController(IHomeHeroProjectService heroService, cpmRunningContext db, IConfiguration configuration)
     {
         _heroService = heroService;
         _db = db;
+        _configuration = configuration;
     }
 
     [HttpGet]
-    public async Task<IActionResult> Index()
+    [Breadcrumb("Home hero")]
+    public async Task<IActionResult> Index(bool classic = false)
     {
         SetPageHeader("bx bx-carousel", "Home hero — uitgelicht project");
+        if (classic) ViewData["UseGlV2Layout"] = false;
+        ZetBreadcrumb();
 
         var bo = await _heroService.GetAsync();
         var vm = bo != null
@@ -43,6 +53,11 @@ public class HomeHeroProjectController : BaseController
             : new HomeHeroProjectVM();
 
         VulProjectOpties(vm);
+        if (ViewData["UseGlV2Layout"] as bool? == true)
+        {
+            if (vm.ProjectId > 0) ViewData["HeroMedia"] = await ProjectMediaAsync(vm.ProjectId);
+            return View("IndexV2", vm);
+        }
         return View(vm);
     }
 
@@ -53,8 +68,9 @@ public class HomeHeroProjectController : BaseController
         if (!ModelState.IsValid)
         {
             SetPageHeader("bx bx-carousel", "Home hero — uitgelicht project");
+            ZetBreadcrumb();
             VulProjectOpties(vm);
-            return View(vm);
+            return ViewData["UseGlV2Layout"] as bool? == true ? View("IndexV2", vm) : View(vm);
         }
 
         await _heroService.SaveAsync(new HomeHeroProjectBO
@@ -89,8 +105,30 @@ public class HomeHeroProjectController : BaseController
         {
             titel = projectTitel,
             tekst = StripHtml(project.CommercialTextNl),
-            projectTitel
+            projectTitel,
+            media = await ProjectMediaAsync(projectId)
         });
+    }
+
+    // Instellingen > Website > Home hero ("Website" is enkel een sectielabel op Instellingen/Index, zie het ontwerp).
+    private void ZetBreadcrumb()
+    {
+        var dashboard = new MvcBreadcrumbNode("Index", "Home", "Dashboard");
+        var instellingen = new MvcBreadcrumbNode("Index", "Instellingen", "Instellingen") { Parent = dashboard };
+        var website = new MvcBreadcrumbNode("Index", "Instellingen", "Website") { Parent = instellingen };
+        ViewData["BreadcrumbNode"] = new MvcBreadcrumbNode("Index", "HomeHeroProject", "Home hero") { Parent = website };
+    }
+
+    // Standaardfoto of -video van het project, met dezelfde bron als de homepage van de website (pictures/800/ of videos/).
+    private async Task<object?> ProjectMediaAsync(int projectId)
+    {
+        var pic = await _db.Set<Project>().AsNoTracking().Where(p => p.ProjectId == projectId && p.DefaultPicture != null)
+            .Select(p => new { p.DefaultPicture.Name, p.DefaultPicture.MediaType }).FirstOrDefaultAsync();
+        if (pic == null || string.IsNullOrWhiteSpace(pic.Name)) return null;
+        var basis = (_configuration["URL:ImageWebURL"] ?? "").TrimEnd('/');
+        var ext = System.IO.Path.GetExtension(pic.Name)?.ToLowerInvariant();
+        var video = pic.MediaType == 1 || ext is ".mp4" or ".webm" or ".mov" or ".avi";
+        return new { url = video ? $"{basis}/videos/{pic.Name}" : $"{basis}/pictures/800/{pic.Name}", video };
     }
 
     private void VulProjectOpties(HomeHeroProjectVM vm)

@@ -17,7 +17,7 @@ namespace CPMCore.Controllers;
 
 [Authorize]
 [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsVacatureBeheer)]
-public class VacatureBeheerController : BaseController
+public partial class VacatureBeheerController : BaseController
 {
     private readonly IVacatureService _vacatureService;
     private readonly IVacatureSollicitatieService _sollicitatieService;
@@ -35,9 +35,11 @@ public class VacatureBeheerController : BaseController
     // ── LIST ────────────────────────────────────────────────────────────
 
     [HttpGet]
-    public IActionResult Index()
+    public IActionResult Index(bool classic = false)
     {
         SetPageHeader("bx bx-briefcase", "Vacatures");
+        if (classic) ViewData["UseGlV2Layout"] = false;
+        if (IsV2) return IndexV2();
 
         var result = _vacatureService.GetVacatures(alleenGepubliceerd: false);
         var vm = new VacatureListVM { Vacatures = result.Values ?? new() };
@@ -52,6 +54,7 @@ public class VacatureBeheerController : BaseController
         SetPageHeader("bx bx-briefcase", "Nieuwe vacature");
 
         var vm = new VacatureEditVM();
+        if (IsV2) return BewerkenV2(vm);
         return View("Bewerken", vm);
     }
 
@@ -79,6 +82,7 @@ public class VacatureBeheerController : BaseController
         }
 
         var vm = MapBoToVm(result.Value);
+        if (IsV2) return BewerkenV2(vm);
         return View(vm);
     }
 
@@ -89,6 +93,7 @@ public class VacatureBeheerController : BaseController
         if (!ModelState.IsValid)
         {
             SetPageHeader("bx bx-briefcase", vm.ID == 0 ? "Nieuwe vacature" : "Vacature bewerken");
+            if (IsV2) return BewerkenV2(HervulLijsten(vm));
             return View(vm);
         }
 
@@ -105,7 +110,7 @@ public class VacatureBeheerController : BaseController
             }
             else
             {
-                var (uploaded, uploadError) = await UploadNaarStorageAsync(vm.VideoUpload, "videos", 120 * 1024 * 1024);
+                var (uploaded, uploadError) = await UploadNaarStorageAsync(vm.VideoUpload, "videos", 60 * 1024 * 1024);
                 if (uploaded != null)
                 {
                     await DeleteVanStorageAsync(vm.VideoBestand);
@@ -156,6 +161,7 @@ public class VacatureBeheerController : BaseController
             vm.VideoBestand = videoBestand;
             vm.VideoPosterBestand = posterBestand;
             SetPageHeader("bx bx-briefcase", vm.ID == 0 ? "Nieuwe vacature" : "Vacature bewerken");
+            if (IsV2) return BewerkenV2(HervulLijsten(vm));
             return View(vm);
         }
 
@@ -201,6 +207,7 @@ public class VacatureBeheerController : BaseController
             VacatureId = vacatureId,
             VacatureTitel = vacatureTitel
         };
+        if (IsV2) return SollicitatiesV2(vm);
         return View(vm);
     }
 

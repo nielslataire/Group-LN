@@ -23,8 +23,9 @@ public class CookieConsentStatsController : BaseController
 
     [HttpGet]
     [Breadcrumb("Cookiebanner")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(bool classic = false)
     {
+        if (classic) ViewData["UseGlV2Layout"] = false;
         SetPageHeader("bx bx-cookie", "Cookiebanner — statistieken",
             description: "Hoeveel bezoekers de cookiebanner op de publieke website aanvaarden, weigeren of verlaten zonder keuze. Los van Google Analytics gemeten — die laadt zelf pas ná toestemming.");
 
@@ -58,6 +59,6 @@ public class CookieConsentStatsController : BaseController
             }
         };
 
-        return View(vm);
+        return ViewData["UseGlV2Layout"] as bool? == true ? View("IndexV2", vm) : View(vm);
     }
 }

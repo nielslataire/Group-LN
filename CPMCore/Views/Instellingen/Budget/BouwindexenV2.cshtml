@@ -1,0 +1,493 @@
+@model CPMCore.Models.Instellingen.BouwindexenModel
+@using System.Globalization
+@using BOCore
+@using DALCore.Models
+@using FacadeCore
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen/Bouwindexen (design-handoff punt 48a-d, "CRM Instellingen.dc.html"): drie tabs (S-index lonen, I2021
+    materialen, ABEX) met dezelfde opbouw: kerncijfers (geldende waarde, Δ, bron), daaronder de waarden. S-index = waarden per jaar
+    in een uitklapbare lijst (recente jaren open); I2021 = raster jaar × maand met schakelaar naar Index I+ (historisch); ABEX =
+    manuele invoer met een inline rij voor een nieuw jaar en een melding als het lopende jaar ontbreekt. Per rij een ⋯-menu
+    (bewerken, geldend maken, verwijderen met bevestiging).
+
+    Bewust anders dan het mockup (zie DESIGN.md "Instellingen/Bouwindexen"):
+    - "Geldend" = de rij met IsActief, anders de meest recente (dezelfde regel als BouwIndexService.GetActieveIndexAsync, dus wat je ziet
+      is wat de budgetberekening gebruikt). Een tweede kolom "uitgesloten" bestaat niet in het model: geen "uitsluiten".
+    - Geen "laatste synchronisatie" (niet bewaard): de vierde kerncel van de S-index toont de nieuwste waarde en of die al geldt.
+    - De synchronisatie overschrijft bestaande waarden van dezelfde maand (gedrag van de services, niet aangepast).
+*@
+@{
+    ViewData["Title"] = "Bouwindexen";
+    ViewData["PageIcon"] = "ph ph-chart-line-up";
+    ViewData["HelpScreenId"] = "instellingen-bouwindexen";
+    var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsBouwIndexen);
+    var nl = new CultureInfo("nl-BE");
+    var kort = new[] { "jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec" };
+    string F(decimal v, int d) => v.ToString("N" + d, nl);
+    string Pct(decimal? p) => p.HasValue ? (p.Value >= 0 ? "+" : "−") + Math.Abs(p.Value).ToString("N2", nl) + " %" : "—";
+    string Maand(int? m) => m is >= 1 and <= 12 ? nl.DateTimeFormat.GetMonthName(m.Value) : "—";
+    string Periode(BouwIndex r) => r.Maand.HasValue ? $"{r.Maand.Value:00}/{r.Jaar}" : $"{r.Jaar}";
+    BouwIndex? Geldend(List<BouwIndex> l) => l.FirstOrDefault(x => x.IsActief) ?? l.FirstOrDefault();
+    decimal? Verschil(decimal nu, decimal? vorig) => vorig is > 0 ? (nu / vorig.Value - 1m) * 100m : null;
+    Dictionary<int, decimal?> DeltaMap(List<BouwIndex> lijst, bool perCategorie)
+    {
+        var map = new Dictionary<int, decimal?>();
+        foreach (var grp in lijst.GroupBy(x => perCategorie ? x.Categorie : null))
+        {
+            var asc = grp.OrderBy(x => x.Jaar).ThenBy(x => x.Maand).ToList();
+            for (var i = 0; i < asc.Count; i++) map[asc[i].Id] = i == 0 ? null : Verschil(asc[i].IndexWaarde, asc[i - 1].IndexWaarde);
+        }
+        return map;
+    }
+
+    var tab = (string?)Context.Request.Query["tab"];
+    var startTab = tab is "I2021" or "ABEX" ? tab : "S";
+
+    var sRows = Model.SIndexen.OrderByDescending(x => x.Jaar).ThenByDescending(x => x.Maand).ToList();
+    var iRows = Model.I2021Indexen.OrderByDescending(x => x.Jaar).ThenByDescending(x => x.Maand).ToList();
+    var aRows = Model.AbexIndexen.OrderByDescending(x => x.Jaar).ToList();
+    var sGeldend = Geldend(sRows);
+    var iGeldend = Geldend(iRows);
+    var aGeldend = Geldend(aRows);
+    var sDelta = DeltaMap(sRows, true);
+    var aDelta = DeltaMap(aRows, false);
+
+    var vandaag = DateTime.Today;
+    var abexMetJaar = aRows.Any(x => x.Jaar == vandaag.Year);
+    var abexVolgendJaar = (aRows.Select(x => x.Jaar ?? 0).DefaultIfEmpty(vandaag.Year - 1).Max()) + 1;
+    const int BaseJaar = 2020, BaseMaand = 11;
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-bouwindexen.css" asp-append-version="true" />
+}
+
+<div class="gl-v2-bwi" id="gl-v2-bwi" data-start-tab="@startTab" data-can-write="@(canWrite ? "1" : "0")"
+     data-url-opslaan="@Url.Action("BouwindexOpslaanV2", "Instellingen")" data-url-verwijder="@Url.Action("BouwindexVerwijderV2", "Instellingen")"
+     data-url-geldend="@Url.Action("BouwindexGeldendV2", "Instellingen")" data-url-sync-s="@Url.Action("SyncSIndex", "Instellingen")"
+     data-url-sync-i="@Url.Action("SyncI2021", "Instellingen")">
+    @Html.AntiForgeryToken()
+
+    <div class="gl-v2-tabbar" role="tablist">
+        <button type="button" class="gl-v2-tabbar-tab @(startTab == "S" ? "is-active" : "")" role="tab" aria-selected="@(startTab == "S" ? "true" : "false")" data-bwi-tab="S">S-index (lonen) <span class="gl-v2-tabbar-count">@sRows.Count</span></button>
+        <button type="button" class="gl-v2-tabbar-tab @(startTab == "I2021" ? "is-active" : "")" role="tab" aria-selected="@(startTab == "I2021" ? "true" : "false")" data-bwi-tab="I2021">I2021 (materialen) <span class="gl-v2-tabbar-count">@iRows.Count</span></button>
+        <button type="button" class="gl-v2-tabbar-tab @(startTab == "ABEX" ? "is-active" : "")" role="tab" aria-selected="@(startTab == "ABEX" ? "true" : "false")" data-bwi-tab="ABEX">ABEX <span class="gl-v2-tabbar-count">@aRows.Count</span></button>
+    </div>
+
+    <div class="gl-v2-bwi-body">
+
+        @* ═══════════════ S-INDEX (48a) ═══════════════ *@
+        <div class="gl-v2-tab-panel" data-bwi-panel="S" @(startTab == "S" ? "" : "hidden")>
+            <span class="gl-v2-bwi-intro">Gebruikt in de budgetberekening voor het looncomponent van de herzieningsformule. De waarden komen van arch-index.be. Een nieuw budget neemt de geldende waarde over.</span>
+
+            @if (sGeldend != null)
+            {
+                var vorigJaar = sRows.FirstOrDefault(x => x.Jaar == sGeldend.Jaar - 1 && x.Maand == sGeldend.Maand && x.Categorie == sGeldend.Categorie);
+                var nieuwste = sRows[0];
+                var nieuwerDanGeldend = nieuwste.Id != sGeldend.Id;
+                <div class="gl-v2-bwi-kpis is-4">
+                    <div class="gl-v2-bwi-kpi">
+                        <span class="lbl">GELDENDE WAARDE</span>
+                        <span class="val is-primary">@F(sGeldend.IndexWaarde, 4)</span>
+                        <span class="sub">@(sGeldend.Categorie ?? "Categorie A")@(sGeldend.GeldigVanaf.HasValue ? " · sinds " + sGeldend.GeldigVanaf.Value.ToString("dd/MM/yyyy") : "")</span>
+                    </div>
+                    <div class="gl-v2-bwi-kpi">
+                        <span class="lbl">T.O.V. VORIG JAAR</span>
+                        <span class="val">@(vorigJaar != null ? Pct(Verschil(sGeldend.IndexWaarde, vorigJaar.IndexWaarde)) : "—")</span>
+                        <span class="sub">@(vorigJaar != null ? Periode(vorigJaar) + " → " + Periode(sGeldend) : "geen waarde van vorig jaar")</span>
+                    </div>
+                    <div class="gl-v2-bwi-kpi">
+                        <span class="lbl">BRON</span>
+                        <span class="val is-text"><i class="ph ph-check-circle" aria-hidden="true"></i>@(string.IsNullOrWhiteSpace(sGeldend.Bron) ? "Manueel" : sGeldend.Bron)</span>
+                        <span class="sub">enkel categorie A (reeks 2B)</span>
+                    </div>
+                    <div class="gl-v2-bwi-kpi">
+                        <span class="lbl">NIEUWSTE WAARDE</span>
+                        <span class="val is-text">@Periode(nieuwste)</span>
+                        <span class="sub @(nieuwerDanGeldend ? "is-warning" : "")">@(nieuwerDanGeldend ? "nieuwer dan de geldende waarde" : "is de geldende waarde")</span>
+                    </div>
+                </div>
+            }
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-trend-up" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">S-index waarden</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">lonen bouwsector@(sRows.Count > 0 ? $" · {sRows.Count} waarden sinds {sRows.Min(x => x.Jaar)}" : "")</span>
+                    @if (canWrite)
+                    {
+                        <span class="gl-v2-section-card-meta gl-v2-bwi-card-actions">
+                            <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-bwi-add="S"><i class="ph ph-plus" aria-hidden="true"></i>Manueel toevoegen</button>
+                            <button type="button" class="gl-v2-btn gl-v2-btn-primary" data-bwi-sync="S"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i>Nu synchroniseren</button>
+                        </span>
+                    }
+                </div>
+
+                @if (sRows.Count == 0)
+                {
+                    <div class="gl-v2-bwi-empty">
+                        <span class="t">Nog geen S-indexwaarden</span>
+                        <span class="s">@(canWrite ? "Klik op Nu synchroniseren om ze bij arch-index.be op te halen, of voeg er een manueel toe." : "Er zijn nog geen waarden opgehaald.")</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="gl-v2-bwi-head gl-v2-bwi-grid--s">
+                        <span>Maand</span><span>Categorie</span><span class="is-right">Indexwaarde</span><span class="is-right">Δ vorige</span><span>Geldig vanaf</span><span>Status</span><span></span>
+                    </div>
+                    var jaarGroepen = sRows.GroupBy(x => x.Jaar ?? 0).OrderByDescending(g => g.Key).ToList();
+                    for (var gi = 0; gi < jaarGroepen.Count; gi++)
+                    {
+                        var jg = jaarGroepen[gi];
+                        var open = gi < 2;
+                        <div class="gl-v2-bwi-year">
+                            <button type="button" class="gl-v2-bwi-year-head" aria-expanded="@(open ? "true" : "false")" data-bwi-year>
+                                <i class="ph ph-caret-down" aria-hidden="true"></i>
+                                <span class="y">@jg.Key</span>
+                                <span class="c">@jg.Count() @(jg.Count() == 1 ? "waarde" : "waarden")</span>
+                            </button>
+                            <div class="gl-v2-bwi-year-body" @(open ? "" : "hidden")>
+                                @foreach (var r in jg)
+                                {
+                                    var isG = sGeldend != null && r.Id == sGeldend.Id;
+                                    var d = sDelta.TryGetValue(r.Id, out var dv) ? dv : null;
+                                    var menuId = "bwi-menu-" + r.Id;
+                                    <div class="gl-v2-bwi-row gl-v2-bwi-grid--s @(isG ? "is-geldend" : "")">
+                                        <span class="gl-v2-bwi-strong">@Maand(r.Maand)</span>
+                                        <span class="gl-v2-bwi-cell">@(r.Categorie ?? "—")</span>
+                                        <span class="gl-v2-bwi-num">@F(r.IndexWaarde, 4)</span>
+                                        <span class="gl-v2-bwi-delta @(d.HasValue && Math.Abs(d.Value) >= 5m ? "is-jump" : "")">@Pct(d)</span>
+                                        <span class="gl-v2-bwi-cell">@(r.GeldigVanaf?.ToString("dd/MM/yyyy") ?? "—")</span>
+                                        <span>@if (isG) { <span class="gl-v2-badge is-positive">Geldend</span> } else { <span class="gl-v2-badge is-neutral">Historisch</span> }</span>
+                                        <span class="gl-v2-bwi-actions">
+                                            @if (canWrite)
+                                            {
+                                                <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="@menuId" aria-label="Meer acties voor @Periode(r)"><i class="ph ph-dots-three" aria-hidden="true"></i></button>
+                                                <div class="gl-v2-menu" id="@menuId">
+                                                    <button type="button" class="gl-v2-menu-item" data-bwi-edit data-id="@r.Id" data-type="S" data-jaar="@r.Jaar" data-maand="@r.Maand" data-waarde="@F(r.IndexWaarde, 4)" data-opmerking="@r.Opmerking">
+                                                        <i class="ph ph-pencil-simple" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Bewerken</span></span>
+                                                    </button>
+                                                    @if (!isG)
+                                                    {
+                                                        <button type="button" class="gl-v2-menu-item" data-bwi-geldend data-id="@r.Id" data-type="S" data-label="@Periode(r)">
+                                                            <i class="ph ph-check-circle" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Geldend maken</span></span>
+                                                        </button>
+                                                    }
+                                                    <button type="button" class="gl-v2-menu-item is-danger" data-bwi-delete data-id="@r.Id" data-label="S-index @Periode(r)">
+                                                        <i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Verwijderen</span></span>
+                                                    </button>
+                                                </div>
+                                            }
+                                        </span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+                <div class="gl-v2-bwi-foot">
+                    <div class="gl-v2-notice gl-v2-notice-compact is-info">
+                        <i class="ph ph-info" aria-hidden="true"></i>
+                        <span>De synchronisatie haalt de reeks van arch-index.be opnieuw op en past bestaande maanden aan. Een waarde die je manueel toevoegt of bewerkt, kan daardoor opnieuw veranderen.</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        @* ═══════════════ I2021 (48b) ═══════════════ *@
+        <div class="gl-v2-tab-panel" data-bwi-panel="I2021" @(startTab == "I2021" ? "" : "hidden")>
+            <span class="gl-v2-bwi-intro">Materiaalindex van FOD Economie, maandelijks gepubliceerd. Eén rij per jaar, één kolom per maand. Klik op een waarde om ze aan te passen.</span>
+
+            @if (iGeldend != null)
+            {
+                var vorigeMaandJaar = iGeldend.Maand == 1 ? iGeldend.Jaar - 1 : iGeldend.Jaar;
+                var vorigeMaandNr = iGeldend.Maand == 1 ? 12 : iGeldend.Maand - 1;
+                var vorigeMaand = iRows.FirstOrDefault(x => x.Jaar == vorigeMaandJaar && x.Maand == vorigeMaandNr);
+                var vorigJaarI = iRows.FirstOrDefault(x => x.Jaar == iGeldend.Jaar - 1 && x.Maand == iGeldend.Maand);
+                <div class="gl-v2-bwi-kpis is-4">
+                    <div class="gl-v2-bwi-kpi">
+                        <span class="lbl">GELDENDE WAARDE</span>
+                        <span class="val is-primary">@F(iGeldend.IndexWaarde, 2)</span>
+                        <span class="sub">I2021 · @Maand(iGeldend.Maand) @iGeldend.Jaar</span>
+                    </div>
+                    <div class="gl-v2-bwi-kpi">
+                        <span class="lbl">T.O.V. VORIGE MAAND</span>
+                        <span class="val">@(vorigeMaand != null ? Pct(Verschil(iGeldend.IndexWaarde, vorigeMaand.IndexWaarde)) : "—")</span>
+                        <span class="sub">@(vorigeMaand != null ? $"{kort[vorigeMaandNr!.Value - 1]} {F(vorigeMaand.IndexWaarde, 2)} → {kort[iGeldend.Maand!.Value - 1]} {F(iGeldend.IndexWaarde, 2)}" : "geen waarde van vorige maand")</span>
+                    </div>
+                    <div class="gl-v2-bwi-kpi">
+                        <span class="lbl">T.O.V. VORIG JAAR</span>
+                        <span class="val">@(vorigJaarI != null ? Pct(Verschil(iGeldend.IndexWaarde, vorigJaarI.IndexWaarde)) : "—")</span>
+                        <span class="sub">@(vorigJaarI != null ? $"{kort[iGeldend.Maand!.Value - 1]} {vorigJaarI.Jaar} → {kort[iGeldend.Maand!.Value - 1]} {iGeldend.Jaar}" : "geen waarde van vorig jaar")</span>
+                    </div>
+                    <div class="gl-v2-bwi-kpi">
+                        <span class="lbl">BRON</span>
+                        <span class="val is-text"><i class="ph ph-check-circle" aria-hidden="true"></i>@(string.IsNullOrWhiteSpace(iGeldend.Bron) ? "Manueel" : iGeldend.Bron)</span>
+                        <span class="sub">basis november 2020 = 100</span>
+                    </div>
+                </div>
+            }
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-package" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Indexwaarden per maand</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">basis november 2020 = 100</span>
+                    <span class="gl-v2-section-card-meta gl-v2-bwi-card-actions">
+                        @if (Model.IPlusIndexen.Any())
+                        {
+                            <span class="gl-v2-segmented is-sm" role="radiogroup" aria-label="Soort index" data-bwi-grid-switch>
+                                <button type="button" class="is-active" data-grid="I2021">I2021 · materialen</button>
+                                <button type="button" data-grid="I+">Index I+ · historisch</button>
+                            </span>
+                        }
+                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-bwi-export><i class="ph ph-download-simple" aria-hidden="true"></i>Exporteren</button>
+                        @if (canWrite)
+                        {
+                            <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-bwi-add="I2021"><i class="ph ph-plus" aria-hidden="true"></i>Manueel toevoegen</button>
+                            <button type="button" class="gl-v2-btn gl-v2-btn-primary" data-bwi-sync="I2021"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i>Nu synchroniseren</button>
+                        }
+                    </span>
+                </div>
+
+                @foreach (var set in new[] { (Key: "I2021", Rows: iRows), (Key: "I+", Rows: Model.IPlusIndexen.OrderByDescending(x => x.Jaar).ThenByDescending(x => x.Maand).ToList()) })
+                {
+                    if (set.Key == "I+" && set.Rows.Count == 0) { continue; }
+                    var gridGeldend = set.Key == "I2021" ? iGeldend : Geldend(set.Rows);
+                    <div class="gl-v2-bwi-gridwrap" data-bwi-grid="@set.Key" @(set.Key == "I2021" ? "" : "hidden")>
+                        @if (set.Rows.Count == 0)
+                        {
+                            <div class="gl-v2-bwi-empty">
+                                <span class="t">Nog geen I2021-waarden</span>
+                                <span class="s">@(canWrite ? "Klik op Nu synchroniseren om ze bij FOD Economie op te halen." : "Er zijn nog geen waarden opgehaald.")</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="gl-v2-bwi-scroll">
+                                <div class="gl-v2-bwi-matrix">
+                                    <div class="gl-v2-bwi-head gl-v2-bwi-grid--m">
+                                        <span>Jaar</span>
+                                        @foreach (var k in kort) { <span class="is-right">@k.ToUpperInvariant()</span> }
+                                        <span class="is-right">Gem.</span>
+                                    </div>
+                                    @foreach (var jg in set.Rows.GroupBy(x => x.Jaar ?? 0).OrderByDescending(g => g.Key))
+                                    {
+                                        var perMaand = jg.Where(x => x.Maand.HasValue).GroupBy(x => x.Maand!.Value).ToDictionary(g => g.Key, g => g.First());
+                                        var gem = perMaand.Count > 0 ? perMaand.Values.Average(x => x.IndexWaarde) : (decimal?)null;
+                                        <div class="gl-v2-bwi-row gl-v2-bwi-grid--m" data-bwi-matrix-row="@jg.Key">
+                                            <span class="gl-v2-bwi-strong">@jg.Key</span>
+                                            @for (var mm = 1; mm <= 12; mm++)
+                                            {
+                                                if (perMaand.TryGetValue(mm, out var c))
+                                                {
+                                                    var isG = gridGeldend != null && c.Id == gridGeldend.Id;
+                                                    var voorBasis = set.Key == "I2021" && (jg.Key < BaseJaar || (jg.Key == BaseJaar && mm < BaseMaand));
+                                                    var isBase = set.Key == "I2021" && jg.Key == BaseJaar && mm == BaseMaand;
+                                                    <button type="button" class="gl-v2-bwi-mcell @(isG ? "is-geldend" : "") @(voorBasis ? "is-pre-base" : "") @(isBase ? "is-base" : "")" @(canWrite ? "" : "data-readonly")
+                                                            data-bwi-cell data-id="@c.Id" data-type="@set.Key" data-jaar="@jg.Key" data-maand="@mm" data-waarde="@F(c.IndexWaarde, 2)" data-opmerking="@c.Opmerking" data-geldend="@(isG ? "1" : "0")"
+                                                            title="@(isG ? "Geldende waarde. " : "")@(isBase ? "Basisperiode: november 2020 = 100. " : "")@(voorBasis ? "Vóór de basisperiode (november 2020). " : "")@Maand(mm) @jg.Key">@F(c.IndexWaarde, 2)</button>
+                                                }
+                                                else if (canWrite)
+                                                {
+                                                    <button type="button" class="gl-v2-bwi-mcell is-empty" data-bwi-cell data-id="0" data-type="@set.Key" data-jaar="@jg.Key" data-maand="@mm" aria-label="Waarde toevoegen voor @Maand(mm) @jg.Key">·</button>
+                                                }
+                                                else
+                                                {
+                                                    <span class="gl-v2-bwi-mcell is-empty">·</span>
+                                                }
+                                            }
+                                            <span class="gl-v2-bwi-gem" title="@(perMaand.Count) @(perMaand.Count == 1 ? "maand" : "maanden")">@(gem.HasValue ? F(gem.Value, 2) + (perMaand.Count < 12 ? "*" : "") : "—")</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                <div class="gl-v2-bwi-foot">
+                    <div class="gl-v2-notice gl-v2-notice-compact is-info">
+                        <i class="ph ph-info" aria-hidden="true"></i>
+                        <span>De omlijnde waarde is de geldende. Waarden vóór de basisperiode (november 2020) staan in oker. Een * bij het gemiddelde betekent dat het jaar nog niet volledig is.</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        @* ═══════════════ ABEX (48c) ═══════════════ *@
+        <div class="gl-v2-tab-panel" data-bwi-panel="ABEX" @(startTab == "ABEX" ? "" : "hidden")>
+            <span class="gl-v2-bwi-intro">De ABEX-index wordt niet in een bruikbaar formaat gepubliceerd. Vul hem één keer per jaar manueel in. De waarde van het meest recente jaar wordt de geldende.</span>
+
+            @if (!abexMetJaar && aRows.Count > 0)
+            {
+                <div class="gl-v2-notice gl-v2-notice-expanded is-warning">
+                    <span class="gl-v2-notice-expanded-icon"><i class="ph ph-warning" aria-hidden="true"></i></span>
+                    <div class="gl-v2-notice-body">
+                        <span class="gl-v2-notice-title">Nog geen ABEX voor @vandaag.Year ingevuld</span>
+                        <span class="gl-v2-notice-text">De geldende waarde is nog @F(aGeldend!.IndexWaarde, 2) (@aGeldend.Jaar).</span>
+                    </div>
+                    @if (canWrite)
+                    {
+                        <div class="gl-v2-notice-actions"><button type="button" class="gl-v2-notice-action" data-bwi-abex-new>Nieuw jaar toevoegen</button></div>
+                    }
+                </div>
+            }
+
+            @if (aGeldend != null)
+            {
+                var vorigAbex = aRows.Where(x => x.Jaar < aGeldend.Jaar).OrderByDescending(x => x.Jaar).FirstOrDefault();
+                <div class="gl-v2-bwi-kpis is-3">
+                    <div class="gl-v2-bwi-kpi">
+                        <span class="lbl">GELDENDE WAARDE</span>
+                        <span class="val is-primary">@F(aGeldend.IndexWaarde, 2)</span>
+                        <span class="sub">@aGeldend.Jaar@(string.IsNullOrWhiteSpace(aGeldend.Opmerking) ? "" : " · " + aGeldend.Opmerking)</span>
+                    </div>
+                    <div class="gl-v2-bwi-kpi">
+                        <span class="lbl">T.O.V. VORIG JAAR</span>
+                        <span class="val">@(vorigAbex != null ? Pct(Verschil(aGeldend.IndexWaarde, vorigAbex.IndexWaarde)) : "—")</span>
+                        <span class="sub">@(vorigAbex != null ? $"{F(vorigAbex.IndexWaarde, 2)} → {F(aGeldend.IndexWaarde, 2)}" : "geen vorig jaar")</span>
+                    </div>
+                    <div class="gl-v2-bwi-kpi">
+                        <span class="lbl">INVOER</span>
+                        <span class="val is-text">Manueel</span>
+                        <span class="sub">één waarde per jaar · @aRows.Count @(aRows.Count == 1 ? "jaar" : "jaren")</span>
+                    </div>
+                </div>
+            }
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-buildings" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">ABEX-index</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">één waarde per jaar · @aRows.Count @(aRows.Count == 1 ? "jaar" : "jaren")</span>
+                    @if (canWrite)
+                    {
+                        <span class="gl-v2-section-card-meta gl-v2-bwi-card-actions">
+                            <button type="button" class="gl-v2-btn gl-v2-btn-primary" data-bwi-abex-new><i class="ph ph-plus" aria-hidden="true"></i>Nieuw jaar toevoegen</button>
+                        </span>
+                    }
+                </div>
+                <div class="gl-v2-bwi-head gl-v2-bwi-grid--a">
+                    <span>Jaar</span><span class="is-right">ABEX-waarde</span><span class="is-right">Δ vorig jaar</span><span>Opmerking</span><span>Status</span><span></span>
+                </div>
+                @if (canWrite)
+                {
+                    <form class="gl-v2-bwi-row gl-v2-bwi-grid--a is-edit" data-bwi-abex-form data-id="0" hidden autocomplete="off">
+                        <div class="gl-v2-field"><div class="gl-v2-field-box"><input type="text" inputmode="numeric" name="jaar" class="gl-v2-field-input is-tabular" value="@abexVolgendJaar" maxlength="4" aria-label="Jaar" required /></div></div>
+                        <div class="gl-v2-field"><div class="gl-v2-field-box"><input type="text" inputmode="decimal" name="waarde" class="gl-v2-field-input is-tabular is-right" placeholder="0,00" aria-label="ABEX-waarde" required /></div></div>
+                        <span class="gl-v2-bwi-delta" data-bwi-live-delta>—</span>
+                        <div class="gl-v2-field"><div class="gl-v2-field-box"><input type="text" name="opmerking" class="gl-v2-field-input" placeholder="bv. januari @abexVolgendJaar · bron: ABEX-bulletin" maxlength="500" aria-label="Opmerking" /></div></div>
+                        <span class="gl-v2-bwi-hint">Enter = opslaan · Esc = annuleren</span>
+                        <div class="gl-v2-bwi-actions">
+                            <button type="submit" class="gl-v2-row-action gl-v2-row-action-primary" title="Opslaan" aria-label="Opslaan"><i class="ph ph-check" aria-hidden="true"></i><span class="gl-v2-row-action-label">Opslaan</span></button>
+                            <button type="button" class="gl-v2-row-action" data-bwi-abex-cancel title="Annuleren" aria-label="Annuleren"><i class="ph ph-x" aria-hidden="true"></i><span class="gl-v2-row-action-label">Annuleren</span></button>
+                        </div>
+                    </form>
+                }
+                @if (aRows.Count == 0)
+                {
+                    <div class="gl-v2-bwi-empty">
+                        <span class="t">Nog geen ABEX-waarden</span>
+                        <span class="s">@(canWrite ? "Voeg het eerste jaar toe met Nieuw jaar toevoegen." : "Er zijn nog geen waarden ingevoerd.")</span>
+                    </div>
+                }
+                @foreach (var r in aRows)
+                {
+                    var isG = aGeldend != null && r.Id == aGeldend.Id;
+                    var d = aDelta.TryGetValue(r.Id, out var dv) ? dv : null;
+                    var menuId = "bwi-menu-" + r.Id;
+                    <div class="gl-v2-bwi-row gl-v2-bwi-grid--a @(isG ? "is-geldend" : "")" data-bwi-abex-row>
+                        <span class="gl-v2-bwi-strong">@r.Jaar</span>
+                        <span class="gl-v2-bwi-num">@F(r.IndexWaarde, 2)</span>
+                        <span class="gl-v2-bwi-delta @(d.HasValue && Math.Abs(d.Value) >= 5m ? "is-jump" : "")">@Pct(d)</span>
+                        <span class="gl-v2-bwi-cell is-muted" title="@r.Opmerking">@(string.IsNullOrWhiteSpace(r.Opmerking) ? "—" : r.Opmerking)</span>
+                        <span>@if (isG) { <span class="gl-v2-badge is-positive">Geldend</span> } else { <span class="gl-v2-badge is-neutral">Historisch</span> }</span>
+                        <span class="gl-v2-bwi-actions">
+                            @if (canWrite)
+                            {
+                                <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="@menuId" aria-label="Meer acties voor ABEX @r.Jaar"><i class="ph ph-dots-three" aria-hidden="true"></i></button>
+                                <div class="gl-v2-menu" id="@menuId">
+                                    <button type="button" class="gl-v2-menu-item" data-bwi-abex-edit>
+                                        <i class="ph ph-pencil-simple" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Bewerken</span></span>
+                                    </button>
+                                    @if (!isG)
+                                    {
+                                        <button type="button" class="gl-v2-menu-item" data-bwi-geldend data-id="@r.Id" data-type="ABEX" data-label="@r.Jaar">
+                                            <i class="ph ph-check-circle" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Geldend maken</span></span>
+                                        </button>
+                                    }
+                                    <button type="button" class="gl-v2-menu-item is-danger" data-bwi-delete data-id="@r.Id" data-label="ABEX @r.Jaar">
+                                        <i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Verwijderen</span></span>
+                                    </button>
+                                </div>
+                            }
+                        </span>
+                    </div>
+                    if (canWrite)
+                    {
+                        <form class="gl-v2-bwi-row gl-v2-bwi-grid--a is-edit" data-bwi-abex-form data-id="@r.Id" hidden autocomplete="off">
+                            <span class="gl-v2-bwi-strong">@r.Jaar<input type="hidden" name="jaar" value="@r.Jaar" /></span>
+                            <div class="gl-v2-field"><div class="gl-v2-field-box"><input type="text" inputmode="decimal" name="waarde" class="gl-v2-field-input is-tabular is-right" value="@F(r.IndexWaarde, 2)" aria-label="ABEX-waarde" required /></div></div>
+                            <span class="gl-v2-bwi-delta" data-bwi-live-delta>@Pct(d)</span>
+                            <div class="gl-v2-field"><div class="gl-v2-field-box"><input type="text" name="opmerking" class="gl-v2-field-input" value="@r.Opmerking" maxlength="500" aria-label="Opmerking" /></div></div>
+                            <span class="gl-v2-bwi-hint">Enter = opslaan · Esc = annuleren</span>
+                            <div class="gl-v2-bwi-actions">
+                                <button type="submit" class="gl-v2-row-action gl-v2-row-action-primary" title="Opslaan" aria-label="Opslaan"><i class="ph ph-check" aria-hidden="true"></i><span class="gl-v2-row-action-label">Opslaan</span></button>
+                                <button type="button" class="gl-v2-row-action" data-bwi-abex-cancel title="Annuleren" aria-label="Annuleren"><i class="ph ph-x" aria-hidden="true"></i><span class="gl-v2-row-action-label">Annuleren</span></button>
+                            </div>
+                        </form>
+                    }
+                }
+                <div class="gl-v2-bwi-foot">
+                    <div class="gl-v2-notice gl-v2-notice-compact is-info">
+                        <i class="ph ph-info" aria-hidden="true"></i>
+                        <span>Een nieuwe waarde heeft geen invloed op bestaande budgetten. De waarde van het meest recente jaar is de geldende.</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+
+@if (canWrite)
+{
+    @* Waarde toevoegen of bewerken voor de S-index en I2021 (TYPE 2 formulier-modal) *@
+    <div class="modal fade gl-v2-modal-form gl-v2-bwi-modal" id="bwi-modal" tabindex="-1" aria-hidden="true" aria-labelledby="bwi-modal-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <form class="modal-content" novalidate autocomplete="off">
+                <input type="hidden" name="id" value="0" />
+                <input type="hidden" name="indexType" value="S" />
+                <div class="modal-header"><h2 class="modal-title" id="bwi-modal-title">Waarde toevoegen</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body">
+                    <div class="gl-v2-field"><label class="gl-v2-field-label" for="bwi-jaar">Jaar</label><div class="gl-v2-field-box"><input class="gl-v2-field-input is-tabular" id="bwi-jaar" name="jaar" inputmode="numeric" maxlength="4" required /></div></div>
+                    @await Html.PartialAsync("GlV2/_SelectList", new CPMCore.Models.GlV2.GlV2SelectListVm
+                    {
+                        Name = "maand", Id = "bwi-maand", Label = "Maand", Required = true, Value = "", Placeholder = "Kies een maand",
+                        Items = Enumerable.Range(1, 12).Select(mm => new CPMCore.Models.GlV2.GlV2SelectItem { Value = mm.ToString(), Text = Maand(mm) }).ToList()
+                    })
+                    <div class="gl-v2-field gl-v2-field-full"><label class="gl-v2-field-label" for="bwi-waarde">Indexwaarde</label><div class="gl-v2-field-box"><input class="gl-v2-field-input is-tabular" id="bwi-waarde" name="waarde" inputmode="decimal" placeholder="0,00" required /></div><span class="gl-v2-field-help" id="bwi-waarde-hint"></span></div>
+                    <div class="gl-v2-field gl-v2-field-full"><label class="gl-v2-field-label" for="bwi-opmerking">Opmerking <span class="gl-v2-bwi-optioneel">· optioneel</span></label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="bwi-opmerking" name="opmerking" maxlength="500" /></div></div>
+                    <span class="gl-v2-field-help gl-v2-bwi-err gl-v2-field-full" id="bwi-modal-err" role="alert" hidden></span>
+                </div>
+                <div class="modal-footer">
+                    <span class="gl-v2-bwi-modal-extra" data-bwi-modal-extra>
+                        <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bwi-modal-geldend><i class="ph ph-check-circle" aria-hidden="true"></i>Geldend maken</button>
+                        <button type="button" class="gl-v2-btn gl-v2-btn-text gl-v2-bwi-danger-text" data-bwi-modal-delete><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</button>
+                    </span>
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary">Opslaan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    @await Html.PartialAsync("GlV2/_BevestigModal")
+}
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-instellingen-bouwindexen.js" asp-append-version="true"></script>
+}

@@ -168,17 +168,23 @@
                 <span class="gl-v2-sign-card-meta">het bestand verlaat je toestel niet</span>
             </div>
             <div class="gl-v2-sign-card-body">
-                <label class="gl-v2-ver-drop" id="gl-ver-drop" for="gl-ver-file">
-                    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 10.6V2.8 M4.8 6 8 2.8 11.2 6 M3 10.4v2.8h10v-2.8"></path></svg>
-                    <span>Sleep je PDF hierheen of <u>kies een bestand</u></span>
-                </label>
-                <input type="file" id="gl-ver-file" class="gl-v2-ver-file" accept="application/pdf,.pdf" />
+                @{
+                    Func<object, Microsoft.AspNetCore.Html.IHtmlContent> verDrop = @<text>
+                        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 10.6V2.8 M4.8 6 8 2.8 11.2 6 M3 10.4v2.8h10v-2.8"></path></svg>
+                        <span>Sleep je PDF hierheen of <u>kies een bestand</u></span>
+                    </text>;
+                }
+                @await Html.PartialAsync("GlV2/_Dropzone", new CPMCore.Models.GlV2.GlV2DropzoneVm { Id = "gl-ver-file", Accept = "application/pdf,.pdf", Layout = "box", Mode = "select", CssClass = "gl-v2-ver-drop", Content = verDrop(null), AriaLabel = "Je pdf kiezen" })
                 <div id="gl-ver-result" aria-live="polite" hidden></div>
             </div>
         </section>
     }
 </div>
 
+@section PageStyle {
+    <link rel="stylesheet" href="~/css/gl-v2/dropzone.css" asp-append-version="true" />
+}
 @section PageScripts {
+    <script src="~/js/gl-v2-dropzone.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-verifieer.js" asp-append-version="true"></script>
 }

@@ -146,17 +146,39 @@ namespace CPMCore.Controllers
                 return RedirectToAction(nameof(Index), new { issuerCompanyId });
             }
 
+            var result = await BookInvoicesCoreAsync(issuerCompanyId, invoiceIds, ct);
+            if (result.Ok)
+                AddMessage("success", $"Facturen van nummer {result.From} tot en met nummer {result.Until} geboekt.", "Factuur");
+            else
+                AddMessage("error", result.Error!, "Factuur");
+
+            return RedirectToAction(nameof(Index), new { issuerCompanyId });
+        }
+
+        /// <summary>Resultaat van BookInvoicesCoreAsync: het doorboeken naar Octopus zonder meldingen of redirect, zodat de oude actie (BookInvoices) en het gl-v2-scherm (BookInvoicesV2) dezelfde controles en stappen gebruiken.</summary>
+        private sealed class BookFlowResult
+        {
+            public bool Ok { get; set; }
+            public string? Error { get; set; }
+            /// <summary>Eerste en laatste Octopus-documentnummer dat geboekt werd.</summary>
+            public int From { get; set; }
+            public int Until { get; set; }
+            /// <summary>Aantal facturen dat in de database als geboekt is gemarkeerd.</summary>
+            public int Count { get; set; }
+            public static BookFlowResult Fail(string error) => new BookFlowResult { Error = error };
+        }
+
+        private async Task<BookFlowResult> BookInvoicesCoreAsync(int issuerCompanyId, int[] invoiceIds, CancellationToken ct)
+        {
             var issuer = await _ics.GetAsync(issuerCompanyId, ct);
             if (issuer == null || string.IsNullOrWhiteSpace(issuer.OctopusDossierNumber))
             {
-                AddMessage("error", "Facturen kunnen niet geboekt worden omdat er geen Octopus-dossier is gekoppeld.", "Factuur");
-                return RedirectToAction(nameof(Index), new { issuerCompanyId });
+                return BookFlowResult.Fail("Facturen kunnen niet geboekt worden omdat er geen Octopus-dossier is gekoppeld.");
             }
 
             if (invoiceIds == null || invoiceIds.Length == 0)
             {
-                AddMessage("error", "Selecteer minstens één factuur om door te boeken.", "Factuur");
-                return RedirectToAction(nameof(Index), new { issuerCompanyId });
+                return BookFlowResult.Fail("Selecteer minstens één factuur om door te boeken.");
             }
 
             var bookedStatusId = (byte)InvoiceStatus.Booked;
@@ -173,8 +195,7 @@ namespace CPMCore.Controllers
 
             if (eligibleInvoices.Count == 0)
             {
-                AddMessage("error", "Er zijn geen geldige facturen geselecteerd om door te boeken.", "Factuur");
-                return RedirectToAction(nameof(Index), new { issuerCompanyId });
+                return BookFlowResult.Fail("Er zijn geen geldige facturen geselecteerd om door te boeken.");
             }
 
             // Voorkom dat facturen uit verschillende boekjaren of dagboeken tegelijk doorgeboeked worden.
@@ -186,8 +207,7 @@ namespace CPMCore.Controllers
 
             if (distinctBookyearJournals.Count > 1)
             {
-                AddMessage("error", "De geselecteerde facturen vallen in verschillende boekjaren of dagboeken. Boek per boekjaar afzonderlijk.", "Factuur");
-                return RedirectToAction(nameof(Index), new { issuerCompanyId });
+                return BookFlowResult.Fail("De geselecteerde facturen vallen in verschillende boekjaren of dagboeken. Boek per boekjaar afzonderlijk.");
             }
 
             var targetInvoice = eligibleInvoices
@@ -196,16 +216,14 @@ namespace CPMCore.Controllers
 
             if (InvoiceStatusExtensions.FromId(targetInvoice.StatusId) == InvoiceStatus.Generating)
             {
-                AddMessage("error", "Deze factuur wordt momenteel gegenereerd. Probeer later opnieuw.", "Factuur");
-                return RedirectToAction(nameof(Index), new { issuerCompanyId });
+                return BookFlowResult.Fail("Deze factuur wordt momenteel gegenereerd. Probeer later opnieuw.");
             }
 
             if (targetInvoice.OctopusBookyearId is null
                 || targetInvoice.OctopusDocumentSequenceNr is null
                 || string.IsNullOrWhiteSpace(targetInvoice.OctopusJournalKey))
             {
-                AddMessage("error", "Geen geldig boekjaar of dagboek gevonden bij de geselecteerde factuur.", "Factuur");
-                return RedirectToAction(nameof(Index), new { issuerCompanyId });
+                return BookFlowResult.Fail("Geen geldig boekjaar of dagboek gevonden bij de geselecteerde factuur.");
             }
 
             var unbookedInvoices = await _db.Invoices
@@ -220,8 +238,7 @@ namespace CPMCore.Controllers
             var selectedIds = eligibleInvoices.Select(i => i.Id).ToHashSet();
             if (unbookedInvoices.Any(i => !selectedIds.Contains(i.Id)))
             {
-                AddMessage("error", "Selecteer eerst alle voorgaande facturen om door te boeken.", "Factuur");
-                return RedirectToAction(nameof(Index), new { issuerCompanyId });
+                return BookFlowResult.Fail("Selecteer eerst alle voorgaande facturen om door te boeken.");
             }
 
             var previousStatusId = targetInvoice.StatusId;
@@ -269,10 +286,9 @@ namespace CPMCore.Controllers
                 var generatingId = (byte)InvoiceStatus.Generating;
                 if (invoicesToUpdate.Any(i => i.StatusId == generatingId && i.Id != targetInvoice.Id))
                 {
-                    AddMessage("error", "Eén of meerdere facturen worden momenteel gegenereerd. Probeer later opnieuw.", "Factuur");
                     targetInvoice.StatusId = previousStatusId;
                     await _db.SaveChangesAsync(ct);
-                    return RedirectToAction(nameof(Index), new { issuerCompanyId });
+                    return BookFlowResult.Fail("Eén of meerdere facturen worden momenteel gegenereerd. Probeer later opnieuw.");
                 }
 
 
@@ -312,7 +328,7 @@ namespace CPMCore.Controllers
 
                 await _db.SaveChangesAsync(ct);
 
-                AddMessage("success", $"Facturen van nummer {bookedFrom} tot en met nummer {bookedUntil} geboekt.", "Factuur");
+                return new BookFlowResult { Ok = true, From = bookedFrom, Until = bookedUntil, Count = invoicesToUpdate.Count };
             }
             catch (Exception ex)
             {
@@ -322,10 +338,9 @@ namespace CPMCore.Controllers
                 var message = string.IsNullOrWhiteSpace(ex.Message)
                     ? "Facturen konden niet geboekt worden."
                     : ex.Message;
-                AddMessage("error", message, "Factuur");
+                return BookFlowResult.Fail(message);
             }
 
-            return RedirectToAction(nameof(Index), new { issuerCompanyId });
         }
 
         //DETAIL FACTUUR

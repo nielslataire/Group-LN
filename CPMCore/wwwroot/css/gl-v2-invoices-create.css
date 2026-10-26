@@ -1,0 +1,132 @@
+/* gl-v2 — Nieuwe factuur (Invoices/CreateV2, design-handoff punt 47a–d). Eigen namespace gl-v2-ic-*. Het live voorbeeld (.gl-v2-ps-*) en de
+   gedeelde stukken (.gl-v2-ie-ta, .gl-v2-ie-opt, .gl-v2-ie-stepinfo, .gl-v2-ie-side-*) komen uit gl-v2-invoices-edit.css, dat deze pagina ook laadt.
+   Pagina-CSS laadt vóór de shell-CSS: overrides van gedeelde regels hebben daarom een extra .gl-v2-voorvoegsel. */
+
+.gl-v2 .gl-v2-ic-form { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 16px; }
+.gl-v2 .gl-v2-ic-form > .gl-v2-form-actionbar { margin-top: auto; }
+.gl-v2-ic-grid { display: flex; gap: 18px; align-items: flex-start; }
+.gl-v2-ic-main { flex: 1; min-width: 0; }
+.gl-v2-ic-side { width: 470px; flex: none; display: flex; flex-direction: column; gap: 10px; position: sticky; top: 0; }
+@media (max-width: 1199.98px) { .gl-v2-ic-grid { flex-direction: column; } .gl-v2-ic-side { width: 100%; max-width: 520px; position: static; } }
+
+.gl-v2-ic-steps { padding: 14px 20px; border-bottom: 1px solid var(--gl-v2-hairline-soft, rgba(44, 59, 42, .08)); }
+.gl-v2-ic-steps [hidden] { display: none; }
+.gl-v2-ic-body { padding: 16px 20px 22px; display: flex; flex-direction: column; gap: 16px; }
+.gl-v2-ic-panel { display: flex; flex-direction: column; gap: 18px; }
+.gl-v2-ic-panel[hidden] { display: none; }
+.gl-v2-ic-row2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+@media (max-width: 699.98px) { .gl-v2-ic-row2 { grid-template-columns: minmax(0, 1fr); } }
+
+/* blokken met kop (Van / Aan / Data / Opbouw / Verzenden) */
+.gl-v2-ic-block { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px 16px; border: 1px solid rgba(44, 59, 42, .10); border-radius: 10px; background: #fff; }
+.gl-v2-ic-block-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.gl-v2-ic-block-head b { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-ic-block-head span { font: 450 11.5px var(--gl-v2-font-sans); color: #7a8a78; }
+.gl-v2-ic-errors-list { margin: 4px 0 0; padding-left: 18px; font: 450 12.5px/1.5 var(--gl-v2-font-sans); }
+.gl-v2-ic-errors-list a { color: inherit; text-decoration: underline; cursor: pointer; }
+
+
+/* gekozen klant als kaart */
+.gl-v2-ic-party-card { display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 12px 14px; border: 1px solid #C9DDBE; border-radius: 10px; background: #F7FAF4; }
+.gl-v2-ic-party-card[hidden] { display: none; }
+.gl-v2-ic-avatar { flex: none; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #E4EEDD; color: var(--gl-v2-primary); font: 700 12px var(--gl-v2-font-sans); }
+.gl-v2-ic-party-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.gl-v2-ic-party-text b { font: 600 13.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-ic-party-text span { font: 450 12px var(--gl-v2-font-sans); color: #5a6b58; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-ic-peppol { display: inline-flex; align-items: center; gap: 5px; margin-top: 2px; font: 600 11px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+.gl-v2-ic-peppol.is-off { color: #7a8a78; font-weight: 500; }
+.gl-v2-ic-recent { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.gl-v2-ic-recent[hidden] { display: none; }
+.gl-v2-ic-recent small { font: 450 11.5px var(--gl-v2-font-sans); color: #7a8a78; }
+.gl-v2-ic-recent #ic-recent-items { display: contents; }
+.gl-v2 .gl-v2-ic-chip { display: inline-flex; align-items: center; height: 28px; padding: 0 11px; border-radius: 14px; border: 1px solid rgba(44, 59, 42, .14); background: transparent; color: #5a6b58; font: 600 11.5px var(--gl-v2-font-sans); cursor: pointer; }
+.gl-v2 .gl-v2-ic-chip:hover { background: var(--gl-v2-hover-tint, #F2F5EF); }
+
+/* opbouw: aantallen in de segmenten */
+.gl-v2-ic-form #ic-modes em { font-style: normal; margin-left: 6px; padding: 1px 6px; border-radius: 8px; background: rgba(44, 59, 42, .08); font-size: 10.5px; }
+.gl-v2-ic-form #ic-modes em:empty { display: none; }
+.gl-v2-ic-form #ic-modes button:disabled { opacity: .45; cursor: not-allowed; }
+
+/* verzendkanalen */
+.gl-v2-ic-channels { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.gl-v2-ic-channels li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid rgba(44, 59, 42, .10); border-radius: 8px; background: #F7F9F5; font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-ic-channels li i { flex: none; font-size: 16px; color: var(--gl-v2-primary); }
+.gl-v2-ic-channels li small { margin-left: auto; font: 450 11.5px var(--gl-v2-font-sans); color: #7a8a78; }
+.gl-v2-ic-channels li.is-muted { background: transparent; color: #7a8a78; font-weight: 450; }
+.gl-v2-ic-channels li.is-muted i { color: #7a8a78; }
+
+/* lijnen */
+.gl-v2-ic-lines { border: 1px solid rgba(44, 59, 42, .10); border-radius: 10px; overflow: hidden; }
+.gl-v2-ic-lines-head, .gl-v2-ic-line { display: grid; grid-template-columns: 22px minmax(0, 1fr) 76px 120px 128px 118px 30px; gap: 10px; align-items: center; padding: 0 12px; }
+.gl-v2-ic-lines-head { height: 34px; background: #F7F9F5; font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; color: #5a6b58; }
+.gl-v2-ic-line { min-height: 52px; padding-top: 6px; padding-bottom: 6px; border-top: 1px solid rgba(44, 59, 42, .06); background: #fff; }
+.gl-v2-ic-line.is-dragging { opacity: .5; }
+.gl-v2-ic-line.is-over { box-shadow: inset 0 2px 0 var(--gl-v2-primary); }
+.gl-v2-ic-line .gl-v2-field-box { height: 36px; }
+.gl-v2-ic-line .gl-v2-field-input.is-num { text-align: right; font-variant-numeric: tabular-nums; }
+.gl-v2-ic-lines .is-num { text-align: right; font-variant-numeric: tabular-nums; }
+.gl-v2-ic-line .is-total { text-align: right; font: 600 13px var(--gl-v2-font-sans); font-variant-numeric: tabular-nums; color: var(--gl-v2-ink); }
+.gl-v2-ic-grip { cursor: grab; color: #9aa898; font-size: 16px; display: flex; align-items: center; background: transparent; border: 0; padding: 0; }
+.gl-v2-ic-grip:active { cursor: grabbing; }
+.gl-v2-ic-del { border: 0; background: transparent; color: #9aa898; cursor: pointer; padding: 5px; border-radius: 6px; font-size: 15px; }
+.gl-v2-ic-del:hover { background: #F6E3DE; color: #A2432F; }
+.gl-v2-ic-line select.gl-v2-ic-vat { width: 100%; height: 36px; border: 1px solid rgba(44, 59, 42, .14); border-radius: 8px; background: #fff; padding: 0 8px; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2 .gl-v2-ic-addline { align-self: flex-start; margin-top: 10px; }
+@media (max-width: 899.98px) {
+    .gl-v2-ic-lines-head { display: none; }
+    .gl-v2-ic-line { grid-template-columns: 22px minmax(0, 1fr) 30px; row-gap: 6px; padding-top: 10px; padding-bottom: 10px; }
+    .gl-v2-ic-line > :nth-child(3), .gl-v2-ic-line > :nth-child(4), .gl-v2-ic-line > :nth-child(5), .gl-v2-ic-line > :nth-child(6) { grid-column: 2; }
+}
+
+/* openstaande posten en offerte: kiezen */
+.gl-v2-ic-pickgroup { border: 1px solid rgba(44, 59, 42, .10); border-radius: 10px; overflow: hidden; margin-bottom: 10px; background: #fff; }
+.gl-v2-ic-pickgroup-head { display: flex; align-items: center; gap: 10px; padding: 9px 14px; background: #F7F9F5; font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-ic-pickgroup-head small { margin-left: auto; font: 450 11.5px var(--gl-v2-font-sans); color: #7a8a78; }
+.gl-v2-ic-pickrow { display: grid; grid-template-columns: 22px minmax(0, 1fr) 90px 110px; gap: 12px; align-items: center; padding: 9px 14px; border-top: 1px solid rgba(44, 59, 42, .06); font: 450 13px var(--gl-v2-font-sans); cursor: pointer; }
+.gl-v2-ic-pickrow.is-on { background: #FBFDF9; }
+.gl-v2-ic-pickrow .is-num { text-align: right; font-variant-numeric: tabular-nums; }
+.gl-v2-ic-pickrow small { display: block; font: 450 11px var(--gl-v2-font-sans); color: #7a8a78; }
+.gl-v2-ic-pickrow input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--gl-v2-primary); }
+.gl-v2-ic-pct { width: 100%; height: 30px; border: 1px solid rgba(44, 59, 42, .14); border-radius: 7px; text-align: right; padding: 0 8px; font: 450 12.5px var(--gl-v2-font-sans); }
+.gl-v2-ic-empty { padding: 18px 14px; border: 1px dashed rgba(44, 59, 42, .2); border-radius: 10px; font: 450 13px var(--gl-v2-font-sans); color: #7a8a78; text-align: center; }
+
+/* totalen */
+.gl-v2-ic-totals { align-self: flex-end; width: 340px; max-width: 100%; margin-left: auto; display: flex; flex-direction: column; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
+.gl-v2-ic-totals > div { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; }
+.gl-v2-ic-totals > div span:first-child { color: #5a6b58; }
+.gl-v2-ic-totals .is-grand { margin-top: 4px; padding: 9px 12px; border-radius: 8px; background: var(--gl-v2-primary); color: #fff; font-weight: 700; }
+.gl-v2-ic-totals .is-grand span:first-child { color: inherit; }
+
+
+.gl-v2 .gl-v2-form-actionbar-actions [hidden] { display: none; }
+.gl-v2-ic-form .gl-v2-field-help i { vertical-align: -1px; }
+
+/* hidden moet altijd winnen van display:flex op velden en meldingen */
+.gl-v2-ic-form [hidden], .gl-v2-ic-main [hidden] { display: none !important; }
+
+/* — nieuwe klant snel aanmaken (47e–g): formuliermodaal — */
+.gl-v2-ic-newparty-modal [hidden] { display: none !important; }
+.gl-v2-ic-newparty-modal .modal-dialog { max-width: 620px; }
+.gl-v2-ic-newparty-modal .modal-header { align-items: flex-start; }
+.gl-v2-ic-np-sub { margin: 4px 0 0; font: 450 12px var(--gl-v2-font-sans); color: #7a8a78; }
+.gl-v2-ic-np-body { display: flex; flex-direction: column; gap: 14px; }
+.gl-v2-ic-np-section { display: flex; flex-direction: column; gap: 14px; }
+.gl-v2-ic-np-error { padding: 10px 12px; border-radius: 8px; background: #FBF3F0; border: 1px solid #E6C3BA; color: #8B2A2A; font: 500 12.5px var(--gl-v2-font-sans); }
+.gl-v2-ic-np-numrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: stretch; }
+.gl-v2-ic-np-country { flex: none; padding-right: 8px; margin-right: 4px; border-right: 1px solid rgba(44, 59, 42, .14); font: 500 12px var(--gl-v2-font-sans); color: #5a6b58; white-space: nowrap; }
+.gl-v2-ic-np-result { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 8px; font: 450 12.5px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-ic-np-result i { flex: none; font-size: 18px; margin-top: 1px; }
+.gl-v2-ic-np-result b { font-weight: 600; }
+.gl-v2-ic-np-result.is-ok { background: #F2F7EE; border: 1px solid #C9DDBE; }
+.gl-v2-ic-np-result.is-ok i { color: var(--gl-v2-primary); }
+.gl-v2-ic-np-result.is-bad { background: #FBF6EA; border: 1px solid #E6D3A8; }
+.gl-v2-ic-np-result.is-bad i { color: #8A6A32; }
+.gl-v2-ic-np-result.is-busy { background: #F7F9F5; border: 1px solid rgba(44, 59, 42, .10); }
+.gl-v2-ic-np-result em { display: block; margin-top: 4px; font-style: normal; font-weight: 500; color: #7a8a78; }
+.gl-v2-ic-np-result em.is-on { color: var(--gl-v2-primary); font-weight: 600; }
+.gl-v2-ic-np-note { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 8px; background: #F7F9F5; border: 1px solid rgba(44, 59, 42, .10); font: 450 12.5px/1.5 var(--gl-v2-font-sans); color: #5a6b58; }
+.gl-v2-ic-np-note i { flex: none; font-size: 18px; color: var(--gl-v2-primary); }
+.gl-v2-ic-np-note b { color: var(--gl-v2-ink); font-weight: 600; }
+.gl-v2-ic-newparty-modal .modal-footer { align-items: center; }
+.gl-v2-ic-np-foot { margin-right: auto; font: 450 11.5px var(--gl-v2-font-sans); color: #7a8a78; }
+.gl-v2-ic-main .gl-v2-notice-compact { margin-bottom: 10px; }

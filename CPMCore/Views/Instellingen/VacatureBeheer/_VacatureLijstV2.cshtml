@@ -1,0 +1,40 @@
+@model CPMCore.Models.Instellingen.VacatureLijstV2Vm
+@*
+    gl-v2 — één puntenlijst van de vacature-editor (punt 55d): kop met "Toevoegen", rijen die je sleept om te herschikken, potlood en prullenbak per rij.
+    De knoppen zijn geen submit: gl-v2-instellingen-vacatures.js opent de gedeelde bewerk-modal of de gedeelde verwijderbevestiging en post naar de bestaande acties.
+*@
+<section class="gl-v2-section-card gl-v2-inh-list" data-vc-list data-kind="@Model.Kind" data-cat="@Model.Categorie" data-save="@Url.Action(Model.SaveAction)" data-del="@Url.Action(Model.DeleteAction)"
+         data-del-field="@Model.DeleteField" data-order="@Url.Action(Model.OrderAction)" data-title="@Model.Titel">
+    <div class="gl-v2-section-card-header">
+        <h2 class="gl-v2-section-card-title">@Model.Titel</h2>
+        <span class="gl-v2-field-divider"></span>
+        <span class="gl-v2-section-card-desc">@(Model.Omschrijving) </span>
+        <span class="gl-v2-section-card-spacer"></span>
+        <span class="gl-v2-inh-count" data-vc-count>@Model.Items.Count</span>
+        @if (Model.CanWrite)
+        {
+            <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-vc-add><i class="ph ph-plus" aria-hidden="true"></i>@Model.AddText</button>
+        }
+    </div>
+    <ul class="gl-v2-inh-items" data-vc-items>
+        @foreach (var i in Model.Items)
+        {
+            <li class="gl-v2-inh-item" data-id="@i.Id" data-sort="@i.SortOrder" data-titel="@i.Titel" data-tekst="@i.Tekst" @(Model.CanWrite ? "draggable=true" : "")>
+                @if (Model.CanWrite) { <span class="gl-v2-inh-grip" aria-hidden="true"><i class="ph ph-dots-six-vertical"></i></span> }
+                <span class="gl-v2-inh-item-text">
+                    @if (Model.Numbered) { <b class="gl-v2-inh-nr" data-vc-nr></b> }
+                    @if (!string.IsNullOrWhiteSpace(i.Titel)) { <span class="t">@i.Titel</span><span class="s">@i.Tekst</span> }
+                    else { <span class="t">@i.Tekst</span> }
+                </span>
+                @if (Model.CanWrite)
+                {
+                    <span class="gl-v2-inh-item-acts">
+                        <button type="button" class="gl-v2-row-action" data-vc-edit title="Bewerken" aria-label="Bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>
+                        <button type="button" class="gl-v2-row-action gl-v2-row-action-danger" data-vc-del title="Verwijderen" aria-label="Verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+                    </span>
+                }
+            </li>
+        }
+    </ul>
+    <div class="gl-v2-inh-list-empty" data-vc-empty @(Model.Items.Any() ? "hidden" : "")>Nog niets toegevoegd.</div>
+</section>

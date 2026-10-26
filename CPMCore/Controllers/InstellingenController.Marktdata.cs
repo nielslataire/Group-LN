@@ -42,8 +42,9 @@ public partial class InstellingenController
     [HttpGet]
     [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsMarketDataStatus)]
     [Breadcrumb("Marktdata-status")]
-    public async Task<IActionResult> MarketDataStatus(CancellationToken ct)
+    public async Task<IActionResult> MarketDataStatus(CancellationToken ct, bool classic = false)
     {
+        if (classic) ViewData["UseGlV2Layout"] = false;
         SetPageHeader("bx bx-radar", "Marktdata-status");
 
         var dashboard    = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
@@ -52,6 +53,8 @@ public partial class InstellingenController
         ViewData["BreadcrumbNode"] = status;
 
         var model = await _marketDataStatus.GetStatusAsync(ct: ct);
+        // gl-v2 (design-handoff punt 56c)
+        if (ViewData["UseGlV2Layout"] as bool? == true) { ViewData["BackUrl"] = Url.Action("Index", "Instellingen"); return View("MarketDataStatusV2", model); }
         return View(model);
     }
 }

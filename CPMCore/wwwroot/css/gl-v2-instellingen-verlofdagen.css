@@ -1,0 +1,40 @@
+/* gl-v2 — Instellingen › Verlofdagen (design-handoff punt 50). Kalender, jaarbalk, legende en maandkaarten komen uit het
+   projectbrede jaarkalender-component (css/gl-v2/yearcal.css); hier enkel de toolbar met de "wat zet je bij een klik"-schakelaar
+   en de kleuren van bouwverlof (groen paar van de app) en feestdag (goud paar van de app). */
+
+.gl-v2-vl-toolbar { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+.gl-v2-vl-spacer { flex: 1; }
+.gl-v2-vl-field { display: flex; flex-direction: column; gap: 5px; flex: none; }
+.gl-v2-vl-field-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .09em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gl-v2-vl-notice { margin-bottom: 14px; }
+.gl-v2-vl-notice[hidden] { display: none; }
+
+/* Schakelaar: basis is het projectbrede .gl-v2-segmented; hier de bredere opties met kleurvlak en teller. */
+.gl-v2-segmented > .gl-v2-vl-option { gap: 8px; padding: 0 14px; }
+.gl-v2-vl-option-count { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); font-variant-numeric: tabular-nums; }
+.gl-v2-vl-option[data-kind="B"].is-active .gl-v2-vl-option-label,
+.gl-v2-vl-option[data-kind="B"].is-active .gl-v2-vl-option-count { color: var(--gl-v2-primary); }
+.gl-v2-vl-option[data-kind="F"].is-active .gl-v2-vl-option-label,
+.gl-v2-vl-option[data-kind="F"].is-active .gl-v2-vl-option-count { color: var(--gl-v2-warning); }
+.gl-v2-vl-swatch { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.gl-v2-vl-swatch.is-bouwverlof { background: var(--gl-v2-primary-tint); box-shadow: inset 0 0 0 1.5px var(--gl-v2-primary); }
+.gl-v2-vl-swatch.is-feestdag { background: var(--gl-v2-gold-tint); box-shadow: inset 0 0 0 1.5px var(--gl-v2-warning); }
+
+.gl-v2-yc-yearbar-stat.is-bouwverlof { color: var(--gl-v2-primary); }
+.gl-v2-yc-yearbar-stat.is-feestdag { color: var(--gl-v2-warning); }
+.gl-v2-spin { animation: gl-v2-spin 1s linear infinite; }
+@keyframes gl-v2-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .gl-v2-spin { animation: none; } }
+
+@media (max-width: 767.98px) {
+    .gl-v2-vl-toolbar { align-items: stretch; }
+    .gl-v2-vl-field { width: 100%; }
+    .gl-v2-vl-field .gl-v2-segmented { width: 100%; }
+    .gl-v2-vl-field .gl-v2-segmented > button { flex: 1; }
+    .gl-v2-vl-spacer { flex-basis: 100%; height: 0; }
+    /* De jaarbalk is te smal voor drie tellers plus ‹ jaar ›: de tellers staan ook in de schakelaar en in elke maandkop. */
+    .gl-v2-yc-yearbar-stat.is-bouwverlof,
+    .gl-v2-yc-yearbar-stat.is-feestdag,
+    .gl-v2-yc-yearbar-stat.is-bouwverlof + .gl-v2-yc-yearbar-divider,
+    .gl-v2-yc-yearbar-stat.is-feestdag + .gl-v2-yc-yearbar-divider { display: none; }
+}

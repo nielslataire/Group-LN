@@ -460,31 +460,18 @@
 
     // ── Documenten (16b §7) ────────────────────────────────────────────────────────────────────
     function isPdf(file) { return file && ((file.type && file.type === "application/pdf") || /\.pdf$/i.test(file.name)); }
+    // nieuwe uitvoeringsplannen staan in de lijst van het gedeelde GlV2/_Dropzone (Mode list)
+    function execNewCount() { var z = document.getElementById("gl-v2-unit-exec-files_zone"); return z && window.GlV2Dropzone ? window.GlV2Dropzone.getFiles(z).length : 0; }
     function updateDocBadge() {
         var n = 0;
         var plan = $("[data-plan-current]");
         if (plan && !plan.hidden) n++;
         n += $$("[data-exec-existing]").filter(function (r) { return !r.hidden; }).length;
-        n += $$("[data-exec-new]").length;
+        n += execNewCount();
         setBadge("docs", n ? String(n) : "");
         var empty = document.getElementById("gl-v2-unit-exec-empty");
-        var execCount = $$("[data-exec-existing]").filter(function (r) { return !r.hidden; }).length + $$("[data-exec-new]").length;
+        var execCount = $$("[data-exec-existing]").filter(function (r) { return !r.hidden; }).length + execNewCount();
         if (empty) empty.hidden = execCount > 0;
-    }
-    function wireDrop(dropEl, inputEl, onFiles, multiple) {
-        if (!dropEl || !inputEl) return;
-        dropEl.addEventListener("click", function () { inputEl.click(); });
-        ["dragenter", "dragover"].forEach(function (ev) {
-            dropEl.addEventListener(ev, function (e) { e.preventDefault(); dropEl.classList.add("is-dragover"); });
-        });
-        ["dragleave", "drop"].forEach(function (ev) {
-            dropEl.addEventListener(ev, function (e) { e.preventDefault(); dropEl.classList.remove("is-dragover"); });
-        });
-        dropEl.addEventListener("drop", function (e) {
-            var files = Array.prototype.slice.call((e.dataTransfer && e.dataTransfer.files) || []);
-            if (!multiple) files = files.slice(0, 1);
-            onFiles(files);
-        });
     }
     function initPlan() {
         var wrap = document.getElementById("gl-v2-unit-plan");
@@ -510,11 +497,12 @@
             updateDocBadge();
             markDirty();
         }
-        wireDrop(drop, input, function (files) { if (files[0]) showChosen(files[0]); }, false);
+        // slepen en kiezen: het gedeelde GlV2/_Dropzone zet het bestand in het veld en stuurt het gewone change-event
         input.addEventListener("change", function () { if (input.files && input.files[0]) showChosen(input.files[0]); });
         $("[data-plan-replace]", wrap).addEventListener("click", function () { input.click(); });
         $("[data-plan-remove]", wrap).addEventListener("click", function () {
             input.value = "";
+            if (window.GlV2Dropzone) window.GlV2Dropzone.reset(drop);
             current.hidden = true;
             drop.hidden = false;
             if (removeFlag) removeFlag.value = hadPlan ? "true" : "false";
@@ -524,48 +512,14 @@
             markDirty();
         });
     }
-    var execQueue = [];
-    function rebuildExecFiles() {
-        var input = document.getElementById("gl-v2-unit-exec-files");
-        if (!input) return;
-        var dt = new DataTransfer();
-        execQueue.forEach(function (q) { dt.items.add(q.file); });
-        input.files = dt.files;
-    }
-    function addExecFiles(files) {
-        var list = document.getElementById("gl-v2-unit-exec-list");
-        files.forEach(function (file) {
-            if (!isPdf(file)) { toast("Kies een pdf", file.name + " is geen pdf-bestand.", "danger"); return; }
-            var key = uid();
-            execQueue.push({ key: key, file: file });
-            var row = document.createElement("div");
-            row.className = "gl-v2-unit-doc-row";
-            row.setAttribute("data-exec-new", key);
-            row.innerHTML = '<span class="gl-v2-unit-doc-type">PDF</span>' +
-                '<div class="gl-v2-field gl-v2-unit-doc-name-input"><div class="gl-v2-field-box"><input type="text" name="executionPlanNames" class="gl-v2-field-input" autocomplete="off" placeholder="Naam van het plan" aria-label="Naam van het uitvoeringsplan"></div></div>' +
-                '<button type="button" class="gl-v2-icon-btn is-warning" data-exec-remove-new="' + key + '" title="Verwijderen" aria-label="Verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>';
-            $("input", row).value = file.name.replace(/\.pdf$/i, "");
-            list.appendChild(row);
-        });
-        rebuildExecFiles();
-        updateDocBadge();
-        markDirty();
-    }
     function initExecPlans() {
         var list = document.getElementById("gl-v2-unit-exec-list");
         var drop = $("[data-exec-drop]");
         var input = document.getElementById("gl-v2-unit-exec-files");
         if (!list || !input) return;
-        wireDrop(drop, input, addExecFiles, true);
-        // De <input type=file multiple> bevat na elke keuze precies de gekozen bestanden; die gaan in de
-        // wachtrij (die de echte inhoud van het formulierveld beheert via DataTransfer).
-        input.addEventListener("change", function () {
-            var chosen = Array.prototype.slice.call(input.files || []);
-            var previous = execQueue.map(function (q) { return q.file; });
-            // Alleen wat nieuw is t.o.v. de wachtrij toevoegen (rebuildExecFiles zet de wachtrij terug).
-            var fresh = chosen.filter(function (f) { return previous.indexOf(f) === -1; });
-            addExecFiles(fresh);
-        });
+        // Nieuwe plannen: het gedeelde GlV2/_Dropzone (Mode list) houdt de bestanden, een naamveld per plan en het kruisje bij; wij tellen en markeren.
+        var zone = document.getElementById("gl-v2-unit-exec-files_zone");
+        if (zone) zone.addEventListener("gl-v2:dropzone-change", function () { updateDocBadge(); markDirty(); });
         list.addEventListener("click", function (e) {
             var existing = e.target.closest("[data-exec-remove]");
             if (existing) {
@@ -576,15 +530,6 @@
                 updateDocBadge();
                 markDirty();
                 return;
-            }
-            var fresh = e.target.closest("[data-exec-remove-new]");
-            if (fresh) {
-                var key = fresh.getAttribute("data-exec-remove-new");
-                execQueue = execQueue.filter(function (q) { return q.key !== key; });
-                fresh.closest("[data-exec-new]").remove();
-                rebuildExecFiles();
-                updateDocBadge();
-                markDirty();
             }
         });
     }

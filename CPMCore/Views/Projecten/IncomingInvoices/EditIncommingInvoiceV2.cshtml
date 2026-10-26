@@ -38,12 +38,7 @@
                ernaast staat i.p.v. er volledig onder. Leverancier/nummer/datum/bedrag worden ingevuld;
                de gebruiker kiest zelf nog altijd het Contract/Bedrijf (geen automatische matching op
                naam, te foutgevoelig om blind te vertrouwen). *@
-            <div class="gln-ai-dropzone" id="gln-ai-dropzone">
-                <i class="ph ph-upload-simple" aria-hidden="true"></i>
-                <span>Sleep de PDF van de factuur hierheen — nummer, datum, vervaldatum en bedrag worden ingevuld</span>
-                <label class="gln-ai-dropzone-link">kies een bestand<input type="file" id="gln-ai-file-input" accept="application/pdf" hidden /></label>
-                <span class="gln-ai-dropzone-status" id="gln-ai-dropzone-status" hidden></span>
-            </div>
+            @await Html.PartialAsync("GlV2/_Dropzone", new GlV2DropzoneVm { Id = "gln-ai-file-input", Accept = "application/pdf,.pdf", Layout = "bar", Mode = "select", StatusSlot = true, Title = "Sleep de PDF van de factuur hierheen — nummer, datum, vervaldatum en bedrag worden ingevuld", LinkText = "kies een bestand", AriaLabel = "PDF van de factuur kiezen" })
 
             <section class="gl-v2-section-card">
                 <div class="gl-v2-section-card-header">

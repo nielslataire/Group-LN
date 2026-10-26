@@ -1,0 +1,122 @@
+@model CPMCore.Models.IssueNotification.IssueNotificationIndexVm
+@using BOCore
+@using FacadeCore
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen › Puntmeldingen (design-handoff punt 56a, "CRM Instellingen.dc.html"): de schema's als leesbare zin met prioriteitsniveau, daaronder de recente uitvoeringen met een
+    samenvatting en een filter; runs zonder mails gedempt, vastgelopen runs gemarkeerd. Dezelfde acties als de klassieke pagina (Nieuw, Bewerken, Verwijderen, NuVersturen, TestEmail,
+    TestUitnodiging, Logs). Prioriteitsniveau volgens "het meest specifieke schema wint": 1 aannemer + project, 2 aannemer, 3 project, Standaard = alle aannemers + alle projecten.
+*@
+@{
+    ViewData["Title"] = "Puntmeldingen";
+    ViewData["PageIcon"] = "ph ph-bell-ringing";
+    ViewData["HelpScreenId"] = "instellingen-puntmeldingen";
+    ViewData["BackUrl"] = Url.Action("Index", "Instellingen");
+    var nl = new System.Globalization.CultureInfo("nl-BE");
+    var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsIssueNotifications);
+    var canDelete = PermissionService.HasDelete(PermissionCodes.SettingsIssueNotifications);
+    string[] dagen = { "zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag" };
+    string Herinnering(CPMCore.Models.IssueNotification.ScheduleRowVm s)
+    {
+        if (s.ReminderFrequencyDays == 0) return "Geen herinnering";
+        var dag = s.ReminderDayOfWeek.HasValue ? dagen[s.ReminderDayOfWeek.Value % 7] : null;
+        var uur = $"{s.BrusselsReminderHour:00}:00";
+        return s.ReminderFrequencyDays switch
+        {
+            7 when dag != null => $"Elke {dag} om {uur}",
+            14 when dag != null => $"Om de 2 weken op {dag} om {uur}",
+            30 => dag != null ? $"Maandelijks op {dag} om {uur}" : $"Maandelijks om {uur}",
+            _ => $"Om de {s.ReminderFrequencyDays} dagen{(dag != null ? " op " + dag : "")} om {uur}"
+        };
+    }
+    int Niveau(CPMCore.Models.IssueNotification.ScheduleRowVm s) => s.SupplierName != null && s.ProjectName != null ? 1 : s.SupplierName != null ? 2 : s.ProjectName != null ? 3 : 4;
+    var sinds = DateTime.Now.AddDays(-10);
+    var recent = Model.RecentRuns.Where(r => r.StartedDate >= sinds).ToList();
+    bool Vast(CPMCore.Models.IssueNotification.RunRowVm r) => r.StatusLabel == "Bezig" && !r.FinishedDate.HasValue && (DateTime.Now - r.StartedDate) > TimeSpan.FromHours(1);
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-automatisatie.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @if (canWrite)
+    {
+        <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="pm-test" data-url="@Url.Action("SendTestEmail", "IssueNotificationAdmin")"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>Testmail</button>
+        <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="pm-test-inv" data-url="@Url.Action("SendTestInviteEmail", "IssueNotificationAdmin")"><i class="ph ph-envelope-simple" aria-hidden="true"></i>Test uitnodigingsmail</button>
+        <a href="@Url.Action("Create")" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-plus" aria-hidden="true"></i>Nieuw schema</a>
+    }
+}
+
+<div class="gl-v2-auto" id="gl-v2-pm">
+    @Html.AntiForgeryToken()
+
+    <section class="gl-v2-section-card">
+        <div class="gl-v2-section-card-header">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-calendar-check" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-section-card-title">Schema’s</h2>
+            <span class="gl-v2-field-divider"></span>
+            <span class="gl-v2-section-card-desc">Het meest specifieke schema wint per aannemer en project.</span>
+        </div>
+        <div class="gl-v2-auto-head gl-v2-auto-grid--sch"><span>Voor wie</span><span>Herinnering</span><span>Dagelijkse update</span><span>Volgende herinnering</span><span>Status</span><span></span></div>
+        @if (!Model.Schedules.Any())
+        {
+            <div class="gl-v2-auto-none">Nog geen schema’s. Maak er een met “Nieuw schema”.</div>
+        }
+        @foreach (var s in Model.Schedules)
+        {
+            var n = Niveau(s);
+            var wie = (s.SupplierName ?? "Alle aannemers") + " · " + (s.ProjectName ?? "alle projecten");
+            <div class="gl-v2-auto-row gl-v2-auto-grid--sch @(s.IsActive ? "" : "is-muted-row")">
+                <span class="gl-v2-auto-who"><span class="t">@wie</span><span class="gl-v2-badge @(n == 4 ? "is-neutral" : "is-info")">@(n == 4 ? "Standaard" : "Niveau " + n)</span></span>
+                <span class="gl-v2-auto-cell">@Herinnering(s)</span>
+                <span class="gl-v2-auto-cell">@(s.SendEveningUpdate ? $"Ja, om {s.BrusselsEveningUpdateHour:00}:00" : "Nee")</span>
+                <span class="gl-v2-auto-cell">@(s.NextReminderRun.HasValue && s.IsActive ? s.NextReminderRun.Value.ToString("ddd d MMM", nl) : "—")</span>
+                <span><span class="gl-v2-badge @(s.IsActive ? "is-positive" : "is-inactive")">@(s.IsActive ? "Actief" : "Inactief")</span></span>
+                <span class="gl-v2-auto-acts">
+                    @if (canWrite)
+                    {
+                        <button type="button" class="gl-v2-row-action" data-pm-send="@Url.Action("SendNow", "IssueNotificationAdmin", new { id = s.Id })" data-pm-naam="@wie" title="Nu versturen" aria-label="Nu versturen voor @wie"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i></button>
+                    }
+                    <a class="gl-v2-row-action" href="@Url.Action("Edit", new { id = s.Id })" title="Bewerken" aria-label="Schema @wie bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></a>
+                    @if (canDelete)
+                    {
+                        <form method="post" action="@Url.Action("Delete", new { id = s.Id })" data-bv-titel="Schema verwijderen?" data-bv-tekst="Het schema voor @wie wordt verwijderd. Aannemers vallen terug op het volgende meest specifieke schema." data-bv-ok="Verwijderen" data-bv-tone="danger" data-bv-icon="ph-trash">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="gl-v2-row-action gl-v2-row-action-danger" title="Verwijderen" aria-label="Schema @wie verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+                        </form>
+                    }
+                </span>
+            </div>
+        }
+    </section>
+
+    <section class="gl-v2-section-card">
+        <div class="gl-v2-section-card-header">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-section-card-title">Recente uitvoeringen</h2>
+            <span class="gl-v2-section-card-spacer"></span>
+            <div class="gl-v2-segmented is-sm" role="group" aria-label="Filter" id="pm-filter">
+                <button type="button" class="is-active" aria-pressed="true" data-f="">Alle</button>
+                <button type="button" aria-pressed="false" data-f="ok">Geslaagd</button>
+                <button type="button" aria-pressed="false" data-f="fout">Fout</button>
+                <button type="button" aria-pressed="false" data-f="vast">Vastgelopen</button>
+            </div>
+        </div>
+        <div class="gl-v2-auto-tiles">
+            <div><span class="l">Laatste 10 dagen</span><span class="v">@recent.Count runs</span></div>
+            <div><span class="l">Mails verstuurd</span><span class="v">@recent.Sum(r => r.EmailsSent)</span></div>
+            <div><span class="l">Herinneringen</span><span class="v">@recent.Count(r => r.RunTypeLabel == "Herinnering")</span></div>
+            <div><span class="l">Vastgelopen</span><span class="v @(recent.Any(Vast) ? "is-bad" : "")">@recent.Count(Vast)</span></div>
+        </div>
+        @await Html.PartialAsync("_RunsV2", Model.RecentRuns)
+        <div class="gl-v2-auto-foot">Tijden in Brussels-tijd. <a href="@Url.Action("Logs")">Alle logs bekijken</a></div>
+    </section>
+</div>
+
+@await Html.PartialAsync("GlV2/_BevestigModal")
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-instellingen-puntmeldingen.js" asp-append-version="true"></script>
+}

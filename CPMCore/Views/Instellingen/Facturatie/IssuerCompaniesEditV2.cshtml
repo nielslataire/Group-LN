@@ -128,11 +128,7 @@
                                 }
                             </div>
                             <div class="gl-v2-ice-logo-upload">
-                                <label class="gl-v2-ice-logo-drop" for="LogoUpload">
-                                    <span class="gl-v2-ice-logo-drop-title">Sleep een nieuw logo hierheen</span>
-                                    <span class="gl-v2-ice-logo-drop-sub">of klik om te kiezen · PNG, SVG of JPG</span>
-                                </label>
-                                <input type="file" id="LogoUpload" name="LogoUpload" accept="image/*" class="gl-v2-ice-logo-input" />
+                                @await Html.PartialAsync("GlV2/_Dropzone", new GlV2DropzoneVm { Name = "LogoUpload", Id = "LogoUpload", Accept = "image/*", Layout = "compact", Mode = "inline", Title = "Sleep een nieuw logo hierheen", LinkText = null, Sub = "of klik om te kiezen · PNG, SVG of JPG", AriaLabel = "Nieuw logo kiezen" })
                                 @Html.HiddenFor(m => m.LogoPath)
                                 @if (!string.IsNullOrWhiteSpace(Model.LogoPath))
                                 {

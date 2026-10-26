@@ -12,7 +12,7 @@ namespace CPMCore.Controllers;
 [Authorize]
 [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsIssueNotifications)]
 [Route("Instellingen/PuntMeldingen")]
-public class IssueNotificationAdminController : BaseController
+public partial class IssueNotificationAdminController : BaseController
 {
     private readonly cpmRunningContext _db;
     private readonly IIssueNotificationSchedulerService _scheduler;
@@ -65,8 +65,9 @@ public class IssueNotificationAdminController : BaseController
     // ── INDEX ─────────────────────────────────────────────────────
 
     [HttpGet("")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(bool classic = false)
     {
+        if (classic) ViewData["UseGlV2Layout"] = false;
         var schedules = await _db.IssueNotificationSchedule
             .OrderBy(x => x.SupplierId.HasValue ? 1 : 0)
             .ThenBy(x => x.Id)
@@ -119,6 +120,7 @@ public class IssueNotificationAdminController : BaseController
 
         SetBreadcrumbs();
         SetPageHeader("bx bx-bell", "Automatische puntmeldingen");
+        if (IsV2) return View("IndexV2", vm);
         return View(vm);
     }
 
@@ -133,6 +135,7 @@ public class IssueNotificationAdminController : BaseController
         vm.BrusselsReminderHour = UtcToBrusselsHour(vm.ReminderHour);
         SetBreadcrumbs("Nieuw schema");
         SetPageHeader("bx bx-bell", "Nieuw schema");
+        if (IsV2) return View("EditV2", vm);
         return View("Edit", vm);
     }
 
@@ -145,6 +148,7 @@ public class IssueNotificationAdminController : BaseController
         {
             await PopulateSelectLists(vm);
             SetPageHeader("bx bx-bell", "Nieuw schema");
+            if (IsV2) { SetBreadcrumbs("Nieuw schema"); return View("EditV2", vm); }
             return View("Edit", vm);
         }
 
@@ -198,6 +202,7 @@ public class IssueNotificationAdminController : BaseController
         vm.BrusselsReminderHour = UtcToBrusselsHour(vm.ReminderHour);
         SetBreadcrumbs("Schema bewerken");
         SetPageHeader("bx bx-bell", "Schema bewerken");
+        if (IsV2) return View("EditV2", vm);
         return View(vm);
     }
 
@@ -210,6 +215,7 @@ public class IssueNotificationAdminController : BaseController
         {
             await PopulateSelectLists(vm);
             SetPageHeader("bx bx-bell", "Schema bewerken");
+            if (IsV2) { SetBreadcrumbs("Schema bewerken"); return View("EditV2", vm); }
             return View("Edit", vm);
         }
 
@@ -355,6 +361,7 @@ public class IssueNotificationAdminController : BaseController
         ViewBag.TotalPages = (int)Math.Ceiling(total / (double)pageSize);
         SetBreadcrumbs("Logs");
         SetPageHeader("bx bx-bell", "Uitvoeringslogboek");
+        if (IsV2) return View("LogsV2", runs.Select(MapRun).ToList());
         return View(runs.Select(MapRun).ToList());
     }
 

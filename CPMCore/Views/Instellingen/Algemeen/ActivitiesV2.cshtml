@@ -1,0 +1,140 @@
+@model CPMCore.Models.Instellingen.ActivitySettingsViewModel
+@using System.Text.Json
+@using BOCore
+@using FacadeCore
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen/Activiteiten (design-handoff punt 51a/51b, "CRM Instellingen.dc.html"): een leesbare lijst i.p.v. 150 open
+    invoervelden. Tabbar Activiteiten / Activiteitgroepen; links de loten als filter, rechts de lijst met zoeken, een inline "nieuwe
+    activiteit"-rij, sorteren, paginering (25 per pagina) en bewerken per rij (één rij tegelijk in bewerkmodus). Een activiteit heeft een eigen
+    lotnummer = lot van de groep + eigen volgnummer ("5.11", migratie 117). Een groep heeft lot als sleutel (uniek), toont het aantal activiteiten
+    en kan pas verwijderd worden als ze leeg is. Alle acties gaan via fetch (InstellingenController.ActivitiesV2.cs) en geven de volledige stand
+    terug; de pagina tekent de lijst in JS uit die stand (gl-v2-instellingen-activiteiten.js).
+*@
+@{
+    ViewData["Title"] = "Activiteiten";
+    ViewData["PageIcon"] = "ph ph-list-bullets";
+    ViewData["HelpScreenId"] = "instellingen-activiteiten";
+    var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsActivities);
+    var tab = (string?)Context.Request.Query["tab"] == "groepen" ? "groepen" : "activiteiten";
+    var stand = new
+    {
+        groepen = Model.ActivityGroups.OrderBy(g => g.Lot).ThenBy(g => g.Name)
+            .Select(g => new { id = g.ID, lot = g.Lot, naam = g.Name, aantal = Model.Activities.Count(a => a.Group != null && a.Group.ID == g.ID) }),
+        activiteiten = Model.Activities.Select(a => new { id = a.ID, naam = a.Name, groepId = a.Group?.ID ?? 0, volgnr = a.Volgnr })
+    };
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-activiteiten.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="act-export"><i class="ph ph-download-simple" aria-hidden="true"></i>Exporteren</button>
+}
+
+<div class="gl-v2-act" id="gl-v2-act" data-can-write="@(canWrite ? "1" : "0")" data-start-tab="@tab"
+     data-url-act-save="@Url.Action("ActiviteitOpslaanV2", "Instellingen")" data-url-act-delete="@Url.Action("ActiviteitVerwijderV2", "Instellingen")"
+     data-url-grp-save="@Url.Action("ActiviteitgroepOpslaanV2", "Instellingen")" data-url-grp-delete="@Url.Action("ActiviteitgroepVerwijderV2", "Instellingen")">
+    @Html.AntiForgeryToken()
+    <script type="application/json" id="act-data">@Html.Raw(JsonSerializer.Serialize(stand))</script>
+
+    <div class="gl-v2-tabbar" role="tablist">
+        <button type="button" class="gl-v2-tabbar-tab @(tab == "activiteiten" ? "is-active" : "")" role="tab" aria-selected="@(tab == "activiteiten" ? "true" : "false")" data-act-tab="activiteiten">Activiteiten <span class="gl-v2-tabbar-count" id="act-count-tab">@Model.Activities.Count</span></button>
+        <button type="button" class="gl-v2-tabbar-tab @(tab == "groepen" ? "is-active" : "")" role="tab" aria-selected="@(tab == "groepen" ? "true" : "false")" data-act-tab="groepen">Activiteitgroepen <span class="gl-v2-tabbar-count" id="grp-count-tab">@Model.ActivityGroups.Count</span></button>
+    </div>
+
+    @* ═══ 51a Activiteiten ═══ *@
+    <div class="gl-v2-act-panel" data-act-panel="activiteiten" @(tab == "activiteiten" ? "" : "hidden")>
+        <aside class="gl-v2-act-lots" aria-label="Activiteitgroep">
+            <span class="gl-v2-act-lots-label">ACTIVITEITGROEP</span>
+            <div class="gl-v2-act-lots-list" id="act-lots"></div>
+        </aside>
+
+        <section class="gl-v2-section-card gl-v2-act-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-list-bullets" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Activiteit</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc" id="act-info">—</span>
+            </div>
+
+            <div class="gl-v2-act-toolbar">
+                <div class="gl-v2-field gl-v2-act-search">
+                    <div class="gl-v2-field-box">
+                        <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                        <input type="text" class="gl-v2-field-input" id="act-search" placeholder="Zoek op naam, nummer of groep" autocomplete="off" />
+                        <button type="button" class="gl-v2-field-clear" id="act-search-clear" aria-label="Zoekterm wissen">&times;</button>
+                    </div>
+                </div>
+                <div class="gl-v2-act-lot-select">
+                    @await Html.PartialAsync("GlV2/_SelectList", new CPMCore.Models.GlV2.GlV2SelectListVm { Name = "lotFilter", Id = "act-lot-select", Value = "", Bare = true, Icon = "ph-funnel", EmptyText = "Alle activiteitgroepen", Items = new List<CPMCore.Models.GlV2.GlV2SelectItem>() })
+                </div>
+            </div>
+
+            @if (canWrite)
+            {
+                <form class="gl-v2-act-row gl-v2-act-grid--act is-add" id="act-add" autocomplete="off">
+                    <span class="gl-v2-act-nr is-preview" id="act-add-nr" title="Een nieuwe activiteit krijgt nog geen eigen nummer: vul het later aan via het potlood">—</span>
+                    <div class="gl-v2-field"><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="act-add-naam" maxlength="250" placeholder="Nieuwe activiteit…" aria-label="Naam van de nieuwe activiteit" /></div></div>
+                    <div>@await Html.PartialAsync("GlV2/_SelectList", new CPMCore.Models.GlV2.GlV2SelectListVm { Name = "groepId", Id = "act-add-groep", Value = "", Bare = true, Placeholder = "Kies een groep", Items = new List<CPMCore.Models.GlV2.GlV2SelectItem>() })</div>
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-plus" aria-hidden="true"></i>Toevoegen</button>
+                </form>
+            }
+
+            <div class="gl-v2-act-head gl-v2-act-grid--act">
+                <button type="button" class="gl-v2-act-sort" data-sort="nr">Lot<i class="ph" aria-hidden="true"></i></button>
+                <button type="button" class="gl-v2-act-sort is-active" data-sort="naam">Naam<i class="ph ph-arrow-up" aria-hidden="true"></i></button>
+                <button type="button" class="gl-v2-act-sort" data-sort="groep">Activiteitgroep<i class="ph" aria-hidden="true"></i></button>
+                <span></span>
+            </div>
+            <div id="act-rows"></div>
+            <div class="gl-v2-act-empty" id="act-empty" hidden>
+                <span class="t" id="act-empty-t">Geen activiteiten gevonden</span>
+                <span class="s"><button type="button" id="act-empty-reset">Wis de filter</button></span>
+            </div>
+            <div class="gl-v2-act-foot">
+                <span class="gl-v2-act-foot-text" id="act-foot">—</span>
+                <nav class="gl-v2-act-pager" id="act-pager" aria-label="Paginering"></nav>
+            </div>
+        </section>
+    </div>
+
+    @* ═══ 51b Activiteitgroepen ═══ *@
+    <div class="gl-v2-act-panel is-single" data-act-panel="groepen" @(tab == "groepen" ? "" : "hidden")>
+        <section class="gl-v2-section-card gl-v2-act-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-folders" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Activiteitgroepen</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc" id="grp-info">—</span>
+            </div>
+            @if (canWrite)
+            {
+                <form class="gl-v2-act-row gl-v2-act-grid--grp is-add" id="grp-add" autocomplete="off">
+                    <div class="gl-v2-field"><div class="gl-v2-field-box"><input type="text" inputmode="numeric" class="gl-v2-field-input is-tabular" id="grp-add-lot" maxlength="3" aria-label="Lot" /></div></div>
+                    <div class="gl-v2-field"><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="grp-add-naam" maxlength="100" placeholder="Nieuwe activiteitgroep…" aria-label="Naam van de nieuwe groep" /></div></div>
+                    <span class="gl-v2-act-hint" id="grp-add-hint">volgend vrij lot</span>
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-plus" aria-hidden="true"></i>Toevoegen</button>
+                </form>
+            }
+            <div class="gl-v2-act-head gl-v2-act-grid--grp">
+                <span>Lot</span><span>Naam</span><span>Activiteiten</span><span></span>
+            </div>
+            <div id="grp-rows"></div>
+            <div class="gl-v2-act-note">
+                <div class="gl-v2-notice gl-v2-notice-compact is-info">
+                    <i class="ph ph-info" aria-hidden="true"></i>
+                    <span>Het lot bepaalt de volgorde in calculaties en budgetten. Een groep verwijder je pas als er geen activiteiten meer in zitten. Klik op het aantal om ze te bekijken en te verplaatsen.</span>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+@await Html.PartialAsync("GlV2/_BevestigModal")
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-instellingen-activiteiten.js" asp-append-version="true"></script>
+}

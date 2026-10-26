@@ -60,7 +60,7 @@ public class VerkoopService
         };
         if (appartement) posten.Add(new("Aandeel basisakte", i.BaseCertificateCost, "enkel bij appartementen", btwKosten));
         posten.Add(new("Aandeel verkavelingsakte", i.ParcelCost, null, btwKosten));
-        posten.Add(new("Aansluitkosten", i.ConnectionFees, "water, elektriciteit, riolering", i.VatPercentage));
+        posten.Add(new("Aansluitkosten", i.ConnectionFees, null, i.VatPercentage));
         posten.Add(new("Landmetingskosten", i.SurveyorCost, null, btwKosten));
         foreach (var e in i.Extra) posten.Add(new(e.Naam, e.Bedrag, e.Toelichting, btwKosten));
         posten = posten.Where(p => p.Bedrag != 0m).ToList();
@@ -133,7 +133,7 @@ public class VerkoopService
 
         var units = await _db.Units.AsNoTracking()
             .Where(u => u.ProjectId == projectId && u.AttachedUnitId == null && u.LinkedUnitId == null)
-            .Include(u => u.Type).Include(u => u.ClientAccount).Include(u => u.UnitConstructionValue).Include(u => u.UnitFinishingOption)
+            .Include(u => u.Type).Include(u => u.UnitRooms).Include(u => u.ClientAccount).Include(u => u.UnitConstructionValue).Include(u => u.UnitFinishingOption)
             .OrderBy(u => u.Name).ToListAsync();
 
         var unitIds = units.Select(u => u.Id).ToList();
@@ -170,6 +170,7 @@ public class VerkoopService
                 Verdieping = (u.Level ?? 0) == 0 ? "gelijkvloers" : "verdieping " + u.Level,
                 IsAppartement = appartement, Status = verkocht ? "Verkocht" : optie ? "Optie" : "Te koop",
                 Grond = grond, Bouw = bouw, Totaal = totaal,
+                Slaapkamers = u.UnitRooms.Where(k => k.Type == (int)BOCore.RoomType.Slaapkamer).Sum(k => k.Number),
                 PreKad = u.PreKad ?? "", Perceel = u.GroundSurface, Wonen = u.Surface, Tienduizendsten = u.Landshare,
                 KoperNaam = u.ClientAccount?.Name, CompromisDatum = u.ClientAccount?.DateSalesAgreement, AkteDatum = u.ClientAccount?.DateDeedOfSale,
                 OptionUntil = u.OptionUntil, OptionHolder = u.OptionHolder, SaleVia = u.SaleVia, OnlineSince = u.OnlineSince,
@@ -381,6 +382,8 @@ public class VerkoopRijVm
     public decimal Grond { get; set; }
     public decimal Bouw { get; set; }
     public decimal Totaal { get; set; }
+    /// <summary>Som van het aantal van alle kamers van het type slaapkamer.</summary>
+    public int Slaapkamers { get; set; }
     public string PreKad { get; set; } = "";
     public decimal? Perceel { get; set; }
     public decimal? Wonen { get; set; }

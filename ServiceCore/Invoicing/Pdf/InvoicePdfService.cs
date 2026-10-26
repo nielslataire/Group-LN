@@ -76,7 +76,9 @@ public sealed class InvoicePdfService : IInvoicePdfService
 
     private static LayoutConfig LoadLayout(string? templateJson, string templateKey)
     {
-        var json = string.IsNullOrWhiteSpace(templateJson)
+        // De JSON van een bedrijf telt enkel nog voor de JSON-layout "layoutB". Alle andere sleutels renderen de gl-v2-factuur,
+        // die de JSON niet gebruikt: een foute JSON mag die facturen dus niet laten mislukken.
+        var json = string.IsNullOrWhiteSpace(templateJson) || !string.Equals(templateKey, "layoutB", StringComparison.OrdinalIgnoreCase)
             ? DefaultLayouts.Get(templateKey)
             : templateJson;
 

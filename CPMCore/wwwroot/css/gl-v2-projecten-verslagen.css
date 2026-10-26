@@ -93,65 +93,6 @@
 
 /* ── Verslag voorbereiden (design-handoff punt 44): volle pagina in het contentvlak, geen overlay ── */
 body.gl-v2-vsprep-on #gl-v2-vs-edit { display: none !important; }
-.gl-v2-vsprep { display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 190px); padding: 32px 16px; background: #F7F9F5; border-radius: 12px; }
-.gl-v2-vsprep[hidden] { display: none !important; }
-.gl-v2-vsprep__col { width: min(460px, 100%); display: flex; flex-direction: column; align-items: center; gap: 26px; }
-.gl-v2-vsprep__art { position: relative; width: 260px; height: 200px; display: flex; align-items: center; justify-content: center; }
-.gl-v2-vsprep__head { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
-.gl-v2-vsprep__kicker { font-size: 10px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--gl-v2-primary); }
-.gl-v2-vsprep__title { margin: 0; font-family: var(--gl-v2-font-serif); font-weight: 500; font-size: 26px; line-height: 1.2; color: var(--gl-v2-ink); }
-.gl-v2-vsprep__sub { margin: 0; font-size: 13px; line-height: 1.55; color: var(--gl-v2-muted); text-wrap: pretty; }
-.gl-v2-vsprep__bar { position: relative; width: 100%; height: 6px; border-radius: 3px; background: #E2ECDA; overflow: hidden; }
-.gl-v2-vsprep__bar i { position: absolute; top: 0; bottom: 0; left: 0; width: 40%; border-radius: 3px; background: var(--gl-v2-primary); animation: vl-bar 1.6s ease-in-out infinite; }
-.gl-v2-vsprep__steps { width: 100%; display: flex; flex-direction: column; gap: 2px; padding: 8px; background: var(--gl-v2-surface); border-radius: 12px; box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 16px 34px -28px rgba(44, 59, 42, .42); }
-.gl-v2-vsprep__step { display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 10px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--gl-v2-ink); }
-.gl-v2-vsprep__step.is-act { background: #F2F5EF; font-weight: 600; }
-.gl-v2-vsprep__step.is-todo { color: var(--gl-v2-muted-light); }
-.gl-v2-vsprep__step > b { flex: 1; font-weight: inherit; }
-.gl-v2-vsprep__step > em { font-style: normal; font-size: 12px; font-weight: 500; color: #7a8a78; font-variant-numeric: tabular-nums; }
-.gl-v2-vsprep__step.is-act > em { color: var(--gl-v2-primary); }
-.gl-v2-vsprep__ico { width: 22px; height: 22px; flex: none; display: flex; align-items: center; justify-content: center; }
-.gl-v2-vsprep__ico.done { border-radius: 50%; background: var(--gl-v2-primary); }
-.gl-v2-vsprep__ico.done svg { width: 12px; height: 12px; fill: none; stroke: #fff; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
-.gl-v2-vsprep__ico.act i { width: 18px; height: 18px; box-sizing: border-box; border-radius: 50%; border: 2px solid #D6E5CC; border-top-color: var(--gl-v2-primary); animation: vl-spin .9s linear infinite; }
-.gl-v2-vsprep__ico.todo i { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid rgba(44, 59, 42, .25); }
-.gl-v2-vsprep__foot { margin: 0; min-height: 1.4em; font-size: 11.5px; color: #7a8a78; text-align: center; }
-.gl-v2-vsprep__foot span { display: inline-block; animation: vl-msg .45s cubic-bezier(.16, 1, .3, 1) backwards; }
-.gl-v2-vsprep__actions { display: flex; gap: 10px; }
-.gl-v2-vsprep__actions[hidden], .gl-v2-vsprep__bar[hidden] { display: none; }
-
-/* kunst: bladen met scanlijn */
-.gl-v2-vsprep__float { position: relative; width: 260px; height: 200px; animation: vl-float 3.2s ease-in-out infinite; }
-.gl-v2-vsprep__sheet { position: absolute; width: 132px; height: 172px; background: #fff; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 6px rgba(44, 59, 42, .12), 0 24px 40px -22px rgba(44, 59, 42, .5); }
-.gl-v2-vsprep__sheet.back { left: 78px; top: 22px; transform: rotate(6deg); opacity: .6; }
-.gl-v2-vsprep__sheet.front { left: 62px; top: 14px; }
-.gl-v2-vsprep__sheet span { position: absolute; display: block; }
-.gl-v2-vsprep__sheet .top { left: 0; right: 0; top: 0; height: 8px; background: var(--gl-v2-primary); }
-.gl-v2-vsprep__sheet .ttl { left: 16px; top: 20px; width: 60px; height: 8px; border-radius: 3px; background: var(--gl-v2-ink); opacity: .8; }
-.gl-v2-vsprep__sheet .ph1 { left: 16px; top: 40px; width: 40px; height: 30px; border-radius: 3px; background: #E2ECDA; }
-.gl-v2-vsprep__sheet .ph2 { left: 62px; top: 40px; width: 54px; height: 30px; border-radius: 3px; background: #EDEFEB; }
-.gl-v2-vsprep__sheet .ln { left: 16px; height: 5px; border-radius: 3px; background: #D6E5CC; transform-origin: left; animation: vl-line 2.4s ease-out infinite; }
-.gl-v2-vsprep__sheet .scan { left: 0; right: 0; height: 2px; background: #C9A96E; box-shadow: 0 0 12px 2px rgba(201, 169, 110, .55); animation: vl-scan 2.4s ease-in-out infinite; }
-
-/* kunst: klaar */
-.gl-v2-vsprep__ok { position: relative; width: 120px; height: 120px; }
-.gl-v2-vsprep__ok .ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid #7A9E6E; animation: vl-ring 1.8s ease-out infinite; }
-.gl-v2-vsprep__ok .disc { position: absolute; inset: 0; border-radius: 50%; background: var(--gl-v2-primary); display: flex; align-items: center; justify-content: center; animation: vl-pop .6s ease-out both; }
-.gl-v2-vsprep__ok svg { width: 56px; height: 56px; fill: none; stroke: #fff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-
-@keyframes vl-line { 0% { transform: scaleX(0); } 40%, 100% { transform: scaleX(1); } }
-@keyframes vl-scan { 0% { top: 14%; } 50% { top: 80%; } 100% { top: 14%; } }
-@keyframes vl-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-@keyframes vl-spin { to { transform: rotate(360deg); } }
-@keyframes vl-bar { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
-@keyframes vl-pop { 0% { transform: scale(.6); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); } }
-@keyframes vl-ring { 0% { transform: scale(.8); opacity: .5; } 100% { transform: scale(1.5); opacity: 0; } }
-@keyframes vl-msg { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) {
-    .gl-v2-vsprep__float, .gl-v2-vsprep__ok .ring, .gl-v2-vsprep__ok .disc, .gl-v2-vsprep__sheet .scan, .gl-v2-vsprep__foot span { animation: none; }
-    .gl-v2-vsprep__sheet .ln { animation: none; transform: none; }
-    .gl-v2-vsprep__bar i { animation: none; width: 100%; opacity: .5; }
-    .gl-v2-vsprep__ico.act i { animation-duration: 2.4s; }
-}
+/* De opmaak van het voortgangsscherm (.gl-v2-vsprep__*) staat sinds okt. 2026 in css/gl-v2/progress-screen.css (gedeeld met budget-pdf en facturen). */
 .gl-v2-vs-chip.is-excused { background: var(--gl-v2-neutral-tint); color: var(--gl-v2-muted); }
 .gl-v2-vs-chip.is-excused > :first-child { text-decoration: none; }

@@ -519,10 +519,11 @@
 
     // ── Foto-voorbeeld + sleepzone ──────────────────────────────────────────────────────────────
     function initPhoto() {
+        // Het gedeelde GlV2/_Dropzone (inline) regelt slepen, kiezen, de controle op jpg/png/webp en de bestandsnaam; wij tonen enkel het voorbeeld.
         var input = document.getElementById("StandardFotoUpload");
-        var zone = document.getElementById("gl-v2-pf-dropzone");
-        if (!input || !zone) return;
-        function showFile(file) {
+        if (!input) return;
+        input.addEventListener("change", function () {
+            var file = input.files && input.files[0];
             if (!file) return;
             var reader = new FileReader();
             reader.onload = function (ev) {
@@ -532,20 +533,6 @@
                 if (empty) empty.hidden = true;
             };
             reader.readAsDataURL(file);
-            var title = document.getElementById("gl-v2-pf-dropzone-title");
-            if (title) title.textContent = file.name;
-        }
-        input.addEventListener("change", function () { showFile(input.files && input.files[0]); });
-        zone.addEventListener("dragover", function (e) { e.preventDefault(); zone.classList.add("is-drag-over"); });
-        zone.addEventListener("dragleave", function () { zone.classList.remove("is-drag-over"); });
-        zone.addEventListener("drop", function (e) {
-            e.preventDefault();
-            zone.classList.remove("is-drag-over");
-            if (!e.dataTransfer.files.length) return;
-            var dt = new DataTransfer();
-            dt.items.add(e.dataTransfer.files[0]);
-            input.files = dt.files;
-            input.dispatchEvent(new Event("change", { bubbles: true }));
         });
     }
 

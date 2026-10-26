@@ -331,7 +331,7 @@
                                         {
                                             <a class="gl-v2-row-action js-issue-invoice" data-placement="top" title="Nummeren" data-original-title="Nummeren"
                                                asp-action="Issue" asp-route-id="@r.Id" asp-route-issuerCompanyId="@ViewBag.CompanyId"
-                                               data-processing-message="Factuur wordt genummerd...">
+                                               data-invoice-id="@r.Id" data-processing-message="Factuur wordt genummerd...">
                                                 <i class="ph ph-lock" aria-hidden="true"></i>
                                                 <span class="gl-v2-row-action-label">Nummeren</span>
                                             </a>
@@ -510,8 +510,20 @@ else
             deleteUrl: '@Url.Action("ModalDeleteV2", "Invoices")',
             defaultBookyear: '@defaultBookYear',
             createUrl: '@Url.Action("Create", "Invoices", new { issuerId = ViewBag.CompanyId })',
-            canWrite: @Html.Raw(canWriteInvoices ? "true" : "false")
+            canWrite: @Html.Raw(canWriteInvoices ? "true" : "false"),
+            // Voortgangsschermen van punt 48 (gl-v2-invoices-flow.js): nummeren en verzenden (48c–f) en boeken (48a–b)
+            issuerCompanyId: @(ViewBag.CompanyId ?? 0),
+            flow: {
+                issue: '@Url.Action("IssueV2", "Invoices")',
+                resendPeppol: '@Url.Action("ResendPeppolV2", "Invoices")',
+                book: '@Url.Action("BookInvoicesV2", "Invoices")',
+                detail: '@Url.Action("Detail", "Invoices")',
+                send: '@Url.Action("Send", "Invoices")',
+                create: '@Url.Action("Create", "Invoices", new { issuerId = ViewBag.CompanyId })',
+                index: '@Url.Action("Index", "Invoices", new { issuerCompanyId = ViewBag.CompanyId })'
+            }
         };
     </script>
+    <script src="~/js/gl-v2-invoices-flow.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-invoices.js" asp-append-version="true"></script>
 }

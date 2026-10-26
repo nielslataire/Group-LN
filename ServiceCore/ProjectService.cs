@@ -727,8 +727,11 @@ namespace ServiceCore
             {
 
                 // Voeg hier extra keys toe indien per gebruiker/medewerker/project uniek moet zijn
-            var existing = _uow.VacationDays.Query()
-                        .FirstOrDefault(x => x.VacationDay == vacationday.VacationDay /* && x.EmployeeId == vacationday.EmployeeId */);
+                // Uniek per datum én per bereik: een algemene verlofdag (ProjectId leeg) botst niet met een verlofdag van een project.
+                var scopeProjectId = vacationday.ProjectId ?? 0;
+                var existing = _uow.VacationDays.Query()
+                        .FirstOrDefault(x => x.VacationDay == vacationday.VacationDay
+                                          && (scopeProjectId == 0 ? (x.ProjectId == null || x.ProjectId == 0) : x.ProjectId == scopeProjectId));
 
                 if (existing != null)
                 {

@@ -106,10 +106,10 @@
                 <span class="gl-v2-qi-toolbar-spacer"></span>
                 <button type="button" class="gl-v2-qi-tool" id="gl-v2-qi-camera"><i class="ph ph-camera" aria-hidden="true"></i>Foto nemen</button>
                 <label class="gl-v2-qi-tool" for="gl-v2-qi-file"><i class="ph ph-upload-simple" aria-hidden="true"></i>Bestand</label>
-                <input type="file" id="gl-v2-qi-file" accept="application/pdf,image/*" hidden />
                 <input type="file" id="gl-v2-qi-camera-input" accept="image/*" capture="environment" hidden />
             </div>
-            <div class="gl-v2-qi-canvas-wrap" id="gl-v2-qi-canvas-wrap">
+            @{
+                Func<object, Microsoft.AspNetCore.Html.IHtmlContent> canvasContent = @<text>
                 <div class="gl-v2-qi-canvas-empty" id="gl-v2-qi-empty">
                     <i class="ph ph-file-text" aria-hidden="true"></i>
                     <p>Laad een offerte (PDF of foto) — slepen of plakken (Ctrl+V) kan ook</p>
@@ -122,7 +122,10 @@
                     <canvas id="gl-v2-qi-canvas"></canvas>
                     <canvas id="gl-v2-qi-overlay"></canvas>
                 </div>
-            </div>
+                </text>;
+            }
+            @* Het canvas is een dropzone (gedeeld GlV2/_Dropzone, enkel slepen): PDF of foto neerzetten laadt de offerte; Bestand, Foto nemen en plakken (Ctrl+V) blijven werken. *@
+            @await Html.PartialAsync("GlV2/_Dropzone", new GlV2DropzoneVm { Id = "gl-v2-qi-file", Accept = "application/pdf,image/*", Layout = "box", Mode = "select", DropOnly = true, AcceptPaste = true, CssClass = "gl-v2-qi-canvas-wrap", Content = canvasContent(null), AriaLabel = "Offerte (PDF of foto) kiezen" })
             <div class="gl-v2-qi-hint">
                 Sleep een kader rond een tabel: regels, aantallen en prijzen worden ingelezen. Sleep een kader rond een foto of schets: die hangt als beeld aan de regel die je daarna kiest. Werkt ook met een foto van een papieren offerte of een schermafdruk (Ctrl+V).
             </div>

@@ -32,16 +32,9 @@
 .gl-v2-bref-cards > .gl-v2-section-card { display: flex; flex-direction: column; }
 
 /* Uploadvak (38c "Sleep je .xlsx hierheen of kies een bestand") — zelfde taal als de foto-dropzone van Projecten/EditV2 */
-.gl-v2-bref-drop {
-    height: 64px; border-radius: 9px; border: 1.5px dashed var(--gl-v2-accent-sage); background: #F7F9F5;
-    display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer;
-    font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); transition: background .12s ease, border-color .12s ease;
-}
-.gl-v2-bref-drop:hover, .gl-v2-bref-drop.is-drag-over { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); }
-.gl-v2-bref-drop > i { font-size: 20px; color: var(--gl-v2-primary); }
-.gl-v2-bref-drop u { color: var(--gl-v2-primary); font-weight: 600; }
-.gl-v2-bref-drop.has-file { border-style: solid; }
-.gl-v2-bref-drop input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.gl-v2-bref-drop { background: #F7F9F5; }
+.gl-v2-bref-drop .gl-v2-dropzone-empty { min-height: 64px; justify-content: center; padding: 0 16px; }
+.gl-v2-bref-drop .gl-v2-dropzone-title { font-weight: 500; color: var(--gl-v2-ink); }
 
 /* Preview van het project vóór de snapshot (38c): vier waarden als alleen-lezen tegels */
 .gl-v2-bref-preview { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; grid-column: 1 / -1; }
@@ -70,7 +63,7 @@
 .gl-v2-bref-row:hover { background: #FAFBF8; }
 .gl-v2-bref-row.is-archived > :not(.gl-v2-bref-actions) { opacity: .55; }
 .gl-v2-bref-row[hidden], .gl-v2-bref-row.is-filtered { display: none; }
-.gl-v2-bref-grid--prijs { grid-template-columns: 80px minmax(0, 1.4fr) 160px 140px minmax(0, 1fr) minmax(0, 1fr) 120px 64px; }
+.gl-v2-bref-grid--prijs { grid-template-columns: 90px minmax(0, 1.5fr) 160px 140px minmax(0, 1.1fr) 150px 72px; }
 .gl-v2-bref-grid--ref { grid-template-columns: minmax(0, 1.6fr) 100px 100px 70px 80px 120px 100px 80px 100px 110px 64px; }
 .gl-v2-bref-grid--controle { grid-template-columns: 90px minmax(0, 1fr) minmax(0, 1fr) 120px 150px; }
 .gl-v2-bref-right { text-align: right; }
@@ -130,7 +123,7 @@
 @media (max-width: 1199.98px) {
     .gl-v2-bref-form--prijs { grid-template-columns: 110px minmax(0, 1fr) 150px 150px; }
     .gl-v2-bref-form--prijs > :nth-child(5), .gl-v2-bref-form--prijs > :nth-child(6) { grid-column: span 2; }
-    .gl-v2-bref-grid--prijs { grid-template-columns: 70px minmax(0, 1.4fr) 140px 110px minmax(0, 1fr) 110px 64px; }
+    .gl-v2-bref-grid--prijs { grid-template-columns: 80px minmax(0, 1.4fr) 140px 120px 140px 72px; }
     .gl-v2-bref-grid--prijs > :nth-child(5) { display: none; }   /* bron */
     .gl-v2-bref-grid--ref { grid-template-columns: minmax(0, 1.6fr) 90px 90px 60px 110px 100px 80px 64px; }
     .gl-v2-bref-grid--ref > :nth-child(5), .gl-v2-bref-grid--ref > :nth-child(9), .gl-v2-bref-grid--ref > :nth-child(10) { display: none; }   /* GBA, activiteiten, index */
@@ -146,10 +139,41 @@
     .gl-v2-bref-grid--prijs, .gl-v2-bref-grid--ref, .gl-v2-bref-grid--controle { grid-template-columns: minmax(0, 1fr) auto; }
     .gl-v2-bref-row > * { grid-column: 1; }
     .gl-v2-bref-row > .gl-v2-bref-actions { grid-column: 2; grid-row: 1 / span 3; align-self: start; }
-    .gl-v2-bref-grid--prijs > :nth-child(4), .gl-v2-bref-grid--prijs > :nth-child(5), .gl-v2-bref-grid--prijs > :nth-child(6) { display: none; }
+    .gl-v2-bref-grid--prijs > :nth-child(4), .gl-v2-bref-grid--prijs > :nth-child(5) { display: none; }
     .gl-v2-bref-grid--ref > :nth-child(n+4):not(.gl-v2-bref-actions) { display: none; }
     .gl-v2-bref-num { text-align: left; }
     .gl-v2-bref-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .gl-v2-bref-scroll { padding-bottom: 140px; }
     .gl-v2-bref-toolbar .gl-v2-bref-search, .gl-v2-bref-toolbar .gl-v2-bref-filter { width: 100%; }
 }
+
+/* ── 54a: codes gegroepeerd per project, toevoegen als eerste rij, ontbrekende bron gemarkeerd ── */
+.gl-v2-bref-row.is-add { background: #FAFBF8; align-items: end; padding-top: 10px; padding-bottom: 10px; border-top: 0; }
+.gl-v2-bref-row.is-add .gl-v2-field { margin: 0; }
+.gl-v2-bref-row.is-add .gl-v2-field-label { display: none; }
+.gl-v2-bref-row.is-add .gl-v2-field-box { height: 40px; }
+.gl-v2-bref-group { display: flex; align-items: center; gap: 10px; padding: 10px 20px; background: var(--gl-v2-hover-tint); border-top: 1px solid var(--gl-v2-hairline-soft); font: 600 10.5px var(--gl-v2-font-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gl-v2-bref-group .n { font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--gl-v2-ink); font-size: 12px; }
+.gl-v2-bref-group .c { margin-left: auto; letter-spacing: 0; text-transform: none; font-weight: 500; font-variant-numeric: tabular-nums; }
+.gl-v2-bref-nogroup { padding: 14px 20px; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-bref-add-bron { border: 0; background: transparent; padding: 0; font: 600 12px var(--gl-v2-font-sans); color: #8A6A32; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; text-align: left; }
+.gl-v2-bref-add-bron:hover { color: #6B5226; }
+.gl-v2-bref-add-bron:focus-visible { outline: 3px solid var(--gl-v2-gold); outline-offset: 2px; border-radius: 3px; }
+.gl-v2-bref-oud { color: #8A6A32; }
+@media (max-width: 767.98px) { .gl-v2-bref-row.is-add > *, .gl-v2-bref-row.is-edit > * { grid-column: 1 / -1; } }
+
+/* ── 54b: één toevoegkaart met keuze tussen een project uit de app en Excel; voorbeeld van de snapshot; kost per lot ── */
+.gl-v2-bref-addcard form { display: contents; }
+.gl-v2-bref-addcard form[hidden] { display: none; }
+.gl-v2-bref-snap { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; }
+.gl-v2-bref-snap-title { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .14em; color: var(--gl-v2-muted); }
+.gl-v2-bref-snap .gl-v2-bref-preview { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.gl-v2-bref-detail-grid.lot { grid-template-columns: 90px minmax(0, 1fr) 140px 120px 100px; }
+.gl-v2-bref-detail-more { padding: 8px 0 4px; }
+.gl-v2-bref-linkbtn { border: 0; background: transparent; padding: 0; font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.gl-v2-bref-linkbtn:focus-visible { outline: 3px solid var(--gl-v2-gold); outline-offset: 2px; border-radius: 3px; }
+@media (max-width: 1023.98px) { .gl-v2-bref-snap .gl-v2-bref-preview { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 767.98px) { .gl-v2-bref-snap .gl-v2-bref-preview { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.gl-v2-bref-detail-grid.lot { grid-template-columns: 90px minmax(0, 220px) minmax(60px, 1fr) 120px 100px 80px; }
+.gl-v2-bref-bar { display: block; height: 6px; border-radius: 3px; background: #EDEFEB; overflow: hidden; }
+.gl-v2-bref-bar > span { display: block; height: 100%; border-radius: 3px; background: var(--gl-v2-primary); }

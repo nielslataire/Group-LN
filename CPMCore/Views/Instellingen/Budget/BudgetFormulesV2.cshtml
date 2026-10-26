@@ -1,0 +1,85 @@
+@model string
+@using BOCore
+@using FacadeCore
+@using CPMCore.Models.GlV2
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen › Budgetformules (design-handoff punt 53a, "CRM Instellingen.dc.html"): drie kolommen. Links de formules per lot (zoeken, filter op lot en
+    status), in het midden de editor, rechts de parameters (klik = invoegen, ook typen met @@ geeft suggesties). In de editor rekent de UITWERKING en het
+    RESULTAAT live mee met het testbudget: kies bovenaan "Testen met" een budgetversie en de formule wordt (kort na het typen) doorgerekend; zonder versie staat er
+    een uitnodiging om te testen. Een fout in de formule staat meteen onder het veld. Opslaan, Herstel (terug naar de opgeslagen formule) en een teken voor
+    niet-opgeslagen wijzigingen; Verwijderen met bevestiging. Het model is de JSON als tekst (InstellingenController.Budget.cs / BudgetFormulesV2.cs).
+
+    Bewust anders dan het mockup: "Laatst gewijzigd … door …" toont enkel datum en uur (wie het deed wordt niet bewaard); het formuleveld is een gewoon
+    tekstveld in lettertype met vaste breedte, de parameters staan als blokjes in de uitwerking (geen blokjes in het veld zelf).
+*@
+@{
+    ViewData["Title"] = "Budgetformules";
+    ViewData["PageIcon"] = "ph ph-function";
+    ViewData["HelpScreenId"] = "instellingen-budgetformules";
+    var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsCalculatie);
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-budgetformules.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @if (canWrite)
+    {
+        <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="bf-new"><i class="ph ph-plus" aria-hidden="true"></i>Nieuwe formule</button>
+    }
+}
+
+<div class="gl-v2-bf" id="gl-v2-bf" data-can-write="@(canWrite ? "1" : "0")"
+     data-url-params="@Url.Action("GetBudgetFormuleParameters", "Instellingen")" data-url-test="@Url.Action("BudgetFormuleTest", "Instellingen")"
+     data-url-save="@Url.Action("BudgetFormuleOpslaanV2", "Instellingen")" data-url-del="@Url.Action("BudgetFormuleVerwijderV2", "Instellingen")">
+    @Html.AntiForgeryToken()
+    <script type="application/json" id="bf-data">@Html.Raw(Model)</script>
+
+    <div class="gl-v2-bf-top">
+        <div class="gl-v2-bf-test">
+            <span class="gl-v2-bf-test-label">Testen met</span>
+            <div class="gl-v2-bf-test-select">
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "testVersie", Id = "bf-versie", Value = "", Bare = true, Icon = "ph-flask", EmptyText = "Geen testbudget", Items = new List<GlV2SelectItem>() })
+            </div>
+        </div>
+    </div>
+
+    <div class="gl-v2-bf-body">
+        <aside class="gl-v2-section-card gl-v2-bf-list" aria-label="Formules">
+            <div class="gl-v2-bf-panel-head"><span class="gl-v2-bf-eyebrow">FORMULES</span><span class="gl-v2-bf-count" id="bf-count">0</span></div>
+            <div class="gl-v2-bf-panel-tools">
+                <div class="gl-v2-field"><div class="gl-v2-field-box"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input type="text" class="gl-v2-field-input" id="bf-search" placeholder="Zoek activiteit of parameter" autocomplete="off" /><button type="button" class="gl-v2-field-clear" id="bf-search-clear" aria-label="Zoekterm wissen">&times;</button></div></div>
+                <div class="gl-v2-bf-filters">
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "lotFilter", Id = "bf-lot", Value = "", Bare = true, EmptyText = "Alle loten", Items = new List<GlV2SelectItem>() })
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                    {
+                        Name = "statusFilter", Id = "bf-status", Value = "", Bare = true, EmptyText = "Alle statussen",
+                        Items = new List<GlV2SelectItem> { new() { Value = "actief", Text = "Actief" }, new() { Value = "inactief", Text = "Inactief" } }
+                    })
+                </div>
+            </div>
+            <div class="gl-v2-bf-items" id="bf-items"></div>
+            <div class="gl-v2-bf-foot" id="bf-foot">—</div>
+        </aside>
+
+        <section class="gl-v2-section-card gl-v2-bf-editor" id="bf-editor" aria-label="Formule"></section>
+
+        <aside class="gl-v2-section-card gl-v2-bf-params" aria-label="Parameters">
+            <div class="gl-v2-bf-panel-head"><span class="gl-v2-bf-eyebrow">PARAMETERS</span><span class="gl-v2-bf-hint">klik = toevoegen</span></div>
+            <div class="gl-v2-bf-panel-tools">
+                <div class="gl-v2-field"><div class="gl-v2-field-box"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input type="text" class="gl-v2-field-input" id="bf-param-search" placeholder="Zoek parameter" autocomplete="off" /></div></div>
+            </div>
+            <div class="gl-v2-bf-paramlist" id="bf-params"></div>
+        </aside>
+    </div>
+</div>
+<div class="gl-v2-bf-suggest" id="bf-suggest" role="listbox" hidden></div>
+
+@await Html.PartialAsync("GlV2/_BevestigModal")
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-instellingen-budgetformules.js" asp-append-version="true"></script>
+}

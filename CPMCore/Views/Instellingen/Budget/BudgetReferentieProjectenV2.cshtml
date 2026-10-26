@@ -12,6 +12,8 @@
 @{
     ViewData["Title"] = "Referentieprojecten (nacalc)";
     ViewData["PageIcon"] = "ph ph-clock-counter-clockwise";
+    ViewData["HelpScreenId"] = "instellingen-referentieprojecten";
+    ViewData["BackUrl"] = Url.Action("Index", "Instellingen");
     var nlBE = new System.Globalization.CultureInfo("nl-BE");
     string Eur0(decimal v) => "€ " + v.ToString("N0", nlBE);
     string Factor(decimal? idx, decimal huidig) => idx is > 0m && huidig > 0m ? (huidig / idx.Value).ToString("0.000", nlBE) : "—";
@@ -24,66 +26,18 @@
 <div class="gl-v2-bref" id="gl-v2-bref-ref" data-preview-url="@Url.Action("BudgetReferentieProjectPreview", "Instellingen")">
     <span class="gl-v2-bref-intro">Werkelijke kost per activiteit van afgewerkte projecten. Op stap 6 van de budgetwizard kies je welke projecten je vergelijkt; de bedragen worden met de S- en I-index van de peildatum naar vandaag geïndexeerd.</span>
 
-    <div class="gl-v2-bref-cards">
-        @* ── Uit Excel ── *@
+    <div class="gl-v2-bref-addcard">
         <section class="gl-v2-section-card">
             <div class="gl-v2-section-card-header">
-                <span class="gl-v2-section-card-icon"><i class="ph ph-file-xls" aria-hidden="true"></i></span>
-                <h2 class="gl-v2-section-card-title">Uit Excel inladen</h2>
-                <span class="gl-v2-field-divider"></span>
-                <span class="gl-v2-section-card-desc">projecten van vóór de app</span>
-                <span class="gl-v2-section-card-meta" style="margin-left:auto">
-                    <a href="@Url.Action("BudgetReferentieSjabloon", "Instellingen")" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-download-simple" aria-hidden="true"></i>Sjabloon</a>
-                </span>
-            </div>
-            <form method="post" asp-action="BudgetReferentieProjectImportExcel" asp-controller="Instellingen" enctype="multipart/form-data" id="bref-excel-form" autocomplete="off" style="display:contents">
-                @Html.AntiForgeryToken()
-                <div class="gl-v2-bref-form gl-v2-bref-form--excel">
-                    <div class="gl-v2-field">
-                        <label class="gl-v2-field-label" for="bref-x-naam">Naam referentieproject</label>
-                        <div class="gl-v2-field-box"><input type="text" id="bref-x-naam" name="Naam" class="gl-v2-field-input" placeholder="bv. Residentie Keerstraat (2024)" maxlength="200" required /></div>
-                    </div>
-                    <div class="gl-v2-field">
-                        @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "Datum", Id = "bref-x-datum", Label = "Peildatum" })
-                        <span class="gl-v2-field-help">datum van de prijzen</span>
-                    </div>
-                    <div class="gl-v2-field">
-                        <label class="gl-v2-field-label" for="bref-x-eenh">Eenheden</label>
-                        <div class="gl-v2-field-box"><input type="text" inputmode="numeric" pattern="[0-9]*" id="bref-x-eenh" name="AantalEenheden" class="gl-v2-field-input is-tabular" placeholder="0" required /></div>
-                    </div>
-                    <div class="gl-v2-field">
-                        <label class="gl-v2-field-label" for="bref-x-gba">GBA <span class="gl-v2-bref-optioneel">· optioneel</span></label>
-                        <div class="gl-v2-field-box"><input type="text" inputmode="decimal" id="bref-x-gba" name="OppervlakteGBA" class="gl-v2-field-input is-tabular" placeholder="0" /><span class="gl-v2-field-unit">m²</span></div>
-                    </div>
-                    <div class="gl-v2-field gl-v2-bref-span2">
-                        <span class="gl-v2-field-label">Excel-bestand</span>
-                        <label class="gl-v2-bref-drop" id="bref-x-drop" for="bref-x-file">
-                            <i class="ph ph-upload-simple" aria-hidden="true"></i>
-                            <span id="bref-x-drop-text">Sleep je .xlsx hierheen of <u>kies een bestand</u></span>
-                            <input type="file" id="bref-x-file" name="bestand" accept=".xlsx" required />
-                        </label>
-                        <span class="gl-v2-field-help">kolommen ActivityId · Activiteit · Bedrag — matching op id, anders op naam</span>
-                    </div>
-                    <div class="gl-v2-field gl-v2-bref-span2">
-                        <label class="gl-v2-field-label" for="bref-x-opm">Opmerking <span class="gl-v2-bref-optioneel">· optioneel</span></label>
-                        <div class="gl-v2-field-box"><input type="text" id="bref-x-opm" name="Opmerking" class="gl-v2-field-input" placeholder="bron van de cijfers" maxlength="500" /></div>
-                    </div>
+                <span class="gl-v2-section-card-icon"><i class="ph ph-plus-circle" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Referentieproject toevoegen</h2>
+                <span class="gl-v2-section-card-spacer"></span>
+                <div class="gl-v2-segmented is-sm" role="group" aria-label="Bron van het referentieproject" id="bref-mode">
+                    <button type="button" class="is-active" aria-pressed="true" data-mode="project"><i class="ph ph-camera" aria-hidden="true"></i>Project uit de app</button>
+                    <button type="button" aria-pressed="false" data-mode="excel"><i class="ph ph-file-xls" aria-hidden="true"></i>Uit Excel</button>
                 </div>
-                <div class="gl-v2-bref-card-foot">
-                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-list-checks" aria-hidden="true"></i>Inladen en controleren</button>
-                </div>
-            </form>
-        </section>
-
-        @* ── Uit een project van de app ── *@
-        <section class="gl-v2-section-card">
-            <div class="gl-v2-section-card-header">
-                <span class="gl-v2-section-card-icon"><i class="ph ph-camera" aria-hidden="true"></i></span>
-                <h2 class="gl-v2-section-card-title">Uit een project van de app</h2>
-                <span class="gl-v2-field-divider"></span>
-                <span class="gl-v2-section-card-desc">inkomende facturen per activiteit (zonder meerwerken voor klanten), anders contracten</span>
             </div>
-            <form method="post" asp-action="BudgetReferentieProjectImportProject" asp-controller="Instellingen" id="bref-project-form" autocomplete="off" style="display:contents">
+            <form method="post" asp-action="BudgetReferentieProjectImportProject" asp-controller="Instellingen" id="bref-project-form" autocomplete="off" data-bref-mode="project">
                 @Html.AntiForgeryToken()
                 <div class="gl-v2-bref-form gl-v2-bref-form--project">
                     <div class="gl-v2-field">
@@ -98,11 +52,16 @@
                         @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "Datum", Id = "bref-p-datum", Label = "Peildatum · optioneel" })
                         <span class="gl-v2-field-help" id="bref-p-datum-help">standaard de opleverdatum van het project</span>
                     </div>
-                    <div class="gl-v2-bref-preview" id="bref-p-preview">
-                        <div class="gl-v2-bref-preview-tile"><span class="lbl">Eenheden</span><span class="val is-empty" data-pv="eenheden">—</span></div>
-                        <div class="gl-v2-bref-preview-tile"><span class="lbl">GBA</span><span class="val is-empty" data-pv="gba">—</span></div>
-                        <div class="gl-v2-bref-preview-tile"><span class="lbl" data-pv-lbl="basis">Facturen</span><span class="val is-empty" data-pv="basis">—</span></div>
-                        <div class="gl-v2-bref-preview-tile"><span class="lbl">Status</span><span class="val is-empty" data-pv="status">—</span></div>
+                    <div class="gl-v2-bref-snap" id="bref-p-preview">
+                        <span class="gl-v2-bref-snap-title">DE SNAPSHOT NEEMT MEE</span>
+                        <div class="gl-v2-bref-preview">
+                            <div class="gl-v2-bref-preview-tile"><span class="lbl">Eenheden</span><span class="val is-empty" data-pv="eenheden">—</span></div>
+                            <div class="gl-v2-bref-preview-tile"><span class="lbl">GBA m²</span><span class="val is-empty" data-pv="gba">—</span></div>
+                            <div class="gl-v2-bref-preview-tile"><span class="lbl" data-pv-lbl="basis">Inkomende facturen</span><span class="val is-empty" data-pv="basis">—</span></div>
+                            <div class="gl-v2-bref-preview-tile"><span class="lbl">Activiteiten met kost</span><span class="val is-empty" data-pv="activiteiten">—</span></div>
+                            <div class="gl-v2-bref-preview-tile"><span class="lbl">Totaal</span><span class="val is-empty" data-pv="totaal">—</span></div>
+                        </div>
+                        <span class="gl-v2-field-help">Meerwerken voor klanten zijn uitgesloten. <span id="bref-p-status"></span></span>
                     </div>
                     <div class="gl-v2-field">
                         <label class="gl-v2-field-label" for="bref-p-eenh">Eenheden <span class="gl-v2-bref-optioneel">· enkel als het project geen units heeft</span></label>
@@ -125,6 +84,39 @@
                 <div class="gl-v2-bref-card-foot">
                     <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="bref-p-submit" disabled><i class="ph ph-camera" aria-hidden="true"></i>Snapshot maken</button>
                     <span class="gl-v2-bref-hint" id="bref-p-hint">enkel afgewerkte projecten</span>
+                </div>
+            </form>
+            <form method="post" asp-action="BudgetReferentieProjectImportExcel" asp-controller="Instellingen" enctype="multipart/form-data" id="bref-excel-form" autocomplete="off" data-bref-mode="excel" hidden>
+                @Html.AntiForgeryToken()
+                <div class="gl-v2-bref-form gl-v2-bref-form--excel">
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="bref-x-naam">Naam referentieproject</label>
+                        <div class="gl-v2-field-box"><input type="text" id="bref-x-naam" name="Naam" class="gl-v2-field-input" placeholder="bv. Residentie Keerstraat (2024)" maxlength="200" required /></div>
+                    </div>
+                    <div class="gl-v2-field">
+                        @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "Datum", Id = "bref-x-datum", Label = "Peildatum" })
+                        <span class="gl-v2-field-help">datum van de prijzen</span>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="bref-x-eenh">Eenheden</label>
+                        <div class="gl-v2-field-box"><input type="text" inputmode="numeric" pattern="[0-9]*" id="bref-x-eenh" name="AantalEenheden" class="gl-v2-field-input is-tabular" placeholder="0" required /></div>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="bref-x-gba">GBA <span class="gl-v2-bref-optioneel">· optioneel</span></label>
+                        <div class="gl-v2-field-box"><input type="text" inputmode="decimal" id="bref-x-gba" name="OppervlakteGBA" class="gl-v2-field-input is-tabular" placeholder="0" /><span class="gl-v2-field-unit">m²</span></div>
+                    </div>
+                    <div class="gl-v2-field gl-v2-bref-span2">
+                        <span class="gl-v2-field-label">Excel-bestand</span>
+                        @await Html.PartialAsync("GlV2/_Dropzone", new GlV2DropzoneVm { Name = "bestand", Id = "bref-x-file", Accept = ".xlsx", Required = true, Layout = "bar", Mode = "inline", CssClass = "gl-v2-bref-drop", Title = "Sleep je .xlsx hierheen of", LinkText = "kies een bestand", ChangeText = "ander bestand kiezen", AriaLabel = "Excel-bestand kiezen" })
+                        <span class="gl-v2-field-help">kolommen ActivityId · Activiteit · Bedrag — matching op id, anders op naam</span>
+                    </div>
+                    <div class="gl-v2-field gl-v2-bref-span2">
+                        <label class="gl-v2-field-label" for="bref-x-opm">Opmerking <span class="gl-v2-bref-optioneel">· optioneel</span></label>
+                        <div class="gl-v2-field-box"><input type="text" id="bref-x-opm" name="Opmerking" class="gl-v2-field-input" placeholder="bron van de cijfers" maxlength="500" /></div>
+                    </div>
+                </div>
+                <div class="gl-v2-bref-card-foot">
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-list-checks" aria-hidden="true"></i>Inladen en controleren</button>
                 </div>
             </form>
         </section>
@@ -182,7 +174,28 @@
                         </form>
                     </div>
                 </div>
+                var lotten = r.Lijnen.Where(l => l.ActivityId.HasValue && l.LotNummer > 0).GroupBy(l => (l.LotNummer, l.LotNaam)).OrderBy(g => g.Key.LotNummer).ToList();
+                var lotTotaal = lotten.Sum(g => g.Sum(l => l.Bedrag));
+                var lotMax = lotten.Any() ? lotten.Max(g => g.Sum(l => l.Bedrag)) : 0m;
                 <div class="gl-v2-bref-detail" id="ref-detail-@r.Id" hidden>
+                    @if (lotten.Any())
+                    {
+                        <div class="gl-v2-bref-detail-grid lot head"><span>Lot</span><span>Activiteitgroep</span><span></span><span class="gl-v2-bref-right">Kost</span><span class="gl-v2-bref-right">€ / m²</span><span class="gl-v2-bref-right">Aandeel</span></div>
+                        @foreach (var g in lotten)
+                        {
+                            var kost = g.Sum(l => l.Bedrag);
+                            <div class="gl-v2-bref-detail-grid lot row">
+                                <span class="gl-v2-bref-mono">Lot @g.Key.LotNummer.ToString("G", nlBE)</span>
+                                <span class="gl-v2-bref-cell">@g.Key.LotNaam</span>
+                                <span class="gl-v2-bref-bar" role="img" aria-label="@(lotTotaal > 0 ? (kost / lotTotaal * 100m).ToString("0.0", nlBE) + " % van het totaal" : "")"><span style="width:@((lotMax > 0 ? Math.Max(kost / lotMax * 100m, 1m) : 0m).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"></span></span>
+                                <span class="gl-v2-bref-num">@Eur0(kost)</span>
+                                <span class="gl-v2-bref-cell gl-v2-bref-right">@(r.OppervlakteGBA is > 0 ? Eur0(kost / r.OppervlakteGBA.Value) : "—")</span>
+                                <span class="gl-v2-bref-cell gl-v2-bref-right">@(lotTotaal > 0 ? (kost / lotTotaal * 100m).ToString("0.0", nlBE) + " %" : "—")</span>
+                            </div>
+                        }
+                        <div class="gl-v2-bref-detail-more"><button type="button" class="gl-v2-bref-linkbtn" data-ref-all="ref-all-@r.Id" data-label-open="Bekijk alle @r.Lijnen.Count activiteiten" data-label-close="Verberg de activiteiten">Bekijk alle @r.Lijnen.Count activiteiten</button></div>
+                    }
+                    <div id="ref-all-@r.Id" @(lotten.Any() ? "hidden" : "")>
                     <div class="gl-v2-bref-detail-grid head"><span>Lot</span><span>Activiteit</span><span class="gl-v2-bref-right">Bedrag</span><span class="gl-v2-bref-right">€ / eenheid</span><span>Match</span></div>
                     @foreach (var l in r.Lijnen)
                     {
@@ -201,6 +214,7 @@
                             }
                         </div>
                     }
+                    </div>
                 </div>
             }
         </div>
@@ -232,28 +246,19 @@
     if (!root) return;
     var nf0 = new Intl.NumberFormat('nl-BE', { maximumFractionDigits: 0 });
 
-    // Uploadvak: bestandsnaam tonen, sleepstaat
-    var drop = document.getElementById('bref-x-drop'), file = document.getElementById('bref-x-file'), dropText = document.getElementById('bref-x-drop-text');
-    function toonBestand() {
-        var f = file.files && file.files[0];
-        drop.classList.toggle('has-file', !!f);
-        dropText.innerHTML = f ? '<strong>' + f.name.replace(/</g, '&lt;') + '</strong> · <u>ander bestand kiezen</u>' : 'Sleep je .xlsx hierheen of <u>kies een bestand</u>';
-    }
-    file.addEventListener('change', toonBestand);
-    ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('is-drag-over'); }); });
-    ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('is-drag-over'); }); });
-    drop.addEventListener('drop', function (e) { if (e.dataTransfer && e.dataTransfer.files.length) { file.files = e.dataTransfer.files; toonBestand(); } });
+    // Uploadvak: het gedeelde GlV2/_Dropzone (bar + inline) regelt slepen, kiezen, de controle op .xlsx en de bestandsnaam
 
     // Preview van het gekozen project vóór de snapshot (38c): eenheden, GBA, facturen/contracten, status
     var projInput = document.getElementById('bref-p-project'), submit = document.getElementById('bref-p-submit'), hint = document.getElementById('bref-p-hint');
     var tiles = {}; root.querySelectorAll('[data-pv]').forEach(function (el) { tiles[el.getAttribute('data-pv')] = el; });
     var basisLbl = root.querySelector('[data-pv-lbl="basis"]');
     function zet(key, tekst, leeg) { tiles[key].textContent = tekst; tiles[key].classList.toggle('is-empty', !!leeg); }
-    function leegmaken(msg) { ['eenheden', 'gba', 'basis', 'status'].forEach(function (k) { zet(k, '—', true); }); basisLbl.textContent = 'Facturen'; submit.disabled = true; hint.textContent = msg || 'enkel afgewerkte projecten'; }
+    var KEYS = ['eenheden', 'gba', 'basis', 'activiteiten', 'totaal'], statusEl = document.getElementById('bref-p-status');
+    function leegmaken(msg) { KEYS.forEach(function (k) { zet(k, '—', true); }); basisLbl.textContent = 'Inkomende facturen'; statusEl.textContent = ''; submit.disabled = true; hint.textContent = msg || 'enkel afgewerkte projecten'; }
     if (projInput) projInput.addEventListener('change', function () {
         var id = parseInt(projInput.value);
         if (!id) { leegmaken(); return; }
-        ['eenheden', 'gba', 'basis', 'status'].forEach(function (k) { zet(k, '…', true); });
+        KEYS.forEach(function (k) { zet(k, '…', true); });
         fetch(root.getAttribute('data-preview-url') + '?projectId=' + id, { credentials: 'same-origin' })
             .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
             .then(function (p) {
@@ -264,16 +269,26 @@
                 if (gbaInput && !p.oppervlakteGBA) gbaInput.focus();
                 var eenhInput = document.getElementById('bref-p-eenh'); if (eenhInput) eenhInput.placeholder = p.aantalEenheden ? String(p.aantalEenheden) + ' uit het project' : 'geen units: zelf invullen';
                 var fact = p.basis === 'facturen';
-                basisLbl.textContent = fact ? 'Facturen' : 'Contracten';
+                basisLbl.textContent = fact ? 'Inkomende facturen' : 'Contractactiviteiten (geen facturen)';
                 var n = fact ? p.aantalFacturen : p.aantalContractActiviteiten, tot = fact ? p.totaalFacturen : p.totaalContracten;
-                zet('basis', n ? n + ' · € ' + (tot >= 1000000 ? (tot / 1000000).toLocaleString('nl-BE', { maximumFractionDigits: 2 }) + ' mln' : nf0.format(tot)) : 'geen', !n);
-                zet('status', p.statusNaam || '—', !p.statusNaam);
+                zet('basis', n ? String(n) : 'geen', !n);
+                zet('activiteiten', p.aantalActiviteiten ? String(p.aantalActiviteiten) : 'geen', !p.aantalActiviteiten);
+                zet('totaal', n ? '€ ' + nf0.format(tot) : '—', !n);
+                statusEl.textContent = p.statusNaam ? 'Status van het project: ' + p.statusNaam + '.' : '';
                 var ok = p.aantalActiviteiten > 0;
                 submit.disabled = !ok;
                 hint.textContent = !p.aantalActiviteiten ? 'geen facturen of contracten met een bedrag per activiteit' : (!p.aantalEenheden ? 'project zonder units: vul het aantal eenheden zelf in' : (p.statusNaam && /opgeleverd|afgewerkt/i.test(p.statusNaam) ? 'afgewerkt project — klaar voor een snapshot' : 'nog niet opgeleverd: de bedragen zijn mogelijk onvolledig'));
                 var help = document.getElementById('bref-p-datum-help'); if (help) help.textContent = p.opleverdatum ? 'standaard de opleverdatum: ' + p.opleverdatum : 'geen opleverdatum: standaard vandaag';
             })
             .catch(function () { leegmaken('preview niet beschikbaar'); });
+    });
+
+    // Keuze tussen een project uit de app en Excel (54b): één kaart, twee formulieren
+    var modeBar = document.getElementById('bref-mode');
+    if (modeBar) modeBar.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-mode]'); if (!b) return;
+        modeBar.querySelectorAll('button').forEach(function (x) { var on = x === b; x.classList.toggle('is-active', on); x.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+        root.querySelectorAll('[data-bref-mode]').forEach(function (f) { f.hidden = f.getAttribute('data-bref-mode') !== b.getAttribute('data-mode'); });
     });
 
     // Zoeken in de lijst + uitklappen per rij
@@ -292,6 +307,8 @@
     document.getElementById('bref-ref-search-clear').addEventListener('click', function () { search.value = ''; pas(); search.focus(); });
     document.getElementById('bref-ref-reset').addEventListener('click', function () { search.value = ''; pas(); });
     root.addEventListener('click', function (e) {
+        var all = e.target.closest('[data-ref-all]');
+        if (all) { var grid = document.getElementById(all.getAttribute('data-ref-all')); grid.hidden = !grid.hidden; all.textContent = grid.hidden ? all.getAttribute('data-label-open') : all.getAttribute('data-label-close'); return; }
         var t = e.target.closest('[data-ref-toggle]'); if (!t) return;
         var det = document.getElementById(t.getAttribute('data-ref-toggle')); if (!det) return;
         det.hidden = !det.hidden;

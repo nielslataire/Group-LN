@@ -1,0 +1,104 @@
+@using CPMCore.Models.GlV2
+@*
+    gl-v2 — Nieuwe klant snel aanmaken vanuit de factuur (design-handoff punt 47e–g): formuliermodaal (.gl-v2-modal-form). Gebruikt de gedeelde onderdelen:
+    GlV2/_Segmented (soort, type, aanspreking, facturatie e-mail), GlV2/_GlV2Combo (postcode of gemeente, server-zoekopdracht op Shared/GetPostcodesByCountry
+    met het land uit #np-country) en GlV2/_SelectList (land; de opties vult gl-v2-invoices-newparty.js bij het openen). Gedrag: wwwroot/js/gl-v2-invoices-newparty.js.
+    Het opslaan gebeurt via de BESTAANDE actie Klanten/QuickCreate.
+*@
+@{
+    GlV2SegmentedVm Seg(string id, string label, params (string Text, string V, bool On)[] items) => new()
+    {
+        Id = id, Fill = true, AriaLabel = label,
+        Items = items.Select(i => new GlV2SegmentedItem { Text = i.Text, Active = i.On, Data = new() { ["v"] = i.V } }).ToList()
+    };
+}
+<div class="modal fade gl-v2-modal-form gl-v2-ic-newparty-modal" id="ic-newparty-modal" tabindex="-1" aria-hidden="true" aria-labelledby="np-title">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-fullscreen-md-down">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div><h2 class="modal-title" id="np-title">Nieuwe klant</h2><p class="gl-v2-ic-np-sub" id="np-sub"></p></div>
+                <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+            </div>
+            <div class="modal-body gl-v2-ic-np-body">
+                <div class="gl-v2-ic-np-error" id="np-error" role="alert" hidden></div>
+
+                <div class="gl-v2-ic-row2">
+                    <div class="gl-v2-field"><span class="gl-v2-field-label">SOORT</span>
+                        @await Html.PartialAsync("GlV2/_Segmented", Seg("np-kind", "Soort", ("Klant", "client", true), ("Leverancier", "supplier", false), ("Beide", "both", false)))
+                    </div>
+                    <div class="gl-v2-field"><span class="gl-v2-field-label">TYPE</span>
+                        @await Html.PartialAsync("GlV2/_Segmented", Seg("np-type", "Type", ("Onderneming", "company", true), ("Particulier", "person", false)))
+                    </div>
+                </div>
+
+                @* ─── Onderneming (47e) en ondernemingsnummer niet gevonden (47g) ─── *@
+                <div id="np-company" class="gl-v2-ic-np-section">
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="np-number">ONDERNEMINGSNUMMER</label>
+                        <div class="gl-v2-ic-np-numrow">
+                            <div class="gl-v2-field-box"><span class="gl-v2-ic-np-country">België (BE)</span><input class="gl-v2-field-input" id="np-number" placeholder="0123.456.789" autocomplete="off" inputmode="numeric" /></div>
+                            <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="np-check">Controleren</button>
+                        </div>
+                    </div>
+                    <div class="gl-v2-ic-np-result" id="np-result" hidden></div>
+                    <div class="gl-v2-ic-row2">
+                        <div class="gl-v2-field"><label class="gl-v2-field-label" for="np-company-name">BEDRIJFSNAAM</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="np-company-name" placeholder="Bedrijfsnaam" autocomplete="off" /></div></div>
+                        <div class="gl-v2-field"><label class="gl-v2-field-label" for="np-email">E-MAIL</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="np-email" type="email" inputmode="email" placeholder="klant@bedrijf.be" autocomplete="off" /></div></div>
+                    </div>
+                    <div class="gl-v2-field"><span class="gl-v2-field-label">FACTURATIE E-MAIL</span>
+                        @await Html.PartialAsync("GlV2/_Segmented", Seg("np-inv-mode", "Facturatie e-mail", ("Zelfde als e-mail", "same", true), ("Ander adres", "other", false)))
+                        <div class="gl-v2-field-box" id="np-inv-box" hidden style="margin-top:8px"><input class="gl-v2-field-input" id="np-inv-email" type="email" placeholder="facturatie@bedrijf.be" autocomplete="off" aria-label="Ander facturatie e-mailadres" /></div>
+                    </div>
+                </div>
+
+                @* ─── Particulier (47f) ─── *@
+                <div id="np-person" class="gl-v2-ic-np-section" hidden>
+                    <div class="gl-v2-ic-np-note"><i class="ph ph-envelope-simple" aria-hidden="true"></i><span><b>Geen ondernemingsnummer nodig</b> Particulieren ontvangen de factuur per e-mail. Peppol is niet van toepassing.</span></div>
+                    <div class="gl-v2-field"><span class="gl-v2-field-label">AANSPREKING</span>
+                        @await Html.PartialAsync("GlV2/_Segmented", Seg("np-sal", "Aanspreking", ("Dhr.", "Dhr.", false), ("Mevr.", "Mevr.", false), ("—", "", true)))
+                    </div>
+                    <div class="gl-v2-ic-row2">
+                        <div class="gl-v2-field"><label class="gl-v2-field-label" for="np-forename">VOORNAAM</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="np-forename" placeholder="Voornaam" autocomplete="off" /></div></div>
+                        <div class="gl-v2-field"><label class="gl-v2-field-label" for="np-name">NAAM</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="np-name" placeholder="Naam" autocomplete="off" /></div></div>
+                    </div>
+                    <div class="gl-v2-field"><label class="gl-v2-field-label" for="np-email-p">E-MAIL</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="np-email-p" type="email" inputmode="email" placeholder="naam@voorbeeld.be" autocomplete="off" /></div><span class="gl-v2-field-help">hier wordt de factuur naartoe gestuurd</span></div>
+                </div>
+
+                @* ─── Adres ─── *@
+                <div class="gl-v2-ic-block-head"><b>Adres</b></div>
+                <div class="gl-v2-ic-row2">
+                    <div class="gl-v2-field"><label class="gl-v2-field-label" for="np-street">STRAAT</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="np-street" placeholder="Straat" autocomplete="off" /></div></div>
+                    <div class="gl-v2-ic-row2" style="grid-template-columns:1fr 1fr">
+                        <div class="gl-v2-field"><label class="gl-v2-field-label" for="np-house">HUISNR.</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="np-house" placeholder="14" autocomplete="off" /></div></div>
+                        <div class="gl-v2-field"><label class="gl-v2-field-label" for="np-bus">BUS</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="np-bus" placeholder="optioneel" autocomplete="off" /></div></div>
+                    </div>
+                </div>
+                <div class="gl-v2-ic-row2">
+                    <div class="gl-v2-field"><label class="gl-v2-field-label" for="np-pc-id_input">POSTCODE / GEMEENTE</label>
+                        @await Html.PartialAsync("GlV2/_GlV2Combo", new GlV2ComboVm { Name = "np_pc", Id = "np-pc-id", Placeholder = "Zoek postcode of gemeente", LookupUrl = Url.Action("GetPostcodesByCountry", "Shared"), MinChars = 2, CountrySelector = "#np-country", ListLabel = "Postcodes", Icon = "ph-map-pin" })
+                    </div>
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "np_country", Id = "np-country", Label = "LAND", Placeholder = "Kies een land" })
+                </div>
+                <label class="gl-v2-toggle-row" for="np-useinv"><input type="checkbox" id="np-useinv" class="gl-v2-toggle-switch" /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Afwijkend facturatieadres</span></span></label>
+                <div id="np-invaddr" class="gl-v2-ic-np-section" hidden>
+                    <div class="gl-v2-ic-row2">
+                        <div class="gl-v2-field"><label class="gl-v2-field-label" for="np-istreet">STRAAT</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="np-istreet" placeholder="Straat" autocomplete="off" /></div></div>
+                        <div class="gl-v2-ic-row2" style="grid-template-columns:1fr 1fr">
+                            <div class="gl-v2-field"><label class="gl-v2-field-label" for="np-ihouse">HUISNR.</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="np-ihouse" placeholder="14" autocomplete="off" /></div></div>
+                            <div class="gl-v2-field"><label class="gl-v2-field-label" for="np-ibus">BUS</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="np-ibus" placeholder="optioneel" autocomplete="off" /></div></div>
+                        </div>
+                    </div>
+                    <div class="gl-v2-field"><label class="gl-v2-field-label" for="np-ipc-id_input">POSTCODE / GEMEENTE</label>
+                        @await Html.PartialAsync("GlV2/_GlV2Combo", new GlV2ComboVm { Name = "np_ipc", Id = "np-ipc-id", Placeholder = "Zoek postcode of gemeente", LookupUrl = Url.Action("GetPostcodesByCountry", "Shared"), MinChars = 2, CountrySelector = "#np-country", ListLabel = "Postcodes", Icon = "ph-map-pin" })
+                    </div>
+                </div>
+                <label class="gl-v2-toggle-row" for="np-six" id="np-six-row" hidden><input type="checkbox" id="np-six" class="gl-v2-toggle-switch" /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Particulier met eigen woning ouder dan 10 jaar</span><span class="gl-v2-toggle-hint">6 % btw voorstellen als standaardtarief op deze factuur</span></span></label>
+            </div>
+            <div class="modal-footer">
+                <span class="gl-v2-ic-np-foot">Contactpersonen, IBAN en betaaltermijn vul je later aan in Contacten.</span>
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="np-save">Aanmaken en gebruiken</button>
+            </div>
+        </div>
+    </div>
+</div>

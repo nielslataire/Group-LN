@@ -144,8 +144,13 @@
             .catch(function () { console.warn("Offertebestand niet bewaard."); });
     }
 
-    var fileInput = document.getElementById("gl-v2-qi-file");
-    if (fileInput) fileInput.addEventListener("change", function () { if (fileInput.files[0]) loadSource(fileInput.files[0]); });
+    // Bestand kiezen (knop "Bestand") en slepen op het canvas: het gedeelde GlV2/_Dropzone (enkel slepen) controleert pdf/afbeelding en meldt het bestand.
+    var canvasZone = document.getElementById("gl-v2-qi-file_zone");
+    if (canvasZone) canvasZone.addEventListener("gl-v2:dropzone-change", function (e) {
+        if (!e.detail.file) return;
+        loadSource(e.detail.file);
+        if (window.GlV2Dropzone) window.GlV2Dropzone.reset(canvasZone); // zo kan hetzelfde bestand opnieuw gekozen worden
+    });
 
     var cameraBtn = document.getElementById("gl-v2-qi-camera");
     var cameraInput = document.getElementById("gl-v2-qi-camera-input");
@@ -154,42 +159,8 @@
         cameraInput.addEventListener("change", function () { if (cameraInput.files[0]) loadSource(cameraInput.files[0]); });
     }
 
-    // Een geplakt/gesleept "bestand" is iets anders dan een geplakte schermafdruk: een schermafdruk komt
-    // als image/*-item binnen, een uit de Verkenner gekopieerd of gesleept PDF/foto-bestand als
-    // DataTransfer.files. Beide wegen leiden naar loadSource.
-    function firstSupportedFile(dt) {
-        if (!dt) return null;
-        var files = dt.files || [];
-        for (var i = 0; i < files.length; i++) {
-            if (files[i].type === "application/pdf" || files[i].type.indexOf("image/") === 0) return files[i];
-        }
-        var items = dt.items || [];
-        for (var j = 0; j < items.length; j++) {
-            if (items[j].kind === "file" && (items[j].type === "application/pdf" || items[j].type.indexOf("image/") === 0)) {
-                var f = items[j].getAsFile();
-                if (f) return f;
-            }
-        }
-        return null;
-    }
+    // Slepen, kiezen en plakken (Ctrl+V: een schermafdruk of gekopieerd pdf/foto-bestand): het gedeelde GlV2/_Dropzone (AcceptPaste) regelt ze alle drie.
 
-    document.addEventListener("paste", function (e) {
-        var file = firstSupportedFile(e.clipboardData);
-        if (file) { loadSource(file); e.preventDefault(); }
-    });
-
-    var canvasWrap = document.getElementById("gl-v2-qi-canvas-wrap");
-    if (canvasWrap) {
-        canvasWrap.addEventListener("dragover", function (e) { e.preventDefault(); canvasWrap.classList.add("is-dragover"); });
-        canvasWrap.addEventListener("dragleave", function () { canvasWrap.classList.remove("is-dragover"); });
-        canvasWrap.addEventListener("drop", function (e) {
-            e.preventDefault();
-            canvasWrap.classList.remove("is-dragover");
-            var file = firstSupportedFile(e.dataTransfer);
-            if (file) loadSource(file);
-            else setStatus("Enkel PDF of afbeeldingen worden ondersteund.");
-        });
-    }
 
     // ── 2. Kader-selectie (tabel/foto) ──────────────────────────────────────────────────────────────
     var mode = "table";

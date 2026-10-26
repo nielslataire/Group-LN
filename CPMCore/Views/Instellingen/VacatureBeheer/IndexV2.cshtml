@@ -1,0 +1,74 @@
+@model CPMCore.Models.Instellingen.VacatureListV2Vm
+@using BOCore
+@using FacadeCore
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen › Vacatures (design-handoff punt 55c): de lijst met per vacature het aantal sollicitaties en hoeveel nog nieuw zijn, rechtstreeks door te klikken.
+    Dezelfde acties als de klassieke pagina (Aanmaken, Bewerken, Sollicitaties, Verwijderen). Bewust anders dan het mockup: de volgorde wijzig je niet door te slepen
+    maar in het veld "Volgorde" op de vacature zelf, want opslaan van enkel de volgorde bestaat in de code niet (het zou de hele vacature opnieuw bewaren).
+*@
+@{
+    ViewData["Title"] = "Vacatures";
+    ViewData["PageIcon"] = "ph ph-briefcase";
+    ViewData["HelpScreenId"] = "instellingen-vacatures";
+    ViewData["BackUrl"] = Url.Action("Index", "Instellingen");
+    var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsVacatureBeheer);
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-inhoud.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    <a href="@Url.Action("Sollicitaties")" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>Alle sollicitaties@(Model.TotaalNieuw > 0 ? $" · {Model.TotaalNieuw} nieuw" : "")</a>
+    @if (canWrite)
+    {
+        <a href="@Url.Action("Aanmaken")" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-plus" aria-hidden="true"></i>Nieuwe vacature</a>
+    }
+}
+
+<div class="gl-v2-inh"><section class="gl-v2-section-card gl-v2-inh-card">
+    @if (!Model.Vacatures.Any())
+    {
+        <div class="gl-v2-inh-empty">
+            <i class="ph ph-briefcase" aria-hidden="true"></i><b>Nog geen vacatures</b>
+            <span>@(canWrite ? "Maak je eerste vacature aan met “Nieuwe vacature”." : "Er is nog niets om te tonen.")</span>
+        </div>
+    }
+    else
+    {
+        <div class="gl-v2-inh-head gl-v2-inh-grid--list"><span>Titel</span><span>Categorie</span><span>Locatie</span><span>Sollicitaties</span><span>Status</span><span></span></div>
+        @foreach (var v in Model.Vacatures)
+        {
+            Model.Sollicitaties.TryGetValue(v.ID, out var s);
+            <div class="gl-v2-inh-row gl-v2-inh-grid--list">
+                <a class="gl-v2-inh-title" href="@Url.Action("Bewerken", new { id = v.ID })">
+                    <span class="t">@v.Titel</span><span class="p">/vacatures/@v.Slug</span>
+                </a>
+                <span class="gl-v2-inh-cell" data-label="Categorie">@v.Categorie</span>
+                <span class="gl-v2-inh-cell" data-label="Locatie">@v.Locatie</span>
+                <span class="gl-v2-inh-cell" data-label="Sollicitaties">
+                    <a class="gl-v2-inh-count" href="@Url.Action("Sollicitaties", new { vacatureId = v.ID })" aria-label="Sollicitaties voor @v.Titel">
+                        <b>@s.Totaal</b>
+                        @if (s.Nieuw > 0) { <span class="gl-v2-badge is-info">@s.Nieuw nieuw</span> }
+                    </a>
+                </span>
+                <span class="gl-v2-inh-cell"><span class="gl-v2-badge @(v.IsGepubliceerd ? "is-positive" : "is-neutral")">@(v.IsGepubliceerd ? "Gepubliceerd" : "Concept")</span></span>
+                <span class="gl-v2-inh-actions">
+                    <a class="gl-v2-row-action" href="@Url.Action("Bewerken", new { id = v.ID })" title="Bewerken" aria-label="@v.Titel bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></a>
+                    @if (canWrite)
+                    {
+                        <form method="post" action="@Url.Action("Verwijderen")" data-bv-titel="Vacature verwijderen?" data-bv-tekst="“@v.Titel” verdwijnt van de website. Je kunt dit niet ongedaan maken." data-bv-ok="Verwijderen" data-bv-tone="danger" data-bv-icon="ph-trash">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@v.ID" />
+                            <button type="submit" class="gl-v2-row-action gl-v2-row-action-danger" title="Verwijderen" aria-label="@v.Titel verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+                        </form>
+                    }
+                </span>
+            </div>
+        }
+        <div class="gl-v2-inh-foot">De volgorde op de website volgt het veld “Volgorde” van elke vacature. Een concept is niet zichtbaar voor bezoekers.</div>
+    }
+</section></div>
+
+@await Html.PartialAsync("GlV2/_BevestigModal")

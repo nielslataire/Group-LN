@@ -1,0 +1,97 @@
+@model CPMCore.Models.Home.HomeModel
+@using BOCore
+@using FacadeCore
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen/Verlofdagen (design-handoff punt 50, "CRM Instellingen.dc.html"): de jaarkalender van weerverlet (10a)
+    hergebruikt als projectbreed component (GlV2YearCal, js/gl-v2-yearcal.js). Per jaar zet je bouwverlof en feestdagen met één klik
+    ("klik zet · nog eens klikken wist · andere modus overschrijft", slepen zet een reeks); weekends zijn buiten spel; totalen per maand en
+    per jaar, werkbare dagen in de jaarbalk; "Wettelijke feestdagen invullen" zet de 10 Belgische feestdagen van het getoonde jaar.
+
+    Bewust anders dan het mockup: de mockup noemt de pagina "Verlofdagen" met 11 feestdagen in het voorbeeld; de app vult de 10 wettelijke
+    feestdagen (Nieuwjaar, Paasmaandag, 1 mei, Hemelvaart, Pinkstermaandag, 21 juli, 15 augustus, Allerheiligen, Wapenstilstand, Kerstmis).
+    Het soort (bouwverlof/feestdag) staat sinds migratie 116 op VacationDays.Kind; bestaande dagen zijn bouwverlof.
+*@
+@{
+    ViewData["Title"] = "Verlofdagen";
+    ViewData["PageIcon"] = "ph ph-calendar-blank";
+    ViewData["HelpScreenId"] = "instellingen-verlofdagen";
+    var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsHolidays);
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-verlofdagen.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @* @section staat onvoorwaardelijk op view-niveau (zie _LayoutV2): de knop zelf enkel met schrijfrecht. *@
+    @if (canWrite)
+    {
+        <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="vl-fill"><i class="ph ph-calendar-check" aria-hidden="true"></i>Wettelijke feestdagen invullen</button>
+    }
+}
+<div class="gl-v2-vl-toolbar">
+    @if (canWrite)
+    {
+        <div class="gl-v2-vl-field">
+            <span class="gl-v2-vl-field-label">Wat zet je bij een klik</span>
+            <div class="gl-v2-segmented" id="vl-kind" role="group" aria-label="Soort verlofdag">
+                <button type="button" class="gl-v2-vl-option is-active" data-kind="B" aria-pressed="true">
+                    <span class="gl-v2-vl-swatch is-bouwverlof" aria-hidden="true"></span>
+                    <span class="gl-v2-vl-option-label">Bouwverlof</span>
+                    <span class="gl-v2-vl-option-count" id="vl-count-B">0</span>
+                </button>
+                <button type="button" class="gl-v2-vl-option" data-kind="F" aria-pressed="false">
+                    <span class="gl-v2-vl-swatch is-feestdag" aria-hidden="true"></span>
+                    <span class="gl-v2-vl-option-label">Feestdag</span>
+                    <span class="gl-v2-vl-option-count" id="vl-count-F">0</span>
+                </button>
+            </div>
+        </div>
+    }
+    <span class="gl-v2-vl-spacer"></span>
+    <div class="gl-v2-yc-yearbar" id="vl-yearbar">
+        <span class="gl-v2-yc-yearbar-stat is-bouwverlof"><span id="vl-year-B">0</span> bouwverlof</span>
+        <span class="gl-v2-yc-yearbar-divider" aria-hidden="true"></span>
+        <span class="gl-v2-yc-yearbar-stat is-feestdag"><span id="vl-year-F">0</span> feestdagen</span>
+        <span class="gl-v2-yc-yearbar-divider" aria-hidden="true"></span>
+        <span class="gl-v2-yc-yearbar-stat is-total"><span id="vl-year-werk">0</span> werkbare dagen</span>
+        <button type="button" class="gl-v2-yc-yearnav" id="vl-prev" aria-label="Vorig jaar"><i class="ph ph-caret-left" aria-hidden="true"></i></button>
+        <span class="gl-v2-yc-yearvalue" id="vl-year">@DateTime.Today.Year</span>
+        <button type="button" class="gl-v2-yc-yearnav" id="vl-next" aria-label="Volgend jaar"><i class="ph ph-caret-right" aria-hidden="true"></i></button>
+    </div>
+</div>
+
+<div class="gl-v2-notice gl-v2-notice-expanded is-warning gl-v2-vl-notice" id="vl-empty" hidden>
+    <span class="gl-v2-notice-expanded-icon"><i class="ph ph-warning" aria-hidden="true"></i></span>
+    <div class="gl-v2-notice-body">
+        <span class="gl-v2-notice-title">Voor <span id="vl-empty-year"></span> zijn nog geen verlofdagen ingesteld</span>
+        <span class="gl-v2-notice-text">Deadlines en planningen rekenen tot dan met alle werkdagen.</span>
+    </div>
+    @if (canWrite)
+    {
+        <div class="gl-v2-notice-actions"><button type="button" class="gl-v2-notice-action" id="vl-empty-fill">Feestdagen invullen</button></div>
+    }
+</div>
+
+<div id="vl-cal" aria-busy="true">
+    <div class="gl-v2-yc-message"><i class="ph ph-circle-notch gl-v2-spin" aria-hidden="true"></i> Kalender laden…</div>
+</div>
+<div id="vl-legend"></div>
+
+@Html.AntiForgeryToken()
+
+@section PageScripts
+{
+    <script>
+        window.glV2VerlofdagenConfig = {
+            listUrl: '@Url.Action("VerlofdagenV2Dagen", "Instellingen")',
+            setUrl: '@Url.Action("VerlofdagenZetV2", "Instellingen")',
+            deleteUrl: '@Url.Action("VerlofdagWisV2", "Instellingen")',
+            fillUrl: '@Url.Action("FeestdagenInvullenV2", "Instellingen")',
+            canWrite: @Html.Raw(canWrite ? "true" : "false"),
+            initialYear: @DateTime.Today.Year
+        };
+    </script>
+    <script src="~/js/gl-v2-instellingen-verlofdagen.js" asp-append-version="true"></script>
+}

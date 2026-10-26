@@ -1,0 +1,158 @@
+@model CPMCore.Models.Instellingen.EmailTemplateV2Vm
+@using BOCore
+@using FacadeCore
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen › E-mailtemplates (design-handoff punt 55f, "CRM Instellingen.dc.html"): lijst en editor op één scherm, tokens klikbaar, live voorbeeld met een
+    voorbeeldcontact. Dezelfde acties en velden als de klassieke pagina (Bewerken/Aanmaken, Verwijderen); een template kiezen laadt de pagina met die template, zodat
+    opslaan, fouten en doorverwijzen identiek blijven. Het voorbeeld vult de tokens met een vast voorbeeldcontact.
+    Bewust anders dan het mockup: de knop "Testmail naar mij" ontbreekt, want de bestaande code kan geen testmail versturen (nieuw te bouwen).
+*@
+@{
+    var edit = Model.Edit;
+    var isNieuw = edit != null && edit.ID == 0;
+    ViewData["Title"] = "E-mailtemplates";
+    ViewData["PageIcon"] = "ph ph-envelope-simple";
+    ViewData["HelpScreenId"] = "instellingen-emailtemplates";
+    ViewData["BackUrl"] = Url.Action("Index", "Instellingen");
+    var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsEmailTemplates);
+    var tokens = new[] { "{Voornaam}", "{Naam}", "{ProjectNaam}", "{Gemeente}" };
+    var fouten = ViewData.ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).Where(m => !string.IsNullOrWhiteSpace(m)).Distinct().ToList();
+}
+@section PageStyle
+{
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/gl-v2-richtext.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-emailtemplates.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @if (canWrite)
+    {
+        <a href="@Url.Action("Aanmaken")" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-plus" aria-hidden="true"></i>Nieuwe template</a>
+    }
+}
+
+<div class="gl-v2-et" id="gl-v2-et" data-nieuw="@(isNieuw ? "1" : "0")" data-afzender="@Model.Afzender">
+    <aside class="gl-v2-section-card gl-v2-et-list" aria-label="Templates">
+        <div class="gl-v2-et-panel-head"><span class="gl-v2-et-eyebrow">TEMPLATES</span><span class="gl-v2-et-count">@Model.Templates.Count</span></div>
+        <div class="gl-v2-et-items">
+            @foreach (var t in Model.Templates)
+            {
+                var actief = edit != null && edit.ID == t.ID;
+                <a class="gl-v2-et-item @(actief ? "is-active" : "")" href="@Url.Action("Bewerken", new { id = t.ID })" @(actief ? "aria-current=page" : "")>
+                    <span class="gl-v2-et-item-text"><span class="t">@t.Naam</span><span class="p">@t.Onderwerp</span></span>
+                    <span class="gl-v2-badge @(t.IsActief ? "is-positive" : "is-inactive")">@(t.IsActief ? "Actief" : "Inactief")</span>
+                </a>
+            }
+            @if (isNieuw)
+            {
+                <div class="gl-v2-et-item is-active"><span class="gl-v2-et-item-text"><span class="t">Nieuwe template</span><span class="p">nog niet opgeslagen</span></span></div>
+            }
+            @if (!Model.Templates.Any() && !isNieuw)
+            {
+                <div class="gl-v2-et-empty">Er zijn nog geen e-mailtemplates.</div>
+            }
+        </div>
+        <div class="gl-v2-et-foot">Actieve templates kies je bij het mailen van een projectcontact.</div>
+    </aside>
+
+    <div class="gl-v2-et-main">
+        @if (edit == null)
+        {
+            <section class="gl-v2-section-card gl-v2-et-blank">
+                <i class="ph ph-envelope-simple" aria-hidden="true"></i><b>Nog geen template</b>
+                <span>@(canWrite ? "Maak je eerste template aan met “Nieuwe template”." : "Er is nog niets om te tonen.")</span>
+            </section>
+        }
+        else
+        {
+            <form method="post" action="@Url.Action("Bewerken")" id="et-form" novalidate>
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="ID" value="@edit.ID" />
+                <section class="gl-v2-section-card">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-envelope-simple" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">@(isNieuw ? "Nieuwe template" : "Template bewerken")</h2>
+                        <span class="gl-v2-section-card-spacer"></span>
+                        <label class="gl-v2-et-active" for="et-actief">
+                            <input type="checkbox" id="et-actief" name="IsActief" value="true" class="gl-v2-toggle-switch" @(edit.IsActief ? "checked" : "") @(canWrite ? "" : "disabled") />
+                            <input type="hidden" name="IsActief" value="false" />
+                            <span>Actief</span>
+                        </label>
+                    </div>
+                    <div class="gl-v2-et-body">
+                        @if (fouten.Any())
+                        {
+                            <div class="gl-v2-notice gl-v2-notice-compact is-danger" role="alert"><i class="ph ph-warning-circle" aria-hidden="true"></i><span>@string.Join(" ", fouten)</span></div>
+                        }
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="et-naam">Naam (intern)</label>
+                            <div class="gl-v2-field-box"><input class="gl-v2-field-input" id="et-naam" name="Naam" value="@edit.Naam" maxlength="200" placeholder="bv. Uitnodiging bezoek toonzaal" @(canWrite ? "" : "disabled") /></div>
+                        </div>
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="et-onderwerp">Onderwerp</label>
+                            <div class="gl-v2-field-box"><input class="gl-v2-field-input" id="et-onderwerp" name="Onderwerp" value="@edit.Onderwerp" maxlength="300" placeholder="bv. Welkom bij project {ProjectNaam}" @(canWrite ? "" : "disabled") /></div>
+                        </div>
+                        <div class="gl-v2-field">
+                            <span class="gl-v2-field-label" id="et-tekst-label">Tekst</span>
+                            <div class="gl-v2-rte" aria-labelledby="et-tekst-label"><div id="et-quill"></div></div>
+                            <textarea id="et-body" name="BodyHtml" hidden>@edit.BodyHtml</textarea>
+                        </div>
+                        <div class="gl-v2-et-tokens">
+                            <span class="gl-v2-et-tokens-label">Klik een token om het toe te voegen. Het wordt bij het verzenden ingevuld.</span>
+                            <div class="gl-v2-et-chips">
+                                @foreach (var t in tokens)
+                                {
+                                    <button type="button" class="gl-v2-et-chip" data-token="@t" @(canWrite ? "" : "disabled")>@t</button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    @if (canWrite)
+                    {
+                        <div class="gl-v2-et-actions">
+                            <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="et-save"><i class="ph ph-floppy-disk" aria-hidden="true"></i>Opslaan</button>
+                            <span class="gl-v2-et-dirty" id="et-dirty" hidden><i></i>Niet opgeslagen wijzigingen</span>
+                            <span class="gl-v2-et-spacer"></span>
+                            @if (!isNieuw)
+                            {
+                                <button type="button" class="gl-v2-btn gl-v2-btn-danger" id="et-del"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</button>
+                            }
+                        </div>
+                    }
+                </section>
+            </form>
+
+            @if (canWrite && !isNieuw)
+            {
+                <form method="post" action="@Url.Action("Verwijderen")" id="et-del-form">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@edit.ID" />
+                </form>
+            }
+
+            <section class="gl-v2-section-card" aria-label="Voorbeeld">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-eye" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Voorbeeld</h2>
+                    <span class="gl-v2-section-card-desc">als Sofie Declercq · Verkaveling Keerstraat</span>
+                </div>
+                <div class="gl-v2-et-mail">
+                    <div class="gl-v2-et-mail-meta"><span class="k">Van</span><span>@(string.IsNullOrWhiteSpace(Model.Afzender) ? "jou" : Model.Afzender)</span></div>
+                    <div class="gl-v2-et-mail-meta"><span class="k">Aan</span><span>sofie.declercq@voorbeeld.be</span></div>
+                    <div class="gl-v2-et-mail-subject" id="et-pv-onderwerp"></div>
+                    <div class="gl-v2-et-mail-body" id="et-pv-body"></div>
+                </div>
+            </section>
+        }
+    </div>
+</div>
+
+@await Html.PartialAsync("GlV2/_BevestigModal")
+
+@section PageScripts
+{
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+    <script src="~/js/gl-v2-instellingen-emailtemplates.js" asp-append-version="true"></script>
+}

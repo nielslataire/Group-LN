@@ -181,7 +181,7 @@
         sortValueInput.addEventListener("change", function () {
             var mode = sortValueInput.value;
             document.querySelectorAll(".gl-v2-dp-grid").forEach(function (grid) {
-                var dropzone = grid.querySelector(".gl-v2-dp-dropzone");
+                var dropzone = grid.querySelector(".gl-v2-dropzone");
                 var cards = originalGridOrder.get(grid).slice();
                 if (mode === "newest") cards.sort(function (a, b) { return Number(b.dataset.uploaded) - Number(a.dataset.uploaded); });
                 else if (mode === "oldest") cards.sort(function (a, b) { return Number(a.dataset.uploaded) - Number(b.dataset.uploaded); });
@@ -510,35 +510,12 @@
     var uploadModal = uploadModalEl ? new bootstrap.Modal(uploadModalEl) : null;
     var uploadForm = document.getElementById("gl-v2-dp-upload-form");
     var uploadFileInput = document.getElementById("gl-v2-dp-upload-file");
-    var uploadDropzone = document.getElementById("gl-v2-dp-upload-dropzone");
-    var uploadFilenameLabel = document.getElementById("gl-v2-dp-upload-filename");
-    var uploadPlaceholderDesktop = document.getElementById("gl-v2-dp-upload-placeholder-desktop");
-    var uploadPlaceholderTouch = document.getElementById("gl-v2-dp-upload-placeholder-touch");
+    var uploadDropzone = document.getElementById("gl-v2-dp-upload-file_zone");
     var uploadSubmit = document.getElementById("gl-v2-dp-upload-submit");
     var uploadSectionSelect = document.getElementById("gl-v2-dp-upload-section-select");
 
-    // De "sleep hierheen"/"klik" placeholders (CSS-getoggled op viewportbreedte, zie
-    // gl-v2-projecten-detailphotos.css) en de effectief-gekozen-bestandsnaam delen dezelfde plek —
-    // een gekozen bestand toont altijd zijn naam, ongeacht viewportbreedte, dus dat is losse JS-
-    // zichtbaarheid (hidden), niet nog een derde CSS-breakpuntvariant.
-    function resetUploadFilename() {
-        if (uploadFilenameLabel) { uploadFilenameLabel.hidden = true; uploadFilenameLabel.textContent = ""; }
-        if (uploadPlaceholderDesktop) uploadPlaceholderDesktop.hidden = false;
-        if (uploadPlaceholderTouch) uploadPlaceholderTouch.hidden = false;
-    }
-
-    function setUploadFile(file) {
-        var dt = new DataTransfer();
-        dt.items.add(file);
-        uploadFileInput.files = dt.files;
-        if (uploadPlaceholderDesktop) uploadPlaceholderDesktop.hidden = true;
-        if (uploadPlaceholderTouch) uploadPlaceholderTouch.hidden = true;
-        if (uploadFilenameLabel) {
-            uploadFilenameLabel.hidden = false;
-            uploadFilenameLabel.textContent = file.name + " (" + (file.size / 1024 / 1024).toFixed(2) + " MB)";
-        }
-        uploadSubmit.disabled = false;
-    }
+    // Het gedeelde GlV2/_Dropzone (inline) toont de bestandsnaam en grootte, controleert type en maximum (60 MB) en zet het bestand in het veld.
+    function resetUploadFilename() { if (window.GlV2Dropzone) window.GlV2Dropzone.reset(uploadDropzone); }
 
     document.querySelectorAll(".js-gl-v2-dp-upload-open").forEach(function (btn) {
         btn.addEventListener("click", function () {
@@ -548,17 +525,26 @@
             if (uploadModal) uploadModal.show();
         });
     });
-    if (uploadDropzone) {
-        uploadDropzone.addEventListener("click", function () { uploadFileInput.click(); });
-        uploadDropzone.addEventListener("dragover", function (e) { e.preventDefault(); uploadDropzone.classList.add("is-drag-over"); });
-        uploadDropzone.addEventListener("dragleave", function () { uploadDropzone.classList.remove("is-drag-over"); });
-        uploadDropzone.addEventListener("drop", function (e) {
-            e.preventDefault(); uploadDropzone.classList.remove("is-drag-over");
-            if (e.dataTransfer.files.length) setUploadFile(e.dataTransfer.files[0]);
-        });
+    if (uploadDropzone) uploadDropzone.addEventListener("gl-v2:dropzone-change", function (e) { uploadSubmit.disabled = !e.detail.file; });
+    // Uploaden met voortgangsbalk (het gedeelde GlV2/_Dropzone, XMLHttpRequest naar dezelfde actie): UploadImage antwoordt op een AJAX-aanroep met JSON
+    // { ok, message }, zodat een fout (verkeerd type, storage-fout, te groot) zichtbaar blijft; bij succes laden we de pagina opnieuw.
+    function uploadWithProgress(zone, formData) {
+        return window.GlV2Dropzone.upload(zone, { url: uploadForm.action, formData: formData }).then(function (r) {
+            var res; try { res = JSON.parse(r.text); } catch (e) { res = null; }
+            if (res && res.ok) { window.location.reload(); return true; }
+            window.GlV2Dropzone.setError(zone, (res && res.message) || "Het uploaden is mislukt. Probeer opnieuw.");
+            return false;
+        }, function (err) { window.GlV2Dropzone.setError(zone, err.message); return false; });
     }
-    if (uploadFileInput) uploadFileInput.addEventListener("change", function () { if (this.files.length) setUploadFile(this.files[0]); });
-    if (uploadForm) uploadForm.addEventListener("submit", function () {
+    if (uploadForm) uploadForm.addEventListener("submit", function (e) {
+        if (window.GlV2Dropzone && uploadDropzone) {
+            e.preventDefault();
+            var label = uploadSubmit.innerHTML;
+            uploadSubmit.disabled = true;
+            uploadSubmit.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Bezig …';
+            uploadWithProgress(uploadDropzone, new FormData(uploadForm)).then(function (ok) { if (!ok) { uploadSubmit.disabled = false; uploadSubmit.innerHTML = label; } });
+            return;
+        }
         uploadSubmit.disabled = true;
         uploadSubmit.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Bezig …';
     });
@@ -575,8 +561,14 @@
 
     // ── Sectie-dropzones (rastertegel + lege-sectierij): rechtstreeks uploaden zonder de modal te
     // openen — zet het gedeelde formulier se velden en dient het meteen in. ───────────────────────
-    function quickUploadToSection(sectionId, file) {
+    function quickUploadToSection(sectionId, file, zone) {
         if (uploadSectionSelect) uploadSectionSelect.value = sectionId || "";
+        if (window.GlV2Dropzone && zone) {
+            var fd = new FormData(uploadForm);
+            fd.set("file", file);
+            uploadWithProgress(zone, fd);
+            return;
+        }
         var dt = new DataTransfer();
         dt.items.add(file);
         uploadFileInput.files = dt.files;
@@ -584,17 +576,9 @@
     }
     document.querySelectorAll(".js-gl-v2-dp-dropzone").forEach(function (zone) {
         var sectionId = zone.getAttribute("data-section-id");
-        zone.addEventListener("click", function () {
-            uploadFileInput.value = "";
-            var handler = function () { if (uploadFileInput.files.length) quickUploadToSection(sectionId, uploadFileInput.files[0]); uploadFileInput.removeEventListener("change", handler); };
-            uploadFileInput.addEventListener("change", handler);
-            uploadFileInput.click();
-        });
-        zone.addEventListener("dragover", function (e) { e.preventDefault(); zone.classList.add("is-drag-over"); });
-        zone.addEventListener("dragleave", function () { zone.classList.remove("is-drag-over"); });
-        zone.addEventListener("drop", function (e) {
-            e.preventDefault(); zone.classList.remove("is-drag-over");
-            if (e.dataTransfer.files.length) quickUploadToSection(sectionId, e.dataTransfer.files[0]);
+        zone.addEventListener("gl-v2:dropzone-change", function (e) {
+            if (!e.detail.file) return;
+            quickUploadToSection(sectionId, e.detail.file, zone);
         });
     });
 

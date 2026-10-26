@@ -14,6 +14,9 @@
     var groups = Array.prototype.slice.call(document.querySelectorAll("[data-set-group]"));
     var navItems = Array.prototype.slice.call(document.querySelectorAll("[data-set-nav-item]"));
 
+    var navById = {};
+    navItems.forEach(function (link) { navById[link.getAttribute("data-target")] = link; });
+
     function normalize(s) { return (s || "").toLowerCase(); }
 
     function applySearch() {
@@ -28,6 +31,16 @@
                 if (match) { groupHasMatch = true; anyVisible = true; }
             });
             group.classList.toggle("is-search-hidden", !groupHasMatch);
+
+            // Het menu volgt de zoekopdracht: een groep zonder match verdwijnt ook uit "ONDERDELEN" en
+            // de teller toont het aantal zichtbare kaarten — anders scrolt een klik naar een verborgen sectie.
+            var link = navById[group.id];
+            if (link) {
+                link.hidden = !groupHasMatch;
+                var visible = cards.filter(function (c) { return !c.classList.contains("is-search-hidden"); }).length;
+                var count = link.querySelector("[data-set-nav-count]");
+                if (count) count.textContent = visible;
+            }
         });
         if (emptyState) {
             emptyState.hidden = !q || anyVisible;
@@ -35,14 +48,28 @@
         }
     }
 
-    if (searchInput) searchInput.addEventListener("input", applySearch);
-    if (clearBtn && searchInput) {
-        clearBtn.addEventListener("click", function () {
-            searchInput.value = "";
-            searchInput.focus();
-            applySearch();
-        });
+    function clearSearch() {
+        searchInput.value = "";
+        searchInput.focus();
+        applySearch();
     }
+
+    if (searchInput) searchInput.addEventListener("input", applySearch);
+    if (clearBtn && searchInput) clearBtn.addEventListener("click", clearSearch);
+
+    // "Zoekterm wissen" in de lege staat — zelfde uitweg als het kruisje in het veld, maar op de plek
+    // waar je kijkt wanneer er niets gevonden is.
+    var emptyClear = document.getElementById("gl-v2-set-empty-clear");
+    if (emptyClear && searchInput) emptyClear.addEventListener("click", clearSearch);
+
+    // "/" springt naar de zoekbalk (zoals in GitHub/Slack) — enkel buiten een invoerveld.
+    document.addEventListener("keydown", function (e) {
+        if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey || !searchInput) return;
+        var t = e.target;
+        if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+        e.preventDefault();
+        searchInput.focus();
+    });
 
     // ── "ONDERDELEN"-navigatie: klik scrollt (smooth) naar de sectie, IntersectionObserver houdt de
     //    actieve link bij terwijl je scrollt — zelfde "welke sectie staat nu bovenaan"-benadering als
@@ -58,18 +85,29 @@
         });
     });
 
+    function setActive(link) {
+        navItems.forEach(function (l) { l.classList.remove("is-active"); });
+        if (link) link.classList.add("is-active");
+    }
+
     if (groups.length && "IntersectionObserver" in window) {
-        var byId = {};
-        navItems.forEach(function (link) { byId[link.getAttribute("data-target")] = link; });
         var observer = new IntersectionObserver(function (entries) {
             entries.forEach(function (entry) {
-                var link = byId[entry.target.id];
+                var link = navById[entry.target.id];
                 if (!link || !entry.isIntersecting) return;
-                navItems.forEach(function (l) { l.classList.remove("is-active"); });
-                link.classList.add("is-active");
+                setActive(link);
             });
         }, { rootMargin: "-20% 0px -70% 0px" });
         groups.forEach(function (g) { observer.observe(g); });
+
+        // Onderaan de pagina haalt een korte laatste groep het observer-venster (20%–30% van boven) nooit:
+        // daar activeren we expliciet de laatste zichtbare groep.
+        window.addEventListener("scroll", function () {
+            if (window.innerHeight + window.scrollY < document.documentElement.scrollHeight - 2) return;
+            for (var i = groups.length - 1; i >= 0; i--) {
+                if (!groups[i].classList.contains("is-search-hidden")) { setActive(navById[groups[i].id]); return; }
+            }
+        }, { passive: true });
     } else if (navItems.length) {
         navItems[0].classList.add("is-active");
     }

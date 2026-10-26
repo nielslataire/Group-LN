@@ -377,13 +377,8 @@
                     }
                     @if (canWrite)
                     {
-                        <div class="gl-v2-dp-dropzone js-gl-v2-dp-dropzone" data-section-id="@sect.Id">
-                            <i class="ph ph-upload-simple" aria-hidden="true"></i>
-                            <span class="gl-v2-dp-dropzone-title gl-v2-dp-desktop-text">Sleep hierheen</span>
-                            <span class="gl-v2-dp-dropzone-sub gl-v2-dp-desktop-text">of klik — foto of video<br />naar @sect.Name</span>
-                            <span class="gl-v2-dp-dropzone-title gl-v2-dp-touch-text">Klik om te uploaden</span>
-                            <span class="gl-v2-dp-dropzone-sub gl-v2-dp-touch-text">foto of video naar @sect.Name</span>
-                        </div>
+                        @await Html.PartialAsync("GlV2/_Dropzone", new GlV2DropzoneVm { Id = "gl-v2-dp-tile-" + sect.Id, Accept = "image/*,video/mp4,video/webm", MaxMb = 60, Layout = "box", Mode = "select", CssClass = "gl-v2-dp-dropzone-tile js-gl-v2-dp-dropzone", Data = new() { ["section-id"] = sect.Id.ToString() },
+                            Title = "Sleep hierheen", LinkText = null, Sub = "of klik — foto of video\nnaar " + sect.Name, TitleTouch = "Klik om te uploaden", SubTouch = "foto of video naar " + sect.Name, AriaLabel = "Foto of video uploaden naar " + sect.Name })
                     }
                 </div>
             </div>
@@ -413,7 +408,7 @@
                 <span class="gl-v2-dp-empty-sections-label">LEGE SECTIES</span>
                 @foreach (var sect in emptySections)
                 {
-                    <div class="gl-v2-dp-empty-section-row js-gl-v2-dp-dropzone" data-section-id="@sect.Id">
+                    Func<object, Microsoft.AspNetCore.Html.IHtmlContent> rowContent = @<text>
                         <i class="ph ph-squares-four" aria-hidden="true"></i>
                         <span class="gl-v2-dp-empty-section-name">@sect.Name</span>
                         <span class="gl-v2-dp-empty-section-count">0</span>
@@ -424,7 +419,8 @@
                         <span class="gl-v2-dp-empty-section-spacer"></span>
                         <span class="gl-v2-badge @(sect.IsPublic ? "is-positive" : "is-attention")">@(sect.IsPublic ? "PUBLIEK" : "INTERN")</span>
                         <span class="gl-v2-dp-empty-section-cta"><i class="ph ph-upload-simple" aria-hidden="true"></i><span class="gl-v2-dp-desktop-text">Sleep bestanden hierheen of klik</span><span class="gl-v2-dp-touch-text">Klik om te uploaden</span></span>
-                    </div>
+                    </text>;
+                    @await Html.PartialAsync("GlV2/_Dropzone", new GlV2DropzoneVm { Id = "gl-v2-dp-row-" + sect.Id, Accept = "image/*,video/mp4,video/webm", MaxMb = 60, Layout = "box", Mode = "select", CssClass = "gl-v2-dp-empty-section-row js-gl-v2-dp-dropzone", Data = new() { ["section-id"] = sect.Id.ToString() }, Content = rowContent(null), AriaLabel = "Foto of video uploaden naar " + sect.Name })
                 }
             </div>
         }
@@ -559,13 +555,9 @@
                     <input type="hidden" name="UploadedBO.Type" value="1" />
                     <input type="hidden" name="UploadedBO.IsPublic" value="true" />
                     <div class="modal-body">
-                        <div class="gl-v2-dp-dropzone gl-v2-dp-dropzone-modal gl-v2-field-full" id="gl-v2-dp-upload-dropzone">
-                            <i class="ph ph-upload-simple" aria-hidden="true"></i>
-                            <span class="gl-v2-dp-dropzone-title gl-v2-dp-desktop-text" id="gl-v2-dp-upload-placeholder-desktop">Sleep bestanden hierheen of klik om te selecteren</span>
-                            <span class="gl-v2-dp-dropzone-title gl-v2-dp-touch-text" id="gl-v2-dp-upload-placeholder-touch">Klik om te selecteren</span>
-                            <span class="gl-v2-dp-dropzone-title" id="gl-v2-dp-upload-filename" hidden></span>
-                            <span class="gl-v2-dp-dropzone-sub" id="gl-v2-dp-upload-hint">JPG, PNG, WebP, GIF, MP4, WebM · Max 500MB</span>
-                            <input type="file" name="file" id="gl-v2-dp-upload-file" accept="image/*,video/mp4,video/webm" hidden />
+                        <div class="gl-v2-field-full">
+                            @await Html.PartialAsync("GlV2/_Dropzone", new GlV2DropzoneVm { Name = "file", Id = "gl-v2-dp-upload-file", Accept = "image/*,video/mp4,video/webm", MaxMb = 60, Layout = "box", Mode = "row", Preview = true, Camera = true, CssClass = "gl-v2-dp-dropzone-modal",
+                                Title = "Sleep bestanden hierheen of klik om te selecteren", LinkText = null, TitleTouch = "Klik om te selecteren", Sub = "JPG, PNG, WebP, GIF, MP4, WebM · foto max 50 MB, video max 60 MB", AriaLabel = "Foto of video kiezen" })
                         </div>
                         <div class="gl-v2-field gl-v2-field-full">
                             <label class="gl-v2-field-label">CAPTION (optioneel)</label>

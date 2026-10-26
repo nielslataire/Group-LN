@@ -647,17 +647,6 @@ namespace CPMCore.Controllers
         {
             return PartialView("ChangeOrderFooter", text);
         }
-        public IActionResult MinimalTestPDF()
-        {
-            var pdf = new ViewAsPdf("MinimalTestPDF", "Dit is een test.")
-            {
-                PageOrientation = Orientation.Portrait,
-                PageSize = Rotativa.AspNetCore.Options.Size.A4,
-                PageMargins = new Margins(10, 5, 40, 5),
-                FileName = "MinimalTest.pdf"
-            };
-            return pdf;
-        }
 
     }
 }

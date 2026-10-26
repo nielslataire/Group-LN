@@ -27,14 +27,11 @@
     });
 
     // ── Dropzone / PDF-intake (42e punt 06) ─────────────────────────────────────────────────────
-    var dropzone = document.getElementById('gln-ai-dropzone');
-    var fileInput = document.getElementById('gln-ai-file-input');
-    var statusEl = document.getElementById('gln-ai-dropzone-status');
+    // Het gedeelde Dropzone-component (GlV2/_Dropzone, bar + select): het regelt slepen, kiezen en de PDF-controle; deze pagina leest de PDF in.
+    var dropzone = document.getElementById('gln-ai-file-input_zone');
 
     function showStatus(text, cls) {
-        statusEl.textContent = text;
-        statusEl.className = 'gln-ai-dropzone-status' + (cls ? ' ' + cls : '');
-        statusEl.hidden = false;
+        if (window.GlV2Dropzone) window.GlV2Dropzone.setStatus(dropzone, text, cls === 'is-error' ? 'error' : cls === 'is-success' ? 'ok' : '');
     }
 
     function extractPdf(file) {
@@ -63,12 +60,8 @@
             .catch(function () { showStatus('Kon de factuur niet versturen.', 'is-error'); });
     }
 
-    if (dropzone && fileInput) {
-        dropzone.querySelector('.gln-ai-dropzone-link').addEventListener('click', function () { fileInput.click(); });
-        fileInput.addEventListener('change', function () { extractPdf(fileInput.files[0]); });
-        ['dragenter', 'dragover'].forEach(function (ev) { dropzone.addEventListener(ev, function (e) { e.preventDefault(); dropzone.classList.add('is-dragover'); }); });
-        ['dragleave', 'drop'].forEach(function (ev) { dropzone.addEventListener(ev, function (e) { e.preventDefault(); dropzone.classList.remove('is-dragover'); }); });
-        dropzone.addEventListener('drop', function (e) { var f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) extractPdf(f); });
+    if (dropzone) {
+        dropzone.addEventListener('gl-v2:dropzone-change', function (e) { if (e.detail.file) extractPdf(e.detail.file); });
     }
 
     // ── Contractinfo-zijbalk (42e punt 02) ──────────────────────────────────────────────────────
@@ -656,7 +649,7 @@
     // een aparte intake-pagina: dezelfde bestemming, enkel de aandacht gaat eerst naar de upload.
     if (cfg.focusUpload && dropzone) {
         dropzone.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        dropzone.classList.add('is-dragover');
-        setTimeout(function () { dropzone.classList.remove('is-dragover'); }, 1200);
+        dropzone.classList.add('is-over');
+        setTimeout(function () { dropzone.classList.remove('is-over'); }, 1200);
     }
 })();

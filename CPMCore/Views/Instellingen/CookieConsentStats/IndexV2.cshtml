@@ -1,0 +1,52 @@
+@model CPMCore.Models.Instellingen.CookieConsentStatsVM
+@using CPMCore.Models.GlV2
+@*
+    gl-v2 — Instellingen › Website › Cookiebanner (geen eigen nummer in het ontwerp; opgebouwd uit de gedeelde onderdelen): een uitleg in een meldingskader en per periode
+    een sectiekaart met de gedeelde KPI-strip (GlV2/_KpiStrip). Enkel lezen, geen acties. De cijfers komen uit dezelfde service als de klassieke pagina.
+*@
+@{
+    ViewData["Title"] = "Cookiebanner";
+    ViewData["PageIcon"] = "ph ph-cookie";
+    ViewData["HelpScreenId"] = "instellingen-cookiebanner";
+    ViewData["BackUrl"] = Url.Action("Index", "Instellingen");
+
+    static List<GlV2KpiItemVm> Kpis(CPMCore.Models.Instellingen.CookieConsentStatsPeriodVM p)
+    {
+        var s = p.Stats;
+        return new List<GlV2KpiItemVm>
+        {
+            new() { Label = "Getoond", Value = s.ShownCount.ToString("N0", new System.Globalization.CultureInfo("nl-BE")), Hint = "Keer dat de banner verscheen", IconClass = "ph-cookie" },
+            new() { Label = "Aanvaard", Value = s.AcceptedCount.ToString("N0", new System.Globalization.CultureInfo("nl-BE")), Hint = s.AcceptedPercentage.ToString("0.0") + "% · Alles aanvaarden", IconClass = "ph-check-circle" },
+            new() { Label = "Geweigerd", Value = s.RejectedCount.ToString("N0", new System.Globalization.CultureInfo("nl-BE")), Hint = s.RejectedPercentage.ToString("0.0") + "% · Alles weigeren, een geldige keuze", IconClass = "ph-x-circle" },
+            new() { Label = "Verlaten", Value = s.AbandonedCount.ToString("N0", new System.Globalization.CultureInfo("nl-BE")), Hint = s.AbandonedPercentage.ToString("0.0") + "% · zonder keuze", IconClass = "ph-sign-out", Tone = GlV2KpiTone.Warning }
+        };
+    }
+}
+
+<div class="gl-v2-notice gl-v2-notice-expanded is-info">
+    <span class="gl-v2-notice-expanded-icon"><i class="ph ph-info" aria-hidden="true"></i></span>
+    <div class="gl-v2-notice-body">
+        <span class="gl-v2-notice-title">Los van Google Analytics gemeten</span>
+        <span class="gl-v2-notice-text">
+            Google Analytics laadt pas na toestemming en kan dus nooit meten wie weigert of geen keuze maakt. Hier telt de weergave van de banner, een klik op “Alles aanvaarden”,
+            een klik op “Alles weigeren” en het verlaten van de site zonder keuze apart mee. Anoniem, zonder IP of bezoekers-id. Per browser telt de banner één keer als getoond,
+            ook als de bezoeker pas bij een later bezoek kiest. Wie al gekozen heeft, krijgt de banner niet meer en telt niet mee. Bots en crawlers worden op user-agent overgeslagen.
+            “Verlaten” wordt sinds eind september 2026 gemeten (migratie 059), oudere periodes tonen daar 0. Wie eerst verlaat en later toch kiest, telt in beide kolommen,
+            dus de som kan afwijken van “Getoond”.
+        </span>
+    </div>
+</div>
+
+@foreach (var periode in new[] { Model.Last30Days, Model.AllTime })
+{
+    <section class="gl-v2-section-card" style="margin-top:16px">
+        <div class="gl-v2-section-card-header">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-chart-bar" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-section-card-title">@periode.Titel</h2>
+            <span class="gl-v2-section-card-desc">@periode.Subtitel</span>
+        </div>
+        <div style="padding:16px 20px 20px">
+            @await Html.PartialAsync("GlV2/_KpiStrip", Kpis(periode))
+        </div>
+    </section>
+}

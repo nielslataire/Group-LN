@@ -55,7 +55,8 @@ namespace ServiceCore
                 var bo = new ActivityBO
                 {
                     ID = e.ActivityId,
-                    Name = e.Omschrijving
+                    Name = e.Omschrijving,
+                    Volgnr = e.Volgnr
                 };
 
                 if (e.Group != null)

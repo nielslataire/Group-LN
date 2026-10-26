@@ -1,5 +1,6 @@
 @using CPMCore.Models.Projecten
 @model IProjectFormModel
+@using CPMCore.Models.GlV2
 @*
     gl-v2 (design-handoff punt 19 "Standaard foto") — huidige foto naast een sleep-/kies-zone.
     Bindt exact hetzelfde als de legacy _ProjectFormMedia: het bestandsveld heet StandardFotoUpload
@@ -33,15 +34,8 @@
         <div class="gl-v2-col-8">
             <div class="gl-v2-field">
                 <span class="gl-v2-field-label">@(hasCurrent ? "Nieuwe foto" : "Foto")</span>
-                <label class="gl-v2-pf-dropzone" id="gl-v2-pf-dropzone" for="StandardFotoUpload">
-                    <i class="ph ph-upload-simple" aria-hidden="true"></i>
-                    <span class="gl-v2-pf-dropzone-title" id="gl-v2-pf-dropzone-title">
-                        <span class="gl-v2-pf-desktop-text">Sleep een foto hierheen of kies een bestand</span>
-                        <span class="gl-v2-pf-touch-text">Tik om een foto te kiezen</span>
-                    </span>
-                    <span class="gl-v2-pf-dropzone-sub">JPG, PNG of WEBP@(hasCurrent ? " · leeg laten houdt de huidige foto" : " · kan ook later worden toegevoegd")</span>
-                    <input type="file" name="StandardFotoUpload" id="StandardFotoUpload" accept="image/jpeg,image/png,image/webp" hidden />
-                </label>
+                @await Html.PartialAsync("GlV2/_Dropzone", new GlV2DropzoneVm { Name = "StandardFotoUpload", Id = "StandardFotoUpload", Accept = "image/jpeg,image/png,image/webp", Layout = "box", Mode = "inline", Camera = true, CssClass = "gl-v2-pf-dropzone",
+                    Title = "Sleep een foto hierheen of kies een bestand", LinkText = null, TitleTouch = "Tik om een foto te kiezen", Sub = "JPG, PNG of WEBP" + (hasCurrent ? " · leeg laten houdt de huidige foto" : " · kan ook later worden toegevoegd"), AriaLabel = "Standaardfoto kiezen" })
             </div>
         </div>
     </div>

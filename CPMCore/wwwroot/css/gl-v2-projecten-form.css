@@ -81,27 +81,7 @@
 .gl-v2-pf-photo-empty[hidden] { display: none; }
 .gl-v2-pf-photo-empty i { font-size: 18px; }
 
-.gl-v2-pf-dropzone {
-    height: 160px;
-    box-sizing: border-box;
-    border-radius: var(--gl-v2-radius-md);
-    border: 1.5px dashed var(--gl-v2-accent-sage);
-    background: var(--gl-v2-surface);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    padding: 12px;
-    text-align: center;
-    cursor: pointer;
-    transition: background .12s ease, border-color .12s ease;
-}
-.gl-v2-pf-dropzone:hover,
-.gl-v2-pf-dropzone.is-drag-over { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); }
-.gl-v2-pf-dropzone > i { font-size: 22px; color: var(--gl-v2-primary); }
-.gl-v2-pf-dropzone-title { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
-.gl-v2-pf-dropzone-sub { font: 450 11px/1.4 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-pf-dropzone .gl-v2-dropzone-empty { min-height: 160px; box-sizing: border-box; padding: 12px; gap: 7px; }
 
 /* ── Verplichte documenten (tabel) ──────────────────────────────────────────────────────────── */
 .gl-v2-pf-doc-count { margin-left: auto; font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .08em; color: var(--gl-v2-muted); white-space: nowrap; }

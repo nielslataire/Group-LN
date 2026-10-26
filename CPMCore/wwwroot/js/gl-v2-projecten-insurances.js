@@ -268,22 +268,17 @@
             if (b !== aangevraagd) b.addEventListener("click", function () { requested.value = "false"; });
         });
 
-        // Dropzone voor het polisdocument
-        var zone = byId("gln-vz-dropzone"), fileInput = byId("gln-vz-polisfile"), zoneTekst = byId("gln-vz-dropzone-tekst");
-        function toonBestand(f) {
-            if (!zone || !f) return;
-            zone.classList.add("heeft-bestand");
-            zoneTekst.textContent = f.name + " (" + (f.size >= 1048576 ? (f.size / 1048576).toFixed(1).replace(".", ",") + " MB" : Math.max(1, Math.round(f.size / 1024)) + " kB") + ") wordt bewaard in Documenten. Of";
-        }
-        if (fileInput) fileInput.addEventListener("change", function () { if (fileInput.files && fileInput.files[0]) toonBestand(fileInput.files[0]); });
-        if (zone && fileInput) {
-            ["dragenter", "dragover"].forEach(function (ev) { zone.addEventListener(ev, function (e) { e.preventDefault(); zone.classList.add("is-dragover"); }); });
-            ["dragleave", "drop"].forEach(function (ev) { zone.addEventListener(ev, function (e) { e.preventDefault(); zone.classList.remove("is-dragover"); }); });
-            zone.addEventListener("drop", function (e) {
-                var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-                if (!f) return;
-                try { var dt = new DataTransfer(); dt.items.add(f); fileInput.files = dt.files; } catch (err) { /* oudere browsers: enkel via klik */ }
-                toonBestand(f);
+        // Dropzone voor het polisdocument: het gedeelde GlV2/_Dropzone (bar + select) regelt slepen, kiezen en de controle; wij tonen enkel wat gekozen is.
+        var zone = byId("gln-vz-polisfile_zone");
+        if (zone) {
+            var zoneTitel = zone.querySelector('[data-role="title"]'), startTekst = zoneTitel ? zoneTitel.innerHTML : "";
+            zone.addEventListener("gl-v2:dropzone-change", function (e) {
+                var f = e.detail.file;
+                if (!zoneTitel) return;
+                if (!f) { zoneTitel.innerHTML = startTekst; return; }
+                var grootte = f.size >= 1048576 ? (f.size / 1048576).toFixed(1).replace(".", ",") + " MB" : Math.max(1, Math.round(f.size / 1024)) + " kB";
+                zoneTitel.textContent = f.name + " (" + grootte + ") wordt bewaard in Documenten. Of ";
+                var link = document.createElement("u"); link.setAttribute("data-role", "link"); link.textContent = "kies een ander bestand"; zoneTitel.appendChild(link);
             });
         }
     }

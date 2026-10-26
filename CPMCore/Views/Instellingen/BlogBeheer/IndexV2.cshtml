@@ -1,0 +1,97 @@
+@model CPMCore.Models.Instellingen.BlogArtikelListVM
+@using BOCore
+@using FacadeCore
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen › Blogartikelen (design-handoff punt 55a): de status als filter met aantallen, zoeken inline, een artikel opent bij een klik op de rij.
+    Dezelfde acties als de klassieke pagina (Aanmaken, Bewerken). Verwijderen kan in het artikel zelf.
+*@
+@{
+    ViewData["Title"] = "Blogartikelen";
+    ViewData["PageIcon"] = "ph ph-newspaper";
+    ViewData["HelpScreenId"] = "instellingen-blog";
+    ViewData["BackUrl"] = Url.Action("Index", "Instellingen");
+    var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsBlogBeheer);
+    var artikelen = Model.Artikelen.OrderByDescending(a => a.Datum).ThenBy(a => a.SortOrder).ToList();
+    var gepubliceerd = artikelen.Count(a => a.IsGepubliceerd);
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-inhoud.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @if (canWrite)
+    {
+        <a href="@Url.Action("Aanmaken")" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-plus" aria-hidden="true"></i>Nieuw artikel</a>
+    }
+}
+
+<div class="gl-v2-inh" id="gl-v2-bl-lijst">
+    <section class="gl-v2-section-card gl-v2-inh-card">
+        @if (!artikelen.Any())
+        {
+            <div class="gl-v2-inh-empty">
+                <i class="ph ph-newspaper" aria-hidden="true"></i><b>Nog geen blogartikelen</b>
+                <span>@(canWrite ? "Maak je eerste artikel aan met “Nieuw artikel”." : "Er is nog niets om te tonen.")</span>
+            </div>
+        }
+        else
+        {
+            <div class="gl-v2-inh-bl-top">
+                <div class="gl-v2-field gl-v2-inh-bl-search"><div class="gl-v2-field-box"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input type="text" class="gl-v2-field-input" id="bl-zoek" placeholder="Zoek op titel of slug" autocomplete="off" aria-label="Zoek op titel of slug" /><button type="button" class="gl-v2-field-clear" id="bl-zoek-wis" aria-label="Zoekterm wissen">&times;</button></div></div>
+                <div class="gl-v2-segmented" role="group" aria-label="Status" id="bl-filter">
+                    <button type="button" class="is-active" aria-pressed="true" data-f="">Alle <span>@artikelen.Count</span></button>
+                    <button type="button" aria-pressed="false" data-f="pub">Gepubliceerd <span>@gepubliceerd</span></button>
+                    <button type="button" aria-pressed="false" data-f="concept">Concept <span>@(artikelen.Count - gepubliceerd)</span></button>
+                </div>
+            </div>
+            <div class="gl-v2-inh-head gl-v2-inh-grid--blog"><span>Titel</span><span>Datum</span><span>Status</span><span></span></div>
+            <div id="bl-rijen">
+                @foreach (var a in artikelen)
+                {
+                    <a class="gl-v2-inh-row gl-v2-inh-grid--blog" href="@Url.Action("Bewerken", new { id = a.ID })" data-pub="@(a.IsGepubliceerd ? "1" : "0")" data-zoek="@((a.Titel + " " + a.Slug).ToLowerInvariant())">
+                        <span class="gl-v2-inh-bl-titel">
+                            @if (!string.IsNullOrEmpty(a.FotoBestand)) { <img class="gl-v2-inh-bl-thumb" src="@a.FotoBestand" alt="" loading="lazy" /> }
+                            else { <span class="gl-v2-inh-bl-thumb is-leeg" aria-hidden="true"><i class="ph ph-image"></i></span> }
+                            <span class="gl-v2-inh-title"><span class="t">@a.Titel</span><span class="p">/blog/@a.Slug</span></span>
+                        </span>
+                        <span class="gl-v2-inh-cell">@a.Datum.ToString("dd/MM/yyyy")</span>
+                        <span class="gl-v2-inh-cell"><span class="gl-v2-badge @(a.IsGepubliceerd ? "is-positive" : "is-neutral")">@(a.IsGepubliceerd ? "Gepubliceerd" : "Concept")</span></span>
+                        <span class="gl-v2-inh-actions"><span class="gl-v2-row-action" aria-hidden="true"><i class="ph ph-caret-right"></i></span></span>
+                    </a>
+                }
+            </div>
+            <div class="gl-v2-inh-none" id="bl-geen" hidden>Geen artikelen gevonden.</div>
+            <div class="gl-v2-inh-foot" id="bl-foot">@artikelen.Count artikelen</div>
+        }
+    </section>
+</div>
+
+@section PageScripts
+{
+    <script>
+        (function () {
+            var root = document.getElementById("gl-v2-bl-lijst"), zoek = document.getElementById("bl-zoek");
+            if (!zoek) return;
+            var f = "";
+            function toon() {
+                var q = zoek.value.trim().toLowerCase(), n = 0;
+                document.querySelectorAll("#bl-rijen > a").forEach(function (r) {
+                    var ok = (!q || r.dataset.zoek.indexOf(q) >= 0) && (!f || (f === "pub" ? r.dataset.pub === "1" : r.dataset.pub === "0"));
+                    r.hidden = !ok; if (ok) n++;
+                });
+                document.getElementById("bl-geen").hidden = n > 0;
+                document.getElementById("bl-foot").textContent = n + (n === 1 ? " artikel" : " artikelen");
+            }
+            zoek.addEventListener("input", toon);
+            document.getElementById("bl-zoek-wis").addEventListener("click", function () { zoek.value = ""; toon(); zoek.focus(); });
+            document.getElementById("bl-filter").addEventListener("click", function (e) {
+                var b = e.target.closest("[data-f]"); if (!b) return;
+                f = b.dataset.f;
+                this.querySelectorAll("button").forEach(function (x) { var on = x === b; x.classList.toggle("is-active", on); x.setAttribute("aria-pressed", on ? "true" : "false"); });
+                toon();
+            });
+        })();
+    </script>
+}

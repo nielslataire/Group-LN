@@ -208,15 +208,10 @@
                 </div>
                 <div class="gl-v2-section-grid">
                     <div class="gl-v2-col-12">
-                        <div class="gln-vz-dropzone" id="gln-vz-dropzone">
-                            <i class="ph ph-upload-simple" aria-hidden="true"></i>
-                            <span id="gln-vz-dropzone-tekst">@(Model.DocumentId.HasValue ? "Er staat al een polisdocument in Documenten. Kies een bestand om een nieuw toe te voegen, of" : "Sleep de polis of het voorstel hierheen of")</span>
-                            <label class="gln-vz-dropzone-link">kies een bestand<input type="file" name="polisFile" id="gln-vz-polisfile" accept="application/pdf,image/*" hidden /></label>
-                            @if (Model.DocumentId.HasValue)
-                            {
-                                <a class="gln-vz-dropzone-open" href="@Url.Action("DetailDocs", "Projecten", new { projectid = i.ProjectId, open = Model.DocumentId })">huidig document openen</a>
-                            }
-                        </div>
+                        @await Html.PartialAsync("GlV2/_Dropzone", new GlV2DropzoneVm { Name = "polisFile", Id = "gln-vz-polisfile", Accept = "application/pdf,image/*", Layout = "bar", Mode = "select",
+                            Title = Model.DocumentId.HasValue ? "Er staat al een polisdocument in Documenten. Kies een bestand om een nieuw toe te voegen, of" : "Sleep de polis of het voorstel hierheen of", LinkText = "kies een bestand",
+                            AsideText = Model.DocumentId.HasValue ? "huidig document openen" : null, AsideHref = Model.DocumentId.HasValue ? Url.Action("DetailDocs", "Projecten", new { projectid = i.ProjectId, open = Model.DocumentId }) : null,
+                            AriaLabel = "Polis of voorstel kiezen" })
                     </div>
                     <div class="gl-v2-col-12">
                         <span class="gl-v2-field-label">HERINNERINGEN</span>

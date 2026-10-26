@@ -50,21 +50,6 @@
 .gl-v2-ice-logo-preview span { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 .gl-v2-ice-logo-preview img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .gl-v2-ice-logo-upload { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.gl-v2-ice-logo-drop {
-    height: 74px;
-    border: 1.5px dashed rgba(0, 83, 45, .3);
-    border-radius: var(--gl-v2-radius-md);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    cursor: pointer;
-}
-.gl-v2-ice-logo-drop:hover { background: var(--gl-v2-hover-tint); }
-.gl-v2-ice-logo-drop-title { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
-.gl-v2-ice-logo-drop-sub { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
-.gl-v2-ice-logo-input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; pointer-events: none; }
 
 @media (max-width: 1023.98px) {
     .gl-v2-ice-cols { grid-template-columns: 1fr; }

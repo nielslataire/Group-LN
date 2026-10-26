@@ -89,5 +89,52 @@
             run({ op: "optie", until: $("#vk-optie-until").value, holder: $("#vk-optie-holder").value, via: $("#vk-optie-via").value });
         });
     }
+
+    // ── exporteren (45f): PDF-prijslijst; Excel (45g) volgt ──
+    var xm = document.getElementById("vk-export-modal");
+    if (xm) {
+        var xScope = function () { return (xm.querySelector("input[name=vk-x-scope]:checked") || {}).value || "all"; };
+        var xIds = function (scope) {
+            if (scope === "selection") return selected();
+            var list = scope === "filter" ? rows.filter(function (r) { return !r.hidden; }) : rows;
+            return list.map(function (r) { return r.dataset.id; });
+        };
+        var xRefresh = function () {
+            var sel = selected().length, fil = rows.filter(function (r) { return !r.hidden; }).length;
+            $("#vk-x-n-all").textContent = "(" + rows.length + ")"; $("#vk-x-n-sel").textContent = "(" + sel + ")"; $("#vk-x-n-filter").textContent = "(" + fil + ")";
+            var selInput = xm.querySelector("input[name=vk-x-scope][value=selection]"); selInput.disabled = sel === 0; selInput.closest("label").classList.toggle("is-disabled", sel === 0);
+            if (selInput.disabled && selInput.checked) xm.querySelector("input[name=vk-x-scope][value=all]").checked = true;
+            var n = xIds(xScope()).length, xl = xFmt === "xlsx";
+            $$("[data-vk-for]", xm).forEach(function (el) { el.hidden = el.dataset.vkFor !== xFmt; });
+            $$("[data-vk-format]", xm).forEach(function (b) { var on = b.dataset.vkFormat === xFmt; b.classList.toggle("is-on", on); b.setAttribute("aria-checked", on ? "true" : "false"); });
+            $("#vk-x-note").textContent = xl
+                ? n + (n === 1 ? " eenheid" : " eenheden") + " in het werkblad · " + (1 + ($("#vk-x-berekening").checked ? 1 : 0) + ($("#vk-x-kosten").checked ? 1 : 0)) + " tabbladen. Bedragen staan als getallen, om verder te rekenen."
+                : n + (n === 1 ? " eenheid" : " eenheden") + " in de prijslijst · " + (xm.querySelector("input[name=vk-x-layout]:checked").value === "1" ? "A4 liggend" : "A4 staand") + ". Prijzen staan onder voorbehoud van verkoop.";
+            $("#vk-x-go-text").textContent = xl ? "Download Excel" : "Download PDF";
+            $("#vk-x-go-icon").className = "ph " + (xl ? "ph-file-xls" : "ph-file-pdf");
+            $("#vk-x-go").disabled = n === 0;
+        };
+        var xFmt = "pdf";
+        xm.addEventListener("click", function (e) { var b = e.target.closest("[data-vk-format]"); if (b) { xFmt = b.dataset.vkFormat; xRefresh(); } });
+        document.addEventListener("click", function (e) {
+            var b = e.target.closest(".js-vk-export"); if (!b) return;
+            closePops();
+            var pickSel = b.dataset.vkExportScope === "selection" && selected().length > 0;
+            xRefresh();
+            if (pickSel) xm.querySelector("input[name=vk-x-scope][value=selection]").checked = true;
+            xRefresh();
+            if (window.bootstrap) window.bootstrap.Modal.getOrCreateInstance(xm).show();
+        });
+        xm.addEventListener("change", xRefresh);
+        $("#vk-x-go").addEventListener("click", function () {
+            var scope = xScope(), ids = scope === "all" ? [] : xIds(scope);
+            var q = xFmt === "xlsx"
+                ? new URLSearchParams({ prekad: $("#vk-x-prekad").checked, koper: $("#vk-x-koper").checked, totaalKoper: $("#vk-x-xtotaal").checked, berekening: $("#vk-x-berekening").checked, kosten: $("#vk-x-kosten").checked })
+                : new URLSearchParams({ verkochtZonderPrijs: $("#vk-x-sold").checked, totaalKoper: $("#vk-x-total").checked, optieAlsTeKoop: $("#vk-x-option").checked, liggend: xm.querySelector("input[name=vk-x-layout]:checked").value === "1" });
+            if (ids.length) q.set("ids", ids.join(","));
+            var url = xFmt === "xlsx" ? xm.dataset.xlsxUrl : xm.dataset.url; window.open(url + (url.indexOf("?") < 0 ? "?" : "&") + q.toString(), "_blank", "noopener");
+            if (window.bootstrap) window.bootstrap.Modal.getOrCreateInstance(xm).hide();
+        });
+    }
     apply();
 })();

@@ -1,0 +1,235 @@
+@model CPMCore.Models.Instellingen.VacatureEditV2Vm
+@using BOCore
+@using CPMCore.Models.GlV2
+@using CPMCore.Models.Instellingen
+@using FacadeCore
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen › Vacatures › Bewerken (design-handoff punt 55d): dezelfde opbouw als een blogartikel. Inhoud links, publicatie en media rechts; must-haves en mooi meegenomen
+    naast elkaar. Eén form (Bewerken, ook voor het nieuwe formulier) voor de velden van de vacature zelf. De puntenlijsten (taken, vereisten, voordelen, stappen) hebben elk hun eigen,
+    ongewijzigde actie (…Opslaan, …Verwijderen, …Volgorde): de knoppen in de lijst openen één gedeelde modal of bevestiging en posten dan naar die actie, buiten dit form. Daardoor
+    zijn de lijsten pas beschikbaar nadat de vacature een eerste keer is opgeslagen (zoals in de klassieke pagina).
+    Bewust anders dan het mockup: geen "Gewijzigd … · Niels" (de gebruiker wordt niet bewaard).
+*@
+@{
+    var edit = Model.Edit;
+    var isNieuw = edit.ID == 0;
+    var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsVacatureBeheer);
+    ViewData["Title"] = isNieuw ? "Nieuwe vacature" : (string.IsNullOrWhiteSpace(edit.Titel) ? "Vacature" : edit.Titel);
+    ViewData["PageIcon"] = "ph ph-briefcase";
+    ViewData["HelpScreenId"] = "instellingen-vacature-bewerken";
+    ViewData["BackUrl"] = Url.Action("Index");
+    var fouten = ViewData.ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).Where(m => !string.IsNullOrWhiteSpace(m)).Distinct().ToList();
+    var must = edit.VereisteItems.Where(v => v.Categorie == "MustHave").OrderBy(v => v.SortOrder).ToList();
+    var mooi = edit.VereisteItems.Where(v => v.Categorie != "MustHave").OrderBy(v => v.SortOrder).ToList();
+    VacatureLijstV2Vm Lijst(string kind, string titel, string? omschr, string addText, string save, string del, string delField, string order, IEnumerable<VacatureLijstItemV2> items, string? cat = null, bool numbered = false) =>
+        new() { Kind = kind, Titel = titel, Omschrijving = omschr, AddText = addText, SaveAction = save, DeleteAction = del, DeleteField = delField, OrderAction = order, Categorie = cat, Numbered = numbered, CanWrite = canWrite, Items = items.ToList() };
+}
+@section PageStyle
+{
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/gl-v2-richtext.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-inhoud.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    @if (!isNieuw)
+    {
+        <span class="gl-v2-badge @(edit.IsGepubliceerd ? "is-positive" : "is-neutral")">@(edit.IsGepubliceerd ? "GEPUBLICEERD" : "CONCEPT")</span>
+    }
+    <span class="gl-v2-badge is-attention" id="vc-dirty" hidden>NIET-OPGESLAGEN WIJZIGINGEN</span>
+}
+@section PageActions
+{
+    @if (!isNieuw && !string.IsNullOrEmpty(Model.PreviewUrl))
+    {
+        <a href="@Model.PreviewUrl" target="_blank" rel="noopener" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-eye" aria-hidden="true"></i>Voorvertoning</a>
+    }
+    @if (!isNieuw)
+    {
+        <a href="@Url.Action("Sollicitaties", new { vacatureId = edit.ID })" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>Sollicitaties · @Model.AantalSollicitaties</a>
+    }
+    <a href="@Url.Action("Index")" class="gl-v2-btn gl-v2-btn-text">Annuleren</a>
+    @if (canWrite)
+    {
+        <button type="submit" form="vc-form" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-floppy-disk" aria-hidden="true"></i>Opslaan</button>
+    }
+}
+
+<form method="post" action="@Url.Action("Bewerken")" id="vc-form" enctype="multipart/form-data" novalidate class="gl-v2-inh gl-v2-inh-edit">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="ID" value="@edit.ID" />
+    <input type="hidden" name="SortOrder" id="vc-sort-hidden" value="@edit.SortOrder" />
+
+    @if (fouten.Any())
+    {
+        <div class="gl-v2-notice gl-v2-notice-expanded is-danger" role="alert">
+            <span class="gl-v2-notice-expanded-icon"><i class="ph ph-x-circle" aria-hidden="true"></i></span>
+            <div class="gl-v2-notice-body"><span class="gl-v2-notice-title">De vacature is niet opgeslagen</span><span class="gl-v2-notice-text">@string.Join(" ", fouten)</span></div>
+        </div>
+    }
+
+    <div class="gl-v2-inh-split">
+        <div class="gl-v2-inh-main">
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-briefcase" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Vacature</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Overzichtskaart en kop van de detailpagina.</span>
+                </div>
+                <div class="gl-v2-inh-fields">
+                    <div class="gl-v2-field gl-v2-inh-full">
+                        <label class="gl-v2-field-label" for="vc-titel">Titel <span class="gl-v2-inh-req">*</span></label>
+                        <div class="gl-v2-field-box"><input class="gl-v2-field-input" id="vc-titel" name="Titel" value="@edit.Titel" maxlength="250" placeholder="bv. Junior Projectleider Bouw" required @(canWrite ? "" : "disabled") /></div>
+                    </div>
+                    <div class="gl-v2-field"><label class="gl-v2-field-label" for="vc-cat">Categorie</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="vc-cat" name="Categorie" value="@edit.Categorie" maxlength="100" placeholder="bv. Bouw &amp; Werfopvolging" @(canWrite ? "" : "disabled") /></div></div>
+                    <div class="gl-v2-field"><label class="gl-v2-field-label" for="vc-loc">Locatie</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="vc-loc" name="Locatie" value="@edit.Locatie" maxlength="100" placeholder="bv. Gent" @(canWrite ? "" : "disabled") /></div></div>
+                    <div class="gl-v2-field"><label class="gl-v2-field-label" for="vc-dienst">Dienstverband</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="vc-dienst" name="Dienstverband" value="@edit.Dienstverband" maxlength="100" placeholder="bv. Voltijds" @(canWrite ? "" : "disabled") /></div></div>
+                    <div class="gl-v2-field"><label class="gl-v2-field-label" for="vc-opl">Opleiding</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="vc-opl" name="Opleiding" value="@edit.Opleiding" maxlength="150" placeholder="bv. Bachelor Bouw of gelijkwaardig door ervaring" @(canWrite ? "" : "disabled") /></div></div>
+                    <div class="gl-v2-field"><label class="gl-v2-field-label" for="vc-start">Start</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="vc-start" name="Start" value="@edit.Start" maxlength="100" placeholder="bv. Zo snel mogelijk" @(canWrite ? "" : "disabled") /></div></div>
+                    <div class="gl-v2-field gl-v2-inh-full">
+                        <label class="gl-v2-field-label" for="vc-kort">Korte beschrijving</label>
+                        <div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea class="gl-v2-field-input" id="vc-kort" name="KorteBeschrijving" rows="2" maxlength="500" placeholder="Verschijnt op de vacaturekaart in de lijst…" @(canWrite ? "" : "disabled")>@edit.KorteBeschrijving</textarea></div>
+                    </div>
+                    <div class="gl-v2-field gl-v2-inh-full">
+                        <span class="gl-v2-field-label" id="vc-lang-label">Lange beschrijving</span>
+                        <div class="gl-v2-rte" aria-labelledby="vc-lang-label"><div id="vc-quill"></div></div>
+                        <textarea id="vc-lang" name="Beschrijving" hidden>@edit.Beschrijving</textarea>
+                    </div>
+                </div>
+            </section>
+
+            @if (isNieuw)
+            {
+                <div class="gl-v2-notice gl-v2-notice-compact is-info"><i class="ph ph-info" aria-hidden="true"></i><span>Bewaar de vacature eerst. Daarna kun je het takenpakket, de vereisten, de voordelen en de sollicitatiestappen toevoegen.</span></div>
+            }
+            else
+            {
+                @await Html.PartialAsync("_VacatureLijstV2", Lijst("taak", "Takenpakket", "Puntenlijst op de detailpagina. Sleep om te herschikken.", "Taak", "TaakOpslaan", "TaakVerwijderen", "taakId", "TaakVolgorde",
+                    edit.TaakItems.OrderBy(t => t.SortOrder).Select(t => new VacatureLijstItemV2 { Id = t.ID, SortOrder = t.SortOrder, Tekst = t.Tekst })))
+
+                <div class="gl-v2-inh-pair">
+                    @await Html.PartialAsync("_VacatureLijstV2", Lijst("must", "Must-haves", "Wie zoeken we", "Toevoegen", "VereisteOpslaan", "VereisteVerwijderen", "vereisteId", "VereisteVolgorde",
+                        must.Select(v => new VacatureLijstItemV2 { Id = v.ID, SortOrder = v.SortOrder, Tekst = v.Tekst }), "MustHave"))
+                    @await Html.PartialAsync("_VacatureLijstV2", Lijst("mooi", "Mooi meegenomen", "Wie zoeken we", "Toevoegen", "VereisteOpslaan", "VereisteVerwijderen", "vereisteId", "VereisteVolgorde",
+                        mooi.Select(v => new VacatureLijstItemV2 { Id = v.ID, SortOrder = v.SortOrder, Tekst = v.Tekst }), "MooiMeegenomen"))
+                </div>
+
+                @await Html.PartialAsync("_VacatureLijstV2", Lijst("voordeel", "Wat bieden we", "Voordelen op de detailpagina.", "Voordeel", "VoordeelOpslaan", "VoordeelVerwijderen", "voordeelId", "VoordeelVolgorde",
+                    edit.VoordeelItems.OrderBy(t => t.SortOrder).Select(t => new VacatureLijstItemV2 { Id = t.ID, SortOrder = t.SortOrder, Tekst = t.Tekst })))
+
+                @await Html.PartialAsync("_VacatureLijstV2", Lijst("stap", "Sollicitatieproces", "Stappen met titel en tekst.", "Stap", "StapOpslaan", "StapVerwijderen", "stapId", "StapVolgorde",
+                    edit.SollicitatieStapItems.OrderBy(t => t.SortOrder).Select(t => new VacatureLijstItemV2 { Id = t.ID, SortOrder = t.SortOrder, Titel = t.Titel, Tekst = t.Tekst }), numbered: true))
+            }
+        </div>
+
+        <aside class="gl-v2-inh-side">
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <h2 class="gl-v2-section-card-title">Publicatie</h2>
+                    <span class="gl-v2-section-card-spacer"></span>
+                    <span class="gl-v2-badge @(edit.IsGepubliceerd ? "is-positive" : "is-neutral")" id="vc-pub-badge">@(edit.IsGepubliceerd ? "Gepubliceerd" : "Concept")</span>
+                </div>
+                <div class="gl-v2-inh-side-body">
+                    <label class="gl-v2-toggle-row" for="vc-pub">
+                        <input type="checkbox" id="vc-pub" name="IsGepubliceerd" value="true" class="gl-v2-toggle-switch" @(edit.IsGepubliceerd ? "checked" : "") @(canWrite ? "" : "disabled") />
+                        <input type="hidden" name="IsGepubliceerd" value="false" />
+                        <span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Zichtbaar op de website</span></span>
+                    </label>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="vc-slug">URL</label>
+                        <div class="gl-v2-field-box"><span class="gl-v2-inh-prefix">/vacatures/</span><input class="gl-v2-field-input gl-v2-inh-mono" id="vc-slug" name="Slug" value="@edit.Slug" placeholder="wordt automatisch gegenereerd" @(canWrite ? "" : "disabled") /></div>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="vc-sort">Volgorde</label>
+                        <div class="gl-v2-field-box"><input class="gl-v2-field-input is-tabular" id="vc-sort" type="number" value="@edit.SortOrder" @(canWrite ? "" : "disabled") /></div>
+                        <span class="gl-v2-field-help">Lager = hoger in de lijst op de website.</span>
+                    </div>
+                    @if (canWrite && !isNieuw)
+                    {
+                        <div class="gl-v2-inh-side-foot"><button type="button" class="gl-v2-btn gl-v2-btn-danger" id="vc-delete"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</button></div>
+                    }
+                </div>
+            </section>
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <h2 class="gl-v2-section-card-title">Video</h2>
+                    <span class="gl-v2-section-card-desc">optioneel · max. 60 MB</span>
+                </div>
+                <div class="gl-v2-inh-side-body">
+                    <input type="hidden" name="VideoBestand" id="vc-video-cur" value="@edit.VideoBestand" />
+                    @await Html.PartialAsync("GlV2/_Dropzone", new GlV2DropzoneVm
+                    {
+                        Name = "VideoUpload", Id = "vc-video", Accept = "video/mp4,video/webm,.mp4,.m4v,.webm", MaxMb = 60, Layout = "compact", Mode = "row", Icon = "ph-video",
+                        Title = "Sleep een video hierheen of", LinkText = "kies een bestand", Sub = "MP4 of WebM",
+                        CurrentName = string.IsNullOrEmpty(edit.VideoBestand) ? null : System.IO.Path.GetFileName(edit.VideoBestand), AriaLabel = "Video kiezen"
+                    })
+                    <video class="gl-v2-inh-video" id="vc-video-pv" controls preload="metadata" @(string.IsNullOrEmpty(edit.VideoBestand) ? "hidden" : "") src="@edit.VideoBestand"></video>
+                    <span class="gl-v2-field-help">Getoond boven “Vacature in één oogopslag” op de detailpagina. Speelt niet automatisch af.</span>
+                </div>
+            </section>
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <h2 class="gl-v2-section-card-title">Posterbeeld</h2>
+                    <span class="gl-v2-section-card-desc">optioneel</span>
+                </div>
+                <div class="gl-v2-inh-side-body">
+                    <input type="hidden" name="VideoPosterBestand" id="vc-poster-cur" value="@edit.VideoPosterBestand" />
+                    @await Html.PartialAsync("GlV2/_Dropzone", new GlV2DropzoneVm
+                    {
+                        Name = "PosterUpload", Id = "vc-poster", Accept = "image/*", MaxMb = 20, Layout = "compact", Mode = "row", Preview = true,
+                        Title = "Sleep een afbeelding hierheen of", LinkText = "kies een bestand",
+                        CurrentName = string.IsNullOrEmpty(edit.VideoPosterBestand) ? null : System.IO.Path.GetFileName(edit.VideoPosterBestand), AriaLabel = "Posterbeeld kiezen"
+                    })
+                    @if (!string.IsNullOrEmpty(edit.VideoPosterBestand))
+                    {
+                        <img class="gl-v2-inh-poster" id="vc-poster-pv" src="@edit.VideoPosterBestand" alt="Posterbeeld" />
+                    }
+                    <span class="gl-v2-field-help">Het eerste beeld vóór het afspelen. Leeg = de browser toont het eerste beeld van de video.</span>
+                </div>
+            </section>
+        </aside>
+    </div>
+</form>
+
+@if (!isNieuw && canWrite)
+{
+    @* Gedeelde formulieren buiten het hoofdform: één voor het verwijderen van een punt, één voor de hele vacature. *@
+    <form method="post" id="vc-del-form" hidden>@Html.AntiForgeryToken()<input type="hidden" name="vacatureId" value="@edit.ID" /><input type="hidden" id="vc-del-id" /></form>
+    <form method="post" action="@Url.Action("Verwijderen")" id="vc-del-vac" hidden>@Html.AntiForgeryToken()<input type="hidden" name="id" value="@edit.ID" /></form>
+
+    <div class="modal fade gl-v2-modal-form" id="vc-item-modal" tabindex="-1" aria-hidden="true" aria-labelledby="vc-item-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <form class="modal-content" method="post" novalidate id="vc-item-form">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="ID" value="0" />
+                <input type="hidden" name="VacatureId" value="@edit.ID" />
+                <input type="hidden" name="SortOrder" value="0" />
+                <input type="hidden" name="Categorie" value="" />
+                <div class="modal-header"><h2 class="modal-title" id="vc-item-title">Toevoegen</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body">
+                    <div class="gl-v2-field" id="vc-item-titel-wrap" hidden>
+                        <label class="gl-v2-field-label" for="vc-item-titel">Titel</label>
+                        <div class="gl-v2-field-box"><input class="gl-v2-field-input" id="vc-item-titel" name="Titel" maxlength="200" placeholder="bv. Sollicitatie versturen" autocomplete="off" /></div>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="vc-item-tekst" id="vc-item-tekst-label">Tekst</label>
+                        <div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea class="gl-v2-field-input" id="vc-item-tekst" name="Tekst" rows="3" maxlength="500" placeholder=" " required></textarea></div>
+                    </div>
+                </div>
+                <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="submit" class="gl-v2-btn gl-v2-btn-primary">Opslaan</button></div>
+            </form>
+        </div>
+    </div>
+}
+
+@await Html.PartialAsync("GlV2/_BevestigModal")
+
+@section PageScripts
+{
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+    <script src="~/js/gl-v2-instellingen-vacatures.js" asp-append-version="true"></script>
+}

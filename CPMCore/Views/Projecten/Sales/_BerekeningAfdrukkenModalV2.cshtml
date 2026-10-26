@@ -1,0 +1,32 @@
+@model IReadOnlyList<CPMCore.Services.Verkoop.VerkoopRijVm>
+@* gl-v2 — Berekening afdrukken (design-handoff 45d): eenheden kiezen, versie koper of intern en wat er in komt; de PDF is 45e (SalesCalculationPdfV2).
+   Gedrag in gl-v2-projecten-verkoop-print.js; werkt op Te koop (selectie) en op Eenheid berekenen (huidige eenheid met de eigen bedragen). *@
+<div class="modal fade gl-v2-modal-form" id="vk-print-modal" tabindex="-1" aria-hidden="true" aria-labelledby="vk-print-title" data-url="@(ViewData["PrintUrl"])">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <div class="modal-content">
+            <div class="modal-header"><div><h2 class="modal-title" id="vk-print-title">Berekening afdrukken</h2><p class="gl-v2-vk-x-sub" id="vk-p-sub"></p></div><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+            <div class="modal-body">
+                <span class="gl-v2-vk-x-label">EENHEDEN</span>
+                <div class="gl-v2-vk-x-opts" id="vk-p-units">
+                    @foreach (var r in Model)
+                    {
+                        <label><input type="checkbox" value="@r.UnitId" /><span>@r.Naam <b>@r.Status</b></span></label>
+                    }
+                </div>
+                <span class="gl-v2-vk-x-label">VERSIE</span>
+                <div class="gl-v2-vk-x-checks">
+                    <label><input type="radio" name="vk-p-versie" value="koper" checked /><span><b>Voor de koper</b><small>grond, constructie, kosten koper en het totaal</small></span></label>
+                    <label><input type="radio" name="vk-p-versie" value="intern" /><span><b>Intern</b><small>voegt kostprijs, minimum en marge uit het definitieve budget toe</small></span></label>
+                </div>
+                <span class="gl-v2-vk-x-label">OPNEMEN</span>
+                <div class="gl-v2-vk-x-checks">
+                    <label><input type="checkbox" id="vk-p-kosten" checked /><span><b>Kosten koper</b><small>aktekosten, aansluitingen, landmeting en notaris</small></span></label>
+                    <label><input type="checkbox" id="vk-p-detail" checked /><span><b>Detail van de berekening</b><small>oppervlakte × €/m² en de grondslag van de belastingen</small></span></label>
+                    <label><input type="checkbox" id="vk-p-overzicht" checked /><span><b>Overzichtspagina vooraan</b><small>enkel bij meer dan één eenheid</small></span></label>
+                </div>
+                <div class="gl-v2-notice gl-v2-notice-compact is-info"><i class="ph ph-info" aria-hidden="true"></i><span id="vk-p-note"></span></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="button" class="gl-v2-btn gl-v2-btn-primary" id="vk-p-go"><i class="ph ph-file-pdf" aria-hidden="true"></i><span id="vk-p-go-text">Download PDF</span></button></div>
+        </div>
+    </div>
+</div>

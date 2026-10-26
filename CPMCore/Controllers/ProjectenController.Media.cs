@@ -544,6 +544,20 @@ namespace CPMCore.Controllers
         }
 
 
+        /// <summary>Antwoord van UploadImage: een gewoon formulier krijgt een flashmelding bij een fout en een redirect (zoals altijd); een AJAX-aanroep
+        /// (gl-v2: GlV2Dropzone.upload met voortgangsbalk, header X-Requested-With) krijgt JSON { ok, message }, zodat een fout niet verloren gaat in de redirect.</summary>
+        private IActionResult UploadImageResult(int projectId, string? errorMessage, string? ajaxMessage = null)
+        {
+            if (string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase))
+            {
+                var message = errorMessage ?? ajaxMessage;
+                return Json(new { ok = message == null, message });
+            }
+            if (errorMessage != null)
+                AddMessage("error", errorMessage, "Fout!");
+            return RedirectToAction("DetailPhotos", "Projecten", new { projectid = projectId });
+        }
+
         // Een foto-origineel mag 50 MB zijn (Kestrel/IIS staan standaard ~30 MB toe)
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -552,15 +566,14 @@ namespace CPMCore.Controllers
         public async Task<IActionResult> UploadImage(ProjectPictureBO UploadedBO, IFormFile file)
         {
             if (file == null || file.Length == 0)
-                return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
+                return UploadImageResult(UploadedBO.ProjectId, null, ajaxMessage: "Geen bestand ontvangen.");
 
             var isVideo = _validVideoTypes.Contains(file.ContentType);
             var isImage = _validImageTypes.Contains(file.ContentType);
 
             if (!isImage && !isVideo)
             {
-                AddMessage("error", "Ongeldig bestandstype. Kies een afbeelding (jpg, png, webp) of video (mp4, webm).", "Fout!");
-                return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
+                return UploadImageResult(UploadedBO.ProjectId, "Ongeldig bestandstype. Kies een afbeelding (jpg, png, webp) of video (mp4, webm).");
             }
 
             string storedFilename;
@@ -583,8 +596,7 @@ namespace CPMCore.Controllers
                     var uploaded = await UploadAssetFileToStorageAsync(tempPath, "videos", videoFilename, file.ContentType);
                     if (string.IsNullOrWhiteSpace(uploaded))
                     {
-                        AddMessage("error", "Video upload naar storage API mislukt.", "Fout!");
-                        return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
+                        return UploadImageResult(UploadedBO.ProjectId, "Video upload naar storage API mislukt.");
                     }
                     storedFilename = uploaded;
                 }
@@ -606,7 +618,7 @@ namespace CPMCore.Controllers
                     DateTimeUploaded = DateTime.Now
                 };
                 _projectService.InsertUpdatePicture(videoPicture);
-                return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
+                return UploadImageResult(UploadedBO.ProjectId, null);
             }
 
             // Foto: het origineel gaat integraal naar de Storage API. Die draait de foto volgens EXIF, verwijdert de EXIF-gegevens,
@@ -616,8 +628,7 @@ namespace CPMCore.Controllers
             const long maxPhotoBytes = 50L * 1024 * 1024;
             if (file.Length > maxPhotoBytes)
             {
-                AddMessage("error", $"De foto is {file.Length / 1024d / 1024d:0.#} MB; het maximum is 50 MB.", "Fout!");
-                return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
+                return UploadImageResult(UploadedBO.ProjectId, $"De foto is {file.Length / 1024d / 1024d:0.#} MB; het maximum is 50 MB.");
             }
 
             var storage = HttpContext.RequestServices.GetRequiredService<FacadeCore.Signing.IAssetStorageClient>();
@@ -628,8 +639,7 @@ namespace CPMCore.Controllers
 
             if (!upload.Success || string.IsNullOrWhiteSpace(upload.FileName))
             {
-                AddMessage("error", upload.Error ?? "Afbeelding upload naar storage API mislukt.", "Fout!");
-                return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
+                return UploadImageResult(UploadedBO.ProjectId, upload.Error ?? "Afbeelding upload naar storage API mislukt.");
             }
 
             var picture = new ProjectPictureBO
@@ -660,7 +670,7 @@ namespace CPMCore.Controllers
                 }
             }
 
-            return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
+            return UploadImageResult(UploadedBO.ProjectId, null);
         }
 
         // ── Media Sections API ────────────────────────────────────────────────

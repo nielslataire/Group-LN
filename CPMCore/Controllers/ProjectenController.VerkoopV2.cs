@@ -5,10 +5,11 @@ using CPMCore.Services.Verkoop;
 using FacadeCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using QuestPDF.Fluent;
 
 namespace CPMCore.Controllers;
 
-// gl-v2 (design-handoff punt 45 "Verkoop"): Te koop (45a), Verkoopinstellingen (45b); Eenheid berekenen (45c) en afdrukken/exporteren (45d-h) volgen.
+// gl-v2 (design-handoff punt 45 "Verkoop"): Te koop (45a), Verkoopinstellingen (45b); Eenheid berekenen (45c), afdrukken (45d/45e) en de prijslijst (45f/45h) staan er; Excel (45g) volgt.
 // De legacy schermen (DetailSales/SalesSettings) blijven bestaan voor ?classic=true.
 public partial class ProjectenController
 {
@@ -123,6 +124,22 @@ public partial class ProjectenController
             t = t == "strong" ? "b" : t == "em" ? "i" : t;
             return t is "p" or "br" or "b" or "i" or "ul" or "li" ? "<" + m.Groups[1].Value + t + ">" : "";
         }, opt).Trim();
+    }
+
+    /// <summary>45h — Prijslijst (PDF). <paramref name="ids"/> = enkel de gekozen eenheden (leeg = alle); de opties volgen 45f "Opnemen" en "Opmaak".</summary>
+    [HttpGet]
+    public async Task<IActionResult> SalesListPdfV2(int projectid, string? ids, bool verkochtZonderPrijs = true, bool totaalKoper = true, bool optieAlsTeKoop = false, bool liggend = true)
+    {
+        var vm = await Verkoop.GetIndexAsync(projectid);
+        var gekozen = (ids ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => int.TryParse(s, out var n) ? n : 0).Where(n => n > 0).ToHashSet();
+        var rijen = gekozen.Count == 0 ? vm.Rijen : vm.Rijen.Where(r => gekozen.Contains(r.UnitId)).ToList();
+        if (rijen.Count == 0) { AddMessage("error", "Er zijn geen eenheden om in de prijslijst op te nemen.", "Fout"); return RedirectToAction("DetailSales", new { projectid }); }
+        var company = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.Signing.ChangeOrderPdfBuilder>().BuildGlV2CompanyForProjectAsync(projectid);
+        var fonts = CPMCore.Documents.GlV2.GlV2PdfFonts.EnsureRegistered(HttpContext.RequestServices.GetRequiredService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>(), HttpContext.RequestServices.GetRequiredService<ILogger<ProjectenController>>());
+        var opties = new CPMCore.Documents.GlV2.PrijslijstOpties(verkochtZonderPrijs, totaalKoper, optieAlsTeKoop, liggend);
+        var pdf = new CPMCore.Documents.GlV2.PrijslijstDocumentV2(vm.ProjectName, rijen, opties, company, fonts).GeneratePdf();
+        var naam = string.Concat(vm.ProjectName.Where(ch => char.IsLetterOrDigit(ch) || ch == ' ')).Trim().Replace(' ', '_');
+        return File(pdf, "application/pdf", $"Prijslijst_{naam}_{DateTime.Now:yyyyMMdd}.pdf");
     }
 
     /// <summary>Acties op de selectie in Te koop: Te koop zetten, In optie zetten, Op website zetten of van de website halen. Verkochte eenheden worden overgeslagen.</summary>

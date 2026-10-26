@@ -429,7 +429,6 @@
 .gl-v2-ver-drop u { color: var(--gl-v2-primary); font-weight: 600; text-underline-offset: 2px; }
 .gl-v2-ver-drop:hover, .gl-v2-ver-drop.is-over { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); }
 .gl-v2-ver-drop:focus-within { outline: 3px solid var(--gl-v2-primary-tint); outline-offset: 2px; }
-.gl-v2-ver-file { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; clip-path: inset(50%); }
 
 .gl-v2-ver-result { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 10px; background: #EEF4EA; border: 1px solid rgba(0, 83, 45, .25); }
 .gl-v2-ver-result.is-error { background: #FBF1EF; border-color: rgba(155, 44, 31, .25); }

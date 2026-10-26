@@ -88,43 +88,30 @@
 
     <span class="gl-v2-weer-toolbar-spacer"></span>
 
-    <div class="gl-v2-weer-year-bar">
-        <span class="gl-v2-weer-year-station" id="weer-year-station">—</span>
-        <span class="gl-v2-weer-year-stat is-rain"><span id="weer-year-rain">0</span> regendagen</span>
-        <span class="gl-v2-weer-year-divider" aria-hidden="true"></span>
-        <span class="gl-v2-weer-year-stat is-wind"><span id="weer-year-wind">0</span> winddagen</span>
-        <span class="gl-v2-weer-year-divider" aria-hidden="true"></span>
-        <span class="gl-v2-weer-year-stat is-total"><span id="weer-year-total">0</span> totaal</span>
-        <button type="button" class="gl-v2-weer-year-nav" id="weer-year-prev" aria-label="Vorig jaar">
+    <div class="gl-v2-yc-yearbar gl-v2-weer-year-bar">
+        <span class="gl-v2-yc-yearbar-text" id="weer-year-station">—</span>
+        <span class="gl-v2-yc-yearbar-stat is-rain"><span id="weer-year-rain">0</span> regendagen</span>
+        <span class="gl-v2-yc-yearbar-divider" aria-hidden="true"></span>
+        <span class="gl-v2-yc-yearbar-stat is-wind"><span id="weer-year-wind">0</span> winddagen</span>
+        <span class="gl-v2-yc-yearbar-divider" aria-hidden="true"></span>
+        <span class="gl-v2-yc-yearbar-stat is-total"><span id="weer-year-total">0</span> totaal</span>
+        <button type="button" class="gl-v2-yc-yearnav" id="weer-year-prev" aria-label="Vorig jaar">
             <i class="ph ph-caret-left" aria-hidden="true"></i>
         </button>
-        <span class="gl-v2-weer-year-value" id="weer-year-value">@DateTime.Today.Year</span>
-        <button type="button" class="gl-v2-weer-year-nav" id="weer-year-next" aria-label="Volgend jaar">
+        <span class="gl-v2-yc-yearvalue" id="weer-year-value">@DateTime.Today.Year</span>
+        <button type="button" class="gl-v2-yc-yearnav" id="weer-year-next" aria-label="Volgend jaar">
             <i class="ph ph-caret-right" aria-hidden="true"></i>
         </button>
     </div>
 </div>
 
-<div class="gl-v2-weer-months @(canWrite ? "" : "is-readonly")" id="weer-months" data-armed-type="rain" aria-busy="true">
-    <div class="gl-v2-weer-loading" id="weer-months-loading">
+<div id="weer-months" aria-busy="true">
+    <div class="gl-v2-yc-message" id="weer-months-loading">
         <i class="ph ph-circle-notch gl-v2-spin" aria-hidden="true"></i> Kalender laden…
     </div>
 </div>
 
-<div class="gl-v2-weer-legend">
-    <span class="gl-v2-weer-legend-label">Legende</span>
-    <span class="gl-v2-weer-legend-item"><span class="gl-v2-weer-legend-swatch is-rain">14</span>regendag</span>
-    <span class="gl-v2-weer-legend-item"><span class="gl-v2-weer-legend-swatch is-wind">15</span>winddag</span>
-    <span class="gl-v2-weer-legend-item"><span class="gl-v2-weer-legend-swatch is-both">13</span>beide</span>
-    <span class="gl-v2-weer-legend-item"><span class="gl-v2-weer-legend-swatch is-vacation">9</span>verlofdag</span>
-    <span class="gl-v2-weer-legend-item"><span class="gl-v2-weer-legend-swatch is-weekend">17</span>weekend — telt niet mee</span>
-    @if (canWrite)
-    {
-        <span class="gl-v2-weer-legend-item"><span class="gl-v2-weer-legend-swatch is-hover-preview">18</span>hover in @("regenmodus")</span>
-        <span class="gl-v2-weer-legend-spacer"></span>
-        <span class="gl-v2-weer-legend-hint">klik zet · nog eens klikken wist · slepen over meerdere dagen zet een reeks</span>
-    }
-</div>
+<div id="weer-legend"></div>
 
 @Html.AntiForgeryToken()
 

@@ -52,7 +52,7 @@ public partial class InstellingenController
         {
             Parent = dashboard
         };
-        var instellingenKM = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("KostprijsMaterialen", "Instellingen", "Kostprijs materialen")
+        var instellingenKM = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("KostprijsMaterialen", "Instellingen", "Kostprijzen materialen")
         {
             Parent = instellingenIndex
         };
@@ -68,6 +68,11 @@ public partial class InstellingenController
             Percentages        = _kostprijsService.GetPercentages().Values        ?? new(),
             FormulaKoppelingen = _kostprijsService.GetFormulaKoppelingen().Values ?? new()
         };
+        if (ViewData["UseGlV2Layout"] as bool? == true)
+        {
+            ViewData["BackUrl"] = Url.Action("Index", "Instellingen");
+            return ViewJson("KostprijsMaterialenV2", KostprijsStand());
+        }
         return View(vm);
     }
 
@@ -165,6 +170,16 @@ public partial class InstellingenController
             Activiteiten = await _budgetFormules.GetActiviteitenMetLotAsync(),
             TestVersies  = await _budgetFormules.GetTestVersiesAsync()
         };
+        if (ViewData["UseGlV2Layout"] as bool? == true)
+        {
+            ViewData["BackUrl"] = Url.Action("Index", "Instellingen");
+            return ViewJson("BudgetFormulesV2", new
+            {
+                formules = vm.Formules.Select(FormuleJson),
+                activiteiten = vm.Activiteiten.Select(a => new { activityId = a.ActivityId, naam = a.ActivityOmschrijving, lotNummer = a.LotNummer, lotNaam = a.LotNaam }),
+                testVersies = vm.TestVersies.Select(v => new { waarde = v.Value, tekst = v.Text })
+            });
+        }
         return View(vm);
     }
 
@@ -519,6 +534,11 @@ public partial class InstellingenController
             IPlusIndexen = await _bouwIndex.GetGefilterdAsync("I+"),
             AbexIndexen  = await _bouwIndex.GetGefilterdAsync("ABEX")
         };
+        if (ViewData["UseGlV2Layout"] as bool? == true)
+        {
+            ViewData["BackUrl"] = Url.Action("Index", "Instellingen");
+            return View("BouwindexenV2", model);
+        }
         return View(model);
     }
 

@@ -1,0 +1,34 @@
+@model List<CPMCore.Models.IssueNotification.RunRowVm>
+@*
+    gl-v2 — tabel met uitvoeringen van de puntmeldingen (punt 56a), gedeeld door Index en Logs. Tijden in Brussels-tijd. Afgeleid, zonder wijziging aan de verzender:
+    een run die langer dan een uur op "Bezig" staat zonder einde is "Vastgelopen"; een geslaagde run zonder mails staat gedempt.
+*@
+@{
+    var nl = new System.Globalization.CultureInfo("nl-BE");
+    bool Vast(CPMCore.Models.IssueNotification.RunRowVm r) => r.StatusLabel == "Bezig" && !r.FinishedDate.HasValue && (DateTime.Now - r.StartedDate) > TimeSpan.FromHours(1);
+    string Duur(CPMCore.Models.IssueNotification.RunRowVm r)
+    {
+        if (!r.FinishedDate.HasValue) return "—";
+        var d = r.FinishedDate.Value - r.StartedDate;
+        return d.TotalMinutes >= 1 ? $"{(int)d.TotalMinutes}m {d.Seconds}s" : $"{Math.Max(d.TotalSeconds, 0):0.#}s";
+    }
+}
+<div class="gl-v2-auto-head gl-v2-auto-grid--pm"><span>Datum</span><span>Type</span><span>Getriggerd door</span><span>Status</span><span class="r">Mails</span><span class="r">Duur</span></div>
+@if (!Model.Any())
+{
+    <div class="gl-v2-auto-none">Nog geen uitvoeringen.</div>
+}
+@foreach (var r in Model)
+{
+    var vast = Vast(r);
+    var tone = vast ? "is-danger" : r.StatusLabel switch { "Geslaagd" => "is-positive", "Bezig" => "is-info", _ => "is-danger" };
+    var gedempt = r.StatusLabel == "Geslaagd" && r.EmailsSent == 0;
+    <div class="gl-v2-auto-row gl-v2-auto-grid--pm @(gedempt ? "is-muted-row" : "")" data-run data-st="@(vast ? "vast" : r.StatusLabel == "Geslaagd" ? "ok" : r.StatusLabel == "Bezig" ? "bezig" : "fout")">
+        <span class="gl-v2-auto-cell">@r.StartedDate.ToString("dd/MM HH:mm", nl)</span>
+        <span class="gl-v2-auto-strong">@r.RunTypeLabel</span>
+        <span class="gl-v2-auto-cell is-muted">@(string.IsNullOrWhiteSpace(r.TriggeredBy) ? "—" : r.TriggeredBy)</span>
+        <span class="gl-v2-auto-state"><span class="gl-v2-badge @tone">@(vast ? "Vastgelopen" : r.StatusLabel)</span>@if (!string.IsNullOrWhiteSpace(r.ErrorMessage)) { <span class="gl-v2-auto-err" title="@r.ErrorMessage">@r.ErrorMessage</span> }</span>
+        <span class="gl-v2-auto-cell r">@r.EmailsSent</span>
+        <span class="gl-v2-auto-cell r">@Duur(r)</span>
+    </div>
+}

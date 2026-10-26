@@ -1,0 +1,154 @@
+/* gl-v2 — Instellingen › Bouwindexen (design-handoff punt 48a-d). Alles hier is paginaspecifiek (klassen .gl-v2-bwi-*);
+   tabbar, sectiekaart, badges, meldingskaders, velden, segmented control, ⋯-menu, modal en knoppen komen uit de gedeelde gl-v2-CSS.
+   Page-CSS laadt vóór de shell: nieuwe klassen hier botsen niet, maar een regel die een shell-regel moet overschrijven staat onder .gl-v2-bwi. */
+
+.gl-v2-bwi { display: flex; flex-direction: column; gap: 16px; }
+.gl-v2-bwi-body { display: flex; flex-direction: column; gap: 16px; }
+.gl-v2-bwi-body > [data-bwi-panel] { display: flex; flex-direction: column; gap: 16px; }
+.gl-v2-bwi-body > [data-bwi-panel][hidden] { display: none; }
+.gl-v2-bwi-intro { font: 450 12.5px/1.55 var(--gl-v2-font-sans); color: var(--gl-v2-muted); max-width: 900px; text-wrap: pretty; }
+
+/* ── Kerncijfers (48a/b/c): één witte kaart, 3 of 4 cellen gescheiden door een hairline ── */
+.gl-v2-bwi-kpis { display: grid; background: var(--gl-v2-surface); border-radius: 12px; box-shadow: var(--gl-v2-shadow-card); overflow: hidden; }
+.gl-v2-bwi-kpis.is-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.gl-v2-bwi-kpis.is-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.gl-v2-bwi-kpi { padding: 14px 20px; display: flex; flex-direction: column; gap: 3px; min-width: 0; border-right: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-bwi-kpi:last-child { border-right: 0; }
+.gl-v2-bwi-kpi .lbl { font: 600 10px var(--gl-v2-font-sans); letter-spacing: .1em; color: var(--gl-v2-muted); }
+.gl-v2-bwi-kpi .val { font: 600 24px/1.25 var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gl-v2-bwi-kpi .val.is-primary { color: var(--gl-v2-primary); }
+.gl-v2-bwi-kpi .val.is-text { font-size: 16px; display: flex; align-items: center; gap: 7px; padding: 4px 0 3px; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-bwi-kpi .val.is-text i { color: #2F6038; font-size: 17px; flex: none; }
+.gl-v2-bwi-kpi .sub { font: 450 12px var(--gl-v2-font-sans); color: #7a8a78; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-bwi-kpi .sub.is-warning { color: var(--gl-v2-warning); font-weight: 500; }
+
+.gl-v2-bwi-card-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+/* ── Kop en rijen (tabelkop volgens het Facturen-recept: wit, primair-groen 11px, hairline) ── */
+.gl-v2-bwi-head, .gl-v2-bwi-row { display: grid; gap: 10px; align-items: center; padding: 0 20px; }
+.gl-v2-bwi-head { height: 36px; background: var(--gl-v2-surface); font: 600 11px var(--gl-v2-font-sans); letter-spacing: .04em; color: var(--gl-v2-primary); text-transform: uppercase; border-bottom: 1px solid var(--gl-v2-hairline); }
+.gl-v2-bwi-row { min-height: 46px; padding-top: 4px; padding-bottom: 4px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-bwi-year-body > .gl-v2-bwi-row:first-child { border-top: 0; }
+.gl-v2-bwi-row:hover { background: #FAFBF8; }
+.gl-v2-bwi-row.is-geldend { background: var(--gl-v2-primary-tint); box-shadow: inset 3px 0 0 var(--gl-v2-primary); }
+.gl-v2-bwi-row[hidden] { display: none; }
+.gl-v2-bwi-grid--s { grid-template-columns: minmax(0, 1fr) 130px 150px 110px 130px 120px 56px; }
+.gl-v2-bwi-grid--a { grid-template-columns: 110px 160px 130px minmax(0, 1fr) 120px 64px; }
+.gl-v2-bwi-grid--m { grid-template-columns: 70px repeat(12, minmax(0, 1fr)) 84px; gap: 4px; }
+.gl-v2-bwi .is-right { text-align: right; }
+.gl-v2-bwi-strong { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); min-width: 0; text-transform: capitalize; }
+.gl-v2-bwi-grid--a .gl-v2-bwi-strong, .gl-v2-bwi-grid--m .gl-v2-bwi-strong { text-transform: none; font-variant-numeric: tabular-nums; }
+.gl-v2-bwi-cell { font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-bwi-cell.is-muted { color: var(--gl-v2-muted); font-size: 12px; }
+.gl-v2-bwi-num { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gl-v2-bwi-delta { font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gl-v2-bwi-delta.is-jump { color: var(--gl-v2-warning); font-weight: 600; }   /* sprong van ≥ 5 % t.o.v. de vorige waarde valt meteen op */
+.gl-v2-bwi-actions { display: flex; justify-content: flex-end; gap: 2px; }
+.gl-v2-bwi-hint { font: 450 11px var(--gl-v2-font-sans); color: #7a8a78; }
+.gl-v2-bwi-optioneel { font-weight: 450; letter-spacing: 0; color: #7a8a78; text-transform: none; }
+
+/* Rij-acties (inline bewerken): het gedocumenteerde recept — 26×26 bare, primair = opslaan */
+.gl-v2-bwi .gl-v2-row-action {
+    display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 7px;
+    border: 1px solid transparent; background: transparent; color: var(--gl-v2-muted); padding: 0; cursor: pointer;
+    transition: background-color .12s ease, border-color .12s ease, color .12s ease;
+}
+.gl-v2-bwi .gl-v2-row-action:hover { background: var(--gl-v2-hover-tint); color: var(--gl-v2-ink); }
+.gl-v2-bwi .gl-v2-row-action-primary { color: var(--gl-v2-primary); }
+.gl-v2-bwi .gl-v2-row-action-primary:hover { background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); }
+.gl-v2-bwi .gl-v2-row-action:focus-visible { outline: 3px solid var(--gl-v2-gold); outline-offset: 1px; }
+.gl-v2-bwi .gl-v2-row-action-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Inline bewerk-/nieuwe rij: velden vullen exact hun kolom (een <input> heeft anders een eigen intrinsieke breedte) */
+.gl-v2-bwi-row.is-edit { background: #FBF6EA; }
+.gl-v2-bwi .gl-v2-field { min-width: 0; }
+.gl-v2-bwi .gl-v2-field-box { width: 100%; min-width: 0; box-sizing: border-box; height: 38px; }
+.gl-v2-bwi .gl-v2-field-box > input.gl-v2-field-input { flex: 1 1 0; width: 100%; min-width: 0; }
+.gl-v2-bwi .gl-v2-field-input.is-right { text-align: right; }
+
+/* ── Jaargroepen S-index (48a): recente jaren open, oudere samengevouwen ── */
+.gl-v2-bwi-year-head {
+    display: flex; align-items: center; gap: 10px; width: 100%; height: 38px; padding: 0 20px; border: 0; border-top: 1px solid var(--gl-v2-hairline-soft);
+    background: #F7F9F5; color: var(--gl-v2-ink); cursor: pointer; text-align: left;
+}
+.gl-v2-bwi-year-head:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-bwi-year-head:focus-visible { outline: 3px solid var(--gl-v2-gold); outline-offset: -3px; }
+.gl-v2-bwi-year-head i { font-size: 13px; color: var(--gl-v2-muted); transition: transform .12s ease; }
+.gl-v2-bwi-year-head[aria-expanded="false"] i { transform: rotate(-90deg); }
+.gl-v2-bwi-year-head .y { font: 600 13px var(--gl-v2-font-sans); font-variant-numeric: tabular-nums; }
+.gl-v2-bwi-year-head .c { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-bwi-year-body[hidden] { display: none; }
+
+/* ── Raster I2021 (48b): rij per jaar, kolom per maand ── */
+.gl-v2-bwi-gridwrap[hidden] { display: none; }
+.gl-v2-bwi-scroll { overflow-x: auto; }
+.gl-v2-bwi-matrix { min-width: 940px; }
+.gl-v2-bwi-matrix .gl-v2-bwi-row { min-height: 42px; }
+.gl-v2-bwi-matrix .gl-v2-bwi-row:hover { background: transparent; }
+.gl-v2-bwi-mcell {
+    height: 32px; border: 1px solid transparent; border-radius: 7px; background: transparent; padding: 0 6px; cursor: pointer; position: relative;
+    font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap;
+    transition: background-color .12s ease, border-color .12s ease;
+}
+button.gl-v2-bwi-mcell:hover { background: var(--gl-v2-hover-tint); }
+button.gl-v2-bwi-mcell:focus-visible { outline: 3px solid var(--gl-v2-gold); outline-offset: 1px; }
+.gl-v2-bwi-mcell.is-geldend { background: var(--gl-v2-primary-tint); border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); font-weight: 600; }
+.gl-v2-bwi-mcell.is-pre-base { color: var(--gl-v2-warning); }
+.gl-v2-bwi-mcell.is-base::after { content: ""; position: absolute; top: 4px; right: 4px; width: 5px; height: 5px; border-radius: 50%; background: var(--gl-v2-gold); }
+.gl-v2-bwi-mcell.is-empty { color: var(--gl-v2-muted-light); text-align: center; cursor: default; }
+button.gl-v2-bwi-mcell.is-empty { cursor: pointer; }
+.gl-v2-bwi-gem { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); text-align: right; font-variant-numeric: tabular-nums; padding-right: 6px; }
+
+/* Lege staat en voet */
+.gl-v2-bwi-empty { padding: 36px 20px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-bwi-empty .t { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-bwi-empty .s { font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-bwi-foot { padding: 12px 20px 16px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+
+/* Modal: foutregel en de extra acties links in de voet (enkel bij bewerken) */
+.gl-v2-bwi-err { color: var(--gl-v2-danger); }
+.gl-v2-bwi-modal .modal-footer { align-items: center; }
+.gl-v2-bwi-modal-extra { margin-right: auto; display: flex; gap: 4px; }
+.gl-v2-bwi-modal-extra[hidden] { display: none; }
+.gl-v2-bwi-danger-text { color: var(--gl-v2-danger); }
+
+/* Laadstaat van de synchroniseerknop */
+.gl-v2-bwi [data-bwi-sync].is-loading i { animation: gl-v2-bwi-spin 1s linear infinite; }
+@keyframes gl-v2-bwi-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+    .gl-v2-bwi [data-bwi-sync].is-loading i { animation: none; }
+    .gl-v2-bwi-year-head i { transition: none; }
+}
+
+/* ── Tablet (< 1024px): minder kolommen ── */
+@media (max-width: 1023.98px) {
+    .gl-v2-bwi-kpis.is-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gl-v2-bwi-kpis.is-4 .gl-v2-bwi-kpi:nth-child(2) { border-right: 0; }
+    .gl-v2-bwi-kpis.is-4 .gl-v2-bwi-kpi:nth-child(n+3) { border-top: 1px solid var(--gl-v2-hairline-soft); }
+    .gl-v2-bwi-grid--s { grid-template-columns: minmax(0, 1fr) 140px 100px 120px 48px; }
+    .gl-v2-bwi-grid--s > :nth-child(2), .gl-v2-bwi-grid--s > :nth-child(5) { display: none; }
+    .gl-v2-bwi-grid--a { grid-template-columns: 90px 140px 120px 110px 56px; }
+    .gl-v2-bwi-grid--a:not(.is-edit) > :nth-child(4) { display: none; }
+    .gl-v2-bwi-grid--a:not(.is-edit) { grid-template-columns: 90px 140px 120px 110px 56px; }
+    .gl-v2-bwi-grid--a.is-edit { grid-template-columns: 90px 140px 120px minmax(0, 1fr) 56px; }
+    .gl-v2-bwi-grid--a.is-edit > :nth-child(5) { display: none; }
+    .gl-v2-bwi-year-head, .gl-v2-bwi-head, .gl-v2-bwi-row { padding-left: 16px; padding-right: 16px; }
+}
+
+/* ── Telefoon (< 768px) ── */
+@media (max-width: 767.98px) {
+    .gl-v2-bwi-kpis.is-4, .gl-v2-bwi-kpis.is-3 { grid-template-columns: 1fr 1fr; }
+    .gl-v2-bwi-kpis.is-3 .gl-v2-bwi-kpi:last-child { grid-column: 1 / -1; border-top: 1px solid var(--gl-v2-hairline-soft); }
+    .gl-v2-bwi-kpi { padding: 12px 14px; }
+    .gl-v2-bwi-kpi .val { font-size: 20px; }
+    .gl-v2-bwi-card-actions { width: 100%; margin-left: 0; justify-content: flex-start; }
+    .gl-v2-bwi-grid--s { grid-template-columns: minmax(0, 1fr) 110px 96px 44px; }
+    .gl-v2-bwi-grid--s > :nth-child(4) { display: none; }
+    .gl-v2-bwi-grid--a:not(.is-edit) { grid-template-columns: 70px minmax(0, 1fr) 96px 44px; }
+    .gl-v2-bwi-grid--a:not(.is-edit) > :nth-child(3), .gl-v2-bwi-grid--a:not(.is-edit) > :nth-child(4) { display: none; }
+    .gl-v2-bwi-grid--a.is-edit { grid-template-columns: 70px minmax(0, 1fr) auto; row-gap: 8px; padding-top: 10px; padding-bottom: 10px; }
+    .gl-v2-bwi-grid--a.is-edit > :nth-child(3), .gl-v2-bwi-grid--a.is-edit > :nth-child(5) { display: none; }
+    .gl-v2-bwi-grid--a.is-edit > :nth-child(4) { grid-column: 1 / -1; grid-row: 2; }
+    .gl-v2-bwi-grid--a.is-edit > :nth-child(6) { grid-column: 3; grid-row: 1; }
+    .gl-v2-bwi-year-head, .gl-v2-bwi-head, .gl-v2-bwi-row { padding-left: 14px; padding-right: 14px; }
+}

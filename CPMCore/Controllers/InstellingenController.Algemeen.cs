@@ -69,19 +69,10 @@ public partial class InstellingenController
                 facturatie.Items.Add(new SettingsItemVm
                 {
                     Icon = "ph-buildings",
+                    Featured = true,
                     Title = "Mijn bedrijven",
                     Description = "Beheer uitgevende vennootschappen, factuurlay-out, bankrekeningen en verzendgegevens.",
                     Href = Url.Action("IssuerCompanies", "Instellingen") ?? "#"
-                });
-            }
-            if (permissionService.HasRead(PermissionCodes.SettingsInvoiceTemplates))
-            {
-                facturatie.Items.Add(new SettingsItemVm
-                {
-                    Icon = "ph-file-text",
-                    Title = "Factuurtemplates",
-                    Description = "Beheer factuurlay-outs die je per bedrijf kunt selecteren en hergebruiken.",
-                    Href = Url.Action("InvoiceTemplates", "Instellingen") ?? "#"
                 });
             }
             if (permissionService.HasRead(PermissionCodes.SettingsBouwIndexen))
@@ -102,10 +93,11 @@ public partial class InstellingenController
                 team.Items.Add(new SettingsItemVm
                 {
                     Icon = "ph-users",
+                    Featured = true,
                     Title = "Gebruikers & rollen",
                     Description = "Beheer toegang van collega's, aannemers en gastgebruikers, en hou rolrechten up-to-date.",
                     Href = Url.Action("Index", "UserAdmin") ?? "#",
-                    Chips = { new SettingsChipVm { Label = "Rollen", Href = Url.Action("Index", "AppRoles") ?? "#" } }
+                    Chips = { new SettingsChipVm { Label = "Rollen", Href = Url.Action("Rollen", "UserAdmin") ?? "#" } }
                 });
             }
             if (permissionService.HasRead(PermissionCodes.SettingsHolidays))
@@ -126,6 +118,7 @@ public partial class InstellingenController
                 calculatie.Items.Add(new SettingsItemVm
                 {
                     Icon = "ph-list-bullets",
+                    Featured = true,
                     Title = "Activiteiten",
                     Description = "Beheer activiteiten en activiteitgroepen (loten) die in je calculaties terugkomen.",
                     Href = Url.Action("Activities", "Instellingen") ?? "#",
@@ -323,6 +316,11 @@ public partial class InstellingenController
             ActivityGroups = groupsResponse.Values?.OrderBy(g => g.Lot).ThenBy(g => g.Name).ToList() ?? new List<ActivityGroupBO>()
         };
 
+        if (ViewData["UseGlV2Layout"] as bool? == true)
+        {
+            ViewData["BackUrl"] = Url.Action("Index", "Instellingen");
+            return View("ActivitiesV2", model);
+        }
         return View(model);
     }
 
@@ -432,8 +430,17 @@ public partial class InstellingenController
     {
         SetPageHeader("bx bx-cog", "Vakantiedagen");
 
+        var dashboard = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+        var instellingenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Instellingen", "Instellingen") { Parent = dashboard };
+        ViewData["BreadcrumbNode"] = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Vacationdays", "Instellingen", "Verlofdagen") { Parent = instellingenIndex };
+
         HomeModel model = new HomeModel();
 
+        if (ViewData["UseGlV2Layout"] as bool? == true)
+        {
+            ViewData["BackUrl"] = Url.Action("Index", "Instellingen");
+            return View("VacationDaysV2", model);
+        }
         return View(model);
     }
     [HttpGet]

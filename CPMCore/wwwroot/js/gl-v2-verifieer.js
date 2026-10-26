@@ -10,10 +10,10 @@
     var original = (section.getAttribute("data-original") || "").toLowerCase();
     var final = (section.getAttribute("data-final") || "").toLowerCase();
     var issuer = section.getAttribute("data-issuer") || "";
-    var drop = document.getElementById("gl-ver-drop");
+    var zone = document.getElementById("gl-ver-file_zone");   // het gedeelde GlV2/_Dropzone (zelfde bestand, geen upload: het blijft in de browser)
     var input = document.getElementById("gl-ver-file");
     var result = document.getElementById("gl-ver-result");
-    if (!drop || !input || !result) return;
+    if (!zone || !input || !result) return;
 
     var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     var MAX_BYTES = 150 * 1024 * 1024;
@@ -61,14 +61,14 @@
     function reset() {
         result.hidden = true;
         result.innerHTML = "";
-        drop.hidden = false;
+        zone.hidden = false;
         input.value = "";
         input.focus();
     }
 
     async function check(file) {
         if (!file) return;
-        drop.hidden = true;
+        zone.hidden = true;
         if (!(window.crypto && window.crypto.subtle)) {
             show("neutral", PATH_CLOCK, "Je browser kan dit hier niet controleren", "Open deze pagina via een beveiligde verbinding (https) of probeer een andere browser.", "");
             return;
@@ -98,16 +98,11 @@
         }
     }
 
-    input.addEventListener("change", function () { check(input.files && input.files[0]); });
-
-    ["dragenter", "dragover"].forEach(function (t) {
-        drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.add("is-over"); });
-    });
-    ["dragleave", "drop"].forEach(function (t) {
-        drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.remove("is-over"); });
-    });
-    drop.addEventListener("drop", function (e) {
-        var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-        if (f) check(f);
+    // kiezen en slepen: het component controleert het type (pdf) en meldt het bestand; daarna kan hetzelfde bestand opnieuw gekozen worden
+    zone.addEventListener("gl-v2:dropzone-change", function (e) {
+        var f = e.detail.file;
+        if (!f) return;
+        check(f);
+        if (window.GlV2Dropzone) window.GlV2Dropzone.reset(zone);
     });
 })();

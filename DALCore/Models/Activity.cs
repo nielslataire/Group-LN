@@ -13,6 +13,9 @@ public partial class Activity
 
     public int GroupId { get; set; }
 
+    /// <summary>Eigen volgnummer binnen de activiteitgroep; met het lot van de groep het lotnummer "5.11" (migratie 117).</summary>
+    public int? Volgnr { get; set; }
+
     public virtual ICollection<ContractActivity> ContractActivity { get; set; } = new List<ContractActivity>();
 
     public virtual ActivityGroup Group { get; set; }

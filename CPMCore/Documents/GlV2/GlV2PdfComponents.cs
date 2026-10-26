@@ -28,7 +28,7 @@ namespace CPMCore.Documents.GlV2
 
         /// <summary>Cel van de typetabel. Met <c>PilKleur</c> wordt de tekst als tag getoond (btw-tarief,
         /// status), zoals de btw-tag in 35d.</summary>
-        public record TabelCel(string Tekst, string? PilKleur = null);
+        public record TabelCel(string Tekst, string? PilKleur = null, string? PilTekstKleur = null, float PilPunten = 8f);
 
         /// <summary>De standaard-typetabel voor alle gl-v2-PDF's (35d): kop zonder vlak met enkel een
         /// groene lijn eronder (6.5pt 700, letterspatiëring .1em), rijen 8pt met fijne scheidingslijn en
@@ -121,9 +121,11 @@ namespace CPMCore.Documents.GlV2
 
                         if (cel.PilKleur is not null)
                         {
+                            // Eigen pilkleuren (status) = een kleine pil die de breedte van zijn tekst volgt; de btw-tag vult de kolom zoals voorheen.
+                            if (cel.PilTekstKleur is not null && !kolommen[i].Rechts) cell = cell.AlignLeft();
                             cell.Background(cel.PilKleur).CornerRadius(1, Unit.Millimetre)
                                 .PaddingHorizontal(1.4f, Unit.Millimetre).PaddingVertical(0.3f, Unit.Millimetre)
-                                .Text(cel.Tekst).FontFamily(bodyFont).FontSize(8).SemiBold().FontColor(GlV2PdfTheme.Inkt)
+                                .Text(cel.Tekst).FontFamily(bodyFont).FontSize(cel.PilPunten).SemiBold().FontColor(cel.PilTekstKleur ?? GlV2PdfTheme.Inkt)
                                 .EnableFontFeature(FontFeatures.TabularFigures);
                         }
                         else if (i == 0 && !string.IsNullOrWhiteSpace(regel.SubTekst))
@@ -368,9 +370,9 @@ namespace CPMCore.Documents.GlV2
         public record FicheVeld(string Label, string Waarde, string? Sub = null);
 
         /// <summary>Projectfiche: raster van 4 kolommen met een hairline-kader; per cel label (6pt 600 gedempt), waarde (8pt 700) en subregel (6,5pt gedempt).</summary>
-        public static void Fiche(IContainer c, string bodyFont, IReadOnlyList<FicheVeld> velden)
+        public static void Fiche(IContainer c, string bodyFont, IReadOnlyList<FicheVeld> velden, int kolommen = 4)
         {
-            const int Kolommen = 4;
+            var Kolommen = kolommen;
             var rijen = (velden.Count + Kolommen - 1) / Kolommen;
             c.Border(0.25f, Unit.Millimetre).BorderColor(GlV2PdfTheme.Lijn).Table(t =>
             {

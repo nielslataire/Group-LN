@@ -18,6 +18,7 @@ namespace ServiceCore.Translators
                 return ErrorCode.BoNull;
             bo.Id = _entity.Id;
             bo.VacationDay = _entity.VacationDay;
+            bo.Kind = _entity.Kind;
             if (_entity.ProjectId is not null)
                 bo.ProjectId = _entity.ProjectId;
             return ErrorCode.Success;
@@ -30,6 +31,7 @@ namespace ServiceCore.Translators
             if (bo == null)
                 return ErrorCode.BoNull;
             _entity.VacationDay = bo.VacationDay;
+            _entity.Kind = bo.Kind;
             if (bo.ProjectId != 0)
                 _entity.ProjectId = bo.ProjectId;
             return ErrorCode.Success;

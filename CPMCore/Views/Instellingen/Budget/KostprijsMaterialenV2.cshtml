@@ -1,0 +1,243 @@
+@model string
+@using BOCore
+@using FacadeCore
+@using CPMCore.Models.GlV2
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen › Kostprijzen materialen (design-handoff punt 52a/52b/52c, "CRM Instellingen.dc.html"): drie tabs op de bestaande gegevens.
+    52a Materialen: gegroepeerd per activiteitgroep (filter links), filter op toepassing, verouderde referentieprijzen gemarkeerd, bewerken per rij
+    (één rij tegelijk), verwijderen geblokkeerd zolang een formule het materiaal gebruikt. 52b Bouwkost %: vaste parameters (standaard erelonen en marges)
+    en bijkomende percentages per groep, met één Opslaan voor alle percentages en slepen om de groepen te ordenen. 52c Formule koppelingen: elk slot is
+    een @@mat_-parameter voor Budgetformules; de keuze van het materiaal slaat meteen op. Alles wordt in JS getekend uit één JSON-blok
+    (gl-v2-instellingen-kostprijs.js); het model van de view is die JSON als tekst (InstellingenController.KostprijsV2.cs).
+
+    Bewust anders dan het mockup (zie DESIGN.md "Instellingen/Kostprijzen materialen"): geen kolom "Berekend op" bij de vaste parameters (die info bestaat
+    niet in de database); "verouderd" = referentiedatum ouder dan 24 maanden; de slots hebben geen eigen groep, dus het filter volgt de activiteitgroep van
+    het gekoppelde materiaal.
+*@
+@{
+    ViewData["Title"] = "Kostprijzen materialen";
+    ViewData["PageIcon"] = "ph ph-cube";
+    ViewData["HelpScreenId"] = "instellingen-kostprijzen";
+    var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsKostprijsMaterialen);
+    var tab = (string?)Context.Request.Query["tab"] is "bouwkost" or "koppelingen" ? (string?)Context.Request.Query["tab"] : "materialen";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-kostprijs.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @if (canWrite)
+    {
+        <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="kp-add-open"><i class="ph ph-plus" aria-hidden="true"></i>Materiaal toevoegen</button>
+    }
+}
+
+<div class="gl-v2-kp" id="gl-v2-kp" data-can-write="@(canWrite ? "1" : "0")" data-start-tab="@tab" data-formules-url="@Url.Action("BudgetFormules", "Instellingen")"
+     data-url-mat-save="@Url.Action("KostprijsMateriaalOpslaanV2", "Instellingen")" data-url-mat-del="@Url.Action("KostprijsMateriaalVerwijderV2", "Instellingen")"
+     data-url-bk-save="@Url.Action("BouwkostOpslaanV2", "Instellingen")" data-url-grp-save="@Url.Action("BouwkostGroepOpslaanV2", "Instellingen")"
+     data-url-grp-del="@Url.Action("BouwkostGroepVerwijderV2", "Instellingen")" data-url-grp-order="@Url.Action("BouwkostGroepenVolgordeV2", "Instellingen")"
+     data-url-item-save="@Url.Action("BouwkostItemOpslaanV2", "Instellingen")" data-url-item-del="@Url.Action("BouwkostItemVerwijderV2", "Instellingen")"
+     data-url-kop-save="@Url.Action("KoppelingOpslaanV2", "Instellingen")" data-url-kop-new="@Url.Action("KoppelingAanmakenV2", "Instellingen")" data-url-kop-del="@Url.Action("KoppelingVerwijderV2", "Instellingen")">
+    @Html.AntiForgeryToken()
+    <script type="application/json" id="kp-data">@Html.Raw(Model)</script>
+
+    <div class="gl-v2-tabbar" role="tablist">
+        <button type="button" class="gl-v2-tabbar-tab @(tab == "materialen" ? "is-active" : "")" role="tab" aria-selected="@(tab == "materialen" ? "true" : "false")" data-kp-tab="materialen">Materialen <span class="gl-v2-tabbar-count" id="kp-count-mat">0</span></button>
+        <button type="button" class="gl-v2-tabbar-tab @(tab == "bouwkost" ? "is-active" : "")" role="tab" aria-selected="@(tab == "bouwkost" ? "true" : "false")" data-kp-tab="bouwkost">Bouwkost % <span class="gl-v2-tabbar-count" id="kp-count-bk">0</span></button>
+        <button type="button" class="gl-v2-tabbar-tab @(tab == "koppelingen" ? "is-active" : "")" role="tab" aria-selected="@(tab == "koppelingen" ? "true" : "false")" data-kp-tab="koppelingen">Formule koppelingen <span class="gl-v2-tabbar-count" id="kp-count-fk">0</span></button>
+    </div>
+
+    @* ═══ 52a Materialen ═══ *@
+    <div class="gl-v2-kp-panel" data-kp-panel="materialen" @(tab == "materialen" ? "" : "hidden")>
+        <aside class="gl-v2-kp-lots" aria-label="Activiteitgroep">
+            <span class="gl-v2-kp-lots-label">ACTIVITEITGROEP</span>
+            <div class="gl-v2-kp-lots-list" id="kp-lots"></div>
+        </aside>
+        <section class="gl-v2-section-card gl-v2-kp-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-cube" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Materialen</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc" id="kp-mat-info">—</span>
+            </div>
+            <div class="gl-v2-kp-toolbar">
+                <div class="gl-v2-field gl-v2-kp-search">
+                    <div class="gl-v2-field-box">
+                        <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                        <input type="text" class="gl-v2-field-input" id="kp-search" placeholder="Zoek op naam" autocomplete="off" />
+                        <button type="button" class="gl-v2-field-clear" id="kp-search-clear" aria-label="Zoekterm wissen">&times;</button>
+                    </div>
+                </div>
+                <div class="gl-v2-kp-select">
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                    {
+                        Name = "toepassingFilter", Id = "kp-toep-filter", Value = "", Bare = true, Icon = "ph-house-line", EmptyText = "Alle types",
+                        Items = new List<GlV2SelectItem> { new() { Value = "Woning", Text = "Woning" }, new() { Value = "Appartement", Text = "Appartement" }, new() { Value = "Gemeenschappelijk", Text = "Gemeenschappelijk deel" } }
+                    })
+                </div>
+                <div class="gl-v2-kp-select gl-v2-kp-lot-select">
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "lotFilter", Id = "kp-lot-select", Value = "", Bare = true, Icon = "ph-funnel", EmptyText = "Alle activiteitgroepen", Items = new List<GlV2SelectItem>() })
+                </div>
+            </div>
+            <div class="gl-v2-kp-notice" id="kp-stale" hidden>
+                <div class="gl-v2-notice gl-v2-notice-compact is-warning">
+                    <i class="ph ph-warning" aria-hidden="true"></i>
+                    <span id="kp-stale-text"></span>
+                    <button type="button" class="gl-v2-kp-linkbtn" id="kp-stale-toggle">Toon enkel verouderde</button>
+                </div>
+            </div>
+            <div class="gl-v2-kp-head gl-v2-kp-grid--mat">
+                <button type="button" class="gl-v2-kp-sort is-active" data-sort="naam">Naam<i class="ph ph-arrow-up" aria-hidden="true"></i></button>
+                <span>Eenheid</span><span>Toepassing</span>
+                <button type="button" class="gl-v2-kp-sort is-right" data-sort="prijs">Referentieprijs<i class="ph" aria-hidden="true"></i></button>
+                <button type="button" class="gl-v2-kp-sort" data-sort="datum">Referentiedatum<i class="ph" aria-hidden="true"></i></button>
+                <span>Index</span><span></span>
+            </div>
+            <div id="kp-mat-rows"></div>
+            <div class="gl-v2-kp-empty" id="kp-mat-empty" hidden>
+                <span class="t" id="kp-mat-empty-t">Geen materialen gevonden</span>
+                <span class="s"><button type="button" class="gl-v2-kp-linkbtn" id="kp-mat-reset">Wis de filters</button></span>
+            </div>
+            <div class="gl-v2-kp-foot"><span id="kp-mat-foot">—</span></div>
+        </section>
+    </div>
+
+    @* ═══ 52b Bouwkost % ═══ *@
+    <div class="gl-v2-kp-panel is-single" data-kp-panel="bouwkost" @(tab == "bouwkost" ? "" : "hidden")>
+        <div class="gl-v2-kp-stack">
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-percent" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Standaard erelonen en marges</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">vaste parameters; ze vullen het budget-parameterscherm voor, per budget nog bij te sturen</span>
+                </div>
+                <div class="gl-v2-kp-savebar" id="bk-bar">
+                    <span class="gl-v2-kp-savebar-text" id="bk-bar-text">Alles opgeslagen</span>
+                    @if (canWrite)
+                    {
+                        <button type="button" class="gl-v2-btn gl-v2-btn-text" id="bk-reset" disabled>Herstel</button>
+                        <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="bk-save" disabled>Opslaan</button>
+                    }
+                </div>
+                <div class="gl-v2-kp-head gl-v2-kp-grid--bk"><span>Parameter</span><span class="is-right">Percentage</span></div>
+                <div id="bk-system"></div>
+            </section>
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-stack" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Bijkomende percentages</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">gegroepeerd zoals in het budget; sleep een groep om de volgorde te wijzigen</span>
+                    @if (canWrite)
+                    {
+                        <span class="gl-v2-section-card-meta gl-v2-kp-card-actions"><button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="bk-grp-add"><i class="ph ph-plus" aria-hidden="true"></i>Groep</button></span>
+                    }
+                </div>
+                <div id="bk-groups"></div>
+                <div class="gl-v2-kp-note">
+                    <div class="gl-v2-notice gl-v2-notice-compact is-info">
+                        <i class="ph ph-info" aria-hidden="true"></i>
+                        <span>Een groep met percentages verwijder je pas als ze leeg is. De vaste parameters hierboven kunnen niet verwijderd of verplaatst worden, enkel hun percentage past aan.</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    @* ═══ 52c Formule koppelingen ═══ *@
+    <div class="gl-v2-kp-panel" data-kp-panel="koppelingen" @(tab == "koppelingen" ? "" : "hidden")>
+        <aside class="gl-v2-kp-lots" aria-label="Formulegroep">
+            <span class="gl-v2-kp-lots-label">FORMULEGROEP</span>
+            <div class="gl-v2-kp-lots-list" id="fk-groups"></div>
+        </aside>
+        <section class="gl-v2-section-card gl-v2-kp-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-link-simple" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Formule koppelingen</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">gebruik in Budgetformules als <code>@@mat_slot</code>; de referentieprijs wordt de invoer</span>
+            </div>
+            <div class="gl-v2-kp-toolbar">
+                <div class="gl-v2-field gl-v2-kp-search">
+                    <div class="gl-v2-field-box"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input type="text" class="gl-v2-field-input" id="fk-search" placeholder="Zoek op slot, omschrijving of materiaal" autocomplete="off" /></div>
+                </div>
+            </div>
+            @if (canWrite)
+            {
+                <form class="gl-v2-kp-row gl-v2-kp-grid--fk is-add" id="fk-add" autocomplete="off">
+                    <span class="gl-v2-kp-mono is-preview">@@mat_<span id="fk-add-slot">…</span></span>
+                    <div class="gl-v2-field"><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="fk-add-naam" maxlength="200" placeholder="bv. Gordijnwand systeem" aria-label="Omschrijving van het nieuwe slot" /></div></div>
+                    <div id="fk-add-mat"></div>
+                    <span></span>
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-plus" aria-hidden="true"></i>Koppelen</button>
+                </form>
+            }
+            <div class="gl-v2-kp-head gl-v2-kp-grid--fk"><span>Formule-slot</span><span>Omschrijving</span><span>Gekoppeld materiaal</span><span class="is-right">Prijs</span><span></span></div>
+            <div id="fk-rows"></div>
+            <div class="gl-v2-kp-empty" id="fk-empty" hidden><span class="t" id="fk-empty-t">Geen koppelingen gevonden</span></div>
+            <div class="gl-v2-kp-foot"><span id="fk-foot">—</span></div>
+        </section>
+    </div>
+</div>
+
+@if (canWrite)
+{
+    @* Materiaal toevoegen *@
+    <div class="modal fade gl-v2-modal-form gl-v2-kp-modal" id="kp-add-modal" tabindex="-1" aria-hidden="true" aria-labelledby="kp-add-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <form class="modal-content" novalidate autocomplete="off">
+                <div class="modal-header"><h2 class="modal-title" id="kp-add-title">Materiaal toevoegen</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body">
+                    <div class="gl-v2-field gl-v2-field-full"><label class="gl-v2-field-label" for="kp-add-naam">Naam <span style="color:var(--gl-v2-danger)">*</span></label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="kp-add-naam" name="naam" maxlength="200" required /></div></div>
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "categorieId", Id = "kp-add-groep", Label = "Activiteitgroep", Required = true, Value = "", Placeholder = "Kies een groep", Items = new List<GlV2SelectItem>() })
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                    {
+                        Name = "eenheid", Id = "kp-add-eenheid", Label = "Eenheid", Required = true, Value = "m²",
+                        Items = new[] { "m²", "m³", "lm", "stuk", "forfait" }.Select(e => new GlV2SelectItem { Value = e, Text = e }).ToList()
+                    })
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                    {
+                        Name = "toepassing", Id = "kp-add-toep", Label = "Toepassing", Value = "", EmptyText = "Alle types",
+                        Items = new List<GlV2SelectItem> { new() { Value = "Woning", Text = "Woning" }, new() { Value = "Appartement", Text = "Appartement" }, new() { Value = "Gemeenschappelijk", Text = "Gemeenschappelijk deel" } }
+                    })
+                    <div class="gl-v2-field"><label class="gl-v2-field-label" for="kp-add-prijs">Referentieprijs</label><div class="gl-v2-field-box"><span class="gl-v2-field-prefix">€</span><input class="gl-v2-field-input is-tabular" id="kp-add-prijs" name="prijs" inputmode="decimal" placeholder="0,00" required /></div></div>
+                    @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "datum", Id = "kp-add-datum", Label = "Referentiedatum", Required = true, IsoValue = DateTime.Today.ToString("yyyy-MM-dd"), DisplayValue = DateTime.Today.ToString("dd/MM/yyyy") })
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "indexTypeId", Id = "kp-add-index", Label = "Index", Required = true, Value = "", Placeholder = "Kies een index", Items = new List<GlV2SelectItem>() })
+                    <span class="gl-v2-field-help gl-v2-kp-err gl-v2-field-full" id="kp-add-err" role="alert" hidden></span>
+                </div>
+                <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="kp-add-submit">Toevoegen</button></div>
+            </form>
+        </div>
+    </div>
+
+    @* Groep of percentage toevoegen/bewerken (bouwkost) *@
+    <div class="modal fade gl-v2-modal-form gl-v2-kp-modal" id="bk-modal" tabindex="-1" aria-hidden="true" aria-labelledby="bk-modal-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <form class="modal-content" novalidate autocomplete="off">
+                <div class="modal-header"><h2 class="modal-title" id="bk-modal-title">Groep toevoegen</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body">
+                    <div class="gl-v2-field gl-v2-field-full"><label class="gl-v2-field-label" for="bk-modal-naam">Naam <span style="color:var(--gl-v2-danger)">*</span></label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="bk-modal-naam" maxlength="200" required /></div></div>
+                    <div id="bk-modal-item" class="gl-v2-field-full" hidden>
+                        <div class="gl-v2-kp-modal-grid">
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "groepId", Id = "bk-modal-groep", Label = "Groep", Value = "", Placeholder = "Kies een groep", Items = new List<GlV2SelectItem>() })
+                            <div class="gl-v2-field"><label class="gl-v2-field-label" for="bk-modal-pct">Percentage</label><div class="gl-v2-field-box"><input class="gl-v2-field-input is-tabular" id="bk-modal-pct" inputmode="decimal" placeholder="0,00" /><span class="gl-v2-field-unit">%</span></div></div>
+                        </div>
+                    </div>
+                    <span class="gl-v2-field-help gl-v2-kp-err gl-v2-field-full" id="bk-modal-err" role="alert" hidden></span>
+                </div>
+                <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="bk-modal-submit">Opslaan</button></div>
+            </form>
+        </div>
+    </div>
+}
+
+@await Html.PartialAsync("GlV2/_BevestigModal")
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-instellingen-kostprijs.js" asp-append-version="true"></script>
+}

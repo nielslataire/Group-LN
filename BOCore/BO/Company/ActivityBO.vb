@@ -39,4 +39,15 @@
         End Set
     End Property
 
+    Private _volgnr As Integer?
+    ''' <summary>Volgnummer binnen de groep; met het lot van de groep het lotnummer (5.11).</summary>
+    Public Property Volgnr() As Integer?
+        Get
+            Return _volgnr
+        End Get
+        Set(ByVal value As Integer?)
+            _volgnr = value
+        End Set
+    End Property
+
 End Class

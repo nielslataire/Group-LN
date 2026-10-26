@@ -1,0 +1,158 @@
+@model string
+@using BOCore
+@using FacadeCore
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen › Gebruikers en rollen › Rollen (design-handoff punt 49c): links de rollen met het aantal leden (interne rollen en portaalrollen
+    gescheiden), rechts per rol de naam, de bedrijfstoegang, de leden en de rechtenboom (GlV2RightsTree) met één niveau per functie. Wijzigingen worden pas
+    actief na Opslaan; de balk onderaan toont hoeveel leden geraakt worden. Afwijkingen van gebruikers blijven behouden. Nieuwe rol of Dupliceren vertrekt
+    van een bestaande rol. Regels: Admin kan niet verwijderd of aangepast worden (die heeft altijd alle rechten, dus niemand sluit zich buiten); een rol met
+    leden kan pas verwijderd worden nadat de leden een andere rol hebben. Het model is de JSON als tekst (UserAdminController.V2.cs).
+
+    Bewust anders dan het mockup: een rol heeft geen omschrijving ("alles, incl. gebruikers en rollen"): die bestaat niet in de database. Een rol geldt als
+    portaalrol als al haar leden aannemers of gasten zijn. Wijzigingen worden niet gelogd (wie, wanneer, oud → nieuw): daar is nog geen tabel voor.
+*@
+@{
+    ViewData["Title"] = "Gebruikers en rollen";
+    ViewData["PageIcon"] = "ph ph-users-three";
+    ViewData["HelpScreenId"] = "instellingen-rollen";
+    var canUsers = PermissionService.HasRead(PermissionCodes.SettingsUsers);
+    var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsRoles);
+    var canDelete = PermissionService.HasDelete(PermissionCodes.SettingsRoles);
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-useradmin.css" asp-append-version="true" />
+}
+
+<div class="gl-v2-ua" id="gl-v2-ua-rol" data-can-write="@(canWrite ? "1" : "0")" data-can-delete="@(canDelete ? "1" : "0")" data-rollen-url="@Url.Action("Rollen", "UserAdmin")"
+     data-url-state="@Url.Action("RolStateV2", "UserAdmin")" data-url-opslaan="@Url.Action("RolOpslaanV2", "UserAdmin")" data-url-nieuw="@Url.Action("RolNieuwV2", "UserAdmin")"
+     data-url-verwijder="@Url.Action("RolVerwijderV2", "UserAdmin")" data-url-leden="@Url.Action("RolLedenV2", "UserAdmin")" data-url-kandidaten="@Url.Action("RolKandidatenV2", "UserAdmin")"
+     data-rechten-url="@Url.Action("Rechten", "UserAdmin")">
+    @Html.AntiForgeryToken()
+    <script type="application/json" id="rol-data">@Html.Raw(Model)</script>
+
+    <div class="gl-v2-tabbar" role="tablist">
+        @if (canUsers)
+        {
+            <a class="gl-v2-tabbar-tab" role="tab" aria-selected="false" href="@Url.Action("Index", "UserAdmin")">Gebruikers <span class="gl-v2-tabbar-count" id="rol-count-users">0</span></a>
+        }
+        <a class="gl-v2-tabbar-tab is-active" role="tab" aria-selected="true" href="@Url.Action("Rollen", "UserAdmin")">Rollen <span class="gl-v2-tabbar-count" id="rol-count-roles">0</span></a>
+    </div>
+
+    <div class="gl-v2-ua-roles">
+        <section class="gl-v2-section-card" aria-label="Rollen">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-identification-badge" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Rollen</h2>
+            </div>
+            <div class="gl-v2-ua-rolelist" id="rol-list"></div>
+            @if (canWrite)
+            {
+                <form class="gl-v2-ua-rolenew" id="rol-new" autocomplete="off">
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="rol-new-naam">Nieuwe rol</label>
+                        <div class="gl-v2-field-box"><input class="gl-v2-field-input" id="rol-new-naam" maxlength="100" placeholder="Naam van de rol" /><button type="submit" class="gl-v2-btn gl-v2-btn-primary" style="margin:3px"><i class="ph ph-plus" aria-hidden="true"></i>Maken</button></div>
+                        <span class="gl-v2-ua-help">Een nieuwe rol begint zonder rechten. Wil je vertrekken van een bestaande rol, gebruik dan Dupliceren.</span>
+                    </div>
+                </form>
+            }
+        </section>
+
+        <section class="gl-v2-section-card" id="rol-detail" aria-label="Rol">
+            <div class="gl-v2-ua-rolehead">
+                <input type="text" class="gl-v2-ua-rolename" id="rol-naam" maxlength="100" aria-label="Naam van de rol" />
+                <span class="gl-v2-badge is-info" id="rol-admin-badge" hidden>Altijd alle rechten</span>
+                <span style="flex:1"></span>
+                @if (canWrite)
+                {
+                    <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="rol-dup"><i class="ph ph-copy" aria-hidden="true"></i>Dupliceren</button>
+                }
+                @if (canDelete)
+                {
+                    <button type="button" class="gl-v2-btn gl-v2-btn-danger" id="rol-del"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</button>
+                }
+            </div>
+            <div class="gl-v2-ua-rolemeta">
+                <div class="gl-v2-ua-block">
+                    <span class="gl-v2-ua-block-label">Bedrijfstoegang</span>
+                    <div class="gl-v2-ua-chips" id="rol-chips" role="group" aria-label="Bedrijfstoegang"></div>
+                    <span class="gl-v2-ua-help">Geldt voor de functies die als “per bedrijf” gemarkeerd zijn. Een bedrijf telt pas mee als de rol daar minstens Lezen heeft.</span>
+                </div>
+                <div class="gl-v2-ua-block">
+                    <span class="gl-v2-ua-block-label">Leden</span>
+                    <div class="gl-v2-ua-members">
+                        <span class="gl-v2-ua-stack" id="rol-stack"></span>
+                        <span class="gl-v2-ua-help" id="rol-members-text" style="color:var(--gl-v2-ink)"></span>
+                        @if (canWrite)
+                        {
+                            <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="rol-members-open"><i class="ph ph-users" aria-hidden="true"></i>Leden beheren</button>
+                        }
+                    </div>
+                    <span class="gl-v2-ua-help is-gold" id="rol-dev-text" hidden></span>
+                </div>
+            </div>
+            <div class="gl-v2-rt-toolbar">
+                <span class="gl-v2-ua-block-label">Rechten van de rol</span>
+                <span class="gl-v2-ua-help">geldt voor alle leden, behalve hun afwijkingen</span>
+                <span class="gl-v2-ua-toolbar-spacer"></span>
+                <div class="gl-v2-field gl-v2-rt-search">
+                    <div class="gl-v2-field-box"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input type="text" class="gl-v2-field-input" id="rol-search" placeholder="Zoek functie" autocomplete="off" /></div>
+                </div>
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" id="rol-expand">Alles openklappen</button>
+            </div>
+            <div id="rol-tree" role="table" aria-label="Rechten per functie"></div>
+            <div class="gl-v2-rt-legend">
+                <span class="l-rol"><i></i>opgeslagen</span>
+                <span class="l-afw"><i></i>wijziging, nog niet opgeslagen</span>
+                <span>Elk niveau bevat het vorige: Verwijderen = lezen + bewerken + verwijderen</span>
+                <span>Groep klikken = alle onderliggende functies instellen</span>
+            </div>
+            <div class="gl-v2-ua-savebar" id="rol-savebar" hidden>
+                <span class="gl-v2-ua-savebar-text" id="rol-savetext"></span>
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" id="rol-cancel">Annuleren</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="rol-save">Opslaan</button>
+            </div>
+        </section>
+    </div>
+</div>
+
+@if (canWrite)
+{
+    @* Dupliceren *@
+    <div class="modal fade gl-v2-modal-form gl-v2-ua-modal" id="rol-dup-modal" tabindex="-1" aria-hidden="true" aria-labelledby="rol-dup-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <form class="modal-content" novalidate autocomplete="off">
+                <div class="modal-header"><h2 class="modal-title" id="rol-dup-title">Rol dupliceren</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body">
+                    <p class="gl-v2-ua-help" style="margin:0">De nieuwe rol krijgt dezelfde rechten en bedrijfstoegang, maar nog geen leden.</p>
+                    <div class="gl-v2-field"><label class="gl-v2-field-label" for="rol-dup-naam">Naam van de nieuwe rol</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="rol-dup-naam" maxlength="100" required /></div><span class="gl-v2-field-help gl-v2-ua-err" id="rol-dup-err" role="alert" hidden></span></div>
+                </div>
+                <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="submit" class="gl-v2-btn gl-v2-btn-primary">Dupliceren</button></div>
+            </form>
+        </div>
+    </div>
+
+    @* Leden beheren *@
+    <div class="modal fade gl-v2-modal-form gl-v2-ua-modal" id="rol-members-modal" tabindex="-1" aria-hidden="true" aria-labelledby="rol-members-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <form class="modal-content" novalidate>
+                <div class="modal-header"><h2 class="modal-title" id="rol-members-title">Leden beheren</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body">
+                    <p class="gl-v2-ua-help" style="margin:0">Vink de gebruikers aan die deze rol krijgen. Een gebruiker heeft één rol: wie van rol wisselt, begint zonder afwijkingen. Wil je iemand uit de rol halen, geef die persoon dan een andere rol.</p>
+                    <div class="gl-v2-field"><div class="gl-v2-field-box"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input type="text" class="gl-v2-field-input" id="rol-members-search" placeholder="Zoek op naam of e-mail" autocomplete="off" /></div></div>
+                    <div class="gl-v2-ua-pick" id="rol-members-list"><div class="gl-v2-ua-pick-empty">Laden…</div></div>
+                </div>
+                <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="rol-members-submit" disabled>Toevoegen aan rol</button></div>
+            </form>
+        </div>
+    </div>
+}
+
+@await Html.PartialAsync("GlV2/_BevestigModal")
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-rechtenboom.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-useradmin-rollen.js" asp-append-version="true"></script>
+}

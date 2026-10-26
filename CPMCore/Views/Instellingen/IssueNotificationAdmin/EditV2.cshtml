@@ -1,0 +1,176 @@
+@model CPMCore.Models.IssueNotification.ScheduleEditVm
+@using BOCore
+@using CPMCore.Models.GlV2
+@using FacadeCore
+@using System.Text.Json
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen › Puntmeldingen › Schema bewerken (design-handoff punt 56b): de dag kies je met één tik, een samenvatting in gewone taal met de eerstvolgende verzendmomenten,
+    en de prioriteit als ladder met dit schema aangeduid. Dezelfde acties en velden als de klassieke pagina (CreatePost, EditPost).
+    De "volgende herinneringen" zijn een schatting in de browser met dezelfde regel als de server (de dag en het uur van het schema, daarna elke N dagen); de verzender blijft beslissen.
+*@
+@{
+    var isNieuw = Model.Id == 0;
+    ViewData["Title"] = isNieuw ? "Nieuw schema" : "Schema bewerken";
+    ViewData["PageIcon"] = "ph ph-bell-ringing";
+    ViewData["HelpScreenId"] = "instellingen-puntmeldingen-schema";
+    ViewData["BackUrl"] = Url.Action("Index");
+    var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsIssueNotifications);
+    var fouten = ViewData.ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).Where(m => !string.IsNullOrWhiteSpace(m)).Distinct().ToList();
+    var uren = Enumerable.Range(0, 24).Select(h => new GlV2SelectItem { Value = h.ToString(), Text = $"{h:00}:00" }).ToList();
+    var freqs = new List<GlV2SelectItem> { new() { Value = "0", Text = "Uitgeschakeld" }, new() { Value = "7", Text = "Wekelijks (7 dagen)" }, new() { Value = "14", Text = "Tweewekelijks (14 dagen)" }, new() { Value = "30", Text = "Maandelijks (30 dagen)" } };
+    if (freqs.All(f => f.Value != Model.ReminderFrequencyDays.ToString())) freqs.Add(new GlV2SelectItem { Value = Model.ReminderFrequencyDays.ToString(), Text = $"Om de {Model.ReminderFrequencyDays} dagen" });
+    string[] dagKort = { "zo", "ma", "di", "wo", "do", "vr", "za" };
+    int[] dagVolgorde = { 1, 2, 3, 4, 5, 6, 0 };
+    var opties = JsonSerializer.Serialize(new
+    {
+        leverancier = Model.Suppliers.Select(s => new { id = s.Id, text = s.Name, sub = "" }),
+        project = Model.Projects.Select(p => new { id = p.Id, text = p.Name, sub = "" })
+    }, new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
+    var optLev = JsonSerializer.Serialize(Model.Suppliers.Select(s => new { id = s.Id, text = s.Name, sub = "" }));
+    var optProj = JsonSerializer.Serialize(Model.Projects.Select(p => new { id = p.Id, text = p.Name, sub = "" }));
+    string NaamVan(IEnumerable<CPMCore.Models.IssueNotification.SelectItem> l, int? id) => id.HasValue ? (l.FirstOrDefault(x => x.Id == id.Value)?.Name ?? "") : "";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-automatisatie.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    <a href="@Url.Action("Index")" class="gl-v2-btn gl-v2-btn-text">Annuleren</a>
+    @if (canWrite)
+    {
+        <button type="submit" form="pm-form" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-floppy-disk" aria-hidden="true"></i>@(isNieuw ? "Schema aanmaken" : "Wijzigingen opslaan")</button>
+    }
+}
+
+<form method="post" action="@(isNieuw ? Url.Action("CreatePost") : Url.Action("EditPost", new { id = Model.Id }))" id="pm-form" novalidate class="gl-v2-auto gl-v2-auto-edit" data-nieuw="@(isNieuw ? "1" : "0")">
+    @Html.AntiForgeryToken()
+    @if (fouten.Any())
+    {
+        <div class="gl-v2-notice gl-v2-notice-expanded is-danger" role="alert">
+            <span class="gl-v2-notice-expanded-icon"><i class="ph ph-x-circle" aria-hidden="true"></i></span>
+            <div class="gl-v2-notice-body"><span class="gl-v2-notice-title">Het schema is niet opgeslagen</span><span class="gl-v2-notice-text">@string.Join(" ", fouten)</span></div>
+        </div>
+    }
+    <div class="gl-v2-auto-split">
+        <div class="gl-v2-auto-main">
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-users-three" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Voor wie</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Leeg laten = van toepassing op alle.</span>
+                </div>
+                <div class="gl-v2-auto-fields">
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="SupplierId_input">Aannemer / bedrijf</label>
+                        @await Html.PartialAsync("GlV2/_GlV2Combo", new GlV2ComboVm { Name = "SupplierId", Id = "SupplierId", Value = Model.SupplierId?.ToString(), DisplayText = NaamVan(Model.Suppliers, Model.SupplierId), Placeholder = "Alle aannemers", Icon = "ph-buildings", ListLabel = "Bedrijven", OptionsJson = optLev, Disabled = !canWrite })
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="ProjectId_input">Project</label>
+                        @await Html.PartialAsync("GlV2/_GlV2Combo", new GlV2ComboVm { Name = "ProjectId", Id = "ProjectId", Value = Model.ProjectId?.ToString(), DisplayText = NaamVan(Model.Projects, Model.ProjectId), Placeholder = "Alle projecten", Icon = "ph-buildings", ListLabel = "Projecten", OptionsJson = optProj, Disabled = !canWrite })
+                    </div>
+                </div>
+            </section>
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-bell" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Herinnering</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Mail met openstaande werfpunten naar de aannemer.</span>
+                </div>
+                <div class="gl-v2-auto-fields">
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "ReminderFrequencyDays", Id = "pm-freq", Label = "Herhaling", Value = Model.ReminderFrequencyDays.ToString(), Items = freqs, Disabled = !canWrite })
+                    <div class="gl-v2-field" id="pm-uur-wrap">
+                        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "BrusselsReminderHour", Id = "pm-uur", Label = "Uur (Brussel)", Value = Model.BrusselsReminderHour.ToString(), Items = uren, Disabled = !canWrite })
+                    </div>
+                    <div class="gl-v2-field gl-v2-auto-full" id="pm-dag-wrap">
+                        <span class="gl-v2-field-label" id="pm-dag-label">Dag</span>
+                        <input type="hidden" name="ReminderDayOfWeek" id="pm-dag" value="@Model.ReminderDayOfWeek" />
+                        <div class="gl-v2-auto-days" role="group" aria-labelledby="pm-dag-label">
+                            @foreach (var d in dagVolgorde)
+                            {
+                                <button type="button" class="gl-v2-auto-day @(Model.ReminderDayOfWeek == d ? "is-active" : "")" aria-pressed="@(Model.ReminderDayOfWeek == d ? "true" : "false")" data-d="@d" @(canWrite ? "" : "disabled")>@dagKort[d]</button>
+                            }
+                        </div>
+                        <span class="gl-v2-field-help">Tik nogmaals op de gekozen dag om ze te wissen (geen voorkeur).</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-envelope-simple" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Dagelijkse update</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">Overzicht van de wijzigingen van vandaag.</span>
+                </div>
+                <div class="gl-v2-auto-fields">
+                    <label class="gl-v2-toggle-row" for="pm-avond">
+                        <input type="checkbox" id="pm-avond" name="SendEveningUpdate" value="true" class="gl-v2-toggle-switch" @(Model.SendEveningUpdate ? "checked" : "") @(canWrite ? "" : "disabled") />
+                        <input type="hidden" name="SendEveningUpdate" value="false" />
+                        <span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Dagelijkse update versturen</span></span>
+                    </label>
+                    <div class="gl-v2-field" id="pm-avonduur-wrap">
+                        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "BrusselsHour", Id = "pm-avonduur", Label = "Uur (Brussel)", Value = Model.BrusselsHour.ToString(), Items = uren, Disabled = !canWrite })
+                    </div>
+                </div>
+            </section>
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-note" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Notities</h2>
+                </div>
+                <div class="gl-v2-auto-fields">
+                    <div class="gl-v2-field gl-v2-auto-full"><div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea class="gl-v2-field-input" name="Notes" rows="3" maxlength="500" placeholder="Interne notitie bij dit schema…" aria-label="Notities" @(canWrite ? "" : "disabled")>@Model.Notes</textarea></div></div>
+                </div>
+            </section>
+        </div>
+
+        <aside class="gl-v2-auto-side">
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <h2 class="gl-v2-section-card-title">Samenvatting</h2>
+                    <span class="gl-v2-section-card-spacer"></span>
+                    <label class="gl-v2-auto-active" for="pm-actief">
+                        <input type="checkbox" id="pm-actief" name="IsActive" value="true" class="gl-v2-toggle-switch" @(Model.IsActive ? "checked" : "") @(canWrite ? "" : "disabled") />
+                        <input type="hidden" name="IsActive" value="false" />
+                        <span>Actief</span>
+                    </label>
+                </div>
+                <div class="gl-v2-auto-side-body">
+                    <p class="gl-v2-auto-sum" id="pm-sum" aria-live="polite"></p>
+                    <div class="gl-v2-auto-next" id="pm-next-wrap">
+                        <span class="gl-v2-auto-eyebrow">VOLGENDE HERINNERINGEN</span>
+                        <ul id="pm-next"></ul>
+                    </div>
+                </div>
+            </section>
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header"><h2 class="gl-v2-section-card-title">Welk schema wint?</h2></div>
+                <div class="gl-v2-auto-side-body">
+                    <p class="gl-v2-auto-sub">Bij overlap telt het meest specifieke schema.</p>
+                    <ol class="gl-v2-auto-ladder" id="pm-ladder">
+                        <li data-n="1"><b>1</b><span>Aannemer + project</span><em>dit schema</em></li>
+                        <li data-n="2"><b>2</b><span>Aannemer + alle projecten</span><em>dit schema</em></li>
+                        <li data-n="3"><b>3</b><span>Alle aannemers + project</span><em>dit schema</em></li>
+                        <li data-n="4"><b>4</b><span>Alle aannemers + alle projecten</span><em>dit schema</em></li>
+                    </ol>
+                    <div class="gl-v2-notice gl-v2-notice-compact is-info">
+                        <i class="ph ph-info" aria-hidden="true"></i>
+                        <span>Geen mail als de aannemer enkel punten heeft met status “Wacht op keuring”, als het bedrijf geen e-mailadres heeft, of als het punt “Geen automatische melding” heeft.</span>
+                    </div>
+                </div>
+            </section>
+        </aside>
+    </div>
+</form>
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-instellingen-puntmeldingen.js" asp-append-version="true"></script>
+}

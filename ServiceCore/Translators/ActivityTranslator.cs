@@ -18,6 +18,7 @@ namespace ServiceCore.Translators
                 return ErrorCode.BoNull;
             bo.ID = _entity.ActivityId;
             bo.Name = _entity.Omschrijving;
+            bo.Volgnr = _entity.Volgnr;
             if (_entity.Group != null)
             {
                 bo.Group.ID = _entity.Group.GroupId;
@@ -35,6 +36,7 @@ namespace ServiceCore.Translators
             if (bo == null)
                 return ErrorCode.BoNull;
             _entity.Omschrijving = bo.Name;
+            if (bo.Volgnr.HasValue) _entity.Volgnr = bo.Volgnr;   // leeg = niet aanraken (het oude scherm kent het nummer niet)
             if (bo.Group != null)
                 // If _entity.ActivityGroup Is Nothing Then
                 // _entity.ActivityGroup = New ActivityGroup()

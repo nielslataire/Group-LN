@@ -1,0 +1,79 @@
+/* gl-v2 projectbreed component — jaarkalender (GlV2YearCal, js/gl-v2-yearcal.js). Uit de weerverlet-kalender
+   (design-handoff 10a) gehaald: 12 maandkaarten, dagcel krijgt de volle kleur van zijn categorie (geen letterpil),
+   weekends lichter i.p.v. donkerder, hoverring in de kleur van de modus die een klik zet. Categoriekleuren komen van
+   de pagina (inline per cel); hier alleen de structuur. Zie DESIGN.md "Jaarkalender (GlV2YearCal)". */
+
+/* Raster: één kolom op gsm, drie op tablet, zes vanaf 1200px — herijkt op de echte inhoudsbreedte van de gl-v2-kaart. */
+.gl-v2-yc { display: grid; grid-template-columns: 1fr; gap: 12px; position: relative; min-height: 120px; --yc-armed: #2C3B2A; }
+@media (min-width: 768px) { .gl-v2-yc { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1200px) { .gl-v2-yc { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+
+.gl-v2-yc-message {
+    grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 40px 0;
+    font: 500 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted);
+}
+.gl-v2-yc-message i { font-size: 15px; color: var(--gl-v2-primary); }
+
+.gl-v2-yc-month {
+    background: var(--gl-v2-surface); border-radius: var(--gl-v2-radius-md); box-shadow: var(--gl-v2-shadow-tile);
+    padding: 12px 12px 13px; display: flex; flex-direction: column; gap: 9px; min-width: 0;
+}
+.gl-v2-yc-month-head { display: flex; align-items: baseline; gap: 7px; }
+.gl-v2-yc-month-name { flex: 1; font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); text-transform: capitalize; }
+.gl-v2-yc-month-count { font: 600 10.5px var(--gl-v2-font-sans); font-variant-numeric: tabular-nums; }
+
+.gl-v2-yc-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.gl-v2-yc-dow {
+    height: 18px; display: flex; align-items: center; justify-content: center;
+    font: 600 9.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); letter-spacing: .06em; text-transform: uppercase;
+}
+.gl-v2-yc-day {
+    aspect-ratio: 1; display: flex; align-items: center; justify-content: center; position: relative;
+    border-radius: 6px; font: 600 11px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; user-select: none;
+}
+.gl-v2-yc-day.is-blank { visibility: hidden; }
+.gl-v2-yc-day.is-weekend { background: var(--gl-v2-bg); color: var(--gl-v2-muted-light); }
+/* Categorie op een weekenddag (bv. een feestdag op zaterdag): de cel blijft weekend, een stip in de kleur van de categorie. */
+.gl-v2-yc-day.is-weekend.has-cats::after { content: ""; position: absolute; bottom: 3px; width: 5px; height: 5px; border-radius: 50%; background: var(--yc-dot, currentColor); }
+.gl-v2-yc-day.is-locked { cursor: default; }
+
+.gl-v2-yc:not(.is-readonly) .gl-v2-yc-day.is-eligible { cursor: pointer; }
+.gl-v2-yc:not(.is-readonly) .gl-v2-yc-day.is-eligible:hover,
+.gl-v2-yc-day.is-drag-preview { box-shadow: inset 0 0 0 1.5px var(--yc-armed); }
+
+/* Legende: eigen rij onder het raster. */
+.gl-v2-yc-legend {
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap; padding: 14px 16px; margin-top: 12px;
+    border-radius: var(--gl-v2-radius-md); background: var(--gl-v2-surface); box-shadow: var(--gl-v2-shadow-tile);
+}
+.gl-v2-yc-legend-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .09em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gl-v2-yc-legend-item { display: flex; align-items: center; gap: 8px; font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-yc-swatch {
+    width: 26px; height: 26px; border-radius: 7px; flex: none; position: relative;
+    display: flex; align-items: center; justify-content: center; font: 600 11.5px var(--gl-v2-font-sans);
+}
+.gl-v2-yc-swatch.is-weekend { background: var(--gl-v2-bg); color: var(--gl-v2-muted); font-weight: 450; }
+.gl-v2-yc-swatch.is-weekend-dot { background: var(--gl-v2-bg); color: var(--gl-v2-muted); font-weight: 450; }
+.gl-v2-yc-swatch.is-weekend-dot::after { content: ""; position: absolute; bottom: 3px; width: 5px; height: 5px; border-radius: 50%; background: var(--yc-dot, currentColor); }
+.gl-v2-yc-swatch.is-hover { background: var(--gl-v2-surface); box-shadow: inset 0 0 0 1.5px currentColor; }
+.gl-v2-yc-legend-spacer { flex: 1; }
+.gl-v2-yc-legend-hint { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
+@media (max-width: 767.98px) { .gl-v2-yc-legend-hint { flex-basis: 100%; } }
+
+/* Jaarbalk: totalen en ‹ jaar › naast elkaar (de pagina vult de totalen, het component levert enkel de opmaak). */
+.gl-v2-yc-yearbar {
+    display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 4px 0 14px; border-radius: 9px;
+    background: var(--gl-v2-surface); box-shadow: var(--gl-v2-shadow-tile); flex: none;
+}
+.gl-v2-yc-yearbar-text { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; }
+.gl-v2-yc-yearbar-stat { font: 600 12px var(--gl-v2-font-sans); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gl-v2-yc-yearbar-stat.is-total { color: var(--gl-v2-primary); }
+.gl-v2-yc-yearbar-divider { width: 1px; height: 16px; background: var(--gl-v2-hairline); flex: none; }
+.gl-v2-yc-yearnav {
+    width: 32px; height: 32px; flex: none; border-radius: 7px; border: 1px solid var(--gl-v2-hairline); background: transparent;
+    display: flex; align-items: center; justify-content: center; color: var(--gl-v2-muted); cursor: pointer; margin-left: 4px;
+}
+.gl-v2-yc-yearnav:hover, .gl-v2-yc-yearnav:focus-visible { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); outline: none; }
+.gl-v2-yc-yearbar .gl-v2-yc-yearnav + .gl-v2-yc-yearnav { margin-left: 0; }
+.gl-v2-yc-yearvalue { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; padding: 0 2px; }
+@media (max-width: 767.98px) { .gl-v2-yc-yearbar { width: 100%; justify-content: space-between; } }
