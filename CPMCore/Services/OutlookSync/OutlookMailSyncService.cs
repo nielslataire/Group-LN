@@ -106,8 +106,8 @@ public class OutlookMailSyncService
         foreach (var e in await _db.Users.AsNoTracking().Where(u => u.IsActive && u.Email != null).Select(u => u.Email!).ToListAsync(ct))
             if (OutlookMailRegels.Domein(e) is { } d && !OutlookMailRegels.IsPubliekDomein(d)) ctx.InterneDomeinen.Add(d);
 
-        foreach (var p in await _db.Project.AsNoTracking().Select(p => new { p.ProjectId, p.ProjectName, p.ProjectCode, p.Street, p.Number, p.StatusId }).ToListAsync(ct))
-            ctx.Projecten.Add(new MailProject(p.ProjectId, p.ProjectName ?? "", p.ProjectCode, p.Street, p.Number, p.StatusId != StatusOpgeleverd));
+        foreach (var p in await _db.Project.AsNoTracking().Select(p => new { p.ProjectId, p.ProjectName, p.ProjectCode, p.Street, p.Number, p.StatusId, Gemeente = p.PostalCode != null ? p.PostalCode.Gemeente : null }).ToListAsync(ct))
+            ctx.Projecten.Add(new MailProject(p.ProjectId, p.ProjectName ?? "", p.ProjectCode, p.Street, p.Number, p.StatusId != StatusOpgeleverd, p.Gemeente));
 
         void Voeg(string? veld, BekendeContact partij)
         {

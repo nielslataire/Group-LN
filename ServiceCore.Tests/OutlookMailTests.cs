@@ -18,7 +18,8 @@ public class OutlookMailRegelsTests
     {
         var ctx = new MailContext();
         ctx.InterneDomeinen.Add("groupln.be");
-        ctx.Projecten.Add(new MailProject(1, "Résidence De Linde", "2501-03", "Keerstraat", "12", true));
+        ctx.Projecten.Add(new MailProject(1, "Résidence De Linde", "2501-03", "Keerstraat", "12", true, "Vlekkem"));
+        ctx.Projecten.Add(new MailProject(4, "Verkaveling Dorp", null, "Molenstraat", null, true, "Vlekkem"));
         ctx.Projecten.Add(new MailProject(2, "Villa Cauxyde", null, "Dorpsstraat", "5", true));
         ctx.Projecten.Add(new MailProject(3, "Oud Project", null, null, null, false));
         ctx.Contacten["klant@example.com"] = new() { new BekendeContact("klant", 10, null, new[] { 1 }) };
@@ -76,6 +77,8 @@ public class OutlookMailRegelsTests
     [InlineData("Offerte keerstraat 12", 1)]                      // straat + nummer
     [InlineData("Vraag over 2501-03", 1)]                         // projectcode
     [InlineData("Re: Villa Cauxyde: ramen", 2)]
+    [InlineData("Keerstraat Vlekkem", 1)]                         // straat + gemeente
+    [InlineData("vlekkem, MOLENSTRAAT: nutsleidingen", 4)]        // andere volgorde, project zonder huisnummer
     public void Projectverwijzing_in_het_onderwerp_neemt_mails_van_onbekende_afzenders_op(string onderwerp, int project)
     {
         var b = Beoordeel(Mail("gemeente@stad.be", onderwerp));
@@ -88,6 +91,8 @@ public class OutlookMailRegelsTests
     [InlineData("Keerstraat 123")]    // ander huisnummer
     [InlineData("Keerstraat")]        // geen nummer
     [InlineData("Linde")]             // maar een deel van de projectnaam
+    [InlineData("Vlekkem")]           // enkel de gemeente
+    [InlineData("Molenstraat")]       // enkel de straat bij een project zonder nummer
     public void Gedeeltelijke_verwijzingen_tellen_niet(string onderwerp)
         => Assert.False(Beoordeel(Mail("gemeente@stad.be", onderwerp)).Opnemen);
 

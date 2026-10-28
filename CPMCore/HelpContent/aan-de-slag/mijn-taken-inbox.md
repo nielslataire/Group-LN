@@ -19,7 +19,7 @@ faq:
   - q: Waar komt mijn inbox mee gevuld?
     a: Met wat je zelf vastlegt, bovenaan Vandaag of Inbox. Zet je de Outlook-koppeling aan in Mijn profiel, dan komen ook project-gerelateerde mails binnen. Werfverslagen en meldingen komen nog niet automatisch in je inbox.
   - q: Welke mails komen in mijn inbox?
-    a: Mails van een bekende klant, leverancier, contactpersoon of makelaar, en mails met een projectnaam, projectcode of straat en nummer in het onderwerp. Nieuwsbrieven, no-reply-mails, mails tussen enkel collega's en wat Outlook in Overige of ongewenst zet, blijven buiten CPM.
+    a: Mails van een bekende klant, leverancier, contactpersoon of makelaar, en mails met een projectnaam, projectcode, straat en nummer of straat en gemeente in het onderwerp. Nieuwsbrieven, no-reply-mails, mails tussen enkel collega's en wat Outlook in Overige of ongewenst zet, blijven buiten CPM.
   - q: Waarom staat een mail bij Nog te koppelen?
     a: CPM is niet zeker over het project. De mail blijft zichtbaar, maar zonder project.
   - q: Verdwijnt een mail ook uit Outlook als ik op Afgehandeld klik?

@@ -13,7 +13,7 @@ public static class OutlookMailStatus
 public sealed record BekendeContact(string Soort, int? KlantId, int? LeverancierId, IReadOnlyCollection<int> ProjectIds);
 
 /// <summary>Een project zoals de mailregels het nodig hebben om een onderwerp te herkennen.</summary>
-public sealed record MailProject(int Id, string Naam, string? Code, string? Straat, string? Nummer, bool Actief);
+public sealed record MailProject(int Id, string Naam, string? Code, string? Straat, string? Nummer, bool Actief, string? Gemeente = null);
 
 /// <summary>Alles wat de regels over de omgeving moeten weten, één keer opgebouwd per sync-ronde.</summary>
 public sealed class MailContext
@@ -34,7 +34,7 @@ public sealed record MailBeslissing(bool Opnemen, string Reden, int? ProjectId, 
 /// De in- en uitsluitregels en de koppelregels van de mailsync (spec #2). Puur: geen database, geen Graph. Volgorde:
 /// (1) uitsluiten: concept, geblokkeerde afzender, nieuwsbrief of no-reply, enkel interne collega's zonder projectverwijzing;
 /// (2) Outlooks "Overige" sluit uit, tenzij de afzender een bekende contactpersoon is of het onderwerp een expliciete projectverwijzing heeft;
-/// (3) opnemen bij een bekende klant, leverancier, contactpersoon of makelaar, of een projectnaam, -code of straat + nummer in het onderwerp.
+/// (3) opnemen bij een bekende klant, leverancier, contactpersoon of makelaar, of een projectnaam, -code, straat + nummer of straat + gemeente in het onderwerp.
 /// Koppelen: één project per mail (project in het onderwerp, anders het enige actieve project van de bekende partijen), klant en leverancier uit de partijen.
 /// </summary>
 public static class OutlookMailRegels
@@ -81,7 +81,9 @@ public static class OutlookMailRegels
         return projecten.Where(p =>
                 (Normaliseer(p.Naam).Length >= 4 && Bevat(p.Naam)) ||
                 Bevat(p.Code) ||
-                (!string.IsNullOrWhiteSpace(p.Straat) && !string.IsNullOrWhiteSpace(p.Nummer) && Bevat($"{p.Straat} {p.Nummer}")))
+                (!string.IsNullOrWhiteSpace(p.Straat) && !string.IsNullOrWhiteSpace(p.Nummer) && Bevat($"{p.Straat} {p.Nummer}")) ||
+                // Een verkaveling heeft vaak geen huisnummer: straat én gemeente samen in het onderwerp (in elke volgorde) is een expliciete verwijzing.
+                (Bevat(p.Straat) && Bevat(p.Gemeente)))
             .Select(p => p.Id).Distinct().ToList();
     }
 
