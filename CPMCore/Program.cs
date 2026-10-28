@@ -678,6 +678,7 @@ builder.Services.Configure<RazorViewEngineOptions>(options =>
 // SMTP server
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 builder.Services.AddSingleton<CPMCore.Services.IGraphIngang, CPMCore.Services.GraphIngang>();
+builder.Services.AddScoped<CPMCore.Services.OutlookSync.OutlookMailSyncService>();
 builder.Services.AddScoped<CPMCore.Services.OutlookSync.OutlookSyncService>();
 builder.Services.AddHostedService<CPMCore.Services.OutlookSync.OutlookSyncHostedService>();   // Outlook-sync per opt-in gebruiker (migratie 121)
 

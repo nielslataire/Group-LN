@@ -1,0 +1,16 @@
+@*
+    gl-v2 — Snel starten (design-handoff 2e): Ctrl K (⌘ K), een paar woorden, Enter, de timer loopt. #project en @context geef je in één beweging mee,
+    +20m laat de timer met terugwerkende kracht beginnen. Bestaande taken verschijnen tijdens het typen. De JS vult de lijsten.
+*@
+<div class="gl-v2-mt-qs" id="mt-qs" hidden role="dialog" aria-modal="true" aria-label="Snel starten">
+    <div class="gl-v2-mt-qs-back" data-mt-qs-close></div>
+    <div class="gl-v2-mt-qs-box">
+        <div class="gl-v2-mt-qs-input">
+            <i class="ph ph-play" aria-hidden="true"></i>
+            <input type="text" id="mt-qs-input" placeholder="Waar begin je aan?" autocomplete="off" maxlength="200" aria-label="Waar begin je aan?" />
+            <kbd>Enter</kbd>
+        </div>
+        <div class="gl-v2-mt-qs-list" id="mt-qs-list"></div>
+        <div class="gl-v2-mt-qs-hints"><span><b>#villa</b> project</span><span><b>@@telefoon</b> context</span><span><b>+20m</b> al bezig</span><span class="gl-v2-mt-qs-sp"></span><span><b>Esc</b> sluiten</span></div>
+    </div>
+</div>

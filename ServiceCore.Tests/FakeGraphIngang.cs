@@ -25,6 +25,23 @@ public sealed class FakeGraphIngang : IGraphIngang
         return Task.FromResult(gebruiker != null && Toegang.TryGetValue(gebruiker, out var t) ? t : GraphToegang.Ok);
     }
 
+    /// <summary>Mails per gebruiker (sleutel zoals de sync die opvraagt). Alleen mails vanaf het gevraagde moment komen terug, zoals bij een eerste delta.</summary>
+    public Dictionary<string, List<GraphMail>> MailsPerGebruiker { get; } = new();
+    public List<string> VerwijderdeMailIds { get; } = new();
+    public List<(string? Gebruiker, string? Tokens, DateTime Vanaf)> MailAanvragen { get; } = new();
+    public string? MailFout { get; set; }
+
+    public Task<GraphMailResultaat> HaalMailAsync(string? gebruiker, string? deltaTokensJson, DateTime vanafUtc, CancellationToken ct = default)
+    {
+        MailAanvragen.Add((gebruiker, deltaTokensJson, vanafUtc));
+        if (MailFout != null) return Task.FromResult(new GraphMailResultaat { Toegang = GraphToegang.Fout, Fout = MailFout });
+        var lijst = gebruiker != null && MailsPerGebruiker.TryGetValue(gebruiker, out var l) ? l : new List<GraphMail>();
+        // Zonder token geeft Graph alles vanaf "vanaf"; met token enkel wat nog niet eerder is teruggegeven.
+        var eerder = deltaTokensJson == null ? 0 : int.Parse(deltaTokensJson);
+        var nieuw = lijst.Skip(eerder).Where(m => m.OntvangenOpUtc >= vanafUtc).ToList();
+        return Task.FromResult(new GraphMailResultaat { Nieuw = nieuw, VerwijderdeIds = VerwijderdeMailIds.ToList(), NieuweTokensJson = lijst.Count.ToString() });
+    }
+
     public Task<AgendaResultaat> GetAgendaAsync(string? gebruiker, DateTime van, DateTime tot, CancellationToken ct = default)
     {
         AgendaAanvragen.Add((gebruiker, van, tot));

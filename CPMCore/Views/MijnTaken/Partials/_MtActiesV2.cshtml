@@ -1,0 +1,21 @@
+@model CPMCore.Models.MijnTaken.MtShell
+@*
+    gl-v2 — acties rechtsboven op elke Mijn taken-pagina: ▶ Start (Ctrl K) en de lopende of gepauzeerde timer.
+    data-sec = verstreken seconden bij het laden van de pagina; de JS (gl-v2-mijntaken.js) telt zelf verder zolang data-loopt="1".
+*@
+@{
+    var timer = Model.Timer;
+    var sec = timer == null ? 0 : (int)Math.Max(0, (timer.Einde - timer.Start).TotalSeconds);
+}
+<button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-mt-start" id="mt-start-btn" title="Nieuwe taak starten (Ctrl K)">
+    <i class="ph ph-play" aria-hidden="true"></i>Start<kbd>Ctrl K</kbd>
+</button>
+@if (timer != null)
+{
+    <div class="gl-v2-mt-timer @(timer.Loopt ? "is-running" : "is-paused")" id="mt-timer" data-loopt="@(timer.Loopt ? "1" : "0")" data-sec="@sec" data-taak="@timer.TaakId">
+        <span class="gl-v2-mt-timer-dot" style="background:@timer.Kleur"></span>
+        <span class="gl-v2-mt-timer-titel" title="@timer.Titel">@timer.Titel</span>
+        <span class="gl-v2-mt-timer-tijd" id="mt-timer-tijd">@(sec / 3600):@((sec / 60 % 60).ToString("00")):@((sec % 60).ToString("00"))</span>
+        <button type="button" class="gl-v2-mt-timer-btn" id="mt-timer-toggle" aria-label="@(timer.Loopt ? "Pauzeren" : "Hervatten")" title="@(timer.Loopt ? "Pauzeren" : "Hervatten")"><i class="ph @(timer.Loopt ? "ph-pause" : "ph-play")" aria-hidden="true"></i></button>
+    </div>
+}

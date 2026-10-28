@@ -27,7 +27,8 @@ public class OutlookSyncServiceTests
             new Users { Id = 3, UserId = "u3", Voornaam = "Cy", Familienaam = "C", Email = "cy@groupln.be", IsActive = false });
         db.SaveChanges();
         var graph = new FakeGraphIngang();
-        return (new OutlookSyncService(db, graph, NullLogger<OutlookSyncService>.Instance), db, graph);
+        var mail = new OutlookMailSyncService(db, graph, NullLogger<OutlookMailSyncService>.Instance);
+        return (new OutlookSyncService(db, graph, mail, NullLogger<OutlookSyncService>.Instance), db, graph);
     }
 
     [Fact]

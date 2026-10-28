@@ -1,0 +1,25 @@
+@model CPMCore.Models.MijnTaken.MtShell
+@*
+    gl-v2 — tabbladen van Mijn taken (Vandaag, Week, Inbox, Overzicht) met de datum of week rechts, plus de verborgen antiforgery-token voor de acties van de pagina.
+    Het tabblad Inbox toont het aantal items dat nog verwerkt moet worden.
+*@
+@{
+    var tabs = new (string Key, string Label, string Actie, string Icoon)[]
+    {
+        ("vandaag", "Vandaag", "Index", "ph-sun"),
+        ("week", "Week", "WeekV2", "ph-calendar-blank"),
+        ("inbox", "Inbox", "InboxV2", "ph-tray"),
+        ("overzicht", "Overzicht", "OverzichtV2", "ph-chart-bar")
+    };
+}
+<form id="mt-token" hidden data-base="@Url.Content("~/MijnTaken/")">@Html.AntiForgeryToken()</form>
+<div class="gl-v2-tabbar" role="tablist">
+    @foreach (var t in tabs)
+    {
+        <a class="gl-v2-tabbar-tab @(t.Key == Model.Tab ? "is-active" : "")" role="tab" aria-selected="@(t.Key == Model.Tab ? "true" : "false")" href="@Url.Action(t.Actie, "MijnTaken")">
+            <i class="ph @t.Icoon" aria-hidden="true"></i>@t.Label@if (t.Key == "inbox" && Model.InboxAantal > 0) { <span class="gl-v2-tabbar-count gl-v2-mt-count">@Model.InboxAantal</span> }
+        </a>
+    }
+    <span class="gl-v2-tabbar-spacer"></span>
+    <span class="gl-v2-mt-sub">@Model.Ondertitel</span>
+</div>

@@ -49,6 +49,10 @@ public interface IGraphIngang
     /// <summary>Controleert of de app bij de mailbox van deze gebruiker mag (bv. 403 als de gebruiker buiten de toegestane Exchange-groep valt). Gooit nooit; leest geen inhoud.</summary>
     Task<GraphToegang> ControleerToegangAsync(string? gebruiker, CancellationToken ct = default);
 
+    /// <summary>Haalt de nieuwe en verwijderde mails op uit Postvak IN (met submappen) en Verzonden items, met Graph-delta. Concepten, verwijderde items, ongewenste
+    /// mail en archief komen er niet in. Zonder deltatoken voor een map begint ze bij <paramref name="vanafUtc"/>. Gooit nooit.</summary>
+    Task<GraphMailResultaat> HaalMailAsync(string? gebruiker, string? deltaTokensJson, DateTime vanafUtc, CancellationToken ct = default);
+
     /// <summary>Wijzigt titel en tijd van een afspraak. Geeft een foutmelding terug, of null bij succes.</summary>
     Task<string?> BijwerkenAfspraakAsync(string? gebruiker, string eventId, string? titel, DateTime start, DateTime einde, CancellationToken ct = default);
 
@@ -156,6 +160,120 @@ public sealed class GraphIngang : IGraphIngang
         // Fouten maar kort onthouden, zodat een herstelde machtiging snel opgemerkt wordt.
         _cache[sleutel] = (DateTime.UtcNow + (resultaat.Fout == null ? Bewaartijd : TimeSpan.FromMinutes(1)), resultaat);
         return resultaat;
+    }
+
+    private const string MailVelden = "id,internetMessageId,conversationId,subject,from,toRecipients,ccRecipients,receivedDateTime,bodyPreview,webLink,inferenceClassification,isDraft";
+
+    public async Task<GraphMailResultaat> HaalMailAsync(string? gebruiker, string? deltaTokensJson, DateTime vanafUtc, CancellationToken ct = default)
+    {
+        var resultaat = new GraphMailResultaat();
+        if (_client == null || string.IsNullOrWhiteSpace(gebruiker))
+        {
+            resultaat.Toegang = GraphToegang.Fout;
+            resultaat.Fout = _client == null ? "De Entra-instellingen ontbreken." : "Geen Entra-account of e-mailadres bekend.";
+            return resultaat;
+        }
+
+        var oud = new Dictionary<string, string>();
+        try { if (!string.IsNullOrWhiteSpace(deltaTokensJson)) oud = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(deltaTokensJson) ?? new(); }
+        catch (System.Text.Json.JsonException) { oud = new(); }   // een beschadigd token = opnieuw beginnen; dedup op internet-message-id vangt dubbels op
+
+        var nieuw = new Dictionary<string, string>();
+        try
+        {
+            var mappen = new List<(string Map, string Richting)> { ("inbox", "in"), ("sentitems", "uit") };
+            await VoegSubmappenToeAsync(gebruiker, "inbox", mappen, 0, ct);
+
+            foreach (var (map, richting) in mappen)
+            {
+                oud.TryGetValue(map, out var token);
+                try
+                {
+                    await LeesMapAsync(gebruiker, map, richting, token, vanafUtc, resultaat, nieuw, ct);
+                }
+                catch (ServiceException ex) when (token != null && (ex.StatusCode == System.Net.HttpStatusCode.Gone || ex.StatusCode == System.Net.HttpStatusCode.BadRequest))
+                {
+                    // Verlopen of ongeldig deltatoken: deze map opnieuw vanaf het koppelmoment lezen.
+                    _logger.LogInformation("Deltatoken van map {Map} voor {Gebruiker} is ongeldig; opnieuw beginnen.", map, gebruiker);
+                    await LeesMapAsync(gebruiker, map, richting, null, vanafUtc, resultaat, nieuw, ct);
+                }
+            }
+            resultaat.NieuweTokensJson = System.Text.Json.JsonSerializer.Serialize(nieuw);
+        }
+        catch (ServiceException ex)
+        {
+            _logger.LogWarning(ex, "Mail ophalen via Graph mislukt voor {Gebruiker} (status {Status}).", gebruiker, (int)ex.StatusCode);
+            resultaat.Toegang = ex.StatusCode switch
+            {
+                System.Net.HttpStatusCode.Forbidden or System.Net.HttpStatusCode.Unauthorized => GraphToegang.GeenToegang,
+                System.Net.HttpStatusCode.NotFound => GraphToegang.GeenMailbox,
+                _ => GraphToegang.Fout
+            };
+            resultaat.Fout = $"Graph gaf status {(int)ex.StatusCode}.";
+            resultaat.Nieuw.Clear(); resultaat.VerwijderdeIds.Clear(); resultaat.NieuweTokensJson = null;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Mail ophalen via Graph mislukt voor {Gebruiker}.", gebruiker);
+            resultaat.Toegang = GraphToegang.Fout;
+            resultaat.Fout = ex.GetType().Name;
+            resultaat.Nieuw.Clear(); resultaat.VerwijderdeIds.Clear(); resultaat.NieuweTokensJson = null;
+        }
+        return resultaat;
+    }
+
+    private async Task VoegSubmappenToeAsync(string gebruiker, string map, List<(string Map, string Richting)> mappen, int diepte, CancellationToken ct)
+    {
+        if (diepte >= 5) return;
+        var pagina = await _client!.Users[gebruiker].MailFolders[map].ChildFolders.Request().Top(100).GetAsync(ct);
+        while (pagina != null)
+        {
+            foreach (var kind in pagina)
+            {
+                if (string.IsNullOrEmpty(kind.Id)) continue;
+                mappen.Add((kind.Id, "in"));
+                if ((kind.ChildFolderCount ?? 0) > 0) await VoegSubmappenToeAsync(gebruiker, kind.Id, mappen, diepte + 1, ct);
+            }
+            pagina = pagina.NextPageRequest != null ? await pagina.NextPageRequest.GetAsync(ct) : null;
+        }
+    }
+
+    private async Task LeesMapAsync(string gebruiker, string map, string richting, string? token, DateTime vanafUtc, GraphMailResultaat resultaat, Dictionary<string, string> nieuweTokens, CancellationToken ct)
+    {
+        IMessageDeltaCollectionPage pagina;
+        if (token == null)
+        {
+            pagina = await _client!.Users[gebruiker].MailFolders[map].Messages.Delta().Request()
+                .Header("Prefer", "odata.maxpagesize=50, IdType=\"ImmutableId\"")   // vaste id's: een verplaatste mail krijgt geen nieuw id
+                .Filter($"receivedDateTime ge {vanafUtc.ToUniversalTime():yyyy-MM-dd'T'HH:mm:ss'Z'}")
+                .Select(MailVelden).GetAsync(ct);
+        }
+        else
+        {
+            pagina = await new MessageDeltaRequestBuilder(token, _client!).Request().Header("Prefer", "odata.maxpagesize=50, IdType=\"ImmutableId\"").GetAsync(ct);
+        }
+
+        while (true)
+        {
+            foreach (var m in pagina)
+            {
+                if (string.IsNullOrEmpty(m.Id)) continue;
+                if (m.AdditionalData != null && m.AdditionalData.ContainsKey("@removed")) { resultaat.VerwijderdeIds.Add(m.Id); continue; }
+                resultaat.Nieuw.Add(new GraphMail
+                {
+                    Id = m.Id, InternetMessageId = m.InternetMessageId, ConversationId = m.ConversationId, Onderwerp = m.Subject,
+                    VanAdres = m.From?.EmailAddress?.Address, VanNaam = m.From?.EmailAddress?.Name,
+                    Ontvangers = (m.ToRecipients ?? Enumerable.Empty<Recipient>()).Concat(m.CcRecipients ?? Enumerable.Empty<Recipient>())
+                        .Select(r => r.EmailAddress?.Address).Where(a => !string.IsNullOrWhiteSpace(a)).Cast<string>().ToList(),
+                    OntvangenOpUtc = m.ReceivedDateTime?.UtcDateTime ?? DateTime.UtcNow, Voorvertoning = m.BodyPreview, WebLink = m.WebLink,
+                    Richting = richting, IsOverige = m.InferenceClassification == InferenceClassificationType.Other, IsConcept = m.IsDraft == true
+                });
+            }
+            if (pagina.NextPageRequest == null) break;
+            pagina = await pagina.NextPageRequest.GetAsync(ct);
+        }
+        if (pagina.AdditionalData != null && pagina.AdditionalData.TryGetValue("@odata.deltaLink", out var link) && link != null)
+            nieuweTokens[map] = link.ToString()!;
     }
 
     public async Task<GraphToegang> ControleerToegangAsync(string? gebruiker, CancellationToken ct = default)

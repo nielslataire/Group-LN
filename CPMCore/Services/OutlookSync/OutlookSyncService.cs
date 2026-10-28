@@ -25,12 +25,14 @@ public class OutlookSyncService
 
     private readonly cpmRunningContext _db;
     private readonly IGraphIngang _graph;
+    private readonly OutlookMailSyncService _mail;
     private readonly ILogger<OutlookSyncService> _logger;
 
-    public OutlookSyncService(cpmRunningContext db, IGraphIngang graph, ILogger<OutlookSyncService> logger)
+    public OutlookSyncService(cpmRunningContext db, IGraphIngang graph, OutlookMailSyncService mail, ILogger<OutlookSyncService> logger)
     {
         _db = db;
         _graph = graph;
+        _mail = mail;
         _logger = logger;
     }
 
@@ -84,6 +86,7 @@ public class OutlookSyncService
                                 where r.Aan && u.IsActive
                                 select new { r.Id, u.EntraObjectId, u.Email }).ToListAsync(ct);
         var verwerkt = 0;
+        _mail.NieuweRonde();
         foreach (var k in kandidaten)
         {
             if (ct.IsCancellationRequested) break;
@@ -111,6 +114,13 @@ public class OutlookSyncService
         try
         {
             toegang = await _graph.ControleerToegangAsync(gebruiker, ct);
+            if (toegang == GraphToegang.Ok)
+            {
+                // Toegang in orde: nu de mails (nieuw sinds de vorige ronde) ophalen, filteren en koppelen.
+                var mail = await _mail.SynchroniseerAsync(rij, gebruiker, nuUtc, ct);
+                toegang = mail.Toegang;
+                fout = mail.Fout;
+            }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -125,20 +135,22 @@ public class OutlookSyncService
                 rij.Status = OutlookSyncCodes.Ok; rij.LaatsteSyncOp = nuUtc; rij.LaatsteFout = null; rij.FoutenOpRij = 0;
                 break;
             case GraphToegang.GeenToegang:
-                rij.Status = OutlookSyncCodes.GeenToegang; rij.LaatsteFout = "Graph weigerde de toegang tot de mailbox (403)."; rij.FoutenOpRij++;
+                rij.Status = OutlookSyncCodes.GeenToegang; rij.LaatsteFout = "Graph weigerde de toegang tot de mailbox (403). Controleer of de app Mail.Read en Calendars.Read heeft en of de gebruiker in de toegestane groep zit."; rij.FoutenOpRij++;
                 break;
             case GraphToegang.GeenMailbox:
                 rij.Status = OutlookSyncCodes.GeenMailbox; rij.LaatsteFout = "Graph vond geen mailbox voor deze gebruiker (404)."; rij.FoutenOpRij++;
                 break;
             default:
                 rij.Status = OutlookSyncCodes.Fout;
-                rij.LaatsteFout = fout ?? (string.IsNullOrWhiteSpace(gebruiker) ? "Geen Entra-account of e-mailadres bekend." : _graph.IsConfigured ? "Graph gaf een fout." : "De Entra-instellingen ontbreken.");
+                rij.LaatsteFout = Kort(fout) ?? (string.IsNullOrWhiteSpace(gebruiker) ? "Geen Entra-account of e-mailadres bekend." : _graph.IsConfigured ? "Graph gaf een fout." : "De Entra-instellingen ontbreken.");
                 rij.FoutenOpRij++;
                 break;
         }
         rij.GewijzigdOp = nuUtc;
         await _db.SaveChangesAsync(ct);
     }
+
+    private static string? Kort(string? tekst) => tekst is { Length: > 500 } ? tekst[..500] : tekst;
 
     public async Task<OutlookSyncWeergave> WeergaveVoorAsync(int userId, DateTime nuUtc, CancellationToken ct = default) =>
         Weergave(await _db.OutlookSyncStatus.AsNoTracking().FirstOrDefaultAsync(r => r.UserId == userId, ct), nuUtc);

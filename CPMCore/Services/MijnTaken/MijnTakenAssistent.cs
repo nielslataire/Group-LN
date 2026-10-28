@@ -4,6 +4,7 @@ using BOCore;
 using CPMCore.Helpers;
 using CPMCore.Models;
 using CPMCore.Models.MijnTaken;
+using CPMCore.Services.OutlookSync;
 using DALCore.Models;
 using FacadeCore;
 using Microsoft.EntityFrameworkCore;
@@ -123,6 +124,8 @@ public class MijnTakenAssistent
     public async Task<MtShell> Shell(MtContext c, string tab, string ondertitel)
     {
         var inbox = await Mijn(c).CountAsync(t => t.IsInbox && t.Status != StatusAfgerond && t.Status != StatusGeannuleerd);
+        // Gesynchroniseerde mails tellen mee bij de Inbox (enkel een teller, geen melding).
+        inbox += await _db.OutlookMail.CountAsync(m => m.UserId == c.UserId && m.Richting == "in" && m.Status != OutlookMailStatus.Afgehandeld);
         var shell = new MtShell { Tab = tab, Ondertitel = ondertitel, InboxAantal = inbox, Projecten = c.Projecten.Values.ToList() };
 
         var laatste = await _db.TaakTijd.AsNoTracking().Where(x => x.UserId == c.UserId).OrderByDescending(x => x.Start).FirstOrDefaultAsync();
@@ -350,9 +353,47 @@ public class MijnTakenAssistent
     {
         var items = await Mijn(c).Where(t => t.IsInbox && t.Status != StatusAfgerond && t.Status != StatusGeannuleerd).OrderByDescending(t => t.CreatedDate).ToListAsync();
         var vm = new MtInboxVm { Items = items.Select(t => Map(t, c)).ToList() };
-        vm.Shell = await Shell(c, "inbox", items.Count == 0 ? "Inbox leeg" : items.Count == 1 ? "1 item te verwerken" : items.Count + " items te verwerken");
+        vm.Mails = await MailsVan(c, "in", 100);
+        vm.Verzonden = await MailsVan(c, "uit", 20);
+        var totaal = items.Count + vm.Mails.Count;
+        vm.Shell = await Shell(c, "inbox", totaal == 0 ? "Inbox leeg" : totaal == 1 ? "1 item te verwerken" : totaal + " items te verwerken");
         vm.Contexten = StandaardContexten.ToList();
         return vm;
+    }
+
+    private async Task<List<MtMail>> MailsVan(MtContext c, string richting, int max)
+    {
+        var query = _db.OutlookMail.AsNoTracking().Where(m => m.UserId == c.UserId && m.Richting == richting);
+        if (richting == "in") query = query.Where(m => m.Status != OutlookMailStatus.Afgehandeld);
+        var rijen = await query.OrderByDescending(m => m.OntvangenOp).Take(max).ToListAsync();
+
+        var klanten = rijen.Where(m => m.KlantId != null).Select(m => m.KlantId!.Value).Distinct().ToList();
+        var leveranciers = rijen.Where(m => m.LeverancierId != null).Select(m => m.LeverancierId!.Value).Distinct().ToList();
+        var klantNamen = klanten.Count == 0 ? new Dictionary<int, string>() : await _db.ClientAccount.AsNoTracking().Where(k => klanten.Contains(k.Id)).ToDictionaryAsync(k => k.Id, k => k.Name ?? "");
+        var leverancierNamen = leveranciers.Count == 0 ? new Dictionary<int, string>() : await _db.CompanyInfo.AsNoTracking().Where(b => leveranciers.Contains(b.CompanyId)).ToDictionaryAsync(b => b.CompanyId, b => b.BedrijfsNaam ?? "");
+
+        return rijen.Select(m => new MtMail
+        {
+            Id = m.Id, Richting = m.Richting, WebLink = m.WebLink, ProjectId = m.ProjectId,
+            Afzender = string.IsNullOrWhiteSpace(m.AfzenderNaam) ? m.Afzender ?? "" : m.AfzenderNaam,
+            Onderwerp = string.IsNullOrWhiteSpace(m.Onderwerp) ? "(zonder onderwerp)" : m.Onderwerp,
+            Voorvertoning = m.Voorvertoning ?? "", Ontvangen = DateTime.SpecifyKind(m.OntvangenOp, DateTimeKind.Utc).ToLocalTime(),
+            // Enkel de projectnaam tonen als het project voor jou zichtbaar is.
+            Project = m.ProjectId != null && c.Projecten.TryGetValue(m.ProjectId.Value, out var p) ? p.Naam : null,
+            Klant = m.KlantId != null && klantNamen.TryGetValue(m.KlantId.Value, out var k) ? k : null,
+            Leverancier = m.LeverancierId != null && leverancierNamen.TryGetValue(m.LeverancierId.Value, out var l) ? l : null,
+            TeKoppelen = m.Status == OutlookMailStatus.TeKoppelen, VerwijderdInOutlook = m.VerwijderdInOutlook
+        }).ToList();
+    }
+
+    /// <summary>Zet een eigen mail op afgehandeld: ze verdwijnt uit de Inbox maar blijft bij het project, de klant of de leverancier. Geeft false als de mail niet van jou is.</summary>
+    public async Task<bool> MailAfgehandeld(MtContext c, int id)
+    {
+        var mail = await _db.OutlookMail.FirstOrDefaultAsync(m => m.Id == id && m.UserId == c.UserId);
+        if (mail == null) return false;
+        mail.Status = OutlookMailStatus.Afgehandeld;
+        await _db.SaveChangesAsync();
+        return true;
     }
 
     public async Task<int> Leg(MtContext c, string titel)

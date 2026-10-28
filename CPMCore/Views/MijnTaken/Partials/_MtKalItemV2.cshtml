@@ -1,0 +1,30 @@
+@model CPMCore.Models.MijnTaken.MtKalItemVm
+@using CPMCore.Services.MijnTaken
+@*
+    gl-v2 — één blok in de kalender van Mijn taken, Outlook-achtig: een geplande taak of een afspraak uit Outlook. Beide zijn verplaatsbaar, vergrootbaar via de randen (muis én aanraking)
+    en wijzigbaar via een klik; een afspraak enkel als jij de organisator bent (data-edit="1"). Overlappende items staan naast elkaar (Kol/Kols uit MtFormat.Kalender).
+    Korte blokken tonen titel en uur op één regel. De data-attributen voeden gl-v2-mijntaken.js (popover, slepen, vergroten).
+    data-start/-einde zijn het ECHTE begin en einde, ook als het blok op het zichtbare uurbereik is afgekapt.
+*@
+@{
+    var i = Model.Item;
+    var top = (i.Start.Hour + i.Start.Minute / 60.0 - Model.UurVan) * Model.Px;
+    var hoogte = Math.Max((i.Einde - i.Start).TotalMinutes / 60.0 * Model.Px - 2, 20);
+    var kort = hoogte < 46;
+    var breedte = 100.0 / i.Kols;
+    var min = (int)(i.EchtEinde - i.EchtStart).TotalMinutes;
+    var bewerkbaar = !i.Afspraak || i.Bewerkbaar;
+    var klassen = "gl-v2-mt-block " + (i.Afspraak ? "is-meet" : "is-planned") + (i.Vrij ? " is-free" : "") + (kort ? " is-short" : "") + (Model.Compact ? " is-compact" : "");
+}
+<div class="@klassen" @(bewerkbaar ? "draggable=true" : "") tabindex="0" role="button"
+     data-kind="@(i.Afspraak ? "afspraak" : "taak")" data-id="@i.TaakId" data-event="@i.EventId" data-edit="@(bewerkbaar ? "1" : "0")" data-deelnemers="@(i.Deelnemers ? "1" : "0")"
+     data-min="@min" data-titel="@i.Titel" data-project="@i.Project" data-plaats="@i.Plaats" data-link="@i.Link" data-online="@(i.Online ? "1" : "0")"
+     data-start="@i.EchtStart.ToString("yyyy-MM-dd'T'HH:mm")" data-einde="@i.EchtEinde.ToString("yyyy-MM-dd'T'HH:mm")"
+     style="top:@(MtFormat.Px(top))px;height:@(MtFormat.Px(hoogte))px;left:calc(@(MtFormat.Px(i.Kol * breedte))% + 1px);width:calc(@(MtFormat.Px(breedte))% - 3px);--c:@i.Kleur"
+     title="@i.Titel · @MtFormat.Uur(i.EchtStart)–@MtFormat.Uur(i.EchtEinde)@(string.IsNullOrEmpty(i.Plaats) ? "" : " · " + i.Plaats)">
+    @if (bewerkbaar) { <span class="gl-v2-mt-resize is-top" aria-hidden="true"></span> }
+    <span class="t">@i.Titel</span>
+    <span class="m">@MtFormat.Uur(i.EchtStart)–@MtFormat.Uur(i.EchtEinde)</span>
+    @if (!kort && !string.IsNullOrEmpty(i.Afspraak ? i.Plaats : i.Project)) { <span class="p">@(i.Afspraak ? i.Plaats : i.Project)</span> }
+    @if (bewerkbaar) { <span class="gl-v2-mt-resize is-bottom" aria-hidden="true"></span> }
+</div>

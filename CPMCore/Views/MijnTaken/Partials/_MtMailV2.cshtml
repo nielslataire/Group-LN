@@ -1,0 +1,30 @@
+@model CPMCore.Models.MijnTaken.MtMail
+@*
+    Mijn taken › Inbox: één gesynchroniseerde Outlook-mail (enkel metadata en voorvertoning). Ontvangen mails hebben "Afgehandeld" (verdwijnt uit de Inbox, blijft op het
+    project, de klant of de leverancier) en "Open in Outlook"; verzonden mails enkel het laatste.
+*@
+<div class="gl-v2-mt-mail @(Model.Richting == "uit" ? "is-uit" : "")" data-mail-id="@Model.Id">
+    <span class="gl-v2-mt-kind">@(Model.Richting == "uit" ? "Verzonden" : "Mail")</span>
+    <div class="gl-v2-mt-mail-text">
+        <span class="t">@Model.Onderwerp</span>
+        <span class="v">@Model.Afzender@(string.IsNullOrWhiteSpace(Model.Voorvertoning) ? "" : " · " + Model.Voorvertoning)</span>
+        <span class="m">
+            <span>@Model.Ontvangen.ToString("dd/MM HH:mm")</span>
+            @if (Model.Project != null) { <span class="gl-v2-badge is-info">@Model.Project</span> }
+            @if (Model.Klant != null) { <span class="gl-v2-badge is-neutral">@Model.Klant</span> }
+            @if (Model.Leverancier != null) { <span class="gl-v2-badge is-neutral">@Model.Leverancier</span> }
+            @if (Model.TeKoppelen && Model.Project == null) { <span class="gl-v2-badge is-attention">Nog te koppelen</span> }
+            @if (Model.VerwijderdInOutlook) { <span class="gl-v2-badge is-inactive">Verwijderd in Outlook</span> }
+        </span>
+    </div>
+    <div class="gl-v2-mt-mail-acties">
+        @if (Model.Richting == "in")
+        {
+            <button type="button" class="gl-v2-icon-btn" data-mail-klaar="@Model.Id" aria-label="Afgehandeld" title="Afgehandeld"><i class="ph ph-check" aria-hidden="true"></i></button>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.WebLink))
+        {
+            <a class="gl-v2-icon-btn" href="@Model.WebLink" target="_blank" rel="noopener" aria-label="Open in Outlook" title="Open in Outlook"><i class="ph ph-arrow-square-out" aria-hidden="true"></i></a>
+        }
+    </div>
+</div>

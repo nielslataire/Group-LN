@@ -7,7 +7,7 @@ minutes: 3
 updated: 2026-10-28
 newsTag: Bijgewerkt
 screens: account-profiel
-related: outlook-sync-bekijken, mijn-handtekening-instellen, meldingen-instellen, account-en-rol
+related: mijn-taken-inbox, outlook-sync-bekijken, mijn-handtekening-instellen, meldingen-instellen, account-en-rol
 synonyms: outlook, koppeling, agenda, profiel, naam, functie, gsm, telefoon, werkuren, werkdagen, afwezigheid, verlof, back-up, foto, rol
 description: je gegevens, werkuren en afwezigheid beheren
 intro: |
@@ -60,7 +60,9 @@ Kies je geen back-up, zet dan de opties uit die een back-up nodig hebben. Anders
 Tot dan staat er **Wacht op eerste sync**. Staat er **Geen toegang** of **Fout**, lees dan de melding in het blok. CPM probeert het automatisch opnieuw.
 Staat er **Sync loopt niet**, dan is er al een tijd geen synchronisatie meer gelukt. Meld dit aan je beheerder.
 
-Met **Koppeling uitzetten** stopt CPM meteen. CPM schrijft niets naar je mailbox. Voorlopig controleert CPM enkel of de verbinding werkt. Mails en afspraken uit Outlook volgen later.
+Daarna komen project-gerelateerde mails vanaf dat moment binnen in je inbox van Mijn taken. Zie "Je inbox verwerken".
+
+Met **Koppeling uitzetten** stopt CPM meteen. CPM schrijft niets naar je mailbox en bewaart geen bijlagen of volledige mailteksten.
 
 ## Rol en toegang bekijken
 

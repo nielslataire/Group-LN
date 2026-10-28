@@ -1,0 +1,127 @@
+@model CPMCore.Models.MijnTaken.MtInboxVm
+@using CPMCore.Services.MijnTaken
+@using CPMCore.Models.GlV2
+@*
+    gl-v2 — Mijn taken › Inbox (design-handoff punt 2c): alles wat je vastlegt op één plek; per item beslis je volgens Getting Things Done: nu doen, plannen, volgende actie,
+    delegeren, ooit of weg. Bewust anders dan het mockup: zelf vastgelegde notities plus (met de Outlook-koppeling aan, Mijn profiel) project-gerelateerde mails als aparte rijen (geen taak per mail; werfverslagen en CRM-meldingen komen nog niet automatisch in de inbox) en geen "Inspreken".
+*@
+@{
+    ViewData["Title"] = "Mijn taken";
+    ViewData["PageIcon"] = "ph ph-list-checks";
+    ViewData["GlV2FullHeightBody"] = true;   // de kaart vult de volle schermhoogte (zie gl-v2-mijntaken.css)
+    var projectItems = Model.Shell.Projecten.Select(p => new GlV2SelectItem { Value = p.Id.ToString(), Text = p.Naam }).ToList();
+    var schattingen = new[] { 5, 10, 15, 30, 45, 60, 90, 120, 180, 240 }.Select(m => new GlV2SelectItem { Value = m.ToString(), Text = MtFormat.Duur(m) }).ToList();
+    var eerste = Model.Items.FirstOrDefault();
+    var acties = new (string Id, string Naam, string Uitleg, string Knop)[]
+    {
+        ("nu", "Nu doen", "Minder dan 2 minuten? Meteen afwerken.", "Afgewerkt"),
+        ("plan", "Plannen", "Een vast moment in je dag of week.", "Inplannen"),
+        ("next", "Volgende actie", "Op je lijst, zonder vast moment.", "Op de lijst zetten"),
+        ("del", "Delegeren", "Iemand anders doet het; jij volgt op.", "Naar “Wachten op”"),
+        ("ooit", "Ooit / misschien", "Niet nu, wel bewaren.", "Bewaren"),
+        ("weg", "Archief of weg", "Referentie, of niet nodig.", "Archiveren")
+    };
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-mijntaken.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @await Html.PartialAsync("Partials/_MtActiesV2", Model.Shell)
+}
+
+@await Html.PartialAsync("Partials/_MtTabsV2", Model.Shell)
+
+<div class="gl-v2-mt-inbox" id="mt-inbox">
+    <div class="gl-v2-mt-col">
+        <div class="gl-v2-mt-capture">
+            <i class="ph ph-lightbulb" aria-hidden="true"></i>
+            <input type="text" id="mt-capture" placeholder="Leg vast wat in je hoofd zit…" maxlength="200" aria-label="Leg vast wat in je hoofd zit" />
+            <kbd>↵</kbd>
+        </div>
+        @if (Model.Mails.Any() || Model.Verzonden.Any())
+        {
+            <section class="gl-v2-section-card" id="mt-mails">
+                <div class="gl-v2-mt-panel-head"><span class="gl-v2-mt-eyebrow">MAILS</span><span class="gl-v2-mt-muted">uit je Outlook · nieuwste eerst</span></div>
+                @foreach (var m in Model.Mails)
+                {
+                    @await Html.PartialAsync("Partials/_MtMailV2", m)
+                }
+                @if (Model.Verzonden.Any())
+                {
+                    <details class="gl-v2-mt-mail-sectie">
+                        <summary>Verzonden (@Model.Verzonden.Count)</summary>
+                        @foreach (var m in Model.Verzonden)
+                        {
+                            @await Html.PartialAsync("Partials/_MtMailV2", m)
+                        }
+                    </details>
+                }
+            </section>
+        }
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-mt-panel-head"><span class="gl-v2-mt-eyebrow">INBOX</span><span class="gl-v2-mt-muted">nieuwste eerst</span></div>
+            <div id="mt-inbox-list">
+                @foreach (var i in Model.Items)
+                {
+                    <button type="button" class="gl-v2-mt-in @(i == eerste ? "is-active" : "")" data-id="@i.Id" data-titel="@i.Titel" data-bron="@(i.InboxBron ?? "Notitie")" data-meta="@(i.InboxMeta ?? "")">
+                        <span class="gl-v2-mt-kind is-notitie">@(i.InboxBron ?? "Notitie")</span>
+                        <span class="gl-v2-mt-in-text"><span class="t">@i.Titel</span><span class="m">@(i.InboxMeta ?? "vastgelegd") · @i.Aangemaakt.ToString("dd/MM HH:mm")</span></span>
+                    </button>
+                }
+            </div>
+            <div class="gl-v2-mt-empty" id="mt-inbox-leeg" @(Model.Items.Any() || Model.Mails.Any() ? "hidden" : "")>Inbox leeg, alles is verwerkt.</div>
+        </section>
+    </div>
+
+    <section class="gl-v2-section-card gl-v2-mt-verwerk" id="mt-verwerk" @(Model.Items.Any() ? "" : "hidden")>
+        <div class="gl-v2-mt-verwerk-head"><span class="gl-v2-mt-eyebrow">VERWERKEN</span><span class="gl-v2-mt-verwerk-titel" id="mt-v-titel">@eerste?.Titel</span><span class="gl-v2-mt-muted" id="mt-v-meta">@(eerste == null ? "" : $"{eerste.InboxBron ?? "Notitie"} · {eerste.InboxMeta ?? "vastgelegd"}")</span></div>
+        <div class="gl-v2-mt-verwerk-body">
+            <span class="gl-v2-mt-vraag">Wat is de volgende stap?</span>
+            <div class="gl-v2-mt-gtd" id="mt-gtd" role="radiogroup" aria-label="Wat is de volgende stap?">
+                @foreach (var a in acties)
+                {
+                    <button type="button" role="radio" aria-checked="@(a.Id == "plan" ? "true" : "false")" class="@(a.Id == "plan" ? "is-active" : "")" data-actie="@a.Id" data-knop="@a.Knop"><b>@a.Naam</b><span>@a.Uitleg</span></button>
+                }
+            </div>
+            <div class="gl-v2-mt-velden">
+                <div class="gl-v2-field" data-v="nu plan next del ooit weg">
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "projectId", Id = "mt-v-project", Label = "Project", Items = projectItems, Placeholder = "Geen project", EmptyText = "Geen project" })
+                </div>
+                <div class="gl-v2-field" data-v="plan next del ooit">
+                    <span class="gl-v2-field-label">Context</span>
+                    <div class="gl-v2-mt-chips is-field" id="mt-v-context">
+                        <button type="button" class="is-active" data-ctx="">Geen</button>
+                        @foreach (var x in Model.Contexten) { <button type="button" data-ctx="@x">@x</button> }
+                    </div>
+                </div>
+                <div class="gl-v2-field" data-v="plan next del">
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "schatting", Id = "mt-v-schatting", Label = "Schatting", Items = schattingen, Placeholder = "Geen schatting", EmptyText = "Geen schatting" })
+                </div>
+                <div class="gl-v2-mt-wanneer" data-v="plan">
+                    @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "wanneerDatum", Id = "mt-v-datum", Label = "Wanneer", IsoValue = DateTime.Today.AddDays(1).ToString("yyyy-MM-dd"), DisplayValue = DateTime.Today.AddDays(1).ToString("dd/MM/yyyy") })
+                    <div class="gl-v2-field"><span class="gl-v2-field-label">Uur</span><div class="gl-v2-field-box"><input type="time" class="gl-v2-field-input" id="mt-v-uur" value="09:00" aria-label="Uur" /></div></div>
+                </div>
+                <div class="gl-v2-field" data-v="del" hidden>
+                    <label class="gl-v2-field-label" for="mt-v-wachtop">Wachten op</label>
+                    <div class="gl-v2-field-box"><input class="gl-v2-field-input" id="mt-v-wachtop" maxlength="150" placeholder="bv. Pieter Desmet, offerte ramen" /></div>
+                </div>
+                <div data-v="del" hidden>
+                    @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "wachtOpDatum", Id = "mt-v-wachtdatum", Label = "Opvolgen op" })
+                </div>
+            </div>
+            <div class="gl-v2-mt-verwerk-foot">
+                <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="mt-v-ok">Inplannen</button>
+                <span class="gl-v2-mt-muted">en door naar het volgende item</span>
+            </div>
+        </div>
+    </section>
+</div>
+
+@await Html.PartialAsync("Partials/_MtSnelStartV2", Model.Shell)
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-mijntaken.js" asp-append-version="true"></script>
+}
