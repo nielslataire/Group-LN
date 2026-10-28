@@ -181,6 +181,7 @@ builder.Services.AddScoped<FacadeCore.IVacatureSollicitatieService, ServiceCore.
 builder.Services.AddScoped<FacadeCore.IEmailTemplateService, ServiceCore.EmailTemplateService>();
 builder.Services.AddScoped<FacadeCore.IEmailSendLogService, ServiceCore.EmailSendLogService>();
 builder.Services.AddScoped<FacadeCore.IUserSignatureService, ServiceCore.UserSignatureService>();
+builder.Services.AddScoped<CPMCore.Services.MijnTaken.MijnTakenAssistent>();
 builder.Services.AddScoped<FacadeCore.IKostprijsService, ServiceCore.KostprijsService>();
 builder.Services.AddScoped<FacadeCore.IBudgetPrijsReferentieService, ServiceCore.Budget.BudgetPrijsReferentieService>();
 builder.Services.AddScoped<FacadeCore.IBudgetReferentieProjectService, ServiceCore.Budget.BudgetReferentieProjectService>();
@@ -676,7 +677,7 @@ builder.Services.Configure<RazorViewEngineOptions>(options =>
 
 // SMTP server
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
-builder.Services.AddSingleton<CPMCore.Services.GraphMailSender>();
+builder.Services.AddSingleton<CPMCore.Services.IGraphIngang, CPMCore.Services.GraphIngang>();
 
 // BREADCRUMBS
 builder.Services.AddBreadcrumbs(Assembly.GetExecutingAssembly(), options =>

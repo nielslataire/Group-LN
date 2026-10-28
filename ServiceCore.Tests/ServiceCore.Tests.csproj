@@ -12,5 +12,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ServiceCore\ServiceCore.csproj" />
+    <ProjectReference Include="..\CPMCore\CPMCore.csproj" />
   </ItemGroup>
 </Project>

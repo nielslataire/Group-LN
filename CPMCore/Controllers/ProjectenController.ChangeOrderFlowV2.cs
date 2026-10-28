@@ -682,7 +682,7 @@ namespace CPMCore.Controllers
 
             var signingOptions = HttpContext.RequestServices.GetRequiredService<IOptions<ServiceCore.Signing.SigningOptions>>().Value;
             var email = HttpContext.RequestServices.GetRequiredService<IEmailSender>();
-            var graphMail = HttpContext.RequestServices.GetRequiredService<CPMCore.Services.GraphMailSender>();
+            var graph = HttpContext.RequestServices.GetRequiredService<CPMCore.Services.IGraphIngang>();
             var sent = new List<string>();
             var failed = new List<string>();
             foreach (var r in recipients)
@@ -704,7 +704,7 @@ namespace CPMCore.Controllers
                     // Eerst echt namens de mailbox van de afzender (Graph, komt in diens "Verzonden items");
                     // lukt dat niet (niet geconfigureerd, recht ontbreekt), dan via de vaste SMTP-account met
                     // het adres van de afzender als From.
-                    var viaGraph = await graphMail.TrySendAsync(sender!.Email, address, mailSubject, body, new[] { attachment }, ct);
+                    var viaGraph = await graph.TrySendMailAsync(sender!.Email, address, mailSubject, body, new[] { attachment }, ct);
                     if (!viaGraph) await email.SendEmailAsync(address, mailSubject, body, new[] { attachment }, fromEmail: sender.Email);
                     sent.Add(r.Name);
                 }
