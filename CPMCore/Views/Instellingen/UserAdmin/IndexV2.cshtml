@@ -27,6 +27,7 @@
 }
 @section PageActions
 {
+    <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("OutlookSync", "UserAdmin")"><i class="ph ph-microsoft-outlook-logo" aria-hidden="true"></i>Outlook-sync</a>
     @if (canWrite)
     {
         <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="ua-import-open"><i class="ph ph-microsoft-outlook-logo" aria-hidden="true"></i>Importeren uit Entra</button>
@@ -68,7 +69,7 @@
             <span class="gl-v2-section-card-desc">intern, aannemers en gasten in één lijst</span>
         </div>
 
-        <div class="gl-v2-ua-toolbar">
+        <div class="gl-v2-list-toolbar gl-v2-ua-toolbar">
             <div class="gl-v2-field gl-v2-ua-search">
                 <div class="gl-v2-field-box">
                     <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
@@ -87,15 +88,15 @@
                     Items = new List<GlV2SelectItem> { new() { Value = "actief", Text = "Actief" }, new() { Value = "uitgenodigd", Text = "Uitgenodigd" }, new() { Value = "uitgeschakeld", Text = "Uitgeschakeld" } }
                 })
             </div>
-            <span class="gl-v2-ua-toolbar-spacer"></span>
+            <span class="gl-v2-list-toolbar-spacer"></span>
             <label class="gl-v2-ua-switch"><input type="checkbox" class="gl-v2-toggle-switch" id="ua-dev" /> Enkel met afwijkingen</label>
         </div>
 
-        <div class="gl-v2-ua-head gl-v2-ua-grid--u">
+        <div class="gl-v2-list-head gl-v2-ua-head gl-v2-ua-grid--u">
             <span>Gebruiker</span><span>Type</span><span>Rol</span><span>Afwijkingen</span><span>Bedrijven</span><span>Entra</span><span>Status</span><span>Laatste login</span><span></span>
         </div>
         <div id="ua-rows"></div>
-        <div class="gl-v2-ua-empty" id="ua-empty" hidden>
+        <div class="gl-v2-list-empty gl-v2-ua-empty" id="ua-empty" hidden>
             <span class="t">Geen gebruikers voor dit filter</span>
             <span class="s"><button type="button" class="gl-v2-ua-linkbtn" id="ua-reset">Wis de filters</button></span>
         </div>

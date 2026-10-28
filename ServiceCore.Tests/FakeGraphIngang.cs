@@ -13,6 +13,18 @@ public sealed class FakeGraphIngang : IGraphIngang
     public List<(string? Gebruiker, string EventId, string? Titel, DateTime Start, DateTime Einde)> Wijzigingen { get; } = new();
     public List<(string Van, string Aan, string Onderwerp)> Mails { get; } = new();
 
+    /// <summary>Uitkomst per gebruiker; standaard Ok. Zet <see cref="ToegangGooit"/> om een onverwachte fout te simuleren.</summary>
+    public Dictionary<string, GraphToegang> Toegang { get; } = new();
+    public bool ToegangGooit { get; set; }
+    public List<string?> ToegangAanvragen { get; } = new();
+
+    public Task<GraphToegang> ControleerToegangAsync(string? gebruiker, CancellationToken ct = default)
+    {
+        ToegangAanvragen.Add(gebruiker);
+        if (ToegangGooit) throw new InvalidOperationException("boem");
+        return Task.FromResult(gebruiker != null && Toegang.TryGetValue(gebruiker, out var t) ? t : GraphToegang.Ok);
+    }
+
     public Task<AgendaResultaat> GetAgendaAsync(string? gebruiker, DateTime van, DateTime tot, CancellationToken ct = default)
     {
         AgendaAanvragen.Add((gebruiker, van, tot));

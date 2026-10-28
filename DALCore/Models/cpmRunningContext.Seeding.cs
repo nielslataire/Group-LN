@@ -46,6 +46,7 @@ namespace DALCore.Models
             ConfigureSigningEntities(modelBuilder);
             ConfigureKlanten23Entities(modelBuilder);
             ConfigureGoogleLoginEntities(modelBuilder);
+            ConfigureOutlookSyncEntities(modelBuilder);
 
             modelBuilder.Entity<BlogArtikel>(entity =>
             {

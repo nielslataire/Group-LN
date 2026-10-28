@@ -1,0 +1,350 @@
+@model CPMCore.Models.Account.MijnProfielVM
+@using CPMCore.Models.Account
+@using CPMCore.Models.GlV2
+@*
+    gl-v2 — Account › Mijn profiel (design-handoff "CRM Mijn profiel.dc.html"): vier tabbladen (Profiel, Handtekening, Meldingen, Wachtwoord en beveiliging),
+    één formulier en één Opslaan. De instellingen staan in UserProfileSettings (migratie 119); naam, functie en gsm in Users.
+    Bewust anders dan het mockup:
+    - Foto en e-mailadres zijn weergave: de foto komt uit het Microsoft- of Google-account (wordt bij het aanmelden vernieuwd), het e-mailadres is de login.
+    - Rol en toegang toont enkel rol en aantal projecten (facturatielimiet en "account sinds" bestaan niet).
+    - Wachtwoord, tweestapsverificatie en apparaten worden bij Microsoft of Google beheerd: het tabblad verwijst daarheen i.p.v. een eigen formulier.
+    - Handtekening: Opbouwen is de Quill-editor; geen velden/logo/social-opbouwer, geen Volledig/Kort/Geen, geen testmail (zie DESIGN.md).
+    - Meldingen, werkuren en afwezigheid worden bewaard; de verzenders en Mijn taken lezen ze nog niet.
+*@
+@{
+    Layout = "~/Views/Shared/_LayoutV2.cshtml";
+    ViewData["Title"] = "Mijn profiel";
+    ViewData["PageIcon"] = "ph ph-user-circle";
+    ViewData["HelpScreenId"] = "account-profiel,account-handtekening,account-meldingen,account-beveiliging";
+    var tab = Model.Tab;
+    var isHtmlFormat = string.Equals(Model.Format, "Html", StringComparison.OrdinalIgnoreCase);
+    var fouten = ViewData.ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).Where(m => !string.IsNullOrWhiteSpace(m)).Distinct().ToList();
+    var tabs = new (string Key, string Label)[] { ("profiel", "Profiel"), ("handtekening", "Handtekening"), ("meldingen", "Meldingen"), ("beveiliging", "Wachtwoord en beveiliging") };
+    var initialen = ((Model.Voornaam?.Trim().FirstOrDefault().ToString() ?? "") + (Model.Familienaam?.Trim().FirstOrDefault().ToString() ?? "")).ToUpperInvariant();
+    var dagen = new[] { "ma", "di", "wo", "do", "vr", "za", "zo" };
+    var meldingen = MeldingCatalogus.Lees(Model.MeldingenJson);
+    var isGoogle = Model.AanmeldMethode == "Google";
+    var collegaItems = Model.Collegas.Select(c => new GlV2SelectItem { Value = c.Id.ToString(), Text = c.Naam }).ToList();
+    string F(string name) => ViewData.ModelState.TryGetValue(name, out var e) && e.Errors.Count > 0 ? " is-error" : "";
+}
+@section PageStyle
+{
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/gl-v2-richtext.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-account-profiel.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge is-attention" id="mp-dirty-badge" hidden>NIET-OPGESLAGEN WIJZIGINGEN</span>
+}
+@section PageActions
+{
+    <button type="submit" form="FormMijnProfiel" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-floppy-disk" aria-hidden="true"></i>Opslaan</button>
+}
+
+<form method="post" action="@Url.Action("MijnProfiel")" id="FormMijnProfiel" class="gl-v2-mp" data-html-format="@(isHtmlFormat ? "1" : "0")" data-afzender="@(Model.Voornaam) @(Model.Familienaam)" novalidate>
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="Tab" id="mp-tab-input" value="@tab" />
+    <textarea name="SignatureHtml" id="mh-signature-input" hidden>@Model.SignatureHtml</textarea>
+    <input type="hidden" name="Format" id="mh-format-input" value="@Model.Format" />
+    <input type="hidden" name="WerkDagen" id="mp-werkdagen" value="@Model.WerkDagen" />
+    <input type="hidden" name="AfwezigOpties" id="mp-afwezig-opties" value="@Model.AfwezigOpties" />
+    <input type="hidden" name="MeldingenJson" id="mp-meldingen-json" value="@System.Text.Json.JsonSerializer.Serialize(meldingen)" />
+    <input type="hidden" name="DeadlineHerinnering" id="mp-herinnering" value="@Model.DeadlineHerinnering" />
+
+    <div class="gl-v2-tabbar" role="tablist" id="mp-tabbar">
+        @foreach (var t in tabs)
+        {
+            <button type="button" class="gl-v2-tabbar-tab @(t.Key == tab ? "is-active" : "")" role="tab" aria-selected="@(t.Key == tab ? "true" : "false")" data-mp-tab="@t.Key">@t.Label</button>
+        }
+    </div>
+
+    @if (fouten.Any())
+    {
+        <div class="gl-v2-notice gl-v2-notice-compact is-danger" role="alert"><i class="ph ph-warning-circle" aria-hidden="true"></i><span>@string.Join(" ", fouten)</span></div>
+    }
+
+    @* ───────────────────────── PROFIEL ───────────────────────── *@
+    <div class="gl-v2-mp-grid is-profiel" id="mp-pane-profiel" role="tabpanel" @(tab == "profiel" ? "" : "hidden")>
+        <div class="gl-v2-mp-col">
+            <div class="gl-v2-mp-intro"><h2 class="gl-v2-mp-title">Profiel</h2><p>Je gegevens zoals collega’s, klanten en leveranciers ze zien in het CRM, in mails en op documenten.</p></div>
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header"><span class="gl-v2-section-card-icon"><i class="ph ph-user" aria-hidden="true"></i></span><h3 class="gl-v2-section-card-title">Persoonlijke gegevens</h3></div>
+                <div class="gl-v2-mp-body">
+                    <div class="gl-v2-mp-avatar-row">
+                        <span class="gl-v2-mp-avatar"><span>@initialen</span><img src="@Url.Action("ProfilePhoto", "Account")" alt="" onerror="this.remove()" /></span>
+                        <span class="gl-v2-mp-muted">Je foto komt uit je @(isGoogle ? "Google" : "Microsoft")-account. Wijzig ze daar; CPM neemt ze over bij je volgende aanmelding. Zonder foto tonen we je initialen.</span>
+                    </div>
+                    <div class="gl-v2-mp-fields">
+                        <div class="gl-v2-field@(F("Voornaam"))"><label class="gl-v2-field-label" for="mp-voornaam">Voornaam</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="mp-voornaam" name="Voornaam" value="@Model.Voornaam" maxlength="100" autocomplete="given-name" /></div></div>
+                        <div class="gl-v2-field"><label class="gl-v2-field-label" for="mp-achternaam">Achternaam</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="mp-achternaam" name="Familienaam" value="@Model.Familienaam" maxlength="100" autocomplete="family-name" /></div></div>
+                        <div class="gl-v2-field"><label class="gl-v2-field-label" for="mp-functie">Functie</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="mp-functie" name="Functie" value="@Model.Functie" maxlength="100" /></div></div>
+                        <div class="gl-v2-field"><span class="gl-v2-field-label">E-mail</span><div class="gl-v2-field-readonly" id="mp-email"><i class="ph ph-lock-simple" aria-hidden="true"></i><span>@Model.Email</span></div><span class="gl-v2-mp-hint">Dit is ook je login. Een beheerder wijzigt het in Instellingen.</span></div>
+                        <div class="gl-v2-field"><label class="gl-v2-field-label" for="mp-gsm">GSM</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="mp-gsm" name="Gsm" value="@Model.Gsm" maxlength="50" inputmode="tel" autocomplete="tel" /></div></div>
+                        <div class="gl-v2-field"><label class="gl-v2-field-label" for="mp-vast">Vast nummer</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="mp-vast" name="VastNummer" value="@Model.VastNummer" maxlength="50" inputmode="tel" /></div></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header"><span class="gl-v2-section-card-icon"><i class="ph ph-clock" aria-hidden="true"></i></span><h3 class="gl-v2-section-card-title">Werkuren</h3><span class="gl-v2-section-card-desc">gebruikt door Mijn taken</span></div>
+                <div class="gl-v2-mp-body">
+                    <div class="gl-v2-mp-days" id="mp-days" role="group" aria-label="Werkdagen">
+                        @for (var i = 0; i < 7; i++)
+                        {
+                            var bit = 1 << i; var on = (Model.WerkDagen & bit) != 0;
+                            <button type="button" class="gl-v2-mp-day @(on ? "is-on" : "")" data-bit="@bit" aria-pressed="@(on ? "true" : "false")">@dagen[i]</button>
+                        }
+                    </div>
+                    <div class="gl-v2-mp-fields is-three">
+                        <div class="gl-v2-field@(F("WerkVan"))"><label class="gl-v2-field-label" for="mp-werk-van">Van</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="mp-werk-van" name="WerkVan" value="@Model.WerkVan" maxlength="5" inputmode="numeric" placeholder="08:00" /></div></div>
+                        <div class="gl-v2-field@(F("WerkTot"))"><label class="gl-v2-field-label" for="mp-werk-tot">Tot</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="mp-werk-tot" name="WerkTot" value="@Model.WerkTot" maxlength="5" inputmode="numeric" placeholder="17:00" /></div></div>
+                        <div class="gl-v2-field"><span class="gl-v2-field-label">Middagpauze</span>
+                            <div class="gl-v2-mp-pauze">
+                                <div class="gl-v2-field-box@(F("PauzeVan"))"><input class="gl-v2-field-input" name="PauzeVan" value="@Model.PauzeVan" maxlength="5" inputmode="numeric" placeholder="12:00" aria-label="Pauze van" /></div>
+                                <span aria-hidden="true">–</span>
+                                <div class="gl-v2-field-box@(F("PauzeTot"))"><input class="gl-v2-field-input" name="PauzeTot" value="@Model.PauzeTot" maxlength="5" inputmode="numeric" placeholder="12:45" aria-label="Pauze tot" /></div>
+                            </div>
+                        </div>
+                    </div>
+                    <span class="gl-v2-mp-hint">Je dag en week in Mijn taken worden binnen deze uren gepland. Buiten je werkuren krijg je geen meldingen (zie Meldingen › Stille uren).</span>
+                </div>
+            </section>
+        </div>
+
+        <div class="gl-v2-mp-col">
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header"><span class="gl-v2-section-card-icon"><i class="ph ph-shield-check" aria-hidden="true"></i></span><h3 class="gl-v2-section-card-title">Rol en toegang</h3><span class="gl-v2-section-card-desc">beheerd door een beheerder</span></div>
+                <div class="gl-v2-mp-body is-rows">
+                    <div class="gl-v2-mp-row"><span>Rol</span><b>@(string.IsNullOrWhiteSpace(Model.RolNaam) ? "Geen rol toegekend" : Model.RolNaam)</b></div>
+                    <div class="gl-v2-mp-row"><span>Projecten</span><b>@(Model.AantalProjecten == 0 ? "Geen toegewezen projecten" : Model.AantalProjecten + (Model.AantalProjecten == 1 ? " project" : " projecten"))</b></div>
+                    <div class="gl-v2-mp-row"><span>Aanmelden met</span><b>@Model.AanmeldMethode</b></div>
+                </div>
+            </section>
+
+            @if (Model.Outlook != null)
+            {
+                var ol = Model.Outlook;
+                var olBadge = ol.Niveau switch { "ok" => "is-positive", "fout" => "is-blocked", "waarschuwing" => "is-attention", _ => "is-neutral" };
+                <section class="gl-v2-section-card" id="mp-outlook">
+                    <div class="gl-v2-section-card-header"><span class="gl-v2-section-card-icon"><i class="ph ph-microsoft-outlook-logo" aria-hidden="true"></i></span><h3 class="gl-v2-section-card-title">Outlook</h3><span class="gl-v2-section-card-spacer"></span><span class="gl-v2-badge @olBadge">@ol.Label</span></div>
+                    <div class="gl-v2-mp-body">
+                        <span class="gl-v2-mp-hint">@ol.Melding</span>
+                        <span class="gl-v2-mp-hint">Met de koppeling aan volgt CPM je Outlook-agenda en project-gerelateerde mails vanaf het moment van aanzetten. CPM bewaart geen bijlagen of volledige mailteksten en schrijft niets naar je mailbox. Je kan ze op elk moment uitzetten.</span>
+                        <div>
+                            @if (ol.Aan)
+                            {
+                                <button type="submit" class="gl-v2-btn gl-v2-btn-secondary" formaction="@Url.Action("OutlookUit")" formmethod="post" formnovalidate id="mp-outlook-uit"><i class="ph ph-plugs" aria-hidden="true"></i>Koppeling uitzetten</button>
+                            }
+                            else
+                            {
+                                <button type="submit" class="gl-v2-btn gl-v2-btn-primary" formaction="@Url.Action("OutlookAan")" formmethod="post" formnovalidate id="mp-outlook-aan"><i class="ph ph-plugs-connected" aria-hidden="true"></i>Koppeling aanzetten</button>
+                            }
+                        </div>
+                    </div>
+                </section>
+            }
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-airplane-tilt" aria-hidden="true"></i></span><h3 class="gl-v2-section-card-title">Afwezigheid</h3>
+                    <span class="gl-v2-section-card-spacer"></span>
+                    <label class="gl-v2-mp-switch" for="mp-away"><input type="checkbox" id="mp-away" name="AfwezigAan" value="true" class="gl-v2-toggle-switch" @(Model.AfwezigAan ? "checked" : "") aria-label="Afwezigheid aan" /><input type="hidden" name="AfwezigAan" value="false" /></label>
+                </div>
+                <div class="gl-v2-mp-body">
+                    <span class="gl-v2-mp-hint">Ben je met verlof? Zet afwezigheid aan, dan weten collega’s het en gaat werk tijdelijk naar je back-up.</span>
+                    <div class="gl-v2-mp-away" id="mp-away-body" @(Model.AfwezigAan ? "" : "hidden")>
+                        <div class="gl-v2-mp-fields">
+                            @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "AfwezigVan", Id = "mp-away-van", Label = "Van", IsoValue = Model.AfwezigVan?.ToString("yyyy-MM-dd") ?? "", DisplayValue = Model.AfwezigVan?.ToString("dd/MM/yyyy") ?? "", HasError = F("AfwezigVan") != "" })
+                            @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "AfwezigTot", Id = "mp-away-tot", Label = "Tot en met", IsoValue = Model.AfwezigTot?.ToString("yyyy-MM-dd") ?? "", DisplayValue = Model.AfwezigTot?.ToString("dd/MM/yyyy") ?? "", HasError = F("AfwezigTot") != "" })
+                        </div>
+                        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "BackupUserId", Id = "mp-backup", Label = "Back-up", Value = Model.BackupUserId?.ToString(), Items = collegaItems, Placeholder = "Kies een collega", EmptyText = "Geen back-up", Error = ViewData.ModelState.TryGetValue("BackupUserId", out var be) && be.Errors.Count > 0 ? be.Errors[0].ErrorMessage : null })
+                        <div class="gl-v2-mp-checks" id="mp-away-opts">
+                            @foreach (var (bit, tekst) in new[] { (1, "Mijn nieuwe taken en werfpunten naar mijn back-up"), (2, "Afwezigheidsbericht in mails vanuit het CRM"), (4, "Inkomende facturen ter goedkeuring naar mijn back-up") })
+                            {
+                                <label class="gl-v2-mp-check-row"><span class="gl-v2-check"><input type="checkbox" data-bit="@bit" id="mp-ao-@bit" @((Model.AfwezigOpties & bit) != 0 ? "checked" : "") /><label for="mp-ao-@bit"></label></span><span>@tekst</span></label>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    @* ───────────────────────── HANDTEKENING ───────────────────────── *@
+    <div class="gl-v2-mp-grid is-handtekening" id="mp-pane-handtekening" role="tabpanel" @(tab == "handtekening" ? "" : "hidden")>
+        <div class="gl-v2-mp-col">
+            <div class="gl-v2-mp-intro"><h2 class="gl-v2-mp-title">Je handtekening onder e-mails</h2><p>Je kan ze optioneel toevoegen onderaan e-mails die je vanuit een projectcontact verstuurt. Bij elke mail kies je zelf of ze meegaat.</p></div>
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    @await Html.PartialAsync("GlV2/_Segmented", new GlV2SegmentedVm
+                    {
+                        Id = "mh-mode", Fill = false, AriaLabel = "Hoe wil je je handtekening maken",
+                        Items = new()
+                        {
+                            new() { Text = "Opbouwen", Active = !isHtmlFormat, Data = { ["mode"] = "vis" } },
+                            new() { Text = "Eigen HTML plakken", Active = isHtmlFormat, Data = { ["mode"] = "html" } }
+                        }
+                    })
+                    <span class="gl-v2-section-card-spacer"></span>
+                    <span class="gl-v2-mp-hint-inline" id="mh-mode-hint">@(isHtmlFormat ? "Voor een bestaande Outlook-handtekening" : "Aanbevolen")</span>
+                </div>
+                <div class="gl-v2-mp-body" id="mh-pane-vis" @(isHtmlFormat ? "hidden" : "")>
+                    <div class="gl-v2-rte" aria-label="Handtekening opbouwen"><div id="quill-signature"></div></div>
+                </div>
+                <div class="gl-v2-mp-body" id="mh-pane-html" @(isHtmlFormat ? "" : "hidden")>
+                    <div class="gl-v2-notice gl-v2-notice-compact">
+                        <i class="ph ph-info" aria-hidden="true"></i>
+                        <span>Voor wie een bestaande Outlook-handtekening exact wil overnemen. Open in Verkenner <code>%APPDATA%\Microsoft\Signatures</code>, open het <code>.htm</code>-bestand met Kladblok en plak de volledige inhoud hieronder. Tabellen, logo’s en kleuren blijven dan behouden.</span>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="mh-html-source">HTML</label>
+                        <div class="gl-v2-field-box gl-v2-field-box-textarea gl-v2-mp-source"><textarea class="gl-v2-field-input" id="mh-html-source" spellcheck="false" placeholder="Plak hier de HTML van je handtekening">@Model.SignatureHtml</textarea></div>
+                    </div>
+                    <div class="gl-v2-mp-checks-list" id="mh-checks" aria-live="polite"><span class="gl-v2-mp-eyebrow">CONTROLE</span><div id="mh-check-list"></div></div>
+                </div>
+            </section>
+        </div>
+
+        <aside class="gl-v2-mp-col gl-v2-mh-side" aria-label="Voorbeeld">
+            <div class="gl-v2-mh-side-head">
+                <span class="gl-v2-mh-side-title">Voorbeeld</span>
+                @await Html.PartialAsync("GlV2/_Segmented", new GlV2SegmentedVm
+                {
+                    Id = "mh-theme", Size = "sm", Fill = false, AriaLabel = "Weergave van het voorbeeld",
+                    Items = new() { new() { Text = "Licht", Active = true, Data = { ["theme"] = "light" } }, new() { Text = "Donker", Data = { ["theme"] = "dark" } } }
+                })
+            </div>
+            <div class="gl-v2-mh-mail" id="mh-mail">
+                <div class="gl-v2-mh-mail-head">
+                    <div class="gl-v2-mh-mail-row"><span class="k">Van</span><span class="v">@Model.Voornaam @Model.Familienaam</span></div>
+                    <div class="gl-v2-mh-mail-row"><span class="k">Aan</span><span class="v">Pieter Desmet &lt;pieter@desmet-architecten.be&gt;</span></div>
+                    <div class="gl-v2-mh-mail-row"><span class="k">Onderwerp</span><span class="v">Plannen Keerstraat, opmerkingen werfvergadering</span></div>
+                </div>
+                <div class="gl-v2-mh-mail-body">
+                    <p>Beste Pieter,</p>
+                    <p>In bijlage vind je het verslag van de werfvergadering van 23/10 met de opmerkingen bij de plannen van lot 5 en 6. Kan je de aangepaste versie bezorgen tegen vrijdag?</p>
+                    <p>Met vriendelijke groeten,</p>
+                    <iframe id="mh-preview" class="gl-v2-mh-frame" title="Voorbeeld handtekening" sandbox="allow-same-origin"></iframe>
+                </div>
+            </div>
+            <p class="gl-v2-mp-hint" id="mh-note">Zo ziet een ontvanger je mail in Outlook of Gmail.</p>
+            <div><button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="mh-copy"><i class="ph ph-copy" aria-hidden="true"></i>Kopiëren voor Outlook</button></div>
+        </aside>
+    </div>
+
+    @* ───────────────────────── MELDINGEN ───────────────────────── *@
+    <div class="gl-v2-mp-grid is-meldingen" id="mp-pane-meldingen" role="tabpanel" @(tab == "meldingen" ? "" : "hidden")>
+        <div class="gl-v2-mp-col">
+            <div class="gl-v2-mp-intro"><h2 class="gl-v2-mp-title">Meldingen</h2><p>Kies waarover je verwittigd wilt worden en hoe. Alles wat je hier uitzet, blijft wel zichtbaar in Mijn taken en op de pagina zelf.</p></div>
+            <div class="gl-v2-notice gl-v2-notice-compact"><i class="ph ph-info" aria-hidden="true"></i><span>Je keuzes worden bewaard. Het CRM houdt er stap voor stap rekening mee.</span></div>
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-mp-matrix" id="mp-matrix">
+                    <div class="gl-v2-mp-matrix-head"><span>GEBEURTENIS</span><span>IN HET CRM</span><span>E-MAIL</span></div>
+                    @foreach (var g in MeldingCatalogus.Groepen)
+                    {
+                        <div class="gl-v2-mp-matrix-group">@g.Naam</div>
+                        foreach (var i in g.Items)
+                        {
+                            var v = meldingen[i.Key];
+                            <div class="gl-v2-mp-matrix-row" data-key="@i.Key">
+                                <div class="gl-v2-mp-matrix-name"><span>@i.Naam</span>@if (i.Uitleg != null) { <small>@i.Uitleg</small> }</div>
+                                <span class="gl-v2-check"><input type="checkbox" data-col="0" id="mp-m-@i.Key-a" aria-label="@i.Naam in het CRM" @(v[0] ? "checked" : "") /><label for="mp-m-@i.Key-a"></label></span>
+                                <span class="gl-v2-check"><input type="checkbox" data-col="1" id="mp-m-@i.Key-e" aria-label="@i.Naam per e-mail" @(v[1] ? "checked" : "") /><label for="mp-m-@i.Key-e"></label></span>
+                            </div>
+                        }
+                    }
+                </div>
+            </section>
+        </div>
+        <div class="gl-v2-mp-col is-narrow">
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header"><span class="gl-v2-section-card-icon"><i class="ph ph-envelope-simple" aria-hidden="true"></i></span><h3 class="gl-v2-section-card-title">Dagelijkse samenvatting</h3><span class="gl-v2-section-card-spacer"></span>
+                    <label class="gl-v2-mp-switch" for="mp-dig"><input type="checkbox" id="mp-dig" name="DagSamenvatting" value="true" class="gl-v2-toggle-switch" @(Model.DagSamenvatting ? "checked" : "") aria-label="Dagelijkse samenvatting" /><input type="hidden" name="DagSamenvatting" value="false" /></label></div>
+                <div class="gl-v2-mp-body">
+                    <span class="gl-v2-mp-hint">Eén mail in de ochtend in plaats van losse mails: je dag, deadlines, wat je van anderen afwacht en wat nieuw is.</span>
+                    <div class="gl-v2-mp-fields">
+                        <div class="gl-v2-field@(F("SamenvattingTijd"))"><label class="gl-v2-field-label" for="mp-dig-tijd">Tijdstip</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="mp-dig-tijd" name="SamenvattingTijd" value="@Model.SamenvattingTijd" maxlength="5" inputmode="numeric" placeholder="07:30" /></div></div>
+                        <div class="gl-v2-field"><span class="gl-v2-field-label">Op</span><div class="gl-v2-field-readonly"><i class="ph ph-lock-simple" aria-hidden="true"></i><span>Werkdagen</span></div></div>
+                    </div>
+                </div>
+            </section>
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header"><span class="gl-v2-section-card-icon"><i class="ph ph-moon" aria-hidden="true"></i></span><h3 class="gl-v2-section-card-title">Stille uren</h3><span class="gl-v2-section-card-spacer"></span>
+                    <label class="gl-v2-mp-switch" for="mp-quiet"><input type="checkbox" id="mp-quiet" name="StilleUren" value="true" class="gl-v2-toggle-switch" @(Model.StilleUren ? "checked" : "") aria-label="Stille uren" /><input type="hidden" name="StilleUren" value="false" /></label></div>
+                <div class="gl-v2-mp-body">
+                    <span class="gl-v2-mp-hint">Buiten je werkuren (<span id="mp-werkuren-tekst">@Model.WerkVan – @Model.WerkTot</span>) en in het weekend komen er geen meldingen of mails binnen. Ze wachten tot je volgende werkdag.</span>
+                    <label class="gl-v2-toggle-row" for="mp-urg"><input type="checkbox" id="mp-urg" name="DringendDoorlaten" value="true" class="gl-v2-toggle-switch" @(Model.DringendDoorlaten ? "checked" : "") /><input type="hidden" name="DringendDoorlaten" value="false" />
+                        <span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Dringende meldingen toch doorlaten</span><span class="gl-v2-toggle-hint">Werfpunten met prioriteit “Hoog”, ondertekende aktes</span></span></label>
+                </div>
+            </section>
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header"><span class="gl-v2-section-card-icon"><i class="ph ph-bell-ringing" aria-hidden="true"></i></span><h3 class="gl-v2-section-card-title">Herinnering voor deadlines</h3></div>
+                <div class="gl-v2-mp-body">
+                    <div class="gl-v2-mp-remind"><span>Verwittig me</span>
+                        @await Html.PartialAsync("GlV2/_Segmented", new GlV2SegmentedVm
+                        {
+                            Id = "mp-remind", Size = "sm", Fill = false, AriaLabel = "Hoe lang vooraf",
+                            Items = MeldingCatalogus.Herinneringen.Select(h => new GlV2SegmentedItem { Text = h.Naam, Active = h.Id == Model.DeadlineHerinnering, Data = { ["id"] = h.Id } }).ToList()
+                        })
+                        <span>vóór een mijlpaal of taak.</span></div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    @* ───────────────────────── WACHTWOORD EN BEVEILIGING ───────────────────────── *@
+    <div class="gl-v2-mp-grid is-beveiliging" id="mp-pane-beveiliging" role="tabpanel" @(tab == "beveiliging" ? "" : "hidden")>
+        <div class="gl-v2-mp-col">
+            <div class="gl-v2-mp-intro"><h2 class="gl-v2-mp-title">Wachtwoord en beveiliging</h2><p>Je account geeft toegang tot klantgegevens, contracten en facturen. Bescherm het goed.</p></div>
+            <div class="gl-v2-notice gl-v2-notice-compact"><i class="ph ph-info" aria-hidden="true"></i><span>Je meldt je aan met je @(isGoogle ? "Google" : "Microsoft")-account. Wachtwoord, tweestapsverificatie en aangemelde apparaten beheer je daar, niet in het CRM. Zo geldt dezelfde beveiliging overal.</span></div>
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header"><span class="gl-v2-section-card-icon"><i class="ph ph-key" aria-hidden="true"></i></span><h3 class="gl-v2-section-card-title">Wachtwoord wijzigen</h3></div>
+                <div class="gl-v2-mp-body">
+                    <span class="gl-v2-mp-hint">Een goed wachtwoord heeft minstens 12 tekens, met hoofdletters, kleine letters en een cijfer of leesteken. Een zin van een paar woorden is sterk en makkelijk te onthouden.</span>
+                    <div><a class="gl-v2-btn gl-v2-btn-secondary" target="_blank" rel="noopener" href="@(isGoogle ? "https://myaccount.google.com/signinoptions/password" : "https://mysignins.microsoft.com/security-info")"><i class="ph ph-arrow-square-out" aria-hidden="true"></i>Wachtwoord wijzigen bij @(isGoogle ? "Google" : "Microsoft")</a></div>
+                </div>
+            </section>
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header"><span class="gl-v2-section-card-icon"><i class="ph ph-device-mobile" aria-hidden="true"></i></span><h3 class="gl-v2-section-card-title">Tweestapsverificatie</h3></div>
+                <div class="gl-v2-mp-body">
+                    <span class="gl-v2-mp-hint">Naast je wachtwoord vraagt je account een code uit een app op je gsm. Zo kan niemand inloggen met alleen je wachtwoord. Je beheert de methodes en herstelcodes bij je account.</span>
+                    <div><a class="gl-v2-btn gl-v2-btn-secondary" target="_blank" rel="noopener" href="@(isGoogle ? "https://myaccount.google.com/signinoptions/two-step-verification" : "https://mysignins.microsoft.com/security-info")"><i class="ph ph-arrow-square-out" aria-hidden="true"></i>Beveiligingsmethodes beheren</a></div>
+                </div>
+            </section>
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header"><span class="gl-v2-section-card-icon"><i class="ph ph-devices" aria-hidden="true"></i></span><h3 class="gl-v2-section-card-title">Waar je bent aangemeld</h3></div>
+                <div class="gl-v2-mp-body">
+                    <div class="gl-v2-mp-session"><i class="ph ph-desktop" aria-hidden="true"></i><span class="gl-v2-mp-session-text"><b>Dit apparaat</b><small>Aangemeld als @Model.Email</small></span><a class="gl-v2-btn gl-v2-btn-text" href="@Url.Action("SignOut", "Account")">Afmelden</a></div>
+                    <span class="gl-v2-mp-hint">Herken je een apparaat of plaats niet? Meld je overal af in je @(isGoogle ? "Google" : "Microsoft")-account en wijzig meteen je wachtwoord.</span>
+                </div>
+            </section>
+        </div>
+    </div>
+</form>
+
+@* Verlaat-bewaking (DESIGN.md "Verlaat-bewaking"): dirty-badge met id …dirty-badge + deze modal met bevestigingslink *@
+<div class="modal fade gl-v2-modal-confirm" id="gl-v2-discard-changes-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-discard-changes-title">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content is-warning">
+            <div class="modal-body">
+                <span class="gl-v2-modal-icon is-warning"><i class="ph ph-warning" aria-hidden="true"></i></span>
+                <div class="gl-v2-modal-text"><h2 class="gl-v2-modal-title" id="gl-v2-discard-changes-title">Wijzigingen niet opslaan?</h2><p class="gl-v2-modal-desc">U staat op het punt deze pagina te verlaten zonder uw wijzigingen op te slaan.</p></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Terug naar het formulier</button>
+                <a href="#" class="gl-v2-btn gl-v2-btn-warning" id="gl-v2-discard-changes-confirm">Wijzigingen niet opslaan</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@await Html.PartialAsync("GlV2/_BevestigModal")
+
+@section PageScripts
+{
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+    <script src="~/js/gl-v2-account-profiel.js" asp-append-version="true"></script>
+}

@@ -1,0 +1,43 @@
+@model List<CPMCore.Controllers.UserAdminController.OutlookSyncRij>
+@*
+    gl-v2 — Instellingen › Gebruikers en rollen › Outlook-sync (spec #2, ticket #6): wie de Outlook-koppeling aan heeft en of de sync loopt.
+    Bewust zonder inhoud: enkel status, laatste sync en een technische foutcode. De gebruiker zelf zet de koppeling aan of uit in Mijn profiel.
+*@
+@{
+    Layout = "~/Views/Shared/_LayoutV2.cshtml";
+    ViewData["Title"] = "Outlook-sync";
+    ViewData["PageIcon"] = "ph ph-microsoft-outlook-logo";
+    string Badge(string niveau) => niveau switch { "ok" => "is-positive", "fout" => "is-blocked", "waarschuwing" => "is-attention", _ => "is-neutral" };
+}
+
+<section class="gl-v2-section-card">
+    <div class="gl-v2-section-card-header">
+        <span class="gl-v2-section-card-icon"><i class="ph ph-microsoft-outlook-logo" aria-hidden="true"></i></span>
+        <h3 class="gl-v2-section-card-title">Gebruikers met de Outlook-koppeling aan</h3>
+        <span class="gl-v2-section-card-desc">@Model.Count @(Model.Count == 1 ? "gebruiker" : "gebruikers")</span>
+    </div>
+    @if (Model.Count == 0)
+    {
+        <div class="gl-v2-notice gl-v2-notice-compact"><i class="ph ph-info" aria-hidden="true"></i><span>Niemand heeft de koppeling aangezet. Gebruikers zetten ze zelf aan in Mijn profiel.</span></div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table gl-v2-table" id="outlook-sync-tabel">
+                <thead><tr><th>Gebruiker</th><th>Status</th><th>Laatste sync</th><th>Fouten op rij</th><th>Technische melding</th></tr></thead>
+                <tbody>
+                @foreach (var r in Model)
+                {
+                    <tr>
+                        <td><b>@r.Naam</b><br /><small>@r.Email</small></td>
+                        <td><span class="gl-v2-badge @Badge(r.Weergave.Niveau)">@r.Weergave.Label</span></td>
+                        <td>@(r.Weergave.LaatsteSyncLokaal?.ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
+                        <td>@r.FoutenOpRij</td>
+                        <td>@(r.Weergave.TechnischeFout ?? "—")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

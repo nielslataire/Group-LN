@@ -32,6 +32,9 @@ public sealed class AgendaResultaat
     public List<AgendaAfspraak> Afspraken { get; set; } = new();
 }
 
+/// <summary>Uitkomst van <see cref="IGraphIngang.ControleerToegangAsync"/>.</summary>
+public enum GraphToegang { Ok, GeenToegang, GeenMailbox, Fout }
+
 /// <summary>
 /// De ene ingang van CPM naar Microsoft Graph voor mail en agenda. De agenda-service van Mijn taken, het versturen van offertemail en de latere mailsync
 /// delen deze afhankelijkheid; tests gebruiken een fake. Een gebruiker wordt aangeduid met <see cref="GebruikerSleutel"/>.
@@ -42,6 +45,9 @@ public interface IGraphIngang
 
     /// <param name="gebruiker">Entra-object-id of e-mailadres (UPN) van de mailbox.</param>
     Task<AgendaResultaat> GetAgendaAsync(string? gebruiker, DateTime van, DateTime tot, CancellationToken ct = default);
+
+    /// <summary>Controleert of de app bij de mailbox van deze gebruiker mag (bv. 403 als de gebruiker buiten de toegestane Exchange-groep valt). Gooit nooit; leest geen inhoud.</summary>
+    Task<GraphToegang> ControleerToegangAsync(string? gebruiker, CancellationToken ct = default);
 
     /// <summary>Wijzigt titel en tijd van een afspraak. Geeft een foutmelding terug, of null bij succes.</summary>
     Task<string?> BijwerkenAfspraakAsync(string? gebruiker, string eventId, string? titel, DateTime start, DateTime einde, CancellationToken ct = default);
@@ -150,6 +156,31 @@ public sealed class GraphIngang : IGraphIngang
         // Fouten maar kort onthouden, zodat een herstelde machtiging snel opgemerkt wordt.
         _cache[sleutel] = (DateTime.UtcNow + (resultaat.Fout == null ? Bewaartijd : TimeSpan.FromMinutes(1)), resultaat);
         return resultaat;
+    }
+
+    public async Task<GraphToegang> ControleerToegangAsync(string? gebruiker, CancellationToken ct = default)
+    {
+        if (_client == null || string.IsNullOrWhiteSpace(gebruiker)) return GraphToegang.Fout;
+        try
+        {
+            await _client.Users[gebruiker].Calendar.Request().Select("id").GetAsync(ct);
+            return GraphToegang.Ok;
+        }
+        catch (ServiceException ex)
+        {
+            _logger.LogWarning(ex, "Toegang tot de mailbox van {Gebruiker} controleren mislukt (status {Status}).", gebruiker, (int)ex.StatusCode);
+            return ex.StatusCode switch
+            {
+                System.Net.HttpStatusCode.Forbidden or System.Net.HttpStatusCode.Unauthorized => GraphToegang.GeenToegang,
+                System.Net.HttpStatusCode.NotFound => GraphToegang.GeenMailbox,
+                _ => GraphToegang.Fout
+            };
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Toegang tot de mailbox van {Gebruiker} controleren mislukt.", gebruiker);
+            return GraphToegang.Fout;
+        }
     }
 
     /// <summary>Wijzigt titel en tijd van een afspraak in de Outlook-agenda (PATCH op <c>/users/{id}/events/{eventId}</c>). Vereist
