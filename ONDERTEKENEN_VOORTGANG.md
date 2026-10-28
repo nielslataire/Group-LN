@@ -31,7 +31,7 @@ de volgende sessie.
 | Data | 8 eigen tabellen (`SigningCase`… + append-only `SigningEvent`), migraties **055** + **056** (hernummerd bij de merge, waren 047/048) | `ProjectDocs.ChangeOrderId` + `DocumentSignatures` op het Documenten-model, migratie 049 + **054** |
 | PDF | QuestPDF `ChangeOrderDocument` (huisstijl), ondertekeningsblad in fase 2 | Rotativa `ChangeOrderPDF.cshtml` mét handtekeningblok (Signatures/DigitalSigningPending) |
 | Bewijs | hash-ketting, OTP-HMAC, sessiecookie, bewaarregel, testmodus, feature-vlag, rate limiter | SHA-256 van token/code, 10 min/5 pogingen/5 codes per uur, IP + X-Forwarded-For, evidence per handtekening |
-| Status | interne schermen klaar (fase 1), publieke pagina nog niet (fase 2) | publieke pagina + intern startscherm bestaan; zie hun DESIGN.md-sectie "Projecten/ChangeOrderSignV2" en `JURIDISCH_ELEKTRONISCH_ONDERTEKENEN.md` |
+| Status | interne schermen klaar (fase 1), publieke pagina nog niet (fase 2) | publieke pagina + intern startscherm bestaan; zie hun CPMCore/DESIGN.md-sectie "Projecten/ChangeOrderSignV2" en `JURIDISCH_ELEKTRONISCH_ONDERTEKENEN.md` |
 
 Wat bij de merge gedaan is om beide te laten samenleven (geen inhoudelijke keuze):
 - `Klanten/Partials/ChangeOrders.cshtml`: beide actie-iconen staan er (hun `fa-signature` altijd, mijn
@@ -188,7 +188,7 @@ in A werkt (anders staat de app zonder werkende signing-flow).
 - [x] CPMCore: DI + `Features:EnableSigning` (fail closed), rate limiter, `SigningSecurityHeadersMiddleware`,
       `_LayoutPublic.cshtml` + `gl-v2-public.css`, storage-helpers in beide controllers delegeren
 - [x] Tests `ServiceCore.Tests/Signing/` (crypto, regels, hash-ketting)
-- [x] Docs: DESIGN.md-sectie, DEPLOY.md-sectie, voorstel bijgewerkt
+- [x] Docs: CPMCore/DESIGN.md-sectie, DEPLOY.md-sectie, voorstel bijgewerkt
 
 ### Fase 1 — wijzigingsopdracht + interne schermen ✅ gebouwd (2026-09-27), ⚠️ nog niet in de browser getest
 - [x] `SigningCase.SourceFingerprint` (migratie 056, op testdb) + `ISigningDocumentSource.ComputeFingerprintAsync`
@@ -208,7 +208,7 @@ in A werkt (anders staat de app zonder werkende signing-flow).
       "Ondertekeningen" in `GlV2/_ProjectInnerMenuV2` (feature-vlag + permissie `Signing`)
 - [x] `Projecten/ChangeOrderPDF` rendert via `ChangeOrderPdfBuilder` (Rotativa-view blijft ongebruikt staan)
 - [x] `_LayoutV2`: `ViewData["GlV2NoProjectMenu"]` → `IgnoreSection("ProjectMenu")` (Razor kan geen `@section` in `@if`)
-- [x] DESIGN.md, DEPLOY.md, ONDERTEKENEN_VOORSTEL.md bijgewerkt; build groen; tests 31/33 (2 bestaande fouten)
+- [x] CPMCore/DESIGN.md, DEPLOY.md, ONDERTEKENEN_VOORSTEL.md bijgewerkt; build groen; tests 31/33 (2 bestaande fouten)
 - [ ] **Browsertest** van alles hierboven (zie "Eerst te doen"); visuele controle van de PDF
 - [ ] Beslissen: `Views/Projecten/ChangeOrders/ChangeOrderPDF.cshtml` (+ `ChangeOrderFooter`-actie) verwijderen zodra de
       QuestPDF-versie goedgekeurd is
@@ -261,10 +261,10 @@ in A werkt (anders staat de app zonder werkende signing-flow).
       op een klantdocument kan niet — en blijft enkel op het interne auditrapport; komt terug als QR
       zodra `/verifieer` bestaat.
 - [x] **Derde feedbackronde (Niels, 2026-09-28)**, ná fase 3: twee problemen met "Weigeren":
-  - **`window.prompt()` i.p.v. een eigen modal**: DESIGN.md's modal-taal (TYPE 1 "Bevestiging") leunt
+  - **`window.prompt()` i.p.v. een eigen modal**: CPMCore/DESIGN.md's modal-taal (TYPE 1 "Bevestiging") leunt
     normaal op Bootstrap/`gl-v2-shell.css`, die `_LayoutPublic` bewust niet laadt (CSP, geen externe
     bronnen). Daarom een eigen, zelfstandige `.gl-v2-public-modal-*`-component toegevoegd aan
-    `gl-v2-public.css` (zelfde tokens/radius/schaduw/taal als DESIGN.md, `.is-warning`-accentstreep,
+    `gl-v2-public.css` (zelfde tokens/radius/schaduw/taal als CPMCore/DESIGN.md, `.is-warning`-accentstreep,
     mobiel een bottom sheet) + vanilla-JS open/sluit/Esc/backdrop-klik in `gl-v2-tekenen.js` — geen
     Bootstrap-afhankelijkheid, past bij de rest van deze pagina.
   - **Na "Weigeren" verscheen "Uw sessie is verlopen"**: `SigningService.DeclineAsync` roept

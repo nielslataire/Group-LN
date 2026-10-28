@@ -172,7 +172,7 @@
     function renderLists() {
         var box = $("#ct-lists-items"); if (!box) return;
         box.innerHTML = lists.map(function (l) {
-            return '<div class="gl-v2-ct-list' + (activeList === l.id ? " is-on" : "") + '" role="button" tabindex="0" data-list="' + l.id + '"><span class="gl-v2-ct-list-text"><b>' + esc(l.name) + '</b><small>' + esc(summary(l.st)) + '</small></span><span class="gl-v2-ct-list-n">' + countFor(l.st) + '</span>' +
+            return '<div class="gl-v2-ct-list' + (activeList === l.id ? " is-on" : "") + '" role="button" tabindex="0" data-list="' + l.id + '"><span class="gl-v2-stack gl-v2-ct-list-text"><b>' + esc(l.name) + '</b><small>' + esc(summary(l.st)) + '</small></span><span class="gl-v2-ct-list-n">' + countFor(l.st) + '</span>' +
                 (canWrite ? '<button type="button" class="gl-v2-ct-list-x" data-del="' + l.id + '" aria-label="Lijst ' + esc(l.name) + ' verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>' : "") + '</div>';
         }).join("");
         $("#ct-lists-empty").hidden = lists.length > 0;

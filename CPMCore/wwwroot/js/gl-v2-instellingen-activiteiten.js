@@ -18,9 +18,9 @@
     var stand = JSON.parse(document.getElementById("act-data").textContent);
     var ui = { tab: root.getAttribute("data-start-tab"), lot: 0, q: "", sort: "naam", dir: 1, page: 1, editAct: 0, editGrp: 0 };
 
-    function $(id) { return document.getElementById(id); }
+    var $ = window.GlV2.byId; // gedeeld (gl-v2-shell.js)
     function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
-    function toast(tone, title, body) { if (window.GlV2Toast) window.GlV2Toast.show({ tone: tone, title: title, body: body || "" }); }
+    var toast = (window.GlV2Toast && window.GlV2Toast.notify) || function () {}; // gedeeld, zie gl-v2-shell.js
     function norm(s) { return String(s || "").toLowerCase(); }
     function plural(n, een, meer) { return n + " " + (n === 1 ? een : meer); }
 
@@ -79,9 +79,9 @@
     }
 
     function renderLots() {
-        var html = '<button type="button" class="gl-v2-act-lot' + (ui.lot === 0 ? " is-active" : "") + '" data-lot="0"><span class="n">Alle loten</span><span class="c">' + stand.activiteiten.length + "</span></button>";
+        var html = '<button type="button" class="gl-v2-navitem gl-v2-act-lot' + (ui.lot === 0 ? " is-active" : "") + '" data-lot="0"><span class="n">Alle loten</span><span class="c">' + stand.activiteiten.length + "</span></button>";
         stand.groepen.forEach(function (g) {
-            html += '<button type="button" class="gl-v2-act-lot' + (ui.lot === g.id ? " is-active" : "") + '" data-lot="' + g.id + '"><span class="l">' + g.lot + '</span><span class="n">' + esc(g.naam) + '</span><span class="c">' + g.aantal + "</span></button>";
+            html += '<button type="button" class="gl-v2-navitem gl-v2-act-lot' + (ui.lot === g.id ? " is-active" : "") + '" data-lot="' + g.id + '"><span class="l">' + g.lot + '</span><span class="n">' + esc(g.naam) + '</span><span class="c">' + g.aantal + "</span></button>";
         });
         $("act-lots").innerHTML = html;
         // Keuzelijsten zijn de projectbrede keuzelijst (GlV2/_SelectList, window.GlV2Select).
@@ -129,12 +129,13 @@
                     '<div class="gl-v2-act-actions"><button type="submit" class="gl-v2-row-action gl-v2-row-action-primary" title="Opslaan" aria-label="Opslaan"><i class="ph ph-check" aria-hidden="true"></i></button>' +
                     '<button type="button" class="gl-v2-row-action" data-cancel-act title="Annuleren" aria-label="Annuleren"><i class="ph ph-x" aria-hidden="true"></i></button></div></form>';
             } else {
-                html += '<div class="gl-v2-act-row gl-v2-act-grid--act"><span class="gl-v2-act-nr">' + esc(nrOf(a)) + "</span>" +
+                html += '<div class="gl-v2-act-row gl-v2-act-grid--act gl-v2-listrow"><span class="gl-v2-act-nr">' + esc(nrOf(a)) + "</span>" +
                     '<span class="gl-v2-act-name" title="' + esc(a.naam) + '">' + esc(a.naam) + "</span>" +
                     '<span class="gl-v2-act-group">' + (g ? '<span class="gl-v2-badge is-neutral">' + g.lot + " · " + esc(g.naam) + "</span>" : "—") + "</span>" +
                     '<div class="gl-v2-act-actions">' + (canWrite ?
-                        '<button type="button" class="gl-v2-row-action gl-v2-row-action-primary" data-edit-act-btn="' + a.id + '" title="Bewerken" aria-label="Bewerk ' + esc(a.naam) + '"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>' +
-                        '<button type="button" class="gl-v2-row-action gl-v2-row-action-danger" data-del-act="' + a.id + '" title="Verwijderen" aria-label="Verwijder ' + esc(a.naam) + '"><i class="ph ph-trash" aria-hidden="true"></i></button>' : "") + "</div></div>";
+                        '<span class="gl-v2-rowact"><span class="gl-v2-rowact-btns">' +
+                        '<button type="button" class="gl-v2-icon-btn" data-edit-act-btn="' + a.id + '" title="Bewerken" aria-label="Bewerk ' + esc(a.naam) + '"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>' +
+                        '<button type="button" class="gl-v2-icon-btn is-danger" data-del-act="' + a.id + '" title="Verwijderen" aria-label="Verwijder ' + esc(a.naam) + '"><i class="ph ph-trash" aria-hidden="true"></i></button></span></span>' : "") + "</div></div>";
             }
         });
         $("act-rows").innerHTML = html;
@@ -261,12 +262,13 @@
                     '<button type="button" class="gl-v2-row-action" data-cancel-grp title="Annuleren" aria-label="Annuleren"><i class="ph ph-x" aria-hidden="true"></i></button></div></form>';
             } else {
                 var kanWeg = g.aantal === 0;
-                html += '<div class="gl-v2-act-row gl-v2-act-grid--grp"><span class="gl-v2-act-nr is-lot">' + g.lot + "</span>" +
+                html += '<div class="gl-v2-act-row gl-v2-act-grid--grp gl-v2-listrow"><span class="gl-v2-act-nr is-lot">' + g.lot + "</span>" +
                     '<span class="gl-v2-act-name">' + esc(g.naam) + "</span>" +
                     '<span><button type="button" class="gl-v2-act-count" data-show-grp="' + g.id + '" title="Toon de activiteiten van deze groep">' + plural(g.aantal, "activiteit", "activiteiten") + "</button></span>" +
                     '<div class="gl-v2-act-actions">' + (canWrite ?
-                        '<button type="button" class="gl-v2-row-action gl-v2-row-action-primary" data-edit-grp-btn="' + g.id + '" title="Bewerken" aria-label="Bewerk ' + esc(g.naam) + '"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>' +
-                        '<button type="button" class="gl-v2-row-action gl-v2-row-action-danger" data-del-grp="' + g.id + '"' + (kanWeg ? "" : " disabled") + ' title="' + (kanWeg ? "Verwijderen" : "Verplaats eerst de activiteiten uit deze groep") + '" aria-label="Verwijder ' + esc(g.naam) + '"><i class="ph ph-trash" aria-hidden="true"></i></button>' : "") + "</div></div>";
+                        '<span class="gl-v2-rowact"><span class="gl-v2-rowact-btns">' +
+                        '<button type="button" class="gl-v2-icon-btn" data-edit-grp-btn="' + g.id + '" title="Bewerken" aria-label="Bewerk ' + esc(g.naam) + '"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>' +
+                        '<button type="button" class="gl-v2-icon-btn is-danger" data-del-grp="' + g.id + '"' + (kanWeg ? "" : " disabled") + ' title="' + (kanWeg ? "Verwijderen" : "Verplaats eerst de activiteiten uit deze groep") + '" aria-label="Verwijder ' + esc(g.naam) + '"><i class="ph ph-trash" aria-hidden="true"></i></button></span></span>' : "") + "</div></div>";
             }
         });
         $("grp-rows").innerHTML = html;

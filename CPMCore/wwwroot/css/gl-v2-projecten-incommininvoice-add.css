@@ -100,7 +100,6 @@
 .gln-ai-optrow { padding: 14px 20px; border-bottom: 1px solid var(--gl-v2-hairline-soft); }
 .gln-ai-optrow:last-child { border-bottom: 0; }
 .gln-ai-optrow-head { display: flex; align-items: center; gap: 14px; }
-.gln-ai-optrow-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
 .gln-ai-optrow-text strong { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
 .gln-ai-optrow-text span { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 .gln-ai-optrow-amount { font: 650 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -121,7 +120,6 @@
 .gln-ai-pay { display: flex; flex-direction: column; padding: 10px 20px 4px; }
 .gln-ai-pay-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 7px 0; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
 .gln-ai-pay-row[hidden] { display: none; }
-.gln-ai-pay-label { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
 .gln-ai-pay-label small { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 .gln-ai-pay-value { font: 600 13px var(--gl-v2-font-sans); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .gln-ai-pay-borg { display: flex; align-items: center; gap: 10px; margin: 2px -10px; padding: 9px 10px; border-radius: 9px; background: var(--gl-v2-warning-tint, #F6EEDC); border: 1px solid #E6D3A8; }
@@ -139,7 +137,7 @@
 .gln-ai-pay-korting-titel { flex: 1; font: 600 12.5px var(--gl-v2-font-sans); color: #24502E; }
 .gln-ai-pay-dagen { padding: 2px 8px; border-radius: 10px; background: var(--gl-v2-primary); font: 600 10.5px var(--gl-v2-font-sans); color: #fff; white-space: nowrap; }
 .gln-ai-pay-dagen.is-verlopen { background: var(--gl-v2-muted, #7a8a78); }
-.gln-ai-pay-korting-wit { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; background: #fff; font: 450 11.5px/1.45 var(--gl-v2-font-sans); color: #24502E; }
+.gln-ai-pay-korting-wit { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--gl-v2-radius-sm, 8px); background: #fff; font: 450 11.5px/1.45 var(--gl-v2-font-sans); color: #24502E; }
 .gln-ai-pay-korting-wit > span:first-child { flex: 1; }
 .gln-ai-pay-korting-wit b { font-weight: 600; }
 .gln-ai-pay-korting-waarde { font: 700 16px var(--gl-v2-font-sans); color: #2F6038; font-variant-numeric: tabular-nums; white-space: nowrap; }

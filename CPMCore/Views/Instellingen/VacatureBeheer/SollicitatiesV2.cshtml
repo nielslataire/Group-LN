@@ -43,7 +43,7 @@
 
     @if (!Model.Sollicitaties.Any())
     {
-        <section class="gl-v2-section-card gl-v2-inh-empty">
+        <section class="gl-v2-section-card gl-v2-blank gl-v2-inh-empty">
             <i class="ph ph-paper-plane-tilt" aria-hidden="true"></i><b>Nog geen sollicitaties</b>
             <span>@(string.IsNullOrWhiteSpace(Model.VacatureTitel) ? "Er zijn nog geen sollicitaties ontvangen." : "Er zijn nog geen sollicitaties ontvangen voor " + Model.VacatureTitel + ".")</span>
         </section>

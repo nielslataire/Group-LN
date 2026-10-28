@@ -219,45 +219,7 @@
     box-sizing: border-box;
 }
 
-/* Checkbox — zelfde zelfstandige opbouw als gl-v2-co-check (_LayoutV2 laadt theme.css niet). */
-.gl-v2-inv-check { position: relative; display: inline-block; width: 18px; height: 18px; vertical-align: middle; }
-.gl-v2-inv-check input[type="checkbox"] { position: absolute; inset: 0; margin: 0; opacity: 0; z-index: 2; cursor: pointer; }
-.gl-v2-inv-check label { position: absolute; inset: 0; margin: 0; cursor: pointer; }
-.gl-v2-inv-check label:before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    box-sizing: border-box;
-    border-radius: 5px;
-    border: 1px solid var(--gl-v2-hairline);
-    background: var(--gl-v2-surface);
-}
-.gl-v2-inv-check input[type="checkbox"]:hover + label:before { border-color: var(--gl-v2-primary); }
-.gl-v2-inv-check input[type="checkbox"]:checked + label:before { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); }
-.gl-v2-inv-check input[type="checkbox"]:checked + label:after {
-    content: "\f00c";
-    font-family: "Font Awesome 5 Free";
-    font-weight: 900;
-    position: absolute;
-    inset: 0;
-    font-size: 10px;
-    line-height: 18px;
-    text-align: center;
-    color: var(--gl-v2-surface);
-}
-.gl-v2-inv-check input[type="checkbox"]:indeterminate + label:before { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); }
-.gl-v2-inv-check input[type="checkbox"]:indeterminate + label:after {
-    content: "";
-    position: absolute;
-    left: 4px; right: 4px; top: 8px; height: 2px;
-    border-radius: 1px;
-    background: var(--gl-v2-surface);
-}
-.gl-v2-inv-check input[type="checkbox"]:focus-visible + label:before { box-shadow: 0 0 0 3px var(--gl-v2-gold); }
-/* Verplicht meegetrokken door de eindafrekening (checked + disabled, JS) — nog steeds leesbaar aangevinkt,
-   maar het handje verdwijnt zodat duidelijk is dat dit niet meer los uit te vinken valt. */
-.gl-v2-inv-check input[type="checkbox"]:disabled + label { cursor: not-allowed; }
-.gl-v2-inv-check input[type="checkbox"]:disabled:checked + label:before { background: var(--gl-v2-gold); border-color: var(--gl-v2-gold); }
+/* selectievakje: gedeeld .gl-v2-check (css/gl-v2/check.css) */
 
 /* ── Sticky selectiebalk (zelfde donkere balk als gl-v2-co-selbar, maar boven de kaarten i.p.v.
    onderaan — Niels, 2026-09-30: de balk moet zichtbaar blijven terwijl je door meerdere account-
@@ -286,7 +248,7 @@
 .gl-v2-inv-selbar-spacer { flex: 1; }
 .gl-v2-inv-selbar-total { display: inline-flex; align-items: baseline; gap: 6px; font: 450 11px var(--gl-v2-font-sans); color: rgba(255, 255, 255, .6); }
 .gl-v2-inv-selbar-total b { font: 600 17px var(--gl-v2-font-sans); color: var(--gl-v2-surface); font-variant-numeric: tabular-nums; }
-.gl-v2-inv-selbar-clear { border: 0; background: transparent; color: rgba(255, 255, 255, .75); font: 600 12px var(--gl-v2-font-sans); padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.gl-v2-inv-selbar-clear { border: 0; background: transparent; color: rgba(255, 255, 255, .75); font: 600 12px var(--gl-v2-font-sans); padding: 6px 8px; border-radius: var(--gl-v2-radius-xs, 6px); cursor: pointer; }
 .gl-v2-inv-selbar-clear:hover { color: var(--gl-v2-surface); background: rgba(255, 255, 255, .1); }
 .gl-v2-inv-selbar-clear:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--gl-v2-gold); }
 .gl-v2 .gl-v2-btn.gl-v2-inv-selbar-go { background: var(--gl-v2-primary-tint); border-color: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); }

@@ -68,7 +68,7 @@
 .gl-v2-hp-spacer { flex: 1; }
 .gl-v2-hp-open-center { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: none; }
 .gl-v2-hp-header > i.ph-arrow-up-right { font-size: 11px; color: var(--gl-v2-primary); margin-left: -4px; }
-.gl-v2-hp-close { width: 30px; height: 30px; flex: none; border: 0; background: none; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--gl-v2-muted); cursor: pointer; }
+.gl-v2-hp-close { width: 30px; height: 30px; flex: none; border: 0; background: none; border-radius: var(--gl-v2-radius-sm, 8px); display: flex; align-items: center; justify-content: center; color: var(--gl-v2-muted); cursor: pointer; }
 .gl-v2-hp-close:hover { background: var(--gl-v2-hover-tint); }
 
 .gl-v2-hp-body {
@@ -135,5 +135,5 @@
 }
 .gl-v2-hp-support-trigger:hover { background: var(--gl-v2-hover-tint); }
 .gl-v2-hp-support-form { display: flex; flex-direction: column; gap: 8px; }
-.gl-v2-hp-support-textarea { border: 1px solid var(--gl-v2-hairline); border-radius: 8px; padding: 10px 12px; font: 450 13px/1.5 var(--gl-v2-font-sans); resize: vertical; }
+.gl-v2-hp-support-textarea { border: 1px solid var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-sm, 8px); padding: 10px 12px; font: 450 13px/1.5 var(--gl-v2-font-sans); resize: vertical; }
 .gl-v2-hp-support-sent { display: flex; align-items: center; gap: 7px; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); padding: 8px 2px; }

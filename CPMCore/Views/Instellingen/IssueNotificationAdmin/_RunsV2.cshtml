@@ -23,7 +23,7 @@
     var vast = Vast(r);
     var tone = vast ? "is-danger" : r.StatusLabel switch { "Geslaagd" => "is-positive", "Bezig" => "is-info", _ => "is-danger" };
     var gedempt = r.StatusLabel == "Geslaagd" && r.EmailsSent == 0;
-    <div class="gl-v2-auto-row gl-v2-auto-grid--pm @(gedempt ? "is-muted-row" : "")" data-run data-st="@(vast ? "vast" : r.StatusLabel == "Geslaagd" ? "ok" : r.StatusLabel == "Bezig" ? "bezig" : "fout")">
+    <div class="gl-v2-auto-row gl-v2-auto-grid--pm @(gedempt ? "is-muted-row" : "")" data-run data-pg-row data-st="@(vast ? "vast" : r.StatusLabel == "Geslaagd" ? "ok" : r.StatusLabel == "Bezig" ? "bezig" : "fout")">
         <span class="gl-v2-auto-cell">@r.StartedDate.ToString("dd/MM HH:mm", nl)</span>
         <span class="gl-v2-auto-strong">@r.RunTypeLabel</span>
         <span class="gl-v2-auto-cell is-muted">@(string.IsNullOrWhiteSpace(r.TriggeredBy) ? "—" : r.TriggeredBy)</span>

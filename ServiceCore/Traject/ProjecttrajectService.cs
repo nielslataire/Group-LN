@@ -43,6 +43,12 @@ public class ProjecttrajectService : IProjecttrajectService
     {
         var t = await _db.Projecttraject.FirstOrDefaultAsync(x => x.ProjectId == projectId);
         if (t == null) return false;
+        // De koppelingen dossier <-> mijlpaal verwijzen zonder cascade naar de mijlpalen (NO ACTION):
+        // ze moeten dus eerst weg, anders weigert de database het verwijderen van de mijlpalen.
+        var koppelingen = await _db.ProjectDossierMijlpaal
+            .Where(k => _db.Mijlpaal.Any(m => m.Id == k.MijlpaalId && m.ProjecttrajectId == t.Id))
+            .ToListAsync();
+        _db.ProjectDossierMijlpaal.RemoveRange(koppelingen);
         _db.Projecttraject.Remove(t); // cascade -> fases, mijlpalen, historiek, afhankelijkheden
         await _db.SaveChangesAsync();
         return true;

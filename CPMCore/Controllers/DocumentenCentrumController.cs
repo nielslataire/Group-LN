@@ -18,6 +18,7 @@ namespace CPMCore.Controllers
 {
     [Authorize]
     [CPMCore.Filters.PermissionRead(PermissionCodes.DocumentCenter)]
+    [CPMCore.Attributes.ClassicLayout]
     public class DocumentenCentrumController : BaseController
     {
         private readonly IIncomingInvoiceService _incomingInvoiceService;

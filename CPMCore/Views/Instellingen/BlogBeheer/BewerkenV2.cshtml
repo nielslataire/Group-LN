@@ -134,7 +134,7 @@
                     <ul class="gl-v2-inh-items" data-bl-items>
                         @foreach (var b in blokken)
                         {
-                            <li class="gl-v2-inh-item" data-id="@b.ID" @(canWrite ? "draggable=true" : "")>
+                            <li class="gl-v2-inh-item gl-v2-listrow" data-id="@b.ID" @(canWrite ? "draggable=true" : "")>
                                 @if (canWrite) { <span class="gl-v2-inh-grip" aria-hidden="true"><i class="ph ph-dots-six-vertical"></i></span> }
                                 <span class="gl-v2-inh-item-text">
                                     <span class="gl-v2-badge is-info">@(typeLabels.TryGetValue(b.BlokType ?? "tekst", out var tl) ? tl : "BLOK")</span>
@@ -142,10 +142,10 @@
                                 </span>
                                 @if (canWrite)
                                 {
-                                    <span class="gl-v2-inh-item-acts">
-                                        <button type="button" class="gl-v2-row-action" data-bl-edit title="Bewerken" aria-label="Blok bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>
-                                        <button type="button" class="gl-v2-row-action gl-v2-row-action-danger" data-bl-del title="Verwijderen" aria-label="Blok verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
-                                    </span>
+                                    <span class="gl-v2-inh-item-acts"><span class="gl-v2-rowact"><span class="gl-v2-rowact-btns">
+                                        <button type="button" class="gl-v2-icon-btn" data-bl-edit title="Bewerken" aria-label="Blok bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>
+                                        <button type="button" class="gl-v2-icon-btn is-danger" data-bl-del title="Verwijderen" aria-label="Blok verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+                                    </span></span></span>
                                 }
                             </li>
                         }
@@ -164,15 +164,15 @@
                     <ul class="gl-v2-inh-items" data-bl-items>
                         @foreach (var f in faqs)
                         {
-                            <li class="gl-v2-inh-item" data-id="@f.ID" @(canWrite ? "draggable=true" : "")>
+                            <li class="gl-v2-inh-item gl-v2-listrow" data-id="@f.ID" @(canWrite ? "draggable=true" : "")>
                                 @if (canWrite) { <span class="gl-v2-inh-grip" aria-hidden="true"><i class="ph ph-dots-six-vertical"></i></span> }
                                 <span class="gl-v2-inh-item-text"><span class="t">@(string.IsNullOrEmpty(f.Vraag) ? "(zonder vraag)" : f.Vraag)</span></span>
                                 @if (canWrite)
                                 {
-                                    <span class="gl-v2-inh-item-acts">
-                                        <button type="button" class="gl-v2-row-action" data-bl-edit title="Bewerken" aria-label="Vraag bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>
-                                        <button type="button" class="gl-v2-row-action gl-v2-row-action-danger" data-bl-del title="Verwijderen" aria-label="Vraag verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
-                                    </span>
+                                    <span class="gl-v2-inh-item-acts"><span class="gl-v2-rowact"><span class="gl-v2-rowact-btns">
+                                        <button type="button" class="gl-v2-icon-btn" data-bl-edit title="Bewerken" aria-label="Vraag bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>
+                                        <button type="button" class="gl-v2-icon-btn is-danger" data-bl-del title="Verwijderen" aria-label="Vraag verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+                                    </span></span></span>
                                 }
                             </li>
                         }

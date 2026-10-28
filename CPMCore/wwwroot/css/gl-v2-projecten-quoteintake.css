@@ -18,7 +18,7 @@
     gap: 6px;
     height: 32px;
     padding: 0 12px;
-    border-radius: 8px;
+    border-radius: var(--gl-v2-radius-sm, 8px);
     border: 1px solid var(--gl-v2-hairline);
     background: var(--gl-v2-surface);
     color: var(--gl-v2-ink);
@@ -57,7 +57,7 @@
 .gl-v2-qi-region-label.is-photo { background: var(--gl-v2-gold); }
 
 /* ── Regelbron-icoon in de tabel ───────────────────────────────────────────────────────────────────── */
-.gl-v2-qi-row-thumb { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 6px; background: #F2F5EF; color: var(--gl-v2-muted-light); }
+.gl-v2-qi-row-thumb { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: var(--gl-v2-radius-xs, 6px); background: #F2F5EF; color: var(--gl-v2-muted-light); }
 .gl-v2-qi-row-thumb.is-photo { background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); border: 1px solid var(--gl-v2-primary); }
 .gl-v2-co-row.is-needs-review { background: #FDF9F0; }
 
@@ -75,5 +75,5 @@
     overflow-y: auto;
 }
 .gl-v2-qi-photo-picker-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .06em; color: var(--gl-v2-muted); padding: 4px 8px; }
-.gl-v2-qi-photo-picker-item { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 8px; border-radius: 6px; font: 500 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); cursor: pointer; }
+.gl-v2-qi-photo-picker-item { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 8px; border-radius: var(--gl-v2-radius-xs, 6px); font: 500 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); cursor: pointer; }
 .gl-v2-qi-photo-picker-item:hover { background: var(--gl-v2-hover-tint); }

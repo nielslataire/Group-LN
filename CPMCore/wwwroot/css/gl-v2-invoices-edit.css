@@ -23,7 +23,7 @@
 /* vergrendelde velden */
 .gl-v2-ie-locked-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 @media (max-width: 899.98px) { .gl-v2-ie-locked-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.gl-v2-ie-locked { height: 40px; box-sizing: border-box; display: flex; align-items: center; gap: 8px; padding: 0 12px; min-width: 0; border: 1px solid rgba(44, 59, 42, .12); border-radius: 8px; background: #F7F9F5; color: #5a6b58; font: 500 13px var(--gl-v2-font-sans); }
+.gl-v2-ie-locked { height: 40px; box-sizing: border-box; display: flex; align-items: center; gap: 8px; padding: 0 12px; min-width: 0; border: 1px solid rgba(44, 59, 42, .12); border-radius: var(--gl-v2-radius-sm, 8px); background: #F7F9F5; color: #5a6b58; font: 500 13px var(--gl-v2-font-sans); }
 .gl-v2-ie-locked span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gl-v2-ie-locked i { flex: none; font-size: 13px; color: #7a8a78; }
 .gl-v2-ie-opt { font-weight: 450; letter-spacing: 0; color: #7a8a78; }
@@ -49,7 +49,7 @@
 .gl-v2-ie-lines .is-num { text-align: right; font-variant-numeric: tabular-nums; }
 .gl-v2-ie-totals { align-self: flex-end; width: 320px; max-width: 100%; margin-left: auto; display: flex; flex-direction: column; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
 .gl-v2-ie-totals > div { display: flex; justify-content: space-between; padding: 6px 0; }
-.gl-v2-ie-totals .is-grand { margin-top: 4px; padding: 9px 12px; border-radius: 8px; background: var(--gl-v2-primary); color: #fff; font-weight: 700; }
+.gl-v2-ie-totals .is-grand { margin-top: 4px; padding: 9px 12px; border-radius: var(--gl-v2-radius-sm, 8px); background: var(--gl-v2-primary); color: #fff; font-weight: 700; }
 .gl-v2-ie-lines-hint { display: flex; align-items: center; gap: 6px; }
 
 /* actiebalk */

@@ -174,20 +174,6 @@
         }
     });
 
-    // ── Filters-paneel open/dicht (desktop: inklapbaar onder de zoekbalk; <768px: bottom sheet) ──────
-    var filtersToggle = document.getElementById("filters-toggle");
-    var filtersPanel = document.getElementById("filters-panel");
-    var filtersPanelBackdrop = document.getElementById("filters-panel-backdrop");
-    function setFiltersPanelOpen(isOpen) {
-        if (!filtersPanel) return;
-        filtersPanel.hidden = !isOpen;
-        if (filtersPanelBackdrop) filtersPanelBackdrop.hidden = !isOpen;
-        if (filtersToggle) { filtersToggle.classList.toggle("is-open", isOpen); filtersToggle.setAttribute("aria-expanded", isOpen.toString()); }
-    }
-    if (filtersToggle) filtersToggle.addEventListener("click", function () { setFiltersPanelOpen(filtersPanel.hidden); });
-    if (filtersPanelBackdrop) filtersPanelBackdrop.addEventListener("click", function () { setFiltersPanelOpen(false); });
-    var filtersShowBtn = document.getElementById("filters-show-btn");
-    if (filtersShowBtn) filtersShowBtn.addEventListener("click", function () { setFiltersPanelOpen(false); });
 
     applyFilters();
 })();

@@ -22,10 +22,10 @@
     var TOEP = { "": "Alle types", Woning: "Woning", Appartement: "Appartement", Gemeenschappelijk: "Gemeenschappelijk deel" };
     var EENHEDEN = ["m²", "m³", "lm", "stuk", "forfait"];
 
-    function $(id) { return document.getElementById(id); }
+    var $ = window.GlV2.byId; // gedeeld (gl-v2-shell.js)
     function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
     function norm(s) { return String(s || "").toLowerCase(); }
-    function toast(tone, title, body) { if (window.GlV2Toast) window.GlV2Toast.show({ tone: tone, title: title, body: body || "" }); }
+    var toast = (window.GlV2Toast && window.GlV2Toast.notify) || function () {}; // gedeeld, zie gl-v2-shell.js
     function plural(n, een, meer) { return n + " " + (n === 1 ? een : meer); }
     function eur(v) { return "€ " + Number(v).toLocaleString("nl-BE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
     function pct(v) { return Number(v).toLocaleString("nl-BE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
@@ -124,10 +124,10 @@
     }
 
     function renderLots() {
-        var html = '<button type="button" class="gl-v2-kp-lot' + (ui.lot === 0 ? " is-active" : "") + '" data-lot="0"><span class="n">Alle groepen</span><span class="c">' + stand.materialen.length + "</span></button>";
+        var html = '<button type="button" class="gl-v2-navitem gl-v2-kp-lot' + (ui.lot === 0 ? " is-active" : "") + '" data-lot="0"><span class="n">Alle groepen</span><span class="c">' + stand.materialen.length + "</span></button>";
         stand.groepen.forEach(function (g) {
             var c = stand.materialen.filter(function (m) { return m.categorieId === g.id; }).length;
-            html += '<button type="button" class="gl-v2-kp-lot' + (ui.lot === g.id ? " is-active" : "") + '" data-lot="' + g.id + '"><span class="l">' + g.lot + '</span><span class="n">' + esc(g.naam) + '</span><span class="c">' + c + "</span></button>";
+            html += '<button type="button" class="gl-v2-navitem gl-v2-kp-lot' + (ui.lot === g.id ? " is-active" : "") + '" data-lot="' + g.id + '"><span class="l">' + g.lot + '</span><span class="n">' + esc(g.naam) + '</span><span class="c">' + c + "</span></button>";
         });
         $("kp-lots").innerHTML = html;
         setSelect("kp-lot-select_select", groepItems(), ui.lot || "", "Alle activiteitgroepen");
@@ -183,7 +183,7 @@
                 '<button type="button" class="gl-v2-row-action" data-cancel-mat title="Annuleren" aria-label="Annuleren"><i class="ph ph-x" aria-hidden="true"></i></button></div></form>';
         }
         var old = isStale(m);
-        return '<div class="gl-v2-kp-row gl-v2-kp-grid--mat">' +
+        return '<div class="gl-v2-kp-row gl-v2-kp-grid--mat gl-v2-listrow">' +
             '<div class="gl-v2-kp-name"><span class="t" title="' + esc(m.naam) + '">' + esc(m.naam) + "</span>" + (m.gekoppeld ? "" : '<span class="s">niet in formules</span>') + "</div>" +
             '<span class="gl-v2-kp-cell">' + esc(m.eenheid) + "</span>" +
             '<span class="gl-v2-kp-cell ' + (m.toepassing ? "" : "is-muted") + '">' + esc(TOEP[m.toepassing] || m.toepassing) + "</span>" +
@@ -191,8 +191,9 @@
             '<span class="gl-v2-kp-cell">' + fmtDate(m.datum) + (old ? ' <span class="gl-v2-kp-old" title="Ouder dan ' + STALE_MAANDEN + ' maanden">' + jaren(m) + " jr</span>" : "") + "</span>" +
             '<span><span class="gl-v2-badge is-neutral" title="' + esc(idx ? idx.naam : "") + '">' + esc(idx ? idx.code : m.indexCode || "—") + "</span></span>" +
             '<div class="gl-v2-kp-actions">' + (canWrite ?
-                '<button type="button" class="gl-v2-row-action gl-v2-row-action-primary" data-edit-mat-btn="' + m.id + '" title="Bewerken" aria-label="Bewerk ' + esc(m.naam) + '"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>' +
-                '<button type="button" class="gl-v2-row-action gl-v2-row-action-danger" data-del-mat="' + m.id + '"' + (m.gekoppeld ? " disabled" : "") + ' title="' + (m.gekoppeld ? "Dit materiaal hangt aan een formule-slot. Verwijder eerst de koppeling." : "Verwijderen") + '" aria-label="Verwijder ' + esc(m.naam) + '"><i class="ph ph-trash" aria-hidden="true"></i></button>' : "") + "</div></div>";
+                '<span class="gl-v2-rowact"><span class="gl-v2-rowact-btns">' +
+                '<button type="button" class="gl-v2-icon-btn" data-edit-mat-btn="' + m.id + '" title="Bewerken" aria-label="Bewerk ' + esc(m.naam) + '"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>' +
+                '<button type="button" class="gl-v2-icon-btn is-danger" data-del-mat="' + m.id + '"' + (m.gekoppeld ? " disabled" : "") + ' title="' + (m.gekoppeld ? "Dit materiaal hangt aan een formule-slot. Verwijder eerst de koppeling." : "Verwijderen") + '" aria-label="Verwijder ' + esc(m.naam) + '"><i class="ph ph-trash" aria-hidden="true"></i></button></span></span>' : "") + "</div></div>";
     }
 
     function setLot(id) { ui.lot = id; ui.editMat = 0; renderLots(); renderMat(); }
@@ -272,12 +273,13 @@
     function pctRow(p, systeem) {
         var v = ui.bk[p.id] != null ? ui.bk[p.id] : pct(p.percentage);
         var dirty = ui.bk[p.id] != null && parseNl(ui.bk[p.id]) !== p.percentage;
-        return '<div class="gl-v2-kp-row ' + (systeem ? "gl-v2-kp-grid--bk" : "gl-v2-kp-grid--bki") + (dirty ? " is-dirty" : "") + '">' +
+        return '<div class="gl-v2-kp-row gl-v2-listrow ' + (systeem ? "gl-v2-kp-grid--bk" : "gl-v2-kp-grid--bki") + (dirty ? " is-dirty" : "") + '">' +
             '<span class="gl-v2-kp-name"><span class="t">' + esc(p.naam) + '</span></span>' +
             '<div class="gl-v2-field gl-v2-kp-pct"><div class="gl-v2-field-box"><input type="text" inputmode="decimal" class="gl-v2-field-input is-tabular is-right" data-pct="' + p.id + '" value="' + esc(v) + '"' + (canWrite ? "" : " disabled") + ' aria-label="Percentage ' + esc(p.naam) + '" /><span class="gl-v2-field-unit">%</span></div></div>' +
             (systeem ? "" : '<div class="gl-v2-kp-actions">' + (canWrite ?
-                '<button type="button" class="gl-v2-row-action gl-v2-row-action-primary" data-edit-item="' + p.id + '" title="Bewerken" aria-label="Bewerk ' + esc(p.naam) + '"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>' +
-                '<button type="button" class="gl-v2-row-action gl-v2-row-action-danger" data-del-item="' + p.id + '" title="Verwijderen" aria-label="Verwijder ' + esc(p.naam) + '"><i class="ph ph-trash" aria-hidden="true"></i></button>' : "") + "</div>") + "</div>";
+                '<span class="gl-v2-rowact"><span class="gl-v2-rowact-btns">' +
+                '<button type="button" class="gl-v2-icon-btn" data-edit-item="' + p.id + '" title="Bewerken" aria-label="Bewerk ' + esc(p.naam) + '"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>' +
+                '<button type="button" class="gl-v2-icon-btn is-danger" data-del-item="' + p.id + '" title="Verwijderen" aria-label="Verwijder ' + esc(p.naam) + '"><i class="ph ph-trash" aria-hidden="true"></i></button></span></span>' : "") + "</div>") + "</div>";
     }
     function renderBk() {
         var sys = stand.percentages.filter(function (p) { return p.systeem; }).sort(function (a, b) { return a.volgorde - b.volgorde; });
@@ -288,11 +290,12 @@
             var sum = items.reduce(function (s, p) { return s + (parseNl(ui.bk[p.id]) != null && ui.bk[p.id] != null ? parseNl(ui.bk[p.id]) : p.percentage); }, 0);
             var heeftAlles = stand.percentages.some(function (p) { return p.groepId === g.id; });
             return '<div class="gl-v2-kp-pgroup" data-grp="' + g.id + '"' + (canWrite ? ' draggable="true"' : "") + '>' +
-                '<div class="gl-v2-kp-pgroup-head">' + (canWrite ? '<span class="gl-v2-kp-grip" aria-hidden="true" title="Sleep om de volgorde te wijzigen"><i class="ph ph-dots-six-vertical"></i></span>' : "") +
+                '<div class="gl-v2-kp-pgroup-head gl-v2-listrow">' + (canWrite ? '<span class="gl-v2-kp-grip" aria-hidden="true" title="Sleep om de volgorde te wijzigen"><i class="ph ph-dots-six-vertical"></i></span>' : "") +
                 '<span class="t">' + esc(g.naam) + '</span><span class="c">' + plural(items.length, "percentage", "percentages") + '</span><span class="sum">' + pct(sum) + ' %</span><span class="sp"></span>' +
                 (canWrite ? '<button type="button" class="gl-v2-btn gl-v2-btn-text" data-add-item="' + g.id + '"><i class="ph ph-plus" aria-hidden="true"></i>Percentage</button>' +
-                    '<button type="button" class="gl-v2-row-action gl-v2-row-action-primary" data-edit-grp="' + g.id + '" title="Groep hernoemen" aria-label="Hernoem ' + esc(g.naam) + '"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>' +
-                    '<button type="button" class="gl-v2-row-action gl-v2-row-action-danger" data-del-grp="' + g.id + '"' + (heeftAlles ? " disabled" : "") + ' title="' + (heeftAlles ? "Een groep met percentages verwijder je pas als ze leeg is" : "Verwijderen") + '" aria-label="Verwijder ' + esc(g.naam) + '"><i class="ph ph-trash" aria-hidden="true"></i></button>' : "") + "</div>" +
+                    '<span class="gl-v2-rowact"><span class="gl-v2-rowact-btns">' +
+                    '<button type="button" class="gl-v2-icon-btn" data-edit-grp="' + g.id + '" title="Groep hernoemen" aria-label="Hernoem ' + esc(g.naam) + '"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>' +
+                    '<button type="button" class="gl-v2-icon-btn is-danger" data-del-grp="' + g.id + '"' + (heeftAlles ? " disabled" : "") + ' title="' + (heeftAlles ? "Een groep met percentages verwijder je pas als ze leeg is" : "Verwijderen") + '" aria-label="Verwijder ' + esc(g.naam) + '"><i class="ph ph-trash" aria-hidden="true"></i></button></span></span>' : "") + "</div>" +
                 (items.length ? items.map(function (p) { return pctRow(p, false); }).join("") : '<div class="gl-v2-kp-empty-line">Nog geen percentages in deze groep.</div>') + "</div>";
         }).join("") || '<div class="gl-v2-kp-empty-line">Nog geen groepen.</div>';
         $("kp-count-bk").textContent = stand.percentages.length;
@@ -440,21 +443,21 @@
         var ongekoppeld = stand.koppelingen.filter(function (k) { return !k.materiaalId; }).length;
         var perGroep = {};
         stand.koppelingen.forEach(function (k) { var g = fkGroepVan(k); if (g) perGroep[g] = (perGroep[g] || 0) + 1; });
-        var html = '<button type="button" class="gl-v2-kp-lot' + (ui.fkGroep === "alle" ? " is-active" : "") + '" data-fkg="alle"><span class="n">Alle slots</span><span class="c">' + stand.koppelingen.length + "</span></button>" +
-            '<button type="button" class="gl-v2-kp-lot' + (ui.fkGroep === "ongekoppeld" ? " is-active" : "") + '" data-fkg="ongekoppeld"><span class="n">Niet gekoppeld</span><span class="c">' + ongekoppeld + "</span></button>";
+        var html = '<button type="button" class="gl-v2-navitem gl-v2-kp-lot' + (ui.fkGroep === "alle" ? " is-active" : "") + '" data-fkg="alle"><span class="n">Alle slots</span><span class="c">' + stand.koppelingen.length + "</span></button>" +
+            '<button type="button" class="gl-v2-navitem gl-v2-kp-lot' + (ui.fkGroep === "ongekoppeld" ? " is-active" : "") + '" data-fkg="ongekoppeld"><span class="n">Niet gekoppeld</span><span class="c">' + ongekoppeld + "</span></button>";
         stand.groepen.filter(function (g) { return perGroep[g.id]; }).forEach(function (g) {
-            html += '<button type="button" class="gl-v2-kp-lot' + (ui.fkGroep === String(g.id) ? " is-active" : "") + '" data-fkg="' + g.id + '"><span class="l">' + g.lot + '</span><span class="n">' + esc(g.naam) + '</span><span class="c">' + perGroep[g.id] + "</span></button>";
+            html += '<button type="button" class="gl-v2-navitem gl-v2-kp-lot' + (ui.fkGroep === String(g.id) ? " is-active" : "") + '" data-fkg="' + g.id + '"><span class="l">' + g.lot + '</span><span class="n">' + esc(g.naam) + '</span><span class="c">' + perGroep[g.id] + "</span></button>";
         });
         $("fk-groups").innerHTML = html;
 
         var list = fkFiltered(), items = matItems();
         $("fk-rows").innerHTML = list.map(function (k) {
             var m = k.materiaalId ? matById(k.materiaalId) : null;
-            return '<div class="gl-v2-kp-row gl-v2-kp-grid--fk' + (m ? "" : " is-open") + '" data-slot="' + esc(k.sleutel) + '">' +
+            return '<div class="gl-v2-kp-row gl-v2-listrow gl-v2-kp-grid--fk' + (m ? "" : " is-open") + '" data-slot="' + esc(k.sleutel) + '">' +
                 '<span class="gl-v2-kp-mono">@mat_' + esc(k.sleutel) + "</span><span class=\"gl-v2-kp-name\"><span class=\"t\">" + esc(k.omschrijving) + "</span></span>" +
                 (canWrite ? selHtml({ name: "mat", items: items, value: k.materiaalId || "", label: "Gekoppeld materiaal voor " + k.omschrijving, emptyText: "— kies een materiaal —" }) : '<span class="gl-v2-kp-cell">' + esc(m ? m.naam : "— niet gekoppeld —") + "</span>") +
                 '<span class="gl-v2-kp-num">' + (m ? eur(m.prijs) + ' <small>/' + esc(m.eenheid) + "</small>" : "—") + "</span>" +
-                '<div class="gl-v2-kp-actions">' + (canWrite ? '<button type="button" class="gl-v2-row-action gl-v2-row-action-danger" data-del-kop="' + k.id + '" title="Koppeling verwijderen" aria-label="Verwijder ' + esc(k.omschrijving) + '"><i class="ph ph-trash" aria-hidden="true"></i></button>' : "") + "</div></div>";
+                '<div class="gl-v2-kp-actions">' + (canWrite ? '<span class="gl-v2-rowact"><span class="gl-v2-rowact-btns"><button type="button" class="gl-v2-icon-btn is-danger" data-del-kop="' + k.id + '" title="Koppeling verwijderen" aria-label="Verwijder ' + esc(k.omschrijving) + '"><i class="ph ph-trash" aria-hidden="true"></i></button></span></span>' : "") + "</div></div>";
         }).join("");
         wire($("fk-rows"));
         $("fk-empty").hidden = list.length > 0;

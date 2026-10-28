@@ -70,6 +70,7 @@
         .bw-ix-kaart .gl-v2-section-card-header { flex-wrap: wrap; row-gap: 6px; }
         .bw-ix-kaart .gl-v2-section-card-title { font-family: var(--gl-v2-font-serif); font-weight: 500; font-size: 16px; text-transform: none; letter-spacing: 0; }
         .bw-ix-versie { cursor: pointer; }
+        .bw-ix-kaarten .gl-v2-bw-table .col-actions { width: 140px; padding-top: 0; padding-bottom: 0; }
         .bw-ix-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 20px 14px; border-top: 1px solid var(--gl-v2-hairline-soft); flex-wrap: wrap; }
         .bw-ix-ph { color: var(--gl-v2-muted-light); font-weight: 450; }
         @@media (max-width: 991.98px) { .bw-ix-def { grid-template-columns: auto minmax(0, 1fr); } .bw-ix-def-acties { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; } .bw-ix-def-kpis { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); } }
@@ -159,7 +160,7 @@ else
             </div>
             <div class="gl-v2-bw-table-wrap">
                 <table class="gl-v2-bw-table">
-                    <thead><tr><th>Versie</th><th>Naam</th><th>Datum</th><th>Status</th><th class="is-num">Totaal</th><th class="is-num">Marge</th><th class="col-actions" style="width:60px"></th></tr></thead>
+                    <thead><tr><th>Versie</th><th>Naam</th><th>Datum</th><th>Status</th><th class="is-num">Totaal</th><th class="is-num">Marge</th><th class="col-actions"></th></tr></thead>
                     <tbody>
                         @foreach (var v in m.Versies.OrderByDescending(x => x.Versienummer))
                         {
@@ -171,7 +172,7 @@ else
                                 <td><span class="gl-v2-badge @StatusKlasse(v)">@StatusLabel(v)</span></td>
                                 <td class="is-num is-strong">@if (!Compleet(v)) { <span class="bw-ix-stap">stap @(Math.Max(1, v.LaatsteStap ?? 1)) van 9</span> } else { @(Model.Totalen.TryGetValue(v.Id, out var t) && t.HasValue ? Eur0(t.Value) : "—") }</td>
                                 <td class="is-num">@if (Compleet(v) && Model.Marges.TryGetValue(v.Id, out var mg)) { <span class="bw-ix-marge"><b>@Pct1(mg.Percentage)</b><span>@Eur0(mg.Bedrag)</span></span> } else { <span class="bw-ix-ph">—</span> }</td>
-                                <td class="col-actions"><button type="button" class="gl-v2-row-action bw-ix-versie-hernoem" data-versie="@v.Id" data-naam="@v.VersieNaam" data-notitie="@v.Notitie"><i class="ph ph-pencil-simple" aria-hidden="true"></i><span class="gl-v2-row-action-label">Versie hernoemen</span></button> @if (kanVerwijderen && v.Status != "Definitief") { <button type="button" class="gl-v2-row-action bw-ix-versie-del" data-versie="@v.Id" data-budget="@m.Naam" data-vnr="v@(v.Versienummer)" data-laatste="@(m.Versies.Count == 1 ? "1" : "0")"><i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-row-action-label">Versie verwijderen</span></button> } <a href="@url" class="gl-v2-row-action gl-v2-row-action-primary"><i class="ph ph-arrow-square-out" aria-hidden="true"></i><span class="gl-v2-row-action-label">Open versie</span></a></td>
+                                <td class="col-actions"><span class="gl-v2-rowact"><i class="ph ph-caret-right gl-v2-rowact-chev" aria-hidden="true"></i><span class="gl-v2-rowact-btns"><button type="button" class="gl-v2-icon-btn bw-ix-versie-hernoem" title="Versie hernoemen" aria-label="Versie hernoemen" data-versie="@v.Id" data-naam="@v.VersieNaam" data-notitie="@v.Notitie"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>@if (kanVerwijderen && v.Status != "Definitief") { <button type="button" class="gl-v2-icon-btn is-danger bw-ix-versie-del" title="Versie verwijderen" aria-label="Versie verwijderen" data-versie="@v.Id" data-budget="@m.Naam" data-vnr="v@(v.Versienummer)" data-laatste="@(m.Versies.Count == 1 ? "1" : "0")"><i class="ph ph-trash" aria-hidden="true"></i></button> }<a href="@url" class="gl-v2-icon-btn" title="Open versie" aria-label="Open versie"><i class="ph ph-arrow-square-out" aria-hidden="true"></i></a></span></span></td>
                             </tr>
                         }
                     </tbody>
@@ -208,7 +209,7 @@ else
             <input type="hidden" name="ProjectId" value="@Model.ProjectId" /><input type="hidden" name="ProjectName" value="@Model.ProjectName" /><input type="hidden" name="OvernemenIngevuld" value="true" />
             <div class="modal-header bw-mod-kop">
                 <span class="bw-mod-icoon"><i class="ph ph-plus" aria-hidden="true"></i></span>
-                <div class="bw-mod-titels"><h2 class="modal-title" id="bw-ix-modal-title">Nieuw budget</h2><span class="bw-mod-sub">@Model.ProjectName</span></div>
+                <div class="gl-v2-stack bw-mod-titels"><h2 class="modal-title" id="bw-ix-modal-title">Nieuw budget</h2><span class="bw-mod-sub">@Model.ProjectName</span></div>
                 <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
             </div>
             <div class="modal-body bw-mod-body">

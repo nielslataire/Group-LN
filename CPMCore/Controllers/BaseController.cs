@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.Configuration;
 using SuperSimpleBreadcrumbs.Attributes;
 using System;
 using System.Collections.Generic;
@@ -22,7 +23,17 @@ namespace CPMCore.Controllers
         public override void OnActionExecuting(ActionExecutingContext context)
         {
             base.OnActionExecuting(context);
-            if (Request.Cookies[GlV2PreviewCookie] == "1")
+
+            // Schermen zonder gl-v2-versie blijven in de klassieke shell (zie ClassicLayoutAttribute).
+            if (context.ActionDescriptor.EndpointMetadata.OfType<CPMCore.Attributes.ClassicLayoutAttribute>().Any())
+                return;
+
+            // Voorkeur van de gebruiker: cookie "1" = gl-v2 aan, "0" = klassiek (blijft ook als de standaard gl-v2 is). Zonder cookie geldt de
+            // standaardinstelling appsettings "Layout:GlV2Default" (true = gl-v2 voor iedereen, false = enkel wie het via /LayoutPreview/On aanzette).
+            var cookie = Request.Cookies[GlV2PreviewCookie];
+            var standaard = HttpContext.RequestServices.GetService(typeof(Microsoft.Extensions.Configuration.IConfiguration)) is Microsoft.Extensions.Configuration.IConfiguration cfg
+                && cfg.GetValue<bool>("Layout:GlV2Default");
+            if (cookie == "1" || (standaard && cookie != "0"))
             {
                 ViewData["UseGlV2Layout"] = true;
             }

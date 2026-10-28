@@ -78,6 +78,9 @@ namespace CPMCore.Controllers
         private void SetDetailBreadcrumb(int issuerId, string? companyName)
         {
             ViewData["BreadcrumbNode"] = CreateIndexNode(issuerId, companyName);
+            // De trail stopt boven de pagina zelf, dus de laatste kruimel moet klikbaar blijven
+            // (Clickable-Crumb Rule in DESIGN.md); de link draagt de issuerCompanyId-filter mee.
+            ViewData["BreadcrumbLastIsLink"] = true;
         }
 
         private void SetSendBreadcrumb(int issuerId, string? companyName, int invoiceId, string detailTitle)

@@ -44,26 +44,7 @@
         '</div>';
     }
 
-    function buildLanguage(e) {
-        var capSing = e.singular.charAt(0).toUpperCase() + e.singular.slice(1);
-        var capPlur = e.plural.charAt(0).toUpperCase() + e.plural.slice(1);
-        return {
-            processing: "Bezig met verwerken…",
-            search: "Zoeken:",
-            lengthMenu: "Toon _MENU_",
-            info: capSing + " _START_ tot _END_ van _TOTAL_ " + capPlur,
-            infoEmpty: capSing + " 0 tot 0 van 0 " + capPlur,
-            infoFiltered: "(gefilterd uit _MAX_ totaal)",
-            loadingRecords: "Bezig met laden…",
-            zeroRecords: buildEmptyStateHtml(),
-            emptyTable: "Er zijn geen " + e.plural + " om weer te geven",
-            paginate: { previous: "‹", next: "›" },
-            aria: {
-                sortAscending: ": activeer om oplopend te sorteren",
-                sortDescending: ": activeer om aflopend te sorteren"
-            }
-        };
-    }
+    function buildLanguage(e) { return window.GlV2DataTable.language(e, buildEmptyStateHtml()); }
 
     // ── Filters (issuer/status/activiteiten) — zelfde $.fn.dataTable.ext.search-logica als het
     // bestaande inline script in Index.cshtml, ongewijzigd overgenomen. ────────────────────────────
@@ -106,8 +87,12 @@
         return opt ? opt.getAttribute("data-label") : value;
     }
     function activityOptionLabel(id) {
-        var opt = document.querySelector('#activity-filter option[value="' + id + '"]');
-        return opt ? opt.textContent : id;
+        var root = document.querySelector("#activity-combo");
+        var combo = root && root.closest("[data-gl-v2-combo]");
+        var list = [];
+        try { list = JSON.parse((combo && combo.getAttribute("data-options")) || "[]"); } catch (e) { list = []; }
+        var opt = list.filter(function (o) { return String(o.id) === String(id); })[0];
+        return opt ? opt.text : id;
     }
 
     function updateFilterChips() {
@@ -148,8 +133,9 @@
             statusSelectApi.select("active");
         } else if (type === "activity") {
             var value = String($(this).data("filter-value"));
-            var current = $("#activity-filter").val() || [];
-            $("#activity-filter").val(current.filter(function (v) { return v !== value; })).trigger("change");
+            selectedActivityIds = selectedActivityIds.filter(function (v) { return v !== value; });
+            table.draw();
+            updateFilterChips();
         }
     });
 
@@ -172,41 +158,11 @@
         statusSelectApi.select("active", false);
         selectedStatus = "active";
         selectedActivityIds = [];
-        $("#activity-filter").val(null).trigger("change");
         table.draw();
         updateFilterChips();
     }
     $(document).on("click", ".js-gl-v2-clear-filters, .gl-v2-filters-clear", resetFilters);
 
-    // ── Filters-knop (optie 4f) — klapt het filtervelden-/badges-blok open/dicht. Twee triggers
-    // sturen hetzelfde paneel aan: de inline "Filters"-knop in de toolbar (alle breedtes) en de
-    // topbar-filtericoon (enkel <768px, @section MobileTopbarAction in Home/IndexV2.cshtml resp.
-    // hier Leveranciers/IndexV2.cshtml) — op mobiel wordt #filters-panel via CSS een bottom sheet
-    // i.p.v. inline te blijven staan, vandaar ook de backdrop (enkel daar zichtbaar). ─────────────
-    var filtersToggle = document.getElementById("filters-toggle");
-    var mobileFiltersToggle = document.getElementById("mobile-filters-toggle");
-    var filtersPanel = document.getElementById("filters-panel");
-    var filtersPanelBackdrop = document.getElementById("filters-panel-backdrop");
-    var filtersToggleButtons = [filtersToggle, mobileFiltersToggle].filter(Boolean);
-
-    function setFiltersPanelOpen(isOpen) {
-        filtersPanel.hidden = !isOpen;
-        if (filtersPanelBackdrop) filtersPanelBackdrop.hidden = !isOpen;
-        filtersToggleButtons.forEach(function (btn) {
-            btn.classList.toggle("is-open", isOpen);
-            btn.setAttribute("aria-expanded", isOpen.toString());
-        });
-    }
-
-    if (filtersPanel && filtersToggleButtons.length) {
-        filtersToggleButtons.forEach(function (btn) {
-            btn.addEventListener("click", function () { setFiltersPanelOpen(filtersPanel.hidden); });
-        });
-        if (filtersPanelBackdrop) filtersPanelBackdrop.addEventListener("click", function () { setFiltersPanelOpen(false); });
-        document.addEventListener("keydown", function (e) {
-            if (e.key === "Escape" && !filtersPanel.hidden) setFiltersPanelOpen(false);
-        });
-    }
 
     // ── Mobiele kaarten (optie 4c) — zelfde architectuur als gl-v2-invoices.js' renderMobileCards():
     // #gl-v2-mobile-supplier-list is een lege container, gevuld telkens de tabel opnieuw tekent, dus
@@ -326,8 +282,6 @@
     }
     table.on("draw", updateFiltersShowButton);
     updateFiltersShowButton();
-    var filtersShowBtn = document.getElementById("filters-show-btn");
-    if (filtersShowBtn) filtersShowBtn.addEventListener("click", function () { setFiltersPanelOpen(false); });
 
     var MOBILE_PAGE_LENGTH = 15;
 
@@ -393,15 +347,12 @@
         table.search("").draw();
     });
 
-    $("#activity-filter").select2({
-        theme: "bootstrap",
-        placeholder: "Alle activiteiten",
-        allowClear: true,
-        closeOnSelect: false,
-        width: "100%",
-        language: "nl"
-    }).on("change", function () {
-        selectedActivityIds = $(this).val() || [];
+    // Activiteit: gl-v2-keuzelijst met zoekveld (multi-filter: het veld maakt zichzelf na elke keuze leeg, de gekozen activiteiten staan als chips).
+    document.addEventListener("gl-v2:combo-select", function (e) {
+        if (!e.target.querySelector || !e.target.querySelector("#activity-combo")) return;
+        var id = e.detail ? String(e.detail.id || "") : "";
+        if (!id || selectedActivityIds.indexOf(id) !== -1) return;
+        selectedActivityIds = selectedActivityIds.concat([id]);
         table.draw();
         updateFilterChips();
     });

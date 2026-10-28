@@ -182,7 +182,7 @@
     }
 
     // ── Toast (bestaande gl-v2-toasts) ──────────────────────────────────────────────────────────
-    function toast(tone, title, body) { if (window.GlV2Toast) window.GlV2Toast.show({ tone: tone, title: title, body: body || "" }); }
+    var toast = (window.GlV2Toast && window.GlV2Toast.notify) || function () {}; // gedeeld, zie gl-v2-shell.js
 
     // ── CSRF voor fetch-posts ───────────────────────────────────────────────────────────────────
     function token() { var t = document.querySelector('input[name="__RequestVerificationToken"]'); return t ? t.value : ""; }

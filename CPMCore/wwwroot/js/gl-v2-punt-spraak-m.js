@@ -195,7 +195,7 @@
             var thumb = '<button type="button" class="gl-v2-ptv-thumb' + (src ? " has-img" : "") + '" data-act="play" aria-label="Beluister" ' + (src ? 'style="background-image:url(' + src + ')"' : "") + '><i class="ph ph-play" aria-hidden="true"></i></button>';
             var n = (p.photoIndexes || []).length;
             return '<div class="gl-v2-ptv-row' + (p._on ? "" : " is-off") + '" data-i="' + p._i + '">' + thumb +
-                '<div class="gl-v2-ptv-row-main"><b>' + esc(p.title) + '</b><small>' + esc(whereOf(p) + (p.atSeconds != null ? " · " + mmss(p.atSeconds) : "")) + (n ? " · " + n + (n === 1 ? " foto" : " foto’s") : "") + '</small>' +
+                '<div class="gl-v2-stack gl-v2-ptv-row-main"><b>' + esc(p.title) + '</b><small>' + esc(whereOf(p) + (p.atSeconds != null ? " · " + mmss(p.atSeconds) : "")) + (n ? " · " + n + (n === 1 ? " foto" : " foto’s") : "") + '</small>' +
                 (p.existingNr ? '<span class="gl-v2-ptv-who">bestaat al: P-' + ("00" + p.existingNr).slice(-3) + '</span>' : (p.contractorName ? '<span class="gl-v2-ptv-who">' + esc(p.contractorName) + '</span>' : '<span class="gl-v2-ptv-who is-warn">aannemer kiezen</span>')) + attached(p) + links() + '</div>' +
                 (p.existingNr ? '<span class="gl-v2-ptv-badge">bestaat al</span>' : '') +
                 '<button type="button" class="gl-v2-ptv-cb sm' + (p._on ? " is-on" : "") + '" data-act="toggle" aria-pressed="' + p._on + '" aria-label="Dit punt bewaren">' + CHECK + '</button></div>';

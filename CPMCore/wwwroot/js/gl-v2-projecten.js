@@ -148,40 +148,12 @@
         if (e.target.closest(".gl-v2-filters-clear") || e.target === clearFilterBtn) resetFilters();
     });
 
-    // ── Filters-knop — klapt het filterveld-/badges-blok open/dicht. Twee triggers sturen hetzelfde
-    // paneel aan: de inline "Filters"-knop in de toolbar en de topbar-filtericoon (<768px). ────────
-    var filtersToggle = document.getElementById("filters-toggle");
-    var mobileFiltersToggle = document.getElementById("mobile-filters-toggle");
-    var filtersPanel = document.getElementById("filters-panel");
-    var filtersPanelBackdrop = document.getElementById("filters-panel-backdrop");
-    var filtersToggleButtons = [filtersToggle, mobileFiltersToggle].filter(Boolean);
-
-    function setFiltersPanelOpen(isOpen) {
-        filtersPanel.hidden = !isOpen;
-        if (filtersPanelBackdrop) filtersPanelBackdrop.hidden = !isOpen;
-        filtersToggleButtons.forEach(function (btn) {
-            btn.classList.toggle("is-open", isOpen);
-            btn.setAttribute("aria-expanded", isOpen.toString());
-        });
-    }
-
-    if (filtersPanel && filtersToggleButtons.length) {
-        filtersToggleButtons.forEach(function (btn) {
-            btn.addEventListener("click", function () { setFiltersPanelOpen(filtersPanel.hidden); });
-        });
-        if (filtersPanelBackdrop) filtersPanelBackdrop.addEventListener("click", function () { setFiltersPanelOpen(false); });
-        document.addEventListener("keydown", function (e) {
-            if (e.key === "Escape" && !filtersPanel.hidden) setFiltersPanelOpen(false);
-        });
-    }
 
     // ── "Toon N projecten" (mobiele filtersheet) — telt de op dit moment zichtbare kaarten. ───────
     var filtersShowCount = document.getElementById("filters-show-count");
     function updateFiltersShowButton() {
         if (filtersShowCount) filtersShowCount.textContent = cards().filter(function (c) { return !c.hidden; }).length;
     }
-    var filtersShowBtn = document.getElementById("filters-show-btn");
-    if (filtersShowBtn) filtersShowBtn.addEventListener("click", function () { setFiltersPanelOpen(false); });
 
     // ── Status-select — zelfde BASIS-paneelvariant (optie 4h) als Leveranciers/Klanten. ───────────
     function initSelect(prefix, onChange) {

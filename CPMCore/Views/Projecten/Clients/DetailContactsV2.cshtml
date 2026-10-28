@@ -195,7 +195,7 @@
                                 <td class="gl-v2-ct-last" data-order="@(r.LastAt?.ToString("yyyyMMddHHmm") ?? "0")">@if (!string.IsNullOrWhiteSpace(r.LastTitle)) { <span>@r.LastTitle</span><small>@lastSub</small> } else { <span class="gl-v2-ct-muted">—</span> }</td>
                                 <td class="gl-v2-ct-next @nextClass" data-order="@(r.NextDate?.ToString("yyyyMMdd") ?? "99999999")">@(nextLabel == "" ? "—" : nextLabel)</td>
                                 <td data-order="@(r.AssignedName ?? "zzz")">@if (!string.IsNullOrWhiteSpace(r.AssignedName)) { <span class="gl-v2-ct-av" title="@r.AssignedName">@ContactenWeergave.Initials(r.AssignedName)</span> } else { <span class="gl-v2-ct-av is-empty" title="Niet toegewezen">–</span> }</td>
-                                <td class="gl-v2-ct-actions"><i class="ph ph-caret-right gl-v2-ct-chev" aria-hidden="true"></i></td>
+                                <td class="gl-v2-ct-actions"><span class="gl-v2-rowact"><i class="ph ph-caret-right gl-v2-rowact-chev" aria-hidden="true"></i></span></td>
                             </tr>
                         }
                     </tbody>

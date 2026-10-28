@@ -210,6 +210,7 @@
         }
         function choose(it) {
             apply(it.id, it.text, it.sub || "");
+            if (root.getAttribute("data-clear-on-select") === "true") apply("", "", "", true);   // multi-filter: veld is na de keuze weer leeg
             close(false);
         }
         function createNew() {

@@ -37,6 +37,7 @@ namespace CPMCore.Controllers
 
             SetUnitFormV2Breadcrumb(vm);
 
+            ViewData["HelpScreenId"] = "projecten-eenheid-formulier";
             return View(UnitFormV2View, vm);
         }
 
@@ -342,6 +343,7 @@ namespace CPMCore.Controllers
                 if (!isNew) model.Unit.IsOption = existing!.IsOption;
                 SetUnitFormV2Breadcrumb(model);
                 AddMessage("error", "De eenheid is nog niet opgeslagen — kijk de aangeduide velden na.", "Fout!");
+            ViewData["HelpScreenId"] = "projecten-eenheid-formulier";
                 return View(UnitFormV2View, model);
             }
 
@@ -376,6 +378,7 @@ namespace CPMCore.Controllers
                     FillUnitFormV2Lists(model);
                     SetUnitFormV2Breadcrumb(model);
                     AddMessage("error", "Het verkoopplan kon niet geüpload worden.", "Fout!");
+            ViewData["HelpScreenId"] = "projecten-eenheid-formulier";
                     return View(UnitFormV2View, model);
                 }
                 unit.Plan = uploaded;
@@ -392,6 +395,7 @@ namespace CPMCore.Controllers
                 ModelState.AddModelError("", saved.Messages.FirstOrDefault()?.Message ?? "Opslaan mislukt.");
                 FillUnitFormV2Lists(model);
                 SetUnitFormV2Breadcrumb(model);
+            ViewData["HelpScreenId"] = "projecten-eenheid-formulier";
                 return View(UnitFormV2View, model);
             }
             var unitId = saved.InsertedId;

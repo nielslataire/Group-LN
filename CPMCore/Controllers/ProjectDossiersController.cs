@@ -68,6 +68,7 @@ public class ProjectDossiersController : BaseController
             vm.HighlightDossierId = hl;
             vm.FilterKind = kind;
             await VulV2Index(vm);
+            ViewData["HelpScreenId"] = "dossiers-index";
             return View("IndexV2", vm);
         }
         return View(vm);
@@ -185,6 +186,7 @@ public class ProjectDossiersController : BaseController
                 var eenheid = await _db.Units.AsNoTracking().Where(u => u.Id == uid).Select(u => new { u.Name, Klant = u.ClientAccount != null ? u.ClientAccount.Name : null }).FirstOrDefaultAsync();
                 vm.EenheidKlant = eenheid == null ? null : eenheid.Name + (string.IsNullOrWhiteSpace(eenheid.Klant) ? "" : " · " + eenheid.Klant);
             }
+            ViewData["HelpScreenId"] = "dossiers-detail";
             return View("DetailsV2", vm);
         }
         return View(vm);
@@ -202,6 +204,7 @@ public class ProjectDossiersController : BaseController
         vm.DefaultUnitId = unitId;
         if (await VoorstelNetbeheerder(projectId, vm.DefaultType) is { } nb) { vm.DefaultNetbeheerderId = nb.Id; vm.DefaultNetbeheerderNaam = nb.Naam; }
         SetNutsFormHeader(vm, "Nieuwe nutsaansluiting");
+        ViewData["HelpScreenId"] = "dossiers-nuts-formulier";
         return View("NutsFormV2", vm);
     }
 
@@ -213,6 +216,7 @@ public class ProjectDossiersController : BaseController
         if (nuts == null) return NotFound();
         var vm = await BouwNutsForm(projectId, nuts);
         SetNutsFormHeader(vm, "Nutsaansluiting bewerken");
+        ViewData["HelpScreenId"] = "dossiers-nuts-formulier";
         return View("NutsFormV2", vm);
     }
 

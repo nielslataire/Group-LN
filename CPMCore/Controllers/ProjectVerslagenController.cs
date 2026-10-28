@@ -135,6 +135,7 @@ public class ProjectVerslagenController : BaseController
                 OpenTotaal = open.Count, OpenGemeld = open.Count(p => St(p) == (int)ConstructionIssueStatus.Reported),
             };
         }
+        ViewData["HelpScreenId"] = "verslagen-index";
         return View("IndexV2", vm);
     }
 

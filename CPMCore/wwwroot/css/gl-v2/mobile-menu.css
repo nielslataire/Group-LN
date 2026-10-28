@@ -1,0 +1,232 @@
+/* gl-v2 shell — Mobiel hoofdmenu (volledig paneel, optie 3b). Uit gl-v2-shell.css gelicht (26/10/2026, CSS-consolidatie stap 11): bronvolgorde ongewijzigd; de <link>-volgorde in _LayoutV2.cshtml
+   (shell → buttons → userbox-hamburger → mobile-menu → breakpoints → quickactions → forms …) is dezelfde als de oude volgorde binnen één bestand: niet herschikken. */
+
+/* ── Mobile main-menu panel (design-handoff optie 3b) ───────────────────────────────────── */
+.gl-v2-mobile-backdrop {
+    position: fixed;
+    inset: 0;
+    /* height:100dvh backs up inset:0 on browsers that support the dynamic-viewport unit (most
+       current mobile browsers) — plain inset:0 sizes against the LARGE viewport (address bar
+       hidden) in some browsers/versions, taller than what's actually visible with the address bar
+       shown, which can push fixed content below the fold. Unsupported browsers just ignore this
+       line and keep the inset:0 sizing, so it's a pure progressive enhancement, no fallback logic
+       needed. */
+    height: 100dvh;
+    background: rgba(20, 26, 19, .45);
+    z-index: 99998;
+}
+
+.gl-v2-mobile-menu {
+    /* Full-bleed: inset:0 alone (no explicit width) sizes it to the viewport on all four sides —
+       it's only ever opened below the phone breakpoint (the hamburger that triggers it is hidden
+       above 768px), so there's no wider viewport it needs to cap itself against. max-width +
+       overflow-x is a hard backstop: inset:0 should already guarantee viewport width, but if any
+       child ever refuses to shrink (an <input>'s intrinsic min-width, a long unbreakable label),
+       this stops it from ever widening the panel itself instead of just clipping/scrolling that
+       one child. */
+    position: fixed;
+    inset: 0;
+    height: 100dvh;
+    max-width: 100vw;
+    overflow-x: hidden;
+    background: var(--gl-v2-surface);
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+}
+
+/* [hidden] and a plain class share specificity, and author rules win ties — so the display:flex
+   above silently beat the browser's [hidden]{display:none} default, leaving this panel always
+   present (not just when JS opens it). The attribute+class selector below is more specific and
+   wins for real. Same latent risk existed on .gl-v2-mobile-backdrop; it has no competing display
+   rule today, but guarded here too so neither can regress the same way. */
+.gl-v2-mobile-menu[hidden],
+.gl-v2-mobile-backdrop[hidden] {
+    display: none;
+}
+
+.gl-v2-mobile-menu-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px;
+    background: var(--gl-v2-primary);
+    flex: none;
+}
+
+/* Zelfde echte-beeldmerk-behandeling als .gl-v2-mobile-logo (topbar op gsm) — was een gestippeld
+   "LN"-tekstvakje (nog-niet-ingevuld-placeholder), nu het merk-beeldmerk zelf, geen rand/achtergrond
+   nodig (leest leesbaar genoeg rechtstreeks op de groene paneelkop, net als in de topbar). */
+.gl-v2-mobile-menu-logo {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+}
+.gl-v2-mobile-menu-logo img { width: 26px; height: 26px; object-fit: contain; display: block; }
+
+.gl-v2-mobile-menu-title { font: 500 18px var(--gl-v2-font-serif); color: var(--gl-v2-surface); flex: 1; }
+
+.gl-v2-mobile-menu-close {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, .35);
+    background: transparent;
+    color: var(--gl-v2-surface);
+    font-size: 18px;
+    line-height: 1;
+    flex: none;
+}
+
+.gl-v2-mobile-menu-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 14px;
+    padding: 0 14px;
+    height: 38px;
+    border-radius: var(--gl-v2-radius-pill);
+    border: 1px solid var(--gl-v2-hairline);
+    color: var(--gl-v2-muted);
+    flex: none;
+}
+
+.gl-v2-mobile-menu-search input {
+    border: 0;
+    outline: 0;
+    flex: 1;
+    /* An <input>'s flex default min-width:auto resolves to its own browser-intrinsic minimum
+       (often ~170-200px), which it won't shrink below — on a narrow phone that can force this
+       whole search box, and the panel around it, wider than the viewport. */
+    min-width: 0;
+    /* 16px, not 13px — iOS Safari auto-zooms the whole page on focus for any input under 16px,
+       which would explain "search box too big / close button and footer not visible": the zoom
+       itself, not a layout bug. Same rule this app's own DESIGN.md documents for the current
+       system's forms. */
+    font: 500 16px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+    background: transparent;
+}
+
+.gl-v2-mobile-menu-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 8px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.gl-v2-mobile-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 10px;
+    border-radius: 10px;
+    border: 0;
+    border-left: 3px solid transparent;
+    background: transparent;
+    color: var(--gl-v2-ink);
+    text-decoration: none;
+    font: 500 15px var(--gl-v2-font-sans);
+    text-align: left;
+    width: 100%;
+}
+
+.gl-v2-mobile-item i:first-child { font-size: 19px; flex: none; }
+.gl-v2-mobile-chevron { margin-left: auto; font-size: 13px !important; color: var(--gl-v2-muted); transition: transform .15s ease; }
+
+/* Uitgeklapte groep krijgt dezelfde tint + linker accentrand + gekleurde, vetter tekst als het
+   voorbeeld (optie 3b, de open "Klanten"-rij) i.p.v. enkel de pijl te draaien. */
+.gl-v2-mobile-group-trigger[aria-expanded="true"] {
+    background: var(--gl-v2-primary-tint);
+    border-left-color: var(--gl-v2-primary);
+    color: var(--gl-v2-primary);
+    font-weight: 600;
+}
+.gl-v2-mobile-group-trigger[aria-expanded="true"] i:first-child { color: var(--gl-v2-primary); }
+.gl-v2-mobile-group-trigger[aria-expanded="true"] .gl-v2-mobile-chevron { color: var(--gl-v2-primary); transform: rotate(180deg); }
+
+.gl-v2-mobile-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 2px 0 6px 30px;
+}
+
+.gl-v2-mobile-subitem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 10px;
+    border-radius: 9px;
+    color: var(--gl-v2-ink);
+    text-decoration: none;
+    font: 450 14px var(--gl-v2-font-sans);
+}
+
+.gl-v2-mobile-subitem i { font-size: 15px; flex: none; color: var(--gl-v2-primary); }
+
+.gl-v2-mobile-subitem:hover,
+.gl-v2-mobile-item:hover { background: var(--gl-v2-primary-tint); }
+
+/* Optie 3b (bijgewerkt): profielkaart (tappable, chevron) + aparte knoppenrij eronder — twee
+   stukken, niet één enkele rij zoals de eerste versie van dit paneel had. */
+.gl-v2-mobile-menu-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px calc(14px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--gl-v2-hairline-soft);
+    flex: none;
+}
+
+.gl-v2-mobile-profile-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border: 1px solid var(--gl-v2-hairline);
+    border-radius: var(--gl-v2-radius-md);
+    text-decoration: none;
+    color: inherit;
+}
+
+.gl-v2-mobile-profile-card .gl-v2-avatar {
+    width: 36px;
+    height: 36px;
+    border: 0;
+}
+
+.gl-v2-mobile-profile-card > i { margin-left: auto; font-size: 13px; color: var(--gl-v2-muted); flex: none; }
+
+.gl-v2-mobile-profile-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gl-v2-mobile-profile-name { font: 600 13.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-mobile-profile-email {
+    font: 500 10.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gl-v2-mobile-profile-actions { display: flex; gap: 8px; }
+
+.gl-v2-mobile-profile-btn {
+    flex: 1;
+    height: 36px;
+    border-radius: 9px;
+    border: 1px solid var(--gl-v2-hairline);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 500 12px var(--gl-v2-font-sans);
+    color: var(--gl-v2-ink);
+    text-decoration: none;
+}
+
+.gl-v2-mobile-profile-btn:hover { background: var(--gl-v2-primary-tint); }

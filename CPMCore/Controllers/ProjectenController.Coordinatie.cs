@@ -91,6 +91,7 @@ namespace CPMCore.Controllers
             {
                 var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
                 model.GlV2 = BuildDetailCoordinatieV2Vm(model, proj, _ps.HasWrite(PermissionCodes.ProjectsDetail));
+            ViewData["HelpScreenId"] = "projecten-coordinatie";
                 return View("DetailCoordinatieV2", model);
             }
             return View(model);

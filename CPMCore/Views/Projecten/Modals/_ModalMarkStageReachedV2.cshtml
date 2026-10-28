@@ -25,7 +25,7 @@
             @foreach (var u in Model.Units)
             {
                 <label class="gl-v2-ps-mark-unit @(u.IsActionable ? "" : "is-disabled")">
-                    <span class="gl-v2-ps-check">
+                    <span class="gl-v2-check">
                         <input type="checkbox" class="js-ps-mark-unit" value="@u.UnitId" @(u.IsActionable ? "checked" : "disabled") />
                         <label></label>
                     </span>

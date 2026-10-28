@@ -29,7 +29,7 @@
                 <input type="checkbox" id="gln-ai-borg-toggle" class="gln-ai-switch-input" />
                 <span class="gl-v2-switch-track"></span>
             </label>
-            <div class="gln-ai-optrow-text">
+            <div class="gl-v2-stack gln-ai-optrow-text">
                 <strong>Borg inhouden</strong>
                 <span id="gln-ai-borg-sub">kies eerst een leverancier of contract</span>
             </div>
@@ -91,7 +91,7 @@
                 <input type="checkbox" id="gln-ai-inhouding-toggle" class="gln-ai-switch-input" @(inhoudingAan ? "checked" : null) @(vergrendeld ? "disabled" : null) />
                 <span class="gl-v2-switch-track"></span>
             </label>
-            <div class="gln-ai-optrow-text">
+            <div class="gl-v2-stack gln-ai-optrow-text">
                 <strong>Extra inhouding</strong>
                 <span id="gln-ai-inhouding-sub">@(vergrendeld ? "er is al iets van afgehandeld — bedrag en reden zijn vergrendeld" : "tijdelijk niet betalen — later vrijgeven of verrekenen")</span>
             </div>
@@ -178,7 +178,7 @@
                 <input type="checkbox" id="gln-ai-korting-toggle" class="gln-ai-switch-input" @(inv.KortingPercentage.GetValueOrDefault() > 0m ? "checked" : null) />
                 <span class="gl-v2-switch-track"></span>
             </label>
-            <div class="gln-ai-optrow-text">
+            <div class="gl-v2-stack gln-ai-optrow-text">
                 <strong>Korting contant</strong>
                 <span>geen contract: zelf in te vullen, wordt bij de factuur bewaard</span>
             </div>

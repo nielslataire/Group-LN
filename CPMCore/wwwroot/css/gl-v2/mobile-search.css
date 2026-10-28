@@ -54,6 +54,8 @@
         box-shadow: 0 8px 18px -12px rgba(44, 59, 42, .55);
     }
     .gl-v2 .gl-v2-search-spacer { flex: none; }
+    /* De vastgezette zoekbalk valt uit de flow: de pagina krijgt bovenaan evenveel ruimte als de balk hoog is (gezet door GlV2MobileSearch), zodat er niets achter de balk verdwijnt. */
+    body.is-searching .gl-v2-content { padding-top: calc(var(--gl-v2-pinned-h, 0px) + var(--gl-v2-content-pad-y, 0px)); }
 
     /* Postcode-/eenhedenkiezer: het bottom-sheet-paneel valt anders achter het toetsenbord. Tijdens het
        typen hangt het aan de bovenkant van het zichtbare gebied (veld bovenaan, resultaten eronder,

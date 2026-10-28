@@ -35,6 +35,7 @@ namespace CPMCore.Controllers
             var project = projectResponse.Value;
 
             var vm = new PaymentStagesV2Vm { ProjectId = projectid, ProjectName = project.Name, CanWrite = canWrite };
+            ViewData["HelpScreenId"] = "projecten-betalingsschijven";
 
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten") { Parent = Index };

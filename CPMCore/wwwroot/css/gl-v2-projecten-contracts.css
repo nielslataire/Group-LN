@@ -13,19 +13,6 @@
 .gl-v2-pc-print-btn { width: 100%; justify-content: center; margin-top: 4px; }
 
 /* ── Zoekbalk ─────────────────────────────────────────────────────────────────────────────────── */
-.gl-v2-toolbar-card {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    align-items: center;
-    padding: 14px;
-    border-radius: var(--gl-v2-radius-md);
-    background: var(--gl-v2-surface);
-    box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 14px 30px -24px rgba(44, 59, 42, .35);
-    flex: none;
-}
-.gl-v2-toolbar-search { flex: 1; min-width: 180px; }
-.gl-v2-toolbar-search .gl-v2-field-input { min-width: 0; }
 
 /* ── Leverancierstabel ────────────────────────────────────────────────────────────────────────── */
 .gl-v2-detail-table-card { flex: none; padding-bottom: 8px; }
@@ -94,7 +81,7 @@
 /* ── Uitklapbare contracten (design-handoff 14a) ─────────────────────────────────────────────── */
 .gl-v2-pc-chevron {
     width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;
-    border: 0; background: transparent; color: var(--gl-v2-muted); cursor: pointer; border-radius: 6px;
+    border: 0; background: transparent; color: var(--gl-v2-muted); cursor: pointer; border-radius: var(--gl-v2-radius-xs, 6px);
 }
 .gl-v2-pc-chevron:hover { background: var(--gl-v2-hover-tint); color: var(--gl-v2-primary); }
 .gl-v2-pc-chevron i { transition: transform .12s ease; font-size: 13px; }
@@ -135,12 +122,12 @@ tr.is-expanded > td { background: var(--gl-v2-bg); }
 .gl-v2-detail-table-card .dt-paging .pagination { display: flex; align-items: center; gap: 6px; margin: 0; }
 .gl-v2-detail-table-card .dt-paging .page-link {
     width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
-    border-radius: 7px; border: 1px solid var(--gl-v2-hairline); background: var(--gl-v2-surface);
+    border-radius: var(--gl-v2-radius-s, 7px); border: 1px solid var(--gl-v2-hairline); background: var(--gl-v2-surface);
     color: var(--gl-v2-muted-soft); font: 600 12px var(--gl-v2-font-sans);
 }
 .gl-v2-detail-table-card .dt-paging .page-link:hover { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); }
 .gl-v2-detail-table-card .dt-paging .page-item.active .page-link { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); }
-.gl-v2-detail-table-card .dt-paging .page-item.disabled .page-link { color: #C0CABE; background: var(--gl-v2-surface); border-color: var(--gl-v2-hairline-soft); }
+.gl-v2-detail-table-card .dt-paging .page-item.disabled .page-link { color: var(--gl-v2-disabled-ink, #C0CABE); background: var(--gl-v2-surface); border-color: var(--gl-v2-hairline-soft); }
 .gl-v2-detail-table-card .dt-search { display: none; }
 
 /* ── Tablet (768–1023.98px): enkel Leverancier/Contractprijs/Acties blijven over — Contract/
@@ -200,3 +187,7 @@ tr.is-expanded > td { background: var(--gl-v2-bg); }
 @media (min-width: 768px) {
     .gl-v2-pc-mobile-list { display: none; }
 }
+
+/* hersteld uit filters.css-consolidatie: paginavariant van een gedeeld component */
+.gl-v2-toolbar-card { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 14px; border-radius: var(--gl-v2-radius-md); background: var(--gl-v2-surface); box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 14px 30px -24px rgba(44, 59, 42, .35); flex: none; }
+.gl-v2-toolbar-search { flex: 1; min-width: 180px; }

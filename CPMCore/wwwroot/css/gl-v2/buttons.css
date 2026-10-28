@@ -1,0 +1,215 @@
+/* gl-v2 shell — Knoppen (.gl-v2-btn-familie, .gl-v2-icon-btn) en rij-acties (.gl-v2-rowact). Uit gl-v2-shell.css gelicht (26/10/2026, CSS-consolidatie stap 11): bronvolgorde ongewijzigd; de <link>-volgorde in _LayoutV2.cshtml
+   (shell → buttons → userbox-hamburger → mobile-menu → breakpoints → quickactions → forms …) is dezelfde als de oude volgorde binnen één bestand: niet herschikken. */
+
+/* ── Buttons (design-handoff optie 4e — "KNOPPEN: DEFAULT · HOVER · ACTIEF · FOCUS · DISABLED")
+   Vijf families, elk met dezelfde 5 states. .gl-v2-btn is de gedeelde basis (hoogte/radius/font);
+   elke familie (-primary/-secondary/-text/-danger) levert enkel de kleuren. .gl-v2-icon-btn is
+   z'n eigen (vierkante) ding, geen .gl-v2-btn-modifier. Gedeeld/herbruikbaar over elke gl-v2-
+   pagina — niet Facturen-specifiek, vandaar hier i.p.v. in gl-v2-invoices.css. ────────────────── */
+/* Rij-acties in een lijst/tabel (design: Projecten/Issues is de referentie). Rust: enkel een chevron (alleen als de rij doorklikt). Hover/focus op de rij: de chevron
+   verdwijnt en de acties (.gl-v2-icon-btn, 32px) verschijnen. Rij = <tr> of .gl-v2-listrow. Rijhoogte blijft vast (vaste binnenhoogte, geen verticale padding nodig).
+   Markup: <span class="gl-v2-rowact"><i class="ph ph-caret-right gl-v2-rowact-chev"></i><span class="gl-v2-rowact-btns">…icon-btn…</span></span>
+   Een rij die doorklikt krijgt data-row-href (gl-v2-shell.js navigeert, behalve bij klik op link/knop/formulier). */
+/* Breedte van de actiecel = altijd de breedte van de knoppen: die staan met visibility:hidden (niet display:none) gereserveerd, de chevron ligt er in rust bovenop.
+   Daardoor verspringt de kolom of rij nooit bij hover, ook niet als DataTables/autolayout de kolombreedte uit de inhoud afleidt. */
+.gl-v2-rowact { position: relative; display: inline-flex; align-items: center; justify-content: flex-end; min-height: 32px; white-space: nowrap; }
+.gl-v2-rowact-chev { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 15px; color: var(--gl-v2-muted-light); }
+.gl-v2-rowact-chev:only-child { position: static; transform: none; margin-right: 10px; }
+.gl-v2-rowact-btns { display: inline-flex; visibility: hidden; align-items: center; justify-content: flex-end; gap: 4px; }
+.gl-v2-rowact-btns form { display: inline-flex; margin: 0; }
+.gl-v2-rowact-btns .gl-v2-icon-btn { width: 32px; height: 32px; min-width: 32px; padding: 0; }
+.gl-v2-rowact-btns .gl-v2-icon-btn i { font-size: 15px; }
+.gl-v2-rowact-btns .gl-v2-icon-btn.is-danger:hover { background: #F8EBEB; color: #8B2A2A; }
+:is(tr, .gl-v2-listrow)[data-row-href] { cursor: pointer; }
+@media (hover: hover) {
+    :is(tr, .gl-v2-listrow):is(:hover, :focus-within) .gl-v2-rowact-chev { visibility: hidden; }
+    :is(tr, .gl-v2-listrow):is(:hover, :focus-within) .gl-v2-rowact-btns { visibility: visible; }
+}
+@media (hover: none) {
+    .gl-v2-rowact-chev { display: none; }
+    .gl-v2-rowact-btns { visibility: visible; }
+}
+
+.gl-v2-btn {
+    height: 38px;
+    padding: 0 16px;
+    border-radius: var(--gl-v2-radius-sm);
+    border: 1px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font: 600 12px var(--gl-v2-font-sans);
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color .12s ease, border-color .12s ease, color .12s ease, box-shadow .12s ease;
+}
+
+/* Primair */
+.gl-v2-btn-primary { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); }
+.gl-v2-btn-primary:hover { background: #006638; border-color: #006638; box-shadow: 0 8px 18px -10px rgba(0, 83, 45, .75); }
+.gl-v2-btn-primary:active { background: #003d21; border-color: #003d21; box-shadow: none; }
+.gl-v2-btn-primary:disabled { background: #DCE4D7; border-color: #DCE4D7; color: #7C8C7A; }
+
+/* Secundair (outline) */
+.gl-v2-btn-secondary { background: var(--gl-v2-surface); border-color: var(--gl-v2-accent-sage); color: #2F6038; }
+.gl-v2-btn-secondary:hover { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); }
+.gl-v2-btn-secondary:active { background: #2F6038; border-color: #2F6038; color: var(--gl-v2-surface); }
+.gl-v2-btn-secondary:disabled { background: var(--gl-v2-surface); border-color: var(--gl-v2-hairline); color: #9AA898; }
+
+/* Tekstknop (ghost) */
+.gl-v2-btn-text { background: transparent; color: var(--gl-v2-primary); }
+.gl-v2-btn-text:hover { background: #E4EBDE; }
+.gl-v2-btn-text:active { background: var(--gl-v2-primary-tint); color: #003d21; }
+.gl-v2-btn-text:disabled { background: transparent; color: #9AA898; }
+
+/* Verwijderen (danger) */
+.gl-v2-btn-danger { background: var(--gl-v2-surface); border-color: rgba(139, 42, 42, .4); color: var(--gl-v2-danger, #8B2A2A); }
+.gl-v2-btn-danger:hover { background: var(--gl-v2-danger-tint, #F8EBEB); border-color: var(--gl-v2-danger, #8B2A2A); }
+.gl-v2-btn-danger:active { background: var(--gl-v2-danger, #8B2A2A); border-color: var(--gl-v2-danger, #8B2A2A); color: var(--gl-v2-surface); }
+.gl-v2-btn-danger:disabled { background: var(--gl-v2-surface); border-color: var(--gl-v2-hairline); color: #9AA898; }
+
+/* Waarschuwing (warning) — nieuw, eerste gebruik is de modal-knoppenmatrix (design-handoff 4j,
+   "KNOPSTATEN IN DE MODAL"). Gevuld i.p.v. outline: een modal-bevestigknop is altijd de hoogst-
+   nadruk actie op het scherm, dezelfde reden -primary hierboven al gevuld is. Geen bestaand
+   gebruik elders om mee te houden (in tegenstelling tot -danger, dat buiten modals al een lagere-
+   nadruk outline-look heeft voor rij-acties), dus hier meteen de exacte matrix-kleuren. */
+.gl-v2-btn-warning { background: var(--gl-v2-warning); border-color: var(--gl-v2-warning); color: var(--gl-v2-surface); }
+.gl-v2-btn-warning:hover { background: #755826; border-color: #755826; box-shadow: 0 8px 18px -10px rgba(44, 59, 42, .6); }
+.gl-v2-btn-warning:active { background: #63491F; border-color: #63491F; box-shadow: none; }
+.gl-v2-btn-warning:disabled { background: #E4E8E2; border-color: #E4E8E2; color: #A8B3A6; }
+
+.gl-v2-btn:disabled { cursor: not-allowed; }
+
+/* Bezig (loading) — design-handoff 4j's zesde knopstaat naast rust/hover/ingedrukt/focus/uit.
+   Generieke utility (niet modal-gescopeerd): elke `.gl-v2-btn` kan 'm dragen, niet enkel er een
+   in een modal-footer. gl-v2-shell.js zet/verwijdert deze klasse automatisch op de submit-knop van
+   elk formulier binnen een Type 1/2-modal (zie initModalButtonLoading); andere pagina's mogen 'm
+   ook zelf zetten voor een niet-formulier async-actie. */
+.gl-v2-btn.is-loading { opacity: .75; cursor: wait; pointer-events: none; }
+
+/* Focus (alle families): zelfde goud-ring, staat na hover/active zodat die 'm niet verdringt.
+   :focus-visible enkel — een muisklik toont 'm dus nooit, alleen Tab. */
+.gl-v2-btn:focus-visible,
+.gl-v2-icon-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--gl-v2-gold);
+}
+
+/* Icoonknop — vierkant, eigen familie (geen .gl-v2-btn-modifier) */
+.gl-v2-icon-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: var(--gl-v2-radius-sm);
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gl-v2-primary);
+    flex: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color .12s ease, border-color .12s ease, color .12s ease, box-shadow .12s ease;
+}
+
+.gl-v2-icon-btn:hover { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); }
+.gl-v2-icon-btn:active { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); }
+/* Gevaar-variant (zelfde palet als .gl-v2-btn-danger) — een losstaand rood icoon-knopje i.p.v. een
+   knop met tekst, bv. "Verwijderen" rechtstreeks in een topbar i.p.v. weggestopt in een ⋯-menu. */
+.gl-v2-icon-btn.is-danger { border-color: rgba(139, 42, 42, .4); color: var(--gl-v2-danger, #8B2A2A); }
+.gl-v2-icon-btn.is-danger:hover { background: var(--gl-v2-danger-tint, #F8EBEB); border-color: var(--gl-v2-danger, #8B2A2A); }
+.gl-v2-icon-btn.is-danger:active { background: var(--gl-v2-danger, #8B2A2A); border-color: var(--gl-v2-danger, #8B2A2A); color: var(--gl-v2-surface); }
+/* Waarschuwing-variant (zelfde palet als .gl-v2-btn-warning) — onomkeerbaar maar niet destructief,
+   bv. één rij/lot/bijbestelling verwijderen uit een groter geheel (het contract zelf blijft
+   bestaan) — een minder zware handeling dan .is-danger's "dit object zelf verdwijnt volledig". */
+.gl-v2-icon-btn.is-warning { border-color: rgba(138, 106, 50, .4); color: #8A6A32; }
+.gl-v2-icon-btn.is-warning:hover { background: var(--gl-v2-warning-tint); border-color: #8A6A32; }
+.gl-v2-icon-btn.is-warning:active { background: #8A6A32; border-color: #8A6A32; color: var(--gl-v2-surface); }
+/* .js-gl-v2-menu-trigger (initContextMenus(), zie hieronder) toggelt deze klasse zelf terwijl het
+   paneel open staat — generiek hier zodat elke .gl-v2-icon-btn die als menu-trigger dient (bv. de
+   ⋯-knop in een detailpagina se eigen topbar) automatisch dezelfde "actief"-tint krijgt als hover,
+   zonder dat elke aanroeper een eigen .is-menu-open-regel moet schrijven. */
+.gl-v2-icon-btn.is-menu-open { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); }
+.gl-v2-icon-btn:disabled { border-color: var(--gl-v2-hairline-soft); background: var(--gl-v2-surface); color: #B6C1B4; cursor: not-allowed; }
+/* "Primair contact"-ster (js-gl-v2-primary-contact-toggle, klanten-/leveranciers-contactrijen) —
+   zelfde volle kleurvlak als .gl-v2-btn-primary (i.p.v. de te lichte goud-tint eerst geprobeerd,
+   die het sterretje onleesbaar maakte) zodat de actieve rij duidelijk en leesbaar afsteekt. */
+.gl-v2-icon-btn.is-primary { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); }
+.gl-v2-icon-btn.is-primary:hover { background: #006638; border-color: #006638; color: var(--gl-v2-surface); }
+.gl-v2-icon-btn.is-primary:active { background: #003d21; border-color: #003d21; color: var(--gl-v2-surface); }
+
+.gl-v2-topbar-userbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px 4px 4px;
+    border-radius: var(--gl-v2-radius-pill);
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    text-decoration: none;
+    flex: none;
+    white-space: nowrap;
+    transition: background-color .15s ease, border-color .15s ease;
+}
+
+.gl-v2-topbar-userbox:hover { border-color: var(--gl-v2-primary); }
+.gl-v2-topbar-userbox:active { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); }
+
+.gl-v2-avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--gl-v2-primary-tint);
+    border: 1px solid var(--gl-v2-hairline);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 600 10.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-primary);
+    flex: none;
+}
+
+/* Optie 4d: de userbox-trigger draagt een solid-green avatar i.p.v. de tint-bg versie die de
+   mobiele profielkaart gebruikt — zelfde context-override-patroon als
+   .gl-v2-mobile-profile-card .gl-v2-avatar hieronder, geen aparte modifier-class nodig. */
+.gl-v2-topbar-userbox .gl-v2-avatar {
+    width: 32px;
+    height: 32px;
+    background: var(--gl-v2-primary);
+    color: var(--gl-v2-surface);
+    border: none;
+    transition: box-shadow .15s ease;
+}
+
+.gl-v2-topbar-userbox .name { font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); transition: color .15s ease; }
+
+/* Optie 5c: volledige naam op desktop, ingekorte naam ("N. Lataire") op tablet-breedte — zie de
+   breakpoints verderop. Beide staan altijd in de DOM, CSS kiest welke zichtbaar is. */
+.gl-v2-userbox-name-short { display: none; }
+
+.gl-v2-userbox-caret {
+    font-size: 11px;
+    color: var(--gl-v2-muted);
+    flex: none;
+    transition: color .15s ease, transform .15s ease;
+}
+
+/* Bootstrap 5 zet .show op de toggle-trigger zelf (this._element in dropdown.js), niet op de
+   .dropdown-wrapper eromheen — geen eigen JS nodig om de "GEOPEND"-staat (4d) te stylen, wel op
+   het juiste element mikken. */
+.gl-v2-topbar-userbox.show {
+    background: var(--gl-v2-primary);
+    border-color: var(--gl-v2-primary);
+}
+.gl-v2-topbar-userbox.show .name { color: var(--gl-v2-surface); }
+.gl-v2-topbar-userbox.show .gl-v2-userbox-caret { color: var(--gl-v2-surface); transform: rotate(180deg); }
+/* Optie 4d GEOPEND: de avatar keert om (licht rond, groene letters) i.p.v. solid-groen te blijven
+   — anders verdwijnt de cirkel visueel in de nu even-groene pil eromheen. Zelfde
+   contrast-omkering-logica als het actieve rail-item (Primary fill + witte icon i.p.v. omgekeerd),
+   hier de andere kant op omdat de pil zelf al de donkere vlek is. */
+.gl-v2-topbar-userbox.show .gl-v2-avatar {
+    background: var(--gl-v2-surface);
+    color: var(--gl-v2-primary);
+}

@@ -337,7 +337,7 @@
             <div class="gl-v2-kd-unit-body">
                 <div class="gl-v2-kd-unit-head">
                     <span class="gl-v2-kd-unit-thumb"><i class="ph ph-house" aria-hidden="true"></i></span>
-                    <div class="gl-v2-kd-unit-title">
+                    <div class="gl-v2-stack gl-v2-kd-unit-title">
                         <span class="gl-v2-kd-unit-name">@primaryUnit.Type?.Name @primaryUnit.Name</span>
                         <span class="gl-v2-kd-unit-sub">@primaryUnit.Street@(primaryUnit.Surface.HasValue ? " · " + primaryUnit.Surface.Value.ToString("0") + " m²" : "")</span>
                     </div>
@@ -443,7 +443,7 @@
                     var docTitle = string.IsNullOrWhiteSpace(doc.Name) ? doc.Type.GetDisplayName() : doc.Name;
                     <a class="gl-v2-kd-row" href="@Url.Action("ViewDoc", "Projecten", new { id = doc.Docid })" target="_blank" rel="noopener">
                         <span class="gl-v2-kd-row-badge"><i class="ph ph-file-text" aria-hidden="true"></i></span>
-                        <div class="gl-v2-kd-row-main">
+                        <div class="gl-v2-stack is-tight gl-v2-kd-row-main">
                             <span class="gl-v2-kd-row-title">@docTitle</span>
                             <span class="gl-v2-kd-row-sub">@doc.Type.GetDisplayName()@(doc.DocDate.HasValue ? " · " + doc.DocDate.Value.ToString("dd/MM/yyyy") : "")</span>
                         </div>

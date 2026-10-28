@@ -163,6 +163,7 @@ namespace CPMCore.Controllers
                 new() { Label = "Betaald", Count = all.Count(r => r.Status == ChangeOrderStatus.Betaald) },
             };
 
+            ViewData["HelpScreenId"] = "wijzigingen-opmaken,wijzigingen-overzicht";
             return View(vm);
         }
 

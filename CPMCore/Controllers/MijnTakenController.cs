@@ -12,27 +12,33 @@ namespace CPMCore.Controllers;
 [Authorize]
 [CPMCore.Filters.PermissionRead(PermissionCodes.MijnTaken)]
 [Route("MijnTaken")]
-public class MijnTakenController : BaseController
+public partial class MijnTakenController : BaseController
 {
     private readonly cpmRunningContext _db;
     private readonly IProjectTaakService _taken;
     private readonly IProjectService _projectService;
+    private readonly CPMCore.Services.MijnTaken.MijnTakenAssistent _assistent;
 
-    public MijnTakenController(cpmRunningContext db, IProjectTaakService taken, IProjectService projectService)
+    public MijnTakenController(cpmRunningContext db, IProjectTaakService taken, IProjectService projectService, CPMCore.Services.MijnTaken.MijnTakenAssistent assistent)
     {
         _db = db;
         _taken = taken;
         _projectService = projectService;
+        _assistent = assistent;
     }
 
     private string? UserId => User.FindFirst(CpmClaims.UserId)?.Value;
 
     [HttpGet("")]
-    public async Task<IActionResult> Index([FromQuery] TaakFilterBO filters)
+    public async Task<IActionResult> Index([FromQuery] TaakFilterBO filters, bool classic = false)
     {
         SetPageHeader("ph ph-list-checks", "Mijn taken");
+        if (classic) ViewData["UseGlV2Layout"] = false;
         var userId = UserId;
         if (string.IsNullOrEmpty(userId)) return Forbid();
+
+        // gl-v2 (design-handoff punt 2): Vandaag is het beginscherm van de persoonlijke assistent; ?classic=true toont de oude lijst.
+        if (IsV2) return await VandaagV2();
 
         var rollen = await BepaalRollen(userId);
         var projectIds = await ZichtbareProjectIds();

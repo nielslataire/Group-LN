@@ -5,7 +5,7 @@ role: Projectleider
 device: Desktop · tablet
 minutes: 5
 updated: 2026-10-12
-screens: invoices-index
+screens: wijzigingen-opmaken
 synonyms: WO, meerwerk, minwerk, wijzigingsopdracht, itsme
 newsTag: Nieuw
 description: offerte inlezen, regels, ondertekenen via het klantenportaal

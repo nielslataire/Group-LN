@@ -179,12 +179,12 @@
                         <div class="gl-v2-is-attach">
                             <div class="gl-v2-is-tile @(Model.AttachPdf ? "is-on" : "")" data-is-tile="pdf">
                                 <span class="gl-v2-is-tile-ico"><i class="ph ph-file-pdf" aria-hidden="true"></i></span>
-                                <span class="gl-v2-is-tile-text"><b>PDF</b><small>@(fileBase).pdf</small></span>
+                                <span class="gl-v2-stack gl-v2-is-tile-text"><b>PDF</b><small>@(fileBase).pdf</small></span>
                                 <label class="gl-v2-switch"><input type="checkbox" asp-for="AttachPdf" class="gl-v2-is-attach-input" aria-label="PDF bijvoegen" disabled="@(copyMode ? "disabled" : null)" /><span class="gl-v2-switch-track"></span></label>
                             </div>
                             <div class="gl-v2-is-tile @(Model.AttachUbl ? "is-on" : "")" data-is-tile="ubl">
                                 <span class="gl-v2-is-tile-ico"><i class="ph ph-file-code" aria-hidden="true"></i></span>
-                                <span class="gl-v2-is-tile-text"><b>UBL (Peppol BIS 3.0)</b><small>@(fileBase).xml · EN 16931@(Model.DefaultAttachUbl ? " · standaard aan voor deze klant" : "")</small></span>
+                                <span class="gl-v2-stack gl-v2-is-tile-text"><b>UBL (Peppol BIS 3.0)</b><small>@(fileBase).xml · EN 16931@(Model.DefaultAttachUbl ? " · standaard aan voor deze klant" : "")</small></span>
                                 <label class="gl-v2-switch"><input type="checkbox" asp-for="AttachUbl" class="gl-v2-is-attach-input" aria-label="UBL bijvoegen" disabled="@(copyMode ? "disabled" : null)" /><span class="gl-v2-switch-track"></span></label>
                             </div>
                         </div>

@@ -17,18 +17,30 @@ public class DeadlinesController : BaseController
     private readonly cpmRunningContext _db;
     private readonly IMijlpaalService _mijlpalen;
     private readonly IProjectService _projectService;
+    private readonly CPMCore.Services.MijnTaken.MijnTakenAssistent _assistent;
 
-    public DeadlinesController(cpmRunningContext db, IMijlpaalService mijlpalen, IProjectService projectService)
+    public DeadlinesController(cpmRunningContext db, IMijlpaalService mijlpalen, IProjectService projectService, CPMCore.Services.MijnTaken.MijnTakenAssistent assistent)
     {
         _db = db;
         _mijlpalen = mijlpalen;
         _projectService = projectService;
+        _assistent = assistent;
     }
 
     [HttpGet("")]
-    public async Task<IActionResult> Index([FromQuery] MijlpaalFilterBO filters)
+    public async Task<IActionResult> Index([FromQuery] MijlpaalFilterBO filters, bool classic = false)
     {
         SetPageHeader("bx bx-calendar-check", "Deadlines");
+        if (classic) ViewData["UseGlV2Layout"] = false;
+
+        // gl-v2 (design-handoff punt 1b): mijlpalen per project met voortgang; ?classic=true toont de oude tabel.
+        if (ViewData["UseGlV2Layout"] as bool? == true)
+        {
+            var c = await _assistent.Context(User);
+            if (c == null) return Forbid();
+            ViewData["HelpScreenId"] = "deadlines-overzicht";
+            return View("IndexV2", await _assistent.DeadlinesOverzicht(c));
+        }
         filters ??= new MijlpaalFilterBO();
 
         var currentUserCode = User.GetCpmUserCode() ?? string.Empty;

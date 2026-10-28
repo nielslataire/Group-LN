@@ -48,7 +48,7 @@
     <div class="gl-v2-act-panel" data-act-panel="activiteiten" @(tab == "activiteiten" ? "" : "hidden")>
         <aside class="gl-v2-act-lots" aria-label="Activiteitgroep">
             <span class="gl-v2-act-lots-label">ACTIVITEITGROEP</span>
-            <div class="gl-v2-act-lots-list" id="act-lots"></div>
+            <div class="gl-v2-navlist gl-v2-act-lots-list" id="act-lots"></div>
         </aside>
 
         <section class="gl-v2-section-card gl-v2-act-card">
@@ -59,7 +59,7 @@
                 <span class="gl-v2-section-card-desc" id="act-info">—</span>
             </div>
 
-            <div class="gl-v2-act-toolbar">
+            <div class="gl-v2-list-toolbar gl-v2-act-toolbar">
                 <div class="gl-v2-field gl-v2-act-search">
                     <div class="gl-v2-field-box">
                         <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
@@ -82,14 +82,14 @@
                 </form>
             }
 
-            <div class="gl-v2-act-head gl-v2-act-grid--act">
+            <div class="gl-v2-list-head gl-v2-act-head gl-v2-act-grid--act">
                 <button type="button" class="gl-v2-act-sort" data-sort="nr">Lot<i class="ph" aria-hidden="true"></i></button>
                 <button type="button" class="gl-v2-act-sort is-active" data-sort="naam">Naam<i class="ph ph-arrow-up" aria-hidden="true"></i></button>
                 <button type="button" class="gl-v2-act-sort" data-sort="groep">Activiteitgroep<i class="ph" aria-hidden="true"></i></button>
                 <span></span>
             </div>
             <div id="act-rows"></div>
-            <div class="gl-v2-act-empty" id="act-empty" hidden>
+            <div class="gl-v2-list-empty gl-v2-act-empty" id="act-empty" hidden>
                 <span class="t" id="act-empty-t">Geen activiteiten gevonden</span>
                 <span class="s"><button type="button" id="act-empty-reset">Wis de filter</button></span>
             </div>
@@ -118,7 +118,7 @@
                     <button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-plus" aria-hidden="true"></i>Toevoegen</button>
                 </form>
             }
-            <div class="gl-v2-act-head gl-v2-act-grid--grp">
+            <div class="gl-v2-list-head gl-v2-act-head gl-v2-act-grid--grp">
                 <span>Lot</span><span>Naam</span><span>Activiteiten</span><span></span>
             </div>
             <div id="grp-rows"></div>

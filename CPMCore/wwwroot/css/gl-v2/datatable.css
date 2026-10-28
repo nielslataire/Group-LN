@@ -1,0 +1,12 @@
+/* gl-v2 - gedeelde DataTables-voettekst (info links, paginaknoppen 28x28 rechts) voor Facturen, Klanten en Leveranciers; eerder identiek in die drie pagina-CSS-bestanden (consolidatie 26/10/2026).
+   Laadt NA de DataTables/Bootstrap-CSS (einde van de componentenlijst in _LayoutV2.cshtml), net als de pagina-CSS dat deed, zodat de specificiteit-strijd hetzelfde blijft. */
+
+.gl-v2 .dt-container .dt-layout-row:first-child { display: none; }
+.gl-v2 .dt-container .dt-layout-row:last-child { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0 16px !important; flex: none; border-top: 1px solid var(--gl-v2-hairline); }
+.gl-v2 .dt-info { padding-left: 14px; color: var(--gl-v2-muted); font: 500 11.5px var(--gl-v2-font-sans); }
+.gl-v2 .dt-paging { padding-right: 14px; }
+.gl-v2 .dt-paging .page-item.active .page-link { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); }
+.gl-v2 .dt-paging .page-item.disabled .page-link { color: var(--gl-v2-disabled-ink, #C0CABE); background: var(--gl-v2-surface); border-color: var(--gl-v2-hairline-soft); }
+.gl-v2 .dt-paging .page-link { width: 28px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--gl-v2-radius-s, 7px); border: 1px solid var(--gl-v2-hairline); background: var(--gl-v2-surface); color: var(--gl-v2-muted-soft); font: 600 12px var(--gl-v2-font-sans); }
+.gl-v2 .dt-paging .page-link:hover { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); }
+.gl-v2 .dt-paging .pagination { display: flex; align-items: center; gap: 6px; margin: 0; }

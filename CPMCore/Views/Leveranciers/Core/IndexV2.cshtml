@@ -24,8 +24,6 @@
 }
 @section PageStyle
 {
-    <link rel="stylesheet" href="~/lib/select2/css/select2.css" />
-    <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
     <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
     <link rel="stylesheet" href="~/css/gl-v2-leveranciers.css" asp-append-version="true" />
 }
@@ -170,20 +168,12 @@
 
             <div class="gl-v2-filters-field">
                 <span class="gl-v2-filters-field-label">Activiteit</span>
-                <div class="gl-v2-leveranciers-activity">
-                    <select id="activity-filter" multiple data-plugin-selectTwo data-placeholder="Alle activiteiten" class="form-control populate">
-                        <option value=""></option>
-                        @foreach (var group in groupedActivities)
-                        {
-                            <optgroup label="@group.Key">
-                                @foreach (var activity in group.OrderBy(a => a.Name))
-                                {
-                                    <option value="@activity.Id">@activity.Name</option>
-                                }
-                            </optgroup>
-                        }
-                    </select>
-                </div>
+                @await Html.PartialAsync("GlV2/_GlV2Combo", new CPMCore.Models.GlV2.GlV2ComboVm
+                {
+                    Name = "activity_combo", Id = "activity-combo", Placeholder = "Zoek activiteit…", ListLabel = "Activiteiten", Icon = "ph-magnifying-glass",
+                    ClearOnSelect = true,
+                    OptionsJson = System.Text.Json.JsonSerializer.Serialize(groupedActivities.SelectMany(g => g.OrderBy(a => a.Name).Select(a => new { id = a.Id.ToString(), text = a.Name, sub = g.Key })))
+                })
             </div>
         </div>
 
@@ -276,7 +266,7 @@
                     {
                         var activityData = string.Join(",", supplier.ActivityIds);
                         var issuerData = string.Join(",", supplier.IssuerCompanyIds);
-                        <tr data-id="@supplier.Id" data-activities="@activityData" data-issuers="@issuerData" data-is-active="@supplier.IsActive.ToString().ToLowerInvariant()" data-detail-url="@Url.Action("Details", "Leveranciers", new { id = supplier.Id })">
+                        <tr data-id="@supplier.Id" data-activities="@activityData" data-issuers="@issuerData" data-is-active="@supplier.IsActive.ToString().ToLowerInvariant()" data-detail-url="@Url.Action("Details", "Leveranciers", new { id = supplier.Id })" data-row-href="@Url.Action("Details", "Leveranciers", new { id = supplier.Id })">
                             <td>
                                 <a class="gl-v2-supplier-name-link" href="@Url.Action("Details", "Leveranciers", new { id = supplier.Id })">@supplier.Name</a>
                                 @if (!supplier.IsActive)
@@ -304,7 +294,12 @@
                             </td>
                             <td class="text-end">@supplier.ContractCount</td>
                             <td class="text-end">@supplier.TotalContractAmount.ToString("C", currencyCulture)</td>
-                            <td class="text-end">
+                            <td class="text-end gl-td-actions">
+                                @* Rij-actiepatroon (DESIGN.md): >=1024px chevron in rust, iconen bij hover/focus (.gl-v2-rowact);
+                                   tot 1023px blijft het "···"-menu (gl-v2-leveranciers.css). Rij klikt door via data-row-href (gl-v2-shell.js). *@
+                                <span class="gl-v2-rowact">
+                                <i class="ph ph-caret-right gl-v2-rowact-chev" aria-hidden="true"></i>
+                                <span class="gl-v2-rowact-btns">
                                 <button type="button" class="gl-v2-row-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="row-menu-@supplier.Id" aria-label="Meer acties">
                                     <i class="ph ph-dots-three" aria-hidden="true"></i>
                                 </button>
@@ -329,6 +324,8 @@
                                         </a>
                                     }
                                 </div>
+                                </span>
+                                </span>
                             </td>
                         </tr>
                     }
@@ -352,7 +349,6 @@
 
 @section PageScripts
 {
-    <script src="~/lib/select2/js/select2.js"></script>
     <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
     <script>
         window.glV2LeveranciersConfig = {

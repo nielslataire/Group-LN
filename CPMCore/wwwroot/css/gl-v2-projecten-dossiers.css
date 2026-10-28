@@ -55,7 +55,7 @@
 .gl-v2-dos-cell .gl-v2-dos-seg { max-width: none; }
 .gl-v2-dos-cell-sub { font: 450 11.5px/1.35 var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
 .gl-v2-dos-cell.is-late .gl-v2-dos-cell-sub { color: var(--gl-v2-danger); font-weight: 600; }
-.gl-v2-dos-matrix .gl-v2-dos-aanvragen { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 22px auto; width: max-content; height: 36px; padding: 0 16px; border: 1px dashed var(--gl-v2-dashed); border-radius: 8px; background: transparent; color: var(--gl-v2-muted-soft); font: 600 12px var(--gl-v2-font-sans); text-decoration: none; }
+.gl-v2-dos-matrix .gl-v2-dos-aanvragen { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 22px auto; width: max-content; height: 36px; padding: 0 16px; border: 1px dashed var(--gl-v2-dashed); border-radius: var(--gl-v2-radius-sm, 8px); background: transparent; color: var(--gl-v2-muted-soft); font: 600 12px var(--gl-v2-font-sans); text-decoration: none; }
 .gl-v2-dos-matrix .gl-v2-dos-aanvragen:hover { border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); background: var(--gl-v2-hover-tint); }
 .gl-v2-dos-matrix .gl-v2-dos-aanvragen:focus-visible, .gl-v2-dos-cell:focus-visible, .gl-v2-dos-arow:focus-visible { outline: 2.5px solid var(--gl-v2-gold); outline-offset: -3px; }
 .gl-v2-dos-none { display: block; text-align: center; padding: 28px; color: var(--gl-v2-muted-light); }
@@ -177,7 +177,7 @@
 .gl-v2-dos-chk { list-style: none; margin: 0; padding: 0; }
 .gl-v2-dos-chk-item { display: flex; align-items: center; border-top: 1px solid var(--gl-v2-hairline-soft); }
 .gl-v2-dos-chk-label { flex: 1; display: flex; align-items: flex-start; gap: 14px; margin: 0; padding: 13px 20px; cursor: pointer; min-width: 0; }
-.gl-v2-dos-chk-box { appearance: none; width: 20px; height: 20px; margin: 1px 0 0; border: 1.5px solid var(--gl-v2-hairline); border-radius: 6px; background: var(--gl-v2-surface); flex: none; cursor: pointer; display: inline-grid; place-content: center; }
+.gl-v2-dos-chk-box { appearance: none; width: 20px; height: 20px; margin: 1px 0 0; border: 1.5px solid var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-xs, 6px); background: var(--gl-v2-surface); flex: none; cursor: pointer; display: inline-grid; place-content: center; }
 .gl-v2-dos-chk-box:checked { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); }
 .gl-v2-dos-chk-box:checked::after { content: ""; width: 10px; height: 6px; border-left: 2px solid #fff; border-bottom: 2px solid #fff; transform: rotate(-45deg) translate(1px, -1px); }
 .gl-v2-dos-chk-box:focus-visible { outline: 2.5px solid var(--gl-v2-gold); outline-offset: 2px; }
@@ -194,8 +194,7 @@
 .gl-v2-dos-chk-add-row .gl-v2-field-box { flex: 1 1 240px; }
 .gl-v2-dos-docs { list-style: none; margin: 0; padding: 0; }
 .gl-v2-dos-docs li { display: flex; align-items: center; gap: 14px; padding: 12px 20px; border-top: 1px solid var(--gl-v2-hairline-soft); }
-.gl-v2-dos-docicon { width: 34px; height: 40px; border-radius: 6px; border: 1px solid var(--gl-v2-hairline); background: var(--gl-v2-bg); display: inline-flex; align-items: flex-end; justify-content: center; padding-bottom: 5px; font: 700 8.5px var(--gl-v2-font-sans); color: var(--gl-v2-danger); flex: none; }
-.gl-v2-dos-doc-t { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.gl-v2-dos-docicon { width: 34px; height: 40px; border-radius: var(--gl-v2-radius-xs, 6px); border: 1px solid var(--gl-v2-hairline); background: var(--gl-v2-bg); display: inline-flex; align-items: flex-end; justify-content: center; padding-bottom: 5px; font: 700 8.5px var(--gl-v2-font-sans); color: var(--gl-v2-danger); flex: none; }
 .gl-v2-dos-doc-t a { color: inherit; text-decoration: none; }
 .gl-v2-dos-doc-t a:hover b { color: var(--gl-v2-primary); text-decoration: underline; }
 .gl-v2-dos-doc-t b { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow-wrap: anywhere; }

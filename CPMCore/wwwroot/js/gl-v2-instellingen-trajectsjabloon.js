@@ -8,7 +8,7 @@
     var XDAGEN_VOOR_DOELDATUM = 2; // BOCore.TriggerEvent — enige event dat een offset-dagen-waarde gebruikt
     var FASE_PALET = ["#0a5a3b", "#c17d1f", "#7A8450", "#8B6B4A", "#0f7a52", "#8A7967"];
 
-    function $(id) { return document.getElementById(id); }
+    var $ = window.GlV2.byId; // gedeeld (gl-v2-shell.js)
     function readJson(id, fallback) { var el = $(id); if (!el) return fallback; try { return JSON.parse(el.textContent); } catch (e) { return fallback; } }
     function debounce(fn, wait) { var t; return function () { clearTimeout(t); var a = arguments; t = setTimeout(function () { fn.apply(null, a); }, wait); }; }
     function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }

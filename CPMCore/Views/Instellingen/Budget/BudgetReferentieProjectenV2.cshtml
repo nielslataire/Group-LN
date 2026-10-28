@@ -1,4 +1,4 @@
-@model CPMCore.Models.Instellingen.BudgetReferentieProjectenViewModel
+﻿@model CPMCore.Models.Instellingen.BudgetReferentieProjectenViewModel
 @using BOCore.Budget
 @using CPMCore.Models.GlV2
 @*
@@ -130,7 +130,7 @@
             <span class="gl-v2-field-divider"></span>
             <span class="gl-v2-section-card-desc">bedragen tegen peildatum — op stap 6 geïndexeerd met S- en I-index</span>
         </div>
-        <div class="gl-v2-bref-toolbar">
+        <div class="gl-v2-list-toolbar gl-v2-bref-toolbar">
             <div class="gl-v2-field gl-v2-bref-search" style="width:280px">
                 <div class="gl-v2-field-box">
                     <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
@@ -138,10 +138,10 @@
                     <button type="button" class="gl-v2-field-clear" id="bref-ref-search-clear" aria-label="Zoekterm wissen">&times;</button>
                 </div>
             </div>
-            <span class="gl-v2-bref-toolbar-spacer"></span>
+            <span class="gl-v2-list-toolbar-spacer"></span>
             <span class="gl-v2-bref-sort">@Model.Referenties.Count project@(Model.Referenties.Count == 1 ? "" : "en") · sorteer: peildatum ↓</span>
         </div>
-        <div class="gl-v2-bref-head gl-v2-bref-grid--ref">
+        <div class="gl-v2-list-head gl-v2-bref-head gl-v2-bref-grid--ref">
             <span>Naam</span><span>Bron</span><span>Peildatum</span><span class="gl-v2-bref-right">Eenh.</span><span class="gl-v2-bref-right">GBA m²</span><span class="gl-v2-bref-right">Totaal</span><span class="gl-v2-bref-right">€ / eenheid</span><span class="gl-v2-bref-right">€ / m²</span><span class="gl-v2-bref-right">Activiteiten</span><span class="gl-v2-bref-right">Index S / I</span><span></span>
         </div>
         <div id="bref-ref-rows">
@@ -151,7 +151,7 @@
                 var sub = r.AantalNietGematcht > 0
                     ? $"{r.AantalNietGematcht} activiteit{(r.AantalNietGematcht == 1 ? "" : "en")} niet gematcht"
                     : (isSnapshot ? "snapshot" : "Excel") + " · " + (string.IsNullOrWhiteSpace(r.CreatedBy) ? "" : r.CreatedBy + ", ") + r.CreatedAt.ToString("dd/MM/yyyy");
-                <div class="gl-v2-bref-row gl-v2-bref-grid--ref" data-ref-row data-search="@((r.Naam + " " + r.ProjectNaam + " " + r.Opmerking).ToLowerInvariant())">
+                <div class="gl-v2-bref-row gl-v2-listrow gl-v2-bref-grid--ref" data-ref-row data-search="@((r.Naam + " " + r.ProjectNaam + " " + r.Opmerking).ToLowerInvariant())">
                     <div class="gl-v2-bref-name">
                         <span class="gl-v2-bref-strong" title="@r.Naam">@r.Naam</span>
                         <span class="sub @(r.AantalNietGematcht > 0 ? "is-warning" : "")" title="@(r.Opmerking ?? "")">@sub</span>
@@ -165,14 +165,14 @@
                     <span class="gl-v2-bref-cell gl-v2-bref-right">@(r.PrijsPerM2.HasValue ? Eur0(r.PrijsPerM2.Value) : "—")</span>
                     <span class="gl-v2-bref-cell gl-v2-bref-right">@r.AantalGematcht</span>
                     <span class="gl-v2-bref-cell is-muted gl-v2-bref-right" title="Indexfactor peildatum → vandaag (S-index · I2021), zoals op stap 6 toegepast">@Factor(r.SIndex, Model.HuidigeSIndex) / @Factor(r.IIndex, Model.HuidigeIIndex)</span>
-                    <div class="gl-v2-bref-actions">
-                        <button type="button" class="gl-v2-row-action" data-ref-toggle="ref-detail-@r.Id" title="Bedragen per activiteit" aria-label="Bedragen per activiteit" aria-expanded="false"><i class="ph ph-caret-down" aria-hidden="true"></i><span class="gl-v2-row-action-label">Bedragen per activiteit</span></button>
-                        <form method="post" asp-action="BudgetReferentieProjectDelete" asp-controller="Instellingen" data-bv-titel="Referentieproject @r.Naam verwijderen?" data-bv-tekst="Budgetversies die dit project vergelijken, verliezen die vergelijking. Dit kan niet ongedaan gemaakt worden." data-bv-ok="Verwijderen"'", "\\'")\' verwijderen? Budgetversies die het vergelijken, verliezen die vergelijking.');">
+                    <div class="gl-v2-bref-actions"><span class="gl-v2-rowact"><span class="gl-v2-rowact-btns">
+                        <button type="button" class="gl-v2-icon-btn" data-ref-toggle="ref-detail-@r.Id" title="Bedragen per activiteit" aria-label="Bedragen per activiteit" aria-expanded="false"><i class="ph ph-caret-down" aria-hidden="true"></i></button>
+                        <form method="post" asp-action="BudgetReferentieProjectDelete" asp-controller="Instellingen" data-bv-titel="Referentieproject @r.Naam verwijderen?" data-bv-tekst="Budgetversies die dit project vergelijken, verliezen die vergelijking. Dit kan niet ongedaan gemaakt worden." data-bv-ok="Verwijderen" data-bv-tone="danger" data-bv-icon="ph-trash">
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="id" value="@r.Id" />
-                            <button type="submit" class="gl-v2-row-action gl-v2-row-action-danger" title="Verwijderen" aria-label="Verwijderen"><i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-row-action-label">Verwijderen</span></button>
+                            <button type="submit" class="gl-v2-icon-btn is-danger" title="Verwijderen" aria-label="Verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
                         </form>
-                    </div>
+                    </span></span></div>
                 </div>
                 var lotten = r.Lijnen.Where(l => l.ActivityId.HasValue && l.LotNummer > 0).GroupBy(l => (l.LotNummer, l.LotNaam)).OrderBy(g => g.Key.LotNummer).ToList();
                 var lotTotaal = lotten.Sum(g => g.Sum(l => l.Bedrag));

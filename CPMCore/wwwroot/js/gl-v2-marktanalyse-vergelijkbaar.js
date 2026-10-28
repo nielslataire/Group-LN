@@ -9,8 +9,8 @@
     var form = document.getElementById("vpForm");
     if (!cfg || !form) return;
 
-    function $(id) { return document.getElementById(id); }
-    function toast(tone, title, body) { if (window.GlV2Toast) window.GlV2Toast.show({ tone: tone, title: title, body: body || "" }); }
+    var $ = window.GlV2.byId; // gedeeld (gl-v2-shell.js)
+    var toast = (window.GlV2Toast && window.GlV2Toast.notify) || function () {}; // gedeeld, zie gl-v2-shell.js
 
     // ── Laadsluier bij elke zoekopdracht ─────────────────────────────────────────────────────────────────────────────────────
     var overlay = $("vpLoadingOverlay");
@@ -252,7 +252,7 @@
             if (map) { map.invalidateSize(); return; }
             map = L.map(mapDiv, { zoomControl: true }).setView([huidigeLat, huidigeLng], BELGIE_ZOOM);
             map.attributionControl.setPrefix(false);
-            L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", { attribution: "&copy; OpenStreetMap-bijdragers &copy; CARTO", subdomains: "abcd", maxZoom: 19 }).addTo(map);
+            L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "&copy; OpenStreetMap-bijdragers", maxZoom: 19 }).addTo(map);
             circle = L.circle([huidigeLat, huidigeLng], { radius: parseInt(straalInp.value, 10), color: GROEN, weight: 2, dashArray: "4 6", fillColor: GROEN, fillOpacity: 0.08 }).addTo(map);
             centerMarker = L.marker([huidigeLat, huidigeLng], { draggable: true, icon: dot(16, GROEN, "#fff") }).addTo(map);
             var hp = destination(huidigeLat, huidigeLng, parseInt(straalInp.value, 10), 90);

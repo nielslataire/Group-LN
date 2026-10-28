@@ -59,7 +59,7 @@
 
     <div class="gl-v2-dd-p-head">
         <span class="gl-v2-dd-ext @ExtClass(d.Ext)" aria-hidden="true">@d.Ext</span>
-        <div class="gl-v2-dd-p-title">
+        <div class="gl-v2-stack is-loose gl-v2-dd-p-title">
             <span class="gl-v2-dd-p-name">@d.Name</span>
             <span class="gl-v2-dd-p-sub">@d.FolderName@(string.IsNullOrWhiteSpace(d.SubLine) ? "" : " · " + d.SubLine)</span>
             <span><span class="gl-v2-badge @BadgeTone(d.StatusKey)">@d.StatusLabel.ToUpperInvariant()</span></span>
@@ -179,12 +179,16 @@
                     {
                         <div class="gl-v2-dd-sigrow">
                             <span class="gl-v2-dd-sig @(s.Status == 2 ? "is-signed" : s.Status == 1 ? "is-opened" : "")">@s.Initials</span>
-                            <span class="gl-v2-dd-share-text">
+                            <span class="gl-v2-stack is-tight gl-v2-dd-share-text">
                                 <span class="gl-v2-dd-share-name">@s.Name@(string.IsNullOrWhiteSpace(s.Role) ? "" : " · " + s.Role)</span>
                                 <span class="gl-v2-dd-share-sub">
                                     @(s.Status == 2 ? "getekend " + Date(s.SignedDate) + (s.Method == "itsme" ? " via itsme" : s.Method == "email-otp" ? " via persoonlijke link + e-mailcode" : " (handmatig geregistreerd)") : s.Status == 1 ? "geopend " + Date(s.OpenedDate) + ", nog niet getekend" : "verstuurd " + Date(s.SentDate) + (s.ReminderDate.HasValue ? " · herinnerd " + Date(s.ReminderDate) : ""))
                                 </span>
                             </span>
+                            @if (s.Status == 2 && !string.IsNullOrWhiteSpace(s.ProofUrl))
+                            {
+                                <a class="gl-v2-btn gl-v2-btn-text" href="@s.ProofUrl" target="_blank" rel="noopener">Bewijs</a>
+                            }
                             @if (canWrite && s.Status != 2)
                             {
                                 <button type="button" class="gl-v2-btn gl-v2-btn-text" data-dd-act="sign-remind" data-signature-id="@s.Id">Herinneren</button>
@@ -214,11 +218,12 @@
                 {
                     <div class="gl-v2-dd-revrow @(r.IsCurrent ? "is-current" : "") @(r.Status == 1 ? "is-pending" : "")">
                         <span class="gl-v2-dd-revlet">@r.Label</span>
-                        <div class="gl-v2-dd-revbody">
+                        <div class="gl-v2-stack gl-v2-dd-revbody">
                             <div class="gl-v2-dd-revhead">
                                 @if (r.IsCurrent) { <span class="gl-v2-badge is-positive">HUIDIG</span> }
                                 else if (r.Status == 1) { <span class="gl-v2-badge is-attention">TER GOEDKEURING</span> }
                                 else if (r.Status == 0) { <span class="gl-v2-badge is-neutral">CONCEPT</span> }
+                                else if (r.Note != null && r.Note.Contains("fgewezen", StringComparison.Ordinal)) { <span class="gl-v2-badge is-inactive">AFGEWEZEN</span> }
                                 else { <span class="gl-v2-badge is-inactive">VERVANGEN</span> }
                                 @if (r.Amount.HasValue)
                                 {
@@ -246,6 +251,14 @@
                                     <a class="gl-v2-btn gl-v2-btn-text" href="@Url.Action("DocumentFileV2", "Projecten", new { projectid = d.ProjectId, revisionId = r.Id })" target="_blank" rel="noopener">Bekijken</a>
                                 </div>
                             }
+                            else if (r.Status == 3 && !r.IsCurrent && canWrite)
+                            {
+                                @* Een afgewezen revisie kan alsnog goedgekeurd worden (en wordt dan de huidige). *@
+                                <div class="gl-v2-dd-revactions">
+                                    <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-dd-act="approve" data-revision-id="@r.Id"><i class="ph ph-check" aria-hidden="true"></i>Rev. @r.Label alsnog goedkeuren</button>
+                                    <a class="gl-v2-btn gl-v2-btn-text" href="@Url.Action("DocumentFileV2", "Projecten", new { projectid = d.ProjectId, revisionId = r.Id })" target="_blank" rel="noopener">Bekijken</a>
+                                </div>
+                            }
                         </div>
                     </div>
                 }
@@ -258,13 +271,13 @@
         <div>
             <div class="gl-v2-dd-share-row">
                 <span class="gl-v2-dd-share-ico"><i class="ph ph-users-three" aria-hidden="true"></i></span>
-                <span class="gl-v2-dd-share-text"><span class="gl-v2-dd-share-name">Intern team</span><span class="gl-v2-dd-share-sub">altijd — alle revisies</span></span>
+                <span class="gl-v2-stack is-tight gl-v2-dd-share-text"><span class="gl-v2-dd-share-name">Intern team</span><span class="gl-v2-dd-share-sub">altijd — alle revisies</span></span>
             </div>
             @if (d.HasClientAudience)
             {
                 <div class="gl-v2-dd-share-row">
                     <span class="gl-v2-dd-share-ico is-klant"><i class="ph ph-house-line" aria-hidden="true"></i></span>
-                    <span class="gl-v2-dd-share-text">
+                    <span class="gl-v2-stack is-tight gl-v2-dd-share-text">
                         <span class="gl-v2-dd-share-name">Klantportaal</span>
                         <span class="gl-v2-dd-share-sub">
                             @(d.ShareClientOn ? "enkel huidige revisie, zichtbaar voor " + (unitLinks.Count + clientLinks.Count > 0 ? string.Join(", ", unitLinks.Concat(clientLinks).Select(c => c.Label)) : "alle kopers van het project") : "niet gedeeld")
@@ -280,7 +293,7 @@
             {
                 <div class="gl-v2-dd-share-row">
                     <span class="gl-v2-dd-share-ico is-leverancier"><i class="ph ph-hard-hat" aria-hidden="true"></i></span>
-                    <span class="gl-v2-dd-share-text">
+                    <span class="gl-v2-stack is-tight gl-v2-dd-share-text">
                         <span class="gl-v2-dd-share-name">Leveranciersportaal · @c.Label</span>
                         <span class="gl-v2-dd-share-sub">@(c.Shared ? "enkel huidige revisie" : "niet gedeeld")</span>
                     </span>
@@ -294,7 +307,7 @@
             {
                 <div class="gl-v2-dd-share-row">
                     <span class="gl-v2-dd-share-ico is-leverancier"><i class="ph ph-hard-hat" aria-hidden="true"></i></span>
-                    <span class="gl-v2-dd-share-text"><span class="gl-v2-dd-share-name">Leveranciersportaal</span><span class="gl-v2-dd-share-sub">koppel eerst een leverancier</span></span>
+                    <span class="gl-v2-stack is-tight gl-v2-dd-share-text"><span class="gl-v2-dd-share-name">Leveranciersportaal</span><span class="gl-v2-dd-share-sub">koppel eerst een leverancier</span></span>
                 </div>
             }
         </div>

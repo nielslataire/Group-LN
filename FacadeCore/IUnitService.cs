@@ -34,7 +34,7 @@ namespace FacadeCore
         /// mechanisme waarop de eenhedenboom van Projecten/DetailUnitsV2 rust), eenheden die al lid zijn
         /// van een koppeling, en de samengestelde KOPPELING-rijen zelf (IsLink). Zonder die vier
         /// uitsluitingen kan één eenheid via beide koppelmechanismen tegelijk geteld worden — zie
-        /// DESIGN.md, "De twee koppelmechanismen op Units".</summary>
+        /// CPMCore/DESIGN.md, "De twee koppelmechanismen op Units".</summary>
         GetResponse<IdNameBO> GetUnitsForLinkSelect(int projectId, int unitTypeId, int excludeUnitId);
         GetResponse<IdNameBO> GetUnitsByProjectIdForSelectAttachedUnit(int Id);
         GetResponse<IdNameBO> GetUnitsByProjectIdForSelectAttachedUnit(int Id, int UnitId);

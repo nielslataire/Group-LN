@@ -759,9 +759,8 @@
 
             map = L.map(mapDiv, { zoomControl: true }).setView([huidigeLat, huidigeLng], BELGIE_ZOOM);
             map.attributionControl.setPrefix(false);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; OpenStreetMap-bijdragers &copy; CARTO',
-                subdomains: 'abcd',
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap-bijdragers',
                 maxZoom: 19
             }).addTo(map);
 

@@ -57,7 +57,7 @@
                 g.items.forEach(function (item) {
                     html += '<a class="gl-v2-help-search-row" data-help-result-row href="' +
                         '/Help/Artikel/' + encodeURIComponent(item.articleSlug) + '">' +
-                        '<span class="gl-v2-help-search-row-text">' +
+                        '<span class="gl-v2-stack gl-v2-help-search-row-text">' +
                         '<span class="gl-v2-help-search-row-title">' + highlight(item.title, item.matchIndex, item.matchLength) + '</span>' +
                         '<span class="gl-v2-help-search-row-path">' + escapeHtml(item.path) + '</span>' +
                         '</span>' +

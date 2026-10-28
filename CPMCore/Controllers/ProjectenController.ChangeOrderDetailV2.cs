@@ -235,6 +235,7 @@ namespace CPMCore.Controllers
             vm.OpenConvertModal = convert && isQuote && !vm.IsNew && vm.Phase != "offerte-omgezet";
             vm.History = BuildHistory(vm, co, latestCase);
 
+            ViewData["HelpScreenId"] = "wijzigingen-opmaken";
             return View(vm);
         }
 

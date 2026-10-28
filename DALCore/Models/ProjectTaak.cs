@@ -53,6 +53,33 @@ public partial class ProjectTaak
 
     public string ModifiedByUserId { get; set; }
 
+    // Mijn taken als persoonlijke assistent (migratie 120)
+
+    /// <summary>Plek of omstandigheid, bv. "@bureau", "@telefoon", "@werf".</summary>
+    public string Context { get; set; }
+
+    public int? SchattingMinuten { get; set; }
+
+    /// <summary>Begin van het geplande blok in de dag/week (lokale tijd).</summary>
+    public DateTime? GeplandStart { get; set; }
+
+    public int? GeplandMinuten { get; set; }
+
+    /// <summary>Vastgelegd maar nog niet verwerkt (Mijn taken › Inbox).</summary>
+    public bool IsInbox { get; set; }
+
+    public string InboxBron { get; set; }
+
+    public string InboxMeta { get; set; }
+
+    /// <summary>"Ooit / misschien": bewaard, maar niet op de lijst met volgende acties.</summary>
+    public bool Ooit { get; set; }
+
+    /// <summary>Gedelegeerd: wie of wat je afwacht (Status = Wachtend).</summary>
+    public string WachtOp { get; set; }
+
+    public DateTime? WachtOpDatum { get; set; }
+
     public virtual Project Project { get; set; }
 
     public virtual Units Unit { get; set; }

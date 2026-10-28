@@ -633,6 +633,7 @@ namespace CPMCore.Controllers
             ViewBag.CanDeleteProjectSuppliers = _psInv.HasDelete(PermissionCodes.ProjectsSuppliers);
 
             SetPageHeader("bx bx-building-house", BuildIncommingInvoiceDisplayTitle(model.IncommingInvoice.InvoiceExternalId, invoiceid));
+            ViewData["HelpScreenId"] = "nacalculatie-factuur";
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "IncommingInvoiceDetailV2" : "IncommingInvoiceDetail", model);
         }
 

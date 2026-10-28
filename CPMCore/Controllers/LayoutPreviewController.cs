@@ -19,7 +19,7 @@ public class LayoutPreviewController : BaseController
         {
             Path = "/",
             SameSite = SameSiteMode.Lax,
-            Expires = DateTimeOffset.UtcNow.AddDays(30),
+            Expires = DateTimeOffset.UtcNow.AddDays(365),
             HttpOnly = false
         });
         return RedirectToSafeUrl(returnUrl);
@@ -28,7 +28,14 @@ public class LayoutPreviewController : BaseController
     [HttpGet("Off")]
     public IActionResult Off(string? returnUrl = null)
     {
-        Response.Cookies.Delete(GlV2PreviewCookie, new CookieOptions { Path = "/" });
+        // "0" i.p.v. de cookie te wissen: als gl-v2 de standaard is (Layout:GlV2Default) moet de keuze voor klassiek blijven gelden.
+        Response.Cookies.Append(GlV2PreviewCookie, "0", new CookieOptions
+        {
+            Path = "/",
+            SameSite = SameSiteMode.Lax,
+            Expires = DateTimeOffset.UtcNow.AddDays(365),
+            HttpOnly = false
+        });
         return RedirectToSafeUrl(returnUrl);
     }
 

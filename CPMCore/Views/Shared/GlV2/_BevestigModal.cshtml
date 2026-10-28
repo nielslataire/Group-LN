@@ -52,10 +52,10 @@
 
     document.addEventListener("submit", async function (e) {
         var f = e.target;
-        if (!f.hasAttribute || !f.hasAttribute("data-bv-titel") || f.dataset.bvOk) return;
+        if (!f.hasAttribute || !f.hasAttribute("data-bv-titel") || f.dataset.bvBevestigd) return;
         e.preventDefault();
         var ok = await bevestig({ title: f.getAttribute("data-bv-titel"), desc: f.getAttribute("data-bv-tekst"), ok: f.getAttribute("data-bv-ok"), tone: f.getAttribute("data-bv-tone"), icon: f.getAttribute("data-bv-icon") });
-        if (ok) { f.dataset.bvOk = "1"; f.submit(); }
+        if (ok) { f.dataset.bvBevestigd = "1"; f.submit(); }
     }, true);
 })();
 </script>

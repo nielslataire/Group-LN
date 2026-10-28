@@ -406,12 +406,16 @@
                                 {
                                     var contractDetailUrl = Url.Action("DetailContract", "Projecten", new { projectid = contract.ProjectId, contractid = contract.Id });
                                     var contractEditUrl = Url.Action("EditContract", "Projecten", new { projectid = contract.ProjectId, contractid = contract.Id });
-                                    <tr data-detail-url="@contractDetailUrl">
+                                    <tr data-detail-url="@contractDetailUrl" data-row-href="@contractDetailUrl">
                                         <td>@(string.IsNullOrWhiteSpace(contract.ProjectName) ? "—" : contract.ProjectName)</td>
                                         <td>@contract.Id</td>
                                         <td>@contract.ActivityCount</td>
                                         <td class="text-end" data-order="@contract.TotalAmount.ToString(CultureInfo.InvariantCulture)">@contract.TotalAmount.ToString("C", currencyCulture)</td>
-                                        <td class="text-end">
+                                        <td class="text-end gl-td-actions">
+                                            @* Rij-actiepatroon (DESIGN.md): >=1024px chevron in rust, iconen bij hover/focus; tot 1023px het "···"-menu. *@
+                                            <span class="gl-v2-rowact">
+                                            <i class="ph ph-caret-right gl-v2-rowact-chev" aria-hidden="true"></i>
+                                            <span class="gl-v2-rowact-btns">
                                             <button type="button" class="gl-v2-row-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-contract-menu-@contract.Id" aria-label="Meer acties">
                                                 <i class="ph ph-dots-three" aria-hidden="true"></i>
                                             </button>
@@ -425,6 +429,8 @@
                                                     <span class="gl-v2-row-action-label">Bewerken</span>
                                                 </a>
                                             </div>
+                                            </span>
+                                            </span>
                                         </td>
                                     </tr>
                                 }
@@ -470,12 +476,16 @@
                                 {
                                     var invoiceDetailUrl = Url.Action("IncommingInvoiceDetail", "Projecten", new { projectid = invoice.ProjectId, invoiceid = invoice.Id });
                                     var invoiceEditUrl = Url.Action("EditIncommingInvoice", "Projecten", new { projectid = invoice.ProjectId, invoiceid = invoice.Id });
-                                    <tr data-detail-url="@invoiceDetailUrl">
+                                    <tr data-detail-url="@invoiceDetailUrl" data-row-href="@invoiceDetailUrl">
                                         <td data-order="@invoice.InvoiceDate.ToString("yyyy-MM-dd")">@invoice.InvoiceDate.ToString("dd/MM/yyyy")</td>
                                         <td>@(string.IsNullOrWhiteSpace(invoice.ExternalInvoiceId) ? "—" : invoice.ExternalInvoiceId)</td>
                                         <td>@(string.IsNullOrWhiteSpace(invoice.ProjectName) ? "—" : invoice.ProjectName)</td>
                                         <td class="text-end" data-order="@invoice.Amount.ToString(CultureInfo.InvariantCulture)">@invoice.Amount.ToString("C", currencyCulture)</td>
-                                        <td class="text-end">
+                                        <td class="text-end gl-td-actions">
+                                            @* Rij-actiepatroon (DESIGN.md): >=1024px chevron in rust, iconen bij hover/focus; tot 1023px het "···"-menu. *@
+                                            <span class="gl-v2-rowact">
+                                            <i class="ph ph-caret-right gl-v2-rowact-chev" aria-hidden="true"></i>
+                                            <span class="gl-v2-rowact-btns">
                                             <button type="button" class="gl-v2-row-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-invoice-menu-@invoice.Id" aria-label="Meer acties">
                                                 <i class="ph ph-dots-three" aria-hidden="true"></i>
                                             </button>
@@ -489,6 +499,8 @@
                                                     <span class="gl-v2-row-action-label">Bewerken</span>
                                                 </a>
                                             </div>
+                                            </span>
+                                            </span>
                                         </td>
                                     </tr>
                                 }

@@ -29,7 +29,7 @@
 }
 .gl-v2-yc-day {
     aspect-ratio: 1; display: flex; align-items: center; justify-content: center; position: relative;
-    border-radius: 6px; font: 600 11px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; user-select: none;
+    border-radius: var(--gl-v2-radius-xs, 6px); font: 600 11px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; user-select: none;
 }
 .gl-v2-yc-day.is-blank { visibility: hidden; }
 .gl-v2-yc-day.is-weekend { background: var(--gl-v2-bg); color: var(--gl-v2-muted-light); }
@@ -49,7 +49,7 @@
 .gl-v2-yc-legend-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .09em; text-transform: uppercase; color: var(--gl-v2-muted); }
 .gl-v2-yc-legend-item { display: flex; align-items: center; gap: 8px; font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
 .gl-v2-yc-swatch {
-    width: 26px; height: 26px; border-radius: 7px; flex: none; position: relative;
+    width: 26px; height: 26px; border-radius: var(--gl-v2-radius-s, 7px); flex: none; position: relative;
     display: flex; align-items: center; justify-content: center; font: 600 11.5px var(--gl-v2-font-sans);
 }
 .gl-v2-yc-swatch.is-weekend { background: var(--gl-v2-bg); color: var(--gl-v2-muted); font-weight: 450; }
@@ -70,7 +70,7 @@
 .gl-v2-yc-yearbar-stat.is-total { color: var(--gl-v2-primary); }
 .gl-v2-yc-yearbar-divider { width: 1px; height: 16px; background: var(--gl-v2-hairline); flex: none; }
 .gl-v2-yc-yearnav {
-    width: 32px; height: 32px; flex: none; border-radius: 7px; border: 1px solid var(--gl-v2-hairline); background: transparent;
+    width: 32px; height: 32px; flex: none; border-radius: var(--gl-v2-radius-s, 7px); border: 1px solid var(--gl-v2-hairline); background: transparent;
     display: flex; align-items: center; justify-content: center; color: var(--gl-v2-muted); cursor: pointer; margin-left: 4px;
 }
 .gl-v2-yc-yearnav:hover, .gl-v2-yc-yearnav:focus-visible { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); outline: none; }

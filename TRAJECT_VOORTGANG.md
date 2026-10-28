@@ -55,7 +55,7 @@ tijdlijn → mijlpaal toevoegen/bewerken/bereikt, sync-voorbeeld, per-eenheid-po
 Trajectsjablonen/Bewerken`-pagina (master/detail met een fases-en-mijlpalenboom links en een
 genummerd sectie-formulier rechts) en vroeg om zowel de styling als de functionaliteit ervan over
 te nemen, met behoud van het bestaande `_Layout`-stramien. Aanpak: rechtstreeks gebouwd volgens de
-al bestaande, gedocumenteerde conventies in `DESIGN.md` (`gl-page-header`, `gl-form-shell__tabs`,
+al bestaande, gedocumenteerde conventies in `CPMCore/DESIGN.md` (`gl-page-header`, `gl-form-shell__tabs`,
 `gl-field-grid`/`gl-field`) — geen losstaande stylingpas nodig, de bouwstenen lagen er al.
 
 **Wat er veranderd is:**

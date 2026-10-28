@@ -486,9 +486,11 @@
             if (!this.files.length) return;
             var item = mediaById(panelState.id);
             if (!item) return;
-            if (!confirm('"' + item.title + '" vervangen door "' + this.files[0].name + '"?')) { this.value = ""; return; }
+            var fileInput = this, gekozen = this.files[0];
+            GlV2Dialog.confirm({ tone: "warning", icon: "ph-arrows-clockwise", title: "Bestand vervangen?", description: '"' + item.title + '" wordt vervangen door "' + gekozen.name + '". Het oude bestand wordt verwijderd.', confirmLabel: "Vervangen" }).then(function (ok) {
+            if (!ok) { fileInput.value = ""; return; }
             var fd = new FormData();
-            fd.append("file", this.files[0]);
+            fd.append("file", gekozen);
             fd.append("UploadedBO.ProjectId", cfg.projectId);
             fd.append("UploadedBO.Type", "1");
             fd.append("UploadedBO.SectionId", item.sectionId != null ? item.sectionId : "");
@@ -502,6 +504,7 @@
                     return fetch(cfg.urls.deletePhoto + "?" + fd2.toString(), { method: "POST", headers: { "RequestVerificationToken": antiForgery } });
                 })
                 .then(function () { location.reload(); });
+            });
         });
     }
 
@@ -589,13 +592,14 @@
     var sectionsChanged = false;
 
     function sectionViewRow(s) {
-        return '<div class="gl-v2-dp-sections-row" data-sect-id="' + s.id + '">' +
+        return '<div class="gl-v2-dp-sections-row gl-v2-listrow" data-sect-id="' + s.id + '">' +
             '<div class="gl-v2-dp-sections-row-text"><span class="gl-v2-dp-sections-row-name">' + esc(s.name) + "</span>" +
             (s.description ? '<span class="gl-v2-dp-sections-row-desc">' + esc(s.description) + "</span>" : "") + "</div>" +
             '<span class="gl-v2-badge ' + (s.isPublic ? "is-positive" : "is-attention") + '">' + (s.isPublic ? "PUBLIEK" : "INTERN") + "</span>" +
+            '<span class="gl-v2-rowact gl-v2-dp-sections-acts"><span class="gl-v2-rowact-btns">' +
             '<button type="button" class="gl-v2-icon-btn js-gl-v2-dp-sect-edit" title="Bewerken" aria-label="Bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>' +
-            '<button type="button" class="gl-v2-icon-btn js-gl-v2-dp-sect-del" title="Verwijderen" aria-label="Verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>' +
-            "</div>";
+            '<button type="button" class="gl-v2-icon-btn is-danger js-gl-v2-dp-sect-del" title="Verwijderen" aria-label="Verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>' +
+            "</span></span></div>";
     }
     function sectionEditRow(s) {
         return '<div class="gl-v2-dp-sections-edit" data-sect-id="' + s.id + '">' +
@@ -657,9 +661,16 @@
             var row4 = delBtn.closest("[data-sect-id]");
             var id4 = parseInt(row4.getAttribute("data-sect-id"), 10);
             var s4 = sectionsData.find(function (x) { return x.id === id4; });
-            if (!confirm('Sectie "' + s4.name + '" verwijderen? Media in deze sectie wordt losgekoppeld.')) return;
-            fetch(cfg.urls.deleteSection + "?id=" + id4 + "&projectId=" + cfg.projectId, { method: "POST", headers: { "RequestVerificationToken": antiForgery } })
-                .then(function () { sectionsData = sectionsData.filter(function (x) { return x.id !== id4; }); sectionsChanged = true; renderSectionsList(); });
+            GlV2Dialog.confirm({
+                tone: "danger", icon: "ph-trash",
+                title: "Sectie verwijderen?",
+                description: 'Sectie "' + s4.name + '" wordt verwijderd. Media in deze sectie wordt losgekoppeld.',
+                confirmLabel: "Verwijderen"
+            }).then(function (ok) {
+                if (!ok) return;
+                fetch(cfg.urls.deleteSection + "?id=" + id4 + "&projectId=" + cfg.projectId, { method: "POST", headers: { "RequestVerificationToken": antiForgery } })
+                    .then(function () { sectionsData = sectionsData.filter(function (x) { return x.id !== id4; }); sectionsChanged = true; renderSectionsList(); });
+            });
         }
     });
 

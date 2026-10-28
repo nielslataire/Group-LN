@@ -22,14 +22,14 @@ App herstarten na elke build (ze draait met de oude dll). Chrome-iconen: harde r
 - Gemeente/postcode via zoekveld (zoals Klanten); Omzetten naar klant vult naam, partner, e-mail, telefoon, adres, gemeente, 1 eenheid in (`Klanten/AddClientAccount?contactId=`).
 - Export (Excel/CSV/PDF): recht `Projects.ContactsExport`, nieuwsbriefexport, contactdatum-kolom, gesorteerd op contactdatum (oudste eerst); PDF-lijst heeft geen datumkolom.
 - Telefoon/e-mail gevalideerd (GlV2Telefoon/GlV2Email + Foutoverzicht); trimmen van spaties, datumveld-typen en telefoon-plakken zijn **project-wijd** opgelost in `gl-v2-shell.js`.
-- Help: `HelpContent/projecten/contacten-overzicht|contact-opvolgen|contact-toevoegen|contactenlijsten-en-export.md`. Details: `CONTACTEN_VOORTGANG.md` en DESIGN.md ("Contacten gl-v2").
+- Help: `HelpContent/projecten/contacten-overzicht|contact-opvolgen|contact-toevoegen|contactenlijsten-en-export.md`. Details: `CONTACTEN_VOORTGANG.md` en CPMCore/DESIGN.md ("Contacten gl-v2").
 - Open/bewust niet gedaan: commissies aan makelaars, partner als mede-eigenaar bij omzetten, filters enkelvoudig, geen bulk-verwijderen.
 
 ## 3. Facturen bewerken en verzenden gl-v2 (design-handoff 11f en 11g) - gebouwd
 - **Edit** (`Invoices/Editor/EditV2.cshtml`, definitieve factuur): 2 stappen, vergrendelde velden, omschrijving, detailomschrijving en **bijkomende vermelding** (= ExtraInfo) aanpasbaar; de btw-vermelding per tarief is vast (uit Instellingen) en niet getoond als invoer. Live A4-voorbeeld (`Views/Invoices/Partials/_InvoiceSheetV2.cshtml`) uit dezelfde gegevens als de pdf (`IInvoicePdfService.BuildPreview`), toont de eerste pagina, altijd layoutA. "Creditnota maken" = `Invoices/Create?duplicateInvoiceId=&creditNote=true`. Conceptfacturen gaan nog naar het oude `EditDraft`/`Create`.
 - **Send** (`Invoices/Send/SendV2.cshtml`): kanaal E-mail / Peppol via Octopus / Beide (`InvoiceSendVM.Channel`). Peppol via Octopus = doorsturen naar de eigen Octopus (`SendInvoiceToOctopusAsync`, zonder klassieke mail), enkel als Octopus gekoppeld is en de factuur er nog niet is of de verzending mislukte. Ontvangers als tags, bericht als opgemaakte tekst (contenteditable), bijlagetegels, "Kopie naar mezelf", verzendgeschiedenis met kanaal (Octopus-regels = kanaal Peppol).
 - Peppol-controle van de klant gebruikte een niet-bestaand adres; nu `directory.peppol.eu/search/1.0/json` (+ `0208:`+10 cijfers). **Nog niet bevestigd dat GROUP LN nu "geregistreerd" toont** (herstart + test).
-- Help: `HelpContent/facturatie-wijzigingen/factuur-bewerken.md` en `factuur-verzenden.md`; DESIGN.md ("Facturen bewerken en verzenden gl-v2").
+- Help: `HelpContent/facturatie-wijzigingen/factuur-bewerken.md` en `factuur-verzenden.md`; CPMCore/DESIGN.md ("Facturen bewerken en verzenden gl-v2").
 - Te testen/beslissen: of "Peppol via Octopus" in de praktijk goed hervat na een mislukking; het oude Send-scherm blijft de rechtstreekse Peppol-verzender gebruiken; bestandsgrootte bij bijlagen en een oogje per geschiedenisregel zijn niet gebouwd.
 
 ## 4. Iconen (favicon / snelkoppeling)
@@ -39,5 +39,5 @@ App herstarten na elke build (ze draait met de oude dll). Chrome-iconen: harde r
 Punten (alle fases werken), nacalculatie, budget, verzekeringen, Verkoop/Te koop (migratie 115, andere werkstroom). Memory-index: `C:\Users\latni\.claude\projects\e--TFS\memory\MEMORY.md` (nieuwe entries: contacten_crm_gl_v2, facturen_edit_send_gl_v2); op een andere pc staat die map niet: de inhoud staat hier en in de *_VOORTGANG.md-bestanden.
 
 ## 6. Werkafspraken (voor wie verder werkt)
-Nederlandse UI-tekst, eigen gl-v2-modals i.p.v. browserdialogen, migraties als handmatige idempotente SQL in `_migrations/NNN_*.sql` (nooit EF-migraties, enkel additief), sleutels nooit in appsettings, help volgens DESIGN.md ("Een nieuw help-artikel schrijven") en HELP_SCHRIJFGIDS.md (je-vorm, geen gedachtestreepjes, onbekende logica als `[VRAAG: ...]`), pagina-CSS laadt vóór shell-CSS (extra `.gl-v2`-specificiteit), shell-script met apostrofen faalt: schrijf python-scripts met de Write-tool.
+Nederlandse UI-tekst, eigen gl-v2-modals i.p.v. browserdialogen, migraties als handmatige idempotente SQL in `_migrations/NNN_*.sql` (nooit EF-migraties, enkel additief), sleutels nooit in appsettings, help volgens CPMCore/DESIGN.md ("Een nieuw help-artikel schrijven") en CPMCore/HELP_SCHRIJFGIDS.md (je-vorm, geen gedachtestreepjes, onbekende logica als `[VRAAG: ...]`), pagina-CSS laadt vóór shell-CSS (extra `.gl-v2`-specificiteit), shell-script met apostrofen faalt: schrijf python-scripts met de Write-tool.
 Openstaande help-vragen in totaal: zoek met `grep -rn "\[VRAAG" CPMCore/HelpContent`.

@@ -137,7 +137,7 @@
     // ── Rij openen ──
     body.addEventListener("click", function (e) {
         var tr = e.target.closest(".gl-v2-pt-row"); if (!tr) return;
-        if (e.target.closest("input, button, a, .gl-v2-menu, .gl-v2-pt-rowacts")) return;
+        if (e.target.closest("input, button, a, .gl-v2-menu, .gl-v2-rowact")) return;
         window.location.href = tr.dataset.href;
     });
 

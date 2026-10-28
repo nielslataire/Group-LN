@@ -39,6 +39,8 @@ namespace ServiceCore
 
             // issuer + default term
             var issuer = await _db.IssuerCompany.FirstAsync(x => x.Id == bo.IssuerCompanyId && x.IsActive, ct);
+            if (issueNow)
+                await EnsureDefaultBankAccountAsync(bo.IssuerCompanyId, ct);
             var paymentTerm = await ResolvePaymentTermAsync(bo.PaymentTermId, issuer.DefaultPaymentTermId, ct);
             var due = issueNow
                 ? bo.ExpirationDate ?? CalculateDueDate(bo.InvoiceDate, paymentTerm)
@@ -236,6 +238,17 @@ namespace ServiceCore
         }
 
 
+        /// <summary>Een factuur wordt pas uitgegeven als het facturatiebedrijf een standaardrekening heeft
+        /// (die komt op de factuur en in de QR-code).</summary>
+        public async Task EnsureDefaultBankAccountAsync(int issuerCompanyId, CancellationToken ct = default)
+        {
+            var hasDefault = await _db.IssuerBankAccount
+                .AnyAsync(x => x.IssuerCompanyId == issuerCompanyId && x.IsDefault, ct);
+            if (!hasDefault)
+                throw new InvalidOperationException(
+                    "Dit facturatiebedrijf heeft geen standaardrekening. Voeg een bankrekening toe en maak ze standaard bij Instellingen, Mijn bedrijven, tabblad Bankrekeningen.");
+        }
+
         public async Task<int> CreateDraftAsync(InvoiceDraftBO bo, CancellationToken ct = default)
         {
             var (id, _) = await CreateWithLinesAsync(bo, issueNow: false, ct);
@@ -279,6 +292,8 @@ namespace ServiceCore
 
                 var issuerId = invoice.IssuerCompanyId
                     ?? throw new InvalidOperationException("Factuur heeft geen gekoppeld facturatiebedrijf.");
+
+                await EnsureDefaultBankAccountAsync(issuerId, ct);
 
                 // De factuur zelf houdt geen IsCreditNote-vlag bij (die volgt pas achteraf uit de
                 // toegewezen reeks) — bij nummering leiden we het dus af uit het brutototaal van de

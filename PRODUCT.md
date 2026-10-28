@@ -123,8 +123,8 @@ per-session-toggled (`gl_v2_preview` cookie, `LayoutPreviewController`) while
 pages are migrated one at a time; only pages built for gl-v2 render the new
 shell, everything else stays on the current layout until migrated. gl-v2's own
 visual-world decisions live in `design-handoff/DESIGN.md.gl-v2-draft.md`, which
-becomes the real root `DESIGN.md` on adoption day — that draft, not the current
-shipped `DESIGN.md`, is the design authority for any gl-v2 (`*V2.cshtml`,
+becomes the real root `CPMCore/DESIGN.md` on adoption day — that draft, not the current
+shipped `CPMCore/DESIGN.md`, is the design authority for any gl-v2 (`*V2.cshtml`,
 `gl-v2-*` prefixed) surface. This entry only records that the direction question
 itself is settled; gl-v2's design specifics belong in new-work/document, not here.
 

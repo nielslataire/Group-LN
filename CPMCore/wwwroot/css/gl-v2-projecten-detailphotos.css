@@ -51,19 +51,6 @@
 /* .gl-v2-toolbar-card/.gl-v2-toolbar-search have no shared definition in gl-v2-shell.css — same
    "each page keeps its own copy" discipline as DetailContractsV2/DetailClientsV2/Invoices/Leveranciers/
    Klanten/Projecten's own gl-v2-*.css files. */
-.gl-v2-toolbar-card {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    align-items: center;
-    padding: 14px;
-    border-radius: var(--gl-v2-radius-md);
-    background: var(--gl-v2-surface);
-    box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 14px 30px -24px rgba(44, 59, 42, .35);
-    flex: none;
-}
-.gl-v2-toolbar-search { flex: 1; min-width: 180px; }
-.gl-v2-toolbar-search .gl-v2-field-input { min-width: 0; }
 
 /* ── Filter-knop (tablet) — design-handoff 15c punt 4: Zichtbaarheid + Sorteren achter één knop
    i.p.v. twee eigen toolbarplekken. .gl-v2-dp-filter-panel/-panel-body worden op desktop en gsm
@@ -197,7 +184,7 @@ body.gl-v2-dp-is-picking .gl-v2-dp-card:hover { box-shadow: 0 0 0 2px var(--gl-v
     width: 20px;
     height: 20px;
     flex: none;
-    border-radius: 6px;
+    border-radius: var(--gl-v2-radius-xs, 6px);
     background: var(--gl-v2-surface);
     color: var(--gl-v2-ink);
     display: flex;
@@ -216,7 +203,7 @@ body.gl-v2-dp-is-picking .gl-v2-dp-card:hover { box-shadow: 0 0 0 2px var(--gl-v
     height: 34px;
     padding: 0 12px;
     border: 0;
-    border-radius: 8px;
+    border-radius: var(--gl-v2-radius-sm, 8px);
     background: transparent;
     font: 600 12px var(--gl-v2-font-sans);
     color: var(--gl-v2-surface);
@@ -252,7 +239,7 @@ body.gl-v2-dp-is-picking .gl-v2-dp-card:hover { box-shadow: 0 0 0 2px var(--gl-v
     height: 34px;
     padding: 0 12px;
     border: 0;
-    border-radius: 8px;
+    border-radius: var(--gl-v2-radius-sm, 8px);
     background: transparent;
     font: 600 12px var(--gl-v2-font-sans);
     color: var(--gl-v2-surface);
@@ -415,7 +402,7 @@ body.gl-v2-dp-is-picking .gl-v2-dp-card:hover { box-shadow: 0 0 0 2px var(--gl-v
     width: 20px;
     height: 20px;
     box-sizing: border-box;
-    border-radius: 6px;
+    border-radius: var(--gl-v2-radius-xs, 6px);
     background: rgba(255, 255, 255, .92);
     border: 1px solid rgba(44, 59, 42, .25);
     display: flex;
@@ -553,7 +540,7 @@ body.gl-v2-dp-is-picking .gl-v2-dp-card:hover { box-shadow: 0 0 0 2px var(--gl-v
     top: 10px;
     left: 12px;
     padding: 3px 8px;
-    border-radius: 6px;
+    border-radius: var(--gl-v2-radius-xs, 6px);
     background: var(--gl-v2-gold);
     font: 600 10px var(--gl-v2-font-sans);
     color: var(--gl-v2-ink);
@@ -598,6 +585,9 @@ body.gl-v2-dp-is-picking .gl-v2-dp-card:hover { box-shadow: 0 0 0 2px var(--gl-v
     min-width: 0;
 }
 .gl-v2-dp-sections-row:last-child { border-bottom: 0; }
+.gl-v2-dp-sections-row:hover { background: var(--gl-v2-hover-tint); }
+/* acties: .gl-v2-rowact (gl-v2-shell.css), vaste breedte voor 2 iconen zodat de rij niet verspringt */
+.gl-v2-dp-sections-acts { flex: none; width: 68px; }
 /* flex-basis groot genoeg dat naam+beschrijving altijd hun eigen regel krijgen zodra de rij te smal
    wordt (modal krimpt naar 380px op tablet) — badge + bewerk-/verwijderknop wikkelen dan naar een
    tweede regel i.p.v. buiten de kaart te lopen (die zelf geen overflow:hidden/scroll heeft). */
@@ -702,3 +692,7 @@ body.gl-v2-dp-is-picking .gl-v2-dp-card:hover { box-shadow: 0 0 0 2px var(--gl-v
 .gl-v2-dp-grid .js-gl-v2-dp-card[draggable="true"] { cursor: grab; }
 .gl-v2-dp-card.is-dragging { opacity: .45; box-shadow: 0 0 0 2px var(--gl-v2-primary); cursor: grabbing; }
 .gl-v2-dp-grid.is-saving { opacity: .75; transition: opacity .15s; }
+
+/* hersteld uit filters.css-consolidatie: paginavariant van een gedeeld component */
+.gl-v2-toolbar-card { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 14px; border-radius: var(--gl-v2-radius-md); background: var(--gl-v2-surface); box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 14px 30px -24px rgba(44, 59, 42, .35); flex: none; }
+.gl-v2-toolbar-search { flex: 1; min-width: 180px; }

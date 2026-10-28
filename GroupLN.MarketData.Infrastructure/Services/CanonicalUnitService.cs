@@ -122,6 +122,16 @@ public class CanonicalUnitService : ICanonicalUnitService
             .GroupBy(l => l.MarketAssetId)
             .ToDictionary(g => g.Key, g => g.First());
 
+        // Laatst bekende prijs van units zonder actieve listing (offline gehaald/verkocht):
+        // die behouden hun laatste vraagprijs, anders valt de prijs weg uit analyses.
+        var lastKnownPrice = (await _db.MarketListings
+                .Where(l => unitIds.Contains(l.MarketAssetId) && l.AskingPrice > 0)
+                .Select(l => new { l.MarketAssetId, l.AskingPrice, l.LastSeenAt })
+                .AsNoTracking()
+                .ToListAsync(ct))
+            .GroupBy(l => l.MarketAssetId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(l => l.LastSeenAt).First().AskingPrice!.Value);
+
         // 5. Verrijkt model
         var enriched = sourceUnits.Select(u =>
         {
@@ -131,7 +141,7 @@ public class CanonicalUnitService : ICanonicalUnitService
                 SourceName : lst?.SourceName ?? "",
                 ExternalId : lst?.ExternalId ?? u.UnitExternalId ?? "",
                 Url        : lst?.Url,
-                Price      : lst?.AskingPrice ?? 0m);
+                Price      : lst?.AskingPrice ?? lastKnownPrice.GetValueOrDefault(u.Id));
         }).ToList();
 
         // 6. Matching

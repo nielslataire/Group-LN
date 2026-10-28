@@ -70,7 +70,7 @@
     width: 28px;
     height: 28px;
     flex: none;
-    border-radius: 8px;
+    border-radius: var(--gl-v2-radius-sm, 8px);
     background: var(--gl-v2-warning-tint);
     color: var(--gl-v2-warning);
     display: flex;
@@ -317,7 +317,7 @@
     width: 26px;
     height: 26px;
     flex: none;
-    border-radius: 6px;
+    border-radius: var(--gl-v2-radius-xs, 6px);
     background: var(--gl-v2-danger-tint);
     color: var(--gl-v2-danger);
     display: flex;
@@ -326,7 +326,6 @@
     font: 700 8px var(--gl-v2-font-sans);
 }
 
-.gl-v2-pd-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .gl-v2-pd-row-title { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gl-v2-pd-row-sub { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gl-v2-pd-row-value { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; flex: none; }

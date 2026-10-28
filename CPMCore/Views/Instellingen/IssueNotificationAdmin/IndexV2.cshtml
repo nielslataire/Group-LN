@@ -67,26 +67,29 @@
         {
             var n = Niveau(s);
             var wie = (s.SupplierName ?? "Alle aannemers") + " · " + (s.ProjectName ?? "alle projecten");
-            <div class="gl-v2-auto-row gl-v2-auto-grid--sch @(s.IsActive ? "" : "is-muted-row")">
+            <div class="gl-v2-auto-row gl-v2-auto-grid--sch gl-v2-listrow @(s.IsActive ? "" : "is-muted-row")" data-row-href="@Url.Action("Edit", new { id = s.Id })">
                 <span class="gl-v2-auto-who"><span class="t">@wie</span><span class="gl-v2-badge @(n == 4 ? "is-neutral" : "is-info")">@(n == 4 ? "Standaard" : "Niveau " + n)</span></span>
                 <span class="gl-v2-auto-cell">@Herinnering(s)</span>
                 <span class="gl-v2-auto-cell">@(s.SendEveningUpdate ? $"Ja, om {s.BrusselsEveningUpdateHour:00}:00" : "Nee")</span>
                 <span class="gl-v2-auto-cell">@(s.NextReminderRun.HasValue && s.IsActive ? s.NextReminderRun.Value.ToString("ddd d MMM", nl) : "—")</span>
                 <span><span class="gl-v2-badge @(s.IsActive ? "is-positive" : "is-inactive")">@(s.IsActive ? "Actief" : "Inactief")</span></span>
-                <span class="gl-v2-auto-acts">
-                    @if (canWrite)
-                    {
-                        <button type="button" class="gl-v2-row-action" data-pm-send="@Url.Action("SendNow", "IssueNotificationAdmin", new { id = s.Id })" data-pm-naam="@wie" title="Nu versturen" aria-label="Nu versturen voor @wie"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i></button>
-                    }
-                    <a class="gl-v2-row-action" href="@Url.Action("Edit", new { id = s.Id })" title="Bewerken" aria-label="Schema @wie bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></a>
-                    @if (canDelete)
-                    {
-                        <form method="post" action="@Url.Action("Delete", new { id = s.Id })" data-bv-titel="Schema verwijderen?" data-bv-tekst="Het schema voor @wie wordt verwijderd. Aannemers vallen terug op het volgende meest specifieke schema." data-bv-ok="Verwijderen" data-bv-tone="danger" data-bv-icon="ph-trash">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="gl-v2-row-action gl-v2-row-action-danger" title="Verwijderen" aria-label="Schema @wie verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
-                        </form>
-                    }
-                </span>
+                <span class="gl-v2-auto-acts"><span class="gl-v2-rowact">
+                    <i class="ph ph-caret-right gl-v2-rowact-chev" aria-hidden="true"></i>
+                    <span class="gl-v2-rowact-btns">
+                        @if (canWrite)
+                        {
+                            <button type="button" class="gl-v2-icon-btn" data-pm-send="@Url.Action("SendNow", "IssueNotificationAdmin", new { id = s.Id })" data-pm-naam="@wie" title="Nu versturen" aria-label="Nu versturen voor @wie"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i></button>
+                        }
+                        <a class="gl-v2-icon-btn" href="@Url.Action("Edit", new { id = s.Id })" title="Bewerken" aria-label="Schema @wie bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></a>
+                        @if (canDelete)
+                        {
+                            <form method="post" action="@Url.Action("Delete", new { id = s.Id })" data-bv-titel="Schema verwijderen?" data-bv-tekst="Het schema voor @wie wordt verwijderd. Aannemers vallen terug op het volgende meest specifieke schema." data-bv-ok="Verwijderen" data-bv-tone="danger" data-bv-icon="ph-trash">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="gl-v2-icon-btn is-danger" title="Schema @wie verwijderen" aria-label="Schema @wie verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+                            </form>
+                        }
+                    </span>
+                </span></span>
             </div>
         }
     </section>
@@ -109,7 +112,9 @@
             <div><span class="l">Herinneringen</span><span class="v">@recent.Count(r => r.RunTypeLabel == "Herinnering")</span></div>
             <div><span class="l">Vastgelopen</span><span class="v @(recent.Any(Vast) ? "is-bad" : "")">@recent.Count(Vast)</span></div>
         </div>
-        @await Html.PartialAsync("_RunsV2", Model.RecentRuns)
+        <div data-gl-pager data-pg-size="10" data-pg-noun="uitvoeringen">
+            @await Html.PartialAsync("_RunsV2", Model.RecentRuns)
+        </div>
         <div class="gl-v2-auto-foot">Tijden in Brussels-tijd. <a href="@Url.Action("Logs")">Alle logs bekijken</a></div>
     </section>
 </div>
@@ -118,5 +123,6 @@
 
 @section PageScripts
 {
+    <script src="~/js/gl-v2-auto-pager.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-instellingen-puntmeldingen.js" asp-append-version="true"></script>
 }

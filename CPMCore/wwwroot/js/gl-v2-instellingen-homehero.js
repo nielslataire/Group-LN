@@ -34,7 +34,7 @@
             .then(function (r) { return r.ok ? r.json() : null; }).then(function (d) { zetMedia(d && d.media); }).catch(function () { zetMedia(null); });
     });
 
-    function toast(tone, title, body) { if (window.GlV2Toast) window.GlV2Toast.show({ tone: tone, title: title, body: body || "" }); }
+    var toast = (window.GlV2Toast && window.GlV2Toast.notify) || function () {}; // gedeeld, zie gl-v2-shell.js
     var knop = document.getElementById("hh-overnemen");
     if (!knop) return;
 

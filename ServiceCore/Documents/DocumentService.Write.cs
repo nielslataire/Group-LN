@@ -248,7 +248,10 @@ public partial class DocumentService
         rev.ApprovedByUserId = userId;
         rev.ApprovedByName = userName;
         rev.ApprovedDate = DateTime.UtcNow;
-        if (!string.IsNullOrWhiteSpace(note)) rev.Note = string.IsNullOrWhiteSpace(rev.Note) ? "Afgewezen: " + note : rev.Note + " — afgewezen: " + note;
+        // De opmerking markeert de revisie als afgewezen (status 3 betekent ook "vervangen"); ook zonder reden.
+        var reason = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+        var rejectedText = reason == null ? "Afgewezen" : "Afgewezen: " + reason;
+        rev.Note = string.IsNullOrWhiteSpace(rev.Note) ? rejectedText : rev.Note + " — " + (reason == null ? "afgewezen" : "afgewezen: " + reason);
         await _db.SaveChangesAsync();
         return DocResult.Success("Revisie afgewezen.");
     }
@@ -543,14 +546,19 @@ public partial class DocumentService
         return DocResult.Success("Ter ondertekening verstuurd.");
     }
 
-    public async Task<DocResult> MarkSigned(int projectId, int signatureId, string method)
+    public async Task<DocResult> MarkSigned(int projectId, int signatureId, string method, string? proofFilename = null)
     {
         var sig = await _db.DocumentSignatures.Include(s => s.Document).FirstOrDefaultAsync(s => s.Id == signatureId && s.Document.ProjectId == projectId);
         if (sig == null) return DocResult.Fail("Ondertekenaar niet gevonden.");
         if (sig.Status == 2) return DocResult.Success("Al getekend.");
+        var manual = method is not "itsme";
+        // Een handmatige handtekening zonder digitaal spoor moet aantoonbaar zijn: een bewijsbestand is verplicht.
+        if (manual && string.IsNullOrWhiteSpace(proofFilename))
+            return DocResult.Fail("Voeg een bewijs toe (bv. de getekende versie of een mail) om de handtekening te registreren.");
         sig.Status = 2;
         sig.SignedDate = DateTime.UtcNow;
-        sig.Method = method is "itsme" ? "itsme" : "manueel";
+        sig.Method = manual ? "manueel" : "itsme";
+        if (manual) sig.EvidenceRef = proofFilename;
         await _db.SaveChangesAsync();
 
         var d = await LoadTracked(projectId, sig.DocumentId);

@@ -192,6 +192,7 @@ namespace CPMCore.Controllers
                 RestorePostedUnits(model, units);
                 FillInAddSelectLists(ref model);
                 ViewData["GlV2ErrorLocations"] = AddClientAccountErrorLocations();
+                ViewData["HelpScreenId"] = "projecten-klant-toevoegen";
                 return View(viewName, model);
             }
 
@@ -210,6 +211,7 @@ namespace CPMCore.Controllers
             if (!response.Success || response.Messages == null || !response.Messages.Any())
             {
                 AddMessage("error", $"De klantenaccount {model.ClientAccount.Name} is NIET toegevoegd", "Fout!");
+                ViewData["HelpScreenId"] = "projecten-klant-toevoegen";
                 return View(viewName, model);
             }
 
@@ -296,6 +298,7 @@ namespace CPMCore.Controllers
                 }
 
                 FillInAddSelectLists(ref model);
+                ViewData["HelpScreenId"] = "projecten-klant-toevoegen";
                 return View(viewName, model);
             }
 
@@ -762,6 +765,7 @@ namespace CPMCore.Controllers
                 };
             }
 
+            ViewData["HelpScreenId"] = "projecten-klant-bewerken";
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditProjectV2" : "EditProject", model);
         }
 
@@ -774,6 +778,7 @@ namespace CPMCore.Controllers
             // vertakken als de GET — anders zou een mislukte opslag onder gl-v2-preview alsnog stil
             // terugvallen op de legacy EditProject-view.
             var viewName = ViewData["UseGlV2Layout"] as bool? == true ? "EditProjectV2" : "EditProject";
+            ViewData["HelpScreenId"] = "projecten-klant-bewerken";
 
             // Verdeelsleutel (migratie 057, design-handoff 23a) — enkel relevant zodra er mede-eigenaars zijn.
             if (viewmodel.Client?.CoOwners?.Any() == true)
@@ -827,7 +832,7 @@ namespace CPMCore.Controllers
                     if (!r2.Success)
                     {
                         await tx.RollbackAsync();
-                        AddMessage("error", $"Unit {unit.Name} is niet bijgewerkt", "Fout!");
+                        AddMessage("error", r2.Messages.Where(m => m.Type == MessageType.Error).Select(m => m.Message).FirstOrDefault(m => !string.IsNullOrWhiteSpace(m)) ?? $"Unit {unit.Name} is niet bijgewerkt", "Fout!");
                         FillInAddSelectListsEdit(ref viewmodel);
                         return View(viewName, viewmodel);
                     }
@@ -837,7 +842,7 @@ namespace CPMCore.Controllers
                         if (!r3.Success)
                         {
                             await tx.RollbackAsync();
-                            AddMessage("error", $"Unit {unit.Name} is niet bijgewerkt", "Fout!");
+                            AddMessage("error", r3.Messages.Where(m => m.Type == MessageType.Error).Select(m => m.Message).FirstOrDefault(m => !string.IsNullOrWhiteSpace(m)) ?? $"Unit {unit.Name} is niet bijgewerkt", "Fout!");
                             FillInAddSelectListsEdit(ref viewmodel);
                             return View(viewName, viewmodel);
                         }
@@ -1020,11 +1025,31 @@ namespace CPMCore.Controllers
             return (booked, invoices.Count(i => !i.Booked));
         }
 
+        /// <summary>Waarom deze klant niet verwijderd mag worden, of null. Facturatie (geboekt of niet),
+        /// wijzigingsopdrachten en bereikte betalingsschijven betekenen dat er al overeenkomsten of
+        /// facturatie met de klant zijn.</summary>
+        private string? GetClientDeleteBlockReason(int id)
+        {
+            var (booked, unbookedCount) = GetClientInvoiceBlockers(id);
+            var invoiceCount = booked.Count + unbookedCount;
+            var changeOrderCount = _db.ChangeOrder.AsNoTracking().Count(c => c.ClientAccountId == id);
+            var reachedStageCount = _db.UnitPaymentStageReached.AsNoTracking()
+                .Count(r => _db.Units.Any(u => u.Id == r.UnitId && u.ClientAccountId == id));
+            if (invoiceCount == 0 && changeOrderCount == 0 && reachedStageCount == 0) return null;
+
+            var redenen = new List<string>();
+            if (invoiceCount > 0) redenen.Add($"{invoiceCount} {(invoiceCount == 1 ? "factuur" : "facturen")}");
+            if (changeOrderCount > 0) redenen.Add($"{changeOrderCount} {(changeOrderCount == 1 ? "wijzigingsopdracht" : "wijzigingsopdrachten")}");
+            if (reachedStageCount > 0) redenen.Add($"{reachedStageCount} bereikte {(reachedStageCount == 1 ? "betalingsschijf" : "betalingsschijven")}");
+            return $"Deze klant kan niet verwijderd worden: er zijn al overeenkomsten of facturatie met deze klant ({string.Join(", ", redenen)}).";
+        }
+
         private void FillDeleteClientWarnings(int id)
         {
             var (booked, unbooked) = GetClientInvoiceBlockers(id);
             ViewData["BookedInvoices"] = booked;
             ViewData["UnbookedInvoiceCount"] = unbooked;
+            ViewData["ClientDeleteBlock"] = GetClientDeleteBlockReason(id);
         }
         [CPMCore.Filters.PermissionDelete(PermissionCodes.Customers)]
         public ActionResult PartialDeleteClientModal(int id)
@@ -1091,33 +1116,19 @@ namespace CPMCore.Controllers
 
             // Eerst controleren, pas daarna iets wijzigen: een geboekte factuur blokkeert, niet-geboekte vragen
             // bevestiging (de modal stuurt confirmInvoices=true mee nadat de waarschuwing getoond is).
-            var (booked, unbookedCount) = GetClientInvoiceBlockers(id);
-            if (booked.Count > 0)
+            // Een klant met facturatie (geboekt of niet), wijzigingsopdrachten of bereikte betalingsschijven
+            // verwijder je niet meer: er bestaan dan al overeenkomsten of facturatie met die klant.
+            var blockReason = GetClientDeleteBlockReason(id);
+            if (blockReason != null)
             {
-                var list = string.Join(", ", booked.Take(5)) + (booked.Count > 5 ? $" en nog {booked.Count - 5}" : "");
-                AddMessage("error", $"Deze klant kan niet verwijderd worden: {booked.Count} {(booked.Count == 1 ? "factuur is" : "facturen zijn")} al in Octopus geboekt ({list}).", "Niet verwijderd");
-                return Redirect(stri);
-            }
-            if (unbookedCount > 0 && !confirmInvoices)
-            {
-                AddMessage("error", $"Aan deze klant hangen {unbookedCount} nog niet geboekte {(unbookedCount == 1 ? "factuur" : "facturen")}. Bevestig het verwijderen via het venster.", "Bevestiging nodig");
+                AddMessage("error", blockReason, "Niet verwijderd");
                 return Redirect(stri);
             }
 
-            // Alles of niets: faalt het verwijderen, dan blijven ook de eenheden en facturen zoals ze waren.
+            // Alles of niets: faalt het verwijderen, dan blijven ook de eenheden zoals ze waren.
             using var tx = _uow.Context.Database.BeginTransaction();
             try
             {
-                if (unbookedCount > 0)
-                {
-                    var contactIds = _db.ClientContacts.Where(k => k.ClientAccountId == id).Select(k => k.Id).ToList();
-                    var invoices = _db.Invoices
-                        .Where(i => i.ClientIdClientAccount == id || (i.ClientIdClientContacts != null && contactIds.Contains(i.ClientIdClientContacts.Value)))
-                        .ToList();
-                    foreach (var inv in invoices) { inv.ClientIdClientAccount = null; inv.ClientIdClientContacts = null; }
-                    _db.SaveChanges();
-                }
-
                 var idlist = new List<int> { id };
                 var response = _unitService.DeleteUnitFromClientAccountByAccountId(idlist);
                 if (response.Success) response = _clientService.Delete(idlist);
@@ -1125,9 +1136,7 @@ namespace CPMCore.Controllers
                 if (response.Success)
                 {
                     tx.Commit();
-                    AddMessage("", unbookedCount > 0
-                        ? $"De klant is verwijderd. {unbookedCount} niet geboekte {(unbookedCount == 1 ? "factuur is" : "facturen zijn")} ontkoppeld van de klant."
-                        : "De klant is verwijderd", "Geslaagd!");
+                    AddMessage("", "De klant is verwijderd", "Geslaagd!");
                 }
                 else
                 {

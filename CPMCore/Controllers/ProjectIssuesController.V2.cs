@@ -429,6 +429,7 @@ public partial class ProjectsIssuesController
             : issue.HasValue ? vm.Pins.FirstOrDefault(p => p.Id == issue)?.PlanKey
             : plans.OrderByDescending(p => vm.Pins.Count(x => x.PlanKey == p.Key)).FirstOrDefault()?.Key;
         vm.SelectedIssueId = issue;
+        ViewData["HelpScreenId"] = "issues-index";
         return View("PlanV2", vm);
     }
 
@@ -501,6 +502,7 @@ public partial class ProjectsIssuesController
             });
         }
         vm.Groups = vm.Groups.OrderBy(g => g.Name).ToList();
+        ViewData["HelpScreenId"] = "issues-index";
         return View("SendV2", vm);
     }
 

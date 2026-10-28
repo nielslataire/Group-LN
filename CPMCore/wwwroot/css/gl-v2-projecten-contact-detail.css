@@ -40,11 +40,11 @@
 .gl-v2-cd-step:disabled { cursor: default; }
 .gl-v2-cd-step:not(:disabled):not(.is-current):hover { filter: brightness(.97); }
 .gl-v2-cd-step-gap { width: 8px; flex: none; }
-.gl-v2-cd-lost { flex: none; height: 38px; padding: 0 15px; display: flex; align-items: center; gap: 7px; border: 0; border-radius: 8px; background: transparent; font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); cursor: pointer; white-space: nowrap; }
+.gl-v2-cd-lost { flex: none; height: 38px; padding: 0 15px; display: flex; align-items: center; gap: 7px; border: 0; border-radius: var(--gl-v2-radius-sm, 8px); background: transparent; font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); cursor: pointer; white-space: nowrap; }
 .gl-v2-cd-lost.is-current { background: #F7E6E3; color: var(--gl-v2-danger); }
 .gl-v2-cd-lost:not(:disabled):hover { background: var(--gl-v2-hover-tint); }
 .gl-v2-cd-reason { margin: 10px 0 0; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-danger); }
-@media (max-width: 767.98px) { .gl-v2-cd-steps { flex-wrap: wrap; } .gl-v2-cd-step { flex: 1 1 30%; margin-left: 0; clip-path: none; border-radius: 7px; } .gl-v2-cd-step-gap { display: none; } }
+@media (max-width: 767.98px) { .gl-v2-cd-steps { flex-wrap: wrap; } .gl-v2-cd-step { flex: 1 1 30%; margin-left: 0; clip-path: none; border-radius: var(--gl-v2-radius-s, 7px); } .gl-v2-cd-step-gap { display: none; } }
 
 /* melding (bezichtiging of optie) */
 .gl-v2-cd-notice { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; background: #F6EEDC; border: 1px solid #E6D3A8; color: #6B4F22; }
@@ -55,13 +55,13 @@
 /* opvolging */
 .gl-v2 .gl-v2-cd-follow { padding: 0; overflow: hidden; }
 .gl-v2-cd-follow-head { display: flex; align-items: center; gap: 11px; padding: 14px 20px; border-bottom: 1px solid rgba(44, 59, 42, .08); }
-.gl-v2-cd-follow-ico { width: 30px; height: 30px; flex: none; border-radius: 8px; background: #D6E5CC; color: #00532D; display: inline-flex; align-items: center; justify-content: center; font-size: 16px; }
+.gl-v2-cd-follow-ico { width: 30px; height: 30px; flex: none; border-radius: var(--gl-v2-radius-sm, 8px); background: #D6E5CC; color: #00532D; display: inline-flex; align-items: center; justify-content: center; font-size: 16px; }
 .gl-v2-cd-follow-head b { font: 700 13px var(--gl-v2-font-sans); color: #00532D; }
 .gl-v2-cd-sep { width: 1px; height: 16px; background: rgba(44, 59, 42, .14); flex: none; }
 .gl-v2-cd-follow-head small { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); min-width: 0; }
 .gl-v2-cd-composer { margin: 16px 20px 0; border: 1px solid rgba(44, 59, 42, .12); border-radius: 10px; overflow: hidden; }
 .gl-v2-cd-ktabs { display: flex; flex-wrap: wrap; gap: 2px; padding: 6px; background: #F7F9F5; border-bottom: 1px solid rgba(44, 59, 42, .08); }
-.gl-v2-cd-ktabs button { height: 30px; padding: 0 11px; border: 0; border-radius: 7px; display: inline-flex; align-items: center; gap: 6px; background: transparent; color: var(--gl-v2-muted); font: 600 12px var(--gl-v2-font-sans); cursor: pointer; }
+.gl-v2-cd-ktabs button { height: 30px; padding: 0 11px; border: 0; border-radius: var(--gl-v2-radius-s, 7px); display: inline-flex; align-items: center; gap: 6px; background: transparent; color: var(--gl-v2-muted); font: 600 12px var(--gl-v2-font-sans); cursor: pointer; }
 .gl-v2-cd-ktabs button.is-on { background: #fff; color: #00532D; box-shadow: 0 1px 3px rgba(44, 59, 42, .18); }
 .gl-v2-cd-ktabs button:not(.is-on):hover { background: var(--gl-v2-hover-tint); }
 .gl-v2-cd-kbody { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
@@ -85,7 +85,6 @@
 .gl-v2-cd-ev.is-visit .gl-v2-cd-ev-ico, .gl-v2-cd-ev.is-option .gl-v2-cd-ev-ico { background: #F6EEDC; color: #8A6A32; }
 .gl-v2-cd-ev.is-next .gl-v2-cd-ev-ico { background: #D6E5CC; color: #00532D; }
 .gl-v2-cd-ev.is-next.is-overdue .gl-v2-cd-ev-ico { background: #F7E6E3; color: var(--gl-v2-danger); }
-.gl-v2-cd-ev-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .gl-v2-cd-ev-top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
 .gl-v2-cd-ev-top b { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
 .gl-v2-cd-ev-top span { font: 450 11.5px var(--gl-v2-font-sans); color: #7a8a78; }

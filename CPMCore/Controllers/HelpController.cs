@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using SmartBreadcrumbs.Attributes;
+using SmartBreadcrumbs.Nodes;
 
 namespace CPMCore.Controllers;
 
@@ -167,6 +168,7 @@ public class HelpController : BaseController
         };
 
         SetPageHeader("ph ph-question", article.Title, topic.Name);
+        SetArtikelBreadcrumb(article, topic);
         return View("ArtikelV2", vm);
     }
 
@@ -232,6 +234,39 @@ public class HelpController : BaseController
     /// Een artikel met een <c>parent:</c> die niet in hetzelfde topic bestaat valt terug op hoofdartikel,
     /// nooit een kind dat in de boom nergens onder hangt. Een knoop staat open als hij het actieve
     /// artikel is of er (diep) boven hangt; zo staat bij het laden enkel het pad naar het huidige artikel open.</summary>
+    /// <summary>
+    /// Dashboard / Help / {onderwerp} / {bovenliggende artikels uit de helpboom}. Stopt bij de ouder
+    /// (de titel is het artikel zelf); het onderwerp heeft geen eigen pagina en linkt naar zijn eerste artikel.
+    /// </summary>
+    private void SetArtikelBreadcrumb(HelpArticle article, HelpTopic topic)
+    {
+        var topicArticles = _help.GetByTopic(topic.Slug);
+        var firstRoot = topicArticles
+            .Where(a => string.IsNullOrEmpty(a.ParentSlug) || !topicArticles.Any(p => string.Equals(p.Slug, a.ParentSlug, StringComparison.OrdinalIgnoreCase)))
+            .OrderBy(a => a.TreeOrder ?? int.MaxValue).ThenBy(a => a.Title)
+            .FirstOrDefault();
+
+        var node = new MvcBreadcrumbNode("Index", "Home", "Dashboard");
+        node = new MvcBreadcrumbNode("Index", "Help", "Help") { Parent = node };
+        node = firstRoot != null
+            ? new MvcBreadcrumbNode("Artikel", "Help", topic.Name) { Parent = node, RouteValues = new { slug = firstRoot.Slug } }
+            : new MvcBreadcrumbNode("Index", "Help", topic.Name) { Parent = node };
+
+        var ancestors = new List<HelpArticle>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { article.Slug };
+        var parent = string.IsNullOrEmpty(article.ParentSlug) ? null : topicArticles.FirstOrDefault(a => string.Equals(a.Slug, article.ParentSlug, StringComparison.OrdinalIgnoreCase));
+        while (parent != null && seen.Add(parent.Slug))
+        {
+            ancestors.Insert(0, parent);
+            parent = string.IsNullOrEmpty(parent.ParentSlug) ? null : topicArticles.FirstOrDefault(a => string.Equals(a.Slug, parent.ParentSlug, StringComparison.OrdinalIgnoreCase));
+        }
+        foreach (var a in ancestors)
+            node = new MvcBreadcrumbNode("Artikel", "Help", string.IsNullOrWhiteSpace(a.TreeLabel) ? a.Title : a.TreeLabel) { Parent = node, RouteValues = new { slug = a.Slug } };
+
+        ViewData["BreadcrumbNode"] = node;
+        ViewData["BreadcrumbLastIsLink"] = true;
+    }
+
     private static List<HelpTreeNodeVm> BuildTreeNodes(IReadOnlyList<HelpArticle> topicArticles, string activeSlug)
     {
         var slugs = topicArticles.Select(a => a.Slug).ToHashSet(StringComparer.OrdinalIgnoreCase);

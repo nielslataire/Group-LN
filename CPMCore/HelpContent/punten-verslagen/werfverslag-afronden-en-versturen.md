@@ -9,7 +9,7 @@ screens: verslagen-edit
 synonyms: afronden, versturen, pdf, bijlage, plannen, goedkeuren, voorbereiden
 description: wat er gebeurt met punten, pdf en mails
 newsTag: Nieuw
-related: werfverslag-opmaken, punten-lijst-overzicht
+related: verslagen-overzicht, werfverslag-opmaken, punten-lijst-overzicht
 intro: |
   Met **Afronden en versturen** sluit je het werfbezoek af. CPM keurt de nieuwe punten goed, maakt het verslag op
   als PDF en mailt het naar de aanwezigen. Het verslag staat daarna vast.

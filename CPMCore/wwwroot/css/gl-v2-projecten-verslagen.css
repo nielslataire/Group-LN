@@ -4,7 +4,7 @@
 .gl-v2-vs-grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 14px; align-items: start; min-width: 0; }
 .gl-v2-vs-list, .gl-v2-vs-detail { min-width: 0; }
 .gl-v2-vs-segments { display: flex; gap: 4px; padding: 10px 14px; border-bottom: 1px solid var(--gl-v2-hairline-soft); flex-wrap: wrap; }
-.gl-v2-vs-seg { border: 0; background: transparent; padding: 6px 12px; border-radius: 8px; font: 550 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); cursor: pointer; }
+.gl-v2-vs-seg { border: 0; background: transparent; padding: 6px 12px; border-radius: var(--gl-v2-radius-sm, 8px); font: 550 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); cursor: pointer; }
 .gl-v2-vs-seg b { margin-left: 4px; color: var(--gl-v2-muted); font-weight: 600; }
 .gl-v2-vs-seg:hover { background: var(--gl-v2-hover-tint); }
 .gl-v2-vs-seg.is-active { background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); }
@@ -59,8 +59,8 @@
 .gl-v2-vs-ptable a:hover { color: var(--gl-v2-primary); text-decoration: underline; }
 .gl-v2-vs-ptable tr.is-hidden { display: none; }
 .gl-v2-vs-ptable .is-checked td { background: #FBFDF9; }
-.gl-v2-vs-ter { display: inline-flex; padding: 2px; border-radius: 8px; background: var(--gl-v2-bg); gap: 2px; }
-.gl-v2-vs-ter button { border: 0; background: transparent; padding: 5px 10px; border-radius: 6px; font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); cursor: pointer; white-space: nowrap; }
+.gl-v2-vs-ter { display: inline-flex; padding: 2px; border-radius: var(--gl-v2-radius-sm, 8px); background: var(--gl-v2-bg); gap: 2px; }
+.gl-v2-vs-ter button { border: 0; background: transparent; padding: 5px 10px; border-radius: var(--gl-v2-radius-xs, 6px); font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); cursor: pointer; white-space: nowrap; }
 .gl-v2-vs-ter button:disabled { cursor: default; opacity: .6; }
 .gl-v2-vs-ter button.is-on[data-v="0"] { background: var(--gl-v2-surface); color: var(--gl-v2-ink); box-shadow: 0 1px 2px rgba(44, 59, 42, .14); }
 .gl-v2-vs-ter button.is-on[data-v="1"] { background: var(--gl-v2-surface); color: var(--gl-v2-primary); box-shadow: 0 1px 2px rgba(44, 59, 42, .14); }

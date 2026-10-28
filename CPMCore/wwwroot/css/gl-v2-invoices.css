@@ -3,17 +3,6 @@
    — the table structure, DataTables init and all JS are shared byte-for-byte with the current
    page (Views/Invoices/IndexV2.cshtml); only presentation changes here. Scoped under .gl-v2. */
 
-.gl-v2-toolbar-card {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    align-items: center;
-    padding: 14px;
-    border-radius: var(--gl-v2-radius-md);
-    background: var(--gl-v2-surface);
-    box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 14px 30px -24px rgba(44, 59, 42, .35);
-    flex: none;
-}
 
 /* Het zoekveld (optie 4i, .gl-v2-field) moet net als de oude .input-group de resterende breedte
    naast de boekjaar-dropdown opeten, en mag onder een 210px-brede buur even goed krimpen op een
@@ -23,9 +12,6 @@
    i.p.v. enkel op deze fix te vertrouwen. */
 .gl-v2-toolbar-search {
     flex: 1;
-    min-width: 0;
-}
-.gl-v2-toolbar-search .gl-v2-field-input {
     min-width: 0;
 }
 
@@ -59,8 +45,6 @@
    .is-ready zet op .gl-v2-table-card (na DataTable-init + eerste syncTablePageLength()) — voorkomt
    een flits van de rauwe, nog niet gepagineerde tabel (alle rijen, ongesorteerd) voor DataTables
    heeft kunnen initialiseren. */
-.gl-v2-loading-skeleton { display: flex; flex-direction: column; }
-.gl-v2-table-card.is-ready .gl-v2-loading-skeleton { display: none; }
 .gl-v2-table-card:not(.is-ready) .datatables-header-footer-wrapper { display: none; }
 
 .gl-v2-skeleton-header {
@@ -88,28 +72,15 @@
     border-bottom: 1px solid var(--gl-v2-hairline-soft);
 }
 
-.gl-v2-skeleton-box {
-    background: #EDEFEA;
-    border-radius: 5px;
-    animation: gl-v2-skeleton-pulse 1.4s ease-in-out infinite;
-}
 .gl-v2-skeleton-check { width: 18px; height: 18px; }
-.gl-v2-skeleton-text { height: 10px; }
 .gl-v2-skeleton-pill { height: 18px; border-radius: 9px; }
 
 @keyframes gl-v2-skeleton-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
 
-.gl-v2-skeleton-footer {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 9px;
-    height: 46px;
-    flex: none;
-    font: 500 11.5px var(--gl-v2-font-sans);
-    color: var(--gl-v2-muted);
+@media (min-width: 1200px) {
+    .gl-v2-skeleton-header, .gl-v2-skeleton-row { grid-template-columns: 44px 70px 112px 96px minmax(0, 1fr) 90px 90px 66px 116px 92px 200px; }
 }
-.gl-v2-skeleton-footer i { font-size: 15px; color: var(--gl-v2-primary); }
+
 
 /* Lege staat (optie 4f) — .gl-v2-empty-state* is nu de project-brede default in gl-v2-shell.css.
    Twee plekken gebruiken dit hier: de server-side variant (IndexV2.cshtml, Model bevat écht nul
@@ -196,7 +167,7 @@
    vandaag geen echt "vergrendelde factuur"-concept in deze tabel om dit aan te koppelen — zelfde
    aanpak als de rail's badge/disabled-states (component klaar, niet fabriceren wat niet bestaat). */
 .gl-v2 #datatable-invoice-list tbody tr.gl-v2-row-locked td { background: #FBFBF9; color: #9AA898; }
-.gl-v2 #datatable-invoice-list tbody tr.gl-v2-row-locked .gl-v2-row-action { color: #C0CABE; pointer-events: none; }
+.gl-v2 #datatable-invoice-list tbody tr.gl-v2-row-locked .gl-v2-row-action { color: var(--gl-v2-disabled-ink, #C0CABE); pointer-events: none; }
 
 /* ── Rij-actieknoppen: drie families (neutraal/primair/danger), maar de rand/vulling van elke
    familie is enkel de HOVER-STAAT UIT 4e — de DEFAULT toont kale iconen (geen rand, geen vulling,
@@ -210,110 +181,48 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 26px;
-    height: 26px;
-    border-radius: 7px;
-    border: 1px solid transparent;
-    background: transparent;
-    color: var(--gl-v2-muted);
+    width: 32px;
+    height: 32px;
+    border-radius: var(--gl-v2-radius-sm);
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    color: var(--gl-v2-primary);
     text-decoration: none;
     transition: background-color .12s ease, border-color .12s ease, color .12s ease;
 }
 
 .gl-v2 #datatable-invoice-list .gl-v2-row-action i { font-size: 15px; }
 
-.gl-v2 #datatable-invoice-list tbody tr.is-selected .gl-v2-row-action { color: var(--gl-v2-primary); }
 
-.gl-v2 #datatable-invoice-list .gl-v2-row-action:hover,
-.gl-v2 #datatable-invoice-list .gl-v2-row-action:focus-visible {
+.gl-v2 #datatable-invoice-list .gl-v2-row-action:hover {
     border-color: var(--gl-v2-primary);
     background: var(--gl-v2-hover-tint);
     color: var(--gl-v2-primary);
+}
+.gl-v2 #datatable-invoice-list .gl-v2-row-action:focus-visible {
     outline: none;
+    box-shadow: 0 0 0 3px var(--gl-v2-gold);
 }
 
-.gl-v2 #datatable-invoice-list .gl-v2-row-action-primary:hover,
-.gl-v2 #datatable-invoice-list .gl-v2-row-action-primary:focus-visible {
-    background: #006638;
-    border-color: #006638;
-    color: var(--gl-v2-surface);
+/* Danger = zelfde recept als .gl-v2-icon-btn.is-danger (shell). Primary-familie (Bewerken) is op desktop gewoon neutraal. */
+.gl-v2 #datatable-invoice-list .gl-v2-row-action-danger { border-color: rgba(139, 42, 42, .4); color: var(--gl-v2-danger, #8B2A2A); }
+.gl-v2 #datatable-invoice-list .gl-v2-row-action-danger:hover {
+    background: var(--gl-v2-danger-tint, #F8EBEB);
+    border-color: var(--gl-v2-danger, #8B2A2A);
+    color: var(--gl-v2-danger, #8B2A2A);
 }
 
-.gl-v2 #datatable-invoice-list .gl-v2-row-action-danger:hover,
-.gl-v2 #datatable-invoice-list .gl-v2-row-action-danger:focus-visible {
-    background: #F8EBEB;
-    border-color: #8B2A2A;
-    color: #8B2A2A;
+/* Rij-actiepatroon (shell: .gl-v2-rowact). De actiecel krijgt vanaf 1200px een vaste breedte zodat de
+   kolombreedte niet verspringt als de iconen bij hover verschijnen (max. 7 acties: 7x32 + 6x4 = 248px
+   + 10px/20px padding). Rijen focus-within kleuren mee met hover. */
+.gl-v2 #datatable-invoice-list tbody tr:focus-within td { background: var(--gl-v2-hover-tint); }
+@media (min-width: 1200px) {
+    .gl-v2 #datatable-invoice-list thead th:nth-last-child(2),
+    .gl-v2 #datatable-invoice-list tbody td:nth-last-child(2) { min-width: 278px; width: 278px; }
+    .gl-v2 #datatable-invoice-list tbody td.actions { padding-top: 0; padding-bottom: 0; }
 }
 
-/* ── Checkboxes: _LayoutV2.cshtml laadt theme.css/custom.css NIET (enkel _Layout.cshtml, de oude
-   shell, doet dat) — .checkbox-custom's hele getekende box/vinkje (label:before/:after pseudo-
-   elementen) bestaat dus op gl-v2-pagina's helemaal niet, er was hier niets om te overschrijven.
-   Volledig zelfstandig opgebouwd i.p.v. op theme.css te bouwen. Zelfde Font Awesome-vinkje-truc
-   als theme.css gebruikte (content:'\f00c', FA is sowieso al geladen), enkel de kleuren/maat eigen
-   aan gl-v2. ──────────────────────────────────────────────────────────────────────────────────── */
-.gl-v2 #datatable-invoice-list .checkbox-custom {
-    position: relative;
-    display: inline-block;
-    width: 18px;
-    height: 18px;
-}
-
-.gl-v2 #datatable-invoice-list .checkbox-custom input[type="checkbox"] {
-    position: absolute;
-    inset: 0;
-    margin: 0;
-    opacity: 0;
-    z-index: 2;
-    cursor: pointer;
-}
-
-.gl-v2 #datatable-invoice-list .checkbox-custom label {
-    position: absolute;
-    inset: 0;
-    margin: 0;
-    cursor: pointer;
-}
-
-.gl-v2 #datatable-invoice-list .checkbox-custom label:before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    box-sizing: border-box;
-    border-radius: 5px;
-    border: 1px solid var(--gl-v2-hairline);
-    background: var(--gl-v2-surface);
-}
-
-/* Niet-boekbaar (het courante geval voor de meeste facturen) — gedimd, geen streep. */
-.gl-v2 #datatable-invoice-list .checkbox-custom input[type="checkbox"]:disabled + label:before {
-    background: var(--gl-v2-disabled-bg);
-    border-color: var(--gl-v2-hairline-soft);
-}
-
-/* Na :disabled hierboven gedeclareerd zodat aangevinkt-én-disabled (al geboekt) altijd groen wint
-   — informeert dat de factuur geboekt IS, ook al kan de checkbox zelf niet meer aangepast worden. */
-.gl-v2 #datatable-invoice-list .checkbox-custom input[type="checkbox"]:checked + label:before {
-    background: var(--gl-v2-primary);
-    border-color: var(--gl-v2-primary);
-}
-
-.gl-v2 #datatable-invoice-list .checkbox-custom input[type="checkbox"]:checked + label:after {
-    content: "\f00c";
-    font-family: "Font Awesome 5 Free";
-    font-weight: 900;
-    position: absolute;
-    inset: 0;
-    font-size: 10px;
-    line-height: 18px;
-    text-align: center;
-    color: var(--gl-v2-surface);
-}
-
-.gl-v2 #datatable-invoice-list .checkbox-custom input[type="checkbox"]:disabled,
-.gl-v2 #datatable-invoice-list .checkbox-custom input[type="checkbox"]:disabled + label {
-    cursor: not-allowed;
-}
+/* Boeken-checkbox: gedeeld .gl-v2-check (css/gl-v2/check.css), variant .is-solid (al geboekt = aangevinkt én uitgeschakeld blijft groen). */
 
 /* ── Selectie-toolbar (optie 4e) — laatste "rij" van de tabelkaart, verschijnt zodra er ≥1
    factuur geselecteerd is. Zit binnen .gl-v2-table-card (overflow:hidden + radius), dus de
@@ -360,15 +269,6 @@
    won hier toch zichtbaar, vermoedelijk via een specifiekere of `!important`-eigen regel in die
    bundel. Vendor-CSS overrulen met `!important` i.p.v. verder specificiteit-gokken tegen een
    CDN-bundel die we niet zelf beheren/kunnen inzien. ─────────────────────────────────────────────── */
-.gl-v2 .dt-container .dt-layout-row:last-child {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 10px 0 16px !important;
-    flex: none;
-    border-top: 1px solid var(--gl-v2-hairline);
-}
 
 /* De EERSTE .dt-layout-row zelf droeg nooit eigen opmaak — enkel z'n kinderen (export-knoppen,
    ingebouwde zoekbalk) werden apart onzichtbaar gemaakt (jQuery .hide(), zie gl-v2-invoices.js).
@@ -377,32 +277,12 @@
    telefoon (waar de rij nu meteen boven de eerste kaart staat) een duidelijk gat. #btnExportExcel/
    Pdf sturen sowieso `.trigger("click")` naar de echte (verborgen) DataTables-knoppen, wat ook op
    een display:none-element werkt — de hele rij verbergen breekt dus niets. */
-.gl-v2 .dt-container .dt-layout-row:first-child { display: none; }
 
 /* Padding op dt-info/dt-paging zelf i.p.v. op de rij eromheen — dezelfde 14px-inspring als de
    eerste/laatste tabelkolom, maar rechtstreeks op de twee elementen die 'm nodig hebben. */
-.gl-v2 .dt-info { padding-left: 14px; color: var(--gl-v2-muted); font: 500 11.5px var(--gl-v2-font-sans); }
-.gl-v2 .dt-paging { padding-right: 14px; }
 
-.gl-v2 .dt-paging .pagination { display: flex; align-items: center; gap: 6px; margin: 0; }
 
-.gl-v2 .dt-paging .page-link {
-    width: 30px;
-    height: 28px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 7px;
-    border: 1px solid var(--gl-v2-hairline);
-    background: var(--gl-v2-surface);
-    color: var(--gl-v2-muted-soft);
-    font: 600 12px var(--gl-v2-font-sans);
-}
 
-.gl-v2 .dt-paging .page-link:hover { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); }
-.gl-v2 .dt-paging .page-item.active .page-link { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); }
-.gl-v2 .dt-paging .page-item.disabled .page-link { color: #C0CABE; background: var(--gl-v2-surface); border-color: var(--gl-v2-hairline-soft); }
 
 /* Eigen basisstijl i.p.v. Bootstrap's d-flex/align-items-center/justify-content-end/gap-1/
    flex-nowrap (die eerst op dit element stonden): .d-flex{display:flex!important} zou de tablet-
@@ -453,7 +333,12 @@
    implementatie voor exact hetzelfde probleem. gl-v2-invoices.js' positionRowMenu/
    closeAllRowMenus doen al niets anders op desktop (trigger is daar display:none, klikt dus
    nooit). ─────────────────────────────────────────────────────────────────────────────────── */
-@media (max-width: 1023.98px) {
+@media (max-width: 1199.98px) {
+    /* Onder 1200px blijft het "···"-menu (rij-actiepatroon geldt enkel erboven): de .gl-v2-rowact-wrapper
+       toont de trigger altijd en laat de chevron weg, ook bij hover-apparaten. */
+    .gl-v2 #datatable-invoice-list .gl-v2-rowact-btns { display: inline-flex; visibility: visible; }
+    .gl-v2 #datatable-invoice-list .gl-v2-rowact-chev { display: none; }
+
     /* Optie 4f "···-MENU IN DE RIJ": rust = kaal "···", hover = groen gevuld vierkant, open
        (.is-menu-open, gezet door gl-v2-invoices.js — zelfde .is-flyout-open-patroon als de rail-
        flyouts in gl-v2-shell.js) blijft diezelfde gevulde staat behouden i.p.v. terug te vallen
@@ -465,7 +350,7 @@
         width: 28px;
         height: 28px;
         margin-left: auto;
-        border-radius: 8px;
+        border-radius: var(--gl-v2-radius-sm, 8px);
         border: 0;
         background: transparent;
         color: var(--gl-v2-muted);
@@ -542,18 +427,18 @@
     .gl-v2 #datatable-invoice-list .gl-v2-row-menu.is-open .gl-v2-row-action:focus-visible i { color: var(--gl-v2-primary); }
 
     .gl-v2 #datatable-invoice-list .gl-v2-row-menu.is-open .gl-v2-row-action-primary { background: transparent; border: 0; color: var(--gl-v2-ink); }
-    .gl-v2 #datatable-invoice-list .gl-v2-row-menu.is-open .gl-v2-row-action-danger { background: transparent; border: 0; color: #8B2A2A; font-weight: 600; }
-    .gl-v2 #datatable-invoice-list .gl-v2-row-menu.is-open .gl-v2-row-action-danger i { color: #8B2A2A; }
+    .gl-v2 #datatable-invoice-list .gl-v2-row-menu.is-open .gl-v2-row-action-danger { background: transparent; border: 0; color: var(--gl-v2-danger, #8B2A2A); font-weight: 600; }
+    .gl-v2 #datatable-invoice-list .gl-v2-row-menu.is-open .gl-v2-row-action-danger i { color: var(--gl-v2-danger, #8B2A2A); }
     /* Hover moest apart blijven van de rest-regel hierboven — die zette background:transparent
        voor ZOWEL rest als :hover in één keer, wat de hover-tint van Verwijderen mee wegnam. */
     .gl-v2 #datatable-invoice-list .gl-v2-row-menu.is-open .gl-v2-row-action-danger:hover,
     .gl-v2 #datatable-invoice-list .gl-v2-row-menu.is-open .gl-v2-row-action-danger:focus-visible {
-        background: #F8EBEB;
+        background: var(--gl-v2-danger-tint, #F8EBEB);
         border: 0;
-        color: #8B2A2A;
+        color: var(--gl-v2-danger, #8B2A2A);
     }
     .gl-v2 #datatable-invoice-list .gl-v2-row-menu.is-open .gl-v2-row-action-danger:hover i,
-    .gl-v2 #datatable-invoice-list .gl-v2-row-menu.is-open .gl-v2-row-action-danger:focus-visible i { color: #8B2A2A; }
+    .gl-v2 #datatable-invoice-list .gl-v2-row-menu.is-open .gl-v2-row-action-danger:focus-visible i { color: var(--gl-v2-danger, #8B2A2A); }
 
     /* #datatable-invoice-list meegegeven voor dezelfde reden als hierboven — al leek de kale
        .gl-v2-row-menu-divider-regel in theorie specifiek genoeg, dit sluit het verschil met de
@@ -783,15 +668,15 @@
     .gl-v2-row-menu.is-open .gl-v2-row-action:focus-visible i { color: var(--gl-v2-primary); }
 
     .gl-v2-row-menu.is-open .gl-v2-row-action-primary { color: var(--gl-v2-ink); }
-    .gl-v2-row-menu.is-open .gl-v2-row-action-danger { color: #8B2A2A; font-weight: 600; }
-    .gl-v2-row-menu.is-open .gl-v2-row-action-danger i { color: #8B2A2A; }
+    .gl-v2-row-menu.is-open .gl-v2-row-action-danger { color: var(--gl-v2-danger, #8B2A2A); font-weight: 600; }
+    .gl-v2-row-menu.is-open .gl-v2-row-action-danger i { color: var(--gl-v2-danger, #8B2A2A); }
     .gl-v2-row-menu.is-open .gl-v2-row-action-danger:hover,
     .gl-v2-row-menu.is-open .gl-v2-row-action-danger:focus-visible {
-        background: #F8EBEB;
-        color: #8B2A2A;
+        background: var(--gl-v2-danger-tint, #F8EBEB);
+        color: var(--gl-v2-danger, #8B2A2A);
     }
     .gl-v2-row-menu.is-open .gl-v2-row-action-danger:hover i,
-    .gl-v2-row-menu.is-open .gl-v2-row-action-danger:focus-visible i { color: #8B2A2A; }
+    .gl-v2-row-menu.is-open .gl-v2-row-action-danger:focus-visible i { color: var(--gl-v2-danger, #8B2A2A); }
 
     .gl-v2-row-menu.is-open .gl-v2-row-menu-divider {
         display: block;
@@ -801,3 +686,6 @@
         flex: none;
     }
 }
+
+/* hersteld uit filters.css-consolidatie: paginavariant van een gedeeld component */
+.gl-v2-toolbar-card { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 14px; border-radius: var(--gl-v2-radius-md); background: var(--gl-v2-surface); box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 14px 30px -24px rgba(44, 59, 42, .35); flex: none; }

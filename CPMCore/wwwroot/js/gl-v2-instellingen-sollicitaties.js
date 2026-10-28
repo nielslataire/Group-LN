@@ -7,11 +7,11 @@
     var rows = JSON.parse(dataEl.textContent), canWrite = root.dataset.canWrite === "1";
     var token = (root.querySelector('input[name="__RequestVerificationToken"]') || {}).value || "";
     var filter = "", sel = null;
-    function $(id) { return document.getElementById(id); }
+    var $ = window.GlV2.byId; // gedeeld (gl-v2-shell.js)
     function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
     function init(naam) { var p = String(naam || "").trim().split(/\s+/); return ((p[0] || "")[0] || "").toUpperCase() + ((p.length > 1 ? p[p.length - 1][0] : "") || "").toUpperCase(); }
     function byId(id) { return rows.filter(function (r) { return r.id === id; })[0]; }
-    function toast(tone, title, body) { if (window.GlV2Toast) window.GlV2Toast.show({ tone: tone, title: title, body: body || "" }); }
+    var toast = (window.GlV2Toast && window.GlV2Toast.notify) || function () {}; // gedeeld, zie gl-v2-shell.js
 
     function tel() {
         var n = rows.filter(function (r) { return !r.gelezen; }).length;
@@ -30,7 +30,7 @@
 
     function detail() {
         var r = byId(sel), el = $("sol-detail");
-        if (!r) { el.innerHTML = '<div class="gl-v2-inh-sol-blank"><i class="ph ph-user" aria-hidden="true"></i><b>Kies een kandidaat</b><span>Klik links op een sollicitatie om ze te openen.</span></div>'; return; }
+        if (!r) { el.innerHTML = '<div class="gl-v2-blank gl-v2-inh-sol-blank"><i class="ph ph-user" aria-hidden="true"></i><b>Kies een kandidaat</b><span>Klik links op een sollicitatie om ze te openen.</span></div>'; return; }
         var andere = r.dubbel ? rows.filter(function (x) { return x.id !== r.id && x.vacatureId === r.vacatureId && (x.email || "").toLowerCase() === (r.email || "").toLowerCase(); })[0] : null;
         var h = '<div class="gl-v2-inh-sol-who"><span class="av lg">' + esc(init(r.naam)) + "</span><div><h2>" + esc(r.naam) + "</h2><span>" + esc(r.vacature || "") + " · ontvangen " + esc(r.datum) + " om " + esc(r.tijd) + "</span></div></div>";
         if (andere) h += '<div class="gl-v2-notice gl-v2-notice-compact is-warning"><i class="ph ph-warning" aria-hidden="true"></i><span>Deze persoon solliciteerde al eerder voor deze vacature. <button type="button" class="gl-v2-inh-link" data-open="' + andere.id + '">Bekijk de andere sollicitatie</button></span></div>';

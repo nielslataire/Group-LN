@@ -99,13 +99,13 @@
 .gl-v2-detail-table-card .dt-length { display: none; }
 .gl-v2-detail-table-card .dt-paging .pagination { display: flex; align-items: center; gap: 6px; margin: 0; }
 .gl-v2-detail-table-card .dt-paging .page-link {
-    width: 30px;
+    width: 28px;
     height: 28px;
     padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 7px;
+    border-radius: var(--gl-v2-radius-s, 7px);
     border: 1px solid var(--gl-v2-hairline);
     background: var(--gl-v2-surface);
     color: var(--gl-v2-muted-soft);
@@ -113,7 +113,7 @@
 }
 .gl-v2-detail-table-card .dt-paging .page-link:hover { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); }
 .gl-v2-detail-table-card .dt-paging .page-item.active .page-link { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); }
-.gl-v2-detail-table-card .dt-paging .page-item.disabled .page-link { color: #C0CABE; background: var(--gl-v2-surface); border-color: var(--gl-v2-hairline-soft); }
+.gl-v2-detail-table-card .dt-paging .page-item.disabled .page-link { color: var(--gl-v2-disabled-ink, #C0CABE); background: var(--gl-v2-surface); border-color: var(--gl-v2-hairline-soft); }
 .gl-v2-detail-table-card .dt-search { display: none; }
 
 /* ── Rij-actieknoppen — 1-op-1 dezelfde vorm/maten als Leveranciers/IndexV2 se eigen
@@ -138,32 +138,47 @@
    daar), dus moet dezelfde .gl-v2-row-action-stijl ook buiten .gl-v2-detail-table gelden. Deze CSS-
    file is uitsluitend voor DetailsV2, geen risico op botsing met IndexV2 se eigen (wél scoped)
    .gl-v2-row-action in een ander bestand. */
-.gl-v2-row-action {
+/* Nu gescoped op de desktop-tabel (.gl-v2-detail-table) en in het icoonknop-recept van de shell
+   (.gl-v2-icon-btn: 32px, hairline-rand, primary icoon). Het geklonede paneel in de mobiele kaarten
+   en de ···-sheet krijgt zijn eigen vorm verderop (.gl-v2-row-menu.is-open .gl-v2-row-action). */
+.gl-v2-detail-table .gl-v2-row-action {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 26px;
-    height: 26px;
-    border-radius: 7px;
-    border: 1px solid transparent;
-    background: transparent;
-    color: var(--gl-v2-muted);
+    width: 32px;
+    height: 32px;
+    border-radius: var(--gl-v2-radius-sm);
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    color: var(--gl-v2-primary);
     text-decoration: none;
     transition: background-color .12s ease, border-color .12s ease, color .12s ease;
 }
-.gl-v2-row-action i { font-size: 15px; }
-.gl-v2-row-action:hover,
-.gl-v2-row-action:focus-visible {
+.gl-v2-detail-table .gl-v2-row-action i { font-size: 15px; }
+.gl-v2-detail-table .gl-v2-row-action:hover {
     border-color: var(--gl-v2-primary);
     background: var(--gl-v2-hover-tint);
     color: var(--gl-v2-primary);
-    outline: none;
+}
+.gl-v2-detail-table .gl-v2-row-action:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--gl-v2-gold); }
+
+/* Rij-actiepatroon (shell: .gl-v2-rowact): vaste breedte (2 acties) vanaf 1024px zodat de kolom niet verspringt bij hover. */
+.gl-v2-detail-table tbody tr:hover td,
+.gl-v2-detail-table tbody tr:focus-within td { background: var(--gl-v2-hover-tint); }
+@media (min-width: 1024px) {
+    .gl-v2-detail-table thead th:last-child,
+    .gl-v2-detail-table tbody td:last-child { min-width: 120px; width: 120px; }
+    .gl-v2-detail-table tbody td.gl-td-actions { padding-top: 0; padding-bottom: 0; }
 }
 .gl-v2-row-menu { display: flex; align-items: center; justify-content: flex-end; gap: 4px; flex-wrap: nowrap; }
 .gl-v2-row-menu-trigger { display: none; }
 .gl-v2-row-menu-backdrop { display: none; }
 
 @media (max-width: 1023.98px) {
+    /* Onder 1024px blijft het "···"-menu: wrapper toont de trigger altijd, geen chevron. */
+    .gl-v2-detail-table .gl-v2-rowact-btns { display: inline-flex; visibility: visible; }
+    .gl-v2-detail-table .gl-v2-rowact-chev { display: none; }
+
     .gl-v2-row-menu-trigger {
         display: inline-flex;
         align-items: center;
@@ -171,7 +186,7 @@
         width: 28px;
         height: 28px;
         margin-left: auto;
-        border-radius: 8px;
+        border-radius: var(--gl-v2-radius-sm, 8px);
         border: 0;
         background: transparent;
         color: var(--gl-v2-muted);
@@ -209,6 +224,9 @@
         white-space: nowrap;
     }
     .gl-v2-row-menu.is-open .gl-v2-row-action {
+        display: inline-flex;
+        align-items: center;
+        text-decoration: none;
         width: 100%;
         height: auto;
         flex-direction: row;

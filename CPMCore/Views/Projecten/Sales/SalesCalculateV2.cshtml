@@ -60,7 +60,7 @@
 @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
 
 <div class="gl-v2-vb" id="gl-v2-vb-root" data-config="@JsonSerializer.Serialize(cfg)">
-    <div class="gl-v2-vb-scroll">
+    <div class="gl-v2-formscroll gl-v2-vb-scroll">
         <div class="gl-v2-vb-units">
             <span class="gl-v2-vb-ulabel">EENHEID</span>
             @foreach (var r in Model.Units)

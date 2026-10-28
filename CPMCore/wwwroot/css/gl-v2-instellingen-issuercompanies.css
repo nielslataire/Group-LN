@@ -35,7 +35,7 @@
     width: 44px;
     height: 32px;
     flex: none;
-    border-radius: 6px;
+    border-radius: var(--gl-v2-radius-xs, 6px);
     border: 1px dashed var(--gl-v2-dashed);
     display: flex;
     align-items: center;

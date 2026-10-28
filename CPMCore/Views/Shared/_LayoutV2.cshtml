@@ -67,6 +67,11 @@
     <link rel="stylesheet" href="~/lib/select2/css/select2.css" />
     <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
 
+    @* Gedeelde filterbalk/toolbar (gl-v2/filters.css): bewust VOOR de pagina-CSS, zodat een paginavariant bij gelijke specificiteit blijft winnen. *@
+    <link rel="stylesheet" href="~/css/gl-v2/filters.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2/skeleton.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2/list.css" asp-append-version="true" />
+
     @* Page specific css *@
     @RenderSection("PageStyle", required: false)
 
@@ -74,6 +79,11 @@
        specificiteit zonder theme.css/custom.css zelf aan te raken of erbuiten te lekken. *@
     <link rel="stylesheet" href="~/css/gl-v2-tokens.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-shell.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2/buttons.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2/userbox-hamburger.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2/mobile-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2/breakpoints.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2/quickactions.css" asp-append-version="true" />
     @* Componentfamilie, uit gl-v2-shell.css gelicht (okt. 2026). Volgorde = de oude volgorde binnen dat
        bestand; niet herschikken zonder de specificiteits-/volgorde-afhankelijkheden na te gaan. *@
     <link rel="stylesheet" href="~/css/gl-v2/forms.css" asp-append-version="true" />
@@ -88,6 +98,8 @@
     <link rel="stylesheet" href="~/css/gl-v2/projectcard.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2/forms-extra.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2/page.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2/check.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2/datatable.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2/notices.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2/mobile-search.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2/steps.css" asp-append-version="true" />
@@ -259,7 +271,14 @@
                             </li>
                             <li><hr class="dropdown-divider gl-v2-userbox-divider"></li>
                             <li>
-                                <a class="dropdown-item gl-v2-userbox-item" href="@Url.Action("MijnHandtekening", "Account")">
+                                <a class="dropdown-item gl-v2-userbox-item" href="@Url.Action("MijnProfiel", "Account")">
+                                    <i class="ph ph-user-circle" aria-hidden="true"></i>
+                                    <span>Mijn profiel</span>
+                                    <i class="ph ph-caret-right gl-v2-userbox-item-chevron" aria-hidden="true"></i>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item gl-v2-userbox-item" href="@Url.Action("MijnProfiel", "Account", new { tab = "handtekening" })">
                                     <i class="ph ph-envelope" aria-hidden="true"></i>
                                     <span>Mijn handtekening</span>
                                     <i class="ph ph-caret-right gl-v2-userbox-item-chevron" aria-hidden="true"></i>
@@ -418,12 +437,16 @@
     <script src="~/js/currency.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-bedrijfsnaam.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-shell.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-mobile-search.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-fields.js" asp-append-version="true"></script>
     @* Helpcentrum-zijpaneel (punt 41d) — op elke gl-v2-pagina, net als gl-v2-shell.js zelf. *@
     <script src="~/js/gl-v2-help-panel.js" asp-append-version="true"></script>
     @* Foutoverzicht (design-handoff punt 24) — gedeeld engine, doet niets tenzij een pagina
        window.GlV2ErrorSummary.init({...}) aanroept. Zie DESIGN.md "Foutoverzicht (punt 24)". *@
     <script src="~/js/gl-v2-error-summary.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-combo.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-filters.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-datatable.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-progress-screen.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-dropzone.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-yearcal.js" asp-append-version="true"></script>

@@ -71,6 +71,7 @@ namespace CPMCore.Controllers
             ViewData["BreadcrumbNode"] = projectDetail;
 
             SetPageHeader("ph ph-folder", "Documenten");
+            ViewData["HelpScreenId"] = "projecten-documenten";
             return View("DetailDocsV2", vm);
         }
 
@@ -94,6 +95,8 @@ namespace CPMCore.Controllers
                 Clients = overview.Clients,
                 Companies = overview.Companies
             };
+            foreach (var sig in detail.Signatures.Where(s => !string.IsNullOrWhiteSpace(s.ProofFile)))
+                sig.ProofUrl = GetSignedAssetUrlByFileName(sig.ProofFile!, "docs");
             var previewRev = detail.Revisions.FirstOrDefault(r => r.Id == detail.PreviewRevisionId);
             if (previewRev != null)
             {
@@ -370,8 +373,17 @@ namespace CPMCore.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DocumentSignMarkV2(int projectid, int signatureId, string? method) =>
-            DocJson(await DocsSvc.MarkSigned(projectid, signatureId, method ?? "manueel"));
+        [RequestSizeLimit(50_000_000)]
+        public async Task<IActionResult> DocumentSignMarkV2(int projectid, int signatureId, string? method, IFormFile? proof)
+        {
+            string? stored = null;
+            if (proof != null && proof.Length > 0)
+            {
+                stored = await UploadAssetToStorageAsync(proof, "docs");
+                if (string.IsNullOrWhiteSpace(stored)) return DocJson(DocResult.Fail("Upload van het bewijs naar de opslag is mislukt."));
+            }
+            return DocJson(await DocsSvc.MarkSigned(projectid, signatureId, method ?? "manueel", stored));
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]

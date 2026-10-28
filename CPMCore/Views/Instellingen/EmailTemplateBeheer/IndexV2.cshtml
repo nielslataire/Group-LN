@@ -41,13 +41,13 @@
             {
                 var actief = edit != null && edit.ID == t.ID;
                 <a class="gl-v2-et-item @(actief ? "is-active" : "")" href="@Url.Action("Bewerken", new { id = t.ID })" @(actief ? "aria-current=page" : "")>
-                    <span class="gl-v2-et-item-text"><span class="t">@t.Naam</span><span class="p">@t.Onderwerp</span></span>
+                    <span class="gl-v2-stack gl-v2-et-item-text"><span class="t">@t.Naam</span><span class="p">@t.Onderwerp</span></span>
                     <span class="gl-v2-badge @(t.IsActief ? "is-positive" : "is-inactive")">@(t.IsActief ? "Actief" : "Inactief")</span>
                 </a>
             }
             @if (isNieuw)
             {
-                <div class="gl-v2-et-item is-active"><span class="gl-v2-et-item-text"><span class="t">Nieuwe template</span><span class="p">nog niet opgeslagen</span></span></div>
+                <div class="gl-v2-et-item is-active"><span class="gl-v2-stack gl-v2-et-item-text"><span class="t">Nieuwe template</span><span class="p">nog niet opgeslagen</span></span></div>
             }
             @if (!Model.Templates.Any() && !isNieuw)
             {
@@ -60,7 +60,7 @@
     <div class="gl-v2-et-main">
         @if (edit == null)
         {
-            <section class="gl-v2-section-card gl-v2-et-blank">
+            <section class="gl-v2-section-card gl-v2-blank gl-v2-et-blank">
                 <i class="ph ph-envelope-simple" aria-hidden="true"></i><b>Nog geen template</b>
                 <span>@(canWrite ? "Maak je eerste template aan met “Nieuwe template”." : "Er is nog niets om te tonen.")</span>
             </section>

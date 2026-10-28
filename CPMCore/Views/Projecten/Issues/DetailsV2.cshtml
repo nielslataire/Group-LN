@@ -97,7 +97,7 @@
         {
             <div class="gl-v2-notice gl-v2-notice-expanded is-warning gl-v2-pd-notice">
                 <i class="ph ph-pause-circle" aria-hidden="true"></i>
-                <div class="gl-v2-pd-notice-text">
+                <div class="gl-v2-stack gl-v2-pd-notice-text">
                     <b>In de wacht@(Model.OnHoldSince.HasValue ? " sinds " + Model.OnHoldSince.Value.ToString("dd/MM", be) : "")@(string.IsNullOrWhiteSpace(Model.OnHoldReason) ? "" : " — " + Model.OnHoldReason)</b>
                     <span>@(Model.FollowUpDate.HasValue ? "Opvolgen op " + Model.FollowUpDate.Value.ToString("dd/MM", be) + " (herinnering). " : "")De deadline telt niet door zolang het punt in de wacht staat; de aannemer ziet "in de wacht" in zijn portaal.</span>
                 </div>

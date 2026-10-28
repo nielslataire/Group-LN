@@ -29,7 +29,7 @@
     function fmtEur(v) { return "€ " + fmtNum(v, 2); }
     function num(v) { var n = parseFloat(String(v == null ? "" : v).replace(",", ".")); return isNaN(n) ? 0 : n; }
     function token() { var el = $('input[name="__RequestVerificationToken"]'); return el ? el.value : ""; }
-    function toast(tone, title, body) { if (window.GlV2Toast) window.GlV2Toast.show({ tone: tone, title: title, body: body }); }
+    var toast = (window.GlV2Toast && window.GlV2Toast.notify) || function () {}; // gedeeld, zie gl-v2-shell.js
     function bsModal(id) { var el = document.getElementById(id); return el && window.bootstrap ? window.bootstrap.Modal.getOrCreateInstance(el) : null; }
 
     // ── 1. Tabs ─────────────────────────────────────────────────────────────────────────────────────

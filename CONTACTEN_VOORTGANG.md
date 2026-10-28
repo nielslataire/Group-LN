@@ -4,7 +4,7 @@ Gebouwd 22/10/2026: lijst (44a), detail met opvolging (44b), toevoegen (44c), li
 - Migratie `_migrations/105_CrmContacten.sql` (samen met 100 en 104 als die nog niet gelopen zijn).
 - Niets browser-getest; build zonder CS/RZ-fouten.
 ## Details
-Zie DESIGN.md, sectie "Contacten gl-v2".
+Zie CPMCore/DESIGN.md, sectie "Contacten gl-v2".
 
 ## Vervolg 22/10/2026 (feedback Niels)
 Gebouwd: makelaars als gekoppelde bedrijven (Project bewerken > Partners), toegewezen = medewerker of makelaar van het project (zoekveld), gemeente/postcode zoals bij Klanten, omzetten naar klant met voorinvulling, exportrecht (`Projects.ContactsExport`), nieuwsbriefexport, exportvenster herwerkt, detail: icoonknoppen, link onder contactaanvraag, icoon/witruimte/datumbreedte.

@@ -47,7 +47,8 @@ public interface IDocumentService
 
     // ---- Ondertekening (contracten) ----
     Task<DocResult> SendForSignature(int projectId, int documentId, List<DocSignatoryDto> signatories);
-    Task<DocResult> MarkSigned(int projectId, int signatureId, string method);
+    /// <summary>Registreert een handtekening. Bij <c>manueel</c> is een bewijsbestand (opslagnaam) verplicht.</summary>
+    Task<DocResult> MarkSigned(int projectId, int signatureId, string method, string? proofFilename = null);
     Task<DocResult> MarkSignatureReminded(int projectId, int signatureId);
 
     // ---- Offertes ----
@@ -136,6 +137,10 @@ public class DocSignatureDto
     public DateTime? OpenedDate { get; set; }
     public DateTime? SignedDate { get; set; }
     public DateTime? ReminderDate { get; set; }
+    /// <summary>Opslagnaam van het bewijsbestand bij een handmatig geregistreerde handtekening.</summary>
+    public string? ProofFile { get; set; }
+    /// <summary>Tijdelijke downloadlink naar het bewijsbestand; wordt door de controller ingevuld.</summary>
+    public string? ProofUrl { get; set; }
 }
 
 public class DocRow

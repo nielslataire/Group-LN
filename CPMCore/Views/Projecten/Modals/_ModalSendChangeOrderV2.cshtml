@@ -56,7 +56,7 @@
                         var hasEmail = !string.IsNullOrWhiteSpace(p.Email);
                         var checkId = $"gl-v2-co-send-party-{i}";
                         <div class="gl-v2-co-send-party @(hasEmail ? "" : "is-warning")">
-                            <span class="gl-v2-co-check">
+                            <span class="gl-v2-check">
                                 <input type="checkbox" class="js-send-party" id="@checkId" name="parties[@i].include" value="true" @(hasEmail ? "checked" : "disabled") />
                                 <label for="@checkId"></label>
                             </span>

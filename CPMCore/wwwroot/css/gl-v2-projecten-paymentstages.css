@@ -106,7 +106,7 @@
 .gl-v2-ps-dot.is-clickable.is-loading { opacity: .5; cursor: wait; pointer-events: none; }
 
 /* Legende: kleinere, louter illustratieve bolletjes — niet dezelfde maat als de klikbare tabelcellen */
-.gl-v2-ps-legend-item .gl-v2-ps-dot { width: 12px; height: 12px; border-radius: 6px; }
+.gl-v2-ps-legend-item .gl-v2-ps-dot { width: 12px; height: 12px; border-radius: var(--gl-v2-radius-xs, 6px); }
 .gl-v2-ps-legend-item .gl-v2-ps-dot.is-invoiced i { font-size: 7px; }
 .gl-v2-ps-legend-item .gl-v2-ps-dot.is-reached:before { width: 5px; height: 5px; border-radius: 2.5px; }
 .gl-v2-ps-legend-item .gl-v2-ps-dot.is-not-reached { border-width: 1px; }
@@ -153,7 +153,7 @@
     height: 38px;
     box-sizing: border-box;
     border: 1.5px dashed var(--gl-v2-primary);
-    border-radius: 8px;
+    border-radius: var(--gl-v2-radius-sm, 8px);
     background: #F7F9F5;
     display: flex;
     align-items: center;
@@ -190,36 +190,7 @@
 .gl-v2-ps-proof-card img { width: 100%; height: 84px; object-fit: cover; display: block; }
 .gl-v2-ps-proof-card-title { padding: 6px 8px; font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* ── Checkbox (21h eenhedenlijst) — zelfde zelfstandige opbouw als gl-v2-inv-check/gl-v2-co-check,
-   hier gedupliceerd omdat deze pagina gl-v2-projecten-invoicing.css niet laadt. ────────────────── */
-.gl-v2-ps-check { position: relative; display: inline-block; width: 18px; height: 18px; vertical-align: middle; flex: none; }
-.gl-v2-ps-check input[type="checkbox"] { position: absolute; inset: 0; margin: 0; opacity: 0; z-index: 2; cursor: pointer; }
-.gl-v2-ps-check label { position: absolute; inset: 0; margin: 0; cursor: pointer; }
-.gl-v2-ps-check label:before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    box-sizing: border-box;
-    border-radius: 5px;
-    border: 1px solid var(--gl-v2-hairline);
-    background: var(--gl-v2-surface);
-}
-.gl-v2-ps-check input[type="checkbox"]:hover + label:before { border-color: var(--gl-v2-primary); }
-.gl-v2-ps-check input[type="checkbox"]:checked + label:before { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); }
-.gl-v2-ps-check input[type="checkbox"]:checked + label:after {
-    content: "\f00c";
-    font-family: "Font Awesome 5 Free";
-    font-weight: 900;
-    position: absolute;
-    inset: 0;
-    font-size: 10px;
-    line-height: 18px;
-    text-align: center;
-    color: var(--gl-v2-surface);
-}
-.gl-v2-ps-check input[type="checkbox"]:focus-visible + label:before { box-shadow: 0 0 0 3px var(--gl-v2-gold); }
-.gl-v2-ps-check input[type="checkbox"]:disabled + label { cursor: not-allowed; }
-.gl-v2-ps-check input[type="checkbox"]:disabled:checked + label:before { background: var(--gl-v2-gold); border-color: var(--gl-v2-gold); }
+/* selectievakje: gedeeld .gl-v2-check (css/gl-v2/check.css) */
 
 /* ── Infobanner (21h "N posten komen in Facturatie…") — gebruikt nu de gedeelde Meldingskaders-
    component (punt 25, gl-v2-notice/-compact/is-info, gl-v2-shell.css), geen eigen opmaak meer hier.

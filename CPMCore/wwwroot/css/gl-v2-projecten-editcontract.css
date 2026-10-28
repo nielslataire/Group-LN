@@ -124,7 +124,8 @@
 .gl-v2-ec-lot-order-icon { color: var(--gl-v2-muted); margin-right: 6px; }
 .gl-v2-ec-lot-order-row > span:first-child { flex: 1; min-width: 0; }
 .gl-v2-ec-lot-order-price { font-variant-numeric: tabular-nums; flex: none; }
-.gl-v2-ec-lot-order-actions { display: flex; align-items: center; gap: 4px; flex: none; }
+/* acties: .gl-v2-rowact (gl-v2-shell.css, 32px, enkel zichtbaar bij hover); vaste breedte (2 iconen) zodat de prijs niet verspringt */
+.gl-v2-ec-lot-order-actions { flex: none; width: 68px; }
 
 /* "+ Bijbestelling op X" — eigen rij, ingesprongen net als een bijbestelling zelf (14c se eigen
    voorbeeld staat 'm ook zo, niet als losse knop rechts van de lotnaam). */

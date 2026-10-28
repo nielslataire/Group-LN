@@ -288,13 +288,13 @@
     function aankTeken(focusIdx) {
         aankRijen.innerHTML = '';
         aank.forEach(function (x, i) {
-            var rij = document.createElement('div'); rij.className = 'bw-aank-rij';
+            var rij = document.createElement('div'); rij.className = 'bw-aank-rij gl-v2-listrow';
             rij.innerHTML = '<span class="bw-aank-nr"></span>' +
                 '<div class="gl-v2-field"><div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" placeholder="Omschrijving, bv. perceel A" autocomplete="off"></div></div>' +
                 '<div class="gl-v2-field"><div class="gl-v2-field-box"><input type="date" class="gl-v2-field-input" aria-label="Datum akte"></div></div>' +
                 '<div class="gl-v2-field"><div class="gl-v2-field-box"><input type="text" inputmode="decimal" class="gl-v2-field-input is-num is-tabular Currencymask" placeholder="0,00" autocomplete="off"><span class="gl-v2-field-unit">€</span></div></div>' +
-                '<span class="bw-aank-acties"><button type="button" class="bw-aank-ico bw-aank-kopie" aria-label="Aankoop dupliceren" title="Dupliceren"><i class="ph ph-copy" aria-hidden="true"></i></button>' +
-                '<button type="button" class="bw-aank-ico is-del bw-aank-del" aria-label="Aankoop verwijderen" title="Verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button></span>';
+                '<span class="gl-v2-rowact bw-aank-acties"><span class="gl-v2-rowact-btns"><button type="button" class="gl-v2-icon-btn bw-aank-kopie" aria-label="Aankoop dupliceren" title="Dupliceren"><i class="ph ph-copy" aria-hidden="true"></i></button>' +
+                '<button type="button" class="gl-v2-icon-btn is-danger bw-aank-del" aria-label="Aankoop verwijderen" title="Verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button></span></span>';
             rij.querySelector('.bw-aank-nr').textContent = i + 1;
             var inp = rij.querySelectorAll('input'); inp[0].value = x.o || ''; inp[1].value = x.d || ''; inp[2].value = x.p ? String(x.p) : '';
             if (window.CurrencyMask) window.CurrencyMask.init(inp[2]);
@@ -302,7 +302,7 @@
             inp[1].addEventListener('input', function (e) { e.stopPropagation(); x.d = inp[1].value; aankSchrijf(true); });
             inp[2].addEventListener('input', function (e) { e.stopPropagation(); x.p = num(inp[2]); aankSchrijf(true); });
             rij.querySelector('.bw-aank-kopie').addEventListener('click', function () { aank.splice(i + 1, 0, { o: x.o, d: x.d, p: x.p }); aankTeken(i + 1); aankSchrijf(true); });
-            rij.querySelector('.bw-aank-del').addEventListener('click', function () { if (aank.length > 1) aank.splice(i, 1); else aank[0] = { o: '', d: '', p: 0 }; aankTeken(); aankSchrijf(true); });
+            rij.querySelector('.bw-aank-del').addEventListener('click', async function () { if (!await GlV2Budget.bevestig({ title: 'Aankoop verwijderen?', desc: 'Deze aankooplijn wordt uit de lijst verwijderd en het totaal wordt herberekend.', ok: 'Verwijderen' })) return; if (aank.length > 1) aank.splice(i, 1); else aank[0] = { o: '', d: '', p: 0 }; aankTeken(); aankSchrijf(true); });
             aankRijen.appendChild(rij);
         });
         if (focusIdx != null) { var r = aankRijen.children[focusIdx]; if (r) r.querySelectorAll('input')[2].focus(); }

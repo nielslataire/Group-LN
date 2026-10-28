@@ -12,6 +12,7 @@ namespace CPMCore.Controllers;
 
 [Authorize(Policy = "CpmAdmin")]
 [Route("Aannemer/Uitnodiging")]
+[CPMCore.Attributes.ClassicLayout]
 public class ContractorInviteController : BaseController
 {
     private readonly cpmRunningContext _db;

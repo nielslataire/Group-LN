@@ -1,6 +1,6 @@
 # Punten (design-handoff 40/41) — voortgang en overdracht
 
-Laatst bijgewerkt: 14/10/2026 (avond). Bron van het ontwerp: `design-handoff/CRM Punten.dc.html` (40a–40t, 41a–d) en `CRM Verslag verwerken.dc.html` (44). Uitleg per scherm: `DESIGN.md`, secties "Update 08/10/2026 — Punten" tot "Update 14/10/2026 — Punten, fase 6".
+Laatst bijgewerkt: 14/10/2026 (avond). Bron van het ontwerp: `design-handoff/CRM Punten.dc.html` (40a–40t, 41a–d) en `CRM Verslag verwerken.dc.html` (44). Uitleg per scherm: `CPMCore/DESIGN.md`, secties "Update 08/10/2026 — Punten" tot "Update 14/10/2026 — Punten, fase 6".
 
 ## START HIER — overdracht naar een andere pc (14/10/2026)
 
@@ -38,7 +38,7 @@ Laatst bijgewerkt: 14/10/2026 (avond). Bron van het ontwerp: `design-handoff/CRM
 **6. Werkafspraken**
 - Dutch UI-teksten; gl-v2 klassenprefix per pagina; page-CSS laadt vóór `gl-v2-shell.css`; `[hidden]` expliciet guarden.
 - Schemawijzigingen = hand-gedraaide idempotente SQL in `_migrations/NNN_*.sql`, nooit EF-migraties.
-- Help schrijven: `HELP_SCHRIJFGIDS.md` (je-vorm, geen gedachtestreepjes, onbekend = `[VRAAG: …]`) en DESIGN.md "Een nieuw help-artikel schrijven".
+- Help schrijven: `CPMCore/HELP_SCHRIJFGIDS.md` (je-vorm, geen gedachtestreepjes, onbekend = `[VRAAG: …]`) en CPMCore/DESIGN.md "Een nieuw help-artikel schrijven".
 - Bash-heredocs met apostrofs falen soms: schrijf een script met de Write-tool en voer het uit. Memory-notities van Claude staan lokaal op de eerste pc (`~/.claude/projects/e--TFS/memory`) en gaan niet mee: deze nota is de bron.
 
 ---
@@ -156,7 +156,7 @@ Opnieuw opgebouwd naar het bijgewerkte ontwerp (de eerste versie met "+ Plan toe
 - Bijlage: één document per plan (A4 liggend, logo-kop op elke pagina, geen losse voetnootpagina meer); paginanummers lopen door (`PageNumberOffset`/`TotalPagesOverride` in `GlV2PdfDocumentBase`, additief).
 - Pins: kritiek #8B2A2A, "O" goud #8A6A32.
 - Overlay "Verslag voorbereiden…" (bouwplan tekent zichzelf, pins vallen, wisselende werf-teksten; reduced-motion ondersteund) in `gl-v2-projecten-verslag-edit.js` + `gl-v2-projecten-verslagen.css`. Niet browser-getest.
-- 14/10 (later): voorbereid-animatie omgebouwd naar design punt 44 (volle pagina `#vs-prep`, geen overlay, voorbeeld via fetch + knop "Voorbeeld openen"); pillen-hoogte en lege kaartbody in de PDF gefixt; DESIGN.md-sectie "Update 14/10/2026" en helpartikels `werfverslag-opmaken` / `werfverslag-afronden-en-versturen` toegevoegd. Open: 44b (verzenden per aannemer), automatisch doorgaan naar het verslag, alles browser-testen.
+- 14/10 (later): voorbereid-animatie omgebouwd naar design punt 44 (volle pagina `#vs-prep`, geen overlay, voorbeeld via fetch + knop "Voorbeeld openen"); pillen-hoogte en lege kaartbody in de PDF gefixt; CPMCore/DESIGN.md-sectie "Update 14/10/2026" en helpartikels `werfverslag-opmaken` / `werfverslag-afronden-en-versturen` toegevoegd. Open: 44b (verzenden per aannemer), automatisch doorgaan naar het verslag, alles browser-testen.
 - 14/10 (avond): Niels meldt dat de migraties 079/081/082/097/098 zijn uitgevoerd en dat de Punten/Verslagen in de browser zijn getest. Verlaat-bewaking op het verslag werkt. Help toegevoegd: `punt-toevoegen-en-op-plan-aanduiden`, `punten-goedkeuren-en-statusflow`, `avondmelding-aan-aannemers` (met [VRAAG]-regels voor o.a. hoe de aannemer "gemeld uitgevoerd" meldt en wanneer de avondmelding gaat). Volgende: fase 5 (gsm), fase 6 (spraak/rondgang, API-sleutels nodig), help-vragen beantwoorden, 44b.
 - 14/10 (later): Fase 5 (gsm) gebouwd: snelactiesbar (Punt/Foto/Doorsturen/Afdrukken), kaartlijst, camera + markeren (41b), eenheid-chips en laatst-gebruikt in het nieuw-puntformulier, bevestiging na bewaren. Bestanden: `gl-v2-punt-mobile.js`, `gl-v2-projecten-punten-mobile.css`, haken in `gl-v2-punt-panel.js`/`IndexV2`/`_PuntPanelV2`. Niet getest op een echt toestel. Help: `punt-op-de-werf-met-foto`. Open: ongedaan maken na bewaren, aannemervoorstel op basis van kamer. Volgende: fase 6 (spraak/rondgang; OpenAI + Anthropic sleutels nodig).
 - 14/10 (later): punt-detail kreeg Verwijderen (met bevestiging) + Status in de actiebalk, ook als tegels op gsm; 'ongedaan maken' vervalt. KPI's verborgen op gsm. Open: eigen plankiezer voor gsm (design van Niels).

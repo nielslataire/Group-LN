@@ -66,7 +66,7 @@
                 if (!f) return;
                 byId("gln-vz-del-id").value = del.getAttribute("data-vz-verwijder");
                 f.setAttribute("data-bv-tekst", del.getAttribute("data-naam") + " wordt definitief verwijderd, samen met de verzekeringsactiviteit op het contract van de makelaar. Het polisdocument in Documenten blijft staan.");
-                delete f.dataset.bvOk;
+                delete f.dataset.bvBevestigd;
                 if (f.requestSubmit) f.requestSubmit(); else f.submit();
             }
         });

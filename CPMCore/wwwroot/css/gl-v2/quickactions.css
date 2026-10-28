@@ -1,0 +1,328 @@
+/* gl-v2 shell — Snelactiebalk/-rail (7g). Uit gl-v2-shell.css gelicht (26/10/2026, CSS-consolidatie stap 11): bronvolgorde ongewijzigd; de <link>-volgorde in _LayoutV2.cshtml
+   (shell → buttons → userbox-hamburger → mobile-menu → breakpoints → quickactions → forms …) is dezelfde als de oude volgorde binnen één bestand: niet herschikken. */
+
+/* ── Snelactiebalk/-rail (design-handoff 7g) — <768px (gsm) en 768–1023.98px (tablet staand) delen
+   dezelfde horizontale balk onderaan ("Onder 900px verdwijnt de rail" — 7g se eigen tekst voor
+   waarom tablet-staand net als gsm de balkvorm krijgt, geen rail); 1024–1399.98px (tablet liggend)
+   herschikt dezelfde elementen tot een groene rail rechts (zie de aparte @@media hieronder). Voorheen
+   was dit onderdeel van de algemene <767.98px-telefoonblok hierboven — hier apart uitgelicht zodat
+   het bereik onafhankelijk van de rest van dat blok (rail-verbergen, topbar-compact, …) verbreed kon
+   worden tot 1023.98px, dat namelijk WEL moet meebreden, in tegenstelling tot die andere regels. ──── */
+@media (max-width: 1023.98px) {
+    /* Optie 4c (bottom-bar), met primary-achtergrond i.p.v. wit en zonder de "SNELACTIES"-titel —
+       de mobiele tegenhanger van @@section PageActions (die op mobiel verborgen blijft, zie
+       hierboven). Vast aan de onderkant van het scherm, niet langer onderaan de scrollende inhoud:
+       elke gl-v2-pagina die 'm wil krijgt 'm automatisch door @@section MobileQuickActions te
+       vullen (zie _LayoutV2.cshtml + Views/Invoices/IndexV2.cshtml voor het patroon) — niets
+       Facturen-specifieks zit hier, dus bruikbaar op elke pagina zonder aanpassing. */
+    /* Vaste hoogte i.p.v. aan icoon/label/padding laten afmeten: eenvoudiger, en drie andere
+       regels (content-padding, backdrop, sheet — verderop) moeten exact met deze balkhoogte in
+       sync blijven om 'm niet te overlappen. Eén var i.p.v. "64px" overal herhalen. Enkel de
+       icoon-rij zelf (safe-area komt er in elke calc() apart bij, niet hierin verrekend, anders
+       zou die het icoon-rij-budget op een notch-telefoon opeten i.p.v. eronder toe te voegen). */
+    .gl-v2 { --gl-v2-qa-bar-h: 64px; }
+
+    .gl-v2-mobile-quickactions {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 500;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: calc(var(--gl-v2-qa-bar-h) + env(safe-area-inset-bottom, 0px));
+        padding: 0 14px;
+        background: var(--gl-v2-primary);
+        box-shadow: 0 -8px 20px -12px rgba(44, 59, 42, .35);
+    }
+
+    .gl-v2-qa-rail-active { display: none; }
+
+    /* De vaste balk ligt over de laatste rij inhoud heen — main krijgt evenveel bodemruimte terug
+       als de balk zelf inneemt, enkel wanneer een pagina die balk ook echt vult. */
+    .gl-v2-content.has-mobile-quickactions { padding-bottom: calc(var(--gl-v2-qa-bar-h) + env(safe-area-inset-bottom, 0px)); }
+
+    /* Optie 4c: kaal icoon boven, label eronder — geen rand, geen vulling, net als de
+       bottomNav-tegels in de referentie (daar grijs-op-wit, hier wit-op-groen voor contrast met
+       de balk). Geen aparte "primary"-variant meer: 4c maakt zelf geen onderscheid tussen de
+       tegels, dus .gl-v2-mobile-quickaction-primary op een item verandert nu niets meer aan de
+       styling — de klasse blijft wel bruikbaar als hook mocht dat later weer nodig zijn. */
+    .gl-v2-mobile-quickaction {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+        padding: 6px 4px;
+        border-radius: 10px;
+        border: 0;
+        background: transparent;
+        text-decoration: none;
+        color: var(--gl-v2-surface);
+        font: 500 10px var(--gl-v2-font-sans);
+        white-space: nowrap;
+    }
+
+    .gl-v2-mobile-quickaction:hover,
+    .gl-v2-mobile-quickaction:focus-visible { background: rgba(255, 255, 255, .12); }
+
+    .gl-v2-mobile-quickaction i { font-size: 21px; }
+
+    /* [hidden] en een kale class delen specificiteit en author-regels winnen bij gelijkspel — zie
+       de identieke waarschuwing bij .gl-v2-mobile-menu hierboven. gl-v2-shell.js verbergt tegel 5+
+       met .hidden zodra een pagina meer dan 4 snelacties meegeeft; zonder deze regel zou
+       display:flex hierboven dat gewoon overstemmen. */
+    .gl-v2-mobile-quickaction[hidden] { display: none; }
+
+    /* Optie 6b: 5de+ tegel wordt altijd deze ene "Meer"-tegel (5de+, niet vervangend), toegevoegd
+       door gl-v2-shell.js — erft de basisstijl, enkel de states hieronder zijn eigen aan Meer. De
+       vier [data-role]-elementen (rest/open × icon/label) wisselen puur via JS die .hidden zet op
+       de elementen zelf, geen CSS nodig — er staat hier geen eigen display-regel op die met
+       [hidden] zou botsen zoals bij .gl-v2-mobile-menu/.gl-v2-mobile-quickaction hierboven. */
+
+    /* MEER AANGERAAKT: puur :active, geen JS nodig — zolang de vinger neerligt, verdwijnt zodra
+       die optilt (in tegenstelling tot MEER OPEN hieronder, die blijft staan). */
+    .gl-v2-mobile-quickaction-more:active { background: rgba(255, 255, 255, .18); }
+
+    /* MEER OPEN: blijft staan zolang het sheet open is (JS zet/verwijdert .is-open), en de overige
+       tegels dimmen mee. */
+    .gl-v2-mobile-quickaction-more.is-open { background: rgba(255, 255, 255, .18); }
+
+    .gl-v2-mobile-quickactions.has-open-sheet .gl-v2-mobile-quickaction:not(.gl-v2-mobile-quickaction-more) {
+        opacity: .45;
+    }
+
+    /* ── Snelacties-sheet (optie 6b "MEER OPEN") ─────────────────────────────────────────── */
+    /* Beide stoppen bewust boven de balk (dezelfde calc() als de balk zelf hierboven) i.p.v. tot
+       de fysieke onderrand door te lopen: de balk moet zelf zichtbaar/ongedimd blijven staan
+       terwijl het sheet open is (optie 6b "MEER OPEN"), niet verdwijnen onder de backdrop. */
+    .gl-v2-quickactions-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: calc(var(--gl-v2-qa-bar-h) + env(safe-area-inset-bottom, 0px));
+        background: rgba(20, 26, 19, .45);
+        z-index: 99998;
+    }
+
+    .gl-v2-quickactions-backdrop[hidden] { display: none; }
+
+    .gl-v2-quickactions-sheet {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: calc(var(--gl-v2-qa-bar-h) + env(safe-area-inset-bottom, 0px));
+        z-index: 99999;
+        max-height: 80dvh;
+        overflow-y: auto;
+        background: var(--gl-v2-surface);
+        border-radius: var(--gl-v2-radius-lg) var(--gl-v2-radius-lg) 0 0;
+        box-shadow: var(--gl-v2-shadow-flyout);
+        padding: 8px 16px 16px;
+    }
+
+    /* Zelfde [hidden]-vs-author-CSS-valkuil als hierboven — display:block op de sheet zou het
+       display:none van [hidden] anders overstemmen. */
+    .gl-v2-quickactions-sheet[hidden] { display: none; }
+
+    .gl-v2-quickactions-sheet-handle {
+        width: 36px;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--gl-v2-hairline);
+        margin: 6px auto 10px;
+    }
+
+    .gl-v2-quickactions-sheet-header {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        padding: 4px 2px 12px;
+    }
+
+    .gl-v2-quickactions-sheet-title {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        font: 500 19px var(--gl-v2-font-serif);
+        color: var(--gl-v2-ink);
+        margin: 0;
+    }
+
+    .gl-v2-quickactions-sheet-title-page {
+        font: 500 13px var(--gl-v2-font-sans);
+        color: var(--gl-v2-muted);
+    }
+
+    .gl-v2-quickactions-sheet-close {
+        margin-left: auto;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        border: 1px solid var(--gl-v2-hairline);
+        background: var(--gl-v2-surface);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--gl-v2-muted-soft);
+        flex: none;
+    }
+
+    .gl-v2-quickactions-sheet-close:hover { background: var(--gl-v2-hover-tint); }
+
+    .gl-v2-quickactions-sheet-list { display: flex; flex-direction: column; }
+
+    .gl-v2-quickactions-sheet-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        padding: 12px 2px;
+        border: 0;
+        border-bottom: 1px solid var(--gl-v2-hairline-soft);
+        background: transparent;
+        text-align: left;
+        text-decoration: none;
+    }
+
+    .gl-v2-quickactions-sheet-row:last-child { border-bottom: 0; }
+
+    .gl-v2-quickactions-sheet-row:hover,
+    .gl-v2-quickactions-sheet-row:focus-visible { background: var(--gl-v2-hover-tint); }
+
+    .gl-v2-quickactions-sheet-row-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        color: var(--gl-v2-primary);
+        flex: none;
+    }
+
+    .gl-v2-quickactions-sheet-row-icon i { font-size: 18px; }
+
+    .gl-v2-quickactions-sheet-row-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+    .gl-v2-quickactions-sheet-row-title { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+    .gl-v2-quickactions-sheet-row-subtitle { font: 500 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+    .gl-v2-quickactions-sheet-row-chevron { font-size: 13px; color: var(--gl-v2-muted); flex: none; }
+}
+
+/* Tablet liggend (1024–1399.98px, Bootstrap lg–tot-net-onder-xxl): dezelfde balk/sheet-elementen als
+   hierboven, herschikt tot een groene rail rechts — design-handoff 7g. Vanaf 1400px (xxl) toont de
+   echte Snelacties-kaart (GlV2/_SnelactiesCard.cshtml) i.p.v. deze rail. */
+@media (min-width: 1024px) and (max-width: 1399.98px) {
+    .gl-v2 { --gl-v2-qa-rail-w: 92px; }
+
+    .gl-v2-mobile-quickactions {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: auto;
+        z-index: 500;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        width: var(--gl-v2-qa-rail-w);
+        height: auto;
+        padding: 16px 6px;
+        background: var(--gl-v2-primary);
+        box-shadow: -8px 0 20px -12px rgba(44, 59, 42, .35);
+        overflow-y: auto;
+    }
+
+    .gl-v2-content.has-mobile-quickactions { padding-bottom: 0; padding-right: calc(var(--gl-v2-qa-rail-w) + 14px); }
+
+    /* Informatieve tegel bovenaan de rail — "zo weet je waarop de acties werken" (7g). Enkel tonend,
+       window.GlV2ActiveProject (gl-v2-dashboard.js) vult de naam en toont/verbergt via [hidden]. */
+    .gl-v2-qa-rail-active {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        width: 100%;
+        padding: 9px 4px 12px;
+        margin-bottom: 4px;
+        border-bottom: 1px solid rgba(255, 255, 255, .22);
+        color: var(--gl-v2-surface);
+        text-align: center;
+    }
+    .gl-v2-qa-rail-active i { font-size: 18px; }
+    .gl-v2-qa-rail-active span { font: 600 9.5px/1.2 var(--gl-v2-font-sans); word-break: break-word; }
+    .gl-v2-qa-rail-active[hidden] { display: none; }
+
+    .gl-v2-mobile-quickaction {
+        flex: none;
+        width: 100%;
+        flex-direction: column;
+        gap: 4px;
+        padding: 9px 4px;
+        font-size: 9.5px;
+    }
+    .gl-v2-mobile-quickaction i { font-size: 20px; }
+
+    /* Sheet dockt naast de rail i.p.v. onderaan het scherm — zelfde element/JS (optie 6b), enkel de
+       positionering wisselt per breedte. */
+    .gl-v2-quickactions-backdrop { bottom: 0; }
+    .gl-v2-quickactions-sheet {
+        top: 0;
+        bottom: 0;
+        left: auto;
+        right: var(--gl-v2-qa-rail-w);
+        width: 300px;
+        max-height: none;
+        border-radius: var(--gl-v2-radius-lg) 0 0 var(--gl-v2-radius-lg);
+    }
+}
+
+/* Dashboard-only uitzondering: Home/Index zet ViewData["NoTabletQuickActionsRail"]/.gl-v2-qa-no-rail
+   (_LayoutV2.cshtml) om de rail hierboven op tablet-liggend over te slaan — bewust géén product/
+   design-beslissing voor de rail als generiek component (Facturen en elke andere gl-v2-pagina
+   behouden 'm ongewijzigd), dus een pagina-specifieke override i.p.v. de rail-media-query zelf aan
+   te passen. Elke selector krijgt hier één klasse extra t.o.v. de rail-regels hierboven — dat wint op
+   specificiteit ongeacht bronvolgorde, dus de rail-regels zelf blijven onaangeroerd. Herhaalt bewust
+   de balk-vorm-declaraties uit het </1024px-blok verderop in dit bestand i.p.v. ze te delen: die twee
+   blokken overlappen elkaar niet in breedte, dus er is geen bestaande regel om hier simpelweg opnieuw
+   van toepassing te maken. */
+@media (min-width: 1024px) and (max-width: 1399.98px) {
+    .gl-v2-qa-no-rail .gl-v2-mobile-quickactions {
+        top: auto;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: auto;
+        height: calc(var(--gl-v2-qa-bar-h) + env(safe-area-inset-bottom, 0px));
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        padding: 0 14px;
+        box-shadow: 0 -8px 20px -12px rgba(44, 59, 42, .35);
+        overflow-y: visible;
+    }
+    .gl-v2-qa-no-rail .gl-v2-qa-rail-active { display: none; }
+    .gl-v2-qa-no-rail .gl-v2-content.has-mobile-quickactions { padding-right: 0; padding-bottom: calc(var(--gl-v2-qa-bar-h) + env(safe-area-inset-bottom, 0px)); }
+    .gl-v2-qa-no-rail .gl-v2-mobile-quickaction {
+        flex: 1;
+        width: auto;
+        flex-direction: column;
+        gap: 5px;
+        padding: 6px 4px;
+        font-size: 10px;
+    }
+    .gl-v2-qa-no-rail .gl-v2-mobile-quickaction i { font-size: 21px; }
+    .gl-v2-qa-no-rail .gl-v2-quickactions-backdrop { bottom: calc(var(--gl-v2-qa-bar-h) + env(safe-area-inset-bottom, 0px)); }
+    .gl-v2-qa-no-rail .gl-v2-quickactions-sheet {
+        top: auto;
+        bottom: calc(var(--gl-v2-qa-bar-h) + env(safe-area-inset-bottom, 0px));
+        left: 0;
+        right: 0;
+        width: auto;
+        max-height: 80dvh;
+        border-radius: var(--gl-v2-radius-lg) var(--gl-v2-radius-lg) 0 0;
+    }
+}

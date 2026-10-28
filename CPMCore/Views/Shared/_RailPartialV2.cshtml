@@ -175,15 +175,6 @@
         </a>
     }
 
-    @if (canSeeInstellingen)
-    {
-        <a class="gl-v2-rail-item @(IsActive("Instellingen", "IssueNotificationAdmin", "BlogBeheer", "HomeHeroProject", "VacatureBeheer", "CookieConsentStats") ? "is-active" : "")"
-           href="@Url.Action("Index", "Instellingen")" aria-label="Instellingen">
-            <i class="ph ph-gear" aria-hidden="true"></i>
-            <span class="gl-v2-rail-tooltip">Instellingen</span>
-        </a>
-    }
-
     @if (canSeeMarktanalyse)
     {
         <button type="button" class="gl-v2-rail-item js-gl-v2-flyout-trigger @(IsActive("Marktanalyse") ? "is-active" : "")"
@@ -198,7 +189,17 @@
         <span class="gl-v2-rail-tooltip">Links</span>
     </button>
 
-    @* Design-handoff punt 41 — Helpcentrum, laatste rail-item vóór de spacer (zelfde positie als
+    @* Instellingen en Help: de laatste twee items van de rail, direct onder Links (de spacer staat er pas na). *@
+    @if (canSeeInstellingen)
+    {
+        <a class="gl-v2-rail-item @(IsActive("Instellingen", "IssueNotificationAdmin", "BlogBeheer", "HomeHeroProject", "VacatureBeheer", "CookieConsentStats") ? "is-active" : "")"
+           href="@Url.Action("Index", "Instellingen")" aria-label="Instellingen">
+            <i class="ph ph-gear" aria-hidden="true"></i>
+            <span class="gl-v2-rail-tooltip">Instellingen</span>
+        </a>
+    }
+
+    @* Design-handoff punt 41 — Helpcentrum, onderaan de rail (zelfde positie als
        de mockup se eigen rail-array, waar "help" na alle rubrieken komt). Geen flyout, gewoon een
        link, net als Documentencentrum/Instellingen hierboven. *@
     <a class="gl-v2-rail-item @(IsActive("Help") ? "is-active" : "")" href="@Url.Action("Index", "Help")" aria-label="Help">
@@ -409,11 +410,9 @@
     </nav>
 
     @* Optie 3b (bijgewerkt): profielkaart + aparte knoppenrij, i.p.v. één enkele rij met een
-       tekstlink voor "afmelden". "Mijn profiel" wijst naar de dichtstbijzijnde bestaande pagina
-       (Mijn handtekening) — er is geen apart profielscherm in de app; geen nieuwe pagina verzinnen
-       voor een knop die het voorbeeld wel toont maar de echte app niet heeft. *@
+       tekstlink voor "afmelden". "Mijn profiel" wijst naar Account/MijnProfiel (sinds 26/10/2026). *@
     <div class="gl-v2-mobile-menu-footer">
-        <a class="gl-v2-mobile-profile-card" href="@Url.Action("MijnHandtekening", "Account")">
+        <a class="gl-v2-mobile-profile-card" href="@Url.Action("MijnProfiel", "Account")">
             <span class="gl-v2-avatar">@mobileUserInitials</span>
             <span class="gl-v2-mobile-profile-info">
                 <span class="gl-v2-mobile-profile-name">@mobileUserDisplayName</span>
@@ -422,7 +421,7 @@
             <i class="ph ph-caret-down" aria-hidden="true"></i>
         </a>
         <div class="gl-v2-mobile-profile-actions">
-            <a class="gl-v2-mobile-profile-btn" href="@Url.Action("MijnHandtekening", "Account")">Mijn profiel</a>
+            <a class="gl-v2-mobile-profile-btn" href="@Url.Action("MijnProfiel", "Account")">Mijn profiel</a>
             <a class="gl-v2-mobile-profile-btn" href="@Url.Action("SignOut", "Account")">Afmelden</a>
         </div>
     </div>

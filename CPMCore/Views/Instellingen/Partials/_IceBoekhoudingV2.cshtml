@@ -138,7 +138,7 @@
                     @foreach (var y in shown)
                     {
                         <li>
-                            <span class="gl-v2-ice-list-t"><b>@y.BookyearDescription</b><small>@y.StartDate.ToString("dd/MM/yyyy") – @y.EndDate.ToString("dd/MM/yyyy") · @(y.Periods?.Count ?? 0) periodes · @(y.Journals?.Count ?? 0) dagboeken@((y.Journals?.Any() ?? false) ? " (" + string.Join(", ", y.Journals!.Select(j => j.JournalKey)) + ")" : "")</small></span>
+                            <span class="gl-v2-stack is-flat gl-v2-ice-list-t"><b>@y.BookyearDescription</b><small>@y.StartDate.ToString("dd/MM/yyyy") – @y.EndDate.ToString("dd/MM/yyyy") · @(y.Periods?.Count ?? 0) periodes · @(y.Journals?.Count ?? 0) dagboeken@((y.Journals?.Any() ?? false) ? " (" + string.Join(", ", y.Journals!.Select(j => j.JournalKey)) + ")" : "")</small></span>
                             <span class="gl-v2-badge @(y.Closed ? "is-neutral" : "is-positive")">@(y.Closed ? "AFGESLOTEN" : "OPEN")</span>
                         </li>
                     }
@@ -150,7 +150,7 @@
                         @foreach (var y in older)
                         {
                             <li>
-                                <span class="gl-v2-ice-list-t"><b>@y.BookyearDescription</b><small>@y.StartDate.ToString("dd/MM/yyyy") – @y.EndDate.ToString("dd/MM/yyyy") · @(y.Periods?.Count ?? 0) periodes · @(y.Journals?.Count ?? 0) dagboeken</small></span>
+                                <span class="gl-v2-stack is-flat gl-v2-ice-list-t"><b>@y.BookyearDescription</b><small>@y.StartDate.ToString("dd/MM/yyyy") – @y.EndDate.ToString("dd/MM/yyyy") · @(y.Periods?.Count ?? 0) periodes · @(y.Journals?.Count ?? 0) dagboeken</small></span>
                                 <span class="gl-v2-badge @(y.Closed ? "is-neutral" : "is-positive")">@(y.Closed ? "AFGESLOTEN" : "OPEN")</span>
                             </li>
                         }
@@ -177,7 +177,7 @@
                     {
                         var f = customFields[i];
                         <li>
-                            <span class="gl-v2-ice-list-t"><b>@f.DisplayName</b><small>@f.TemplateCode</small></span>
+                            <span class="gl-v2-stack is-flat gl-v2-ice-list-t"><b>@f.DisplayName</b><small>@f.TemplateCode</small></span>
                             <i class="ph ph-arrow-right gl-v2-ice-arrow" aria-hidden="true"></i>
                             <input type="hidden" name="CustomFieldMappings[@i].CustomFieldKeyId" value="@f.CustomFieldKeyId" />
                             <input type="hidden" name="CustomFieldMappings[@i].TemplateCode" value="@f.TemplateCode" />

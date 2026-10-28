@@ -651,7 +651,7 @@
                     @foreach (var inv in facturenRows)
                     {
                         <a class="gl-v2-pd-row" href="@Url.Action("Detail", "Invoices", new { id = inv.Id })">
-                            <div class="gl-v2-pd-row-main">
+                            <div class="gl-v2-stack is-tight gl-v2-pd-row-main">
                                 <span class="gl-v2-pd-row-title">@(string.IsNullOrWhiteSpace(inv.PublicId) ? "Proforma" : inv.PublicId)</span>
                                 <span class="gl-v2-pd-row-sub">@inv.ClientName · @inv.StatusName</span>
                             </div>
@@ -692,7 +692,7 @@
                         var docTitle = string.IsNullOrWhiteSpace(doc.Name) ? doc.Type.GetDisplayName() : doc.Name;
                         <a class="gl-v2-pd-row" href="@Url.Action("ViewDoc", "Projecten", new { id = doc.Docid })" target="_blank" rel="noopener">
                             <span class="gl-v2-pd-row-badge"><i class="ph ph-file-text" aria-hidden="true"></i></span>
-                            <div class="gl-v2-pd-row-main">
+                            <div class="gl-v2-stack is-tight gl-v2-pd-row-main">
                                 <span class="gl-v2-pd-row-title">@docTitle</span>
                                 <span class="gl-v2-pd-row-sub">@doc.Type.GetDisplayName()@(doc.DocDate.HasValue ? " · " + doc.DocDate.Value.ToString("dd/MM/yyyy") : "")</span>
                             </div>

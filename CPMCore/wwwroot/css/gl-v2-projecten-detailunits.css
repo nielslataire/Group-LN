@@ -255,7 +255,7 @@
     min-height: 42px;
     padding: 4px 10px;
     border: 0;
-    border-radius: 7px;
+    border-radius: var(--gl-v2-radius-s, 7px);
     background: transparent;
     cursor: pointer;
     text-align: left;
@@ -268,7 +268,7 @@
     width: 26px;
     height: 26px;
     flex: none;
-    border-radius: 7px;
+    border-radius: var(--gl-v2-radius-s, 7px);
     background: var(--gl-v2-neutral-tint);
     color: var(--gl-v2-muted-soft);
     display: flex;
@@ -276,7 +276,6 @@
     justify-content: center;
 }
 .gl-v2-du-picker-icon i { font-size: 13px; }
-.gl-v2-du-picker-text { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
 .gl-v2-du-picker-name { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
 .gl-v2-du-picker-sub { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
 .gl-v2-du-picker-price { font: 500 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); font-variant-numeric: tabular-nums; flex: none; }
@@ -388,16 +387,6 @@
     flex-direction: column;
 }
 
-.gl-v2-ls-scroll {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    /* Altijd wat lucht boven de actiebalk, ook volledig naar onder gescrold. */
-    padding-bottom: 20px;
-}
 
 .gl-v2-ls-toolbar { gap: 10px; }
 .gl-v2-ls-hint { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); text-align: right; }

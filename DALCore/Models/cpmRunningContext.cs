@@ -263,6 +263,8 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<UserCoachmarkState> UserCoachmarkState { get; set; }
 
+    public virtual DbSet<UserProfileSettings> UserProfileSettings { get; set; }
+
     public virtual DbSet<UserCompany> UserCompany { get; set; }
 
     public virtual DbSet<UserCompanyAccess> UserCompanyAccess { get; set; }
@@ -3104,6 +3106,30 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.UserCoachmarkState)
                 .HasForeignKey(d => d.UserId)
                 .HasConstraintName("FK_UserCoachmarkState_Users");
+        });
+
+        modelBuilder.Entity<UserProfileSettings>(entity =>
+        {
+            entity.HasIndex(e => e.UserId, "UQ_UserProfileSettings_UserId").IsUnique();
+
+            entity.Property(e => e.VastNummer).HasMaxLength(50);
+            entity.Property(e => e.WerkVan).IsRequired().HasMaxLength(5);
+            entity.Property(e => e.WerkTot).IsRequired().HasMaxLength(5);
+            entity.Property(e => e.PauzeVan).HasMaxLength(5);
+            entity.Property(e => e.PauzeTot).HasMaxLength(5);
+            entity.Property(e => e.AfwezigVan).HasColumnType("date");
+            entity.Property(e => e.AfwezigTot).HasColumnType("date");
+            entity.Property(e => e.SamenvattingTijd).IsRequired().HasMaxLength(5);
+            entity.Property(e => e.DeadlineHerinnering).IsRequired().HasMaxLength(4);
+
+            entity.HasOne(d => d.User).WithMany()
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UserProfileSettings_Users");
+
+            entity.HasOne(d => d.BackupUser).WithMany()
+                .HasForeignKey(d => d.BackupUserId)
+                .HasConstraintName("FK_UserProfileSettings_Backup");
         });
 
         modelBuilder.Entity<UserPinnedProject>(entity =>

@@ -2,7 +2,7 @@
 .gl-v2-pv { display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--gl-v2-hairline-soft); border-radius: var(--gl-v2-radius-sm); background: var(--gl-v2-bg); overflow: hidden; }
 .gl-v2-pv-bar { display: flex; align-items: center; gap: 6px; padding: 6px 8px; background: var(--gl-v2-surface); border-bottom: 1px solid var(--gl-v2-hairline-soft); }
 .gl-v2-pv-spacer { flex: 1; }
-.gl-v2-pv-btn { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--gl-v2-hairline); border-radius: 7px; background: var(--gl-v2-surface); color: var(--gl-v2-muted-soft); cursor: pointer; }
+.gl-v2-pv-btn { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-s, 7px); background: var(--gl-v2-surface); color: var(--gl-v2-muted-soft); cursor: pointer; }
 .gl-v2-pv-btn:hover:not(:disabled) { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); }
 .gl-v2-pv-btn:disabled { opacity: .4; cursor: default; }
 .gl-v2-pv-page, .gl-v2-pv-zoom { font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); min-width: 52px; text-align: center; font-variant-numeric: tabular-nums; }

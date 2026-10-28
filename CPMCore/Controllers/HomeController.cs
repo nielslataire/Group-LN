@@ -280,6 +280,7 @@ public class HomeController : BaseController
             model.IssuerCompanyNames = issuers.ToDictionary(i => i.Id, i => i.Name);
         }
 
+        ViewData["HelpScreenId"] = "dashboard";
         return View(model);
     }
 

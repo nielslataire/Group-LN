@@ -146,7 +146,11 @@
         var knop = e.target.closest("[data-afhandeling-intrekken]");
         if (!knop) return;
         e.preventDefault();
-        if (!window.confirm(knop.getAttribute("data-bevestig") || "Ongedaan maken?")) return;
+        var vraag = window.GlV2Bevestig
+            ? window.GlV2Bevestig({ title: "Afhandeling ongedaan maken?", desc: knop.getAttribute("data-bevestig") || "", ok: "Ongedaan maken", tone: "warning" })
+            : Promise.resolve(window.confirm(knop.getAttribute("data-bevestig") || "Ongedaan maken?"));
+        vraag.then(function (ja) {
+        if (!ja) return;
         var token = form.querySelector('input[name="__RequestVerificationToken"]');
         var f = document.createElement("form");
         f.method = "post";
@@ -157,6 +161,7 @@
         });
         document.body.appendChild(f);
         f.submit();
+        });
     });
 
     window.GlnInhouding = { open: open, sluit: sluit };

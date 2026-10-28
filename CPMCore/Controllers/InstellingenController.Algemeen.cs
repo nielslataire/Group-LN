@@ -277,6 +277,7 @@ public partial class InstellingenController
             }
             if (automatisatie.Items.Count > 0) vm.Groups.Add(automatisatie);
 
+            ViewData["HelpScreenId"] = "instellingen-overzicht";
             return View("IndexV2", vm);
         }
 

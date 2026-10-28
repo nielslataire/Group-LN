@@ -76,7 +76,7 @@
     width: 56px;
     height: 46px;
     flex: none;
-    border-radius: 8px;
+    border-radius: var(--gl-v2-radius-sm, 8px);
     background: var(--gl-v2-neutral-tint);
     color: var(--gl-v2-muted);
     display: flex;
@@ -84,7 +84,6 @@
     justify-content: center;
     font-size: 18px;
 }
-.gl-v2-kd-unit-title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .gl-v2-kd-unit-name { font: 600 13.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gl-v2-kd-unit-sub { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gl-v2-kd-unit-more { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
@@ -146,7 +145,7 @@ a.gl-v2-kd-wo-row:hover { background: var(--gl-v2-hover-tint); }
     width: 26px;
     height: 26px;
     flex: none;
-    border-radius: 6px;
+    border-radius: var(--gl-v2-radius-xs, 6px);
     background: var(--gl-v2-danger-tint);
     color: var(--gl-v2-danger);
     display: flex;
@@ -154,7 +153,6 @@ a.gl-v2-kd-wo-row:hover { background: var(--gl-v2-hover-tint); }
     justify-content: center;
     font-size: 13px;
 }
-.gl-v2-kd-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .gl-v2-kd-row-title { font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gl-v2-kd-row-sub { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

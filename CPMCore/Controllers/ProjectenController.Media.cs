@@ -123,6 +123,7 @@ namespace CPMCore.Controllers
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Media");
             // gl-v2 layout-pilot: zelfde data/query hierboven, enkel de view wisselt (design-handoff/
             // punt 15 "Media in een project").
+            ViewData["HelpScreenId"] = "projecten-fotos";
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "DetailPhotosV2" : "DetailPhotos", model);
         }
         [HttpGet]

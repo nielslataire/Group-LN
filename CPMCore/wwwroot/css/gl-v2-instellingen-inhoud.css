@@ -7,22 +7,19 @@
 
 /* ── Rij-acties (hetzelfde recept als de andere Instellingen-pagina's: 26×26 bare) ── */
 .gl-v2-inh .gl-v2-row-action {
-    display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 7px; border: 1px solid transparent;
+    display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: var(--gl-v2-radius-s, 7px); border: 1px solid transparent;
     background: transparent; color: var(--gl-v2-muted); padding: 0; cursor: pointer; text-decoration: none;
     transition: background-color .12s ease, border-color .12s ease, color .12s ease;
 }
 .gl-v2-inh .gl-v2-row-action:hover { background: var(--gl-v2-hover-tint); color: var(--gl-v2-ink); }
-.gl-v2-inh .gl-v2-row-action-danger:hover, .gl-v2-inh .gl-v2-row-action-danger:focus-visible { background: #F8EBEB; border-color: #8B2A2A; color: #8B2A2A; }
+.gl-v2-inh .gl-v2-row-action-danger:hover, .gl-v2-inh .gl-v2-row-action-danger:focus-visible { background: var(--gl-v2-danger-tint, #F8EBEB); border-color: var(--gl-v2-danger, #8B2A2A); color: var(--gl-v2-danger, #8B2A2A); }
 .gl-v2-inh .gl-v2-row-action:focus-visible { outline: 3px solid var(--gl-v2-gold); outline-offset: 1px; }
 .gl-v2-inh-link { border: 0; background: transparent; padding: 0; font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .gl-v2-inh-link:focus-visible { outline: 3px solid var(--gl-v2-gold); outline-offset: 2px; border-radius: 3px; }
 
 /* ── Lijst (vacatures, blog) ── */
-.gl-v2-inh-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 64px 24px; text-align: center; color: var(--gl-v2-muted); font: 400 13px var(--gl-v2-font-sans); }
-.gl-v2-inh-empty i { font-size: 32px; }
-.gl-v2-inh-empty b { font: 600 15px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
 .gl-v2-inh-head, .gl-v2-inh-row { display: grid; gap: 14px; align-items: center; padding: 0 20px; }
-.gl-v2-inh-grid--list { grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr) minmax(0, 1fr) 150px 130px 76px; }
+.gl-v2-inh-grid--list { grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr) minmax(0, 1fr) 150px 130px 140px; }
 .gl-v2-inh-head { min-height: 38px; border-bottom: 1px solid var(--gl-v2-hairline-soft); font: 600 10px var(--gl-v2-font-sans); letter-spacing: .12em; text-transform: uppercase; color: var(--gl-v2-muted); }
 .gl-v2-inh-row { min-height: 62px; border-bottom: 1px solid var(--gl-v2-hairline-soft); }
 .gl-v2-inh-row:hover { background: var(--gl-v2-hover-tint); }
@@ -51,14 +48,14 @@ a.gl-v2-inh-count:hover b { color: var(--gl-v2-primary); text-decoration: underl
 .gl-v2-inh-side-foot { padding-top: 12px; border-top: 1px solid var(--gl-v2-hairline-soft); }
 .gl-v2-inh-prefix { font: 400 12px var(--gl-v2-font-mono, 'IBM Plex Mono', monospace); color: var(--gl-v2-muted-light, var(--gl-v2-muted)); flex: none; }
 .gl-v2-inh-mono { font-family: var(--gl-v2-font-mono, 'IBM Plex Mono', monospace); font-size: 12.5px; }
-.gl-v2-inh-video { width: 100%; max-height: 200px; border-radius: 8px; background: #000; }
-.gl-v2-inh-poster { width: 100%; max-height: 160px; object-fit: cover; border-radius: 8px; }
+.gl-v2-inh-video { width: 100%; max-height: 200px; border-radius: var(--gl-v2-radius-sm, 8px); background: #000; }
+.gl-v2-inh-poster { width: 100%; max-height: 160px; object-fit: cover; border-radius: var(--gl-v2-radius-sm, 8px); }
 
 /* ── Sleepbare puntenlijsten ── */
 .gl-v2-inh-list .gl-v2-section-card-header { flex-wrap: wrap; }
 .gl-v2-inh-count-badge, .gl-v2-inh-list .gl-v2-inh-count { font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); font-variant-numeric: tabular-nums; }
 .gl-v2-inh-items { list-style: none; margin: 0; padding: 4px 8px 8px; }
-.gl-v2-inh-item { display: flex; align-items: flex-start; gap: 8px; padding: 9px 8px; border-radius: 8px; }
+.gl-v2-inh-item { display: flex; align-items: flex-start; gap: 8px; padding: 9px 8px; border-radius: var(--gl-v2-radius-sm, 8px); }
 .gl-v2-inh-item:hover { background: var(--gl-v2-hover-tint); }
 .gl-v2-inh-item.is-dragging { opacity: .5; background: var(--gl-v2-primary-tint); }
 .gl-v2-inh-grip { flex: none; color: var(--gl-v2-muted-light, var(--gl-v2-muted)); cursor: grab; padding-top: 2px; }
@@ -93,9 +90,7 @@ a.gl-v2-inh-count:hover b { color: var(--gl-v2-primary); text-decoration: underl
 .gl-v2-inh-sol-date span { color: var(--gl-v2-muted); font-size: 11.5px; }
 .gl-v2-inh-sol-none { padding: 32px 16px; text-align: center; font: 400 13px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 .gl-v2-inh-sol-detail { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 16px; padding: 20px; min-width: 0; }
-.gl-v2-inh-sol-blank { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 48px 12px; text-align: center; color: var(--gl-v2-muted); font: 400 13px var(--gl-v2-font-sans); }
-.gl-v2-inh-sol-blank i { font-size: 32px; }
-.gl-v2-inh-sol-blank b { font: 600 15px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-inh-sol-blank { padding: 48px 12px; }
 .gl-v2-inh-sol-who { display: flex; align-items: center; gap: 14px; }
 .gl-v2-inh-sol-who h2 { margin: 0; font: 600 18px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
 .gl-v2-inh-sol-who span { font: 400 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
@@ -105,7 +100,7 @@ a.gl-v2-inh-count:hover b { color: var(--gl-v2-primary); text-decoration: underl
 .gl-v2-inh-sol-line { display: inline-flex; align-items: center; gap: 8px; color: var(--gl-v2-ink); font: 400 13.5px var(--gl-v2-font-sans); text-decoration: none; overflow-wrap: anywhere; }
 .gl-v2-inh-sol-line:hover { color: var(--gl-v2-primary); text-decoration: underline; }
 .gl-v2-inh-sol-line i { color: var(--gl-v2-muted); font-size: 16px; }
-.gl-v2-inh-sol-file { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--gl-v2-hairline); border-radius: 8px; color: var(--gl-v2-ink); text-decoration: none; font: 500 13px var(--gl-v2-font-sans); }
+.gl-v2-inh-sol-file { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-sm, 8px); color: var(--gl-v2-ink); text-decoration: none; font: 500 13px var(--gl-v2-font-sans); }
 .gl-v2-inh-sol-file span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gl-v2-inh-sol-file b { color: var(--gl-v2-primary); font-weight: 600; }
 .gl-v2-inh-sol-file:hover { background: var(--gl-v2-hover-tint); }
@@ -129,14 +124,15 @@ a.gl-v2-inh-count:hover b { color: var(--gl-v2-primary); text-decoration: underl
 }
 
 /* ── Blogartikelen: lijst ── */
-.gl-v2-inh-grid--blog { grid-template-columns: minmax(0, 1fr) 120px 140px 40px; }
+.gl-v2-inh-grid--blog { grid-template-columns: minmax(0, 1fr) 120px 140px 56px; }
 a.gl-v2-inh-row { text-decoration: none; color: inherit; }
 a.gl-v2-inh-row:focus-visible { outline: 3px solid var(--gl-v2-gold); outline-offset: -3px; }
 .gl-v2-inh-bl-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 20px; flex-wrap: wrap; border-bottom: 1px solid var(--gl-v2-hairline-soft); }
 .gl-v2-inh-bl-search { width: 340px; max-width: 100%; }
 .gl-v2-inh-bl-top .gl-v2-segmented span { margin-left: 4px; opacity: .7; font-variant-numeric: tabular-nums; }
-.gl-v2-inh-bl-titel { display: flex; align-items: center; gap: 14px; min-width: 0; }
-.gl-v2-inh-bl-thumb { flex: none; width: 56px; height: 40px; border-radius: 6px; object-fit: cover; background: var(--gl-v2-hover-tint); }
+.gl-v2-inh-bl-titel { display: flex; align-items: center; gap: 14px; min-width: 0; text-decoration: none; color: inherit; }
+.gl-v2-inh-bl-titel:focus-visible { outline: 3px solid var(--gl-v2-gold); outline-offset: 2px; border-radius: 4px; }
+.gl-v2-inh-bl-thumb { flex: none; width: 56px; height: 40px; border-radius: var(--gl-v2-radius-xs, 6px); object-fit: cover; background: var(--gl-v2-hover-tint); }
 .gl-v2-inh-bl-thumb.is-leeg { display: inline-flex; align-items: center; justify-content: center; color: var(--gl-v2-muted); }
 .gl-v2-inh-none { padding: 32px 16px; text-align: center; font: 400 13px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 @media (max-width: 800px) {

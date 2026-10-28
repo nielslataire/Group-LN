@@ -388,7 +388,7 @@
 .gl-v2-modal-search-field {
     height: 44px;
     box-sizing: border-box;
-    border-radius: 8px;
+    border-radius: var(--gl-v2-radius-sm, 8px);
     border: 1px solid var(--gl-v2-primary);
     background: var(--gl-v2-surface);
     display: flex;
@@ -403,7 +403,7 @@
 
 .gl-v2-modal-search-btn {
     height: 44px;
-    border-radius: 8px;
+    border-radius: var(--gl-v2-radius-sm, 8px);
     border: 0;
     background: var(--gl-v2-primary);
     color: var(--gl-v2-surface);
@@ -443,7 +443,7 @@
 
 .gl-v2-modal-search-create {
     height: 40px;
-    border-radius: 8px;
+    border-radius: var(--gl-v2-radius-sm, 8px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -505,7 +505,7 @@
     padding: 6px 8px;
     margin: -6px -8px;
     border: 0;
-    border-radius: 8px;
+    border-radius: var(--gl-v2-radius-sm, 8px);
     background: transparent;
     font: 600 11.5px var(--gl-v2-font-sans);
     color: var(--gl-v2-primary);

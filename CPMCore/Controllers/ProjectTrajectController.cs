@@ -91,6 +91,7 @@ public class ProjectTrajectController : BaseController
             if (UseGlV2)
             {
                 vm.CanWrite = HttpContext.RequestServices.GetRequiredService<IPermissionService>().HasWrite(PermissionCodes.ProjectsTraject);
+                ViewData["HelpScreenId"] = "traject-index";
                 return View("IndexV2", vm);
             }
             return View(vm);
@@ -143,6 +144,7 @@ public class ProjectTrajectController : BaseController
             vm.HighlightMijlpaalId = hl;
             await VulV2Data(vm, traject);
             ViewBag.OpenNieuweInFase = nieuw;
+            ViewData["HelpScreenId"] = "traject-index";
             return View("IndexV2", vm);
         }
         return View(vm);

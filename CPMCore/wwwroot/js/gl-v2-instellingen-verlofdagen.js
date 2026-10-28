@@ -15,7 +15,7 @@
     var armed = "B";
     var loaded = false;
 
-    function toast(tone, title, body) { if (window.GlV2Toast) window.GlV2Toast.show({ tone: tone, title: title, body: body || "" }); }
+    var toast = (window.GlV2Toast && window.GlV2Toast.notify) || function () {}; // gedeeld, zie gl-v2-shell.js
     function setText(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; }
     function post(url, data) {
         var fd = new FormData();

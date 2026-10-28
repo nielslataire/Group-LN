@@ -11,7 +11,7 @@ Imports System.Linq
 ''' kent — de Razor-editortemplates gebruiken ze om het veld in prefix+nummer te ontleden, elke
 ''' [GlV2Phone]-validatie (zie GlV2PhoneAttribute.vb) gebruikt IsValid() voor "voor zover mogelijk"
 ''' geldigheid. gl-v2-error-summary.js houdt een eigen, kleinere kopie van dezelfde tabel bij voor de
-''' client-side spiegel (zie DESIGN.md "Telefoon/Gsm-voorvoegsel + validatie" voor waarom die twee
+''' client-side spiegel (zie CPMCore/DESIGN.md "Telefoon/Gsm-voorvoegsel + validatie" voor waarom die twee
 ''' tabellen niet automatisch gesynchroniseerd zijn en hoe je ze samen aanpast).
 ''' </summary>
 Public NotInheritable Class GlV2PhonePrefixes

@@ -76,6 +76,7 @@ namespace CPMCore.Controllers
             }
             var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
             ViewBag.CanWriteProjectWeather = _ps.HasWrite(PermissionCodes.ProjectsWeatherDelay);
+            ViewData["HelpScreenId"] = "projecten-slecht-weer";
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "WeatherV2" : "Weather", model);
         }
         [HttpGet]

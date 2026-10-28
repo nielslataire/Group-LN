@@ -227,27 +227,7 @@
     }
     $(document).on("click", ".js-gl-v2-clear-filters", resetFilters);
 
-    function buildLanguage(e) {
-        var capSing = e.singular.charAt(0).toUpperCase() + e.singular.slice(1);
-        var capPlur = e.plural.charAt(0).toUpperCase() + e.plural.slice(1);
-        return {
-            processing: "Bezig met verwerken…",
-            search: "Zoeken:",
-            lengthMenu: "Toon _MENU_",
-            info: capSing + " _START_ tot _END_ van _TOTAL_ " + capPlur,
-            infoEmpty: capSing + " 0 tot 0 van 0 " + capPlur,
-            infoFiltered: "(gefilterd uit _MAX_ totaal)",
-            loadingRecords: "Bezig met laden…",
-            zeroRecords: buildEmptyStateHtml(),
-            emptyTable: "Er zijn geen " + e.plural + " om weer te geven",
-            // Optie 4a: pagination-pijltjes als kale chevrons i.p.v. de "Previous"/"Next"-tekst.
-            paginate: { previous: "‹", next: "›" },
-            aria: {
-                sortAscending: ": activeer om oplopend te sorteren",
-                sortDescending: ": activeer om aflopend te sorteren"
-            }
-        };
-    }
+    function buildLanguage(e) { return window.GlV2DataTable.language(e, buildEmptyStateHtml()); }
 
     // Optie 4c "Mobiel — facturen als kaarten": #gl-v2-mobile-invoice-list (IndexV2.cshtml, na de
     // tabel) is een lege container, gevuld door renderMobileCards() hieronder telkens de tabel
@@ -475,8 +455,27 @@
         var closeBookyearSelect = function () {
             bookyearPanel.classList.remove("is-open");
             if (bookyearBackdrop) bookyearBackdrop.classList.remove("is-open");
+            sheetTerug();
             bookyearTrigger.classList.remove("is-open");
             bookyearTrigger.setAttribute("aria-expanded", "false");
+        };
+
+        // Mobiel: backdrop + paneel (bottom sheet) tijdelijk naar de .gl-v2-root verhuizen zodat geen voorouder (transform/overflow/stacking) ze kan afknippen of
+        // verplaatsen; bij sluiten terug op hun plek. Binnen .gl-v2 blijven de --gl-v2-* tokens gelden.
+        var bookyearHome = null;
+        var sheetNaarRoot = function () {
+            if (window.innerWidth >= 768 || bookyearHome) return;
+            var root = document.querySelector(".gl-v2");
+            if (!root) return;
+            bookyearHome = { parent: bookyearPanel.parentNode, next: bookyearPanel.nextSibling };
+            if (bookyearBackdrop) root.appendChild(bookyearBackdrop);
+            root.appendChild(bookyearPanel);
+        };
+        var sheetTerug = function () {
+            if (!bookyearHome) return;
+            if (bookyearBackdrop) bookyearHome.parent.insertBefore(bookyearBackdrop, bookyearHome.next);
+            bookyearHome.parent.insertBefore(bookyearPanel, bookyearHome.next);
+            bookyearHome = null;
         };
 
         var positionBookyearPanel = function () {
@@ -491,6 +490,7 @@
         };
 
         var openBookyearSelect = function () {
+            sheetNaarRoot();
             bookyearPanel.classList.add("is-open");
             if (bookyearBackdrop) bookyearBackdrop.classList.add("is-open");
             bookyearTrigger.classList.add("is-open");
@@ -523,7 +523,7 @@
 
         document.addEventListener("click", function (e) {
             if (!bookyearPanel.classList.contains("is-open")) return;
-            if (e.target.closest("#bookyear-select")) return;
+            if (e.target.closest("#bookyear-select, #bookyear-select-panel")) return;
             closeBookyearSelect();
         });
         document.addEventListener("keydown", function (e) {
@@ -598,5 +598,13 @@
     $(window).on("resize", function () {
         window.clearTimeout(rowMenuCloseTimer);
         rowMenuCloseTimer = window.setTimeout(closeAllRowMenus, 100);
+    });
+
+    // Rij-actiepatroon: een klik op de rij zelf opent de factuur (data-row-href → Detail). De tabel staat in een
+    // <form>, waardoor de generieke handler in gl-v2-shell.js (die formulieren overslaat) hier nooit navigeert.
+    $(document).on("click", "#datatable-invoice-list tbody tr[data-row-href]", function (e) {
+        if ($(e.target).closest("a, button, input, select, textarea, label, .gl-v2-check, .gl-v2-row-menu").length) return;
+        if (window.getSelection && String(window.getSelection())) return;
+        window.location.href = this.getAttribute("data-row-href");
     });
 })();

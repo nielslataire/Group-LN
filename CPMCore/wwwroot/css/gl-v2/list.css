@@ -1,0 +1,37 @@
+/* gl-v2 - gedeelde lijstonderdelen van de Instellingen-lijstpagina's (Activiteiten, Bouwindexen, Budgetreferenties, Kostprijs, Gebruikers): kolomkop, toolbar en leeg-staat.
+   Eerder per pagina gekopieerd (.gl-v2-act/-bwi/-bref/-kp/-ua-head|toolbar|empty); consolidatie 26/10/2026, zie E:\TFS\CSS_CONSOLIDATIE_PLAN.md. De kolomindeling (display:grid + grid-template-columns) blijft per pagina; zet de klasse ernaast:
+   <div class="gl-v2-list-head gl-v2-xx-head gl-v2-xx-grid--a">. Laadt VOOR de pagina-CSS. */
+
+.gl-v2-list-head { height: 36px; background: var(--gl-v2-surface); border-bottom: 1px solid var(--gl-v2-hairline); font: 600 11px var(--gl-v2-font-sans); letter-spacing: .04em; color: var(--gl-v2-primary); text-transform: uppercase; }
+.gl-v2-list-toolbar { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-bottom: 1px solid var(--gl-v2-hairline-soft); flex-wrap: wrap; }
+.gl-v2-list-toolbar-spacer { flex: 1; }
+.gl-v2-list-empty { padding: 36px 20px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-list-empty[hidden] { display: none; }
+.gl-v2-list-empty .t { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-list-empty .s { font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* ── Groot leeg-staatblok (icoon 32px + vette titel + grijze toelichting): .gl-v2-blank (eerder .gl-v2-bf-blank/-et-blank/-inh-empty/-inh-sol-blank/-auto-none.is-big). Padding per pagina aanpasbaar. ── */
+.gl-v2-blank { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 64px 24px; text-align: center; color: var(--gl-v2-muted); font: 400 13px var(--gl-v2-font-sans); }
+.gl-v2-blank i { font-size: 32px; }
+.gl-v2-blank b { font: 600 15px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+
+/* ── Keuzelijst-item links (.gl-v2-navitem met .l = code, .n = naam, .c = aantal; is-active = primaire tint + 3px accent): eerder .gl-v2-act-lot/.gl-v2-kp-lot. ── */
+.gl-v2-navlist { display: flex; flex-direction: column; gap: 2px; }
+.gl-v2-navitem { display: flex; align-items: center; gap: 9px; min-height: 36px; padding: 0 10px; border: 0; border-left: 3px solid transparent; border-radius: var(--gl-v2-radius-sm, 8px); background: transparent; color: var(--gl-v2-ink); text-align: left; cursor: pointer; }
+.gl-v2-navitem:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-navitem:focus-visible { outline: 3px solid var(--gl-v2-gold); outline-offset: -2px; }
+.gl-v2-navitem.is-active { background: var(--gl-v2-primary-tint); border-left-color: var(--gl-v2-primary); }
+.gl-v2-navitem .l { flex: none; min-width: 20px; font: 600 12px var(--gl-v2-font-mono, 'IBM Plex Mono', monospace); color: var(--gl-v2-primary); font-variant-numeric: tabular-nums; }
+.gl-v2-navitem .n { flex: 1; min-width: 0; font: 500 13px var(--gl-v2-font-sans); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-navitem.is-active .n { color: var(--gl-v2-primary); font-weight: 600; }
+.gl-v2-navitem .c { flex: none; font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); font-variant-numeric: tabular-nums; }
+
+/* ── Hulpcomponenten (consolidatie 26/10/2026) ──
+   .gl-v2-stack: tekstkolom (titel + subregel) die de rest van de rij vult; .is-tight = gap 1px, .is-loose = gap 3px, .is-flat = geen gap.
+   .gl-v2-formscroll: scrollende kolom van een formulierpagina (gap 16px; .is-tight = 14px). ── */
+.gl-v2-stack { display: flex; flex-direction: column; flex: 1; gap: 2px; min-width: 0; }
+.gl-v2-stack.is-tight { gap: 1px; }
+.gl-v2-stack.is-loose { gap: 3px; }
+.gl-v2-stack.is-flat { gap: 0; }
+.gl-v2-formscroll { display: flex; flex-direction: column; flex: 1; gap: 16px; min-height: 0; overflow-y: auto; padding-bottom: 20px; }
+.gl-v2-formscroll.is-tight { gap: 14px; }

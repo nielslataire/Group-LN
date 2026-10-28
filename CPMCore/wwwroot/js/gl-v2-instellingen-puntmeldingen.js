@@ -2,8 +2,8 @@
 // samenvatting in gewone taal, de eerstvolgende herinneringen en de prioriteitsladder.
 (function () {
     "use strict";
-    function $(id) { return document.getElementById(id); }
-    function toast(tone, title, body) { if (window.GlV2Toast) window.GlV2Toast.show({ tone: tone, title: title, body: body || "" }); }
+    var $ = window.GlV2.byId; // gedeeld (gl-v2-shell.js)
+    var toast = (window.GlV2Toast && window.GlV2Toast.notify) || function () {}; // gedeeld, zie gl-v2-shell.js
     var DAGEN = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
     var MAANDEN = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
 
@@ -36,7 +36,8 @@
         if (filter) filter.addEventListener("click", function (e) {
             var b = e.target.closest("[data-f]"); if (!b) return;
             this.querySelectorAll("button").forEach(function (x) { var on = x === b; x.classList.toggle("is-active", on); x.setAttribute("aria-pressed", on ? "true" : "false"); });
-            root.querySelectorAll("[data-run]").forEach(function (r) { r.hidden = !!b.dataset.f && r.dataset.st !== b.dataset.f; });
+            root.querySelectorAll("[data-run]").forEach(function (r) { r.toggleAttribute("data-out", !!b.dataset.f && r.dataset.st !== b.dataset.f); });
+            root.querySelectorAll("[data-gl-pager]").forEach(function (box) { box.dispatchEvent(new Event("glpager:refresh")); });
         });
     }
 

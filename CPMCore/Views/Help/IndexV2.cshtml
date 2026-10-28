@@ -108,7 +108,7 @@
                 {
                     <a class="gl-v2-help-list-row" href="@Url.Action("Artikel", "Help", new { slug = s.ArticleSlug })">
                         <span class="gl-v2-help-list-num @(s.Highlighted ? "is-highlighted" : "")">@s.Number</span>
-                        <span class="gl-v2-help-list-text">
+                        <span class="gl-v2-stack is-tight gl-v2-help-list-text">
                             <span class="gl-v2-help-list-title">@s.Title</span>
                             <span class="gl-v2-help-list-desc">@s.Description</span>
                         </span>
@@ -131,7 +131,7 @@
                 {
                     <a class="gl-v2-help-list-row" href="@Url.Action("Artikel", "Help", new { slug = n.ArticleSlug })">
                         <span class="gl-v2-badge @(n.IsNew ? "is-solid" : "is-neutral") gl-v2-help-news-tag">@n.Tag</span>
-                        <span class="gl-v2-help-list-text">
+                        <span class="gl-v2-stack is-tight gl-v2-help-list-text">
                             <span class="gl-v2-help-list-title">@n.Title</span>
                         </span>
                         <span class="gl-v2-help-list-meta">@n.Date</span>

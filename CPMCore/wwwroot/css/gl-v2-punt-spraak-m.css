@@ -63,7 +63,7 @@
 .gl-v2-ptv-cb svg { width: 13px; height: 13px; fill: none; stroke: transparent; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .gl-v2-ptv-cb.is-on { background: #00532D; border-color: #00532D; }
 .gl-v2-ptv-cb.is-on svg { stroke: #fff; }
-.gl-v2-ptv-cb.sm { width: 22px; height: 22px; border-radius: 6px; }
+.gl-v2-ptv-cb.sm { width: 22px; height: 22px; border-radius: var(--gl-v2-radius-xs, 6px); }
 .gl-v2-ptv-sub { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); padding-left: 28px; }
 .gl-v2-ptv-sub.is-note { color: var(--gl-v2-warning); font-weight: 600; }
 .gl-v2-ptv-att { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; padding-left: 28px; font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
@@ -80,11 +80,10 @@
 .gl-v2-ptv-seg button.is-on { border: 1.5px solid #00532D; color: #00532D; }
 .gl-v2-ptv-row { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; background: #fff; border-radius: 12px; }
 .gl-v2-ptv-row.is-off { opacity: .65; }
-.gl-v2-ptv-thumb { flex: none; width: 52px; height: 52px; border: 0; border-radius: 8px; background: repeating-linear-gradient(135deg, #E3E9DF 0 6px, #EDF1EA 6px 12px) center / cover; color: #5a6b58; font-size: 18px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; position: relative; }
+.gl-v2-ptv-thumb { flex: none; width: 52px; height: 52px; border: 0; border-radius: var(--gl-v2-radius-sm, 8px); background: repeating-linear-gradient(135deg, #E3E9DF 0 6px, #EDF1EA 6px 12px) center / cover; color: #5a6b58; font-size: 18px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; position: relative; }
 .gl-v2-ptv-thumb.has-img { background-size: cover; background-position: center; color: #fff; }
-.gl-v2-ptv-thumb.has-img::after { content: ""; position: absolute; inset: 0; border-radius: 8px; background: rgba(0, 0, 0, .28); }
+.gl-v2-ptv-thumb.has-img::after { content: ""; position: absolute; inset: 0; border-radius: var(--gl-v2-radius-sm, 8px); background: rgba(0, 0, 0, .28); }
 .gl-v2-ptv-thumb i { position: relative; z-index: 1; }
-.gl-v2-ptv-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .gl-v2-ptv-row-main b { font: 600 13px/1.3 var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
 .gl-v2-ptv-row-main small { font: 450 11px var(--gl-v2-font-sans); color: #7a8a78; }
 .gl-v2-ptv-who { font: 600 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
@@ -135,7 +134,7 @@
 .gl-v2-ptrg-circle b { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; box-sizing: border-box; border-radius: 10px; background: #00A35C; font: 700 11px/20px var(--gl-v2-font-sans); text-align: center; }
 .gl-v2-ptrg-circle b[hidden] { display: none; }
 .gl-v2-ptrg-stop { width: 76px; height: 76px; border-radius: 38px; border: 4px solid #fff; background: transparent; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
-.gl-v2-ptrg-stop span { width: 30px; height: 30px; border-radius: 6px; background: #E05A4A; }
+.gl-v2-ptrg-stop span { width: 30px; height: 30px; border-radius: var(--gl-v2-radius-xs, 6px); background: #E05A4A; }
 
 /* 41d stap 3: kaart op de lijst terwijl een rondgang verwerkt wordt */
 .gl-v2-ptrg-banner { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; padding: 12px 14px; border-radius: 12px; background: #fff; box-shadow: 0 0 0 1.5px #00532D; }

@@ -342,6 +342,7 @@ namespace CPMCore.Controllers
             var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", vm.ProjectName) { Parent = projectenIndex, RouteValues = new { projectid = projectid } };
             ViewData["BreadcrumbNode"] = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode(nameof(InvoicingV2), "Projecten", "Facturatie") { Parent = projectDetail, RouteValues = new { projectid = projectid } };
 
+            ViewData["HelpScreenId"] = "projecten-facturatie";
             return View(vm);
         }
 

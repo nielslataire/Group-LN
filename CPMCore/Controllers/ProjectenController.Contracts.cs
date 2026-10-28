@@ -1415,6 +1415,7 @@ namespace CPMCore.Controllers
                 AddMessage("error", firstError ?? "Controleer de ingevulde gegevens.", "Validatiefout");
                 SetPageHeader("bx bx-building-house", $"{(string.IsNullOrWhiteSpace(model.ProjectName) ? _projectService.GetProjectNameById(projectId) : model.ProjectName)} - Contract toevoegen");
                 PopulateAddContractLookups(model);
+                ViewData["HelpScreenId"] = "projecten-leverancier-toevoegen";
                 return View(ViewData["UseGlV2Layout"] as bool? == true ? "AddContractV2" : "AddContract", model);
             }
 
@@ -1426,6 +1427,7 @@ namespace CPMCore.Controllers
                     AddMessage("error", "Het waarborgdocument kon niet naar de storage geüpload worden.", "Fout!");
                     SetPageHeader("bx bx-building-house", $"{(string.IsNullOrWhiteSpace(model.ProjectName) ? _projectService.GetProjectNameById(projectId) : model.ProjectName)} - Contract toevoegen");
                     PopulateAddContractLookups(model);
+                    ViewData["HelpScreenId"] = "projecten-leverancier-toevoegen";
                     return View(ViewData["UseGlV2Layout"] as bool? == true ? "AddContractV2" : "AddContract", model);
                 }
                 model.Contract.GuaranteeDocFilename = storedName;
@@ -1476,6 +1478,7 @@ namespace CPMCore.Controllers
                 AddMessage("error", serviceError, "Fout!");
                 SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Contract toevoegen");
                 PopulateAddContractLookups(model);
+                ViewData["HelpScreenId"] = "projecten-leverancier-toevoegen";
                 return View(ViewData["UseGlV2Layout"] as bool? == true ? "AddContractV2" : "AddContract", model);
             }
         }
@@ -1630,6 +1633,7 @@ namespace CPMCore.Controllers
                 AddMessage("error", firstError ?? "Controleer de ingevulde gegevens.", "Validatiefout");
                 SetPageHeader("bx bx-building-house", $"{(string.IsNullOrWhiteSpace(model.ProjectName) ? _projectService.GetProjectNameById(projectId) : model.ProjectName)} - Contract bewerken");
                 PopulateAddContractLookups(model);
+                ViewData["HelpScreenId"] = "projecten-leverancier-toevoegen";
                 return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditContractV2" : "EditContract", model);
             }
 
@@ -1655,6 +1659,7 @@ namespace CPMCore.Controllers
                     AddMessage("error", "Het waarborgdocument kon niet naar de storage geüpload worden.", "Fout!");
                     SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Contract bewerken");
                     PopulateAddContractLookups(model);
+                    ViewData["HelpScreenId"] = "projecten-leverancier-toevoegen";
                     return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditContractV2" : "EditContract", model);
                 }
                 model.Contract.GuaranteeDocFilename = storedName;
@@ -1692,6 +1697,7 @@ namespace CPMCore.Controllers
             AddMessage("error", "Het contract is NIET bijgewerkt voor project " + model.ProjectName, "Fout!");
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Contract bewerken");
             PopulateAddContractLookups(model);
+            ViewData["HelpScreenId"] = "projecten-leverancier-toevoegen";
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditContractV2" : "EditContract", model);
         }
         [HttpGet]

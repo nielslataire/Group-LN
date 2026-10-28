@@ -59,13 +59,13 @@
 .gl-v2 .gl-v2-dropzone.is-mode-list { padding-bottom: 0; }
 .gl-v2 .gl-v2-dropzone-list { position: relative; z-index: 2; display: flex; flex-direction: column; gap: 8px; padding: 0 12px 12px; }
 .gl-v2 .gl-v2-dropzone-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--gl-v2-hairline, rgba(44, 59, 42, .12)); border-radius: var(--gl-v2-radius-sm, 8px); background: var(--gl-v2-surface, #fff); flex-wrap: wrap; }
-.gl-v2 .gl-v2-dropzone-type { flex: none; width: 34px; height: 34px; border-radius: 8px; background: var(--gl-v2-danger-tint, #F6E3DE); color: var(--gl-v2-danger, #A2432F); display: flex; align-items: center; justify-content: center; font: 700 9.5px var(--gl-v2-font-sans); letter-spacing: .05em; }
+.gl-v2 .gl-v2-dropzone-type { flex: none; width: 34px; height: 34px; border-radius: var(--gl-v2-radius-sm, 8px); background: var(--gl-v2-danger-tint, #F6E3DE); color: var(--gl-v2-danger, #A2432F); display: flex; align-items: center; justify-content: center; font: 700 9.5px var(--gl-v2-font-sans); letter-spacing: .05em; }
 .gl-v2 .gl-v2-dropzone-item-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
 .gl-v2 .gl-v2-dropzone-item-text b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gl-v2 .gl-v2-dropzone-item-text small, .gl-v2 .gl-v2-dropzone-item-meta { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 .gl-v2 .gl-v2-dropzone-item-name { flex: 1 1 200px; min-width: 0; }
 .gl-v2 .gl-v2-dropzone-item-meta { flex: 0 0 100%; margin: -4px 0 0 46px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gl-v2 .gl-v2-dropzone-thumb { flex: none; width: 44px; height: 44px; border-radius: 8px; overflow: hidden; background: var(--gl-v2-bg, #F2F5EF); display: flex; align-items: center; justify-content: center; }
+.gl-v2 .gl-v2-dropzone-thumb { flex: none; width: 44px; height: 44px; border-radius: var(--gl-v2-radius-sm, 8px); overflow: hidden; background: var(--gl-v2-bg, #F2F5EF); display: flex; align-items: center; justify-content: center; }
 .gl-v2 .gl-v2-dropzone-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .gl-v2 .gl-v2-dropzone-file .gl-v2-dropzone-thumb + i { display: none; }
 
@@ -76,7 +76,7 @@
 .gl-v2 .gl-v2-dropzone.is-uploading .gl-v2-dropzone-input { display: none; }
 
 /* camera: enkel op toestellen zonder muis (tablet en gsm) */
-.gl-v2 .gl-v2-dropzone-camera { display: none; position: relative; z-index: 2; margin: 0 14px 12px; height: 36px; padding: 0 14px; border: 1px solid var(--gl-v2-primary); border-radius: 8px; background: var(--gl-v2-surface, #fff); color: var(--gl-v2-primary); font: 600 12.5px var(--gl-v2-font-sans); cursor: pointer; align-items: center; justify-content: center; gap: 8px; }
+.gl-v2 .gl-v2-dropzone-camera { display: none; position: relative; z-index: 2; margin: 0 14px 12px; height: 36px; padding: 0 14px; border: 1px solid var(--gl-v2-primary); border-radius: var(--gl-v2-radius-sm, 8px); background: var(--gl-v2-surface, #fff); color: var(--gl-v2-primary); font: 600 12.5px var(--gl-v2-font-sans); cursor: pointer; align-items: center; justify-content: center; gap: 8px; }
 .gl-v2 .gl-v2-dropzone-camera:hover { background: var(--gl-v2-hover-tint, #F2F5EF); }
 @media (hover: none) and (pointer: coarse) { .gl-v2 .gl-v2-dropzone-camera { display: inline-flex; } }
 

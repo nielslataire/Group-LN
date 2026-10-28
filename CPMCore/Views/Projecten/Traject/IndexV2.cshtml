@@ -367,7 +367,6 @@ else
                                 var wie = TrajectWeergave.Verantwoordelijke(m, Model);
                                 var streef = TrajectWeergave.Streef(m);
                                 var hasTrigger = Model.TriggersPerMijlpaal.ContainsKey(m.Id);
-                                var rowMenu = "gl-v2-tr-tmenu-" + m.Id;
                                 <tr class="gl-v2-tr-trow @(soort == "late" ? "is-late" : "")" data-ms-id="@m.Id" data-soort="@soort" data-fase-id="@(m.ProjecttrajectFaseId ?? 0)"
                                     data-naam="@m.Naam.ToLowerInvariant()" data-wie="@wie.Naam.ToLowerInvariant()"
                                     data-sort-naam="@m.Naam.ToLowerInvariant()" data-sort-fase="@((m.ProjecttrajectFase?.Volgorde ?? 0).ToString("D4"))" data-sort-type="@TrajectWeergave.TypeNaam(m.MijlpaalType).ToLowerInvariant()"
@@ -401,15 +400,16 @@ else
                                     <td class="gl-v2-tr-col-act">
                                         @if (Model.CanWrite)
                                         {
-                                            <button type="button" class="gl-v2-icon-btn js-tr-edit" data-ms-id="@m.Id" aria-label="Bewerk @m.Naam" title="Bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>
-                                            <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="@rowMenu" aria-label="Meer acties voor @m.Naam"><i class="ph ph-dots-three" aria-hidden="true"></i></button>
-                                            <div class="gl-v2-menu" id="@rowMenu">
-                                                <button type="button" class="gl-v2-menu-item js-tr-edit" data-ms-id="@m.Id"><i class="ph ph-pencil-simple" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Bewerken</span></span></button>
-                                                @if (Model.CanDelete)
-                                                {
-                                                    <button type="button" class="gl-v2-menu-item is-danger js-tr-delete" data-ms-id="@m.Id" data-naam="@m.Naam"><i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Verwijderen</span></span></button>
-                                                }
-                                            </div>
+                                            <span class="gl-v2-rowact">
+                                                <i class="ph ph-caret-right gl-v2-rowact-chev" aria-hidden="true"></i>
+                                                <span class="gl-v2-rowact-btns">
+                                                    <button type="button" class="gl-v2-icon-btn js-tr-edit" data-ms-id="@m.Id" aria-label="Bewerk @m.Naam" title="Bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>
+                                                    @if (Model.CanDelete)
+                                                    {
+                                                        <button type="button" class="gl-v2-icon-btn is-danger js-tr-delete" data-ms-id="@m.Id" data-naam="@m.Naam" aria-label="Verwijder @m.Naam" title="Verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+                                                    }
+                                                </span>
+                                            </span>
                                         }
                                     </td>
                                 </tr>

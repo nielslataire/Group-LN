@@ -5,8 +5,8 @@
     var form = document.getElementById("vc-form");
     if (!form) return;
     var token = (form.querySelector('input[name="__RequestVerificationToken"]') || {}).value || "";
-    function $(id) { return document.getElementById(id); }
-    function toast(tone, title, body) { if (window.GlV2Toast) window.GlV2Toast.show({ tone: tone, title: title, body: body || "" }); }
+    var $ = window.GlV2.byId; // gedeeld (gl-v2-shell.js)
+    var toast = (window.GlV2Toast && window.GlV2Toast.notify) || function () {}; // gedeeld, zie gl-v2-shell.js
     var canWrite = !$("vc-titel").disabled;
 
     // ── Lange beschrijving (Quill) ──

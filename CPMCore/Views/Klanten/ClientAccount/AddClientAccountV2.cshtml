@@ -462,7 +462,7 @@
                                                 data-unit-id="@u.Id" data-unit-name="@u.Name" data-unit-group="@u.Group"
                                                 data-search="@((u.Name + " " + u.Sub).ToLowerInvariant())" @(inAccount ? "hidden" : "")>
                                             <span class="gl-v2-kd-upk-icon"><i class="ph ph-buildings" aria-hidden="true"></i></span>
-                                            <span class="gl-v2-kd-upk-text">
+                                            <span class="gl-v2-stack is-tight gl-v2-kd-upk-text">
                                                 <span class="gl-v2-kd-upk-name">@u.Name</span>
                                                 <span class="gl-v2-kd-upk-sub">@u.Sub@(u.Price > 0 ? " · " + u.Price.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("nl-BE")) : "")</span>
                                             </span>
@@ -477,7 +477,7 @@
                                         {
                                             <div class="gl-v2-kd-upk-option is-disabled" role="option" aria-disabled="true" aria-selected="false" data-search="@((u.Name + " " + (u.Reason ?? "")).ToLowerInvariant())">
                                                 <span class="gl-v2-kd-upk-icon"><i class="ph ph-buildings" aria-hidden="true"></i></span>
-                                                <span class="gl-v2-kd-upk-text">
+                                                <span class="gl-v2-stack is-tight gl-v2-kd-upk-text">
                                                     <span class="gl-v2-kd-upk-name">@u.Name</span>
                                                     <span class="gl-v2-kd-upk-sub">@(u.Reason ?? "")@(u.StatusLabel == "IN OPTIE" ? " · in optie" : "")</span>
                                                 </span>

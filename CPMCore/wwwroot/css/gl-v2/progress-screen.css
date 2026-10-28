@@ -13,7 +13,7 @@
 .gl-v2-vsprep__bar { position: relative; width: 100%; height: 6px; border-radius: 3px; background: #E2ECDA; overflow: hidden; }
 .gl-v2-vsprep__bar i { position: absolute; top: 0; bottom: 0; left: 0; width: 40%; border-radius: 3px; background: var(--gl-v2-primary); animation: vl-bar 1.6s ease-in-out infinite; }
 .gl-v2-vsprep__steps { width: 100%; display: flex; flex-direction: column; gap: 2px; padding: 8px; background: var(--gl-v2-surface); border-radius: 12px; box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 16px 34px -28px rgba(44, 59, 42, .42); }
-.gl-v2-vsprep__step { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; column-gap: 12px; min-height: 40px; padding: 6px 10px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--gl-v2-ink); }
+.gl-v2-vsprep__step { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; column-gap: 12px; min-height: 40px; padding: 6px 10px; border-radius: var(--gl-v2-radius-sm, 8px); font-size: 13px; font-weight: 500; color: var(--gl-v2-ink); }
 .gl-v2-vsprep__step.is-act { background: #F2F5EF; font-weight: 600; }
 .gl-v2-vsprep__step.is-todo { color: var(--gl-v2-muted-light); }
 .gl-v2-vsprep__step > b { flex: 1; font-weight: inherit; }
@@ -31,7 +31,7 @@
 
 /* kunst: bladen met scanlijn */
 .gl-v2-vsprep__float { position: relative; width: 260px; height: 200px; animation: vl-float 3.2s ease-in-out infinite; }
-.gl-v2-vsprep__sheet { position: absolute; width: 132px; height: 172px; background: #fff; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 6px rgba(44, 59, 42, .12), 0 24px 40px -22px rgba(44, 59, 42, .5); }
+.gl-v2-vsprep__sheet { position: absolute; width: 132px; height: 172px; background: #fff; border-radius: var(--gl-v2-radius-xs, 6px); overflow: hidden; box-shadow: 0 2px 6px rgba(44, 59, 42, .12), 0 24px 40px -22px rgba(44, 59, 42, .5); }
 .gl-v2-vsprep__sheet.back { left: 78px; top: 22px; transform: rotate(6deg); opacity: .6; }
 .gl-v2-vsprep__sheet.front { left: 62px; top: 14px; }
 .gl-v2-vsprep__sheet span { position: absolute; display: block; }

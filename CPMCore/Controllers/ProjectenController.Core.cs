@@ -177,6 +177,7 @@ namespace CPMCore.Controllers
             ViewData["SubTitle"] = "Alle projecten";
             ViewData["SubTitleText"] = "Overzicht van alle projecten binnen CPM.";
 
+            ViewData["HelpScreenId"] = "projecten-algemeen";
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "IndexV2" : "Index", model);
         }
 
@@ -372,6 +373,7 @@ namespace CPMCore.Controllers
             FillInAddSelectLists(model);
             FillInAvailableUsers(model);
             model.Users = GetOrderedUsers();
+            ViewData["HelpScreenId"] = "projecten-toevoegen";
             SetToevoegenBreadcrumbV2();
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "ToevoegenV2" : "Toevoegen", model);
         }
@@ -751,6 +753,7 @@ namespace CPMCore.Controllers
                 SetPageHeader("bx bx-building-house", $"Project - {model.Project.Name}");
                 FillInAddSelectListsDetailEdit(model);
                 FillInAvailableUsers(model);
+                ViewData["HelpScreenId"] = "projecten-bewerken";
                 model.Users = GetOrderedUsers();
                 SetEditBreadcrumbV2(model);
                 return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditV2" : "Edit", model);
@@ -838,6 +841,7 @@ namespace CPMCore.Controllers
 
             FillInAddSelectListsDetailEdit(model);
             FillInAvailableUsers(model);
+            ViewData["HelpScreenId"] = "projecten-bewerken";
             model.Users = GetOrderedUsers();
             SetEditBreadcrumbV2(model);
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditV2" : "Edit", model);

@@ -7,6 +7,7 @@ role: Projectleider
 device: Desktop · tablet
 minutes: 4
 updated: 2026-10-12
+screens: projecten-grondaandelen
 synonyms: grondaandelen, aandeel basisakte, basisakte, verdelen op oppervlakte, notaris, verkoopakte
 description: het totaal instellen, per eenheid invullen en controleren
 related: project-status-planning, project-bedrijven-werfmelding

@@ -67,7 +67,7 @@
                                 data-land-value="@candidate.LandValue.ToString("#,##0.00", be)"
                                 data-build-value="@candidate.ConstructionValue.ToString("0.##", CultureInfo.InvariantCulture)">
                             <span class="gl-v2-du-picker-icon"><i class="ph ph-package" aria-hidden="true"></i></span>
-                            <span class="gl-v2-du-picker-text">
+                            <span class="gl-v2-stack is-tight gl-v2-du-picker-text">
                                 <span class="gl-v2-du-picker-name">@candidate.Name</span>
                                 <span class="gl-v2-du-picker-sub">@candidate.TypeLine</span>
                             </span>
@@ -90,7 +90,7 @@
                     {
                         <div class="gl-v2-du-picker-option is-disabled" role="option" aria-disabled="true" aria-selected="false">
                             <span class="gl-v2-du-picker-icon"><i class="ph ph-package" aria-hidden="true"></i></span>
-                            <span class="gl-v2-du-picker-text">
+                            <span class="gl-v2-stack is-tight gl-v2-du-picker-text">
                                 <span class="gl-v2-du-picker-name">@candidate.Name</span>
                                 <span class="gl-v2-du-picker-sub">bij @candidate.AttachedToName</span>
                             </span>

@@ -26,14 +26,13 @@
 
 /* ── Kop en rijen (tabelkop volgens het Facturen-recept: wit, primair-groen 11px, hairline) ── */
 .gl-v2-bwi-head, .gl-v2-bwi-row { display: grid; gap: 10px; align-items: center; padding: 0 20px; }
-.gl-v2-bwi-head { height: 36px; background: var(--gl-v2-surface); font: 600 11px var(--gl-v2-font-sans); letter-spacing: .04em; color: var(--gl-v2-primary); text-transform: uppercase; border-bottom: 1px solid var(--gl-v2-hairline); }
 .gl-v2-bwi-row { min-height: 46px; padding-top: 4px; padding-bottom: 4px; border-top: 1px solid var(--gl-v2-hairline-soft); }
 .gl-v2-bwi-year-body > .gl-v2-bwi-row:first-child { border-top: 0; }
-.gl-v2-bwi-row:hover { background: #FAFBF8; }
+.gl-v2-bwi-row:hover, .gl-v2-bwi-row:focus-within { background: var(--gl-v2-hover-tint); }
 .gl-v2-bwi-row.is-geldend { background: var(--gl-v2-primary-tint); box-shadow: inset 3px 0 0 var(--gl-v2-primary); }
 .gl-v2-bwi-row[hidden] { display: none; }
-.gl-v2-bwi-grid--s { grid-template-columns: minmax(0, 1fr) 130px 150px 110px 130px 120px 56px; }
-.gl-v2-bwi-grid--a { grid-template-columns: 110px 160px 130px minmax(0, 1fr) 120px 64px; }
+.gl-v2-bwi-grid--s { grid-template-columns: minmax(0, 1fr) 130px 150px 110px 130px 120px 112px; }
+.gl-v2-bwi-grid--a { grid-template-columns: 110px 160px 130px minmax(0, 1fr) 120px 112px; }
 .gl-v2-bwi-grid--m { grid-template-columns: 70px repeat(12, minmax(0, 1fr)) 84px; gap: 4px; }
 .gl-v2-bwi .is-right { text-align: right; }
 .gl-v2-bwi-strong { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); min-width: 0; text-transform: capitalize; }
@@ -43,13 +42,13 @@
 .gl-v2-bwi-num { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .gl-v2-bwi-delta { font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .gl-v2-bwi-delta.is-jump { color: var(--gl-v2-warning); font-weight: 600; }   /* sprong van ≥ 5 % t.o.v. de vorige waarde valt meteen op */
-.gl-v2-bwi-actions { display: flex; justify-content: flex-end; gap: 2px; }
+.gl-v2-bwi-actions { display: flex; justify-content: flex-end; gap: 2px; padding: 0; }
 .gl-v2-bwi-hint { font: 450 11px var(--gl-v2-font-sans); color: #7a8a78; }
 .gl-v2-bwi-optioneel { font-weight: 450; letter-spacing: 0; color: #7a8a78; text-transform: none; }
 
 /* Rij-acties (inline bewerken): het gedocumenteerde recept — 26×26 bare, primair = opslaan */
 .gl-v2-bwi .gl-v2-row-action {
-    display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 7px;
+    display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: var(--gl-v2-radius-s, 7px);
     border: 1px solid transparent; background: transparent; color: var(--gl-v2-muted); padding: 0; cursor: pointer;
     transition: background-color .12s ease, border-color .12s ease, color .12s ease;
 }
@@ -86,7 +85,7 @@
 .gl-v2-bwi-matrix .gl-v2-bwi-row { min-height: 42px; }
 .gl-v2-bwi-matrix .gl-v2-bwi-row:hover { background: transparent; }
 .gl-v2-bwi-mcell {
-    height: 32px; border: 1px solid transparent; border-radius: 7px; background: transparent; padding: 0 6px; cursor: pointer; position: relative;
+    height: 32px; border: 1px solid transparent; border-radius: var(--gl-v2-radius-s, 7px); background: transparent; padding: 0 6px; cursor: pointer; position: relative;
     font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap;
     transition: background-color .12s ease, border-color .12s ease;
 }
@@ -100,9 +99,6 @@ button.gl-v2-bwi-mcell.is-empty { cursor: pointer; }
 .gl-v2-bwi-gem { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); text-align: right; font-variant-numeric: tabular-nums; padding-right: 6px; }
 
 /* Lege staat en voet */
-.gl-v2-bwi-empty { padding: 36px 20px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; border-top: 1px solid var(--gl-v2-hairline-soft); }
-.gl-v2-bwi-empty .t { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
-.gl-v2-bwi-empty .s { font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 .gl-v2-bwi-foot { padding: 12px 20px 16px; border-top: 1px solid var(--gl-v2-hairline-soft); }
 
 /* Modal: foutregel en de extra acties links in de voet (enkel bij bewerken) */
@@ -125,12 +121,12 @@ button.gl-v2-bwi-mcell.is-empty { cursor: pointer; }
     .gl-v2-bwi-kpis.is-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .gl-v2-bwi-kpis.is-4 .gl-v2-bwi-kpi:nth-child(2) { border-right: 0; }
     .gl-v2-bwi-kpis.is-4 .gl-v2-bwi-kpi:nth-child(n+3) { border-top: 1px solid var(--gl-v2-hairline-soft); }
-    .gl-v2-bwi-grid--s { grid-template-columns: minmax(0, 1fr) 140px 100px 120px 48px; }
+    .gl-v2-bwi-grid--s { grid-template-columns: minmax(0, 1fr) 140px 100px 120px 112px; }
     .gl-v2-bwi-grid--s > :nth-child(2), .gl-v2-bwi-grid--s > :nth-child(5) { display: none; }
-    .gl-v2-bwi-grid--a { grid-template-columns: 90px 140px 120px 110px 56px; }
+    .gl-v2-bwi-grid--a { grid-template-columns: 90px 140px 120px 110px 112px; }
     .gl-v2-bwi-grid--a:not(.is-edit) > :nth-child(4) { display: none; }
-    .gl-v2-bwi-grid--a:not(.is-edit) { grid-template-columns: 90px 140px 120px 110px 56px; }
-    .gl-v2-bwi-grid--a.is-edit { grid-template-columns: 90px 140px 120px minmax(0, 1fr) 56px; }
+    .gl-v2-bwi-grid--a:not(.is-edit) { grid-template-columns: 90px 140px 120px 110px 112px; }
+    .gl-v2-bwi-grid--a.is-edit { grid-template-columns: 90px 140px 120px minmax(0, 1fr) 112px; }
     .gl-v2-bwi-grid--a.is-edit > :nth-child(5) { display: none; }
     .gl-v2-bwi-year-head, .gl-v2-bwi-head, .gl-v2-bwi-row { padding-left: 16px; padding-right: 16px; }
 }
@@ -142,9 +138,9 @@ button.gl-v2-bwi-mcell.is-empty { cursor: pointer; }
     .gl-v2-bwi-kpi { padding: 12px 14px; }
     .gl-v2-bwi-kpi .val { font-size: 20px; }
     .gl-v2-bwi-card-actions { width: 100%; margin-left: 0; justify-content: flex-start; }
-    .gl-v2-bwi-grid--s { grid-template-columns: minmax(0, 1fr) 110px 96px 44px; }
+    .gl-v2-bwi-grid--s { grid-template-columns: minmax(0, 1fr) 84px 76px 112px; }
     .gl-v2-bwi-grid--s > :nth-child(4) { display: none; }
-    .gl-v2-bwi-grid--a:not(.is-edit) { grid-template-columns: 70px minmax(0, 1fr) 96px 44px; }
+    .gl-v2-bwi-grid--a:not(.is-edit) { grid-template-columns: 70px minmax(0, 1fr) 76px 112px; }
     .gl-v2-bwi-grid--a:not(.is-edit) > :nth-child(3), .gl-v2-bwi-grid--a:not(.is-edit) > :nth-child(4) { display: none; }
     .gl-v2-bwi-grid--a.is-edit { grid-template-columns: 70px minmax(0, 1fr) auto; row-gap: 8px; padding-top: 10px; padding-bottom: 10px; }
     .gl-v2-bwi-grid--a.is-edit > :nth-child(3), .gl-v2-bwi-grid--a.is-edit > :nth-child(5) { display: none; }

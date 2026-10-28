@@ -26,7 +26,7 @@
         }
         else
         {
-            <span class="gl-v2-inv-check">
+            <span class="gl-v2-check">
                 @if (row.IsStage)
                 {
                     <input type="checkbox" class="js-inv-post js-inv-stage" id="gl-v2-inv-stage-@row.StageId-@row.UnitId" data-account-id="@account.ClientAccountId" data-unit-id="@row.UnitId" data-stage-id="@row.StageId" data-amount="@Inv(row.Amount)" data-last-stage="@(row.IsLastStage ? "true" : "false")" aria-label="@row.Description selecteren" />

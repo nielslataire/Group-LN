@@ -96,7 +96,7 @@ Nog steeds: niets gecommit op branch `layout-experiment`; migraties 078 en 080 u
 2. App herstarten/rebuilden en de flow doorlopen met de gl-v2-cookie: overzicht → stap 1…9 → Afronden / Definitief → Niet-definitief.
 
 **Wat gebouwd is (deel 5 + opvolging):** volledige budgetflow in gl-v2 (overzicht + 9 stappen), versiestatus Concept/Afgerond/Definitief, hernoemen van budget/versie,
-"Laatst gewijzigd" (`GewijzigdOp`) en bewaarde totale kostprijs (`TotaalKosten`, lui herberekend na elke wijziging), tabbar/meldingskaders/dropdowns volgens DESIGN.md,
+"Laatst gewijzigd" (`GewijzigdOp`) en bewaarde totale kostprijs (`TotaalKosten`, lui herberekend na elke wijziging), tabbar/meldingskaders/dropdowns volgens CPMCore/DESIGN.md,
 eigen bevestigingsmodal i.p.v. `confirm()` (budgetflow: `V2/_BwBevestigModal` + `GlV2Budget.bevestig`; Instellingen V2: `GlV2/_BevestigModal` met `data-bv-titel`).
 Projectbreed aangepast: dropdown-chevron blijft zichtbaar na keuze (`gl-v2/forms.css`), uitgeschakelde dropdown-stijl, combo `data-allow-new` nu expliciet "true"/"false",
 entranceanimatie met fill-mode `backwards` (anders knippen fixed dropdown-panelen af, zie memory).
@@ -109,12 +109,12 @@ entranceanimatie met fill-mode `backwards` (anders knippen fixed dropdown-panele
 - Overige Instellingen › Budget-pagina's (kostprijsmaterialen, formules, bouwindexen, kostprijs-update) en de klassieke pagina's gebruiken nog `confirm()`/`alert()`.
 - Placeholders tot de koppeling: tegels Gecontracteerd/Gefactureerd/Verwacht verschil op het overzicht.
 - Volgende grote stappen: koppeling budget ↔ contracten/facturen; budget-PDF/Excel (35h); nacalculatie van het lopende project (menu-item "Nacalculatie").
-- Werkwijze: DESIGN.md sectie "Budgetflow — design-handoff punt 39" beschrijft componenten, beweging en schermen.
+- Werkwijze: CPMCore/DESIGN.md sectie "Budgetflow — design-handoff punt 39" beschrijft componenten, beweging en schermen.
 
 ## Gedaan op 2026-10-09 (deel 6: meldingen per stap, design-handoff punt 39k)
 
 Geen nieuwe migratie. `BudgetControleService` berekent alle fouten/waarschuwingen/infomeldingen van de flow, de pagina's tonen ze als veld, rij, kader of label,
-het Stappenplan telt ze en fouten blokkeren Afronden. Zie DESIGN.md "Budgetflow — meldingen per stap, punt 39k" voor de volledige tabel. Niet browser-getest.
+het Stappenplan telt ze en fouten blokkeren Afronden. Zie CPMCore/DESIGN.md "Budgetflow — meldingen per stap, punt 39k" voor de volledige tabel. Niet browser-getest.
 - Stap 6 heeft nu een **opmerking** per activiteit (bewaard in `BudgetActivityLijnen.Omschrijving`, verschijnt zodra de correctie ≠ 100 % is).
 - Bewuste keuzes: "marge 5 % t.o.v. definitief" = meer dan 5 procentpunt onder de marge van het definitieve budget; "geen enkel daktype" = geen plat/hellend/groen-regel; negeren werkt per code.
 - Niet gebouwd: het infolabel "Marktprijs op …" (de marktdata heeft geen datum).
@@ -146,7 +146,7 @@ WaarschuwingenBevestigd). Niets browser-getest — de klassieke pagina's blijven
   stap 7 decennale 0 % (tenzij bevestigd), stap 8 vraagprijs onder minimum. Fouten blokkeren "definitief maken", waarschuwingen niet.
 - **Na eerste test (08/10)**: inner-menu-CSS + telefoonmenu op alle V2-pagina's; `v@(…)` Razor-fout in de versielijst; **hernoemen** van budget en versie vanuit het overzicht (potlood); **Laatst gewijzigd** is nu echt: kolom `BudgetVersie.GewijzigdOp` (**migratie `080_BudgetVersieGewijzigd.sql`**), bijgewerkt door `BudgetVersieVergrendeldFilter` na elke geslaagde schrijvende actie (voorheen toonde het de aanmaakdatum); overzicht krijgt `GlV2FullHeightBody`.
 - **Traagheid**: elke budgetpagina laadde het volledige project (14 includes incl. documenten en foto's) enkel voor de naam, en `BuildContextAsync` deed 2 indexqueries per materiaal (N+1, ook per versie in het overzicht). Nu `GetProjectNameById` en een per-request cache in `BouwIndexService`. Eerstvolgende kandidaten: het overzicht rekent per versie de volledige kostprijs uit; `BudgetActivityService.GetLotGroepenAsync` wordt meermaals per pagina uitgevoerd.
-- Documentatie: DESIGN.md "Budgetflow — design-handoff punt 39".
+- Documentatie: CPMCore/DESIGN.md "Budgetflow — design-handoff punt 39".
 
 ## Gedaan op 2026-10-08 (deel 4: beheerpagina's in gl-v2, design-handoff punt 38)
 
@@ -165,7 +165,7 @@ WaarschuwingenBevestigd). Niets browser-getest — de klassieke pagina's blijven
   Meerwerken klanten op Contracts/Recalculation. Snapshots van vóór 08/10 opnieuw maken. Op stap 6 staat de referentie
   geïndexeerd (peildatum → huidige index van de versie): daarom wijkt het bedrag daar af van de lijst in Instellingen.
 - **Correctie (09/10)**: eerder stond hier een "bug" over `type="number"` en de nl-BE-binder ("2150.5" → 21505). Dat klopt niet: `FlexibleDecimalModelBinder` kent geen duizendtalscheiding en valt terug op invariant, dus "2150.5" wordt 2150,5. De prijsvelden zijn wel tekstvelden met komma (consistent met de gl-v2-velden), maar dat was geen bugfix. Let wel: de binder rondt op 2 decimalen af (3-decimaal-velden gaan daarom via JSON).
-- Documentatie: DESIGN.md "Instellingen/Prijsreferenties verkoop en Referentieprojecten — punt 38".
+- Documentatie: CPMCore/DESIGN.md "Instellingen/Prijsreferenties verkoop en Referentieprojecten — punt 38".
 
 ## Gedaan op 2026-10-07 (deel 3: nacalculatie in stap 6)
 
@@ -321,7 +321,7 @@ daar nog niet; dat wordt een aparte kolom op Units als de verkoopmodule ze nodig
 - Grond in twee zones per woning (migratie 096): stap 2 heeft een kolom "Grond 2 m²" (BudgetOppervlaktes.GrondoppAgrarisch); Parameters › Verkoop heeft "Waarde 2e grondzone" (standaard 20 %) enkel voor de verdeling van de grondkost (gewicht = zone 1 + zone 2 × %); stap 8 heeft per woning een blok "Grond 2" met eigen €/m² (volgt anders zone 1 × %); Grondwaarde = zone 1, GrondwaardeAgrarisch = zone 2, vraagprijs = som. Nog niet in Excel/PDF en niet in de formule opp_grondopp.
 - Budgetten-overzicht (39a) bijgewerkt: definitief budget bovenaan op volle breedte (slotje, naam · versie · totaal, marge % en €, vastzet-regel, drie kengetallen, knoppen rechts); budgetkaarten met kolommen Versie/Naam/Datum/Status/Totaal/Marge; in Totaal staat "stap x van 9" zolang niet alle stappen doorlopen zijn; marge op kostprijs (resultaat / totale kostprijs) bij definitief, afgerond en concept dat stap 9 bereikte (geheugen-cache per versie en wijzigingstijdstip); lege gestreepte kaart "Nieuw budget"; "Maak actief" bestond al.
 - BUG opgelost 14/10/2026: de nieuwe percentagekolommen van BudgetParams (092-096) hadden in de DbContext geen kolomtype, waardoor EF ze als decimal(18,2) wegschreef: 2,5 % werd 3 %, 0,04 % werd 0 (en dus telkens de standaard). Nu decimal(9,6) in cpmRunningContext. Eerder opgeslagen afgeronde waarden moeten eenmalig opnieuw ingevuld worden.
-- 39a/39l/39m/39n (14/10/2026): topbar Vergelijken + Nieuw budget, modal Nieuw budget (startpunt, overnemen per stap, eenheden, index, meteen actief; `KopieerVersieInhoud` met stappen, eenheden uit het project), modal Vergelijken en de vergelijkingspagina (`BudgetVergelijkService`, Excel-export), help geschreven; zie DESIGN.md 'Update 14/10/2026'. Niet browser-getest, enkel statisch gerenderd met voorbeelddata.
+- 39a/39l/39m/39n (14/10/2026): topbar Vergelijken + Nieuw budget, modal Nieuw budget (startpunt, overnemen per stap, eenheden, index, meteen actief; `KopieerVersieInhoud` met stappen, eenheden uit het project), modal Vergelijken en de vergelijkingspagina (`BudgetVergelijkService`, Excel-export), help geschreven; zie CPMCore/DESIGN.md 'Update 14/10/2026'. Niet browser-getest, enkel statisch gerenderd met voorbeelddata.
 - 44d/44e/44f (14/10/2026): PDF intern/bank in stap 9 opent nu de volle pagina `BudgetPdfOpmaken` (view `BudgetPdfOpmakenV2`, JS `gl-v2-budget-pdf.js`, CSS hergebruikt `.gl-v2-vsprep` uit gl-v2-projecten-verslagen.css): hoofdstukken (tijdgestuurd), PDF opvragen via `DownloadBudgetPdfV2` (headers X-Pagina-Aantal / X-Bestandsnaam), opent in nieuw tabblad, klaar-pagina met Download PDF + Terug naar stap 9. Bank: "Financiering, onvoorzien, publiciteit" doorgestreept. NIET gebouwd: bewaren in Documenten › Budgetten. Niet browser-getest.
 - 14/10/2026: Vergelijken-modal: native selects (Basis, Vergelijken op) vervangen door GlV2 `_SelectList` (`setItems` voor Basis). Versie/budget verwijderen op BudgetIndexV2: `ProjectenController.BudgetVersieDelete` (rechtencheck `HasDelete(ProjectsDetail)`, nooit een definitieve versie, laatste versie neemt het budget mee, actief budget/huidige versie gaan over op een ander), knop + bevestigingsmodal; kindrijen via DB-cascade. Build enkel gecompileerd (kopie mislukt omdat de app draait), niet browser-getest.
 - 14/10/2026 (later): verwijdermodal = danger-bevestiging met body; PDF opmaken bewaart in Documenten › Budgetten (`BudgetPdfMaken` POST, migratie 099 `DocumentMapBudgetten`). Gecompileerd, niet getest.
@@ -341,7 +341,7 @@ Ook `bin/obj` van de lopende app blokkeert een build zolang de app draait: stop 
 - **Keuzelijsten:** Vergelijken-modal (Basis, Vergelijken op) nu `GlV2/_SelectList`; Nieuw-budgetmodal: lijsten/vinkjes buiten het radio-`<label>` gezet (lijst sloot meteen).
 - **Kopie:** aantal veluxen niet mee zonder "Dak & afbraak"; activiteitenlijnen zonder voorstel (hoeveelheid 0) zonder handmatige prijs worden op 0 gezet (`BudgetActivityService`, oorzaak: oude prijs bleef staan).
 - **Excel-export:** verkoopwaarde, verkoopkosten, netto opbrengst, resultaat + marge op kostprijs (zelfde cijfers als stap 9, via `VerkoopResultaat.Bereken`), tabblad Oppervlaktes met grond zone 1/2/totaal. Formule `opp_grondopp` = zone 1 + zone 2.
-- **Docs:** DESIGN.md (blokken "Update 14/10/2026 …"), help `budget-nieuw.md`, `budget-stap-resultaat.md`, `budgetten-vergelijken.md` met schermafbeeldingen in `wwwroot/img/help/budget/…`, HELPCENTRUM_VOORTGANG.md.
+- **Docs:** CPMCore/DESIGN.md (blokken "Update 14/10/2026 …"), help `budget-nieuw.md`, `budget-stap-resultaat.md`, `budgetten-vergelijken.md` met schermafbeeldingen in `wwwroot/img/help/budget/…`, CPMCore/HELPCENTRUM_VOORTGANG.md.
 
 ### Nog te doen
 1. **Excel-export testen** door Niels (stap 9 › Excel, budget met verkoop): kostenoverzicht en tabblad Oppervlaktes vergelijken met stap 9.
@@ -349,7 +349,7 @@ Ook `bin/obj` van de lopende app blokkeert een build zolang de app draait: stop 
 3. Browsertest van de rest van de nieuwe functies (Vergelijken/Nieuw budget/PDF-flow/verwijderen met en zonder verwijderrecht); alleen via Playwright-opnames gezien, nooit handmatig doorlopen.
 4. **Koppeling budget ↔ contracten/facturen/nacalculatie** (grootste openstaande brok): tegels Gecontracteerd/Gefactureerd/Verwacht verschil op de budgetindex zijn placeholders ("nog niet gekoppeld"). Eerst beslissen op welk niveau vergeleken wordt (per activiteit/lot); bijkomende nacalc-verbeteringen.
 5. Vastloper op de pagina Budgetactiviteiten (nooit gereproduceerd).
-6. Screenshot-recept: zie DESIGN.md "Schermafbeeldingen maken — herbruikbaar Playwright-recept"; script staat in de scratchpad van de sessie (niet in de repo): niet Escape drukken in een open modal, `waitUntil: 'load'` i.p.v. `networkidle`, radio's klikken via hun label.
+6. Screenshot-recept: zie CPMCore/DESIGN.md "Schermafbeeldingen maken — herbruikbaar Playwright-recept"; script staat in de scratchpad van de sessie (niet in de repo): niet Escape drukken in een open modal, `waitUntil: 'load'` i.p.v. `networkidle`, radio's klikken via hun label.
 - 16/10/2026: Excel-export via dezelfde volle opmaakpagina als de PDF (`BudgetExcelOpmaken`/`BudgetExcelMaken`, bewaard in Documenten; fouten worden zichtbaar met technische melding). Niets gecompileerd tegen de draaiende app; Excel nog te testen — als de oorzaak van 'doet niets' een serverfout was, staat die nu op de foutpagina.
 - 16/10/2026: koppeling budget ↔ contracten/facturen (stap 3): tegels op de budgetindex gevuld (enkel activiteiten; gecontracteerd = contract + bijbestellingen, gefactureerd = incl. meerwerk excl. meerwerk klant; verwacht verschil = begroot − max(contract, factuur) per activiteit, anders budget). Gecompileerd, niet getest. Nog te doen binnen dit thema: koppeling per activiteit/lot op stap 9 of een eigen overzicht, grond en andere posten (aparte bronnen).
 
@@ -401,7 +401,7 @@ Er komt bewust géén vergelijking per activiteit/lot op stap 9: een budget word
 
 **Wat ik daarna nog moet doen (Claude)**
 - Test via Playwright op versie 7 en herstel wat niet werkt (niet-definitief maken, daarna weer definitief zetten).
-- Documenteren: DESIGN.md (blok 39o + afwijkingen: goud i.p.v. rood, geen extra afronding, grond-/bouwwaarde-tegels weg), help `budget-stap-verkoop.md` herschrijven volgens `HELP_SCHRIJFGIDS.md` (afbeelding als eerste regel van een stap, `updated` en `newsTag`), nieuwe schermafbeeldingen van stap 8 (bestaande zijn van de oude layout), `HELPCENTRUM_VOORTGANG.md`.
+- Documenteren: CPMCore/DESIGN.md (blok 39o + afwijkingen: goud i.p.v. rood, geen extra afronding, grond-/bouwwaarde-tegels weg), help `budget-stap-verkoop.md` herschrijven volgens `CPMCore/HELP_SCHRIJFGIDS.md` (afbeelding als eerste regel van een stap, `updated` en `newsTag`), nieuwe schermafbeeldingen van stap 8 (bestaande zijn van de oude layout), `CPMCore/HELPCENTRUM_VOORTGANG.md`.
 - Controleren dat Excel/PDF/vergelijking niets gebruiken van de oude `bw-vk-*`-markup (CSS-klassen `bw-vk-*` blijven grotendeels ongebruikt in `gl-v2-budget.css`; opruimen kan later).
 
 **Overige open punten (ongewijzigd)**
@@ -409,4 +409,4 @@ Er komt bewust géén vergelijking per activiteit/lot op stap 9: een budget word
 - Niets is gecommit sinds de laatste push: stap 8, Excel-opmaakpagina, tegels, redenkader, financieringsgrid, enz. Commit en push vóór je op een andere pc verder gaat.
 - Projectresultaat (nacalculatie voor het volledige project) staat als idee onderaan dit bestand (3 vragen open).
 - 22/10/2026: stap 8 — wisselen tussen Code en Eigen (keuzelijst, chipje EIGEN, schakelaar in de open rij) en Vraagprijs volgt (Voorstel/Markt/Eigen) is nu verliesvrij: de stand van de verlaten kant (gekozen code, eigen €/m² en bedrag, tweede grondzone, forfait, vraagprijs) wordt onthouden en komt terug; een lege zijde begint met de keuzelijst ("Kies code"). Getest met Playwright op het testbudget (versie 7, project 79: projectcodes G-01 € 300 en B-01 € 2.500 aangemaakt en een tweede grondzone van 150 m² bij Lot 1; het budget staat NIET-definitief en heeft testwaarden bij Lot 1).
-- 22/10/2026: stap 8 — help, DESIGN.md en zes nieuwe schermafbeeldingen klaar; Razor-fout in de marktregel (`dagen@if`) en bedragnotatie (punten) hersteld; testbudget weer definitief. Nog open: Niels test stap 8 zelf (zie checklijst hierboven) en de laadtijd van stap 8 (±17 s op de testdata, nog niet onderzocht).
+- 22/10/2026: stap 8 — help, CPMCore/DESIGN.md en zes nieuwe schermafbeeldingen klaar; Razor-fout in de marktregel (`dagen@if`) en bedragnotatie (punten) hersteld; testbudget weer definitief. Nog open: Niels test stap 8 zelf (zie checklijst hierboven) en de laadtijd van stap 8 (±17 s op de testdata, nog niet onderzocht).

@@ -30,7 +30,7 @@
 <div class="gl-v2-inh"><section class="gl-v2-section-card gl-v2-inh-card">
     @if (!Model.Vacatures.Any())
     {
-        <div class="gl-v2-inh-empty">
+        <div class="gl-v2-blank gl-v2-inh-empty">
             <i class="ph ph-briefcase" aria-hidden="true"></i><b>Nog geen vacatures</b>
             <span>@(canWrite ? "Maak je eerste vacature aan met “Nieuwe vacature”." : "Er is nog niets om te tonen.")</span>
         </div>
@@ -41,7 +41,7 @@
         @foreach (var v in Model.Vacatures)
         {
             Model.Sollicitaties.TryGetValue(v.ID, out var s);
-            <div class="gl-v2-inh-row gl-v2-inh-grid--list">
+            <div class="gl-v2-inh-row gl-v2-inh-grid--list gl-v2-listrow" data-row-href="@Url.Action("Bewerken", new { id = v.ID })">
                 <a class="gl-v2-inh-title" href="@Url.Action("Bewerken", new { id = v.ID })">
                     <span class="t">@v.Titel</span><span class="p">/vacatures/@v.Slug</span>
                 </a>
@@ -54,17 +54,20 @@
                     </a>
                 </span>
                 <span class="gl-v2-inh-cell"><span class="gl-v2-badge @(v.IsGepubliceerd ? "is-positive" : "is-neutral")">@(v.IsGepubliceerd ? "Gepubliceerd" : "Concept")</span></span>
-                <span class="gl-v2-inh-actions">
-                    <a class="gl-v2-row-action" href="@Url.Action("Bewerken", new { id = v.ID })" title="Bewerken" aria-label="@v.Titel bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></a>
-                    @if (canWrite)
-                    {
-                        <form method="post" action="@Url.Action("Verwijderen")" data-bv-titel="Vacature verwijderen?" data-bv-tekst="“@v.Titel” verdwijnt van de website. Je kunt dit niet ongedaan maken." data-bv-ok="Verwijderen" data-bv-tone="danger" data-bv-icon="ph-trash">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="id" value="@v.ID" />
-                            <button type="submit" class="gl-v2-row-action gl-v2-row-action-danger" title="Verwijderen" aria-label="@v.Titel verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
-                        </form>
-                    }
-                </span>
+                <span class="gl-v2-inh-actions"><span class="gl-v2-rowact">
+                    <i class="ph ph-caret-right gl-v2-rowact-chev" aria-hidden="true"></i>
+                    <span class="gl-v2-rowact-btns">
+                        <a class="gl-v2-icon-btn" href="@Url.Action("Bewerken", new { id = v.ID })" title="Bewerken" aria-label="@v.Titel bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></a>
+                        @if (canWrite)
+                        {
+                            <form method="post" action="@Url.Action("Verwijderen")" data-bv-titel="Vacature verwijderen?" data-bv-tekst="“@v.Titel” verdwijnt van de website. Je kunt dit niet ongedaan maken." data-bv-ok="Verwijderen" data-bv-tone="danger" data-bv-icon="ph-trash">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@v.ID" />
+                                <button type="submit" class="gl-v2-icon-btn is-danger" title="Verwijderen" aria-label="@v.Titel verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+                            </form>
+                        }
+                    </span>
+                </span></span>
             </div>
         }
         <div class="gl-v2-inh-foot">De volgorde op de website volgt het veld “Volgorde” van elke vacature. Een concept is niet zichtbaar voor bezoekers.</div>

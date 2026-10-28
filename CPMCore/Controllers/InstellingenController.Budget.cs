@@ -458,6 +458,7 @@ public partial class InstellingenController
             Activiteiten = await _referentieProjecten.GetActiviteitenAsync()
         };
         SetPageHeader("bx bx-history", "Controle import");
+        ViewData["HelpScreenId"] = "instellingen-referentieprojecten";
         return View("BudgetReferentieImportControleV2", vm);
     }
 

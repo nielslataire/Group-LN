@@ -1,4 +1,4 @@
-@model CPMCore.Models.Instellingen.BudgetPrijsReferentiesViewModel
+﻿@model CPMCore.Models.Instellingen.BudgetPrijsReferentiesViewModel
 @using BOCore.Budget
 @using CPMCore.Models.GlV2
 @*
@@ -60,7 +60,7 @@
                             <a href="@Url.Action("BudgetPrijsReferentiesExport", "Instellingen", new { prijsType = t.Key })" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-download-simple" aria-hidden="true"></i>Exporteren</a>
                         </span>
                     </div>
-                    <div class="gl-v2-bref-head gl-v2-bref-grid--prijs">
+                    <div class="gl-v2-list-head gl-v2-bref-head gl-v2-bref-grid--prijs">
                         <span>Code</span><span>Omschrijving</span><span class="gl-v2-bref-right">Prijs per m²</span><span>Datum</span><span>Bron</span><span>Project</span><span></span>
                     </div>
 
@@ -92,7 +92,7 @@
                             </div>
                             @foreach (var r in g)
                             {
-                                <div class="gl-v2-bref-row gl-v2-bref-grid--prijs @(r.Gearchiveerd ? "is-archived" : "")" data-bref-row>
+                                <div class="gl-v2-bref-row gl-v2-listrow gl-v2-bref-grid--prijs @(r.Gearchiveerd ? "is-archived" : "")" data-bref-row>
                                     <span class="gl-v2-bref-mono">@r.CodeLabel</span>
                                     <span class="gl-v2-bref-strong" title="@r.Omschrijving">@(string.IsNullOrWhiteSpace(r.Omschrijving) ? "—" : r.Omschrijving)</span>
                                     <span class="gl-v2-bref-num">€ @Eur2(r.PrijsPerM2) <small>/m²</small></span>
@@ -113,27 +113,27 @@
                                     {
                                         <span></span>
                                     }
-                                    <div class="gl-v2-bref-actions">
-                                        <button type="button" class="gl-v2-row-action gl-v2-row-action-primary" data-bref-edit title="Bewerken" aria-label="Bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i><span class="gl-v2-row-action-label">Bewerken</span></button>
+                                    <div class="gl-v2-bref-actions"><span class="gl-v2-rowact"><span class="gl-v2-rowact-btns">
+                                        <button type="button" class="gl-v2-icon-btn" data-bref-edit title="Bewerken" aria-label="Bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>
                                         @if (r.IsInGebruik || r.Gearchiveerd)
                                         {
                                             <form method="post" asp-action="BudgetPrijsReferentieArchiveer" asp-controller="Instellingen">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="id" value="@r.Id" /><input type="hidden" name="prijsType" value="@t.Key" /><input type="hidden" name="gearchiveerd" value="@(r.Gearchiveerd ? "false" : "true")" />
-                                                <button type="submit" class="gl-v2-row-action" title="@(r.Gearchiveerd ? "Herstellen (opnieuw kiesbaar op stap 8)" : "Archiveren — in gebruik in een budget, dus niet verwijderbaar")" aria-label="@(r.Gearchiveerd ? "Herstellen" : "Archiveren")">
-                                                    <i class="ph @(r.Gearchiveerd ? "ph-arrow-counter-clockwise" : "ph-archive")" aria-hidden="true"></i><span class="gl-v2-row-action-label">@(r.Gearchiveerd ? "Herstellen" : "Archiveren")</span>
+                                                <button type="submit" class="gl-v2-icon-btn" title="@(r.Gearchiveerd ? "Herstellen (opnieuw kiesbaar op stap 8)" : "Archiveren — in gebruik in een budget, dus niet verwijderbaar")" aria-label="@(r.Gearchiveerd ? "Herstellen" : "Archiveren")">
+                                                    <i class="ph @(r.Gearchiveerd ? "ph-arrow-counter-clockwise" : "ph-archive")" aria-hidden="true"></i>
                                                 </button>
                                             </form>
                                         }
                                         else
                                         {
-                                            <form method="post" asp-action="BudgetPrijsReferentieDelete" asp-controller="Instellingen" data-bv-titel="Code @r.CodeLabel verwijderen?" data-bv-tekst="De €/m² die al op verkooplijnen staat, blijft daar staan." data-bv-ok="Verwijderen">
+                                            <form method="post" asp-action="BudgetPrijsReferentieDelete" asp-controller="Instellingen" data-bv-titel="Code @r.CodeLabel verwijderen?" data-bv-tekst="De €/m² die al op verkooplijnen staat, blijft daar staan." data-bv-ok="Verwijderen" data-bv-tone="danger" data-bv-icon="ph-trash">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="id" value="@r.Id" /><input type="hidden" name="prijsType" value="@t.Key" />
-                                                <button type="submit" class="gl-v2-row-action gl-v2-row-action-danger" title="Verwijderen" aria-label="Verwijderen"><i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-row-action-label">Verwijderen</span></button>
+                                                <button type="submit" class="gl-v2-icon-btn is-danger" title="Verwijderen" aria-label="Verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
                                             </form>
                                         }
-                                    </div>
+                                    </span></span></div>
                                 </div>
                                 @* Dezelfde rij in bewerking: zelfde kolommen, velden i.p.v. tekst, opslaan/annuleren rechts. *@
                                 <form method="post" asp-action="BudgetPrijsReferentieUpdate" asp-controller="Instellingen" class="gl-v2-bref-row gl-v2-bref-grid--prijs is-edit" data-bref-editrow hidden autocomplete="off">

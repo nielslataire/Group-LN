@@ -214,12 +214,9 @@
                                 <td class="is-actions">
                                     @if (vm.CanWrite)
                                     {
-                                        <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-co-regie-menu-@r.Id" aria-label="Meer acties voor prestatie van @r.Date.ToString("dd/MM/yyyy")">
-                                            <i class="ph ph-dots-three" aria-hidden="true"></i>
-                                        </button>
-                                        <div class="gl-v2-menu" id="gl-v2-co-regie-menu-@r.Id">
-                                            <a href="#" class="gl-v2-menu-item is-danger js-co-regie-delete" data-id="@r.Id" data-label="@r.UserName · @r.Date.ToString("dd/MM/yyyy") · @Hrs(r.Hours) u"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</a>
-                                        </div>
+                                        <span class="gl-v2-rowact"><span class="gl-v2-rowact-btns">
+                                            <button type="button" class="gl-v2-icon-btn is-danger js-co-regie-delete" data-id="@r.Id" data-label="@r.UserName · @r.Date.ToString("dd/MM/yyyy") · @Hrs(r.Hours) u" title="Verwijderen" aria-label="Prestatie verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+                                        </span></span>
                                     }
                                 </td>
                             </tr>
@@ -263,12 +260,9 @@
                                     <td class="is-actions">
                                         @if (vm.CanWrite)
                                         {
-                                            <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-co-regie-menu-@r.Id" aria-label="Meer acties">
-                                                <i class="ph ph-dots-three" aria-hidden="true"></i>
-                                            </button>
-                                            <div class="gl-v2-menu" id="gl-v2-co-regie-menu-@r.Id">
-                                                <span class="gl-v2-menu-item is-disabled" aria-disabled="true" title="Al gefactureerd"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</span>
-                                            </div>
+                                            <span class="gl-v2-rowact"><span class="gl-v2-rowact-btns">
+                                                <button type="button" class="gl-v2-icon-btn is-danger" disabled title="Al gefactureerd — kan niet verwijderd worden" aria-label="Verwijderen niet mogelijk: al gefactureerd"><i class="ph ph-trash" aria-hidden="true"></i></button>
+                                            </span></span>
                                         }
                                     </td>
                                 </tr>

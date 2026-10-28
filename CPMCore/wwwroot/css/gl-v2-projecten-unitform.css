@@ -26,7 +26,6 @@
     flex: none; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
     background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); font-size: 17px;
 }
-.gl-v2-unit-copy-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .gl-v2-unit-copy-text strong { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
 .gl-v2-unit-copy-text span { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 .gl-v2-unit-copy-select { flex: none; width: 280px; }
@@ -163,10 +162,9 @@
 }
 .gl-v2-unit-doc-row[hidden], .gl-v2-field-help[hidden] { display: none; }
 .gl-v2-unit-doc-type {
-    flex: none; width: 34px; height: 34px; border-radius: 8px; background: var(--gl-v2-danger-tint); color: var(--gl-v2-danger);
+    flex: none; width: 34px; height: 34px; border-radius: var(--gl-v2-radius-sm, 8px); background: var(--gl-v2-danger-tint); color: var(--gl-v2-danger);
     display: flex; align-items: center; justify-content: center; font: 700 9.5px var(--gl-v2-font-sans); letter-spacing: .05em;
 }
-.gl-v2-unit-doc-name { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .gl-v2-unit-doc-name strong { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gl-v2-unit-doc-name span { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gl-v2-unit-doc-open { font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: none; }

@@ -221,9 +221,9 @@
                                 && !string.IsNullOrWhiteSpace(r.OctopusJournalKey)
                                 && r.Status != InvoiceStatus.Generating;
 
-                            <tr>
+                            <tr data-row-href="@Url.Action("Detail", "Invoices", new { id = r.Id, issuerCompanyId = ViewBag.CompanyId })">
                                 <td class="gl-col-fit text-center">
-                                    <div class="checkbox-custom checkbox-default">
+                                    <div class="gl-v2-check is-solid">
                                         <input type="checkbox"
                                                id="cbBook_@r.Id"
                                                class="form-check-input invoice-book-checkbox"
@@ -287,6 +287,13 @@
                                        anders niet meer kunnen overschrijven om 'm in het menu zichtbaar te maken) zodat
                                        het menu overal een leesbare rij toont, niet enkel bij de acties die al een
                                        screenreader-label hadden. *@
+                                    @* Rij-actiepatroon (DESIGN.md "Rij-acties in een lijst"): vanaf 1200px chevron in rust, iconen bij hover/focus
+                                       van de rij (.gl-v2-rowact); onder 1200px blijft het "···"-menu (trigger) altijd zichtbaar en is de chevron weg
+                                       (gl-v2-invoices.css). De rij klikt door naar Detail via data-row-href + eigen handler in gl-v2-invoices.js
+                                       (de tabel staat in een <form>, dus de shell-handler slaat die klik over). *@
+                                    <span class="gl-v2-rowact">
+                                    <i class="ph ph-caret-right gl-v2-rowact-chev" aria-hidden="true"></i>
+                                    <span class="gl-v2-rowact-btns">
                                     <button type="button" class="gl-v2-row-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="row-menu-@r.Id" aria-label="Meer acties">
                                         <i class="ph ph-dots-three" aria-hidden="true"></i>
                                     </button>
@@ -393,6 +400,8 @@
                                         }
                                     }
                                     </div>
+                                    </span>
+                                    </span>
                                 </td>
 
                                 <td class="d-none">@(r.BookyearLabel ?? r.InvoiceDate.Year.ToString())</td>

@@ -300,7 +300,7 @@
             if (!panel || !opp) return null;
             function rij(l) {
                 var tr = document.createElement('tr');
-                tr.innerHTML = '<td style="min-width:200px">' + veld('lj-o', (l.omschrijving || '').replace(/"/g, '&quot;'), 'bv. Woningen type A') + '</td><td class="is-num">' + veld('lj-a', l.aantal ? String(l.aantal).replace('.', ',') : '', '1', 90) + '</td><td class="is-num">' + veld('lj-m', l.oppervlakte ? nfm.format(l.oppervlakte) : '', '0,00', 110) + '</td><td class="is-num is-strong lj-t">0,00</td><td class="col-actions"><button type="button" class="gl-v2-row-action gl-v2-row-action-danger lj-del" data-bw-edit title="Regel verwijderen" aria-label="Regel verwijderen"><i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-row-action-label">Verwijderen</span></button></td>';
+                tr.innerHTML = '<td style="min-width:200px">' + veld('lj-o', (l.omschrijving || '').replace(/"/g, '&quot;'), 'bv. Woningen type A') + '</td><td class="is-num">' + veld('lj-a', l.aantal ? String(l.aantal).replace('.', ',') : '', '1', 90) + '</td><td class="is-num">' + veld('lj-m', l.oppervlakte ? nfm.format(l.oppervlakte) : '', '0,00', 110) + '</td><td class="is-num is-strong lj-t">0,00</td><td class="col-actions"><span class="gl-v2-rowact"><span class="gl-v2-rowact-btns"><button type="button" class="gl-v2-icon-btn is-danger lj-del" data-bw-edit title="Regel verwijderen" aria-label="Regel verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button></span></span></td>';
                 body.appendChild(tr); return tr;
             }
             function lees() {
@@ -328,7 +328,7 @@
                 if (!body.children.length && getal(opp.value) > 0) rij({ omschrijving: 'Eerder ingevuld', aantal: 1, oppervlakte: getal(opp.value) });
                 var tr = rij({ aantal: 1 }); wijzig(); tr.querySelector('.lj-o').focus();
             });
-            body.addEventListener('click', function (e) { var b = e.target.closest('.lj-del'); if (!b) return; b.closest('tr').remove(); wijzig(); });
+            body.addEventListener('click', async function (e) { var b = e.target.closest('.lj-del'); if (!b) return; if (!await GlV2Budget.bevestig({ title: 'Regel verwijderen?', desc: 'Deze regel wordt uit de lijst verwijderd en de totalen worden herberekend.', ok: 'Verwijderen' })) return; b.closest('tr').remove(); wijzig(); });
             return { herreken: herreken, opp: opp };
         }
         function grond() {

@@ -11,13 +11,22 @@
         <p class="gl-v2-modal-desc">
             U staat op het punt om <strong>@Model.Name</strong> te verwijderen. Bent u zeker dat u deze wilt verwijderen?
         </p>
+        @if (Model.BlockReason != null)
+        {
+            <p class="gl-v2-modal-desc" style="color:#8B2A2A" role="alert">
+                <strong>Verwijderen kan niet.</strong> @Model.BlockReason.Replace("Deze leverancier kan niet verwijderd worden: ", "")
+            </p>
+        }
     </div>
 </div>
 <div class="modal-footer">
     <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
-    <form asp-action="Delete" asp-controller="Leveranciers" method="post">
-        @Html.AntiForgeryToken()
-        <input type="hidden" name="id" value="@Model.Id" />
-        <button type="submit" class="gl-v2-btn gl-v2-btn-danger">Verwijderen</button>
-    </form>
+    @if (Model.BlockReason == null)
+    {
+        <form asp-action="Delete" asp-controller="Leveranciers" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.Id" />
+            <button type="submit" class="gl-v2-btn gl-v2-btn-danger">Verwijderen</button>
+        </form>
+    }
 </div>

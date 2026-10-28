@@ -18,10 +18,10 @@
     var itemByCode = {};
     data.boom.forEach(function (i) { itemByCode[i.code] = i; });
 
-    function $(id) { return document.getElementById(id); }
+    var $ = window.GlV2.byId; // gedeeld (gl-v2-shell.js)
     function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
     function norm(s) { return String(s || "").toLowerCase(); }
-    function toast(tone, title, body) { if (window.GlV2Toast) window.GlV2Toast.show({ tone: tone, title: title, body: body || "" }); }
+    var toast = (window.GlV2Toast && window.GlV2Toast.notify) || function () {}; // gedeeld, zie gl-v2-shell.js
     function post(url, d) {
         var fd = new FormData();
         Object.keys(d).forEach(function (k) { [].concat(d[k]).forEach(function (v) { if (v !== null && v !== undefined) fd.append(k, v); }); });

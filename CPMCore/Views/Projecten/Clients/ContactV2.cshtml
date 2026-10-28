@@ -207,7 +207,7 @@
                     var overdue = Model.NextDate.HasValue && Model.NextDate.Value < Model.Today;
                     <li class="gl-v2-cd-ev is-next @(overdue ? "is-overdue" : "")">
                         <span class="gl-v2-cd-ev-ico"><i class="ph ph-flag" aria-hidden="true"></i></span>
-                        <div class="gl-v2-cd-ev-main">
+                        <div class="gl-v2-stack is-loose gl-v2-cd-ev-main">
                             <div class="gl-v2-cd-ev-top"><b>Volgende: @(string.IsNullOrWhiteSpace(Model.NextText) ? "actie" : Model.NextText!.ToLowerInvariant())</b><span>@(Model.NextName ?? "")@(Model.NextDate.HasValue ? " · " + ContactenWeergave.Day(Model.NextDate.Value, Model.Today) : "")</span></div>
                             @if (Model.CanWrite) { <button type="button" class="gl-v2-cd-done" id="cd-next-done"><i class="ph ph-check-circle" aria-hidden="true"></i>Gedaan</button> }
                         </div>
@@ -218,7 +218,7 @@
                     var when = ContactenWeergave.Local(e.OccurredAt);
                     <li class="gl-v2-cd-ev is-@e.Kind">
                         <span class="gl-v2-cd-ev-ico"><i class="ph @ContactenWeergave.KindIcon(e.Kind)" aria-hidden="true"></i></span>
-                        <div class="gl-v2-cd-ev-main">
+                        <div class="gl-v2-stack is-loose gl-v2-cd-ev-main">
                             @{ var link = !string.IsNullOrWhiteSpace(e.UserName) && e.UserName.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? e.UserName : null; }
                             <div class="gl-v2-cd-ev-top"><b>@(string.IsNullOrWhiteSpace(e.Title) ? ContactenWeergave.KindLabel(e.Kind) : e.Title)</b><span>@(e.IsAuto || link != null ? "automatisch" : e.UserName) · @when.ToString("dd/MM · HH:mm", be)</span></div>
                             @if (link != null) { <a class="gl-v2-cd-ev-link" href="@link" target="_blank" rel="noopener"><i class="ph ph-link-simple" aria-hidden="true"></i><span>@link</span></a> }

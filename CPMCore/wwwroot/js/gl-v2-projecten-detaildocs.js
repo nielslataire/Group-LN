@@ -748,8 +748,24 @@
                 openSign(docId, signers);
                 break;
             case "sign-mark":
-                confirmDialog({ tone: "success", icon: "ph-signature", title: "Getekend registreren?", desc: el.getAttribute("data-name") + " heeft getekend. Dit wordt handmatig geregistreerd; als alle partijen getekend hebben, is het document bevroren.", okText: "Ja, getekend",
-                    onOk: function () { return post(cfg.urls.signMark, Object.assign({ signatureId: el.getAttribute("data-signature-id"), method: "manueel" }, base)).then(function (r) { return done(r, reopen); }); } });
+                // Een handmatige handtekening vraagt een bewijs (getekende versie, scan of mail) en kan nadien niet terug.
+                var proofInput = document.createElement("input");
+                proofInput.type = "file";
+                proofInput.accept = ".pdf,.png,.jpg,.jpeg,.eml,.msg";
+                proofInput.addEventListener("change", function () {
+                    var proofFile = proofInput.files && proofInput.files[0];
+                    if (!proofFile) return;
+                    confirmDialog({ tone: "success", icon: "ph-signature", title: "Getekend registreren?", desc: el.getAttribute("data-name") + " heeft getekend. Bewijs: " + proofFile.name + ". Dit wordt handmatig geregistreerd en kan niet teruggedraaid worden; als alle partijen getekend hebben, is het document bevroren.", okText: "Ja, getekend",
+                        onOk: function () {
+                            var fd = new FormData();
+                            Object.keys(base).forEach(function (k) { fd.append(k, base[k]); });
+                            fd.append("signatureId", el.getAttribute("data-signature-id"));
+                            fd.append("method", "manueel");
+                            fd.append("proof", proofFile);
+                            return post(cfg.urls.signMark, fd).then(function (r) { return done(r, reopen); });
+                        } });
+                });
+                proofInput.click();
                 break;
             case "sign-remind": simplePost(cfg.urls.signRemind, Object.assign({ signatureId: el.getAttribute("data-signature-id") }, base), reopen, el); break;
             case "award":

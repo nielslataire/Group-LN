@@ -16,11 +16,10 @@
     var streef = TrajectWeergave.Streef(m);
     var dagen = TrajectWeergave.DagenTeLaat(m, today);
     var hasTrigger = vm.TriggersPerMijlpaal.ContainsKey(m.Id);
-    var menuId = "gl-v2-tr-rmenu-" + m.Id;
     var eenheid = m.Unit?.Name;
     var puntenAantal = vm.PuntenPerMijlpaal.TryGetValue(m.Id, out var pn) ? pn : 0;
 }
-<div class="gl-v2-tr-ms is-@soort" id="gl-v2-tr-ms-@m.Id" data-ms-id="@m.Id" data-soort="@soort" @(vm.CanWrite ? "data-editable=1" : "")>
+<div class="gl-v2-tr-ms gl-v2-listrow is-@soort" id="gl-v2-tr-ms-@m.Id" data-ms-id="@m.Id" data-soort="@soort" @(vm.CanWrite ? "data-editable=1" : "")>
     <button type="button" class="gl-v2-tr-dot is-@soort js-tr-toggle" data-ms-id="@m.Id" data-done="@(soort == "done" ? "1" : "0")" @(vm.CanWrite ? "" : "disabled")
             aria-label="@(soort == "done" ? "Bereikt — terugzetten naar nog te doen" : "Markeer als bereikt")" title="@(soort == "done" ? "Bereikt — klik om terug te zetten" : "Markeer als bereikt")">
         <i class="ph @(soort switch { "done" => "ph-check", "late" => "ph-exclamation-mark", "nvt" => "ph-minus", "bezig" => "ph-clock", "geblokkeerd" => "ph-prohibit", _ => "" })" aria-hidden="true"></i>
@@ -57,18 +56,20 @@
         }
         @if (vm.CanWrite)
         {
-            <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="@menuId" aria-label="Meer acties voor @m.Naam"><i class="ph ph-dots-three" aria-hidden="true"></i></button>
-            <div class="gl-v2-menu" id="@menuId">
-                <button type="button" class="gl-v2-menu-item js-tr-edit" data-ms-id="@m.Id"><i class="ph ph-pencil-simple" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Bewerken</span></span></button>
-                @if (soort == "done")
-                {
-                    <button type="button" class="gl-v2-menu-item js-tr-toggle" data-ms-id="@m.Id" data-done="1"><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Terug naar nog te doen</span></span></button>
-                }
-                @if (vm.CanDelete)
-                {
-                    <button type="button" class="gl-v2-menu-item is-danger js-tr-delete" data-ms-id="@m.Id" data-naam="@m.Naam"><i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Verwijderen</span></span></button>
-                }
-            </div>
+            <span class="gl-v2-rowact">
+                <i class="ph ph-caret-right gl-v2-rowact-chev" aria-hidden="true"></i>
+                <span class="gl-v2-rowact-btns">
+                    <button type="button" class="gl-v2-icon-btn js-tr-edit" data-ms-id="@m.Id" aria-label="Bewerk @m.Naam" title="Bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>
+                    @if (soort == "done")
+                    {
+                        <button type="button" class="gl-v2-icon-btn js-tr-toggle" data-ms-id="@m.Id" data-done="1" aria-label="Terug naar nog te doen" title="Terug naar nog te doen"><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i></button>
+                    }
+                    @if (vm.CanDelete)
+                    {
+                        <button type="button" class="gl-v2-icon-btn is-danger js-tr-delete" data-ms-id="@m.Id" data-naam="@m.Naam" aria-label="Verwijder @m.Naam" title="Verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+                    }
+                </span>
+            </span>
         }
     </span>
 </div>

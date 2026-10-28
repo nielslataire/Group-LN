@@ -24,10 +24,10 @@ eigen rol niet wijzigen. Vraag het aan iemand met toegang tot Instellingen.
 ## Je handtekening instellen
 
 1. Klik rechtsboven op je naam.
-2. Kies **Mijn handtekening**.
-3. Stel je handtekening in. [VRAAG: welke stappen volgt de gebruiker precies, en hoe maak je de handtekening (tekenen, opladen)?]
+2. Kies **Mijn profiel** en open het tabblad **Handtekening**.
+3. Maak je handtekening en klik op **Opslaan**.
 
-Je handtekening komt op documenten die jij verstuurt. Dit staat los van je rol. [VRAAG: op welke documenten komt ze, en kan een collega ze ook gebruiken?]
+Je handtekening kan onder mails die je vanuit een projectcontact verstuurt. Ze is enkel van jou en staat los van je rol. Zie het artikel "Je handtekening voor e-mails instellen".
 
 ## Let op
 

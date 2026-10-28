@@ -42,7 +42,7 @@
             var thumb = tr.dataset.photo ? '<img src="' + esc(tr.dataset.photo) + '" alt="" loading="lazy">' : '<i class="ph ph-image" aria-hidden="true"></i>';
             return '<a class="gl-v2-pt-cm' + (tr.dataset.closed === "1" ? " is-closed" : "") + '" href="' + esc(tr.dataset.href) + '">' +
                 '<span class="gl-v2-pt-cm-thumb">' + thumb + '</span>' +
-                '<span class="gl-v2-pt-cm-body"><b>' + esc(title ? title.textContent : "") + '</b><small>' + esc(sub) + '</small>' +
+                '<span class="gl-v2-stack is-loose gl-v2-pt-cm-body"><b>' + esc(title ? title.textContent : "") + '</b><small>' + esc(sub) + '</small>' +
                 '<span class="gl-v2-pt-cm-meta">' + (badge ? badge.outerHTML : "") + tags +
                 (due && due !== "—" ? '<span class="gl-v2-pt-cm-due' + (tr.dataset.overdue === "1" ? " is-overdue" : "") + '">' + esc(due) + '</span>' : "") + '</span></span>' +
                 '<i class="ph ph-caret-right gl-v2-pt-cm-chev" aria-hidden="true"></i></a>';

@@ -13,6 +13,7 @@ namespace CPMCore.Controllers;
 
 [Authorize]
 [Route("Werfportaal")]
+[CPMCore.Attributes.ClassicLayout]
 public class ContractorPortalController : BaseController
 {
     private readonly cpmRunningContext _db;

@@ -8,7 +8,7 @@ Ontwerp: `design-handoff/CRM Verkoop.dc.html` (45a t/m 45h). Tekstdump: `%TEMP%\
 - 45c Eenheid berekenen: **enkel rekenen en bekijken**, niets bewaren, geen "Prijs opslaan", **geen Code/Eigen-schakelaar** (de prijs is altijd een eigen bedrag). Enkel grondwaarde, bouwwaarde, registratierechten en btw zijn aanpasbaar; oppervlaktes, prijs per m² en kosten koper zijn uitgeschakeld. Verkochte eenheden zijn vergrendeld (grijze pill, niet klikbaar).
 - Ontbrekende gegevens zelf gebouwd: optiedatum, optant, makelaar/herkomst, online sinds, geïnteresseerden (uit contacten), "Kost toevoegen".
 - Websitetekst gebruikt de bestaande projectvelden (`Project.CommercialTitleNl/CommercialTextNl`).
-- Help volgens DESIGN.md/HELP_SCHRIJFGIDS.md, met screenshots (die nog ontbreken, zie onder).
+- Help volgens CPMCore/DESIGN.md/HELP_SCHRIJFGIDS.md, met screenshots (die nog ontbreken, zie onder).
 
 ## Wat er gebouwd is
 **Data:** migratie `_migrations/115_VerkoopEenhedenEnKostenKoper.sql` (`Units.OptionUntil/OptionHolder/SaleVia/OnlineSince`, tabel `ProjectSalesExtraCost`); entiteiten in DALCore (`Units.cs`, `ProjectSalesExtraCost.cs`, `cpmRunningContext.Verkoop.cs`).
@@ -21,7 +21,7 @@ Ontwerp: `design-handoff/CRM Verkoop.dc.html` (45a t/m 45h). Tekstdump: `%TEMP%\
 
 **Help:** `HelpContent/projecten/te-koop-overzicht.md`, `verkoopinstellingen-aanpassen.md`, `eenheid-berekenen.md` (schermen `projecten-te-koop`, `projecten-verkoopinstellingen`, `projecten-eenheid-berekenen`). **Screenshots ontbreken nog.**
 
-**DESIGN.md:** sectie "Verkoop gl-v2" met fase 1, kosten/notaris en fase 2.
+**CPMCore/DESIGN.md:** sectie "Verkoop gl-v2" met fase 1, kosten/notaris en fase 2.
 
 ## Rekenregels (belangrijk, bewust zo)
 - **Prijzen:** verkocht = `LandValueSold + Σ ConstructionValues.ValueSold` (exact zoals Klanten/Detail, `UnitBO.TotalValueSold`); niet verkocht = grond + bouwwaarde van de **standaardafwerking** (`ServiceCore.Helpers.UnitPricing`, afwerkingen zijn alternatieven en worden niet opgeteld).

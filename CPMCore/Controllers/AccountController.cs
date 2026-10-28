@@ -14,7 +14,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CPMCore.Controllers;
 
 [Authorize]
-public class AccountController : BaseController
+public partial class AccountController : BaseController
 {
     private readonly cpmRunningContext _db;
     private readonly IUserSignatureService _userSignatureService;
@@ -137,9 +137,10 @@ public class AccountController : BaseController
     }
 
     [HttpGet]
-    public IActionResult MijnHandtekening()
+    public IActionResult MijnHandtekening(bool classic = false)
     {
         SetPageHeader("bx bx-envelope", "Mijn handtekening");
+        if (classic) ViewData["UseGlV2Layout"] = false;
 
         var userId = User.GetCpmUserId();
         if (userId == null)
@@ -151,6 +152,12 @@ public class AccountController : BaseController
             SignatureHtml = result.Value?.SignatureHtml,
             Format = string.IsNullOrWhiteSpace(result.Value?.SignatureFormat) ? "Visual" : result.Value.SignatureFormat
         };
+
+        // gl-v2 (design-handoff "Mijn profiel", tab Handtekening); ?classic=true blijft de oude pagina tonen.
+        if (ViewData["UseGlV2Layout"] as bool? == true)
+        {
+            return RedirectToAction(nameof(MijnProfiel), new { tab = "handtekening" });
+        }
         return View(vm);
     }
 

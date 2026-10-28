@@ -34,13 +34,13 @@
 {
     @foreach (var order in Model.AdditionalOrders)
     {
-        <div class="gl-v2-ec-lot-order-row">
+        <div class="gl-v2-ec-lot-order-row gl-v2-listrow">
             <span><i class="ph ph-arrow-elbow-down-right gl-v2-ec-lot-order-icon" aria-hidden="true"></i>@(string.IsNullOrWhiteSpace(order.Description) ? "(geen omschrijving)" : order.Description)</span>
             <span class="gl-v2-ec-lot-order-price">@order.Price.ToString("C")</span>
-            <span class="gl-v2-ec-lot-order-actions">
-                <button type="button" class="gl-v2-icon-btn js-edit-bijbestelling" data-id="@order.Id" data-lotname="@Model.Activity?.Name" data-description="@order.Description" data-price="@order.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)" title="Bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>
-                <button type="button" class="gl-v2-icon-btn is-warning js-delete-bijbestelling" data-id="@order.Id" data-lotname="@Model.Activity?.Name" data-description="@order.Description" data-price="@order.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)" title="Verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
-            </span>
+            <span class="gl-v2-rowact gl-v2-ec-lot-order-actions"><span class="gl-v2-rowact-btns">
+                <button type="button" class="gl-v2-icon-btn js-edit-bijbestelling" data-id="@order.Id" data-lotname="@Model.Activity?.Name" data-description="@order.Description" data-price="@order.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)" title="Bewerken" aria-label="Bijbestelling bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>
+                <button type="button" class="gl-v2-icon-btn is-warning js-delete-bijbestelling" data-id="@order.Id" data-lotname="@Model.Activity?.Name" data-description="@order.Description" data-price="@order.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)" title="Verwijderen" aria-label="Bijbestelling verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+            </span></span>
         </div>
     }
     <div class="gl-v2-ec-lot-add-row js-add-bijbestelling" data-contractactivityid="@Model.ContractActivityId" data-lotname="@Model.Activity?.Name">

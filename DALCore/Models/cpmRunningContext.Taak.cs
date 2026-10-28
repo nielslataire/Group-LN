@@ -11,6 +11,10 @@ public partial class cpmRunningContext
 {
     public virtual DbSet<ProjectTaak> ProjectTaak { get; set; }
 
+    public virtual DbSet<TaakTijd> TaakTijd { get; set; }
+
+    public virtual DbSet<TaakWeekReview> TaakWeekReview { get; set; }
+
     private void ConfigureTaakEntities(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<ProjectTaak>(entity =>
@@ -24,6 +28,11 @@ public partial class cpmRunningContext
             entity.Property(e => e.Prioriteit).HasDefaultValue(1);
             entity.Property(e => e.Herkomst).HasDefaultValue(0);
             entity.Property(e => e.Vervaldatum).HasColumnType("date");
+            entity.Property(e => e.Context).HasMaxLength(50);
+            entity.Property(e => e.InboxBron).HasMaxLength(30);
+            entity.Property(e => e.InboxMeta).HasMaxLength(200);
+            entity.Property(e => e.WachtOp).HasMaxLength(200);
+            entity.Property(e => e.WachtOpDatum).HasColumnType("date");
             entity.Property(e => e.CreatedDate).HasDefaultValueSql("(sysutcdatetime())");
 
             entity.HasIndex(e => e.ProjectId);
@@ -57,6 +66,23 @@ public partial class cpmRunningContext
                 .HasForeignKey(d => d.ConstructionIssueId)
                 .OnDelete(DeleteBehavior.NoAction)
                 .HasConstraintName("FK_ProjectTaak_ConstructionIssue");
+        });
+        modelBuilder.Entity<TaakTijd>(entity =>
+        {
+            entity.ToTable("TaakTijd");
+            entity.Property(e => e.Titel).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Context).HasMaxLength(50);
+            entity.HasIndex(e => new { e.UserId, e.Start }, "IX_TaakTijd_User_Start");
+            entity.HasOne(d => d.User).WithMany().HasForeignKey(d => d.UserId).OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("FK_TaakTijd_Users");
+            entity.HasOne(d => d.Taak).WithMany().HasForeignKey(d => d.TaakId).OnDelete(DeleteBehavior.SetNull).HasConstraintName("FK_TaakTijd_ProjectTaak");
+        });
+
+        modelBuilder.Entity<TaakWeekReview>(entity =>
+        {
+            entity.ToTable("TaakWeekReview");
+            entity.Property(e => e.WeekStart).HasColumnType("date");
+            entity.HasIndex(e => new { e.UserId, e.WeekStart }, "UQ_TaakWeekReview_User_Week").IsUnique();
+            entity.HasOne(d => d.User).WithMany().HasForeignKey(d => d.UserId).OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("FK_TaakWeekReview_Users");
         });
     }
 }

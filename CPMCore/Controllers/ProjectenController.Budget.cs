@@ -1714,7 +1714,20 @@ namespace CPMCore.Controllers
                 BudgetNaam = string.IsNullOrWhiteSpace(versie.BudgetMaster?.Naam) ? "Budget" : versie.BudgetMaster!.Naam,
                 Versienummer = versie.Versienummer
             };
+            SetBudgetOpmakenBreadcrumb(versie);
+            ViewData["HelpScreenId"] = "budget-pdf-opmaken";
             return View("BudgetPdfOpmakenV2", model);
+        }
+
+        /// <summary>
+        /// Breadcrumb voor de opmaakpagina's (PDF/Excel): Dashboard / Projecten / {project} / Budgetten / {versie} / Resultaat. Stopt bij de ouder (Resultaat, waar je
+        /// vandaan komt): de paginatitel ("… opmaken") is het huidige scherm en mag niet in het kruimelpad herhaald worden, dus de laatste kruimel blijft klikbaar.
+        /// </summary>
+        private void SetBudgetOpmakenBreadcrumb(DALCore.Models.BudgetVersie versie)
+        {
+            var label = string.IsNullOrWhiteSpace(versie.VersieNaam) ? $"v{versie.Versienummer}" : $"v{versie.Versienummer} • {versie.VersieNaam}";
+            SetBudgetPageContext(versie.ProjectId, versie.Project?.ProjectName, nameof(BudgetResultaat), "Resultaat", new { versieId = versie.Id }, versieId: versie.Id, versieLabel: label);
+            ViewData["BreadcrumbLastIsLink"] = true;
         }
 
         // ── DownloadBudgetExcel ───────────────────────────────────────────────
@@ -1775,6 +1788,8 @@ namespace CPMCore.Controllers
         {
             var versie = _uow.BudgetVersies.GetNoTracking().Include(v => v.BudgetMaster).Include(v => v.Project).FirstOrDefault(v => v.Id == versieId);
             if (versie == null) return NotFound();
+            SetBudgetOpmakenBreadcrumb(versie);
+            ViewData["HelpScreenId"] = "budget-pdf-opmaken";
             return View("BudgetPdfOpmakenV2", new CPMCore.Models.Budget.BudgetPdfOpmakenModel
             {
                 BudgetVersieId = versieId, ProjectId = versie.ProjectId, ProjectName = versie.Project?.ProjectName ?? "", Intern = true, Excel = true,

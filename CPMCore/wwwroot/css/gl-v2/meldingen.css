@@ -415,7 +415,7 @@
 .gl-v2-snooze-time-chip {
     flex: 1;
     height: 30px;
-    border-radius: 8px;
+    border-radius: var(--gl-v2-radius-sm, 8px);
     border: 1px solid var(--gl-v2-hairline);
     color: var(--gl-v2-ink);
     background: var(--gl-v2-surface);
@@ -429,7 +429,7 @@
 .gl-v2-snooze-confirm {
     flex: 1;
     height: 34px;
-    border-radius: 8px;
+    border-radius: var(--gl-v2-radius-sm, 8px);
     font: 600 11.5px var(--gl-v2-font-sans);
     cursor: pointer;
 }

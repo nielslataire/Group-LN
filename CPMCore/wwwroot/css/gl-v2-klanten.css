@@ -48,7 +48,7 @@
         min-width: 16px;
         height: 16px;
         padding: 0 4px;
-        border-radius: 8px;
+        border-radius: var(--gl-v2-radius-sm, 8px);
         background: var(--gl-v2-surface);
         color: var(--gl-v2-primary);
         font: 700 9.5px var(--gl-v2-font-sans);
@@ -56,98 +56,25 @@
     .gl-v2-topbar-filter-count[hidden] { display: none; }
 }
 
-.gl-v2-toolbar-card {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    align-items: center;
-    padding: 14px;
-    border-radius: var(--gl-v2-radius-md);
-    background: var(--gl-v2-surface);
-    box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 14px 30px -24px rgba(44, 59, 42, .35);
-    flex: none;
-}
 
-.gl-v2-toolbar-search {
-    flex: 1;
-    min-width: 180px;
-}
-.gl-v2-toolbar-search .gl-v2-field-input { min-width: 0; }
 
 /* ── Filters (design-handoff optie 4f "FILTERS OPEN") — zoekveld + Filters-knop op één rij, de
    knop klapt de filtervelden-grid + badges-rij eronder open/dicht. Slechts één filterveld hier
    (Facturatiebedrijf) i.p.v. Leveranciers' drie — de grid hieronder gebruikt daarom auto-fit i.p.v.
    een vast kolomaantal, zodat één veld gewoon één (volle-breedte) kolom wordt i.p.v. twee lege
    ernaast te reserveren. ─────────────────────────────────────────────────────────────────────── */
-.gl-v2-filters-card { flex-direction: column; align-items: stretch; gap: 0; }
 
-.gl-v2-filters-row { display: flex; gap: 10px; align-items: center; width: 100%; }
 
-.gl-v2-filters-toggle {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    height: 40px;
-    padding: 0 14px;
-    border-radius: var(--gl-v2-radius-sm);
-    border: 1px solid var(--gl-v2-hairline);
-    background: var(--gl-v2-surface);
-    color: var(--gl-v2-ink);
-    font: 600 12.5px var(--gl-v2-font-sans);
-    flex: none;
-    cursor: pointer;
-}
-.gl-v2-filters-toggle i { font-size: 15px; }
-.gl-v2-filters-toggle:hover { background: var(--gl-v2-hover-tint); }
 .gl-v2-filters-toggle.is-open,
 .gl-v2-filters-toggle.has-active {
     border-color: var(--gl-v2-primary);
     background: var(--gl-v2-hover-tint);
     color: var(--gl-v2-primary);
 }
-.gl-v2-filters-toggle-count {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
-    border-radius: 9px;
-    background: var(--gl-v2-primary);
-    color: var(--gl-v2-surface);
-    font: 600 10px var(--gl-v2-font-sans);
-}
-.gl-v2-filters-toggle-count[hidden] { display: none; }
 
-.gl-v2-filters-panel { padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--gl-v2-hairline-soft); }
-.gl-v2-filters-panel[hidden] { display: none; }
 
 /* Sheet-header (design-handoff 4f "MOBIEL — FILTERSHEET") — enkel <768px, zie de mobiele
    media query verderop voor de eigenlijke display:flex/block-omschakeling. */
-.gl-v2-filters-sheet-header { display: none; }
-.gl-v2-filters-sheet-handle {
-    width: 42px;
-    height: 4px;
-    border-radius: 2px;
-    background: var(--gl-v2-dashed);
-    align-self: center;
-    margin: 0 auto 10px;
-}
-.gl-v2-filters-sheet-title-row { display: flex; align-items: center; gap: 10px; }
-.gl-v2-filters-sheet-title { font: 500 19px var(--gl-v2-font-serif); color: var(--gl-v2-ink); }
-.gl-v2-filters-sheet-badge {
-    display: inline-flex;
-    align-items: center;
-    height: 20px;
-    padding: 0 8px;
-    border-radius: 9px;
-    background: var(--gl-v2-primary-tint);
-    color: var(--gl-v2-primary);
-    font: 600 10px var(--gl-v2-font-sans);
-}
-.gl-v2-filters-sheet-badge[hidden] { display: none; }
-.gl-v2-filters-sheet-spacer { flex: 1; }
-.gl-v2-filters-sheet-clear { height: auto; padding: 0; margin-left: 0; }
 
 .gl-v2-filters-grid {
     display: grid;
@@ -157,115 +84,18 @@
 @media (max-width: 767.98px) {
     .gl-v2-filters-grid { grid-template-columns: 1fr; }
 
-    .gl-v2-filters-toggle { display: none; }
 
-    .gl-v2-filters-panel-backdrop {
-        display: block;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: calc(var(--gl-v2-qa-bar-h, 64px) + env(safe-area-inset-bottom, 0px));
-        background: rgba(18, 28, 18, .45);
-        z-index: 99998;
-    }
-    .gl-v2-filters-panel-backdrop[hidden] { display: none; }
 
-    .gl-v2-filters-panel:not([hidden]) {
-        position: fixed;
-        left: 0;
-        right: 0;
-        top: auto;
-        bottom: calc(var(--gl-v2-qa-bar-h, 64px) + env(safe-area-inset-bottom, 0px));
-        max-height: 75dvh;
-        overflow-y: auto;
-        margin: 0;
-        padding: 10px 16px calc(14px + env(safe-area-inset-bottom, 0px));
-        border-top: 0;
-        border-radius: var(--gl-v2-radius-lg) var(--gl-v2-radius-lg) 0 0;
-        background: var(--gl-v2-surface);
-        box-shadow: var(--gl-v2-shadow-flyout);
-        z-index: 99999;
-    }
 
-    .gl-v2-filters-sheet-header { display: block; margin-bottom: 4px; }
-    .gl-v2-filters-chips { display: none; }
 
-    .gl-v2-filters-show-btn {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
-        width: 100%;
-        height: 46px;
-        margin-top: 4px;
-        border: 0;
-        border-radius: var(--gl-v2-radius-sm);
-        background: var(--gl-v2-primary);
-        color: var(--gl-v2-surface);
-        font: 600 13px var(--gl-v2-font-sans);
-        cursor: pointer;
-    }
     .gl-v2-filters-show-btn:hover,
     .gl-v2-filters-show-btn:focus-visible { background: var(--gl-v2-primary-deep); outline: none; }
 }
-@media (min-width: 768px) {
-    .gl-v2-filters-show-btn { display: none; }
-}
 
-.gl-v2-filters-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.gl-v2-filters-field-label {
-    font: 600 9px var(--gl-v2-font-sans);
-    color: var(--gl-v2-muted);
-    letter-spacing: .12em;
-    text-transform: uppercase;
-}
 
-.gl-v2-filters-select { width: 100%; }
-.gl-v2-filters-select .gl-v2-select-trigger { width: 100%; height: 38px; }
 
-.gl-v2-filters-chips {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding-top: 12px;
-}
-.gl-v2-filters-chip-list {
-    display: flex;
-    flex: 1;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-}
-.gl-v2-filters-chip {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    height: 28px;
-    padding: 0 6px 0 10px;
-    border-radius: 14px;
-    background: var(--gl-v2-primary-tint);
-    color: var(--gl-v2-primary);
-    font: 600 11px var(--gl-v2-font-sans);
-    border: 0;
-    cursor: pointer;
-}
-.gl-v2-filters-chip i { font-size: 12px; }
-.gl-v2-filters-chip:hover { background: #C6DABA; }
 
-.gl-v2-filters-clear {
-    height: 28px;
-    padding: 0 10px;
-    border: 0;
-    background: transparent;
-    color: var(--gl-v2-primary);
-    font: 600 11.5px var(--gl-v2-font-sans);
-    cursor: pointer;
-    margin-left: auto;
-}
-.gl-v2-filters-clear:hover { text-decoration: underline; }
-.gl-v2-filters-clear[hidden] { display: none; }
+
 
 .gl-v2-table-card {
     flex: none;
@@ -277,8 +107,6 @@
 }
 
 /* ── Laadstaat (optie 4f "LADEN") ─────────────────────────────────────────────────────────────── */
-.gl-v2-loading-skeleton { display: flex; flex-direction: column; }
-.gl-v2-table-card.is-ready .gl-v2-loading-skeleton { display: none; }
 .gl-v2-table-card:not(.is-ready) .datatables-header-footer-wrapper { display: none; }
 
 .gl-v2-skeleton-header {
@@ -306,49 +134,18 @@
     border-bottom: 1px solid var(--gl-v2-hairline-soft);
 }
 
-.gl-v2-skeleton-box {
-    background: #EDEFEA;
-    border-radius: 5px;
-    animation: gl-v2-skeleton-pulse 1.4s ease-in-out infinite;
-}
-.gl-v2-skeleton-text { height: 10px; }
 
 @keyframes gl-v2-skeleton-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
 
-.gl-v2-skeleton-footer {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 9px;
-    height: 46px;
-    flex: none;
-    font: 500 11.5px var(--gl-v2-font-sans);
-    color: var(--gl-v2-muted);
-}
-.gl-v2-skeleton-footer i { font-size: 15px; color: var(--gl-v2-primary); }
-.gl-v2-skeleton-footer .gl-v2-spin { animation: gl-v2-spin 1s linear infinite; }
 @keyframes gl-v2-spin { to { transform: rotate(360deg); } }
 
 /* Kaartvormige skeletons (<768px) — zelfde kaartschil als de echte .gl-v2-client-card. */
-.gl-v2-skeleton-cards { display: none; }
 @media (max-width: 767.98px) {
     .gl-v2-skeleton-header,
     .gl-v2-skeleton-row,
     .gl-v2-skeleton-footer {
         display: none;
     }
-    .gl-v2-skeleton-cards { display: flex; flex-direction: column; gap: 10px; }
-    .gl-v2-skeleton-card {
-        display: flex;
-        flex-direction: column;
-        gap: 9px;
-        padding: 13px 14px;
-        border-radius: var(--gl-v2-radius-md);
-        background: var(--gl-v2-surface);
-        box-shadow: 0 1px 2px rgba(0, 83, 45, .06), 0 10px 22px -16px rgba(44, 59, 42, .4);
-    }
-    .gl-v2-skeleton-card-row { display: flex; align-items: center; gap: 10px; }
-    .gl-v2-skeleton-card-row-divided { padding-top: 8px; border-top: 1px solid var(--gl-v2-hairline-soft); }
 }
 
 /* Lege staat (optie 4f) — .gl-v2-empty-state* is nu de project-brede default in gl-v2-shell.css;
@@ -405,60 +202,39 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 26px;
-    height: 26px;
-    border-radius: 7px;
-    border: 1px solid transparent;
-    background: transparent;
-    color: var(--gl-v2-muted);
+    width: 32px;
+    height: 32px;
+    border-radius: var(--gl-v2-radius-sm);
+    border: 1px solid var(--gl-v2-hairline);
+    background: var(--gl-v2-surface);
+    color: var(--gl-v2-primary);
     text-decoration: none;
     transition: background-color .12s ease, border-color .12s ease, color .12s ease;
 }
 .gl-v2 #datatable-clients .gl-v2-row-action i { font-size: 15px; }
-.gl-v2 #datatable-clients .gl-v2-row-action:hover,
-.gl-v2 #datatable-clients .gl-v2-row-action:focus-visible {
+.gl-v2 #datatable-clients .gl-v2-row-action:hover {
     border-color: var(--gl-v2-primary);
     background: var(--gl-v2-hover-tint);
     color: var(--gl-v2-primary);
-    outline: none;
 }
-.gl-v2 #datatable-clients .gl-v2-row-action-danger:hover,
-.gl-v2 #datatable-clients .gl-v2-row-action-danger:focus-visible {
-    background: #F8EBEB;
-    border-color: #8B2A2A;
-    color: #8B2A2A;
+.gl-v2 #datatable-clients .gl-v2-row-action:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--gl-v2-gold); }
+/* Danger = recept van .gl-v2-icon-btn.is-danger (shell). */
+.gl-v2 #datatable-clients .gl-v2-row-action-danger { border-color: rgba(139, 42, 42, .4); color: var(--gl-v2-danger, #8B2A2A); }
+.gl-v2 #datatable-clients .gl-v2-row-action-danger:hover {
+    background: var(--gl-v2-danger-tint, #F8EBEB);
+    border-color: var(--gl-v2-danger, #8B2A2A);
+    color: var(--gl-v2-danger, #8B2A2A);
+}
+
+/* Rij-actiepatroon (shell: .gl-v2-rowact): vaste breedte van de actiecel (3 acties) vanaf 1024px, zodat de kolom niet verspringt bij hover. */
+.gl-v2 #datatable-clients tbody tr:focus-within td { background: var(--gl-v2-hover-tint); }
+@media (min-width: 1024px) {
+    .gl-v2 #datatable-clients thead th:last-child,
+    .gl-v2 #datatable-clients tbody td:last-child { min-width: 170px; width: 170px; }
+    .gl-v2 #datatable-clients tbody td.gl-td-actions { padding-top: 0; padding-bottom: 0; }
 }
 
 /* ── Footer/pagination (optie 4a) — identiek aan Leveranciers/Facturen. ──────────────────────── */
-.gl-v2 .dt-container .dt-layout-row:last-child {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 10px 0 16px !important;
-    flex: none;
-    border-top: 1px solid var(--gl-v2-hairline);
-}
-.gl-v2 .dt-container .dt-layout-row:first-child { display: none; }
-.gl-v2 .dt-info { padding-left: 14px; color: var(--gl-v2-muted); font: 500 11.5px var(--gl-v2-font-sans); }
-.gl-v2 .dt-paging { padding-right: 14px; }
-.gl-v2 .dt-paging .pagination { display: flex; align-items: center; gap: 6px; margin: 0; }
-.gl-v2 .dt-paging .page-link {
-    width: 30px;
-    height: 28px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 7px;
-    border: 1px solid var(--gl-v2-hairline);
-    background: var(--gl-v2-surface);
-    color: var(--gl-v2-muted-soft);
-    font: 600 12px var(--gl-v2-font-sans);
-}
-.gl-v2 .dt-paging .page-link:hover { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); }
-.gl-v2 .dt-paging .page-item.active .page-link { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); }
-.gl-v2 .dt-paging .page-item.disabled .page-link { color: #C0CABE; background: var(--gl-v2-surface); border-color: var(--gl-v2-hairline-soft); }
 
 /* ── "···"-rijmenu — zelfde trigger+paneel-component/gedrag als Leveranciers/Facturen. ────────── */
 .gl-v2-row-menu {
@@ -485,6 +261,10 @@
 .gl-v2-row-menu-backdrop { display: none; }
 
 @media (max-width: 1023.98px) {
+    /* Onder 1024px blijft het "···"-menu: wrapper toont de trigger altijd, geen chevron. */
+    .gl-v2 #datatable-clients .gl-v2-rowact-btns { display: inline-flex; visibility: visible; }
+    .gl-v2 #datatable-clients .gl-v2-rowact-chev { display: none; }
+
     .gl-v2-row-menu-trigger {
         display: inline-flex;
         align-items: center;
@@ -492,7 +272,7 @@
         width: 28px;
         height: 28px;
         margin-left: auto;
-        border-radius: 8px;
+        border-radius: var(--gl-v2-radius-sm, 8px);
         border: 0;
         background: transparent;
         color: var(--gl-v2-muted);
@@ -551,13 +331,13 @@
     }
     .gl-v2 #datatable-clients .gl-v2-row-menu.is-open .gl-v2-row-action:hover i,
     .gl-v2 #datatable-clients .gl-v2-row-menu.is-open .gl-v2-row-action:focus-visible i { color: var(--gl-v2-primary); }
-    .gl-v2 #datatable-clients .gl-v2-row-menu.is-open .gl-v2-row-action-danger { color: #8B2A2A; font-weight: 600; }
-    .gl-v2 #datatable-clients .gl-v2-row-menu.is-open .gl-v2-row-action-danger i { color: #8B2A2A; }
+    .gl-v2 #datatable-clients .gl-v2-row-menu.is-open .gl-v2-row-action-danger { color: var(--gl-v2-danger, #8B2A2A); font-weight: 600; }
+    .gl-v2 #datatable-clients .gl-v2-row-menu.is-open .gl-v2-row-action-danger i { color: var(--gl-v2-danger, #8B2A2A); }
     .gl-v2 #datatable-clients .gl-v2-row-menu.is-open .gl-v2-row-action-danger:hover,
     .gl-v2 #datatable-clients .gl-v2-row-menu.is-open .gl-v2-row-action-danger:focus-visible {
-        background: #F8EBEB;
+        background: var(--gl-v2-danger-tint, #F8EBEB);
         border: 0;
-        color: #8B2A2A;
+        color: var(--gl-v2-danger, #8B2A2A);
     }
 }
 
@@ -684,11 +464,15 @@
         color: var(--gl-v2-ink);
         outline: none;
     }
-    .gl-v2-row-menu.is-open .gl-v2-row-action-danger { color: #8B2A2A; font-weight: 600; }
-    .gl-v2-row-menu.is-open .gl-v2-row-action-danger i { color: #8B2A2A; }
+    .gl-v2-row-menu.is-open .gl-v2-row-action-danger { color: var(--gl-v2-danger, #8B2A2A); font-weight: 600; }
+    .gl-v2-row-menu.is-open .gl-v2-row-action-danger i { color: var(--gl-v2-danger, #8B2A2A); }
     .gl-v2-row-menu.is-open .gl-v2-row-action-danger:hover,
     .gl-v2-row-menu.is-open .gl-v2-row-action-danger:focus-visible {
-        background: #F8EBEB;
-        color: #8B2A2A;
+        background: var(--gl-v2-danger-tint, #F8EBEB);
+        color: var(--gl-v2-danger, #8B2A2A);
     }
 }
+
+/* hersteld uit filters.css-consolidatie: paginavariant van een gedeeld component */
+.gl-v2-toolbar-card { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 14px; border-radius: var(--gl-v2-radius-md); background: var(--gl-v2-surface); box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 14px 30px -24px rgba(44, 59, 42, .35); flex: none; }
+.gl-v2-toolbar-search { flex: 1; min-width: 180px; }

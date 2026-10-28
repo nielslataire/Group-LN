@@ -4,7 +4,7 @@
 @inject IPermissionService PermissionService
 @*
     gl-v2 — Instellingen › Blogartikelen (design-handoff punt 55a): de status als filter met aantallen, zoeken inline, een artikel opent bij een klik op de rij.
-    Dezelfde acties als de klassieke pagina (Aanmaken, Bewerken). Verwijderen kan in het artikel zelf.
+    Dezelfde acties als de klassieke pagina (Aanmaken, Bewerken). Verwijderen kan in het artikel zelf (daarom geen prullenbak-actie in de lijst).
 *@
 @{
     ViewData["Title"] = "Blogartikelen";
@@ -31,7 +31,7 @@
     <section class="gl-v2-section-card gl-v2-inh-card">
         @if (!artikelen.Any())
         {
-            <div class="gl-v2-inh-empty">
+            <div class="gl-v2-blank gl-v2-inh-empty">
                 <i class="ph ph-newspaper" aria-hidden="true"></i><b>Nog geen blogartikelen</b>
                 <span>@(canWrite ? "Maak je eerste artikel aan met “Nieuw artikel”." : "Er is nog niets om te tonen.")</span>
             </div>
@@ -50,16 +50,21 @@
             <div id="bl-rijen">
                 @foreach (var a in artikelen)
                 {
-                    <a class="gl-v2-inh-row gl-v2-inh-grid--blog" href="@Url.Action("Bewerken", new { id = a.ID })" data-pub="@(a.IsGepubliceerd ? "1" : "0")" data-zoek="@((a.Titel + " " + a.Slug).ToLowerInvariant())">
-                        <span class="gl-v2-inh-bl-titel">
+                    <div class="gl-v2-inh-row gl-v2-inh-grid--blog gl-v2-listrow" data-row-href="@Url.Action("Bewerken", new { id = a.ID })" data-pub="@(a.IsGepubliceerd ? "1" : "0")" data-zoek="@((a.Titel + " " + a.Slug).ToLowerInvariant())">
+                        <a class="gl-v2-inh-bl-titel" href="@Url.Action("Bewerken", new { id = a.ID })">
                             @if (!string.IsNullOrEmpty(a.FotoBestand)) { <img class="gl-v2-inh-bl-thumb" src="@a.FotoBestand" alt="" loading="lazy" /> }
                             else { <span class="gl-v2-inh-bl-thumb is-leeg" aria-hidden="true"><i class="ph ph-image"></i></span> }
                             <span class="gl-v2-inh-title"><span class="t">@a.Titel</span><span class="p">/blog/@a.Slug</span></span>
-                        </span>
+                        </a>
                         <span class="gl-v2-inh-cell">@a.Datum.ToString("dd/MM/yyyy")</span>
                         <span class="gl-v2-inh-cell"><span class="gl-v2-badge @(a.IsGepubliceerd ? "is-positive" : "is-neutral")">@(a.IsGepubliceerd ? "Gepubliceerd" : "Concept")</span></span>
-                        <span class="gl-v2-inh-actions"><span class="gl-v2-row-action" aria-hidden="true"><i class="ph ph-caret-right"></i></span></span>
-                    </a>
+                        <span class="gl-v2-inh-actions"><span class="gl-v2-rowact">
+                            <i class="ph ph-caret-right gl-v2-rowact-chev" aria-hidden="true"></i>
+                            <span class="gl-v2-rowact-btns">
+                                <a class="gl-v2-icon-btn" href="@Url.Action("Bewerken", new { id = a.ID })" title="Bewerken" aria-label="@a.Titel bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></a>
+                            </span>
+                        </span></span>
+                    </div>
                 }
             </div>
             <div class="gl-v2-inh-none" id="bl-geen" hidden>Geen artikelen gevonden.</div>
@@ -77,7 +82,7 @@
             var f = "";
             function toon() {
                 var q = zoek.value.trim().toLowerCase(), n = 0;
-                document.querySelectorAll("#bl-rijen > a").forEach(function (r) {
+                document.querySelectorAll("#bl-rijen > .gl-v2-inh-row").forEach(function (r) {
                     var ok = (!q || r.dataset.zoek.indexOf(q) >= 0) && (!f || (f === "pub" ? r.dataset.pub === "1" : r.dataset.pub === "0"));
                     r.hidden = !ok; if (ok) n++;
                 });

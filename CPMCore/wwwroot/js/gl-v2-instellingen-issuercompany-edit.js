@@ -250,7 +250,7 @@
             fields += hid(p + "Id", t.id || 0) + hid(p + "Name", t.name) + hid(p + "TermType", t.termType) + hid(p + "Days", t.days) + hid(p + "DisplayMode", t.displayMode) +
                 hid(p + "DisplayText", t.displayText) + hid(p + "Description", t.description) + hid(p + "IsDeleted", t.deleted ? "true" : "false");
             idx++;
-            if (!t.deleted) html += '<li><span class="gl-v2-ice-list-t"><b>' + esc(t.name || "—") + "</b><small>Op factuur: " + esc(termOnInvoice(t)) + '</small></span><span class="gl-v2-badge is-neutral">' + esc(termType(t).toUpperCase()) +
+            if (!t.deleted) html += '<li><span class="gl-v2-stack is-flat gl-v2-ice-list-t"><b>' + esc(t.name || "—") + "</b><small>Op factuur: " + esc(termOnInvoice(t)) + '</small></span><span class="gl-v2-badge is-neutral">' + esc(termType(t).toUpperCase()) +
                 '</span><button type="button" class="gl-v2-btn gl-v2-btn-secondary js-ice-term-edit" data-i="' + i + '">Bewerk</button></li>';
         });
         termsFields.innerHTML = fields;
@@ -298,7 +298,7 @@
         rates.forEach(function (r, i) {
             var p = "UserRates[" + i + "].";
             fields += hid(p + "UserId", r.userId) + hid(p + "UserFullName", r.name) + hid(p + "HourlyRate", String(r.rate));
-            html += '<li><span class="gl-v2-ice-list-t"><b>' + esc(r.name || r.userId) + "</b></span><span class=\"gl-v2-ice-rate\">" + esc(money(r.rate)) + ' <small>per uur</small></span><button type="button" class="gl-v2-btn gl-v2-btn-secondary js-ice-rate-edit" data-i="' + i + '">Bewerk</button></li>';
+            html += '<li><span class="gl-v2-stack is-flat gl-v2-ice-list-t"><b>' + esc(r.name || r.userId) + "</b></span><span class=\"gl-v2-ice-rate\">" + esc(money(r.rate)) + ' <small>per uur</small></span><button type="button" class="gl-v2-btn gl-v2-btn-secondary js-ice-rate-edit" data-i="' + i + '">Bewerk</button></li>';
         });
         ratesFields.innerHTML = fields;
         ratesList.innerHTML = html || emptyLine("Nog geen tarieven. Zonder tarief kan een medewerker niet in regie gefactureerd worden.");

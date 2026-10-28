@@ -11,7 +11,8 @@
 *@
 @using CPMCore.Models.GlV2
 @{
-    ViewData["Title"] = (string.IsNullOrWhiteSpace(Model.Name) ? "Bedrijf" : Model.Name) + " bewerken";
+    var isNew = Model.Id <= 0; // "Nieuw bedrijf" (IssuerCompaniesCreate) hergebruikt deze view; bankrekeningen, reeksen en Octopus kunnen pas na het aanmaken
+    ViewData["Title"] = isNew ? "Nieuw bedrijf" : (string.IsNullOrWhiteSpace(Model.Name) ? "Bedrijf" : Model.Name) + " bewerken";
     ViewData["PageIcon"] = "ph ph-buildings";
     ViewData["GlV2FullHeightBody"] = true;
     ViewData["BackUrl"] = Url.Action("IssuerCompanies", "Instellingen");
@@ -34,7 +35,7 @@
     <span class="gl-v2-badge is-attention" id="ice-dirty-badge" hidden>NIET-OPGESLAGEN WIJZIGINGEN</span>
 }
 
-@using (Html.BeginForm("IssuerCompaniesEdit", "Instellingen", new { id = Model.Id }, FormMethod.Post, antiforgery: null, htmlAttributes: new { @class = "gl-v2-ice-form", id = "gl-v2-ice-form", enctype = "multipart/form-data", novalidate = "novalidate", data_start_tab = startTab }))
+@using (Html.BeginForm(isNew ? "IssuerCompaniesCreate" : "IssuerCompaniesEdit", "Instellingen", isNew ? null : new { id = Model.Id }, FormMethod.Post, antiforgery: null, htmlAttributes: new { @class = "gl-v2-ice-form", id = "gl-v2-ice-form", enctype = "multipart/form-data", novalidate = "novalidate", data_start_tab = startTab }))
 {
     @Html.AntiForgeryToken()
     @Html.HiddenFor(m => m.Id)
@@ -65,7 +66,7 @@
     </div>
 
     <div class="gl-v2-ice-scroll">
-        <p class="gl-v2-ice-required-hint">Velden met <span class="gl-v2-ice-required-star">*</span> zijn verplicht · wisselen van tab bewaart je invoer</p>
+        <p class="gl-v2-ice-required-hint">Velden met <span class="gl-v2-ice-required-star">*</span> zijn verplicht · wisselen van tab bewaart je invoer@(isNew ? " · bankrekeningen, nummerreeksen en de Octopus-koppeling voeg je toe na het opslaan" : "")</p>
 
         @if (!ViewData.ModelState.IsValid)
         {
@@ -179,7 +180,7 @@
         <span class="gl-v2-form-actionbar-spacer"></span>
         <div class="gl-v2-form-actionbar-actions">
             <a href="@Url.Action("IssuerCompanies", "Instellingen")" class="gl-v2-btn gl-v2-btn-text" id="gl-v2-ice-cancel">Annuleren</a>
-            <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="ice-save">Bedrijf opslaan</button>
+            <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="ice-save">@(isNew ? "Bedrijf aanmaken" : "Bedrijf opslaan")</button>
         </div>
     </div>
 }
@@ -357,7 +358,7 @@
                                     <input type="hidden" name="IsSupplier" value="@(suggestion.RelationType == "Leverancier")" />
                                     <input type="hidden" name="CandidateId" value="@candidate.Id" />
                                     <input type="hidden" name="OctopusRelationId" value="@suggestion.OctopusRelationId" />
-                                    <span class="gl-v2-ice-list-t"><b>@candidate.Name</b><small>@candidate.CandidateType@(string.IsNullOrWhiteSpace(candidate.VatNumber) ? "" : " · btw " + candidate.VatNumber)</small></span>
+                                    <span class="gl-v2-stack is-flat gl-v2-ice-list-t"><b>@candidate.Name</b><small>@candidate.CandidateType@(string.IsNullOrWhiteSpace(candidate.VatNumber) ? "" : " · btw " + candidate.VatNumber)</small></span>
                                     <button type="submit" class="gl-v2-btn gl-v2-btn-primary">Koppelen</button>
                                 </form>
                             }

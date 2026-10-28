@@ -476,6 +476,19 @@ public partial class LeveranciersController
             tracked[department.Key] = entity;
         }
 
+        // Een afdeling die niet meer in het formulier staat, is verwijderd. Haar contacten blijven bestaan, zonder afdeling.
+        var postedDepartmentIds = departments.Where(HasDepartmentData).Where(d => d.Id.HasValue).Select(d => d.Id!.Value).ToHashSet();
+        var departmentsToRemove = existingDepartments.Where(d => !postedDepartmentIds.Contains(d.DepartmentId)).ToList();
+        if (departmentsToRemove.Count > 0)
+        {
+            var removeIds = departmentsToRemove.Select(d => d.DepartmentId).ToList();
+            var orphanedContacts = await _db.CompanyContacts
+                .Where(c => c.DepartmentId != null && removeIds.Contains(c.DepartmentId.Value))
+                .ToListAsync(ct);
+            foreach (var orphan in orphanedContacts) orphan.DepartmentId = null;
+            _db.CompanyDepartments.RemoveRange(departmentsToRemove);
+        }
+
         await _db.SaveChangesAsync(ct);
         return tracked;
     }
@@ -836,6 +849,8 @@ public partial class LeveranciersController
             SetPageHeader("bx bx-hard-hat", "Leveranciers");
         }
 
+        ViewData["HelpScreenId"] = "leveranciers-overzicht";
+
         return View(ViewData["UseGlV2Layout"] as bool? == true ? "IndexV2" : "Index", vm);
     }
 
@@ -1065,6 +1080,7 @@ public partial class LeveranciersController
         };
 
         SetPageHeader("bx bx-hard-hat", detailModel.Name);
+        ViewData["HelpScreenId"] = "leveranciers-details";
         return View(ViewData["UseGlV2Layout"] as bool? == true ? "DetailsV2" : "Details", detailModel);
     }
 
@@ -1101,6 +1117,7 @@ public partial class LeveranciersController
 
         SetPageHeader("bx bx-hard-hat", "Nieuwe leverancier");
         SetCreateBreadcrumb();
+        ViewData["HelpScreenId"] = "leveranciers-nieuw";
         return View(ViewData["UseGlV2Layout"] as bool? == true ? "CreateV2" : "Create", vm);
     }
     [HttpPost]
@@ -1137,6 +1154,7 @@ public partial class LeveranciersController
             await BuildFormAsync(model, ct, scope);
             SetPageHeader("bx bx-hard-hat", "Nieuwe leverancier");
             SetCreateBreadcrumb();
+            ViewData["HelpScreenId"] = "leveranciers-nieuw";
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "CreateV2" : "Create", model);
         }
 
@@ -1331,6 +1349,7 @@ public partial class LeveranciersController
 
         await BuildFormAsync(vm, ct, scope);
         SetPageHeader("bx bx-hard-hat", $"Leverancier bewerken — {entity.BedrijfsNaam}");
+        ViewData["HelpScreenId"] = "leveranciers-bewerken";
         return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditV2" : "Edit", vm);
     }
 
@@ -1370,6 +1389,7 @@ public partial class LeveranciersController
             SetPageHeader("bx bx-hard-hat", string.IsNullOrWhiteSpace(invalidEntityName)
                 ? "Leverancier bewerken"
                 : $"Leverancier bewerken — {invalidEntityName}");
+            ViewData["HelpScreenId"] = "leveranciers-bewerken";
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditV2" : "Edit", model);
         }
 
@@ -1441,7 +1461,13 @@ public partial class LeveranciersController
 
         if (requiresOctopusSync)
         {
-            await TrySyncSupplierRelationAsync(entity.CompanyId, ct);
+            try { await TrySyncSupplierRelationAsync(entity.CompanyId, ct); }
+            catch (Exception ex)
+            {
+                HttpContext.RequestServices.GetRequiredService<ILogger<LeveranciersController>>()
+                    .LogWarning(ex, "Octopus-relatie van leverancier {CompanyId} kon niet bijgewerkt worden", entity.CompanyId);
+                AddMessage("warning", "De leverancier is bijgewerkt in CPM, maar de gegevens konden niet naar Octopus doorgegeven worden. Probeer het later opnieuw door de leverancier nogmaals op te slaan.", "Octopus niet bijgewerkt");
+            }
         }
 
         var referrer = TempData["Referrer"] as string;
@@ -1486,6 +1512,7 @@ public partial class LeveranciersController
             }
         }
 
+        supplier.BlockReason = await GetSupplierDeleteBlockReasonAsync(id, ct);
         return PartialView("Modals/_ModalDeleteSupplier", supplier);
     }
 
@@ -1532,6 +1559,7 @@ public partial class LeveranciersController
             }
         }
 
+        supplier.BlockReason = await GetSupplierDeleteBlockReasonAsync(id, ct);
         return PartialView("Modals/_ModalDeleteSupplierV2", supplier);
     }
 
@@ -1569,10 +1597,48 @@ public partial class LeveranciersController
             }
         }
 
-        _db.CompanyInfo.Remove(entity);
-        await _db.SaveChangesAsync(ct);
+        var blockReason = await GetSupplierDeleteBlockReasonAsync(id, ct);
+        if (blockReason != null)
+        {
+            AddMessage("error", blockReason, "Niet verwijderd");
+            return RedirectToAction(nameof(Index));
+        }
+
+        // Een leverancier met enkel afdelingen en contactpersonen mag weg: die gaan mee.
+        try
+        {
+            _db.CompanyContacts.RemoveRange(await _db.CompanyContacts.Where(c => c.CompanyId == id).ToListAsync(ct));
+            _db.CompanyDepartments.RemoveRange(await _db.CompanyDepartments.Where(d => d.CompanyId == id).ToListAsync(ct));
+            _db.CompanyIssuerCompany.RemoveRange(await _db.CompanyIssuerCompany.Where(ci => ci.CompanyId == id).ToListAsync(ct));
+            _db.CompanyInfo.Remove(entity);
+            await _db.SaveChangesAsync(ct);
+            AddMessage("success", "De leverancier is verwijderd", "Geslaagd!");
+        }
+        catch (Exception ex)
+        {
+            _db.ChangeTracker.Clear();
+            HttpContext.RequestServices.GetRequiredService<ILogger<LeveranciersController>>()
+                .LogError(ex, "Leverancier {CompanyId} verwijderen mislukt", id);
+            AddMessage("error", ServiceCore.DbErrorTranslator.ToFriendlyMessage(ex), "Niet verwijderd");
+        }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>Waarom deze leverancier niet verwijderd mag worden, of null. Een leverancier met
+    /// contracten of facturen (verkoop of inkomend) blijft staan; enkel afdelingen en contactpersonen
+    /// zijn geen reden.</summary>
+    private async Task<string?> GetSupplierDeleteBlockReasonAsync(int id, CancellationToken ct)
+    {
+        var contractCount = await _db.Contract.AsNoTracking().CountAsync(c => c.CompanyId == id, ct);
+        var invoiceCount = await _db.Invoices.AsNoTracking().CountAsync(i => i.CompanyId == id, ct)
+            + await _db.IncommingInvoices.AsNoTracking().CountAsync(i => i.CompanyId == id, ct);
+        if (contractCount == 0 && invoiceCount == 0) return null;
+
+        var redenen = new List<string>();
+        if (contractCount > 0) redenen.Add($"{contractCount} {(contractCount == 1 ? "contract" : "contracten")}");
+        if (invoiceCount > 0) redenen.Add($"{invoiceCount} {(invoiceCount == 1 ? "factuur" : "facturen")}");
+        return $"Deze leverancier kan niet verwijderd worden: er zijn al overeenkomsten of facturatie met deze leverancier ({string.Join(", ", redenen)}).";
     }
 
     [HttpGet]

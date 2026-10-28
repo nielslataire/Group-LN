@@ -8,7 +8,7 @@ updated: 2026-10-14
 screens: verslagen-edit
 synonyms: werfbezoek, verslag, aanwezigen, weer, nieuwe punten, openstaande punten, plan, foto
 description: aanwezigen, punten en plannen bij een werfbezoek
-related: werfverslag-afronden-en-versturen, punten-lijst-overzicht
+related: verslagen-overzicht, werfverslag-afronden-en-versturen, punten-lijst-overzicht
 intro: |
   Na of tijdens een werfbezoek leg je vast wie er was, wat je zag en welke punten er bij zijn gekomen.
   Een nieuw verslag neemt de aanwezigen, de algemene opmerkingen en de nog openstaande punten over uit het

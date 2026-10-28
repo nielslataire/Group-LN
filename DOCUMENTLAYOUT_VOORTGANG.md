@@ -2,7 +2,7 @@
 
 Doorlopend statusdocument voor de projectwijde QuestPDF-documentlayout (Niels, okt. 2026, op basis
 van design-handoff punt 35 "Documentlayout" en punt 36 "Opmaakspecificaties", `CRM
-Documentlayout.dc.html`). Zie ook DESIGN.md "PDF-documenten (gl-v2)" voor de korte, projectwijde
+Documentlayout.dc.html`). Zie ook CPMCore/DESIGN.md "PDF-documenten (gl-v2)" voor de korte, projectwijde
 samenvatting; dit bestand is het volledige logboek: wat er klaar is, wat bewust afwijkt van het
 ontwerp, en wat nog moet gebeuren.
 

@@ -799,6 +799,14 @@ namespace ServiceCore
 
             foreach (var id in ids)
             {
+                // Een verkochte eenheid of een eenheid met een klant verwijder je niet.
+                var unit = _uow.Units.GetById(id);
+                if (unit != null && (unit.ClientAccountId != null || (unit.ConstructionValueSold ?? 0m) > 0m || (unit.LandValueSold ?? 0m) > 0m))
+                {
+                    response.AddError($"Eenheid {unit.Name} kan niet verwijderd worden: ze is verkocht of heeft al een klant.");
+                    continue;
+                }
+
                 // unlink children
                 var attached = _uow.Units.GetNormal().Where(m => m.AttachedUnitId == id);
                 foreach (var e in attached) e.AttachedUnitId = null;
@@ -1241,6 +1249,13 @@ namespace ServiceCore
             response.InsertedId = entity.Id;
             return response;
         }
+        private const string SoldAmountLockedMessage =
+            "De verkoopbedragen van deze eenheid kunnen niet meer gewijzigd worden: er is al een factuur voor deze eenheid gemaakt.";
+
+        /// <summary>Is er al een factuur(lijn) voor deze eenheid? Dan liggen de verkoopbedragen vast.</summary>
+        private bool UnitHasInvoice(int unitId) =>
+            _uow.Context.Set<InvoicesDetails>().AsNoTracking().Any(d => d.UnitId == unitId);
+
         public Response UpdateConstructionValueSold(UnitConstructionValueBO bo)
         {
             var response = new Response();
@@ -1254,7 +1269,7 @@ namespace ServiceCore
             var current = _uow.Context.Set<UnitConstructionValue>()
                 .AsNoTracking()
                 .Where(x => x.Id == bo.Id)
-                .Select(x => new { x.Id, x.ValueSold })
+                .Select(x => new { x.Id, x.ValueSold, x.UnitId })
                 .FirstOrDefault();
 
             if (current == null)
@@ -1273,6 +1288,12 @@ namespace ServiceCore
             {
                 response.InsertedId = bo.Id;
                 response.AddSaveChangesResult(1, "Geen wijziging nodig", ""); // 1 = behandel als succes
+                return response;
+            }
+
+            if (UnitHasInvoice(current.UnitId))
+            {
+                response.AddError(SoldAmountLockedMessage);
                 return response;
             }
 
@@ -1328,6 +1349,12 @@ namespace ServiceCore
             {
                 response.InsertedId = bo.Id;
                 response.AddSaveChangesResult(1, "Geen wijziging nodig", ""); // 1 = behandel als succes
+                return response;
+            }
+
+            if (UnitHasInvoice(bo.Id))
+            {
+                response.AddError(SoldAmountLockedMessage);
                 return response;
             }
 

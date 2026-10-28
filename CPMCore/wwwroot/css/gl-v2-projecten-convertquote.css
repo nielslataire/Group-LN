@@ -6,9 +6,9 @@
 
 .gl-v2-cq-header-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .gl-v2-cq-header-sub { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.gl-v2-cq-req { color: #8B2A2A; }
+.gl-v2-cq-req { color: var(--gl-v2-danger, #8B2A2A); }
 
-.gl-v2-cq-readout { height: 38px; display: flex; align-items: center; gap: 7px; padding: 0 11px; border: 1px solid var(--gl-v2-hairline); border-radius: 8px; background: #F7F9F5; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); min-width: 0; }
+.gl-v2-cq-readout { height: 38px; display: flex; align-items: center; gap: 7px; padding: 0 11px; border: 1px solid var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-sm, 8px); background: #F7F9F5; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); min-width: 0; }
 .gl-v2-cq-readout i { font-size: 13px; flex: none; }
 .gl-v2-cq-readout span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

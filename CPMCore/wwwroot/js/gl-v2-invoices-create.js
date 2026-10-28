@@ -177,7 +177,7 @@
         var d = state.detail, del = state.delivery, name = (d && d.name) || state.party.text;
         var bits = [addressLine(d), d && d.vatNumber ? "BTW " + d.vatNumber : "", del && del.email ? del.email : ""].filter(Boolean);
         var peppol = del ? (del.peppolId ? '<span class="gl-v2-ic-peppol"><i class="ph ph-check-circle" aria-hidden="true"></i>Bereikbaar via Peppol</span>' : '<span class="gl-v2-ic-peppol is-off"><i class="ph ph-minus-circle" aria-hidden="true"></i>Niet gevonden op Peppol</span>') : "";
-        card.innerHTML = '<span class="gl-v2-ic-avatar" aria-hidden="true">' + esc(initials(name)) + '</span><span class="gl-v2-ic-party-text"><b>' + esc(name) + '</b>' + (bits.length ? '<span>' + esc(bits.join(" · ")) + '</span>' : "") + peppol + '</span>' + (locked ? "" : '<button type="button" class="gl-v2-btn gl-v2-btn-text" id="ic-party-change">Wijzigen</button>') + '';
+        card.innerHTML = '<span class="gl-v2-ic-avatar" aria-hidden="true">' + esc(initials(name)) + '</span><span class="gl-v2-stack gl-v2-ic-party-text"><b>' + esc(name) + '</b>' + (bits.length ? '<span>' + esc(bits.join(" · ")) + '</span>' : "") + peppol + '</span>' + (locked ? "" : '<button type="button" class="gl-v2-btn gl-v2-btn-text" id="ic-party-change">Wijzigen</button>') + '';
         card.hidden = false;
         var chg = $("#ic-party-change"); if (chg) chg.addEventListener("click", clearParty);
     }

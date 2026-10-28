@@ -100,6 +100,7 @@ namespace CPMCore.Controllers
                     ViewBag.CanWriteProjectUnits as bool? ?? false);
             }
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Eenheden");
+            ViewData["HelpScreenId"] = "projecten-eenheden";
             return View(useGlV2Units ? "DetailUnitsV2" : "DetailUnits", model);
         }
 
@@ -658,7 +659,8 @@ namespace CPMCore.Controllers
                 }
                 else
                 {
-                    AddMessage("error", "De eenheid is niet verwijderd, gelieve opnieuw tot proberen of contact op te nemen met de administrator", "Fout!");
+                    var reason = response.Messages.Where(m => m.Type == MessageType.Error).Select(m => m.Message).FirstOrDefault(m => !string.IsNullOrWhiteSpace(m));
+                    AddMessage("error", reason ?? "De eenheid is niet verwijderd, gelieve opnieuw tot proberen of contact op te nemen met de administrator", "Fout!");
                     return RedirectToAction("DetailUnits", "Projecten", new { projectid = projectid });
                 }
             }
@@ -1478,6 +1480,7 @@ namespace CPMCore.Controllers
             ViewData["BreadcrumbNode"] = projectUnits;
 
             SetPageHeader("bx bx-building-house", $"{projectName} - Aandelen basisakte");
+            ViewData["HelpScreenId"] = "projecten-grondaandelen";
             return View("LandsharesV2", vm);
         }
 

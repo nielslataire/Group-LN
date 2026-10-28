@@ -127,7 +127,7 @@
                                                 <span class="is-num">@Geld(v.Bedrag)</span>
                                                 @if (Model.CanWrite)
                                                 {
-                                                    <form method="post" asp-action="BorgVrijgaveIntrekken" asp-controller="Projecten" data-bevestig="Deze vrijgave van @Geld(v.Bedrag) ongedaan maken? Het bedrag staat daarna weer als ingehouden borg.">
+                                                    <form method="post" asp-action="BorgVrijgaveIntrekken" asp-controller="Projecten" data-bv-titel="Vrijgave ongedaan maken?" data-bv-tekst="Deze vrijgave van @Geld(v.Bedrag) ongedaan maken? Het bedrag staat daarna weer als ingehouden borg." data-bv-ok="Ongedaan maken" data-bv-tone="warning">
                                                         @Html.AntiForgeryToken()
                                                         <input type="hidden" name="projectId" value="@Model.ProjectId" />
                                                         <input type="hidden" name="id" value="@v.Id" />
@@ -211,6 +211,8 @@
         @await Html.PartialAsync("Partials/_InhoudingAfhandelenV2", Model.ProjectId)
     }
 </div>
+
+@await Html.PartialAsync("GlV2/_BevestigModal")
 
 @section PageScripts
 {

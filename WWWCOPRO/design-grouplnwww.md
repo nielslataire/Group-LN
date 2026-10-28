@@ -3,7 +3,7 @@
      - WWWCOPRO/DESIGN.md documents the CURRENT, still-LIVE site (Okler/Porto-based "Pine & Brass").
        Keep using that file while patching/editing the live pages — it stays accurate until a page
        is actually migrated below.
-     - The repo-root DESIGN.md is for CPMCore (gl-v2 admin shell) — a different app entirely, ignore
+     - CPMCore/DESIGN.md is for CPMCore (gl-v2 admin shell) — a different app entirely, ignore
        it here.
      - wireframe-handoff/ holds the actual mockups this doc is derived from. This file is the written
        rulebook; the mockups are the pixel source of truth:

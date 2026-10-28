@@ -74,7 +74,7 @@
 .gl-v2-pg-col-handle { display: flex; justify-content: center; }
 .gl-v2-pg-handle {
     display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 32px; cursor: grab;
-    color: var(--gl-v2-muted-light); border-radius: 6px; font-size: 18px;
+    color: var(--gl-v2-muted-light); border-radius: var(--gl-v2-radius-xs, 6px); font-size: 18px;
 }
 .gl-v2-pg-handle:hover { background: var(--gl-v2-hover-tint); color: var(--gl-v2-muted); }
 .gl-v2-pg-handle:active { cursor: grabbing; }

@@ -7,8 +7,8 @@
     var data = JSON.parse(document.getElementById("bl-data").textContent);
     var token = (form.querySelector('input[name="__RequestVerificationToken"]') || {}).value || "";
     var canWrite = form.dataset.canWrite === "1";
-    function $(id) { return document.getElementById(id); }
-    function toast(tone, title, body) { if (window.GlV2Toast) window.GlV2Toast.show({ tone: tone, title: title, body: body || "" }); }
+    var $ = window.GlV2.byId; // gedeeld (gl-v2-shell.js)
+    var toast = (window.GlV2Toast && window.GlV2Toast.notify) || function () {}; // gedeeld, zie gl-v2-shell.js
 
     // ── Tellers ──
     form.querySelectorAll("[data-tel]").forEach(function (el) {

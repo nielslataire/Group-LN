@@ -1,7 +1,7 @@
 # TODO — Documenten (design-handoff 17) en ondertekenen
 
 Stand 2026-09-25: pagina `Projecten/DetailDocs` (gl-v2), model, service en migratie 049 zijn klaar en getest op
-InMemory + gerenderde HTML. Zie DESIGN.md "Projecten/DetailDocsV2" en DEVNOTES.md §8.
+InMemory + gerenderde HTML. Zie CPMCore/DESIGN.md "Projecten/DetailDocsV2" en DEVNOTES.md §8.
 
 ## Eerst doen (voor de uitrol)
 - [ ] `_migrations/049_DocumentenModel.sql` en daarna `_migrations/054_OndertekeningPerLink.sql` uitvoeren op de live DB **vóór** de nieuwe

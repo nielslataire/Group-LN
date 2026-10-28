@@ -47,12 +47,12 @@
 /* Korte meerregelige velden (omschrijving voor de klant, voorwaarden): twee à drie regels volstaan —
    lager dan de standaard-textarea (104px) van de shell. */
 .gl-v2-field-box.gl-v2-field-box-textarea.gl-v2-co-textbox-sm { height: 72px; }
-.gl-v2-co-readout { min-height: 40px; display: flex; align-items: center; padding: 0 11px; border: 1px solid var(--gl-v2-hairline); border-radius: 8px; background: #F7F9F5; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); min-width: 0; }
+.gl-v2-co-readout { min-height: 40px; display: flex; align-items: center; padding: 0 11px; border: 1px solid var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-sm, 8px); background: #F7F9F5; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); min-width: 0; }
 .gl-v2-co-readout > span, .gl-v2-co-readout > a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .gl-v2-co-readout.is-multiline { padding: 9px 11px; white-space: pre-line; line-height: 1.5; align-items: flex-start; }
 .gl-v2-co-locked-field { gap: 7px; color: var(--gl-v2-muted-soft); }
 .gl-v2-co-locked-field i { font-size: 13px; flex: none; }
-.gl-v2-co-req { color: #8B2A2A; }
+.gl-v2-co-req { color: var(--gl-v2-danger, #8B2A2A); }
 .gl-v2-co-link { font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: none; }
 .gl-v2-co-link:hover { text-decoration: underline; color: var(--gl-v2-primary); }
 
@@ -114,7 +114,7 @@ a.gl-v2-co-quote-preview:hover { border-color: var(--gl-v2-primary); color: var(
 .gl-v2-co-tabular { font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* Invoervelden in een tabelcel: het gedeelde veldkader (.gl-v2-field-box), compacter dan in een
    formulier (34px i.p.v. 40px) zodat een rij niet hoger wordt dan nodig. */
-.gl-v2-co-table .gl-v2-field-box { --gl-v2-field-pad: 9px; height: 34px; padding: 0 9px; gap: 6px; border-radius: 7px; }
+.gl-v2-co-table .gl-v2-field-box { --gl-v2-field-pad: 9px; height: 34px; padding: 0 9px; gap: 6px; border-radius: var(--gl-v2-radius-s, 7px); }
 .gl-v2-co-table .gl-v2-field-box .gl-v2-field-input { font-size: 12.5px; width: 100%; }
 .gl-v2-co-table .gl-v2-field-box.gl-v2-co-numbox { width: 84px; margin-left: auto; }
 /* Btw-code: gesloten veld compact ("6 % · CODE"), de open lijst toont de lange tekst en mag breder zijn. */
@@ -137,7 +137,7 @@ a.gl-v2-co-quote-preview:hover { border-color: var(--gl-v2-primary); color: var(
 /* Sleepgreep (28a): eerste, smalle kolom. Staat NA de :first-child-regel hierboven zodat de kleinere
    inspringing wint (zelfde specificiteit). touch-action:none: slepen met de vinger scrolt de pagina niet. */
 .gl-v2-co-table th.gl-v2-co-handle-cell, .gl-v2-co-table td.gl-v2-co-handle-cell { width: 30px; padding-left: 10px; padding-right: 0; }
-.gl-v2-co-handle { display: flex; align-items: center; justify-content: center; width: 22px; height: 30px; border: 0; border-radius: 6px; background: transparent; color: var(--gl-v2-muted-light); cursor: grab; touch-action: none; }
+.gl-v2-co-handle { display: flex; align-items: center; justify-content: center; width: 22px; height: 30px; border: 0; border-radius: var(--gl-v2-radius-xs, 6px); background: transparent; color: var(--gl-v2-muted-light); cursor: grab; touch-action: none; }
 .gl-v2-co-handle i { font-size: 16px; }
 .gl-v2-co-handle:hover, .gl-v2-co-handle:focus-visible { background: var(--gl-v2-hover-tint); color: var(--gl-v2-primary); outline: none; }
 .gl-v2-co-row.is-dragging { background: var(--gl-v2-hover-tint); }
@@ -205,8 +205,7 @@ a.gl-v2-co-quote-preview:hover { border-color: var(--gl-v2-primary); color: var(
 .gl-v2-co-signer-dot { position: absolute; right: -1px; bottom: -1px; width: 10px; height: 10px; border-radius: 5px; border: 2px solid var(--gl-v2-surface); background: #B9C2B6; }
 .gl-v2-co-signer-dot.is-goud { background: #C9A96E; }
 .gl-v2-co-signer-dot.is-groen { background: var(--gl-v2-primary); }
-.gl-v2-co-signer-dot.is-rood { background: #8B2A2A; }
-.gl-v2-co-signer-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.gl-v2-co-signer-dot.is-rood { background: var(--gl-v2-danger, #8B2A2A); }
 .gl-v2-co-signer-name { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gl-v2-co-signer-status { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 .gl-v2-co-signer-status.is-goud { color: var(--gl-v2-warning); }
@@ -221,7 +220,7 @@ a.gl-v2-co-quote-preview:hover { border-color: var(--gl-v2-primary); color: var(
 
 /* ── Zijkolom: Facturen ────────────────────────────────────────────────────────────────────────────── */
 .gl-v2-card-body.gl-v2-co-invoices { gap: 4px; padding-top: 10px; padding-bottom: 10px; }
-.gl-v2-co-invoice { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px; margin: 0 -8px; border-radius: 8px; text-decoration: none; }
+.gl-v2-co-invoice { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px; margin: 0 -8px; border-radius: var(--gl-v2-radius-sm, 8px); text-decoration: none; }
 .gl-v2-co-invoice:hover { background: var(--gl-v2-hover-tint); }
 .gl-v2-co-invoice-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .gl-v2-co-invoice-nr { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
@@ -232,7 +231,7 @@ a.gl-v2-co-quote-preview:hover { border-color: var(--gl-v2-primary); color: var(
 .gl-v2-card-body.gl-v2-co-source { gap: 12px; }
 .gl-v2-co-source-item { display: flex; flex-direction: column; gap: 3px; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
 .gl-v2-co-source-kind { font: 600 9px var(--gl-v2-font-sans); letter-spacing: .1em; color: var(--gl-v2-muted); }
-.gl-v2-co-dashed-btn { display: flex; align-items: center; justify-content: center; gap: 6px; height: 38px; border: 1.5px dashed var(--gl-v2-hairline); border-radius: 8px; font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: none; }
+.gl-v2-co-dashed-btn { display: flex; align-items: center; justify-content: center; gap: 6px; height: 38px; border: 1.5px dashed var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-sm, 8px); font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: none; }
 .gl-v2-co-dashed-btn:hover { border-color: var(--gl-v2-primary); background: var(--gl-v2-hover-tint); color: var(--gl-v2-primary); }
 /* Historiek als tijdlijn: een bolletje per gebeurtenis op een doorlopende haarlijn (nieuwste bovenaan,
    groen). Bol en lijn zijn pseudo-elementen — geen rand op het item zelf. */
@@ -255,7 +254,6 @@ a.gl-v2-co-quote-preview:hover { border-color: var(--gl-v2-primary); color: var(
 }
 .gl-v2-co-send-icon { width: 34px; height: 34px; flex: none; border-radius: 9px; background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); display: flex; align-items: center; justify-content: center; }
 .gl-v2-co-send-icon i { font-size: 17px; }
-.gl-v2-co-send-header-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .gl-v2-co-send-header-sub { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gl-v2-co-send-main, .gl-v2-co-send-section { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .gl-v2-co-send-section[hidden] { display: none; }
@@ -279,20 +277,11 @@ a.gl-v2-co-quote-preview:hover { border-color: var(--gl-v2-primary); color: var(
 
 /* Aanvinkvakje — zelfde tekening als op Betalingsschijven/Facturatie (daar pagina-eigen gedupliceerd; er
    is nog geen gedeeld checkbox-component in de shell). */
-.gl-v2-co-check { position: relative; display: inline-block; width: 18px; height: 18px; vertical-align: middle; flex: none; }
-.gl-v2-co-check input[type="checkbox"] { position: absolute; inset: 0; margin: 0; opacity: 0; z-index: 2; cursor: pointer; }
-.gl-v2-co-check label { position: absolute; inset: 0; margin: 0; cursor: pointer; }
-.gl-v2-co-check label:before { content: ""; position: absolute; inset: 0; box-sizing: border-box; border-radius: 5px; border: 1px solid var(--gl-v2-hairline); background: var(--gl-v2-surface); }
-.gl-v2-co-check input[type="checkbox"]:hover + label:before { border-color: var(--gl-v2-primary); }
-.gl-v2-co-check input[type="checkbox"]:checked + label:before { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); }
-.gl-v2-co-check input[type="checkbox"]:checked + label:after { content: "\f00c"; font-family: "Font Awesome 5 Free"; font-weight: 900; position: absolute; inset: 0; font-size: 10px; line-height: 18px; text-align: center; color: var(--gl-v2-surface); }
-.gl-v2-co-check input[type="checkbox"]:focus-visible + label:before { box-shadow: 0 0 0 3px var(--gl-v2-gold); }
-.gl-v2-co-check input[type="checkbox"]:disabled + label { cursor: not-allowed; }
-.gl-v2-co-check input[type="checkbox"]:disabled + label:before { background: var(--gl-v2-neutral-tint); }
+/* selectievakje: gedeeld .gl-v2-check (css/gl-v2/check.css) */
 
 /* Voorbeeld */
 .gl-v2-co-send-preview { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.gl-v2-co-send-frame { width: 100%; aspect-ratio: 1 / 1.4; border: 0; border-radius: 6px; background: var(--gl-v2-surface); box-shadow: 0 2px 6px rgba(44, 59, 42, .10), 0 16px 30px -18px rgba(44, 59, 42, .4); }
+.gl-v2-co-send-frame { width: 100%; aspect-ratio: 1 / 1.4; border: 0; border-radius: var(--gl-v2-radius-xs, 6px); background: var(--gl-v2-surface); box-shadow: 0 2px 6px rgba(44, 59, 42, .10), 0 16px 30px -18px rgba(44, 59, 42, .4); }
 .gl-v2-co-send-frame.is-placeholder { display: flex; align-items: center; justify-content: center; color: var(--gl-v2-primary); text-decoration: none; }
 .gl-v2-co-send-frame.is-placeholder i { font-size: 40px; }
 @media (max-width: 767.98px) { .gl-v2-co-send-frame { display: none; } }

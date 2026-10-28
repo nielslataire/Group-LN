@@ -21,7 +21,7 @@
      data-note="@r.Note" data-share-after="@(r.ShareAfter ? "1" : "0")" data-asked="@(r.RequestedDate.HasValue ? "1" : "0")">
     <div class="gl-v2-dd-p-head">
         <span class="gl-v2-dd-ext is-missing" aria-hidden="true">?</span>
-        <div class="gl-v2-dd-p-title">
+        <div class="gl-v2-stack is-loose gl-v2-dd-p-title">
             <span class="gl-v2-dd-p-name">@r.Name</span>
             <span class="gl-v2-dd-p-sub">@r.FolderName@(r.UnitLabel != null ? " · " + r.UnitLabel : "") · nog geen bestand</span>
             <span><span class="gl-v2-badge @tone">@r.StatusLabel.ToUpperInvariant()</span></span>

@@ -1,6 +1,6 @@
 # Verzekeringen (gl-v2, design-handoff punt 43) — voortgang en overdracht
 
-Laatst bijgewerkt: 22/10/2026. Bron van het ontwerp: `design-handoff/CRM Verzekeringen.dc.html` (43a overzicht, 43b attesten aannemers, 43c verzekering toevoegen). Uitleg van de bouw: `DESIGN.md`, sectie "Projecten/DetailInsurancesV2 en AddInsuranceV2" (zoek op die titel, de regelnummers verschuiven).
+Laatst bijgewerkt: 22/10/2026. Bron van het ontwerp: `design-handoff/CRM Verzekeringen.dc.html` (43a overzicht, 43b attesten aannemers, 43c verzekering toevoegen). Uitleg van de bouw: `CPMCore/DESIGN.md`, sectie "Projecten/DetailInsurancesV2 en AddInsuranceV2" (zoek op die titel, de regelnummers verschuiven).
 
 ## START HIER
 
@@ -18,7 +18,7 @@ Laatst bijgewerkt: 22/10/2026. Bron van het ontwerp: `design-handoff/CRM Verzeke
    d3b. Een polis voor één eenheid (met document) en een polis voor het hele project (met document), dan een klant aan een eenheid zonder koper koppelen (klant toevoegen, eenheid bewerken, en een ondertekend verkoopcontract): in Documenten moet het document bij eenheid en klant hangen en gedeeld zijn, zonder de knop Aan kopers koppelen.
    d4. Dashboard van de projectleider: rode en gouden verzekeringspunten van projecten in uitvoering bij de meldingen, zonder ABR-dubbels.
    e. Een project met een definitief budget: het aandachtspunt over de verzekerde waarde van de ABR.
-3. **Let op de bekende lay-outvallen** (DESIGN.md): veld zonder `.gl-v2-field-box`, `position: sticky` in een scrollcontainer, de actiebalk die niet onderaan hangt, en modals waarvan de keuzelijst of kalender wordt afgeknipt.
+3. **Let op de bekende lay-outvallen** (CPMCore/DESIGN.md): veld zonder `.gl-v2-field-box`, `position: sticky` in een scrollcontainer, de actiebalk die niet onderaan hangt, en modals waarvan de keuzelijst of kalender wordt afgeknipt.
 
 ## Beslissingen die ik nam (pas aan als ze niet kloppen)
 - **Eén tabel, geen aparte V2-tabel.** Polissen blijven in `Insurances`, zodat het legacy scherm, het projectdetail en de ABR-waarschuwingen op het dashboard (`InsuranceService.CheckInsurances`) hetzelfde blijven zien. Een polis zonder makelaar heeft geen contractactiviteit en bewaart zelf zijn project.
@@ -36,7 +36,7 @@ Laatst bijgewerkt: 22/10/2026. Bron van het ontwerp: `design-handoff/CRM Verzeke
 
 ## Wat Niels nog moet doen
 1. Migratie 110 draaien en testen zoals hierboven.
-2. **Help-afbeeldingen maken** voor de drie artikels (Playwright-recept in `DESIGN.md`): `wwwroot/img/help/projecten/verzekeringen-overzicht/` (1-totalen, 2-aandachtspunten, 3-polissen, 4-tijdlijn), `verzekering-toevoegen/` (1-type, 2-looptijd) en `attesten-aannemers-opvragen/` (1-tabel, 2-selectie, 3-vastleggen). De artikels verwijzen er al naar; een ontbrekende afbeelding toont de gestippelde placeholder.
+2. **Help-afbeeldingen maken** voor de drie artikels (Playwright-recept in `CPMCore/DESIGN.md`): `wwwroot/img/help/projecten/verzekeringen-overzicht/` (1-totalen, 2-aandachtspunten, 3-polissen, 4-tijdlijn), `verzekering-toevoegen/` (1-type, 2-looptijd) en `attesten-aannemers-opvragen/` (1-tabel, 2-selectie, 3-vastleggen). De artikels verwijzen er al naar; een ontbrekende afbeelding toont de gestippelde placeholder.
 3. **Herinneringen per mail** komen later (besluit Niels, 22/10/2026): nog te bouwen, vraagt een planner en de Graph-mailtoegang (nog niet ingesteld).
 4. Beslis over wat bewust niet gebouwd is: een uploadlink voor aannemers, mails die CPM zelf verstuurt en een verzekerde-waardevoorstel per eenheid.
 

@@ -1,0 +1,141 @@
+/* gl-v2 shell — Userbox-paneel en hamburger. Uit gl-v2-shell.css gelicht (26/10/2026, CSS-consolidatie stap 11): bronvolgorde ongewijzigd; de <link>-volgorde in _LayoutV2.cshtml
+   (shell → buttons → userbox-hamburger → mobile-menu → breakpoints → quickactions → forms …) is dezelfde als de oude volgorde binnen één bestand: niet herschikken. */
+
+/* ── Userbox panel (opties 4d/5c) ─────────────────────────────────────────────────────── */
+/* data-bs-display="static" schakelt Popper's eigen inline-style-modifier uit, maar Bootstrap zet
+   nog altijd een data-bs-popper="static" attribuut op het menu — en .dropdown-menu[data-bs-popper]
+   (klasse + attribuut, specificiteit 0,0,2,0) wint daardoor altijd van een kale .gl-v2-userbox-panel
+   (0,0,1,0), ongeacht load-order: top:100%;margin-top:.125rem (2px) en left:0 bleven dus gewoon
+   staan. Zelfde attribuut-selector gebruiken om er weer boven te komen. */
+.gl-v2-userbox-panel[data-bs-popper] {
+    top: calc(100% + 12px);
+    right: 0;
+    left: auto;
+    margin-top: 0;
+}
+
+.gl-v2-userbox-panel {
+    width: 300px;
+    padding: 10px;
+    border: 0;
+    border-radius: var(--gl-v2-radius-lg);
+    box-shadow: var(--gl-v2-shadow-flyout);
+    background: var(--gl-v2-surface);
+}
+
+.gl-v2-userbox-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    margin-bottom: 4px;
+    background: var(--gl-v2-bg);
+    border: 1px solid var(--gl-v2-hairline);
+    border-radius: var(--gl-v2-radius-md);
+}
+
+.gl-v2-userbox-panel-header .gl-v2-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 13px;
+    background: var(--gl-v2-primary);
+    color: var(--gl-v2-surface);
+    border: none;
+}
+
+.gl-v2-userbox-panel-identity { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gl-v2-userbox-panel-name { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-userbox-panel-email {
+    font: 500 11.5px var(--gl-v2-font-sans);
+    color: var(--gl-v2-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gl-v2-userbox-divider { margin: 6px 4px; border-color: var(--gl-v2-hairline-soft); opacity: 1; }
+
+.gl-v2-userbox-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: var(--gl-v2-radius-sm);
+    color: var(--gl-v2-ink);
+    text-decoration: none;
+    font: 500 13.5px var(--gl-v2-font-sans);
+}
+
+.gl-v2-userbox-item > i:first-child { font-size: 16px; color: var(--gl-v2-primary); flex: none; }
+.gl-v2-userbox-item span { flex: 1; }
+
+/* Optie 4d: Afmelden is de enige rij met een goud icoon — een bewuste "let op, dit is anders"
+   accent op de exit-actie, niet het standaard groen van de andere items. */
+.gl-v2-userbox-item-signout > i:first-child { color: var(--gl-v2-gold); }
+
+.gl-v2-userbox-item-chevron {
+    font-size: 12px;
+    color: var(--gl-v2-muted);
+    opacity: 0;
+    flex: none;
+    transition: opacity .12s ease;
+}
+
+.gl-v2-userbox-item:hover,
+.gl-v2-userbox-item:focus-visible { background: var(--gl-v2-hover-tint); color: var(--gl-v2-ink); }
+.gl-v2-userbox-item:hover .gl-v2-userbox-item-chevron,
+.gl-v2-userbox-item:focus-visible .gl-v2-userbox-item-chevron { opacity: 1; }
+
+.gl-v2-content { flex: 1; min-height: 0; padding: var(--gl-v2-content-pad-y) var(--gl-v2-content-pad-x); display: flex; flex-direction: column; gap: 16px; background: #F7F9F5; }
+
+/* flex:none (was flex:1;min-height:0) — enkel ≥768px, in lijn met .gl-v2-body's eigen
+   align-self:flex-start hierboven (ook daar tot dezelfde breedte beperkt). Op mobiel blijft dit
+   ongemoeid: die kaart is edge-to-edge/vol-scherm en toont sowieso geen tabel maar een gewone,
+   doorscrollende kaartenlijst (.gl-v2-mobile-invoice-list, vaste MOBILE_PAGE_LENGTH — geen
+   "beschikbare hoogte"-berekening zoals desktop), dus daar hoort deze kolom gewoon te blijven vullen
+   zoals ze altijd deed; enkel op desktop/tablet hoeft ze niet langer kunstmatig te groeien tot een
+   hoogte die .gl-v2-body zelf (niet meer gestretched) toch niet meer aanbiedt — ze meet daar nu af
+   op haar eigen kinderen (toolbar-kaart + tabel-kaart + gaps + padding). */
+@media (min-width: 768px) {
+    .gl-v2-content { flex: none; min-height: auto; }
+
+    /* Opt-out, zelfde .is-full-height-vlag als hierboven bij .gl-v2-body: een formulierpagina met
+       vaste tabbar/actiebalk heeft net weer wél nodig dat .gl-v2-content de resterende hoogte van
+       de (nu gestretchte) kaart vult, anders heeft de scrollende tab-inhoud niets om binnen te
+       scrollen en zou de actiebalk gewoon direct onder de inhoud staan i.p.v. onderaan de kaart. */
+    .gl-v2-body.is-full-height .gl-v2-content { flex: 1; min-height: 0; }
+}
+
+/* Toggle link, shown in the userbox dropdown of the CURRENT shell only (_Layout.cshtml is
+   untouched otherwise) — not part of .gl-v2 scope since it renders outside it. */
+.gl-v2-toggle-link i { margin-right: 8px; }
+
+/* ── Hamburger (mobile-only trigger, lives in _LayoutV2.cshtml's topbar) ────────────────── */
+.gl-v2-hamburger {
+    display: none;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--gl-v2-radius-sm);
+    border: 0;
+    background: transparent;
+    color: var(--gl-v2-primary);
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    font-size: 20px;
+}
+
+/* Vastgeprikte terug-/menuknop (zie de phone-breakpoint hieronder voor het echte uiterlijk) —
+   gsm-only net als .gl-v2-hamburger hierboven; op desktop/tablet bestaat het element in de DOM
+   (_LayoutV2.cshtml) maar rendert het nergens. */
+.gl-v2-topbar-pin-btn { display: none; }
+
+/* Mobile-only search icon slot (see the phone breakpoint for its real styling) — hidden by
+   default so it has no effect above the phone breakpoint. */
+.gl-v2-mobile-search-stub { display: none; }
+
+/* Mobile-only brand logo box (optie 3a/3b topbar) — hidden by default. */
+.gl-v2-mobile-logo { display: none; }
+
+/* Mobile-only quick-actions bar (optie 3a "SNELACTIES OP DEZE PAGINA") — hidden by default. */
+.gl-v2-mobile-quickactions { display: none; }

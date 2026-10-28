@@ -141,12 +141,12 @@ tr.is-clickable:hover .gl-v2-ma-chevron { color: var(--gl-v2-primary); }
 .gl-v2-ma .dt-paging { padding: 0 20px 0 0; }
 .gl-v2-ma .dt-paging .pagination { display: flex; align-items: center; gap: 6px; margin: 0; }
 .gl-v2-ma .dt-paging .page-link {
-    width: 30px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 7px;
+    width: 30px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--gl-v2-radius-s, 7px);
     border: 1px solid var(--gl-v2-hairline); background: var(--gl-v2-surface); color: var(--gl-v2-muted-soft); font: 600 12px var(--gl-v2-font-sans); box-shadow: none;
 }
 .gl-v2-ma .dt-paging .page-link:hover { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); }
 .gl-v2-ma .dt-paging .page-item.active .page-link { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); }
-.gl-v2-ma .dt-paging .page-item.disabled .page-link { color: #C0CABE; background: var(--gl-v2-surface); border-color: var(--gl-v2-hairline-soft); }
+.gl-v2-ma .dt-paging .page-item.disabled .page-link { color: var(--gl-v2-disabled-ink, #C0CABE); background: var(--gl-v2-surface); border-color: var(--gl-v2-hairline-soft); }
 .gl-v2-ma .dt-empty { padding: 28px 20px; text-align: center; color: var(--gl-v2-muted); font: 450 12.5px var(--gl-v2-font-sans); }
 
 /* ── Lege staat ── */
@@ -181,7 +181,7 @@ tr.is-clickable:hover .gl-v2-ma-chevron { color: var(--gl-v2-primary); }
 .gl-v2-ma .gl-v2-vp-pick { position: relative; }
 .gl-v2-ma .gl-v2-vp-pick-btn {
     width: 100%; height: 40px; box-sizing: border-box; padding: 0 12px; display: flex; align-items: center; gap: 8px; text-align: left;
-    border: 1px solid rgba(44, 59, 42, .14); border-radius: 8px; background: var(--gl-v2-surface); cursor: pointer;
+    border: 1px solid rgba(44, 59, 42, .14); border-radius: var(--gl-v2-radius-sm, 8px); background: var(--gl-v2-surface); cursor: pointer;
     font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink);
 }
 .gl-v2-ma .gl-v2-vp-pick-btn:hover { border-color: var(--gl-v2-primary); background: #F7F9F5; }
@@ -198,7 +198,7 @@ tr.is-clickable:hover .gl-v2-ma-chevron { color: var(--gl-v2-primary); }
 }
 .gl-v2-ma .gl-v2-vp-panel.open { display: block; }
 .gl-v2-ma .gl-v2-vp-panel.is-wide { width: 400px; max-width: calc(100vw - 48px); padding: 14px; }
-.gl-v2-ma .gl-v2-vp-panel-search { display: flex; align-items: center; gap: 8px; margin: 10px; padding: 0 10px; height: 36px; border: 1px solid var(--gl-v2-hairline); border-radius: 8px; }
+.gl-v2-ma .gl-v2-vp-panel-search { display: flex; align-items: center; gap: 8px; margin: 10px; padding: 0 10px; height: 36px; border: 1px solid var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-sm, 8px); }
 .gl-v2-ma .gl-v2-vp-panel-search i { color: var(--gl-v2-muted); }
 .gl-v2-ma .gl-v2-vp-panel-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
 .gl-v2-ma .gl-v2-vp-panel-head { display: flex; justify-content: space-between; align-items: center; padding: 2px 14px 6px; font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--gl-v2-muted); }
@@ -215,7 +215,7 @@ tr.is-clickable:hover .gl-v2-ma-chevron { color: var(--gl-v2-primary); }
 .gl-v2-ma .gl-v2-vp-panel.is-wide .gl-v2-vp-panel-search { margin: 0 0 12px; }
 .gl-v2-ma .gl-v2-vp-rond-slider { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .gl-v2-ma .gl-v2-vp-rond-slider output { min-width: 48px; text-align: right; font: 700 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
-.gl-v2-ma .gl-v2-vp-map { height: 200px; border-radius: 8px; border: 1px solid var(--gl-v2-hairline); background: #eef2ea; }
+.gl-v2-ma .gl-v2-vp-map { height: 200px; border-radius: var(--gl-v2-radius-sm, 8px); border: 1px solid var(--gl-v2-hairline); background: #eef2ea; }
 .gl-v2-ma .gl-v2-vp-rond-hint { display: flex; gap: 6px; margin-top: 10px; font: 450 11px/1.4 var(--gl-v2-font-sans); color: #7a8a78; }
 
 /* Schuifregelaar (tolerantie, straal): dunne baan, ronde knop met groene rand */

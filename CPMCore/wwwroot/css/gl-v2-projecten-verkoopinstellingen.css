@@ -20,7 +20,7 @@
 .gl-v2-vs-rte { border: 1px solid var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-sm); background: var(--gl-v2-surface); overflow: hidden; }
 .gl-v2-vs-rte:focus-within { border-color: var(--gl-v2-primary); }
 .gl-v2-vs-rte-bar { display: flex; gap: 4px; padding: 6px; border-bottom: 1px solid var(--gl-v2-hairline-soft); background: #F7F9F5; }
-.gl-v2-vs-rte-bar button { width: 30px; height: 30px; border: 0; border-radius: 6px; background: transparent; color: var(--gl-v2-ink); cursor: pointer; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; }
+.gl-v2-vs-rte-bar button { width: 30px; height: 30px; border: 0; border-radius: var(--gl-v2-radius-xs, 6px); background: transparent; color: var(--gl-v2-ink); cursor: pointer; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; }
 .gl-v2-vs-rte-bar button:hover { background: var(--gl-v2-hover-tint); }
 .gl-v2-vs-rte-body { min-height: 160px; max-height: 360px; overflow-y: auto; padding: 12px 14px; font: 450 13.5px/1.55 var(--gl-v2-font-sans); color: var(--gl-v2-ink); outline: none; }
 .gl-v2-vs-rte-body p { margin: 0 0 .8em; }

@@ -257,7 +257,7 @@
 .gl-v2-sign-card-body { padding: 18px; display: flex; flex-direction: column; gap: 16px; }
 
 .gl-v2-sign-tool {
-    height: 32px; padding: 0 12px; border-radius: 7px; border: 1px solid var(--gl-sign-line-green); background: transparent;
+    height: 32px; padding: 0 12px; border-radius: var(--gl-v2-radius-s, 7px); border: 1px solid var(--gl-sign-line-green); background: transparent;
     display: inline-flex; align-items: center; gap: 7px; font: 600 12px var(--gl-v2-font-sans); color: var(--gl-sign-green-ink);
     text-decoration: none; cursor: pointer; transition: background-color .15s ease, border-color .15s ease;
 }
@@ -413,7 +413,7 @@
 .gl-v2-ver-hash-label { display: flex; flex-direction: column; gap: 2px; }
 .gl-v2-ver-hash-label strong { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
 .gl-v2-ver-hash-label span { font: 400 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
-.gl-v2-ver-hash { padding: 9px 12px; border-radius: 7px; background: #F2F5EF; font: 500 12px/1.5 ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; color: var(--gl-v2-ink); overflow-wrap: anywhere; user-select: all; }
+.gl-v2-ver-hash { padding: 9px 12px; border-radius: var(--gl-v2-radius-s, 7px); background: #F2F5EF; font: 500 12px/1.5 ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; color: var(--gl-v2-ink); overflow-wrap: anywhere; user-select: all; }
 .gl-v2-ver-note { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 9px; border: 1px solid var(--gl-v2-hairline); }
 .gl-v2-ver-note svg { width: 16px; height: 16px; flex: none; margin-top: 1px; fill: none; stroke: var(--gl-v2-primary); stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
 .gl-v2-ver-note p { margin: 0; font: 400 12px/1.55 var(--gl-v2-font-sans); color: #4A5B48; text-wrap: pretty; max-width: 75ch; }

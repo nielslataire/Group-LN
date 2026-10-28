@@ -12,7 +12,7 @@
 .gl-v2 .gl-v2-combo-field {
     flex: 1; min-width: 0; height: 40px; box-sizing: border-box;
     display: flex; align-items: center; gap: 8px; padding: 0 10px 0 12px;
-    border: 1px solid rgba(44, 59, 42, .14); border-radius: 8px; background: var(--gl-v2-surface);
+    border: 1px solid rgba(44, 59, 42, .14); border-radius: var(--gl-v2-radius-sm, 8px); background: var(--gl-v2-surface);
     cursor: text;
 }
 .gl-v2 .gl-v2-combo.has-new .gl-v2-combo-field { border-right: 0; border-radius: 8px 0 0 8px; }
@@ -31,7 +31,7 @@
 .gl-v2 .gl-v2-combo-input::placeholder { color: #9aa898; font-weight: 450; }
 .gl-v2 .gl-v2-combo-input::-webkit-search-cancel-button { display: none; }
 .gl-v2 .gl-v2-combo-clear {
-    flex: none; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 6px; background: transparent;
+    flex: none; width: 22px; height: 22px; padding: 0; border: 0; border-radius: var(--gl-v2-radius-xs, 6px); background: transparent;
     display: flex; align-items: center; justify-content: center; color: var(--gl-v2-muted); font-size: 11px; cursor: pointer;
 }
 .gl-v2 .gl-v2-combo-clear:hover { background: var(--gl-v2-bg); }
@@ -97,12 +97,12 @@
 .gl-v2 .gl-v2-combo-head span:first-child { flex: 1; }
 .gl-v2 .gl-v2-combo-head-keys { font: 450 10.5px var(--gl-v2-font-sans); letter-spacing: 0; text-transform: none; color: #9aa898; }
 .gl-v2 .gl-v2-combo-option {
-    display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 4px 10px; border-radius: 7px;
+    display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 4px 10px; border-radius: var(--gl-v2-radius-s, 7px);
     background: transparent; border: 0; width: 100%; text-align: left; cursor: pointer; font: inherit; color: inherit;
 }
 .gl-v2 .gl-v2-combo-option.is-active { background: var(--gl-v2-bg); }
 .gl-v2 .gl-v2-combo-avatar {
-    flex: none; width: 26px; height: 26px; border-radius: 7px; background: #EDEFEB; color: #4A5B48;
+    flex: none; width: 26px; height: 26px; border-radius: var(--gl-v2-radius-s, 7px); background: #EDEFEB; color: #4A5B48;
     display: flex; align-items: center; justify-content: center; font: 600 10px var(--gl-v2-font-sans);
 }
 .gl-v2 .gl-v2-combo-option.is-selected .gl-v2-combo-avatar { background: var(--gl-v2-primary); color: #fff; }

@@ -86,6 +86,7 @@ namespace CPMCore.Controllers
                 vm.DeleteUnitCount = _db.Units.Count(u => u.ProjectId == projectid && (u.PaymentGroupId == groupid || u.UnitConstructionValue.Any(v => v.PaymentGroupId == groupid)));
             }
             SetPaymentGroupEditBreadcrumb(vm);
+            ViewData["HelpScreenId"] = "projecten-betalingsgroep-bewerken";
             return View("Invoicing/PaymentGroupEditV2", vm);
         }
 
@@ -228,6 +229,7 @@ namespace CPMCore.Controllers
                 vm.OtherUnits = allUnits.Where(u => !posted.Contains(u.UnitId)).ToList();
                 vm.OtherGroups = LoadPaymentGroupSources(post.ProjectId, post.GroupId);
                 SetPaymentGroupEditBreadcrumb(vm);
+                ViewData["HelpScreenId"] = "projecten-betalingsgroep-bewerken";
                 return View("Invoicing/PaymentGroupEditV2", vm);
             }
 

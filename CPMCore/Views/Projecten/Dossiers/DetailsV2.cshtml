@@ -289,7 +289,7 @@
                                 </label>
                                 @if (Model.CanWrite && string.IsNullOrEmpty(s.Code))
                                 {
-                                    <form method="post" action="@Url.Action("ChecklistVerwijderen", "ProjectDossiers", new { projectId = Model.ProjectId, id = d.Id, substapId = s.Id })" class="gl-v2-dos-chk-del">
+                                    <form method="post" action="@Url.Action("ChecklistVerwijderen", "ProjectDossiers", new { projectId = Model.ProjectId, id = d.Id, substapId = s.Id })" class="gl-v2-dos-chk-del" data-bv-titel="Checklistitem verwijderen?" data-bv-tekst="@($"“{s.Naam}” wordt uit de checklist van dit dossier verwijderd.")" data-bv-ok="Verwijderen" data-bv-tone="danger" data-bv-icon="ph-trash">
                                         @Html.AntiForgeryToken()
                                         <button type="submit" class="gl-v2-icon-btn" aria-label="Item verwijderen" title="Item verwijderen"><i class="ph ph-x" aria-hidden="true"></i></button>
                                     </form>
@@ -339,7 +339,7 @@
                             {
                                 <li>
                                     <span class="gl-v2-dos-docicon">@(string.IsNullOrEmpty(doc.Extensie) ? "DOC" : doc.Extensie.ToUpperInvariant())</span>
-                                    <span class="gl-v2-dos-doc-t">
+                                    <span class="gl-v2-stack is-flat gl-v2-dos-doc-t">
                                         <a href="@Url.Action("DocumentFileV2", "Projecten", new { projectid = Model.ProjectId, revisionId = doc.RevisionId })" target="_blank" rel="noopener"><b>@doc.Naam</b></a>
                                         <small>@(doc.Datum?.ToString("dd/MM/yyyy"))@(doc.Grootte.HasValue ? " · " + (doc.Grootte.Value >= 1048576 ? (doc.Grootte.Value / 1048576.0).ToString("0.0", System.Globalization.CultureInfo.GetCultureInfo("nl-BE")) + " MB" : Math.Max(1, doc.Grootte.Value / 1024) + " kB") : "")</small>
                                     </span>
@@ -389,7 +389,7 @@
                             <span class="gl-v2-dos-linked-s @(soort == "late" ? "is-late" : "")">@(soort == "late" ? TrajectWeergave.DagenTeLaat(m, today) + " d. te laat" : soort == "done" ? "bereikt" : "")</span>
                             @if (Model.CanWrite)
                             {
-                                <form method="post" action="@Url.Action("OntkoppelMijlpaal", "ProjectDossiers", new { projectId = Model.ProjectId, id = d.Id, mijlpaalId = m.Id })" class="gl-v2-dos-unlink">
+                                <form method="post" action="@Url.Action("OntkoppelMijlpaal", "ProjectDossiers", new { projectId = Model.ProjectId, id = d.Id, mijlpaalId = m.Id })" class="gl-v2-dos-unlink" data-bv-titel="Mijlpaal ontkoppelen?" data-bv-tekst="@($"“{m.Naam}” wordt losgekoppeld van dit dossier. De mijlpaal zelf blijft bestaan.")" data-bv-ok="Ontkoppelen" data-bv-tone="warning" data-bv-icon="ph-link-break">
                                     @Html.AntiForgeryToken()
                                     <button type="submit" class="gl-v2-icon-btn" aria-label="Ontkoppelen van @m.Naam" title="Ontkoppelen"><i class="ph ph-x" aria-hidden="true"></i></button>
                                 </form>
@@ -509,6 +509,8 @@
         FormAction = Url.Action("Verwijderen", "ProjectDossiers", new { projectId = Model.ProjectId, id = d.Id }) ?? ""
     })
 }
+
+@await Html.PartialAsync("GlV2/_BevestigModal")
 
 @section PageScripts
 {

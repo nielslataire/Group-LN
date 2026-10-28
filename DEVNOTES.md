@@ -301,7 +301,7 @@ Maakt `vwInvoiceTotals` consistent: btw per tarief afgerond én korting (`Discou
 ## 8. Documenten — één document, veel plaatsen (sept 2026, design-handoff 17)
 
 Gl-v2-pagina `Projecten/DetailDocs` (`DetailDocsV2.cshtml`, actielogica in `ProjectenController.DocsV2.cs`,
-service `ServiceCore/Documents/DocumentService*.cs`, modelbeschrijving in DESIGN.md "Projecten/DetailDocsV2").
+service `ServiceCore/Documents/DocumentService*.cs`, modelbeschrijving in CPMCore/DESIGN.md "Projecten/DetailDocsV2").
 
 **Deployvolgorde (belangrijk):** voer eerst `_migrations/049_DocumentenModel.sql` uit op de live DB, dán pas de nieuwe
 CPMCore-build — `ProjectDocs` heeft nieuwe kolommen die elke EF-query op die tabel selecteert (ook de legacy pagina's).

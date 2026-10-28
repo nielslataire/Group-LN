@@ -269,6 +269,7 @@ public partial class ProjectsIssuesController : BaseController
             Notifications = await _service.GetNotifications(projectId, id),
             MediaUrls = media.ToDictionary(x => x.Id, x => GetSignedAssetUrlByFileName(x.FileId, "pictures"))
         };
+        ViewData["HelpScreenId"] = "issues-index";
         if (UseGlV2 && !classic) return View("DetailsV2", await BuildDetailV2(projectId, issue));
         SetPageHeader("bx bx-error-circle", issue.Title);
         return View(vm);

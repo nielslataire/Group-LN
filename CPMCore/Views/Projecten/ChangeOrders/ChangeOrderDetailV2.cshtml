@@ -678,7 +678,7 @@
                     {
                         <div class="gl-v2-co-signer">
                             <span class="gl-v2-co-signer-avatar">@s.Initials<span class="gl-v2-co-signer-dot @s.Tone" aria-hidden="true"></span></span>
-                            <span class="gl-v2-co-signer-text">
+                            <span class="gl-v2-stack is-tight gl-v2-co-signer-text">
                                 <span class="gl-v2-co-signer-name">@s.Name</span>
                                 @if (!string.IsNullOrWhiteSpace(s.StatusText))
                                 {
@@ -743,7 +743,7 @@
                         {
                             <div class="gl-v2-co-signer">
                                 <span class="gl-v2-co-signer-avatar">@r.Initials<span class="gl-v2-co-signer-dot @r.Tone" aria-hidden="true"></span></span>
-                                <span class="gl-v2-co-signer-text">
+                                <span class="gl-v2-stack is-tight gl-v2-co-signer-text">
                                     <span class="gl-v2-co-signer-name">@r.Name</span>
                                     <span class="gl-v2-co-signer-status @(r.Tone == "is-rood" ? "is-rood" : "")">@r.StatusText</span>
                                 </span>
@@ -1013,7 +1013,7 @@
                     @Html.AntiForgeryToken()
                     <div class="modal-header">
                         <span class="gl-v2-co-send-icon"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i></span>
-                        <div class="gl-v2-co-send-header-text">
+                        <div class="gl-v2-stack gl-v2-co-send-header-text">
                             <h2 class="modal-title" id="gl-v2-co-send-title">@Model.Number @(isQuote ? "per mail verzenden" : "verzenden ter ondertekening")</h2>
                             <span class="gl-v2-co-send-header-sub" id="gl-v2-co-send-subtitle"></span>
                         </div>

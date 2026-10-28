@@ -74,13 +74,13 @@
     background: var(--gl-v2-primary-tint);
 }
 
-.gl-v2-menu-item.is-danger { color: #8B2A2A; font-weight: 600; }
-.gl-v2-menu-item.is-danger i { color: #8B2A2A; }
+.gl-v2-menu-item.is-danger { color: var(--gl-v2-danger, #8B2A2A); font-weight: 600; }
+.gl-v2-menu-item.is-danger i { color: var(--gl-v2-danger, #8B2A2A); }
 .gl-v2-menu-item.is-danger > i:first-child { background: var(--gl-v2-danger-tint); }
 .gl-v2-menu-item.is-danger:hover,
-.gl-v2-menu-item.is-danger:focus-visible { background: #F8EBEB; color: #8B2A2A; }
+.gl-v2-menu-item.is-danger:focus-visible { background: var(--gl-v2-danger-tint, #F8EBEB); color: var(--gl-v2-danger, #8B2A2A); }
 .gl-v2-menu-item.is-danger:hover i,
-.gl-v2-menu-item.is-danger:focus-visible i { color: #8B2A2A; }
+.gl-v2-menu-item.is-danger:focus-visible i { color: var(--gl-v2-danger, #8B2A2A); }
 
 .gl-v2-menu-item-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .gl-v2-menu-item-label { font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }

@@ -225,6 +225,8 @@ namespace CPMCore.Controllers
                 SetPageHeader("bx bx-group", "Klanten");
             }
 
+            ViewData["HelpScreenId"] = "klanten-overzicht";
+
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "IndexV2" : "Index", model);
         }
 
@@ -367,6 +369,7 @@ namespace CPMCore.Controllers
             ViewBag.ReadOnly = true;
             ViewData["BackUrl"] = Url.Action("Index", "Klanten");
             SetPageHeader("bx bx-group", string.IsNullOrWhiteSpace(model.DisplayLabel) ? model.Title : model.DisplayLabel);
+            ViewData["HelpScreenId"] = "klanten-details";
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "DetailsV2" : "Form", model);
         }
 
@@ -408,6 +411,7 @@ namespace CPMCore.Controllers
             };
             await BuildFormAsync(model, ct, scope);
             SetPageHeader("bx bx-group", model.Title);
+            ViewData["HelpScreenId"] = "klanten-nieuw";
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "CreateV2" : "Create", model);
         }
 
@@ -438,6 +442,7 @@ namespace CPMCore.Controllers
             if (!ModelState.IsValid)
             {
                 SetPageHeader("bx bx-group", model.Title);
+                ViewData["HelpScreenId"] = "klanten-nieuw";
                 return View(ViewData["UseGlV2Layout"] as bool? == true ? "CreateV2" : "Create", model);
             }
 
@@ -716,6 +721,7 @@ namespace CPMCore.Controllers
 
             await BuildFormAsync(model, ct, scope);
             SetPageHeader("bx bx-group", model.Title);
+            ViewData["HelpScreenId"] = "klanten-bewerken";
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditV2" : "Edit", model);
         }
 
@@ -766,6 +772,7 @@ namespace CPMCore.Controllers
             if (!ModelState.IsValid)
             {
                 SetPageHeader("bx bx-group", model.Title);
+                ViewData["HelpScreenId"] = "klanten-bewerken";
                 return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditV2" : "Edit", model);
             }
 
@@ -787,12 +794,20 @@ namespace CPMCore.Controllers
 
             await _db.SaveChangesAsync(ct);
 
+            var octopusSyncFailed = false;
             if (requiresOctopusSync)
             {
-                await TrySyncOctopusRelationAsync(client.Id, ct);
+                try { await TrySyncOctopusRelationAsync(client.Id, ct); }
+                catch (Exception ex)
+                {
+                    octopusSyncFailed = true;
+                    _logger.LogWarning(ex, "Octopus-relatie van klant {ClientId} kon niet bijgewerkt worden", client.Id);
+                }
             }
 
             AddMessage("success", $"Klant {model.DisplayLabel} is bijgewerkt", "Geslaagd!");
+            if (octopusSyncFailed)
+                AddMessage("warning", "De klant is bijgewerkt in CPM, maar de gegevens konden niet naar Octopus doorgegeven worden. Probeer het later opnieuw door de klant nogmaals op te slaan.", "Octopus niet bijgewerkt");
             var referrer = TempData["Referrer"] as string;
             return !string.IsNullOrWhiteSpace(referrer) ? Redirect(referrer) : RedirectToAction(nameof(Index));
         }

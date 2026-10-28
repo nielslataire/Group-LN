@@ -62,13 +62,15 @@ namespace ServiceCore
 
         public async Task<int> CreateAsync(IssuerBankAccountBO bo, CancellationToken ct = default)
         {
+            // De eerste rekening van een bedrijf is meteen de standaardrekening.
+            var isFirst = !await _db.IssuerBankAccount.AnyAsync(x => x.IssuerCompanyId == bo.IssuerCompanyId, ct);
             var e = new IssuerBankAccount
             {
                 IssuerCompanyId = bo.IssuerCompanyId,
                 Iban = NormalizeIban(bo.Iban),
                 Bic = bo.Bic?.Trim().ToUpperInvariant(),
                 DisplayName = bo.DisplayName?.Trim(),
-                IsDefault = bo.IsDefault,
+                IsDefault = bo.IsDefault || isFirst,
                 ValidFrom = bo.ValidFrom,
                 ValidTo = bo.ValidTo
             };
@@ -102,13 +104,34 @@ namespace ServiceCore
 
             e.IsDefault = bo.IsDefault;
             await _uow.SaveChangesAsync(ct);
+
+            // De standaardrekening kun je niet zomaar uitzetten: blijft er geen over, dan springt een geldige rekening bij.
+            await EnsureDefaultAsync(e.IssuerCompanyId, ct);
+        }
+
+        /// <summary>Heeft het bedrijf rekeningen maar geen standaard, dan wordt de eerste nog geldige rekening de standaard.</summary>
+        private async Task EnsureDefaultAsync(int issuerId, CancellationToken ct)
+        {
+            if (await _db.IssuerBankAccount.AnyAsync(x => x.IssuerCompanyId == issuerId && x.IsDefault, ct))
+                return;
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            var next = await _db.IssuerBankAccount
+                .Where(x => x.IssuerCompanyId == issuerId && (x.ValidTo == null || x.ValidTo > today))
+                .OrderBy(x => x.Id)
+                .FirstOrDefaultAsync(ct);
+            if (next != null)
+                await SetDefaultAsync(next.Id, ct);
         }
 
         public async Task DeleteAsync(int id, CancellationToken ct = default)
         {
             var e = await _db.IssuerBankAccount.FirstAsync(x => x.Id == id, ct);
+            var issuerId = e.IssuerCompanyId;
             _uow.IssuerBankAccount.Remove(e);
             await _uow.SaveChangesAsync(ct);
+
+            // Verwijder je de standaardrekening, dan wordt een andere geldige rekening van het bedrijf de standaard.
+            await EnsureDefaultAsync(issuerId, ct);
         }
 
         public async Task SetDefaultAsync(int id, CancellationToken ct = default)

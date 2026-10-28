@@ -160,6 +160,7 @@ public partial class InstellingenController
                     LogoDataUri = logos.TryGetValue(x.Id, out var lb) && lb.Length > 0 ? LogoDataUri(lb, x.LogoPath) : null
                 });
             }
+ViewData["HelpScreenId"] = "instellingen-bedrijven";
             return View("IssuerCompaniesV2", rows);
         }
 
@@ -203,7 +204,32 @@ public partial class InstellingenController
 
         await PopulateInvoiceLayoutViewDataAsync();
         SetPageHeader("bx bx-cog", "Nieuw bedrijf");
+        if (ViewData["UseGlV2Layout"] as bool? == true)
+        {
+            await PrepareIssuerCreateV2Async(vm);
+            ViewData["BreadcrumbNode"] = InstellingenIssuer;
+ViewData["HelpScreenId"] = "instellingen-bedrijven-bewerken";
+            return View("IssuerCompaniesEditV2", vm);
+        }
         return View(vm);
+    }
+
+    // gl-v2 "Nieuw bedrijf" hergebruikt IssuerCompaniesEditV2 met Id = 0: de partials tonen dan zelf wat pas na het aanmaken kan
+    // (bankrekeningen, nummerreeksen, Octopus-acties). Hier enkel de lijsten die de view anders uit de bestaande rij haalt.
+    private async Task PrepareIssuerCreateV2Async(IssuerCompanyVM vm)
+    {
+        ViewBag.PaymentTerms = await _issuers.GetPaymentTermOptionsAsync();
+        ViewBag.CompanyLegalForms = await _issuers.ListLegalFormsAsync();
+        ViewBag.InvoiceFieldOptions = GetInvoiceFieldOptions();
+        vm.PaymentTerms ??= new List<PaymentTermVM>();
+        vm.CustomFieldMappings ??= new List<OctopusCustomFieldMappingVM>();
+        vm.UserRates ??= new List<IssuerUserRateVM>();
+        using var scope = HttpContext.RequestServices.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DALCore.Models.cpmRunningContext>();
+        vm.AvailableUsers = db.Users.AsNoTracking().Where(u => u.IsActive && !u.UserCompanyAccess.Any())
+            .OrderBy(u => u.Familienaam).ThenBy(u => u.Voornaam)
+            .Select(u => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem { Value = u.UserId, Text = (u.Voornaam + " " + u.Familienaam).Trim() })
+            .ToList();
     }
 
     // POST /Admin/IssuerCompanies/Create
@@ -221,6 +247,16 @@ public partial class InstellingenController
             ApplyInvoiceTemplateDefaults(vm, templates);
             await PopulateInvoiceLayoutViewDataAsync();
             SetPageHeader("bx bx-cog", "Nieuw bedrijf");
+            if (ViewData["UseGlV2Layout"] as bool? == true)
+            {
+                await PrepareIssuerCreateV2Async(vm);
+                ViewData["BreadcrumbNode"] = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("IssuerCompanies", "Instellingen", "Mijn Bedrijven")
+                {
+                    Parent = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Instellingen", "Instellingen") { Parent = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard") }
+                };
+ViewData["HelpScreenId"] = "instellingen-bedrijven-bewerken";
+                return View("IssuerCompaniesEditV2", vm);
+            }
             return View(vm);
         }
         if (vm.LogoUpload != null && vm.LogoUpload.Length > 0)
@@ -289,8 +325,31 @@ public partial class InstellingenController
             OctopusDownloadLinkCustomFieldKeyId = vm.OctopusDownloadLinkCustomFieldKeyId,
             OctopusPurchaseJournalKeyPrefix = vm.OctopusPurchaseJournalKeyPrefix,
         };
-        await _issuers.CreateAsync(bo);
+        var newId = await _issuers.CreateAsync(bo);
+
+        // Wat de V2-pagina client-side meegeeft (betaaltermijnen, uurtarieven, km-tarief) kan pas nu, met het nieuwe Id.
+        var newTerms = (vm.PaymentTerms ?? new List<PaymentTermVM>()).Where(t => !t.IsDeleted && !string.IsNullOrWhiteSpace(t.Name)).ToList();
+        if (newTerms.Count > 0)
+            await _issuers.SyncPaymentTermsAsync(newId, newTerms.Select(t => new PaymentTermBO
+            {
+                Id = 0,
+                Name = t.Name ?? string.Empty,
+                Days = t.Days,
+                Description = t.Description,
+                TermType = t.TermType,
+                DisplayMode = t.DisplayMode,
+                DisplayText = t.DisplayText,
+                IssuerCompanyId = newId
+            }));
+        if (vm.UserRates?.Count > 0)
+            await _issuers.SyncUserRatesAsync(newId, vm.UserRates.Select(r => new IssuerCompanyUserRateBO { IssuerCompanyId = newId, UserId = r.UserId, HourlyRate = r.HourlyRate }));
+        if (vm.RatePerKm.HasValue)
+            await _issuers.UpdateRatePerKmAsync(newId, vm.RatePerKm);
+
         AddMessage("success", "Mijn bedrijf " + vm.Name + " toegevoegd.", "Geslaagd!");
+        // gl-v2: meteen door naar de bankrekening — nummerreeksen, bankrekeningen en Octopus kunnen pas nu het bedrijf bestaat.
+        if (ViewData["UseGlV2Layout"] as bool? == true)
+            return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = newId, tab = "bank" });
         return RedirectToAction(nameof(IssuerCompanies));
     }
 
@@ -478,6 +537,7 @@ public partial class InstellingenController
         {
             // gl-v2: de kruimel stopt bij "Mijn bedrijven" — "{naam} bewerken" is al de paginatitel (punt 13, regel 2).
             ViewData["BreadcrumbNode"] = InstellingenIssuer;
+ViewData["HelpScreenId"] = "instellingen-bedrijven-bewerken";
             return View("IssuerCompaniesEditV2", vm);
         }
 
@@ -491,6 +551,21 @@ public partial class InstellingenController
     {
         if (id != vm.Id) return BadRequest();
         if (string.Equals(vm.TemplateKey, "layoutB", StringComparison.OrdinalIgnoreCase)) ValidateTemplateJson(vm.TemplateJson); // de JSON telt enkel nog voor layoutB
+
+        // Het nummerpatroon ligt vast zodra er in het lopende boekjaar facturen genummerd zijn.
+        var currentIssuer = await _issuers.GetAsync(id, ct);
+        if (currentIssuer != null
+            && !string.Equals((currentIssuer.InvoiceNumberPattern ?? "").Trim(), (vm.InvoiceNumberPattern ?? "").Trim(), StringComparison.Ordinal))
+        {
+            var patternDb = HttpContext.RequestServices.GetRequiredService<DALCore.Models.cpmRunningContext>();
+            var fiscalYear = DateTime.Today.Year;
+            var hasNumbered = await patternDb.Invoices.AsNoTracking()
+                .AnyAsync(i => i.IssuerCompanyId == id && i.PublicId != null && i.PublicId != "" && i.FiscalYear == fiscalYear, ct);
+            if (hasNumbered)
+                ModelState.AddModelError(nameof(vm.InvoiceNumberPattern),
+                    $"Het nummerpatroon kan niet meer gewijzigd worden: er zijn in {fiscalYear} al facturen genummerd. Wijzig het patroon bij de start van een nieuw boekjaar.");
+        }
+
         if (!ModelState.IsValid)
         {
             ViewBag.PaymentTerms = await _issuers.GetPaymentTermOptionsAsync(id, ct);
@@ -537,6 +612,7 @@ public partial class InstellingenController
                     Parent = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Instellingen", "Instellingen") { Parent = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard") }
                 };
                 ViewData["BreadcrumbNode"] = errCrumb;
+ViewData["HelpScreenId"] = "instellingen-bedrijven-bewerken";
                 return View("IssuerCompaniesEditV2", vm);
             }
             return View(vm);
@@ -1206,6 +1282,18 @@ public partial class InstellingenController
         {
             SetPageHeader("bx bx-cog", "Nummerreeks bewerken");
             return View(vm);
+        }
+
+        // Het soort reeks (factuur of creditnota) ligt vast zodra er facturen aan hangen.
+        var currentSeries = await _series.GetAsync(id);
+        if (currentSeries != null && currentSeries.IsCreditNote != vm.IsCreditNote)
+        {
+            var seriesDb = HttpContext.RequestServices.GetRequiredService<DALCore.Models.cpmRunningContext>();
+            if (await seriesDb.Invoices.AsNoTracking().AnyAsync(i => i.SeriesId == id))
+            {
+                AddMessage("danger", "Het soort reeks (factuur of creditnota) kan niet meer gewijzigd worden: er hangen al facturen aan. Maak een nieuwe reeks aan.", "Niet opgeslagen");
+                return RedirectToAction("IssuerCompaniesEdit", new { id = issuerId, tab = "facturatie" });
+            }
         }
 
         try

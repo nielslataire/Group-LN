@@ -256,8 +256,8 @@
                     <span class="gl-v2-section-card-desc">rekent live mee</span>
                 </div>
                 <div class="gln-ai-pay">
-                    <div class="gln-ai-pay-row"><span class="gln-ai-pay-label">Factuurbedrag<small>excl. btw</small></span><span class="gln-ai-pay-value" id="gln-pay-factuur">—</span></div>
-                    <div class="gln-ai-pay-row" id="gln-pay-inh-row" hidden><span class="gln-ai-pay-label">Extra inhouding<small>tijdelijk niet betalen</small></span><span class="gln-ai-pay-value" id="gln-pay-inh">—</span></div>
+                    <div class="gln-ai-pay-row"><span class="gl-v2-stack is-tight gln-ai-pay-label">Factuurbedrag<small>excl. btw</small></span><span class="gln-ai-pay-value" id="gln-pay-factuur">—</span></div>
+                    <div class="gln-ai-pay-row" id="gln-pay-inh-row" hidden><span class="gl-v2-stack is-tight gln-ai-pay-label">Extra inhouding<small>tijdelijk niet betalen</small></span><span class="gln-ai-pay-value" id="gln-pay-inh">—</span></div>
                     @* Borg: oranje waarschuwingskader met pil, vrijgaveregel en bedrag (42c) *@
                     <div class="gln-ai-pay-borg" id="gln-pay-borg-row" hidden>
                         <span class="gln-ai-pay-pill" id="gln-pay-borg-label">Borg</span>
@@ -300,6 +300,8 @@
 {
     @await Html.PartialAsync("Partials/_InhoudingAfhandelenV2", Model.ProjectId)
 }
+
+@await Html.PartialAsync("GlV2/_BevestigModal")
 
 @section PageScripts
 {

@@ -40,26 +40,7 @@
         '</div>';
     }
 
-    function buildLanguage(e) {
-        var capSing = e.singular.charAt(0).toUpperCase() + e.singular.slice(1);
-        var capPlur = e.plural.charAt(0).toUpperCase() + e.plural.slice(1);
-        return {
-            processing: "Bezig met verwerken…",
-            search: "Zoeken:",
-            lengthMenu: "Toon _MENU_",
-            info: capSing + " _START_ tot _END_ van _TOTAL_ " + capPlur,
-            infoEmpty: capSing + " 0 tot 0 van 0 " + capPlur,
-            infoFiltered: "(gefilterd uit _MAX_ totaal)",
-            loadingRecords: "Bezig met laden…",
-            zeroRecords: buildEmptyStateHtml(),
-            emptyTable: "Er zijn geen " + e.plural + " om weer te geven",
-            paginate: { previous: "‹", next: "›" },
-            aria: {
-                sortAscending: ": activeer om oplopend te sorteren",
-                sortDescending: ": activeer om aflopend te sorteren"
-            }
-        };
-    }
+    function buildLanguage(e) { return window.GlV2DataTable.language(e, buildEmptyStateHtml()); }
 
     // ── Filter (enkel Facturatiebedrijf — Klanten kent geen Status/Activiteit-onderscheid). ────────
     var selectedIssuerId = document.getElementById("issuer-select-value")?.value || "";
@@ -118,34 +99,6 @@
     }
     $(document).on("click", ".js-gl-v2-clear-filters, .gl-v2-filters-clear", resetFilters);
 
-    // ── Filters-knop (optie 4f) — klapt het filtervelden-/badge-blok open/dicht. Twee triggers
-    // sturen hetzelfde paneel aan: de inline "Filters"-knop in de toolbar en de topbar-filtericoon
-    // (enkel <768px, @section MobileTopbarAction in IndexV2.cshtml) — op mobiel wordt #filters-panel
-    // via CSS een bottom sheet i.p.v. inline te blijven staan. ─────────────────────────────────────
-    var filtersToggle = document.getElementById("filters-toggle");
-    var mobileFiltersToggle = document.getElementById("mobile-filters-toggle");
-    var filtersPanel = document.getElementById("filters-panel");
-    var filtersPanelBackdrop = document.getElementById("filters-panel-backdrop");
-    var filtersToggleButtons = [filtersToggle, mobileFiltersToggle].filter(Boolean);
-
-    function setFiltersPanelOpen(isOpen) {
-        filtersPanel.hidden = !isOpen;
-        if (filtersPanelBackdrop) filtersPanelBackdrop.hidden = !isOpen;
-        filtersToggleButtons.forEach(function (btn) {
-            btn.classList.toggle("is-open", isOpen);
-            btn.setAttribute("aria-expanded", isOpen.toString());
-        });
-    }
-
-    if (filtersPanel && filtersToggleButtons.length) {
-        filtersToggleButtons.forEach(function (btn) {
-            btn.addEventListener("click", function () { setFiltersPanelOpen(filtersPanel.hidden); });
-        });
-        if (filtersPanelBackdrop) filtersPanelBackdrop.addEventListener("click", function () { setFiltersPanelOpen(false); });
-        document.addEventListener("keydown", function (e) {
-            if (e.key === "Escape" && !filtersPanel.hidden) setFiltersPanelOpen(false);
-        });
-    }
 
     // ── Mobiele kaarten (optie 4c) — zelfde architectuur als gl-v2-leveranciers.js. ─────────────────
     var $mobileList = $("#gl-v2-mobile-client-list");
@@ -237,8 +190,6 @@
     }
     table.on("draw", updateFiltersShowButton);
     updateFiltersShowButton();
-    var filtersShowBtn = document.getElementById("filters-show-btn");
-    if (filtersShowBtn) filtersShowBtn.addEventListener("click", function () { setFiltersPanelOpen(false); });
 
     var MOBILE_PAGE_LENGTH = 15;
 

@@ -41,7 +41,7 @@ Bekende absolute paden (bijgewerkt): `Services/ChangeOrderPdfService.cs` (Change
 5. **Controle**: botsende namen over de functiemappen van één module (script in sessie-scratchpad,
    of: `find Views/<X> -maxdepth 2 -name "*.cshtml" | sed 's#.*/##' | sort | uniq -d`); absolute paden.
 6. **Build** — 0 errors vóór de volgende module.
-7. Dit bestand + .md-verwijzingen bijwerken (DESIGN.md "Waar staat een pagina?", DEPLOY.md,
+7. Dit bestand + .md-verwijzingen bijwerken (CPMCore/DESIGN.md "Waar staat een pagina?", DEPLOY.md,
    DEVNOTES.md, *_VOORTGANG.md, `.claude/skills/groupln/SKILL.md`).
 
 ### Scripts (scratchpad van sessie 445ba133…, eenmalig, niet in de repo)
@@ -169,9 +169,9 @@ absolute pad) en `Views/Werfportaal/ContractorInvite/`.
 - **Bug gevonden en hersteld**: het `@media (max-width: 1023.98px)`-blok voor de dashboardkolom
   (`.gl-v2-mc-col`, nu onderaan `mobile-search.css`) was nooit gesloten, waardoor het hele Stappenplan-blok
   erin genest zat en op desktop (≥1024px) geen opmaak kreeg. Sluit-accolade toegevoegd.
-- Verwijstabel bovenaan `gl-v2-shell.css` en in DESIGN.md ("Waar staat gl-v2-CSS?"); vier component-
-  specifieke DESIGN.md-verwijzingen (foutoverzicht, meldingskaders, stappenplan, inline fout) omgezet. De
-  overige ~45 "gl-v2-shell.css"-vermeldingen in DESIGN.md en view-comments gaan over laadvolgorde of zijn
+- Verwijstabel bovenaan `gl-v2-shell.css` en in CPMCore/DESIGN.md ("Waar staat gl-v2-CSS?"); vier component-
+  specifieke CPMCore/DESIGN.md-verwijzingen (foutoverzicht, meldingskaders, stappenplan, inline fout) omgezet. De
+  overige ~45 "gl-v2-shell.css"-vermeldingen in CPMCore/DESIGN.md en view-comments gaan over laadvolgorde of zijn
   historisch; de notitie dekt ze.
 - Niet gedaan: pagina-CSS/-JS (`gl-v2-<module>-<pagina>.*`) naar een `pages/`-submap — vraagt ~60
   href/src-wijzigingen in views; apart te beslissen.

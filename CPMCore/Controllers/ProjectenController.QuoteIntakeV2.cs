@@ -94,6 +94,7 @@ namespace CPMCore.Controllers
             var quoteService = HttpContext.RequestServices.GetRequiredService<IQuoteRegionAnalysisService>();
             vm.AzureConfigured = quoteService.IsEnabled;
 
+            ViewData["HelpScreenId"] = "wijzigingen-opmaken";
             return View(vm);
         }
 

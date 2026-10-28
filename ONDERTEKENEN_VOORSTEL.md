@@ -271,11 +271,11 @@ Zonder antwoord op 1, 2 en 6 kan ik niet zinvol beginnen; de rest kan tijdens fa
 | **0 — Fundament** | `IAssetStorageClient`-refactor; migratie 055 + entiteiten + UoW-repo's; `Signing:*`-config; `ISigningService`, evidence store met trigger + hash-ketting; `InternalSesProvider`, `EmailOtpMethod`, `EmailChannel`; `ISmsProvider`/`SmsChannel`-contracten (leeg); rate limiter + security-header-middleware voor `/ondertekenen/*`; `_LayoutPublic`. | Alles compileert, unit-tests op token/OTP/ketting/regels (ALL/ANY/ORDERED), nog geen UI. |
 | **1 — Wijzigingsopdracht** | `ChangeOrderSigningSource` + `IChangeOrderPdfRenderer`; bronvergrendeling; interne UI: modal "Ter ondertekening aanbieden", statusblok, herinnering/nieuwe link/annuleren; projectbreed overzicht (gl-v2). | Een dossier kan aangemaakt, verstuurd en opgevolgd worden. |
 | **2 — Ondertekenpagina** | Publieke controller + views (document, verificatie, akkoord, handtekeningpad, bevestiging, weigeren, neutrale foutpagina); sign-transactie; definitieve PDF + ondertekeningsblad; auditrapport; bevestigingsmails. | End-to-end SES-ondertekening. |
-| **3 — Opvolging & hardening** | `SigningHostedService` (verlopen, herinneringen, retentiescrub); verificatiepagina + QR; "Audit trail controleren"; `ClientContactChangeLog`; DESIGN.md/DEPLOY.md (NTP, SPF/DKIM, secrets). | Productieklaar. |
+| **3 — Opvolging & hardening** | `SigningHostedService` (verlopen, herinneringen, retentiescrub); verificatiepagina + QR; "Audit trail controleren"; `ClientContactChangeLog`; CPMCore/DESIGN.md/DEPLOY.md (NTP, SPF/DKIM, secrets). | Productieklaar. |
 | **4 — SMS-gereed** | `SmsOtpMethod`, delivery-status-webhook, eerste `ISmsProvider`-adapter (Bird/Twilio/CM naar keuze) achter een feature flag. | SMS inschakelen = configuratie + één adapter. |
 | **later** | Externe providers via `ISignatureMethodProvider` + `SigningWebhookController`; aannemerscontracten via een tweede `ISigningDocumentSource`; interne tegenondertekening-UI; meertaligheid (snapshots per taal). | |
 
-Elke fase eindigt met een werkende build en een DESIGN.md-sectie, zoals bij punt 16.
+Elke fase eindigt met een werkende build en een CPMCore/DESIGN.md-sectie, zoals bij punt 16.
 
 ---
 

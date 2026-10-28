@@ -31,6 +31,8 @@ public class GlV2ComboVm
     /// <summary>Optionele tweede verborgen input voor de weergavenaam (bv. Project.Developer.Display).</summary>
     public string? TextName { get; set; }
     public string? TextValue { get; set; }
+    /// <summary>Multi-select-filter: na een keuze meldt het veld de selectie (gl-v2:combo-select) en maakt zichzelf weer leeg; de pagina houdt de gekozen waarden zelf bij (bv. als chips).</summary>
+    public bool ClearOnSelect { get; set; }
     public bool ReadOnly { get; set; }
     public bool Disabled { get; set; }
     public bool HasError { get; set; }

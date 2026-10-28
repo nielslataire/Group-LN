@@ -396,6 +396,7 @@ namespace CPMCore.Controllers
             SetDetailBreadcrumb(issuerId, companyDisplay);
             SetPageHeader("bx bx-receipt", detailTitle);
 
+            ViewData["HelpScreenId"] = "facturen-detail";
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "DetailV2" : "Detail", vm);
         }
 

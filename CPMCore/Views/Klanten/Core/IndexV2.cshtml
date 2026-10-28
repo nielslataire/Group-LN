@@ -190,7 +190,7 @@
                     @foreach (var client in Model.Clients)
                     {
                         var issuerIds = string.Join(",", client.IssuerCompanyIds);
-                        <tr data-id="@client.Id" data-issuers="@issuerIds" data-detail-url="@Url.Action("Details", "Klanten", new { id = client.Id })">
+                        <tr data-id="@client.Id" data-issuers="@issuerIds" data-detail-url="@Url.Action("Details", "Klanten", new { id = client.Id })" data-row-href="@Url.Action("Details", "Klanten", new { id = client.Id })">
                             <td><a class="gl-v2-client-name-link" href="@Url.Action("Details", "Klanten", new { id = client.Id })">@client.DisplayName</a></td>
                             <td>@(EnterpriseNumberFormatter.Format(client.EnterpriseNumber) ?? "-")</td>
                             <td>@(string.IsNullOrWhiteSpace(client.City) ? "-" : client.City)</td>
@@ -215,7 +215,12 @@
                                 }
                             </td>
                             <td>@(client.IssuerCompanies.Any() ? string.Join(", ", client.IssuerCompanies) : "-")</td>
-                            <td class="text-end">
+                            <td class="text-end gl-td-actions">
+                                @* Rij-actiepatroon (DESIGN.md): >=1024px chevron in rust, iconen bij hover/focus (.gl-v2-rowact);
+                                   tot 1023px blijft het "···"-menu (gl-v2-klanten.css). Rij klikt door via data-row-href (gl-v2-shell.js). *@
+                                <span class="gl-v2-rowact">
+                                <i class="ph ph-caret-right gl-v2-rowact-chev" aria-hidden="true"></i>
+                                <span class="gl-v2-rowact-btns">
                                 <button type="button" class="gl-v2-row-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="row-menu-@client.Id" aria-label="Meer acties">
                                     <i class="ph ph-dots-three" aria-hidden="true"></i>
                                 </button>
@@ -240,6 +245,8 @@
                                         </a>
                                     }
                                 </div>
+                                </span>
+                                </span>
                             </td>
                         </tr>
                     }

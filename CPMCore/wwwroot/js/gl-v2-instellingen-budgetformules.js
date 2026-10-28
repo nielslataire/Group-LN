@@ -18,10 +18,10 @@
     var testSeq = 0, testTimer = null, lastTest = null;
     var editor = null;   // het formuleveld van de editor (voor invoegen)
 
-    function $(id) { return document.getElementById(id); }
+    var $ = window.GlV2.byId; // gedeeld (gl-v2-shell.js)
     function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
     function norm(s) { return String(s || "").toLowerCase(); }
-    function toast(tone, title, body) { if (window.GlV2Toast) window.GlV2Toast.show({ tone: tone, title: title, body: body || "" }); }
+    var toast = (window.GlV2Toast && window.GlV2Toast.notify) || function () {}; // gedeeld, zie gl-v2-shell.js
     var nl2 = new Intl.NumberFormat("nl-BE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     function fmt(v) { return v == null ? "" : nl2.format(v); }
     function lotNr(n) { return Number(n).toFixed(1); }
@@ -121,7 +121,7 @@
     }
     function leeg() {
         ui.sel = null; ui.draft = null; lastTest = null; renderList();
-        $("bf-editor").innerHTML = '<div class="gl-v2-bf-blank"><i class="ph ph-function" aria-hidden="true"></i><b>Kies een formule</b><span>Selecteer links een formule' + (canWrite ? ", of maak een nieuwe aan." : ".") + "</span></div>";
+        $("bf-editor").innerHTML = '<div class="gl-v2-blank gl-v2-bf-blank"><i class="ph ph-function" aria-hidden="true"></i><b>Kies een formule</b><span>Selecteer links een formule' + (canWrite ? ", of maak een nieuwe aan." : ".") + "</span></div>";
         editor = null;
     }
 

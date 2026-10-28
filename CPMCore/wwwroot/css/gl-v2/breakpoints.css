@@ -1,0 +1,160 @@
+/* gl-v2 shell — Breakpoints tablet/telefoon van de shell. Uit gl-v2-shell.css gelicht (26/10/2026, CSS-consolidatie stap 11): bronvolgorde ongewijzigd; de <link>-volgorde in _LayoutV2.cshtml
+   (shell → buttons → userbox-hamburger → mobile-menu → breakpoints → quickactions → forms …) is dezelfde als de oude volgorde binnen één bestand: niet herschikken. */
+
+/* ── Breakpoint: tablet (design-handoff optie 5c) ────────────────────────────────────────
+   Rail/flyouts/topbar blijven zoals op desktop (die leven pas achter de 767.98px-grens
+   hierboven) — enkel de userbox zelf krijgt grotere raakvlakken, een breder paneel en een
+   ingekorte naam. Geen aparte :hover-onderdrukking nodig: :hover vuurt sowieso niet op een
+   puur-touch tablet, dus dezelfde regels als desktop geven daar vanzelf de "geen hover, wel
+   pressed"-staat uit de referentiesheet. */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    .gl-v2-topbar-userbox { padding: 6px 14px 6px 6px; }
+    .gl-v2-topbar-userbox .gl-v2-avatar { width: 32px; height: 32px; }
+    .gl-v2-userbox-name-full { display: none; }
+    .gl-v2-userbox-name-short { display: inline; }
+
+    .gl-v2-userbox-panel { width: 360px; }
+    .gl-v2-userbox-item { padding: 12px 12px; font-size: 14px; }
+    /* Geen hover om de chevron te onthullen op touch, dus permanent (gedimd) zichtbaar. */
+    .gl-v2-userbox-item-chevron { opacity: .55; }
+}
+
+/* Smalle tablet / staand (optie 5c): naam valt helemaal weg, enkel de avatar blijft. */
+@media (min-width: 768px) and (max-width: 899.98px) {
+    .gl-v2-topbar-userbox { padding: 5px; gap: 0; }
+    .gl-v2-topbar-userbox .name,
+    .gl-v2-userbox-caret { display: none; }
+}
+
+/* ── Breakpoint: tablet (768–1399.98px) — minder witruimte dan desktop: rail/menu/inhoud staan
+   dichter op elkaar. .gl-v2-app's padding EN gap delen bewust dezelfde waarde, zodat de rand-links-
+   van-de-rail, rail-tot-menu, menu-tot-inhoud en rand-rechts-van-de-inhoud altijd gelijk blijven —
+   één getal i.p.v. vier die uit sync kunnen raken. ─────────────────────────────────────────── */
+@media (min-width: 768px) and (max-width: 1399.98px) {
+    .gl-v2-app { padding: 8px; gap: 8px; }
+    .gl-v2-rail { top: 8px; min-height: calc(100vh - 16px); min-height: calc(100dvh - 16px); }
+}
+
+/* ── Breakpoint: phone (design-handoff opties 3a/3b/3e) ─────────────────────────────────── */
+@media (max-width: 767.98px) {
+    .gl-v2-app { padding: 0; gap: 0; min-height: 100vh; }
+    .gl-v2-rail,
+    .gl-v2-flyouts { display: none; }
+
+    .gl-v2-body { border-radius: 0; box-shadow: none; }
+
+    /* Optie 3a: search-icon and hamburger are both full circles (radius:17px on a 34px box), not
+       the rounded-square treatment used everywhere else — mobile-topbar icon buttons are their
+       own, distinct shape language in the mockup. */
+    .gl-v2-hamburger {
+        display: inline-flex;
+        color: var(--gl-v2-surface);
+        border: 1px solid rgba(255, 255, 255, .35);
+        border-radius: 50%;
+    }
+
+    /* Was een gestippeld "LN"-tekstvakje (de honeste "nog niet ingevuld"-placeholder-taal uit de
+       referentie) — nu het echte merk-beeldmerk beschikbaar is (wwwroot/img/groupln-logo.png, ook
+       gebruikt op .gl-v2-rail-logo), vervalt de gestippelde placeholder-rand: dit IS nu de
+       definitieve invulling, geen open plek meer. Geen achtergrondvlak nodig — het beeldmerk staat
+       leesbaar genoeg rechtstreeks op de groene topbar (dezelfde reden .gl-v2-rail-logo's vlak wél
+       nodig heeft, is dat die op de lichte pagina-achtergrond staat, hier is de achtergrond zelf al
+       het merkgroen). */
+    .gl-v2-mobile-logo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        flex: none;
+    }
+    .gl-v2-mobile-logo img { width: 26px; height: 26px; object-fit: contain; display: block; }
+
+    /* Wanneer een pagina ViewData["BackUrl"] zet, neemt de terugknop het merk-logo's plek in
+       i.p.v. ernaast te staan — twee "waar ben ik/ga ik heen"-iconen naast elkaar op een topbar
+       die al smal is, is dubbelop. :has() i.p.v. een tweede ViewData-vlag: één regel, projectbreed,
+       geen enkele pagina moet hier zelf iets voor zetten. */
+    .gl-v2-mobile-logo:has(+ .gl-v2-topbar-back) { display: none; }
+
+    /* Zelfde witte-cirkel-op-groen taal als .gl-v2-hamburger/.gl-v2-mobile-search-stub hieronder —
+       de desktopstijl (lichte kaart, hairline-rand, gedempt icoon) leest onleesbaar op de
+       ondertussen groene mobiele topbar-achtergrond. */
+    .gl-v2-topbar-back {
+        border: 1px solid rgba(255, 255, 255, .35);
+        border-radius: 50%;
+        background: transparent;
+        color: var(--gl-v2-surface);
+    }
+
+    /* Vastgeprikte terug-/menuknop — twee visuele duplicaten van .gl-v2-topbar-back/.gl-v2-hamburger
+       hierboven, enkel zichtbaar zodra de echte topbar is weggescrold (gl-v2-shell.js, initGlV2TopbarPin,
+       IntersectionObserver). Zelfde ronde-witte-op-groen-taal, nu als een gevulde cirkel (i.p.v. enkel
+       een rand) zodat ze ook leesbaar blijven zwevend bóven gewone paginakaarten/-achtergrond — daar
+       is geen groene topbar-achtergrond om de witte omtrek tegen af te tekenen. */
+    .gl-v2-topbar-pin-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        position: fixed;
+        top: calc(env(safe-area-inset-top, 0px) + 10px);
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, .35);
+        background: var(--gl-v2-primary);
+        color: var(--gl-v2-surface);
+        box-shadow: 0 6px 16px -6px rgba(0, 83, 45, .55);
+        font-size: 16px;
+        text-decoration: none;
+        z-index: 30;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(-6px);
+        transition: opacity .15s ease, transform .15s ease;
+    }
+    .gl-v2-topbar-pin-back { left: 14px; }
+    .gl-v2-topbar-pin-hamburger { right: 14px; font-size: 18px; }
+    #gl-v2-topbar-pin.is-visible .gl-v2-topbar-pin-btn { opacity: 1; pointer-events: auto; transform: translateY(0); }
+
+    .gl-v2-topbar {
+        background: var(--gl-v2-primary);
+        padding: 0 14px;
+        border-bottom: 0;
+        gap: 10px;
+    }
+    .gl-v2-topbar-icon { display: none; }
+    .gl-v2-topbar-title { color: var(--gl-v2-surface); font-size: 18px; line-height: 1.2; }
+
+    /* Optie 3a/3e houden een compacte, eenregelige subtitel onder de titel (bv. "Home" of
+       "Klanten / LN Bouw") — niet volledig verbergen zoals eerst, enkel het bestaande
+       kruimelpad-uiterlijk vervangen door de witte/gedimde mobiele variant uit het voorbeeld. */
+    .gl-v2-topbar .breadcrumbs {
+        color: rgba(255, 255, 255, .75);
+        font-size: 10px;
+        flex-wrap: nowrap;
+        overflow: hidden;
+    }
+    .gl-v2-topbar .breadcrumbs li:last-child span,
+    .gl-v2-topbar .breadcrumbs li:last-child a { color: rgba(255, 255, 255, .75); }
+    .gl-v2-topbar .breadcrumbs li:not(:last-child) { display: none; }
+
+    .gl-v2-topbar-actions { display: none; }
+
+    /* Zoek-icoontje uit optie 3a — was hier zichtbaar als honeste "nog niet gekoppeld aan echte
+       zoekfunctionaliteit"-placeholder, maar op verzoek nu projectbreed onderdrukt (een dode knop
+       is minder eerlijk dan geen knop): blijft op `display:none` (de standaardregel bovenaan dit
+       bestand), geen mobile-override meer. Een pagina met eigen filters/zoekveld claimt deze plek
+       nog steeds via @@section MobileTopbarAction (zie Leveranciers/IndexV2.cshtml) — enkel de
+       kale, onwerkende stub zelf is weg. */
+
+    /* Optie 3a/3b: het profiel leeft nu enkel nog in de voet van het hoofdmenu-paneel — de
+       topbar-userbox (met naam/chevron) verdwijnt volledig op mobiel i.p.v. enkel gecomprimeerd
+       te worden. */
+    .gl-v2-desktop-userbox { display: none; }
+
+    .gl-v2-content { padding: 14px; }
+    /* .gl-v2-tabbar/.gl-v2-form-actionbar heffen .gl-v2-content se padding op via deze twee vars
+       (zie hun eigen regels) — op mobiel is die padding 14px rondom i.p.v. de 20/22px-desktopsplit,
+       dus de vars moeten hier mee veranderen anders knipt de negatieve margin verkeerd af. */
+    .gl-v2 { --gl-v2-content-pad-x: 14px; --gl-v2-content-pad-y: 14px; }
+}

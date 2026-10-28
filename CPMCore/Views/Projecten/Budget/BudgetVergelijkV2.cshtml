@@ -68,7 +68,7 @@
             var v = vs[i];
             <div class="bw-vg-versie @(i == 0 ? "is-basis" : "")">
                 <span class="bw-vg-letter">@v.Letter</span>
-                <div class="bw-vg-versie-tekst"><strong title="@v.Label">@v.Label</strong><small>@StatusLijn(v)</small></div>
+                <div class="gl-v2-stack is-tight bw-vg-versie-tekst"><strong title="@v.Label">@v.Label</strong><small>@StatusLijn(v)</small></div>
                 <span class="bw-vg-pil @(i == 0 ? "is-basis" : "")">@(i == 0 ? "Basis" : "Versie")</span>
                 @if (i > 0 && n > 2)
                 {

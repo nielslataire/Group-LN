@@ -20,6 +20,16 @@
     flex: none;
     position: sticky;
     top: 12px;
+    /* Precies schermhoog (minus de 12px app-padding boven en onder) en vastgeplakt: het menu schuift mee met de pagina en wordt nooit hoger dan het scherm.
+       align-self:flex-start (i.p.v. de stretch van .gl-v2-app) is nodig, anders rekt het slot mee tot de paginahoogte en doet sticky niets. De lijst
+       binnen de kaart scrolt zelf (.gl-v2-pm-list / .gl-v2-pm-tablet). */
+    align-self: flex-start;
+    height: calc(100vh - 24px);
+    height: calc(100dvh - 24px);
+}
+@media (min-width: 768px) and (max-width: 1399.98px) {
+    /* .gl-v2-app heeft hier 8px padding (gl-v2-shell.css, tabletbreakpoint). */
+    .gl-v2-project-menu-slot { top: 8px; height: calc(100vh - 16px); height: calc(100dvh - 16px); }
 }
 
 /* Scoped to the Outer-mode instance (inside .gl-v2-project-menu-slot) only — Phone-mode's own
@@ -396,7 +406,7 @@
         width: 30px;
         height: 30px;
         flex: none;
-        border-radius: 8px;
+        border-radius: var(--gl-v2-radius-sm, 8px);
         border: 1px solid var(--gl-v2-hairline);
         background: var(--gl-v2-surface);
         color: var(--gl-v2-muted);

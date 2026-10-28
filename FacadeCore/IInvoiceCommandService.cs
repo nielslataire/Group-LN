@@ -16,6 +16,7 @@ namespace FacadeCore
             CancellationToken ct = default);
         Task<int> CreateDraftAsync(InvoiceDraftBO bo, CancellationToken ct = default);
         Task<string> IssueDraftAsync(int invoiceId, int? seriesId = null, DateOnly? issueDate = null, CancellationToken ct = default);
+        Task EnsureDefaultBankAccountAsync(int issuerCompanyId, CancellationToken ct = default);
         Task DeleteAsync(int invoiceId, CancellationToken ct = default);
         Task MarkAsSentAsync(int invoiceId, DateTime sentAtUtc, CancellationToken ct = default);
         Task UpdateAsync(InvoiceUpdateBO bo, CancellationToken ct = default);

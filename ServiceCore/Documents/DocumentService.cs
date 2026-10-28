@@ -97,7 +97,8 @@ public partial class DocumentService : IDocumentService
         sigs.OrderBy(s => s.SignOrder).Select(s => new DocSignatureDto
         {
             Id = s.Id, Name = s.Name, Initials = DocumentRules.Initials(s.Name), Role = s.Role, Status = s.Status,
-            Method = s.Method, SentDate = s.SentDate, OpenedDate = s.OpenedDate, SignedDate = s.SignedDate, ReminderDate = s.ReminderDate
+            Method = s.Method, SentDate = s.SentDate, OpenedDate = s.OpenedDate, SignedDate = s.SignedDate, ReminderDate = s.ReminderDate,
+            ProofFile = s.Method == "manueel" ? s.EvidenceRef : null
         }).ToList();
 
     private static List<DocChip> ChipsFor(ProjectDocs d)

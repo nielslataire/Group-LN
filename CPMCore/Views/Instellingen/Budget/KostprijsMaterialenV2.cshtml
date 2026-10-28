@@ -53,7 +53,7 @@
     <div class="gl-v2-kp-panel" data-kp-panel="materialen" @(tab == "materialen" ? "" : "hidden")>
         <aside class="gl-v2-kp-lots" aria-label="Activiteitgroep">
             <span class="gl-v2-kp-lots-label">ACTIVITEITGROEP</span>
-            <div class="gl-v2-kp-lots-list" id="kp-lots"></div>
+            <div class="gl-v2-navlist gl-v2-kp-lots-list" id="kp-lots"></div>
         </aside>
         <section class="gl-v2-section-card gl-v2-kp-card">
             <div class="gl-v2-section-card-header">
@@ -62,7 +62,7 @@
                 <span class="gl-v2-field-divider"></span>
                 <span class="gl-v2-section-card-desc" id="kp-mat-info">—</span>
             </div>
-            <div class="gl-v2-kp-toolbar">
+            <div class="gl-v2-list-toolbar gl-v2-kp-toolbar">
                 <div class="gl-v2-field gl-v2-kp-search">
                     <div class="gl-v2-field-box">
                         <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
@@ -88,7 +88,7 @@
                     <button type="button" class="gl-v2-kp-linkbtn" id="kp-stale-toggle">Toon enkel verouderde</button>
                 </div>
             </div>
-            <div class="gl-v2-kp-head gl-v2-kp-grid--mat">
+            <div class="gl-v2-list-head gl-v2-kp-head gl-v2-kp-grid--mat">
                 <button type="button" class="gl-v2-kp-sort is-active" data-sort="naam">Naam<i class="ph ph-arrow-up" aria-hidden="true"></i></button>
                 <span>Eenheid</span><span>Toepassing</span>
                 <button type="button" class="gl-v2-kp-sort is-right" data-sort="prijs">Referentieprijs<i class="ph" aria-hidden="true"></i></button>
@@ -96,7 +96,7 @@
                 <span>Index</span><span></span>
             </div>
             <div id="kp-mat-rows"></div>
-            <div class="gl-v2-kp-empty" id="kp-mat-empty" hidden>
+            <div class="gl-v2-list-empty gl-v2-kp-empty" id="kp-mat-empty" hidden>
                 <span class="t" id="kp-mat-empty-t">Geen materialen gevonden</span>
                 <span class="s"><button type="button" class="gl-v2-kp-linkbtn" id="kp-mat-reset">Wis de filters</button></span>
             </div>
@@ -122,7 +122,7 @@
                         <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="bk-save" disabled>Opslaan</button>
                     }
                 </div>
-                <div class="gl-v2-kp-head gl-v2-kp-grid--bk"><span>Parameter</span><span class="is-right">Percentage</span></div>
+                <div class="gl-v2-list-head gl-v2-kp-head gl-v2-kp-grid--bk"><span>Parameter</span><span class="is-right">Percentage</span></div>
                 <div id="bk-system"></div>
             </section>
 
@@ -152,7 +152,7 @@
     <div class="gl-v2-kp-panel" data-kp-panel="koppelingen" @(tab == "koppelingen" ? "" : "hidden")>
         <aside class="gl-v2-kp-lots" aria-label="Formulegroep">
             <span class="gl-v2-kp-lots-label">FORMULEGROEP</span>
-            <div class="gl-v2-kp-lots-list" id="fk-groups"></div>
+            <div class="gl-v2-navlist gl-v2-kp-lots-list" id="fk-groups"></div>
         </aside>
         <section class="gl-v2-section-card gl-v2-kp-card">
             <div class="gl-v2-section-card-header">
@@ -161,7 +161,7 @@
                 <span class="gl-v2-field-divider"></span>
                 <span class="gl-v2-section-card-desc">gebruik in Budgetformules als <code>@@mat_slot</code>; de referentieprijs wordt de invoer</span>
             </div>
-            <div class="gl-v2-kp-toolbar">
+            <div class="gl-v2-list-toolbar gl-v2-kp-toolbar">
                 <div class="gl-v2-field gl-v2-kp-search">
                     <div class="gl-v2-field-box"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input type="text" class="gl-v2-field-input" id="fk-search" placeholder="Zoek op slot, omschrijving of materiaal" autocomplete="off" /></div>
                 </div>
@@ -176,9 +176,9 @@
                     <button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-plus" aria-hidden="true"></i>Koppelen</button>
                 </form>
             }
-            <div class="gl-v2-kp-head gl-v2-kp-grid--fk"><span>Formule-slot</span><span>Omschrijving</span><span>Gekoppeld materiaal</span><span class="is-right">Prijs</span><span></span></div>
+            <div class="gl-v2-list-head gl-v2-kp-head gl-v2-kp-grid--fk"><span>Formule-slot</span><span>Omschrijving</span><span>Gekoppeld materiaal</span><span class="is-right">Prijs</span><span></span></div>
             <div id="fk-rows"></div>
-            <div class="gl-v2-kp-empty" id="fk-empty" hidden><span class="t" id="fk-empty-t">Geen koppelingen gevonden</span></div>
+            <div class="gl-v2-list-empty gl-v2-kp-empty" id="fk-empty" hidden><span class="t" id="fk-empty-t">Geen koppelingen gevonden</span></div>
             <div class="gl-v2-kp-foot"><span id="fk-foot">—</span></div>
         </section>
     </div>

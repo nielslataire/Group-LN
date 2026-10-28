@@ -94,7 +94,7 @@
                                 <th scope="col" class="is-check">
                                     @if (hasOpen)
                                     {
-                                        <span class="gl-v2-co-check"><input type="checkbox" id="gl-v2-co-slices-all" aria-label="Alle schijven selecteren" /><label for="gl-v2-co-slices-all"></label></span>
+                                        <span class="gl-v2-check"><input type="checkbox" id="gl-v2-co-slices-all" aria-label="Alle schijven selecteren" /><label for="gl-v2-co-slices-all"></label></span>
                                     }
                                 </th>
                             }
@@ -115,7 +115,7 @@
                                     <td class="is-check" data-label="">
                                         @if (!s.IsInvoiced)
                                         {
-                                            <span class="gl-v2-co-check">
+                                            <span class="gl-v2-check">
                                                 <input type="checkbox" class="js-co-slice" id="gl-v2-co-slice-@s.Id" name="sliceIds" value="@s.Id" form="gl-v2-co-invoice-form" data-amount="@Inv(s.Amount)" data-pct="@Inv(s.Percentage)" aria-label="Schijf @s.Number selecteren" />
                                                 <label for="gl-v2-co-slice-@s.Id"></label>
                                             </span>

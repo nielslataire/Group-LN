@@ -5,6 +5,7 @@ using CPMCore.Models.Marktanalyse;
 using CPMCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SmartBreadcrumbs.Nodes;
 
 namespace CPMCore.Controllers;
 
@@ -32,6 +33,7 @@ public class MarktanalyseController : BaseController
     {
         var glV2 = ViewData["UseGlV2Layout"] as bool? == true;
         SetPageHeader(glV2 ? "ph ph-chart-bar" : "bx bx-map", "Gemeenteanalyse");
+        SetSectieBreadcrumb();
 
         if (!GemeenteAnalyseViewModel.AanbodOpties.Contains(aanbod)) aanbod = "Actueel";
         if (periodeMaanden < 0) periodeMaanden = 0;
@@ -75,6 +77,7 @@ public class MarktanalyseController : BaseController
     {
         var glV2 = ViewData["UseGlV2Layout"] as bool? == true;
         SetPageHeader(glV2 ? "ph ph-magnifying-glass" : "bx bx-search-alt", "Vergelijkbare panden");
+        SetSectieBreadcrumb();
 
         var vm = await _svc.GetVergelijkbarePandenAsync(
             gemeenteIds, rondAdresPostcode, rondAdresLat, rondAdresLng, rondAdresStraal,
@@ -272,6 +275,13 @@ public class MarktanalyseController : BaseController
         return Json(new { aantal });
     }
 
+    // Dashboard / Marktanalyse — de sectie heeft geen eigen pagina, dus de laatste crumb blijft platte tekst.
+    private void SetSectieBreadcrumb()
+    {
+        var dashboard = new MvcBreadcrumbNode("Index", "Home", "Dashboard");
+        ViewData["BreadcrumbNode"] = new MvcBreadcrumbNode("Gemeenteanalyse", "Marktanalyse", "Marktanalyse") { Parent = dashboard };
+    }
+
     // GET /Marktanalyse/Projectdetail/5
     public async Task<IActionResult> Projectdetail(long id, CancellationToken ct = default)
     {
@@ -280,7 +290,16 @@ public class MarktanalyseController : BaseController
 
         var glV2 = ViewData["UseGlV2Layout"] as bool? == true;
         SetPageHeader(glV2 ? "ph ph-buildings" : "bx bx-building-house", vm.ProjectNaam);
+
+        // Trail stopt bij de ouder (Gemeenteanalyse): de titel is de projectnaam, dus geen eigen leaf.
+        var dashboard = new MvcBreadcrumbNode("Index", "Home", "Dashboard");
+        var sectie = new MvcBreadcrumbNode("Gemeenteanalyse", "Marktanalyse", "Marktanalyse") { Parent = dashboard };
+        var gemeente = new MvcBreadcrumbNode("Gemeenteanalyse", "Marktanalyse", "Gemeenteanalyse") { Parent = sectie };
+        ViewData["BreadcrumbNode"] = gemeente;
+        ViewData["BreadcrumbLastIsLink"] = true;
+
         if (glV2) ViewData["BackUrl"] = Url.Action("Gemeenteanalyse", "Marktanalyse");
+        ViewData["HelpScreenId"] = "marktanalyse-projectdetail";
         return View(glV2 ? "ProjectdetailV2" : "Projectdetail", vm);
     }
 }

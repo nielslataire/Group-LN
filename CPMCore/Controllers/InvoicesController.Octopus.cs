@@ -52,6 +52,14 @@ namespace CPMCore.Controllers
             bool skipClassicEmail = false,
             DateOnly? forcedIssueDate = null)
         {
+            // Zonder standaardrekening geen factuur: controleer vóór er iets naar Octopus gaat.
+            if (!sendOnly)
+            {
+                var issuerId = await _db.Invoices.Where(i => i.Id == invoiceId).Select(i => i.IssuerCompanyId).FirstOrDefaultAsync(ct);
+                if (issuerId.HasValue)
+                    await _cmd.EnsureDefaultBankAccountAsync(issuerId.Value, ct);
+            }
+
             try
             {
                 // 1. Algemene gegevens van de factuur voorbereiden (gestructureerde mededeling, QR-code/public id enz.)

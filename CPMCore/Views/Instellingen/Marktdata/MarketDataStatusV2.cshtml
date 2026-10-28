@@ -108,6 +108,7 @@
                 <span class="gl-v2-field-divider"></span>
                 <span class="gl-v2-section-card-desc">Laatste @Model.RecenteRuns.Count runs, nieuwste eerst.</span>
             </div>
+            <div data-gl-pager data-pg-size="10" data-pg-noun="runs">
             <div class="gl-v2-auto-head gl-v2-auto-grid--runs"><span>Bron</span><span>Gestart</span><span>Afgerond</span><span>Status</span><span class="r">Gevonden</span><span class="r">Nieuw</span><span class="r">Bijgewerkt</span><span>Melding</span></div>
             @if (!Model.RecenteRuns.Any())
             {
@@ -116,7 +117,7 @@
             @foreach (var r in Model.RecenteRuns)
             {
                 var st = RunStatus(r);
-                <div class="gl-v2-auto-row gl-v2-auto-grid--runs">
+                <div class="gl-v2-auto-row gl-v2-auto-grid--runs" data-pg-row>
                     <span class="gl-v2-auto-strong">@r.SourceName</span>
                     <span class="gl-v2-auto-cell">@FmtDt(r.StartedAt)</span>
                     <span class="gl-v2-auto-cell">@FmtDt(r.FinishedAt)</span>
@@ -127,6 +128,12 @@
                     <span class="gl-v2-auto-cell is-muted" title="@r.LogMessage">@(string.IsNullOrWhiteSpace(r.LogMessage) ? "—" : r.LogMessage)</span>
                 </div>
             }
+            </div>
         </section>
     }
 </div>
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-auto-pager.js" asp-append-version="true"></script>
+}

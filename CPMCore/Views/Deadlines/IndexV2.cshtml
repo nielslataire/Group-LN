@@ -1,0 +1,108 @@
+@model CPMCore.Models.MijnTaken.MtDeadlinesVm
+@using CPMCore.Services.MijnTaken
+@using DALCore.Models
+@using BOCore
+@using CPMCore.Models.MijnTaken
+@*
+    gl-v2 — Deadlines (design-handoff punt 1b): mijlpalen per project met voortgang; bereikte mijlpalen ingeklapt, achterstallige bovenaan, onwaarschijnlijke datums (bv. 2213) gesignaleerd.
+    Filteren, zoeken en inklappen gebeurt in de browser; "Taak maken" zet een taak in Mijn taken (aan de mijlpaal gekoppeld).
+    Bewust anders dan het mockup: "Enkel mijn rollen" volgt de rol van je dashboardtype (zoals Mijn taken) en de verantwoordelijke gebruiker van de mijlpaal.
+    De klassieke tabel blijft bereikbaar via ?classic=true.
+*@
+@{
+    ViewData["Title"] = "Deadlines";
+    ViewData["PageIcon"] = "ph ph-calendar-check";
+    ViewData["HelpScreenId"] = "deadlines-overzicht";
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    string StatusTekst(MtMijlpaalRij r) => r.Klaar ? ((MijlpaalStatus)r.Status).GetDisplayName() : r.Laat ? "Te laat" : ((MijlpaalStatus)r.Status).GetDisplayName();
+    string StatusKlasse(MtMijlpaalRij r) => r.Klaar ? "is-done" : r.Laat ? "is-late" : r.Status == (int)MijlpaalStatus.Geblokkeerd ? "is-blocked" : r.Status == (int)MijlpaalStatus.Bezig ? "is-busy" : "";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-deadlines.css" asp-append-version="true" />
+}
+
+<form id="dl-token" hidden data-base="@Url.Content("~/MijnTaken/")">@Html.AntiForgeryToken()</form>
+
+<div class="gl-v2-dl" id="gl-v2-dl">
+    <div class="gl-v2-dl-kpis">
+        <div class="gl-v2-section-card @(Model.Achterstallig > 0 ? "is-late" : "")"><span class="l">Achterstallig</span><span class="v">@Model.Achterstallig</span></div>
+        <div class="gl-v2-section-card"><span class="l">Komende 30 dagen</span><span class="v">@Model.Komende30</span></div>
+        <div class="gl-v2-section-card"><span class="l">Bereikt</span><span class="v">@Model.Bereikt <small>van @Model.Totaal</small></span></div>
+        @if (Model.NakijkenProject != null)
+        {
+            <div class="gl-v2-section-card is-check"><span class="l">Datum nakijken</span><span class="m"><b>@Model.NakijkenAantal</b> mijlpalen van @Model.NakijkenProject.Naam vallen ver in de toekomst, waarschijnlijk een tikfout in de startdatum.</span></div>
+        }
+    </div>
+
+    <div class="gl-v2-dl-bar">
+        @await Html.PartialAsync("GlV2/_Segmented", new CPMCore.Models.GlV2.GlV2SegmentedVm
+        {
+            Id = "dl-filter", Fill = false, AriaLabel = "Welke mijlpalen",
+            Items = new()
+            {
+                new() { Text = "Openstaand", Active = true, Data = { ["f"] = "open" } },
+                new() { Text = "Achterstallig", Data = { ["f"] = "late" } },
+                new() { Text = "Alles", Data = { ["f"] = "all" } }
+            }
+        })
+        <button type="button" class="gl-v2-dl-mine" id="dl-mine" aria-pressed="false"><i class="ph ph-user" aria-hidden="true"></i>Enkel mijn rollen</button>
+        <span class="gl-v2-dl-spacer"></span>
+        <div class="gl-v2-field-box gl-v2-dl-search"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input class="gl-v2-field-input" id="dl-zoek" type="search" placeholder="Zoek mijlpaal" aria-label="Zoek mijlpaal" autocomplete="off" /></div>
+    </div>
+
+    <div class="gl-v2-dl-empty" id="dl-leeg" hidden>Geen mijlpalen in deze selectie. <button type="button" id="dl-alle-rollen">Toon alle rollen</button></div>
+    @if (!Model.Projecten.Any())
+    {
+        <section class="gl-v2-section-card"><div class="gl-v2-dl-empty is-static">Er zijn nog geen mijlpalen voor je projecten.</div></section>
+    }
+
+    @foreach (var p in Model.Projecten)
+    {
+        <section class="gl-v2-section-card gl-v2-dl-project" data-project>
+            <button type="button" class="gl-v2-dl-phead" aria-expanded="true" data-dl-toggle>
+                <i class="ph ph-caret-right gl-v2-dl-chev" aria-hidden="true"></i>
+                <span class="n">@p.Naam</span>
+                @if (p.Laat > 0) { <span class="gl-v2-badge is-blocked" data-dl-late-badge>@p.Laat achterstallig</span> }
+                <span class="gl-v2-dl-spacer"></span>
+                <span class="pr">@p.Bereikt / @p.Rijen.Count bereikt</span>
+                <span class="gl-v2-dl-progress"><i style="width:@((p.Rijen.Count == 0 ? 0 : p.Bereikt * 100.0 / p.Rijen.Count).ToString("0", inv))%"></i></span>
+            </button>
+            <div class="gl-v2-dl-rows" data-dl-rows>
+                @foreach (var r in p.Rijen)
+                {
+                    <div class="gl-v2-dl-row @(r.Laat ? "is-late" : "") @(r.Klaar ? "is-klaar" : "")" data-row data-klaar="@(r.Klaar ? "1" : "0")" data-laat="@(r.Laat ? "1" : "0")" data-mijn="@(r.Mijn ? "1" : "0")" data-naam="@r.Naam.ToLowerInvariant()">
+                        <i class="dot"></i>
+                        <a class="naam" href="@Url.Action("Index", "ProjectTraject", new { projectId = p.Id })">@r.Naam@if (!string.IsNullOrEmpty(r.Eenheid)) { <span class="unit">@r.Eenheid</span> }</a>
+                        <span class="rol">@r.Rol</span>
+                        <span class="datum @(r.Onwaarschijnlijk && !r.Klaar ? "is-odd" : "")">@(r.Datum == null ? "—" : MtFormat.DatumLang(r.Datum.Value))@if (r.Onwaarschijnlijk && !r.Klaar) { <b title="Datum ver in de toekomst, nakijken">?</b> }</span>
+                        <span class="rel @(r.Laat ? "is-late" : "")">@(r.Klaar || r.Datum == null ? "" : r.Onwaarschijnlijk ? "datum nakijken" : MtFormat.Rel(r.Dagen))</span>
+                        <span class="gl-v2-dl-status @StatusKlasse(r)">@StatusTekst(r)</span>
+                        <span class="taak">
+                            @if (!r.Klaar)
+                            {
+                                if (r.HeeftTaak)
+                                {
+                                    <span class="gl-v2-dl-made"><i class="ph ph-check-circle" aria-hidden="true"></i>In Mijn taken</span>
+                                }
+                                else
+                                {
+                                    <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-dl-mk" data-dl-taak="@r.Id" title="Maak een taak in Mijn taken"><i class="ph ph-plus" aria-hidden="true"></i>Taak maken</button>
+                                }
+                            }
+                        </span>
+                    </div>
+                }
+            </div>
+            @if (p.Bereikt > 0)
+            {
+                <button type="button" class="gl-v2-dl-done-toggle" data-dl-done data-aantal="@p.Bereikt">Toon @p.Bereikt bereikte mijlpalen</button>
+            }
+        </section>
+    }
+</div>
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-deadlines.js" asp-append-version="true"></script>
+}

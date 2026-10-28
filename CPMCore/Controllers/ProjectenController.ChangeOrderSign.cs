@@ -36,6 +36,7 @@ namespace CPMCore.Controllers
             var project = new MvcBreadcrumbNode("Detail", "Projecten", vm.ProjectName) { Parent = projecten, RouteValues = new { projectid = vm.ProjectId } };
             var lijst = new MvcBreadcrumbNode("DetailsChangeOrder", "Projecten", "Wijzigingsopdrachten") { Parent = project, RouteValues = new { projectid = vm.ProjectId } };
             ViewData["BreadcrumbNode"] = lijst;
+            ViewData["HelpScreenId"] = "wijzigingen-opmaken";
             return View("ChangeOrderSignV2", vm);
         }
 
