@@ -21,7 +21,15 @@ faq:
   - q: Welke mails komen in mijn inbox?
     a: Mails van een bekende klant, leverancier, contactpersoon of makelaar, en mails met een projectnaam, projectcode, straat en nummer of straat en gemeente in het onderwerp. Nieuwsbrieven, no-reply-mails, mails tussen enkel collega's en wat Outlook in Overige of ongewenst zet, blijven buiten CPM.
   - q: Waarom staat een mail bij Nog te koppelen?
-    a: CPM is niet zeker over het project. De mail blijft zichtbaar, maar zonder project.
+    a: CPM is niet zeker over het project, bijvoorbeeld omdat de klant meerdere lopende projecten heeft. CPM koppelt dan nooit zelf. Soms staat er een voorstel bij, gebaseerd op de projecten waaraan je recent mails koppelde. Klik erop om te bevestigen, of kies zelf een project.
+  - q: Wat gebeurt er met antwoorden op een mail die ik koppelde?
+    a: Alle mails in dezelfde conversatie krijgen hetzelfde project, ook je verzonden antwoorden. Koppel je een mail achteraf, dan volgen de andere mails van die conversatie zonder project mee.
+  - q: Kan ik een foute koppeling aanpassen?
+    a: Ja. Kies in het menu van de mail Ander project kiezen.
+  - q: Wat doet Afzender negeren?
+    a: Mails van dat adres komen nooit meer binnen, ook niet met een projectnaam in het onderwerp. Wat al in je inbox staat van die afzender verdwijnt eruit, maar blijft op het project. Het kan nog niet ongedaan gemaakt worden in CPM.
+  - q: Voegt CPM zelf contacten toe?
+    a: Nee. Een afzender wordt alleen contact als jij dat kiest. Het contact krijgt het project van de mail en geen toestemmingen, want de persoon gaf die niet.
   - q: Verdwijnt een mail ook uit Outlook als ik op Afgehandeld klik?
     a: Nee. CPM schrijft niets naar je mailbox. De mail verdwijnt alleen uit je inbox in CPM en blijft op het project, de klant of de leverancier.
   - q: Waarom zie ik geen oude mails?
@@ -45,9 +53,17 @@ Heb je de Outlook-koppeling aangezet in **Mijn profiel**, dan zie je bovenaan je
 
 - Klik op het vinkje om de mail op **afgehandeld** te zetten. Ze verdwijnt uit je inbox maar blijft bij het project.
 - Klik op het pijltje om de mail te openen in Outlook en te antwoorden.
+- Klik op de drie puntjes voor meer: **Koppelen aan project**, **Taak maken**, **Afzender toevoegen als contact** en **Afzender negeren**.
 - Verzonden mails staan ingeklapt onder **Verzonden**, zodat je je eigen antwoord kan terugvinden.
 
-CPM maakt van een mail geen taak. Wil je er iets mee doen, leg het dan vast als een eigen item.
+CPM maakt zelf nooit een taak van een mail. Kies **Taak maken** in het menu, dan komt er een item in je inbox met het project van de mail en verdwijnt de mail zelf uit de lijst. Dat item verwerk je zoals elk ander.
+
+### Een mail aan een project koppelen
+
+1. Zie je bij een mail **Nog te koppelen**, klik dan op de drie puntjes en kies **Koppelen aan project**.
+2. Kies het project en klik op **Koppelen**.
+
+Staat er een voorstel bij, klik dan gewoon op **Koppel aan** met de naam van het project. CPM schrijft niets naar je mailbox.
 
 ## Een item verwerken
 

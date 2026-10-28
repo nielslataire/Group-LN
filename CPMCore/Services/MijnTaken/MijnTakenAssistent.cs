@@ -385,7 +385,9 @@ public class MijnTakenAssistent
             Project = m.ProjectId != null && c.Projecten.TryGetValue(m.ProjectId.Value, out var p) ? p.Naam : null,
             Klant = m.KlantId != null && klantNamen.TryGetValue(m.KlantId.Value, out var k) ? k : null,
             Leverancier = m.LeverancierId != null && leverancierNamen.TryGetValue(m.LeverancierId.Value, out var l) ? l : null,
-            TeKoppelen = m.Status == OutlookMailStatus.TeKoppelen, VerwijderdInOutlook = m.VerwijderdInOutlook
+            TeKoppelen = m.Status == OutlookMailStatus.TeKoppelen, VerwijderdInOutlook = m.VerwijderdInOutlook, AfzenderAdres = m.Afzender,
+            VoorgesteldProjectId = m.VoorgesteldProjectId != null && c.Projecten.ContainsKey(m.VoorgesteldProjectId.Value) ? m.VoorgesteldProjectId : null,
+            VoorgesteldProject = m.VoorgesteldProjectId != null && c.Projecten.TryGetValue(m.VoorgesteldProjectId.Value, out var vp) ? vp.Naam : null
         }).ToList();
     }
 

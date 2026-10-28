@@ -26,16 +26,19 @@ public sealed class MailContext
 }
 
 /// <summary>De gebruiker wiens mailbox gesynchroniseerd wordt.</summary>
-public sealed record MailGebruiker(int UserId, IReadOnlyCollection<string> EigenAdressen, ISet<string> GeblokkeerdeAfzenders);
+/// <param name="ThreadProjecten">Per conversatie het project waaraan de gebruiker die thread al koppelde; een antwoord in zo'n thread erft het project.</param>
+/// <param name="RecenteProjecten">Projecten van de recent gekoppelde mails van de gebruiker, nieuwste eerst: de basis voor een voorstel.</param>
+public sealed record MailGebruiker(int UserId, IReadOnlyCollection<string> EigenAdressen, ISet<string> GeblokkeerdeAfzenders,
+    IDictionary<string, int>? ThreadProjecten = null, IReadOnlyList<int>? RecenteProjecten = null);
 
-public sealed record MailBeslissing(bool Opnemen, string Reden, int? ProjectId, int? KlantId, int? LeverancierId, string Status);
+public sealed record MailBeslissing(bool Opnemen, string Reden, int? ProjectId, int? KlantId, int? LeverancierId, string Status, int? VoorgesteldProjectId = null);
 
 /// <summary>
 /// De in- en uitsluitregels en de koppelregels van de mailsync (spec #2). Puur: geen database, geen Graph. Volgorde:
 /// (1) uitsluiten: concept, geblokkeerde afzender, nieuwsbrief of no-reply, enkel interne collega's zonder projectverwijzing;
 /// (2) Outlooks "Overige" sluit uit, tenzij de afzender een bekende contactpersoon is of het onderwerp een expliciete projectverwijzing heeft;
 /// (3) opnemen bij een bekende klant, leverancier, contactpersoon of makelaar, of een projectnaam, -code, straat + nummer of straat + gemeente in het onderwerp.
-/// Koppelen: één project per mail (project in het onderwerp, anders het enige actieve project van de bekende partijen), klant en leverancier uit de partijen.
+/// Koppelen: één project per mail (project in het onderwerp of de gekoppelde thread, anders het enige actieve project van de bekende partijen, anders "Nog te koppelen" met een voorstel), klant en leverancier uit de partijen.
 /// </summary>
 public static class OutlookMailRegels
 {
@@ -104,31 +107,43 @@ public static class OutlookMailRegels
         if (van != null && NoReply.IsMatch(van.Split('@')[0])) return Overslaan("nieuwsbrief of no-reply");
 
         var projectRefs = ProjectenInOnderwerp(mail.Onderwerp, ctx.Projecten);
+        // Een thread die de gebruiker al aan een project koppelde, telt als projectverwijzing (ook voor een verzonden antwoord of een nieuwe deelnemer).
+        int? threadProject = mail.ConversationId != null && gebruiker.ThreadProjecten != null && gebruiker.ThreadProjecten.TryGetValue(mail.ConversationId, out var tp) ? tp : null;
+        var verwijzing = projectRefs.Count > 0 || threadProject != null;
         var alleIntern = deelnemers.Count > 0 && deelnemers.All(a => Domein(a) is { } d && ctx.InterneDomeinen.Contains(d));
-        if (alleIntern && projectRefs.Count == 0) return Overslaan("enkel interne collega's");
+        if (alleIntern && !verwijzing) return Overslaan("enkel interne collega's");
 
         // (2) Outlooks "Overige"
         var partijen = anderen.SelectMany(a => ctx.Contacten.TryGetValue(a, out var l) ? l : new()).ToList();
         var afzenderBekend = van != null && !eigen.Contains(van) && ctx.Contacten.ContainsKey(van);
-        if (mail.IsOverige && !afzenderBekend && projectRefs.Count == 0) return Overslaan("Overige van een onbekende afzender");
+        if (mail.IsOverige && !afzenderBekend && !verwijzing) return Overslaan("Overige van een onbekende afzender");
 
         // (3) opnemen
-        if (partijen.Count == 0 && projectRefs.Count == 0) return Overslaan("geen bekende partij of projectverwijzing");
+        if (partijen.Count == 0 && !verwijzing) return Overslaan("geen bekende partij of projectverwijzing");
 
         var klantId = partijen.Select(p => p.KlantId).FirstOrDefault(i => i != null);
         var leverancierId = partijen.Select(p => p.LeverancierId).FirstOrDefault(i => i != null);
 
+        // Voorrang: project in het onderwerp of de gekoppelde thread > het enige actieve project van de bekende partijen > "Nog te koppelen" met voorstel.
         int? projectId = null;
+        var kandidaten = new List<int>();
         if (projectRefs.Count == 1) projectId = projectRefs[0];
-        else if (projectRefs.Count == 0)
+        else if (projectRefs.Count > 1) kandidaten.AddRange(projectRefs);
+        else if (threadProject != null) projectId = threadProject;
+        else
         {
             var actief = ctx.Projecten.Where(p => p.Actief).Select(p => p.Id).ToHashSet();
-            var kandidaten = partijen.SelectMany(p => p.ProjectIds).Where(actief.Contains).Distinct().ToList();
+            kandidaten.AddRange(partijen.SelectMany(p => p.ProjectIds).Where(actief.Contains).Distinct());
             if (kandidaten.Count == 1) projectId = kandidaten[0];
         }
 
+        // Voorstel (nooit een stille koppeling): van de kandidaten het project waaraan de gebruiker het recentst een mail koppelde.
+        int? voorstel = null;
+        if (projectId == null && kandidaten.Count > 1 && gebruiker.RecenteProjecten != null)
+            voorstel = gebruiker.RecenteProjecten.Where(kandidaten.Contains).Cast<int?>().FirstOrDefault();
+
         // Verzonden mails zijn geen to-do: ze staan op het project of de klant, niet in de Inbox.
         var status = mail.Richting == "uit" ? OutlookMailStatus.Afgehandeld : projectId != null ? OutlookMailStatus.Nieuw : OutlookMailStatus.TeKoppelen;
-        return new MailBeslissing(true, projectRefs.Count > 0 ? "projectverwijzing" : "bekende partij", projectId, klantId, leverancierId, status);
+        return new MailBeslissing(true, projectRefs.Count > 0 ? "projectverwijzing" : threadProject != null ? "thread" : "bekende partij", projectId, klantId, leverancierId, status, voorstel);
     }
 }

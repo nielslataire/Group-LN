@@ -14,6 +14,10 @@
             @if (Model.Klant != null) { <span class="gl-v2-badge is-neutral">@Model.Klant</span> }
             @if (Model.Leverancier != null) { <span class="gl-v2-badge is-neutral">@Model.Leverancier</span> }
             @if (Model.TeKoppelen && Model.Project == null) { <span class="gl-v2-badge is-attention">Nog te koppelen</span> }
+            @if (Model.TeKoppelen && Model.Project == null && Model.VoorgesteldProjectId != null)
+            {
+                <button type="button" class="gl-v2-mt-voorstel" data-mail-koppel="@Model.Id" data-project="@Model.VoorgesteldProjectId" title="Voorstel van CPM, op basis van je recente mails"><i class="ph ph-sparkle" aria-hidden="true"></i>Koppel aan @Model.VoorgesteldProject</button>
+            }
             @if (Model.VerwijderdInOutlook) { <span class="gl-v2-badge is-inactive">Verwijderd in Outlook</span> }
         </span>
     </div>
@@ -21,6 +25,20 @@
         @if (Model.Richting == "in")
         {
             <button type="button" class="gl-v2-icon-btn" data-mail-klaar="@Model.Id" aria-label="Afgehandeld" title="Afgehandeld"><i class="ph ph-check" aria-hidden="true"></i></button>
+        }
+        @if (Model.Richting == "in")
+        {
+            var menuId = "mt-mail-menu-" + Model.Id;
+            <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="@menuId" aria-label="Meer acties voor deze mail"><i class="ph ph-dots-three" aria-hidden="true"></i></button>
+            <div class="gl-v2-menu" id="@menuId">
+                <button type="button" class="gl-v2-menu-item" data-mail-open-koppel="@Model.Id" data-onderwerp="@Model.Onderwerp"><i class="ph ph-link" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">@(Model.ProjectId == null ? "Koppelen aan project…" : "Ander project kiezen…")</span></span></button>
+                <button type="button" class="gl-v2-menu-item" data-mail-taak="@Model.Id"><i class="ph ph-check-square" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Taak maken</span></span></button>
+                @if (Model.Project != null)
+                {
+                    <button type="button" class="gl-v2-menu-item" data-mail-contact="@Model.Id"><i class="ph ph-user-plus" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Afzender toevoegen als contact</span></span></button>
+                }
+                <button type="button" class="gl-v2-menu-item is-danger" data-mail-negeer="@Model.Id" data-afzender="@Model.AfzenderAdres"><i class="ph ph-prohibit" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Afzender negeren</span></span></button>
+            </div>
         }
         @if (!string.IsNullOrWhiteSpace(Model.WebLink))
         {

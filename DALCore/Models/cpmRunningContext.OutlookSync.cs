@@ -39,6 +39,7 @@ public partial class cpmRunningContext
             entity.Property(e => e.Status).IsRequired().HasMaxLength(20);
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("FK_OutlookMail_Users");
             entity.HasOne(e => e.Project).WithMany().HasForeignKey(e => e.ProjectId).OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("FK_OutlookMail_Project");
+            entity.HasIndex(e => new { e.UserId, e.ConversationId }, "IX_OutlookMail_User_Conversation").HasFilter("([ConversationId] IS NOT NULL)");
         });
 
         modelBuilder.Entity<OutlookGeblokkeerdeAfzender>(entity =>

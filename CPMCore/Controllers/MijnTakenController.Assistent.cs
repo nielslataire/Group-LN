@@ -65,6 +65,45 @@ public partial class MijnTakenController
 
     // ── Vastleggen en verwerken ──────────────────────────────────────────────────────────────────
 
+    // ── Acties op een mail uit Outlook (spec #2, ticket #12). CPM schrijft niets naar de mailbox; de gebruiker beslist altijd.
+
+    [HttpPost("MailKoppel"), ValidateAntiForgeryToken, CPMCore.Filters.PermissionWrite(BOCore.PermissionCodes.MijnTaken)]
+    public async Task<IActionResult> MailKoppel(int id, int projectId)
+    {
+        var c = await _assistent.Context(User);
+        if (c == null) return Forbid();
+        var fout = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.OutlookSync.OutlookMailActies>().KoppelAsync(c.UserId, id, projectId, c.ProjectIds);
+        return fout == null ? Json(new { ok = true }) : Fout(fout);
+    }
+
+    [HttpPost("MailTaak"), ValidateAntiForgeryToken, CPMCore.Filters.PermissionWrite(BOCore.PermissionCodes.MijnTaken)]
+    public async Task<IActionResult> MailTaak(int id)
+    {
+        var c = await _assistent.Context(User);
+        if (c == null) return Forbid();
+        var (taakId, fout) = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.OutlookSync.OutlookMailActies>().MaakTaakAsync(c.UserId, c.UserStr, id, c.ProjectIds);
+        return fout == null ? Json(new { ok = true, id = taakId }) : Fout(fout);
+    }
+
+    [HttpPost("MailNegeer"), ValidateAntiForgeryToken, CPMCore.Filters.PermissionWrite(BOCore.PermissionCodes.MijnTaken)]
+    public async Task<IActionResult> MailNegeer(int id)
+    {
+        var c = await _assistent.Context(User);
+        if (c == null) return Forbid();
+        var fout = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.OutlookSync.OutlookMailActies>().NegeerAfzenderAsync(c.UserId, id);
+        return fout == null ? Json(new { ok = true }) : Fout(fout);
+    }
+
+    [HttpPost("MailContact"), ValidateAntiForgeryToken, CPMCore.Filters.PermissionWrite(BOCore.PermissionCodes.MijnTaken)]
+    public async Task<IActionResult> MailContact(int id)
+    {
+        var c = await _assistent.Context(User);
+        if (c == null) return Forbid();
+        var naam = User.Identity?.Name ?? c.UserCode;
+        var fout = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.OutlookSync.OutlookMailActies>().VoegContactToeAsync(c.UserId, id, naam, c.ProjectIds);
+        return fout == null ? Json(new { ok = true, bericht = "De afzender is als contact toegevoegd." }) : Fout(fout);
+    }
+
     [HttpPost("MailAfgehandeld"), ValidateAntiForgeryToken, CPMCore.Filters.PermissionWrite(BOCore.PermissionCodes.MijnTaken)]
     public async Task<IActionResult> MailAfgehandeld(int id)
     {

@@ -119,6 +119,21 @@
     </section>
 </div>
 
+@* Mail aan een project koppelen (of een ander project kiezen) *@
+<div class="modal fade gl-v2-modal-form" id="mt-mail-koppel-modal" tabindex="-1" aria-hidden="true" aria-labelledby="mt-mail-koppel-titel">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <form class="modal-content" novalidate>
+            <div class="modal-header"><h2 class="modal-title" id="mt-mail-koppel-titel">Mail koppelen aan een project</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+            <div class="modal-body">
+                <p class="gl-v2-mt-muted" id="mt-mail-koppel-onderwerp"></p>
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "projectId", Id = "mt-mail-koppel-project", Label = "Project", Items = projectItems, Placeholder = "Kies een project", EmptyText = "Kies een project" })
+                <span class="gl-v2-field-help">Een mail hoort bij één project. Andere mails uit dezelfde conversatie zonder project volgen mee.</span>
+            </div>
+            <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="mt-mail-koppel-ok">Koppelen</button></div>
+        </form>
+    </div>
+</div>
+
 @await Html.PartialAsync("Partials/_MtSnelStartV2", Model.Shell)
 
 @section PageScripts

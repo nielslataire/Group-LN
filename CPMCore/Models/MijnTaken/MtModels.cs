@@ -128,6 +128,10 @@ public class MtMail
     public string? Klant { get; set; }
     public string? Leverancier { get; set; }
     public bool TeKoppelen { get; set; }
+    /// <summary>Voorstel van CPM voor het project (enkel zichtbare projecten), te bevestigen door de gebruiker.</summary>
+    public int? VoorgesteldProjectId { get; set; }
+    public string? VoorgesteldProject { get; set; }
+    public string? AfzenderAdres { get; set; }
     public bool VerwijderdInOutlook { get; set; }
 }
 

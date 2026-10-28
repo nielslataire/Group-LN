@@ -45,6 +45,9 @@ public partial class OutlookMail
     /// <summary>CompanyInfo.CompanyId van de leverancier uit afzender of ontvanger.</summary>
     public int? LeverancierId { get; set; }
 
+    /// <summary>Voorstel van CPM voor een mail die nog te koppelen is (migratie 123); de gebruiker bevestigt of kiest zelf.</summary>
+    public int? VoorgesteldProjectId { get; set; }
+
     /// <summary>nieuw, afgehandeld of te-koppelen (zie OutlookMailStatus).</summary>
     public string Status { get; set; } = "nieuw";
 

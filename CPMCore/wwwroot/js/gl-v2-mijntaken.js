@@ -494,6 +494,35 @@
         }, function () { /* netwerkfout: volgende minuut opnieuw */ });
     }, 60000);
 
+    // ── Inbox: acties op een mail (koppelen, taak maken, afzender negeren, contact toevoegen) ──
+    var koppelModal = $("mt-mail-koppel-modal"), koppelId = 0;
+    function mailActie(actie, id, data, bericht) {
+        var d = { id: id }; Object.keys(data || {}).forEach(function (k) { d[k] = data[k]; });
+        return post(actie, d).then(function () { if (bericht) toast("success", bericht); herlaad(); }, mislukt);
+    }
+    $$("[data-mail-koppel]").forEach(function (b) { b.addEventListener("click", function () { mailActie("MailKoppel", b.dataset.mailKoppel, { projectId: b.dataset.project }); }); });
+    $$("[data-mail-taak]").forEach(function (b) { b.addEventListener("click", function () { mailActie("MailTaak", b.dataset.mailTaak, {}, "Er staat een item in je inbox."); }); });
+    $$("[data-mail-negeer]").forEach(function (b) { b.addEventListener("click", function () { mailActie("MailNegeer", b.dataset.mailNegeer, {}, "Mails van " + (b.dataset.afzender || "deze afzender") + " komen niet meer binnen."); }); });
+    $$("[data-mail-contact]").forEach(function (b) {
+        b.addEventListener("click", function () {
+            post("MailContact", { id: b.dataset.mailContact }).then(function (j) { toast("success", j.bericht || "Toegevoegd."); }, mislukt);
+        });
+    });
+    $$("[data-mail-open-koppel]").forEach(function (b) {
+        b.addEventListener("click", function () {
+            koppelId = b.dataset.mailOpenKoppel;
+            var o = $("mt-mail-koppel-onderwerp"); if (o) o.textContent = b.dataset.onderwerp || "";
+            var vorige = koppelModal && koppelModal.querySelector("[name=projectId]"); if (vorige) vorige.value = "";   // geen keuze van de vorige keer
+            if (koppelModal && window.bootstrap) window.bootstrap.Modal.getOrCreateInstance(koppelModal).show();
+        });
+    });
+    if (koppelModal) koppelModal.querySelector("form").addEventListener("submit", function (e) {
+        e.preventDefault();
+        var veld = koppelModal.querySelector("[name=projectId]");
+        if (!veld || !veld.value) { toast("danger", "Kies eerst een project."); return; }
+        mailActie("MailKoppel", koppelId, { projectId: veld.value });
+    });
+
     // ── Inbox: mails op afgehandeld zetten (blijven bij het project) ──────────────────────────
     $$("[data-mail-klaar]").forEach(function (b) {
         b.addEventListener("click", function () { post("MailAfgehandeld", { id: b.dataset.mailKlaar }).then(herlaad, mislukt); });

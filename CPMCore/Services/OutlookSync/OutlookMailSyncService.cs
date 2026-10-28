@@ -46,7 +46,7 @@ public class OutlookMailSyncService
         var bestaandInternet = (await _db.OutlookMail.Where(m => m.UserId == rij.UserId && m.InternetMessageId != null).Select(m => m.InternetMessageId!).ToListAsync(ct)).ToHashSet();
 
         var nieuw = 0;
-        foreach (var mail in resultaat.Nieuw)
+        foreach (var mail in resultaat.Nieuw.OrderBy(n => n.OntvangenOpUtc))   // oudste eerst: een antwoord erft de koppeling van de mail ervoor
         {
             if (mail.OntvangenOpUtc < vanaf) continue;   // enkel mails vanaf het moment van koppelen
             var internetId = Kort(mail.InternetMessageId, 500);   // dedup op de waarde zoals ze bewaard wordt
@@ -60,10 +60,11 @@ public class OutlookMailSyncService
                 UserId = rij.UserId, Richting = mail.Richting, GraphId = mail.Id, InternetMessageId = internetId, ConversationId = Kort(mail.ConversationId, 200),
                 Afzender = Kort(mail.VanAdres, 320), AfzenderNaam = Kort(mail.VanNaam, 200), Ontvangers = Kort(string.Join(";", mail.Ontvangers), 2000),
                 Onderwerp = Kort(mail.Onderwerp, 500), OntvangenOp = mail.OntvangenOpUtc, Voorvertoning = Kort(mail.Voorvertoning?.Trim(), VoorvertoningLengte),
-                WebLink = VeiligeLink(mail.WebLink), ProjectId = beslissing.ProjectId, KlantId = beslissing.KlantId, LeverancierId = beslissing.LeverancierId,
+                WebLink = VeiligeLink(mail.WebLink), ProjectId = beslissing.ProjectId, VoorgesteldProjectId = beslissing.VoorgesteldProjectId, KlantId = beslissing.KlantId, LeverancierId = beslissing.LeverancierId,
                 Status = beslissing.Status, AangemaaktOp = nuUtc
             });
             bestaandGraph.Add(mail.Id);
+            if (beslissing.ProjectId != null && mail.ConversationId != null) gebruiker.ThreadProjecten![mail.ConversationId] = beslissing.ProjectId.Value;
             if (internetId != null) bestaandInternet.Add(internetId);
             nieuw++;
         }
@@ -92,7 +93,13 @@ public class OutlookMailSyncService
         var email = await _db.Users.AsNoTracking().Where(u => u.Id == userId).Select(u => u.Email).FirstOrDefaultAsync(ct);
         var geblokkeerd = (await _db.OutlookGeblokkeerdeAfzender.AsNoTracking().Where(b => b.UserId == userId).Select(b => b.Email).ToListAsync(ct))
             .Select(e => e.Trim().ToLowerInvariant()).ToHashSet();
-        return new MailGebruiker(userId, string.IsNullOrWhiteSpace(email) ? Array.Empty<string>() : new[] { email }, geblokkeerd);
+        // Koppelingen die de gebruiker al heeft (door CPM of door hemzelf): per conversatie het meest recente project, en de recentste projecten voor een voorstel.
+        var gekoppeld = await _db.OutlookMail.AsNoTracking().Where(m => m.UserId == userId && m.ProjectId != null)
+            .OrderByDescending(m => m.OntvangenOp).Select(m => new { m.ConversationId, ProjectId = m.ProjectId!.Value }).Take(500).ToListAsync(ct);
+        var threads = new Dictionary<string, int>();
+        foreach (var g in gekoppeld.Where(g => g.ConversationId != null)) threads.TryAdd(g.ConversationId!, g.ProjectId);   // nieuwste eerst: de eerste wint
+        var recent = gekoppeld.Select(g => g.ProjectId).Distinct().ToList();
+        return new MailGebruiker(userId, string.IsNullOrWhiteSpace(email) ? Array.Empty<string>() : new[] { email }, geblokkeerd, threads, recent);
     }
 
     private static IEnumerable<string> Splits(string? veld) =>
