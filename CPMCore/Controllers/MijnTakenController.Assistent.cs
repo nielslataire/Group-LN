@@ -194,6 +194,15 @@ public partial class MijnTakenController
         return fout == null ? Json(new { ok = true }) : Fout(fout);
     }
 
+    /// <summary>Het aantal items in de Inbox, voor de teller die zichzelf bijwerkt zonder dat de pagina ververst.</summary>
+    [HttpGet("InboxAantal")]
+    public async Task<IActionResult> InboxAantal()
+    {
+        var c = await _assistent.Context(User);
+        if (c == null) return Forbid();
+        return Json(new { ok = true, aantal = await _assistent.InboxAantal(c) });
+    }
+
     /// <summary>Snel starten: bestaande taken die bij de getypte woorden passen, of de recente taken als er niets getypt is.</summary>
     [HttpGet("Snel")]
     public async Task<IActionResult> Snel(string? q)

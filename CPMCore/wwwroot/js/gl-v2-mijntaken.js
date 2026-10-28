@@ -484,6 +484,16 @@
         });
     }
 
+    // ── Teller bij de Inbox werkt zichzelf bij (elke minuut, enkel als het tabblad zichtbaar is; geen melding, geen geluid, de lijst blijft staan) ──
+    var tellers = $$("[data-mt-inbox-count]");
+    if (tellers.length) setInterval(function () {
+        if (document.hidden) return;
+        fetch(base + "InboxAantal", { headers: { "X-Requested-With": "XMLHttpRequest" } }).then(function (r) { return r.json(); }).then(function (j) {
+            if (!j || !j.ok) return;
+            tellers.forEach(function (t) { t.textContent = j.aantal; t.hidden = !(j.aantal > 0); });
+        }, function () { /* netwerkfout: volgende minuut opnieuw */ });
+    }, 60000);
+
     // ── Inbox: mails op afgehandeld zetten (blijven bij het project) ──────────────────────────
     $$("[data-mail-klaar]").forEach(function (b) {
         b.addEventListener("click", function () { post("MailAfgehandeld", { id: b.dataset.mailKlaar }).then(herlaad, mislukt); });

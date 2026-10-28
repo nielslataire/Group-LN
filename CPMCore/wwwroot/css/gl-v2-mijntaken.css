@@ -194,6 +194,7 @@
 .gl-v2-mt-in-text .t { font: 500 13px/1.4 var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
 .gl-v2-mt-in-text .m { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 /* Gesynchroniseerde Outlook-mails in de Inbox: zelfde rij als .gl-v2-mt-in, maar geen knop (de rij zelf heeft geen klikactie). */
+.gl-v2-mt-count[hidden] { display: none; }
 .gl-v2-mt-mail { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--gl-v2-hairline-soft); }
 .gl-v2-mt-mail:hover { background: var(--gl-v2-bg); }
 .gl-v2-mt-mail .gl-v2-mt-kind { width: 70px; flex: none; text-align: center; margin-top: 2px; }

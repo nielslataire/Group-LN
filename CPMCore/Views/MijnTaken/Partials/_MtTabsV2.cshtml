@@ -17,7 +17,7 @@
     @foreach (var t in tabs)
     {
         <a class="gl-v2-tabbar-tab @(t.Key == Model.Tab ? "is-active" : "")" role="tab" aria-selected="@(t.Key == Model.Tab ? "true" : "false")" href="@Url.Action(t.Actie, "MijnTaken")">
-            <i class="ph @t.Icoon" aria-hidden="true"></i>@t.Label@if (t.Key == "inbox" && Model.InboxAantal > 0) { <span class="gl-v2-tabbar-count gl-v2-mt-count">@Model.InboxAantal</span> }
+            <i class="ph @t.Icoon" aria-hidden="true"></i>@t.Label@if (t.Key == "inbox") { <span class="gl-v2-tabbar-count gl-v2-mt-count" data-mt-inbox-count @(Model.InboxAantal > 0 ? "" : "hidden")>@Model.InboxAantal</span> }
         </a>
     }
     <span class="gl-v2-tabbar-spacer"></span>

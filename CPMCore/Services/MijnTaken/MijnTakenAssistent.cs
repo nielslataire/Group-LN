@@ -121,11 +121,14 @@ public class MijnTakenAssistent
     public static string DagNaam(DateOnly d) => Nl.DateTimeFormat.GetAbbreviatedDayName(d.DayOfWeek).TrimEnd('.');
     public static string Vol(DateOnly d) => Nl.TextInfo.ToTitleCase(d.ToString("dddd d MMMM", Nl)).Replace(" ", " ");
 
+    /// <summary>Wat er in de Inbox nog te verwerken is: notities plus ontvangen, niet-afgehandelde mails uit Outlook. Enkel een teller, geen melding. Ook bedoeld voor een latere zijbalk.</summary>
+    public async Task<int> InboxAantal(MtContext c) =>
+        await Mijn(c).CountAsync(t => t.IsInbox && t.Status != StatusAfgerond && t.Status != StatusGeannuleerd)
+        + await _db.OutlookMail.CountAsync(m => m.UserId == c.UserId && m.Richting == "in" && m.Status != OutlookMailStatus.Afgehandeld);
+
     public async Task<MtShell> Shell(MtContext c, string tab, string ondertitel)
     {
-        var inbox = await Mijn(c).CountAsync(t => t.IsInbox && t.Status != StatusAfgerond && t.Status != StatusGeannuleerd);
-        // Gesynchroniseerde mails tellen mee bij de Inbox (enkel een teller, geen melding).
-        inbox += await _db.OutlookMail.CountAsync(m => m.UserId == c.UserId && m.Richting == "in" && m.Status != OutlookMailStatus.Afgehandeld);
+        var inbox = await InboxAantal(c);
         var shell = new MtShell { Tab = tab, Ondertitel = ondertitel, InboxAantal = inbox, Projecten = c.Projecten.Values.ToList() };
 
         var laatste = await _db.TaakTijd.AsNoTracking().Where(x => x.UserId == c.UserId).OrderByDescending(x => x.Start).FirstOrDefaultAsync();
