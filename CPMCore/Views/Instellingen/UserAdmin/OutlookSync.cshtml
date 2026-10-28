@@ -1,43 +1,60 @@
 @model List<CPMCore.Controllers.UserAdminController.OutlookSyncRij>
 @*
     gl-v2 — Instellingen › Gebruikers en rollen › Outlook-sync (spec #2, ticket #6): wie de Outlook-koppeling aan heeft en of de sync loopt.
+    Zelfde lijstopbouw als Gebruikers (DESIGN.md "Instellingen-lijsten"): gedeelde kop .gl-v2-list-head naast de paginaklasse .gl-v2-ua-head met de
+    kolommen .gl-v2-ua-grid--o (gl-v2-useradmin.css), rijen .gl-v2-ua-row met avatar + naam + e-mail.
     Bewust zonder inhoud: enkel status, laatste sync en een technische foutcode. De gebruiker zelf zet de koppeling aan of uit in Mijn profiel.
 *@
 @{
     Layout = "~/Views/Shared/_LayoutV2.cshtml";
     ViewData["Title"] = "Outlook-sync";
     ViewData["PageIcon"] = "ph ph-microsoft-outlook-logo";
+    ViewData["HelpScreenId"] = "instellingen-outlook-sync";
     string Badge(string niveau) => niveau switch { "ok" => "is-positive", "fout" => "is-blocked", "waarschuwing" => "is-attention", _ => "is-neutral" };
+    string Initialen(string naam) => string.Concat(naam.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(d => char.ToUpperInvariant(d[0])));
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-useradmin.css" asp-append-version="true" />
 }
 
-<section class="gl-v2-section-card">
-    <div class="gl-v2-section-card-header">
-        <span class="gl-v2-section-card-icon"><i class="ph ph-microsoft-outlook-logo" aria-hidden="true"></i></span>
-        <h3 class="gl-v2-section-card-title">Gebruikers met de Outlook-koppeling aan</h3>
-        <span class="gl-v2-section-card-desc">@Model.Count @(Model.Count == 1 ? "gebruiker" : "gebruikers")</span>
-    </div>
-    @if (Model.Count == 0)
-    {
-        <div class="gl-v2-notice gl-v2-notice-compact"><i class="ph ph-info" aria-hidden="true"></i><span>Niemand heeft de koppeling aangezet. Gebruikers zetten ze zelf aan in Mijn profiel.</span></div>
-    }
-    else
-    {
-        <div class="table-responsive">
-            <table class="table gl-v2-table" id="outlook-sync-tabel">
-                <thead><tr><th>Gebruiker</th><th>Status</th><th>Laatste sync</th><th>Fouten op rij</th><th>Technische melding</th></tr></thead>
-                <tbody>
-                @foreach (var r in Model)
-                {
-                    <tr>
-                        <td><b>@r.Naam</b><br /><small>@r.Email</small></td>
-                        <td><span class="gl-v2-badge @Badge(r.Weergave.Niveau)">@r.Weergave.Label</span></td>
-                        <td>@(r.Weergave.LaatsteSyncLokaal?.ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
-                        <td>@r.FoutenOpRij</td>
-                        <td>@(r.Weergave.TechnischeFout ?? "—")</td>
-                    </tr>
-                }
-                </tbody>
-            </table>
+<div class="gl-v2-ua" id="gl-v2-ua-outlook">
+    <section class="gl-v2-section-card">
+        <div class="gl-v2-section-card-header">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-microsoft-outlook-logo" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-section-card-title">Outlook-sync</h2>
+            <span class="gl-v2-field-divider"></span>
+            <span class="gl-v2-section-card-desc">gebruikers met de koppeling aan · gebruikers zetten ze zelf aan in Mijn profiel</span>
         </div>
-    }
-</section>
+
+        <div class="gl-v2-list-head gl-v2-ua-head gl-v2-ua-grid--o">
+            <span>Gebruiker</span><span>Status</span><span>Laatste sync</span><span>Fouten op rij</span><span>Technische melding</span>
+        </div>
+        @foreach (var r in Model)
+        {
+            <div class="gl-v2-ua-row gl-v2-ua-grid--o">
+                <div class="gl-v2-ua-person">
+                    <span class="gl-v2-ua-avatar">@Initialen(r.Naam)</span>
+                    <span class="gl-v2-ua-person-text">
+                        <span class="gl-v2-ua-person-name">@r.Naam</span>
+                        <span class="gl-v2-ua-person-sub" title="@r.Email">@r.Email</span>
+                    </span>
+                </div>
+                <span><span class="gl-v2-badge @Badge(r.Weergave.Niveau)">@r.Weergave.Label</span></span>
+                <span class="gl-v2-ua-cell is-muted">@(r.Weergave.LaatsteSyncLokaal?.ToString("dd/MM/yyyy HH:mm") ?? "—")</span>
+                <span class="gl-v2-ua-cell @(r.FoutenOpRij > 0 ? "is-gold" : "is-muted")">@r.FoutenOpRij</span>
+                <span class="gl-v2-ua-cell is-muted" title="@r.Weergave.TechnischeFout">@(r.Weergave.TechnischeFout ?? "—")</span>
+            </div>
+        }
+        @if (Model.Count == 0)
+        {
+            <div class="gl-v2-list-empty gl-v2-ua-empty">
+                <span class="t">Niemand heeft de koppeling aangezet</span>
+                <span class="s">Gebruikers zetten ze zelf aan in Mijn profiel.</span>
+            </div>
+        }
+        <div class="gl-v2-ua-foot">
+            <span class="gl-v2-ua-foot-text">@Model.Count @(Model.Count == 1 ? "gebruiker" : "gebruikers") met de koppeling aan</span>
+        </div>
+    </section>
+</div>
