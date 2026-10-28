@@ -1,0 +1,228 @@
+@model CPMCore.Models.MijnTaken.MtVandaagVm
+@using CPMCore.Services.MijnTaken
+@using CPMCore.Models.MijnTaken
+@*
+    gl-v2 — Mijn taken › Vandaag (design-handoff punt 2a): de dag als tijdlijn met geplande taakblokken (omlijnd) en gewerkte tijd (gevuld); links vastleggen,
+    komende deadlines van jouw rol, de volgende acties om in te slepen en "Wachten op"; rechts de timer en hoe je dag verloopt.
+    Bewust anders dan het mockup: geen agenda-afspraken (er is geen agendakoppeling) en geen "Inspreken" bij het vastleggen.
+    De klassieke takenlijst blijft bereikbaar via ?classic=true.
+*@
+@{
+    ViewData["Title"] = "Mijn taken";
+    ViewData["PageIcon"] = "ph ph-list-checks";
+    ViewData["GlV2FullHeightBody"] = true;   // de kaart vult de volle schermhoogte (zie gl-v2-mijntaken.css)
+    const int Px = 64;
+    var nu = DateTime.Now;
+    string Top(DateTime d) => ((d.Hour + d.Minute / 60.0 - Model.UurVan) * Px).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+    string Hoogte(DateTime a, DateTime b) => Math.Max((b - a).TotalMinutes / 60.0 * Px - 3, 20).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+    var timer = Model.Shell.Timer;
+    var dagTotaal = Math.Max(60, Math.Max(Model.GeplandMinuten, Model.WerkMinuten));
+    var vandaag = Model.Datum;
+    var kalender = MtFormat.Kalender(Model.Afspraken, Model.Gepland, vandaag.ToDateTime(TimeOnly.MinValue), Model.UurVan, Model.UurTot);
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-mijntaken.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @await Html.PartialAsync("Partials/_MtActiesV2", Model.Shell)
+}
+
+@await Html.PartialAsync("Partials/_MtTabsV2", Model.Shell)
+
+@if (!string.IsNullOrEmpty(Model.AgendaFout))
+{
+    <div class="gl-v2-notice gl-v2-notice-compact is-warning gl-v2-mt-agendafout"><i class="ph ph-calendar-x" aria-hidden="true"></i><span>@Model.AgendaFout</span></div>
+}
+
+<div class="gl-v2-mt-vandaag" id="mt-vandaag" data-datum="@vandaag.ToString("yyyy-MM-dd")" data-uur-van="@Model.UurVan" data-px="@Px">
+    <aside class="gl-v2-mt-left">
+        <div class="gl-v2-mt-capture">
+            <i class="ph ph-lightbulb" aria-hidden="true"></i>
+            <input type="text" id="mt-capture" placeholder="Leg vast wat in je hoofd zit…" maxlength="200" aria-label="Leg vast wat in je hoofd zit" />
+            <kbd>↵</kbd>
+        </div>
+
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-mt-panel-head"><span class="gl-v2-mt-eyebrow">KOMENDE DEADLINES</span><span class="gl-v2-mt-muted">jouw rol</span></div>
+            @if (!Model.Deadlines.Any())
+            {
+                <div class="gl-v2-mt-empty">Geen deadlines voor jouw rol.</div>
+            }
+            @foreach (var d in Model.Deadlines)
+            {
+                var laat = d.Dagen < 0;
+                <div class="gl-v2-mt-dl">
+                    <span class="gl-v2-mt-bar @(laat ? "is-late" : "is-soon")"></span>
+                    <div class="gl-v2-mt-dl-text">
+                        <span class="t">@d.Naam</span>
+                        <span class="m">@d.Project · @MtFormat.Datum(d.Datum) · <b class="@(laat ? "is-late" : "is-soon")">@MtFormat.Rel(d.Dagen)</b></span>
+                    </div>
+                    @if (d.HeeftTaak)
+                    {
+                        <i class="ph ph-check-circle gl-v2-mt-made" title="Er bestaat al een taak" aria-label="Er bestaat al een taak"></i>
+                    }
+                    else
+                    {
+                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-mt-mini" data-mt-mijlpaal="@d.MijlpaalId" title="Taak maken"><i class="ph ph-plus" aria-hidden="true"></i>Taak</button>
+                    }
+                </div>
+            }
+        </section>
+
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-mt-panel-head"><span class="gl-v2-mt-eyebrow">VOLGENDE ACTIES</span><span class="gl-v2-mt-muted">sleep naar je dag</span></div>
+            <div class="gl-v2-mt-chips" id="mt-ctx">
+                <button type="button" class="is-active" data-ctx="">Alles</button>
+                @foreach (var x in Model.Contexten)
+                {
+                    <button type="button" data-ctx="@x">@x</button>
+                }
+            </div>
+            <div class="gl-v2-mt-acts" id="mt-acts">
+                @foreach (var t in Model.Acties)
+                {
+                    <div class="gl-v2-mt-act" draggable="true" data-id="@t.Id" data-min="@(t.Schatting ?? 30)" data-ctx="@t.Context">
+                        <button type="button" class="gl-v2-mt-check" data-mt-klaar="@t.Id" aria-label="Afvinken: @t.Titel" title="Afvinken"></button>
+                        <span class="gl-v2-mt-bar" style="background:@t.Kleur"></span>
+                        <div class="gl-v2-mt-act-text">
+                            <span class="t">@t.Titel</span>
+                            <span class="m">@if (t.Project != "") { <span>@t.Project</span> }@if (!string.IsNullOrEmpty(t.Context)) { <span class="gl-v2-mt-ctxchip">@t.Context</span> }</span>
+                        </div>
+                        <span class="gl-v2-mt-est">@MtFormat.Schatting(t.Schatting)</span>
+                        <button type="button" class="gl-v2-mt-play" data-mt-start="@t.Id" aria-label="Nu starten: @t.Titel" title="Nu starten"><i class="ph ph-play" aria-hidden="true"></i></button>
+                        @if (t.Vervaldatum != null)
+                        {
+                            var dagen = t.Vervaldatum.Value.DayNumber - vandaag.DayNumber;
+                            <span class="gl-v2-mt-due @(dagen < 0 ? "is-late" : "")" title="Deadline @MtFormat.DatumLang(t.Vervaldatum.Value)">@(dagen < 0 ? "te laat" : dagen == 0 ? "vandaag" : MtFormat.Datum(t.Vervaldatum.Value))</span>
+                        }
+                    </div>
+                }
+                @if (!Model.Acties.Any())
+                {
+                    <div class="gl-v2-mt-empty">Geen volgende acties. Leg iets vast of verwerk je inbox.</div>
+                }
+            </div>
+        </section>
+
+        @if (Model.Wachten.Any())
+        {
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-mt-panel-head"><span class="gl-v2-mt-eyebrow">WACHTEN OP</span></div>
+                @foreach (var w in Model.Wachten)
+                {
+                    var teLaat = w.WachtOpDatum != null && w.WachtOpDatum.Value.Date < nu.Date;
+                    <div class="gl-v2-mt-wait">
+                        <span class="gl-v2-mt-avatar">@((w.WachtOp ?? "?").Trim().Substring(0, 1).ToUpperInvariant())</span>
+                        <span class="t">@w.WachtOp — @w.Titel</span>
+                        <span class="d @(teLaat ? "is-late" : "")">@(w.WachtOpDatum == null ? "" : MtFormat.Datum(DateOnly.FromDateTime(w.WachtOpDatum.Value)))</span>
+                        <button type="button" class="gl-v2-mt-check" data-mt-klaar="@w.Id" aria-label="Ontvangen: @w.Titel" title="Ontvangen, afvinken"></button>
+                    </div>
+                }
+            </section>
+        }
+    </aside>
+
+    <section class="gl-v2-section-card gl-v2-mt-day">
+        <div class="gl-v2-mt-day-head">
+            <span class="gl-v2-mt-day-title">@MijnTakenAssistent.Vol(vandaag)</span>
+            <span class="gl-v2-section-card-spacer"></span>
+            <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-mt-mini" id="mt-nieuw"><i class="ph ph-plus" aria-hidden="true"></i>Nieuwe taak</button>
+            <span class="gl-v2-mt-legend"><i class="is-worked"></i>gewerkt</span>
+            <span class="gl-v2-mt-legend"><i class="is-planned"></i>gepland</span>
+            <span class="gl-v2-mt-legend"><i class="is-meet"></i>afspraak</span>
+        </div>
+        @if (Model.HeleDag.Any())
+        {
+            <div class="gl-v2-mt-heledag"><span class="gl-v2-mt-eyebrow">HELE DAG</span>@foreach (var h in Model.HeleDag) { <span class="gl-v2-mt-heledag-chip">@h.Titel</span> }</div>
+        }
+        <div class="gl-v2-mt-scroll" id="mt-scroll">
+        <div class="gl-v2-mt-timeline" id="mt-timeline" style="height:@((Model.UurTot - Model.UurVan) * Px)px">
+            @for (var u = Model.UurVan; u < Model.UurTot; u++)
+            {
+                <div class="gl-v2-mt-hour" style="top:@((u - Model.UurVan) * Px)px"><span>@u.ToString("00"):00</span></div>
+            }
+            <div class="gl-v2-mt-lane is-main" id="mt-lane" aria-label="Afspraken en geplande taken">
+                @foreach (var item in kalender)
+                {
+                    @await Html.PartialAsync("Partials/_MtKalItemV2", new MtKalItemVm { Item = item, Px = Px, UurVan = Model.UurVan })
+                }
+            </div>
+            <div class="gl-v2-mt-lane is-worked">
+                @foreach (var b in Model.Gewerkt)
+                {
+                    <div class="gl-v2-mt-block is-worked @(b.Loopt ? "is-now" : "") @((b.Einde - b.Start).TotalMinutes / 60.0 * Px - 3 < 46 ? "is-short" : "")" style="top:@(Top(b.Start))px;height:@(Hoogte(b.Start, b.Einde))px;--c:@b.Kleur">
+                        <span class="t">@b.Titel</span>
+                        <span class="m">@MtFormat.Uur(b.Start)–@(b.Loopt ? "nu" : MtFormat.Uur(b.Einde))</span>
+                    </div>
+                }
+            </div>
+            @if (nu.Hour >= Model.UurVan && nu.Hour < Model.UurTot)
+            {
+                <div class="gl-v2-mt-nowline" style="top:@(Top(nu))px"><i></i></div>
+            }
+        </div>
+        </div>
+    </section>
+
+    <aside class="gl-v2-mt-right">
+        <section class="gl-v2-section-card gl-v2-mt-nubezig">
+            <span class="gl-v2-mt-eyebrow">NU BEZIG</span>
+            @if (timer == null)
+            {
+                <div class="gl-v2-mt-empty">Er loopt niets. Sleep een actie naar je dag, klik ▶ of druk op Ctrl K.</div>
+            }
+            else
+            {
+                var sec = (int)Math.Max(0, (timer.Einde - timer.Start).TotalSeconds);
+                <span class="gl-v2-mt-nu-titel">@timer.Titel</span>
+                <span class="gl-v2-mt-muted">@(timer.Project == "" ? "geen project, voeg later toe" : timer.Project)</span>
+                <span class="gl-v2-mt-nu-tijd" data-mt-tijd data-sec="@sec" data-loopt="@(timer.Loopt ? "1" : "0")">@(sec / 3600):@((sec / 60 % 60).ToString("00")):@((sec % 60).ToString("00"))</span>
+                <div class="gl-v2-mt-progress"><div style="width:@(Math.Min(100, sec / 5400.0 * 100).ToString("0", System.Globalization.CultureInfo.InvariantCulture))%"></div></div>
+                <div class="gl-v2-mt-nu-btns">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-primary" data-mt-timer-toggle="@(timer.Loopt ? "pauze" : "hervat")">@(timer.Loopt ? "Pauzeren" : "Hervatten")</button>
+                    <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-mt-timer-klaar>Klaar</button>
+                </div>
+            }
+        </section>
+
+        <section class="gl-v2-section-card gl-v2-mt-mijndag">
+            <div class="gl-v2-mt-panel-head"><span class="gl-v2-mt-eyebrow">MIJN DAG</span><span class="gl-v2-mt-muted">@MtFormat.Duur(Model.WerkMinuten) van @MtFormat.Duur(Model.GeplandMinuten)</span></div>
+            <div class="gl-v2-mt-split">
+                @foreach (var p in Model.PerProject)
+                {
+                    <div style="width:@((p.Minuten * 100.0 / dagTotaal).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))%;background:@p.Kleur"></div>
+                }
+            </div>
+            @foreach (var p in Model.PerProject)
+            {
+                <div class="gl-v2-mt-split-row"><i style="background:@p.Kleur"></i><span>@p.Project</span><b>@MtFormat.Duur(p.Minuten)</b></div>
+            }
+            @if (!Model.PerProject.Any())
+            {
+                <div class="gl-v2-mt-empty">Nog niets gewerkt vandaag.</div>
+            }
+        </section>
+
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-mt-panel-head"><span class="gl-v2-mt-eyebrow">DEZE WEEK NOG</span></div>
+            @foreach (var s in Model.DezeWeek)
+            {
+                <div class="gl-v2-mt-soon"><span class="d">@s.Dag</span><div><span class="t">@s.Titel</span><span class="gl-v2-mt-kind is-@s.Soort.ToLowerInvariant()">@s.Soort</span></div></div>
+            }
+            @if (!Model.DezeWeek.Any())
+            {
+                <div class="gl-v2-mt-empty">Niets meer met een deadline deze week.</div>
+            }
+        </section>
+    </aside>
+</div>
+
+@await Html.PartialAsync("Partials/_MtAfspraakKoppelV2", Model.Shell)
+@await Html.PartialAsync("Partials/_MtSnelStartV2", Model.Shell)
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-mijntaken.js" asp-append-version="true"></script>
+}

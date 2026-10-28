@@ -1,0 +1,117 @@
+@model CPMCore.Models.MijnTaken.MtWeekVm
+@using CPMCore.Services.MijnTaken
+@using CPMCore.Models.MijnTaken
+@*
+    gl-v2 — Mijn taken › Week (design-handoff punt 2b): weekindeling met geplande blokken per dag, belasting per dag en deadlines bovenaan de dag; ongeplande acties links om in te slepen.
+    De weekdagen en de dagbelasting volgen je werkuren uit Mijn profiel. Bewust anders dan het mockup: geen agenda-afspraken, en vorige/volgende week bladeren is toegevoegd.
+*@
+@{
+    ViewData["Title"] = "Mijn taken";
+    ViewData["PageIcon"] = "ph ph-list-checks";
+    ViewData["GlV2FullHeightBody"] = true;   // de kaart vult de volle schermhoogte (zie gl-v2-mijntaken.css)
+    const int Px = 56;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var vandaag = DateOnly.FromDateTime(DateTime.Today);
+    string Top(DateTime d) => ((d.Hour + d.Minute / 60.0 - Model.UurVan) * Px).ToString("0.#", inv);
+    string Hoogte(DateTime a, DateTime b) => Math.Max((b - a).TotalMinutes / 60.0 * Px - 3, 18).ToString("0.#", inv);
+    var totaalGepland = Model.Dagen.Sum(d => d.GeplandMinuten);
+    var belasting = (int)Math.Round(totaalGepland * 100.0 / Model.CapaciteitMinuten);
+    var dagCap = Math.Max(60, Model.CapaciteitMinuten / 5);
+    var ongeplandMin = Model.Ongepland.Sum(t => t.Schatting ?? 30);
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-mijntaken.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @await Html.PartialAsync("Partials/_MtActiesV2", Model.Shell)
+}
+
+@await Html.PartialAsync("Partials/_MtTabsV2", Model.Shell)
+
+@if (!string.IsNullOrEmpty(Model.AgendaFout))
+{
+    <div class="gl-v2-notice gl-v2-notice-compact is-warning gl-v2-mt-agendafout"><i class="ph ph-calendar-x" aria-hidden="true"></i><span>@Model.AgendaFout</span></div>
+}
+
+<div class="gl-v2-mt-week" id="mt-week" data-uur-van="@Model.UurVan" data-px="@Px">
+    <aside class="gl-v2-mt-left">
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-mt-panel-head"><span class="gl-v2-mt-eyebrow">NOG TE PLANNEN</span><span class="gl-v2-mt-muted">@MtFormat.Duur(ongeplandMin) ongepland</span></div>
+            <div class="gl-v2-mt-acts">
+                @foreach (var t in Model.Ongepland)
+                {
+                    <div class="gl-v2-mt-act" draggable="true" data-id="@t.Id" data-min="@(t.Schatting ?? 30)">
+                        <span class="gl-v2-mt-bar" style="background:@t.Kleur"></span>
+                        <div class="gl-v2-mt-act-text">
+                            <span class="t">@t.Titel</span>
+                            <span class="m">@if (t.Project != "") { <span>@t.Project</span> }@if (!string.IsNullOrEmpty(t.Context)) { <span class="gl-v2-mt-ctxchip">@t.Context</span> }</span>
+                        </div>
+                        <span class="gl-v2-mt-est">@MtFormat.Schatting(t.Schatting ?? 30)</span>
+                        <button type="button" class="gl-v2-mt-play" data-mt-start="@t.Id" aria-label="Nu starten: @t.Titel" title="Nu starten"><i class="ph ph-play" aria-hidden="true"></i></button>
+                    </div>
+                }
+                @if (!Model.Ongepland.Any())
+                {
+                    <div class="gl-v2-mt-empty">Alles staat al in je week.</div>
+                }
+            </div>
+        </section>
+        <div class="gl-v2-notice gl-v2-notice-compact @(belasting > 100 ? "is-warning" : "")"><i class="ph ph-info" aria-hidden="true"></i><span>Je week zit voor <b>@(belasting)%</b> vol. Plan de rest of verschuif naar volgende week.</span></div>
+    </aside>
+
+    <section class="gl-v2-section-card gl-v2-mt-weekcard">
+        <div class="gl-v2-mt-weeknav">
+            <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-mt-mini" id="mt-nieuw"><i class="ph ph-plus" aria-hidden="true"></i>Nieuwe taak</button>
+            <span class="gl-v2-dl-spacer" style="flex:1"></span>
+            <a class="gl-v2-btn gl-v2-btn-text" href="@Url.Action("WeekV2", new { datum = Model.Maandag.AddDays(-7).ToString("yyyy-MM-dd") })"><i class="ph ph-caret-left" aria-hidden="true"></i>Vorige week</a>
+            <a class="gl-v2-btn gl-v2-btn-text" href="@Url.Action("WeekV2")">Deze week</a>
+            <a class="gl-v2-btn gl-v2-btn-text" href="@Url.Action("WeekV2", new { datum = Model.Maandag.AddDays(7).ToString("yyyy-MM-dd") })">Volgende week<i class="ph ph-caret-right" aria-hidden="true"></i></a>
+        </div>
+        <div class="gl-v2-mt-weekgrid" id="mt-scroll">
+            <div class="gl-v2-mt-weekhead">
+                <span></span>
+                @foreach (var d in Model.Dagen)
+                {
+                    var pct = Math.Min(100, d.GeplandMinuten * 100.0 / dagCap);
+                    <div class="@(d.Datum == vandaag ? "is-today" : "")">
+                        <div class="n"><b>@MijnTakenAssistent.DagNaam(d.Datum)</b><span>@MtFormat.Datum(d.Datum)</span></div>
+                        <div class="load"><div class="bar"><i class="@(d.GeplandMinuten > dagCap ? "is-over" : "")" style="width:@(pct.ToString("0", inv))%"></i></div><span>@MtFormat.Duur(d.GeplandMinuten)</span></div>
+                        @foreach (var dl in d.Deadlines.Take(2)) { <span class="gl-v2-mt-flag" title="@dl">⚑ @dl</span> }
+                        @foreach (var h in d.HeleDag.Take(2)) { <span class="gl-v2-mt-allday" title="@h.Titel">@h.Titel</span> }
+                    </div>
+                }
+            </div>
+            <div class="gl-v2-mt-weekbody" style="height:@((Model.UurTot - Model.UurVan) * Px)px">
+                <div class="hours">
+                    @for (var u = Model.UurVan; u < Model.UurTot; u++) { <span style="top:@((u - Model.UurVan) * Px)px">@u.ToString("00"):00</span> }
+                </div>
+                @foreach (var d in Model.Dagen)
+                {
+                    <div class="gl-v2-mt-daycol @(d.Datum == vandaag ? "is-today" : "")" data-datum="@d.Datum.ToString("yyyy-MM-dd")">
+                        @for (var u = Model.UurVan; u < Model.UurTot; u++) { <i style="top:@((u - Model.UurVan) * Px)px"></i> }
+                        <div class="gl-v2-mt-daylane">
+                        @foreach (var item in MtFormat.Kalender(d.Afspraken, d.Gepland, d.Datum.ToDateTime(TimeOnly.MinValue), Model.UurVan, Model.UurTot))
+                        {
+                            @await Html.PartialAsync("Partials/_MtKalItemV2", new MtKalItemVm { Item = item, Px = Px, UurVan = Model.UurVan, Compact = true })
+                        }
+                        </div>
+                        @foreach (var b in d.Gewerkt)
+                        {
+                            <div class="gl-v2-mt-worked" style="top:@(Top(b.Start))px;height:@(Hoogte(b.Start, b.Einde))px;--c:@b.Kleur" title="@b.Titel · @MtFormat.Uur(b.Start)–@MtFormat.Uur(b.Einde)"></div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </section>
+</div>
+
+@await Html.PartialAsync("Partials/_MtAfspraakKoppelV2", Model.Shell)
+@await Html.PartialAsync("Partials/_MtSnelStartV2", Model.Shell)
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-mijntaken.js" asp-append-version="true"></script>
+}

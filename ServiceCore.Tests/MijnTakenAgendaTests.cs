@@ -1,5 +1,7 @@
 using CPMCore.Services;
 using CPMCore.Services.MijnTaken;
+using CPMCore.Services.OutlookSync;
+using Microsoft.Extensions.Logging.Abstractions;
 using DALCore.Models;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -19,8 +21,10 @@ public class MijnTakenAgendaTests
 
     private static (MijnTakenAssistent Svc, MtContext Ctx, FakeGraphIngang Graph) Create(string? gebruiker = "entra-1")
     {
+        var db = new TestDb(Guid.NewGuid().ToString());
         var graph = new FakeGraphIngang();
-        var svc = new MijnTakenAssistent(new TestDb(Guid.NewGuid().ToString()), null!, graph);
+        var afspraken = new OutlookAfspraakService(db, new OutlookMailSyncService(db, graph, NullLogger<OutlookMailSyncService>.Instance));
+        var svc = new MijnTakenAssistent(db, null!, graph, afspraken);
         var ctx = new MtContext { UserId = 1, UserStr = "1", UserCode = "u1", Nu = Nu, AgendaGebruiker = gebruiker };
         return (svc, ctx, graph);
     }

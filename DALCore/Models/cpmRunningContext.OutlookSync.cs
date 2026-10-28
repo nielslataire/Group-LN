@@ -8,6 +8,7 @@ public partial class cpmRunningContext
 {
     public virtual DbSet<OutlookSyncStatus> OutlookSyncStatus { get; set; }
     public virtual DbSet<OutlookMail> OutlookMail { get; set; }
+    public virtual DbSet<OutlookAfspraak> OutlookAfspraak { get; set; }
     public virtual DbSet<OutlookGeblokkeerdeAfzender> OutlookGeblokkeerdeAfzender { get; set; }
 
     private void ConfigureOutlookSyncEntities(ModelBuilder modelBuilder)
@@ -40,6 +41,15 @@ public partial class cpmRunningContext
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("FK_OutlookMail_Users");
             entity.HasOne(e => e.Project).WithMany().HasForeignKey(e => e.ProjectId).OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("FK_OutlookMail_Project");
             entity.HasIndex(e => new { e.UserId, e.ConversationId }, "IX_OutlookMail_User_Conversation").HasFilter("([ConversationId] IS NOT NULL)");
+        });
+
+        modelBuilder.Entity<OutlookAfspraak>(entity =>
+        {
+            entity.ToTable("OutlookAfspraak");
+            entity.HasIndex(e => new { e.UserId, e.EventId }, "UQ_OutlookAfspraak_User_Event").IsUnique();
+            entity.Property(e => e.EventId).IsRequired().HasMaxLength(400);
+            entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("FK_OutlookAfspraak_Users");
+            entity.HasOne(e => e.Project).WithMany().HasForeignKey(e => e.ProjectId).OnDelete(DeleteBehavior.Cascade).HasConstraintName("FK_OutlookAfspraak_Project");
         });
 
         modelBuilder.Entity<OutlookGeblokkeerdeAfzender>(entity =>

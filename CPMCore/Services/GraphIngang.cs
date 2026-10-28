@@ -23,6 +23,13 @@ public sealed class AgendaAfspraak
     public string? Link { get; set; }
     /// <summary>free, tentative, busy, oof of workingElsewhere.</summary>
     public string ToonAls { get; set; } = "busy";
+    /// <summary>E-mailadressen van de deelnemers en de organisator (voor het voorstel van een project). Niet bewaard.</summary>
+    public List<string> Deelnemers { get; set; } = new();
+    // Hierna: ingevuld door OutlookAfspraakService, nooit door Graph. Het gekoppelde project en het voorstel van CPM.
+    public int? ProjectId { get; set; }
+    public string? ProjectNaam { get; set; }
+    public int? VoorstelProjectId { get; set; }
+    public string? VoorstelProjectNaam { get; set; }
 }
 
 public sealed class AgendaResultaat
@@ -114,7 +121,7 @@ public sealed class GraphIngang : IGraphIngang
             };
             var pagina = await _client.Users[gebruiker].CalendarView.Request(opties)
                 .Header("Prefer", $"outlook.timezone=\"{Tijdzone}\"")
-                .Select("id,subject,start,end,isAllDay,isCancelled,location,showAs,isOnlineMeeting,webLink,isOrganizer,attendees")
+                .Select("id,subject,start,end,isAllDay,isCancelled,location,showAs,isOnlineMeeting,webLink,isOrganizer,organizer,attendees")
                 .Top(100).OrderBy("start/dateTime").GetAsync(ct);
 
             while (pagina != null)
@@ -125,6 +132,8 @@ public sealed class GraphIngang : IGraphIngang
                     resultaat.Afspraken.Add(new AgendaAfspraak
                     {
                         Id = e.Id ?? "", IsOrganisator = e.IsOrganizer != false, HeeftDeelnemers = e.Attendees?.Any() == true,
+                        Deelnemers = (e.Attendees ?? Enumerable.Empty<Attendee>()).Select(x => x.EmailAddress?.Address).Append(e.Organizer?.EmailAddress?.Address)
+                            .Where(x => !string.IsNullOrWhiteSpace(x)).Cast<string>().ToList(),
                         Titel = string.IsNullOrWhiteSpace(e.Subject) ? "(zonder titel)" : e.Subject!,
                         Start = DateTime.Parse(e.Start.DateTime, CultureInfo.InvariantCulture),
                         Einde = DateTime.Parse(e.End.DateTime, CultureInfo.InvariantCulture),

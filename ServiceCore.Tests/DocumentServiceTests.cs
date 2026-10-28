@@ -167,7 +167,9 @@ public class DocumentServiceTests
         var blocked = await svc.Upload(rev);
         Assert.False(blocked.Ok); // na de eerste handtekening geen nieuwe revisie meer
 
-        var last = await svc.MarkSigned(1, sigs[1].Id, "manueel");
+        var noProof = await svc.MarkSigned(1, sigs[1].Id, "manueel");
+        Assert.False(noProof.Ok); // een handmatige handtekening vraagt een bewijsbestand
+        var last = await svc.MarkSigned(1, sigs[1].Id, "manueel", "bewijs.pdf");
         Assert.Contains("Verkocht", last.Message);
         db.ChangeTracker.Clear();
         Assert.Equal(DocumentStatus.Getekend, db.ProjectDocs.Single().Status);

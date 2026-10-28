@@ -274,6 +274,40 @@
     }
     function volgendHalfuur() { var d = new Date(), m = Math.ceil((d.getHours() * 60 + d.getMinutes() + 1) / 30) * 30; return Math.max(UUR * 60, Math.min(m, 22 * 60)); }
 
+    // Afspraak aan een project koppelen: het label, het voorstel van CPM (altijd te bevestigen) en de keuze van een ander project.
+    var afspraakModal = $("mt-afspraak-koppel-modal"), afspraakEvent = "";
+    function koppelBlok(body, ac, b) {
+        if (!b.dataset.event) return;
+        if (b.dataset.projectId) {
+            if (b.dataset.project) body.appendChild(rij("ph-buildings", b.dataset.project));
+            var ander = knop("Ander project", "gl-v2-btn-secondary", "ph-link"), los = knop("Ontkoppelen", "gl-v2-btn-text", "ph-link-break");
+            ac.appendChild(ander); ac.appendChild(los);
+            ander.addEventListener("click", function () { openAfspraakKoppel(b); });
+            los.addEventListener("click", function () { post("AfspraakOntkoppel", { eventId: b.dataset.event }).then(herlaad, mislukt); });
+            return;
+        }
+        if (b.dataset.voorstelId) {
+            var ja = knop("Koppel aan " + b.dataset.voorstel, "gl-v2-btn-primary", "ph-sparkle");
+            ja.addEventListener("click", function () { ja.disabled = true; post("AfspraakKoppel", { eventId: b.dataset.event, projectId: b.dataset.voorstelId }).then(herlaad, function () { ja.disabled = false; }); });
+            ac.appendChild(ja);
+        }
+        var kies = knop(b.dataset.voorstelId ? "Ander project" : "Koppelen aan project", "gl-v2-btn-secondary", "ph-link");
+        kies.addEventListener("click", function () { openAfspraakKoppel(b); });
+        ac.appendChild(kies);
+    }
+    function openAfspraakKoppel(b) {
+        afspraakEvent = b.dataset.event; sluitPop();
+        var o = $("mt-afspraak-koppel-onderwerp"); if (o) o.textContent = b.dataset.titel || "";
+        var veld = afspraakModal && afspraakModal.querySelector("[name=projectId]"); if (veld) veld.value = "";
+        if (afspraakModal && window.bootstrap) window.bootstrap.Modal.getOrCreateInstance(afspraakModal).show();
+    }
+    if (afspraakModal) afspraakModal.querySelector("form").addEventListener("submit", function (e) {
+        e.preventDefault();
+        var veld = afspraakModal.querySelector("[name=projectId]");
+        if (!veld || !veld.value) { toast("danger", "Kies eerst een project."); return; }
+        post("AfspraakKoppel", { eventId: afspraakEvent, projectId: veld.value }).then(herlaad, mislukt);
+    });
+
     function openBlok(b) {
         var afspraak = b.dataset.kind === "afspraak", bewerkbaar = b.dataset.edit === "1", info = blokInfo(b);
         var body = maakPop(afspraak ? "#2F4F7A" : getComputedStyle(b).getPropertyValue("--c"), afspraak ? "AFSPRAAK UIT OUTLOOK" : "TAAK");
@@ -313,6 +347,7 @@
             var a = el("a", "gl-v2-btn gl-v2-btn-secondary"); a.href = b.dataset.link; a.target = "_blank"; a.rel = "noopener";
             a.innerHTML = '<i class="ph ph-arrow-square-out" aria-hidden="true"></i>Openen in Outlook'; ac.appendChild(a);
         }
+        if (afspraak) koppelBlok(body, ac, b);
         if (ac.childNodes.length) body.appendChild(ac);
         plaats(b.getBoundingClientRect()); if (bewerkbaar) { titel.i.focus(); if (!("ontouchstart" in window)) titel.i.select(); }
     }

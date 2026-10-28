@@ -65,6 +65,26 @@ public partial class MijnTakenController
 
     // ── Vastleggen en verwerken ──────────────────────────────────────────────────────────────────
 
+    // ── Afspraken aan een project koppelen (spec #2, ticket #7). De koppeling hoort bij de ingelogde gebruiker; de afspraakdetails blijven in Outlook.
+
+    [HttpPost("AfspraakKoppel"), ValidateAntiForgeryToken, CPMCore.Filters.PermissionWrite(BOCore.PermissionCodes.MijnTaken)]
+    public async Task<IActionResult> AfspraakKoppel(string eventId, int projectId)
+    {
+        var c = await _assistent.Context(User);
+        if (c == null) return Forbid();
+        var fout = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.OutlookSync.OutlookAfspraakService>().KoppelAsync(c.UserId, eventId, projectId, c.ProjectIds);
+        return fout == null ? Json(new { ok = true }) : Fout(fout);
+    }
+
+    [HttpPost("AfspraakOntkoppel"), ValidateAntiForgeryToken, CPMCore.Filters.PermissionWrite(BOCore.PermissionCodes.MijnTaken)]
+    public async Task<IActionResult> AfspraakOntkoppel(string eventId)
+    {
+        var c = await _assistent.Context(User);
+        if (c == null) return Forbid();
+        await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.OutlookSync.OutlookAfspraakService>().OntkoppelAsync(c.UserId, eventId);
+        return Json(new { ok = true });
+    }
+
     // ── Acties op een mail uit Outlook (spec #2, ticket #12). CPM schrijft niets naar de mailbox; de gebruiker beslist altijd.
 
     [HttpPost("MailKoppel"), ValidateAntiForgeryToken, CPMCore.Filters.PermissionWrite(BOCore.PermissionCodes.MijnTaken)]

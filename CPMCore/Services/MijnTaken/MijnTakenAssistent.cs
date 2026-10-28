@@ -25,6 +25,8 @@ public class MtContext
     public DateTime Nu { get; set; } = DateTime.Now;
     /// <summary>Entra-object-id (of e-mailadres) van de mailbox voor de Outlook-agenda.</summary>
     public string? AgendaGebruiker { get; set; }
+    /// <summary>E-mailadres van de gebruiker zelf (om zijn eigen adres uit de deelnemers van een afspraak te halen).</summary>
+    public string? Email { get; set; }
 }
 
 /// <summary>Mijn taken als persoonlijke assistent (design-handoff punt 2): vastleggen, verwerken, plannen, doen en terugblikken.
@@ -34,6 +36,7 @@ public class MijnTakenAssistent
     private readonly cpmRunningContext _db;
     private readonly IProjectService _projectService;
     private readonly IGraphIngang _graph;
+    private readonly OutlookAfspraakService _afspraken;
     private static readonly CultureInfo Nl = new("nl-BE");
     private static readonly string[] Kleuren = { "#00532D", "#B8935A", "#2F4F7A", "#7A9E6E", "#8A5A7A", "#B04040", "#4A8A8A", "#6B7A3A" };
     public const string GeenKleur = "#9aa898";
@@ -51,11 +54,12 @@ public class MijnTakenAssistent
     private const int StatusOpen = (int)TaakStatus.Open, StatusBezig = (int)TaakStatus.Bezig, StatusWachtend = (int)TaakStatus.Wachtend,
         StatusAfgerond = (int)TaakStatus.Afgerond, StatusGeannuleerd = (int)TaakStatus.Geannuleerd;
 
-    public MijnTakenAssistent(cpmRunningContext db, IProjectService projectService, IGraphIngang graph)
+    public MijnTakenAssistent(cpmRunningContext db, IProjectService projectService, IGraphIngang graph, OutlookAfspraakService afspraken)
     {
         _db = db;
         _projectService = projectService;
         _graph = graph;
+        _afspraken = afspraken;
     }
 
     public static string KleurVoor(int? projectId) => projectId == null ? GeenKleur : Kleuren[projectId.Value % Kleuren.Length];
@@ -72,6 +76,7 @@ public class MijnTakenAssistent
         var gebruiker = await _db.Users.AsNoTracking().Where(u => u.Id == id.Value).Select(u => new { u.DashboardType, u.EntraObjectId, u.Email }).FirstOrDefaultAsync();
         var dashboardType = gebruiker?.DashboardType;
         c.AgendaGebruiker = IGraphIngang.GebruikerSleutel(gebruiker?.EntraObjectId, gebruiker?.Email);
+        c.Email = gebruiker?.Email;
         InterneRol? rol = dashboardType.HasValue ? (DashboardType)dashboardType.Value switch
         {
             DashboardType.Projectleider => InterneRol.Projectleider,
@@ -120,6 +125,10 @@ public class MijnTakenAssistent
     public static int Weeknummer(DateOnly d) => ISOWeek.GetWeekOfYear(d.ToDateTime(TimeOnly.MinValue));
     public static string DagNaam(DateOnly d) => Nl.DateTimeFormat.GetAbbreviatedDayName(d.DayOfWeek).TrimEnd('.');
     public static string Vol(DateOnly d) => Nl.TextInfo.ToTitleCase(d.ToString("dddd d MMMM", Nl)).Replace(" ", " ");
+
+    /// <summary>Zet bij elke afspraak het gekoppelde project (label) of het voorstel van CPM (knop), uit het koppelrecord en de bekende contactpersonen.</summary>
+    private Task VerrijkAfspraken(MtContext c, IEnumerable<AgendaAfspraak> afspraken) =>
+        _afspraken.VerrijkAsync(c.UserId, c.Email, c.Projecten.ToDictionary(p => p.Key, p => p.Value.Naam), afspraken);
 
     /// <summary>Wat er in de Inbox nog te verwerken is: notities plus ontvangen, niet-afgehandelde mails uit Outlook. Enkel een teller, geen melding. Ook bedoeld voor een latere zijbalk.</summary>
     public async Task<int> InboxAantal(MtContext c) =>
@@ -196,6 +205,7 @@ public class MijnTakenAssistent
         var vrijdagEind = Maandag(vandaag).AddDays(5).ToDateTime(TimeOnly.MinValue);
         var agenda = await _graph.GetAgendaAsync(c.AgendaGebruiker, dagStart, vrijdagEind > dagStart ? vrijdagEind : dagStart.AddDays(1));
         vm.AgendaFout = agenda.Fout;
+        await VerrijkAfspraken(c, agenda.Afspraken);
         var vandaagAfspraken = agenda.Afspraken.Where(a => a.Start < dagStart.AddDays(1) && a.Einde > dagStart).ToList();
         vm.HeleDag = vandaagAfspraken.Where(a => a.HeleDag).ToList();
         vm.Afspraken = vandaagAfspraken.Where(a => !a.HeleDag).OrderBy(a => a.Start).ToList();
@@ -324,6 +334,7 @@ public class MijnTakenAssistent
 
         var agenda = await _graph.GetAgendaAsync(c.AgendaGebruiker, van, van.AddDays(7));
         vm.AgendaFout = agenda.Fout;
+        await VerrijkAfspraken(c, agenda.Afspraken);
 
         for (var i = 0; i < 5; i++)
         {

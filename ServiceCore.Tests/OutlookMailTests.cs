@@ -379,7 +379,7 @@ public class OutlookMailSyncTests
 
     private static async Task<(MijnTakenAssistent Assistent, MtContext Ctx)> AssistentVoor(TestDb db, FakeGraphIngang graph)
     {
-        var assistent = new MijnTakenAssistent(db, null!, graph);
+        var assistent = new MijnTakenAssistent(db, null!, graph, new OutlookAfspraakService(db, new OutlookMailSyncService(db, graph, NullLogger<OutlookMailSyncService>.Instance)));
         var ctx = new MtContext { UserId = 1, UserStr = "1", UserCode = "u1", Nu = Nu.AddMinutes(30) };
         ctx.Projecten[1] = new MtProject { Id = 1, Naam = "Residentie De Linde", Kleur = "#000" };
         return (assistent, ctx);

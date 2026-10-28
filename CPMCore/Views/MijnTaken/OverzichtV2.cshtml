@@ -1,0 +1,110 @@
+@model CPMCore.Models.MijnTaken.MtOverzichtVm
+@using CPMCore.Services.MijnTaken
+@*
+    gl-v2 — Mijn taken › Overzicht (design-handoff punt 2d): waar ging je tijd naartoe deze week (per project en per soort werk), gepland tegenover gewerkt per dag en de wekelijkse
+    review als afvinklijst. "Soort werk" volgt de context van de taak (@@bureau, @@telefoon, @@werf). Focus-tijd = sessies van minstens 25 minuten.
+*@
+@{
+    ViewData["Title"] = "Mijn taken";
+    ViewData["PageIcon"] = "ph ph-list-checks";
+    ViewData["GlV2FullHeightBody"] = true;   // de kaart vult de volle schermhoogte (zie gl-v2-mijntaken.css)
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var maxProj = Math.Max(1, Model.PerProject.Select(p => p.Minuten).DefaultIfEmpty(0).Max());
+    var maxSoort = Math.Max(1, Model.PerSoort.Select(p => p.Minuten).DefaultIfEmpty(0).Max());
+    var maxDag = Math.Max(60, Model.PerDag.Select(d => Math.Max(d.Gepland, d.Gewerkt)).DefaultIfEmpty(0).Max());
+    var reviewAf = Enumerable.Range(0, MijnTakenAssistent.ReviewPunten.Length).Count(i => (Model.Afgevinkt & (1 << i)) != 0);
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-mijntaken.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @await Html.PartialAsync("Partials/_MtActiesV2", Model.Shell)
+}
+
+@await Html.PartialAsync("Partials/_MtTabsV2", Model.Shell)
+
+<div class="gl-v2-mt-overzicht" data-week="@Model.Maandag.ToString("yyyy-MM-dd")">
+    <div class="gl-v2-mt-weeknav is-solo">
+        <a class="gl-v2-btn gl-v2-btn-text" href="@Url.Action("OverzichtV2", new { datum = Model.Maandag.AddDays(-7).ToString("yyyy-MM-dd") })"><i class="ph ph-caret-left" aria-hidden="true"></i>Vorige week</a>
+        <a class="gl-v2-btn gl-v2-btn-text" href="@Url.Action("OverzichtV2")">Deze week</a>
+        <a class="gl-v2-btn gl-v2-btn-text" href="@Url.Action("OverzichtV2", new { datum = Model.Maandag.AddDays(7).ToString("yyyy-MM-dd") })">Volgende week<i class="ph ph-caret-right" aria-hidden="true"></i></a>
+    </div>
+
+    <div class="gl-v2-mt-ov-main">
+        <div class="gl-v2-mt-kpis">
+            <div class="gl-v2-section-card"><span class="l">Gewerkt</span><span class="v">@MtFormat.Duur(Model.GewerktMinuten)</span></div>
+            <div class="gl-v2-section-card"><span class="l">Gepland</span><span class="v">@MtFormat.Duur(Model.GeplandMinuten)</span></div>
+            <div class="gl-v2-section-card"><span class="l">Taken afgerond</span><span class="v">@Model.Afgerond</span></div>
+            <div class="gl-v2-section-card"><span class="l">Focus-tijd</span><span class="v">@MtFormat.Duur(Model.FocusMinuten)</span></div>
+        </div>
+
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header"><span class="gl-v2-section-card-icon"><i class="ph ph-buildings" aria-hidden="true"></i></span><h3 class="gl-v2-section-card-title">Tijd per project</h3></div>
+            <div class="gl-v2-mt-bars">
+                @foreach (var p in Model.PerProject)
+                {
+                    <div class="gl-v2-mt-bar-row"><span class="n"><i style="background:@p.Kleur"></i>@p.Naam</span><span class="b"><i style="width:@((p.Minuten * 100.0 / maxProj).ToString("0.#", inv))%;background:@p.Kleur"></i></span><b>@MtFormat.Duur(p.Minuten)</b></div>
+                }
+                @if (!Model.PerProject.Any()) { <div class="gl-v2-mt-empty">Nog geen gewerkte tijd in deze week. Start een taak met ▶ of Ctrl K.</div> }
+            </div>
+        </section>
+
+        <div class="gl-v2-mt-two">
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header"><span class="gl-v2-section-card-icon"><i class="ph ph-stack" aria-hidden="true"></i></span><h3 class="gl-v2-section-card-title">Soort werk</h3></div>
+                <div class="gl-v2-mt-bars">
+                    @foreach (var s in Model.PerSoort)
+                    {
+                        <div class="gl-v2-mt-bar-row is-soort"><span class="n">@s.Naam</span><span class="b"><i style="width:@((s.Minuten * 100.0 / maxSoort).ToString("0.#", inv))%"></i></span><b>@MtFormat.Duur(s.Minuten)</b></div>
+                    }
+                    @if (!Model.PerSoort.Any()) { <div class="gl-v2-mt-empty">Nog niets om te tonen.</div> }
+                </div>
+            </section>
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header"><span class="gl-v2-section-card-icon"><i class="ph ph-chart-bar" aria-hidden="true"></i></span><h3 class="gl-v2-section-card-title">Gepland vs. gewerkt</h3>
+                    <span class="gl-v2-section-card-spacer"></span><span class="gl-v2-mt-legend"><i class="is-planned"></i>gepland</span><span class="gl-v2-mt-legend"><i class="is-worked"></i>gewerkt</span></div>
+                <div class="gl-v2-mt-pvw">
+                    @foreach (var d in Model.PerDag)
+                    {
+                        <div><div class="cols"><i class="pl" style="height:@((d.Gepland * 100.0 / maxDag).ToString("0", inv))%" title="Gepland @MtFormat.Duur(d.Gepland)"></i><i class="wk" style="height:@((d.Gewerkt * 100.0 / maxDag).ToString("0", inv))%" title="Gewerkt @MtFormat.Duur(d.Gewerkt)"></i></div><span>@d.Dag</span></div>
+                    }
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <aside class="gl-v2-mt-ov-side">
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header"><span class="gl-v2-section-card-icon"><i class="ph ph-list-checks" aria-hidden="true"></i></span><h3 class="gl-v2-section-card-title">Wekelijkse review</h3><span class="gl-v2-section-card-spacer"></span><span class="gl-v2-mt-muted" id="mt-review-teller">@reviewAf / @MijnTakenAssistent.ReviewPunten.Length</span></div>
+            <div class="gl-v2-mt-review">
+                <span class="gl-v2-mt-muted">Vrijdagnamiddag, 30 minuten. Zo start je maandag met een hoofd dat leeg is.</span>
+                @for (var i = 0; i < MijnTakenAssistent.ReviewPunten.Length; i++)
+                {
+                    var delen = MijnTakenAssistent.ReviewPunten[i].Split('|');
+                    var on = (Model.Afgevinkt & (1 << i)) != 0;
+                    <div class="gl-v2-mt-review-row"><span class="gl-v2-check"><input type="checkbox" data-mt-review="@i" id="mt-rv-@i" @(on ? "checked" : "") /><label for="mt-rv-@i"></label></span>
+                        <label for="mt-rv-@i"><span class="t">@delen[0]</span><span class="d">@(i == 3 && Model.WachtenOpen > 0 ? $"{Model.WachtenOpen} open, {Model.WachtenTeLaat} te laat" : delen[1])</span></label></div>
+                }
+            </div>
+        </section>
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header"><span class="gl-v2-section-card-icon"><i class="ph ph-target" aria-hidden="true"></i></span><h3 class="gl-v2-section-card-title">Focus volgende week</h3></div>
+            <div class="gl-v2-mt-focus">
+                @for (var i = 0; i < Model.Focus.Count; i++)
+                {
+                    <div><span class="nr">@(i + 1)</span><span class="t">@Model.Focus[i].Titel</span></div>
+                }
+                @if (!Model.Focus.Any()) { <div class="gl-v2-mt-empty">Geen open taken. Leg iets vast of verwerk je inbox.</div> }
+            </div>
+        </section>
+    </aside>
+</div>
+
+@await Html.PartialAsync("Partials/_MtSnelStartV2", Model.Shell)
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-mijntaken.js" asp-append-version="true"></script>
+}
