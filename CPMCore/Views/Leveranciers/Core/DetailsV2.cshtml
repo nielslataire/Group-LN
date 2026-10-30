@@ -546,7 +546,7 @@
        — enkel geladen wanneer er ook echt een Contracten- of Facturen-tabel op de pagina staat. *@
     @if (Model.Contracts.Any() || Model.Invoices.Any())
     {
-        <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
+        <script src="~/lib/datatables-2.2.2/datatables.min.js" asp-append-version="true"></script>
     }
     <script>
         window.glV2SupplierDetailsConfig = {

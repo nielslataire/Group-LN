@@ -35,6 +35,7 @@ Public NotInheritable Class PermissionCatalog
             New PermissionDefinition(PermissionCodes.ProjectsForSale, "Te Koop", PermissionCodes.ProjectsVerkoop, 61),
             New PermissionDefinition(PermissionCodes.ProjectsContacts, "Contacten", PermissionCodes.ProjectsVerkoop, 62),
             New PermissionDefinition(PermissionCodes.ProjectsContactsExport, "Contacten exporteren", PermissionCodes.ProjectsContacts, 63),
+            New PermissionDefinition(PermissionCodes.ProjectsSalesSettings, "Instellingen", PermissionCodes.ProjectsVerkoop, 64),
             New PermissionDefinition(PermissionCodes.Invoicing, "Facturatie", Nothing, 70),
             New PermissionDefinition(PermissionCodes.InvoicingByBillingCompany, "Per facturatiebedrijf", PermissionCodes.Invoicing, 71),
             New PermissionDefinition(PermissionCodes.Settings, "Instellingen", Nothing, 80),

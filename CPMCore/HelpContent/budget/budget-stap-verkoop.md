@@ -30,7 +30,7 @@ faq:
   - q: Wat betekent het teken P achter een code?
     a: Het is een projectcode. Je maakte hem voor dit project. Een code zonder dat teken is een algemene code uit Instellingen.
   - q: Waarom heeft een eenheid geen marktprijs?
-    a: Dit antwoord volgt nog. [VRAAG: wanneer toont CPM geen marktprijs voor een eenheid, en uit welke bron komt de marktdata?]
+    a: De marktdata komt uit advertenties op Immoweb en Zimmo, aangevuld met de verkochte eenheden van je eigen projecten in dezelfde postcode. CPM heeft per eenheid minstens drie vergelijkbare eenheden nodig. Zijn die er niet, dan staat er Te weinig vergelijkbare units. Heeft het project geen postcode, of is er niets voor de gemeente, dan toont CPM een melding.
 ---
 ## De samenvatting lezen
 

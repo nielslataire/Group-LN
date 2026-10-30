@@ -693,9 +693,30 @@ window.GlV2.byId = function (id) { return document.getElementById(id); };
 
     function glV2SelectPosition(trigger, panel) {
         var rect = trigger.getBoundingClientRect();
-        panel.style.left = rect.left + "px";
-        panel.style.top = (rect.bottom + 4) + "px";
-        panel.style.width = Math.max(rect.width, 200) + "px";
+        var width = Math.max(rect.width, 200);
+        panel.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8)) + "px";
+        panel.style.width = width + "px";
+        // < 768px: de CSS (bottom sheet) bepaalt de plek, geen eigen boven/onder-logica
+        if (window.innerWidth < 768) { panel.style.top = (rect.bottom + 4) + "px"; panel.style.bottom = ""; panel.style.maxHeight = ""; return; }
+        // Past de lijst niet onder het veld (bv. de laatste rij van een tabel)? Dan naar boven openklappen,
+        // en de hoogte beperken tot de beschikbare ruimte zodat de lijst nooit buiten beeld valt.
+        // De lijst is nog verborgen: even onzichtbaar tonen om de echte hoogte te meten.
+        var wasOpen = panel.classList.contains("is-open");
+        var oudeVis = panel.style.visibility, oudeDisp = panel.style.display;
+        panel.style.maxHeight = "";
+        if (!wasOpen) { panel.style.visibility = "hidden"; panel.style.display = "flex"; }
+        var natuurlijk = Math.min(panel.scrollHeight, 320);
+        if (!wasOpen) { panel.style.visibility = oudeVis; panel.style.display = oudeDisp; }
+        var onder = window.innerHeight - rect.bottom - 12, boven = rect.top - 12;
+        if (natuurlijk > onder && boven > onder) {
+            panel.style.top = "";
+            panel.style.bottom = (window.innerHeight - rect.top + 4) + "px";
+            panel.style.maxHeight = Math.min(320, boven) + "px";
+        } else {
+            panel.style.bottom = "";
+            panel.style.top = (rect.bottom + 4) + "px";
+            panel.style.maxHeight = Math.min(320, Math.max(onder, 120)) + "px";
+        }
     }
 
     // Bedraadt elke nog niet bedraade .gl-v2-select[data-gl-v2-select] binnen scope. Ook publiek

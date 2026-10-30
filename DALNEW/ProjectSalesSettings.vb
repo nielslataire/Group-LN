@@ -27,6 +27,8 @@ Partial Public Class ProjectSalesSettings
     Public Property ParcelCost As Nullable(Of Decimal)
     Public Property SalesDisplayStatus As Nullable(Of Integer)
     Public Property IsFeatured As Nullable(Of Boolean)
+    Public Property InschrijvingTitle As String
+    Public Property InschrijvingText As String
 
     Public Overridable Property Project As Project
 

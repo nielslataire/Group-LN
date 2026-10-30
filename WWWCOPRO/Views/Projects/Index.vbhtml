@@ -33,6 +33,8 @@
     Dim fpIsNieuw As Boolean = fpExplicitStatus.HasValue AndAlso fpExplicitStatus.Value = 1
     Dim fpIsBinnenkort As Boolean = fpExplicitStatus.HasValue AndAlso fpExplicitStatus.Value = 2
     Dim fpIsLancering As Boolean = fpExplicitStatus.HasValue AndAlso fpExplicitStatus.Value = 3
+    Dim fpIsInschrijving As Boolean = fpExplicitStatus.HasValue AndAlso fpExplicitStatus.Value = 4 AndAlso
+        Not String.IsNullOrWhiteSpace(fpSettings.InschrijvingTitle) AndAlso Not String.IsNullOrWhiteSpace(fpSettings.InschrijvingText)
     Dim fpIsUitverkocht As Boolean = (fpPercentageSold = 100) OrElse (fpExplicitStatus.HasValue AndAlso fpExplicitStatus.Value = 8)
 
     ' Type label uitgelicht — enkelvoud als count = 1
@@ -169,7 +171,7 @@ end section
     @If fp IsNot Nothing Then
         @<text>
             <div class="sectie-kop">Uitgelicht project</div>
-            <a href="@(Url.RouteUrl(_detailRouteName, New With {.slug = fp.Slug}))" class="uitgelicht-project reveal">
+            <a href="@(If(fpIsInschrijving, Url.Action("Inschrijving", "Projects", New With {.slug = fp.Slug}), Url.RouteUrl(_detailRouteName, New With {.slug = fp.Slug})))" class="uitgelicht-project reveal">
                 <div class="uitgelicht-foto">
                     @If fpIsVideo Then
                         @<video src="@fpVideoSrc" muted loop playsinline data-autoplay="true"></video>
@@ -306,6 +308,9 @@ end section
         Dim isNieuw As Boolean = explicitStatus.HasValue AndAlso explicitStatus.Value = 1
         Dim isBinnenkort As Boolean = explicitStatus.HasValue AndAlso explicitStatus.Value = 2
         Dim isLancering As Boolean = explicitStatus.HasValue AndAlso explicitStatus.Value = 3
+        ' Status Inschrijving (4) toont de inschrijvingspagina, maar pas als de aparte titel en tekst ingevuld zijn.
+        Dim isInschrijving As Boolean = explicitStatus.HasValue AndAlso explicitStatus.Value = 4 AndAlso settings IsNot Nothing AndAlso
+            Not String.IsNullOrWhiteSpace(settings.InschrijvingTitle) AndAlso Not String.IsNullOrWhiteSpace(settings.InschrijvingText)
         Dim isUitverkocht As Boolean = (percentageSold = 100) OrElse (explicitStatus.HasValue AndAlso explicitStatus.Value = 8)
 
         ' Type label — enkelvoud als count = 1
@@ -334,7 +339,7 @@ end section
         Dim cardImgAlt As String = If(project.DefaultPicture IsNot Nothing AndAlso Not String.IsNullOrEmpty(project.DefaultPicture.Caption), project.DefaultPicture.Caption, project.Name)
         Dim cardTitel As String = If(Not String.IsNullOrEmpty(project.CommercialTitleNL), project.CommercialTitleNL, project.Name)
 
-        @If isBinnenkort Then
+        @If isInschrijving Then
             @<text>
                 <a href="@(Url.Action("Inschrijving", "Projects", New With {.slug = project.Slug}))" class="project-kaart reveal">
                     <div class="kaart-foto">
@@ -345,7 +350,7 @@ end section
                         End If
                         <div class="kaart-foto-overlay"></div>
                         <div class="kaart-verkocht-overlay">
-                            <span class="kaart-verkocht-label">Binnenkort</span>
+                            <span class="kaart-verkocht-label">Inschrijving</span>
                         </div>
                         <div class="kaart-pijl">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>

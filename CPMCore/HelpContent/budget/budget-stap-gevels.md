@@ -56,7 +56,7 @@ Open het tabblad **Balustrades & zichtschermen** en vul de lengte in lopende met
 ## Resultaat
 
 CPM slaat de rijen meteen op. De netto geveloppervlakte gebruikt CPM in stap 6, bijvoorbeeld voor de ruwbouw en het gevelmetselwerk.
-[VRAAG: welke activiteiten gebruiken de ramen, balustrades, zichtschermen en leien?] Klik onderaan op **Volgende: Dak & afbraak**.
+Ramen tellen mee bij Buitenschrijnwerk en gaan af van de gevelsom. Balustrades en zichtschermen vallen samen onder Gevelsluiting combi. Leien tellen bij de activiteit Leien. Een formule in Instellingen kan dit anders instellen. Klik onderaan op **Volgende: Dak & afbraak**.
 
 ## Let op
 

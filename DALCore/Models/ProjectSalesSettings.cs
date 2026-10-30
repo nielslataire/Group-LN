@@ -41,6 +41,10 @@ public partial class ProjectSalesSettings
 
     public bool? IsFeatured { get; set; }
 
+    public string InschrijvingTitle { get; set; }
+
+    public string InschrijvingText { get; set; }
+
     public virtual IssuerBankAccount BankAccount { get; set; }
 
     public virtual Project Project { get; set; }

@@ -61,7 +61,7 @@
 }
 @section PageStyle
 {
-    <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
+    <link href="~/lib/datatables-2.2.2/datatables.min.css" rel="stylesheet" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-marktanalyse.css" asp-append-version="true" />
 }
 @section PageActions
@@ -432,10 +432,10 @@
 
 @section PageScripts
 {
-    <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
+    <script src="~/lib/datatables-2.2.2/datatables.min.js" asp-append-version="true"></script>
     @if (Model.HeeftData)
     {
-        <script src="https://cdn.jsdelivr.net/npm/chart.js@@4.4.4/dist/chart.umd.min.js"></script>
+        <script src="~/lib/vendor/chartjs-4.4.4/chart.umd.js"></script>
         <script>
             window.glV2MaData = {
                 labels: @Html.Raw(JsonSerializer.Serialize(Model.AanbodPerMaand.Select(m => m.Label))),

@@ -110,10 +110,10 @@ public sealed class PrijsberekeningDocumentV2 : GlV2PdfDocumentBase
             if (_opties.KostenKoper)
             {
                 _dicht = true;
-                col.Item().Element(x => SectieKop(x, BodyFont, "Kosten koper"));
+                col.Item().Element(x => SectieKop(x, BodyFont, "Kosten notaris + koper"));
                 col.Item().Column(g =>
                 {
-                    foreach (var p in k.Posten) g.Item().Element(x => Regel(x, p.Naam, _opties.Detail ? p.Toelichting : null, E(p.Bedrag)));
+                    foreach (var p in k.Posten) g.Item().Element(x => Regel(x, p.Naam == "Aansluitkosten" ? "Raming aansluitkosten" : p.Naam, _opties.Detail ? p.Toelichting : null, E(p.Bedrag)));
                     if (k.KostenBtw > 0m) g.Item().Element(x => Regel(x, "Btw op de kosten", null, E(k.KostenBtw)));
                     var n = k.Notaris;
                     if (n.Totaal > 0m)
@@ -126,7 +126,7 @@ public sealed class PrijsberekeningDocumentV2 : GlV2PdfDocumentBase
                         g.Item().Element(x => Regel(x, "Registratierecht op bijlagen", null, E(n.RegistratieBijlagen)));
                         g.Item().Element(x => Regel(x, $"Btw {NotarisTarief.Btw:0.##} % op de notariskosten", _opties.Detail ? "op ereloon en kosten" : null, E(n.Btw)));
                     }
-                    g.Item().Element(x => Regel(x, "Subtotaal kosten koper", null, E(k.KostenKoper + k.KostenBtw + k.Notaris.Totaal), subtotaal: true));
+                    g.Item().Element(x => Regel(x, "Subtotaal kosten notaris + koper", null, E(k.KostenKoper + k.KostenBtw + k.Notaris.Totaal), subtotaal: true));
                 });
                 _dicht = false;
             }

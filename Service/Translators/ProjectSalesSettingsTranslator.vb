@@ -21,6 +21,8 @@ Public Class ProjectSalesSettingsTranslator
         If Not _entity.ParcelCost Is Nothing Then bo.ParcelCost = _entity.ParcelCost
         bo.SalesDisplayStatus = _entity.SalesDisplayStatus
         bo.IsFeatured = _entity.IsFeatured
+        bo.InschrijvingTitle = _entity.InschrijvingTitle
+        bo.InschrijvingText = _entity.InschrijvingText
 
         Return ErrorCode.Success
     End Function
@@ -43,6 +45,8 @@ Public Class ProjectSalesSettingsTranslator
         _entity.ParcelCost = bo.ParcelCost
         _entity.SalesDisplayStatus = bo.SalesDisplayStatus
         _entity.IsFeatured = bo.IsFeatured
+        _entity.InschrijvingTitle = bo.InschrijvingTitle
+        _entity.InschrijvingText = bo.InschrijvingText
 
         Return ErrorCode.Success
     End Function

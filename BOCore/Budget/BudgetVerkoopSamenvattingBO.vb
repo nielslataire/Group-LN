@@ -55,6 +55,10 @@ Namespace Budget
         Public Property EenheidNaam As String
         Public Property Grondwaarde As Decimal?
         Public Property Bouwwaarde As Decimal?
+        ''' <summary>Grondoppervlakte (m²) van de unit: alle grondzones van de eenheid samen (grond + agrarisch). Nothing = niet doorzetten.</summary>
+        Public Property GrondOppervlakte As Decimal?
+        ''' <summary>Bewoonbare oppervlakte (m²) van de unit: bewoonbaar + zolder, zonder coëfficiënten. Nothing = niet doorzetten.</summary>
+        Public Property BewoonbareOppervlakte As Decimal?
     End Class
 
 End Namespace

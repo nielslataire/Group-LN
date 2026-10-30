@@ -393,10 +393,10 @@
                     </div>
                     <div class="gl-v2-section-grid">
                         <div class="gl-v2-col-4">
-                            @Html.EditorFor(m => m.Unit.GroundSurface, "GlV2NumberUnit", new { Label = "Grondoppervlakte", Unit = "m²", Max = "volgens kadaster", Placeholder = "0,00" })
+                            @Html.EditorFor(m => m.Unit.GroundSurface, "GlV2NumberUnit", new { Label = "Grondoppervlakte", Unit = "m²", Max = "volgens landmeter", Placeholder = "0,00" })
                         </div>
                         <div class="gl-v2-col-4">
-                            @Html.EditorFor(m => m.Unit.Surface, "GlV2NumberUnit", new { Label = "Bewoonbare oppervlakte", Unit = "m²", Max = "netto, binnenmaten", Placeholder = "0,00" })
+                            @Html.EditorFor(m => m.Unit.Surface, "GlV2NumberUnit", new { Label = "Bewoonbare oppervlakte", Unit = "m²", Max = "bruto: buitenkant muur, midden gemene muur", Placeholder = "0,00" })
                         </div>
                     </div>
                 </section>

@@ -30,7 +30,7 @@ faq:
 5. Klik op **Wijzigingen opslaan**.
 
 De gekozen partners staan daarna in de kaart **Algemene gegevens** op de projectpagina.
-[VRAAG: wie is de verkoopverantwoordelijke, en wat doet CPM met die keuze?]
+De verkoopverantwoordelijke is de gebruiker die je hier kiest. CPM mailt die persoon bij een getekend meerwerk (anders de projectverantwoordelijke) en verwittigt hem of haar via de trajecttriggers voor de rol Verkoper.
 
 ## Verplichte documenten aanduiden
 
@@ -46,4 +46,4 @@ postinterventiedossier en de elektrische keuring, waterkeuring, branddetectiekeu
 ## Resultaat
 
 Het tabblad houdt bij welke documenten verplicht zijn en of ze al zijn aangeleverd. Het bewaart zelf
-geen bestanden. [VRAAG: waarschuwt CPM als een verplicht document ontbreekt, en waar?]
+geen bestanden. CPM waarschuwt enkel op het Dashboard en enkel voor opgeleverde projecten: in geel staat welke aangevinkte documenten nog ontbreken. Op een lopend project verschijnt geen waarschuwing.

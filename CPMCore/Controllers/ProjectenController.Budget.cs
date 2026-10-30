@@ -1497,6 +1497,10 @@ namespace CPMCore.Controllers
             if (GebruikGlV2)
             {
                 await PrepareWizardV2(versieId, 9);
+                // Aantal units dat bij "Definitief maken" bijgewerkt kan worden (verkooplijn met gekoppelde unit en een grond- of bouwwaarde).
+                ViewBag.DoorzetbareUnits = await _db.BudgetVerkoopLijn.AsNoTracking()
+                    .Where(l => l.BudgetVersieId == versieId && l.UnitId != null && (l.Grondwaarde != null || l.Bouwwaarde != null))
+                    .Select(l => l.UnitId).Distinct().CountAsync();
                 return View("BudgetResultaatV2", model);
             }
             return View(model);

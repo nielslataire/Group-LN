@@ -44,19 +44,15 @@
        iOS negeren het en gebruiken window.visualViewport (gl-v2-shell.js, GlV2MobileSearch). *@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
     @await Html.PartialAsync("_PwaHead")
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700,800&display=swap" rel="stylesheet" type="text/css">
+    <link href="~/lib/vendor/fonts/fonts.css" rel="stylesheet" type="text/css">
     @* gl-v2: enige nieuwe font-load t.o.v. _Layout.cshtml, enkel geladen op deze shell. IBM Plex Sans
        i.p.v. Open Sans als schreefloos werkpaard (--gl-v2-font-sans, gl-v2-tokens.css). *@
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/lib/animate/animate.compat.css">
     <link rel="stylesheet" href="~/lib/font-awesome/css/all.min.css" />
-    <link href="https://cdn.boxicons.com/3.0.8/fonts/basic/boxicons.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@phosphor-icons/web@@2.1.2/src/regular/style.css">
+    <link href="~/lib/vendor/boxicons-3.0.8/boxicons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/lib/vendor/phosphor-2.1.2/style.css">
     <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
     <link rel="stylesheet" href="~/lib/bootstrap-datepicker/css/bootstrap-datepicker3.css" />
     <link rel="stylesheet" href="~/lib/jquery-ui/jquery-ui.css" />
@@ -433,7 +429,7 @@
        pagina in @@section PageScripts (AddClientAccountV2 miste ze en toonde "100000.00" i.p.v.
        "100.000,00"). gl-v2-shell.js initialiseert ze bij het laden; een pagina die rijen dynamisch
        toevoegt roept daarna zelf window.CurrencyMask.init(".Currencymask") opnieuw aan (idempotent). *@
-    <script src="https://cdn.jsdelivr.net/npm/autonumeric@4.10.5/dist/autoNumeric.min.js"></script>
+    <script src="~/lib/vendor/autonumeric-4.10.5/autoNumeric.min.js"></script>
     <script src="~/js/currency.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-bedrijfsnaam.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-shell.js" asp-append-version="true"></script>

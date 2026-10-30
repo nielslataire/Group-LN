@@ -14,6 +14,7 @@ namespace CPMCore.Controllers;
 public partial class ProjectenController
 {
     private VerkoopService Verkoop => HttpContext.RequestServices.GetRequiredService<VerkoopService>();
+    private bool CanWriteVerkoopInstellingen => HttpContext.RequestServices.GetRequiredService<IPermissionService>().HasWrite(PermissionCodes.ProjectsSalesSettings);
     private bool CanWriteVerkoop => HttpContext.RequestServices.GetRequiredService<IPermissionService>().HasWrite(PermissionCodes.ProjectsForSale);
 
     private void SetVerkoopBreadcrumb(int projectid, string projectName, string? leaf = null, string? leafAction = null)
@@ -42,7 +43,7 @@ public partial class ProjectenController
         var projectName = _projectService.GetProjectNameById(projectid);
         var vm = new VerkoopInstellingenVm
         {
-            ProjectId = projectid, ProjectName = projectName, CanWrite = CanWriteVerkoop,
+            ProjectId = projectid, ProjectName = projectName, CanWrite = CanWriteVerkoopInstellingen,
             Instellingen = await Verkoop.GetInstellingenAsync(projectid), Website = await Verkoop.GetWebsiteAsync(projectid),
         };
         var rijen = (await Verkoop.GetIndexAsync(projectid)).Rijen;
@@ -68,7 +69,7 @@ public partial class ProjectenController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsForSale)]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsSalesSettings)]
     public async Task<IActionResult> SalesSettingsSaveV2(int projectid, IFormCollection form)
     {
         string F(string k) => form[k].ToString();
@@ -87,8 +88,13 @@ public partial class ProjectenController
         {
             SaleVisible = F("salevisible") == "1", IsFeatured = F("featured") == "1",
             DisplayStatus = int.TryParse(F("displaystatus"), out var ds) && ds > 0 ? ds : null,
-            Title = F("title"), Text = SchoonWebsiteTekst(F("text")), BankAccountId = int.TryParse(F("bankaccount"), out var bid) && bid > 0 ? bid : null,
+            Title = F("title"), Text = SchoonWebsiteTekst(F("text")),
+            InschrijvingTitle = F("institle").Trim(), InschrijvingText = SchoonWebsiteTekst(F("instext")), BankAccountId = int.TryParse(F("bankaccount"), out var bid) && bid > 0 ? bid : null,
         };
+
+        // De inschrijvingspagina toont enkel een titel en tekst die er echt zijn: zonder beide kan de status niet gezet worden.
+        if (w.DisplayStatus == (int)BOCore.SalesDisplayStatus.Inschrijving && (string.IsNullOrWhiteSpace(w.InschrijvingTitle) || string.IsNullOrWhiteSpace(w.InschrijvingText)))
+            return Json(new { ok = false, error = "Vul een titel en een tekst in voor de inschrijvingspagina om de status Inschrijving te kunnen kiezen." });
 
         // Nieuwe rekening via de lijst: zelfde aanmaak als het oude scherm (zoekt eerst op IBAN).
         string? iban = null;

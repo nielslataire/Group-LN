@@ -232,6 +232,8 @@
     }
     ["ct-export", "ct-export-m", "ct-sel-export"].forEach(function (i) { var b = document.getElementById(i); if (b) b.addEventListener("click", openExport); });
     var fmt = "xlsx";
+    // De exportmodal staat er enkel voor wie exportrecht heeft (CanExport); zonder die modal mag de rest van het script niet stoppen.
+    if ($("#ct-x-news")) {
     $("#ct-x-news").addEventListener("change", refreshExportNote);
     $("#ct-x-formats").addEventListener("click", function (e) {
         var b = e.target.closest("[data-format]"); if (!b) return; fmt = b.dataset.format;
@@ -244,6 +246,7 @@
         $("#ct-export-form").submit();
         var m = modal("ct-export-modal"); if (m) setTimeout(function () { m.hide(); }, 400);
     });
+    }
 
     // ── DataTable + paginagrootte ──
     var card = $(".gl-v2-ct-card");

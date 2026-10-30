@@ -77,7 +77,7 @@ Rechts staat de kaart **VERKOOPPRIJS**. Ze rekent live: grond, bouw en de totaal
 
 ## 4. Oppervlaktes
 
-Vul de **Grondoppervlakte** (volgens kadaster) en de **Bewoonbare oppervlakte** in, in m². Die laatste is netto, binnenmaten.
+Vul de **Grondoppervlakte** (volgens landmeter) en de **Bewoonbare oppervlakte** in, in m². Die laatste is bruto: gemeten tot de buitenkant van de muur en bij appartementen tot het midden van de gemene muur.
 
 ## 5. Indeling
 

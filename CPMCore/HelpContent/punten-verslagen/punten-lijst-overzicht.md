@@ -32,9 +32,10 @@ De lijst toont standaard enkel open punten. Wil je ook afgesloten punten zien, z
 1. Vink de punten aan die je wilt aanpassen. Bovenaan verschijnt een donkere balk.
 2. Kies **Goedkeuren**, **Status wijzigen**, **Deadline wijzigen**, **Aannemer wijzigen** of **Verwijderen**.
 
-[VRAAG: kun je een verwijderd punt terugzetten, en krijgt de aannemer een melding bij Goedkeuren?]
+Een verwijderd punt kun je niet terugzetten. Het verdwijnt definitief, samen met de foto's, de historiek en de meldingen.
+[VRAAG: krijgt de aannemer een melding als je in de lijst Goedkeuren kiest? Bij Goedkeuren en doorsturen op de detailpagina mailt CPM de aannemer wel.]
 
 ## Een punt openen
 
 Klik op een rij. Je ziet de foto's, de beschrijving en de historiek. Je kunt het punt ook **In de
-wacht** zetten. [VRAAG: wat betekent In de wacht voor de aannemer en voor de deadline?]
+wacht** zetten. Je geeft een reden en een opvolgdatum op. De deadline loopt dan niet meer door, dus het punt wordt niet te laat. De aannemer ziet het punt nog in het portaal als In de wacht en het blijft open. Bij het doorsturen gaat het niet mee.

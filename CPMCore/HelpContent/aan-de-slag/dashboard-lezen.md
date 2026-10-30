@@ -25,7 +25,7 @@ faq:
   - q: Verandert Rangschikken ook het dashboard van mijn collega's?
     a: Nee. De volgorde van je werven en de vastgezette projecten zijn persoonlijk.
   - q: Wat is het verschil tussen Fysiek en Financieel op een werfkaart?
-    a: Fysiek is de stand van de werf. Financieel is de stand van de facturatie. Loopt Fysiek merkbaar achter op Financieel, dan kleurt de balk goud. [VRAAG: hoe wordt het percentage Fysiek en Financieel berekend?]
+    a: Fysiek is de stand van de werf. Financieel is de stand van de facturatie. Loopt Fysiek meer dan 5 procentpunten achter op Financieel, dan kleurt de balk goud. Fysiek vergelijkt per groep werkzaamheden wat aannemers al gefactureerd hebben met het budget, tot maximaal 95% zolang de groep niet klaar is. Staat er voortgang in de planning, dan telt die. Zijn er verkochte eenheden met een akte, dan telt het aandeel gefactureerde betaalschijven. Financieel is wat aannemers al gefactureerd hebben ten opzichte van het budget of het contract, en kan boven 100% komen. CPM herberekent beide elke nacht, behalve voor opgeleverde projecten.
 ---
 ## De vier kerncijfers bovenaan lezen
 

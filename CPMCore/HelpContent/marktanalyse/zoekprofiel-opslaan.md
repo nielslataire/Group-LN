@@ -25,7 +25,7 @@ faq:
   - q: Wat staat er bij Laatste zoekacties?
     a: De zoekopdrachten die je recent deed, met het aantal gevonden panden en de datum. Een klik herhaalt de zoekopdracht met de huidige gegevens.
   - q: Kan ik een opgeslagen profiel hernoemen of verwijderen?
-    a: [VRAAG: kan een gebruiker een opgeslagen profiel hernoemen of verwijderen, en waar?]
+    a: Nee. Je kunt een zoekopdracht herhalen, maar niet hernoemen of verwijderen.
 ---
 ## Een zoekprofiel opslaan
 

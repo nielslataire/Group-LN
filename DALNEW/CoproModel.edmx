@@ -564,6 +564,8 @@
           <Property Name="ParcelCost" Type="decimal" Precision="19" Scale="4" />
           <Property Name="SalesDisplayStatus" Type="int" />
           <Property Name="IsFeatured" Type="bit" />
+          <Property Name="InschrijvingTitle" Type="nvarchar" MaxLength="200" />
+          <Property Name="InschrijvingText" Type="nvarchar(max)" />
         </EntityType>
         <EntityType Name="ProjectStatus">
           <Key>
@@ -3728,6 +3730,8 @@ warning 6002: The table/view 'cpmDevelop.dbo.UtilityPercentage' does not have a 
           <Property Name="ParcelCost" Type="Decimal" Precision="19" Scale="4" />
           <Property Name="SalesDisplayStatus" Type="Int32" />
           <Property Name="IsFeatured" Type="Boolean" />
+          <Property Name="InschrijvingTitle" Type="String" MaxLength="200" FixedLength="false" Unicode="true" />
+          <Property Name="InschrijvingText" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
         </EntityType>
         <Association Name="FK_ProjectSalesSettings_Project">
           <End Type="copropmModel.Project" Role="Project" Multiplicity="1" />
@@ -5043,6 +5047,8 @@ warning 6002: The table/view 'cpmDevelop.dbo.UtilityPercentage' does not have a 
                 <ScalarProperty Name="Id" ColumnName="Id" />
                 <ScalarProperty Name="SalesDisplayStatus" ColumnName="SalesDisplayStatus" />
                 <ScalarProperty Name="IsFeatured" ColumnName="IsFeatured" />
+                <ScalarProperty Name="InschrijvingTitle" ColumnName="InschrijvingTitle" />
+                <ScalarProperty Name="InschrijvingText" ColumnName="InschrijvingText" />
               </MappingFragment>
             </EntityTypeMapping>
           </EntitySetMapping>

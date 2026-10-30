@@ -220,7 +220,7 @@
         $("#pt-add-file-meta").textContent = fmtMb(file.size);
         var isPdf = /\.pdf$/i.test(file.name), lib = window.pdfjsLib || window["pdfjs-dist/build/pdf"];
         if (isPdf && lib) {
-            lib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+            lib.GlobalWorkerOptions.workerSrc = "/lib/vendor/pdfjs-3.11.174/pdf.worker.min.js";
             file.arrayBuffer().then(function (buf) { return lib.getDocument({ data: buf }).promise; }).then(function (doc) {
                 return doc.getPage(1).then(function (pg) { var vp = pg.getViewport({ scale: 1 }); $("#pt-add-file-meta").textContent = fmtMb(file.size) + " · " + doc.numPages + (doc.numPages === 1 ? " pagina" : " pagina's") + " · " + paperOf(vp.width, vp.height); });
             }).catch(function () { });

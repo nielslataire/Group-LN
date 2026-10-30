@@ -30,7 +30,7 @@ faq:
   - q: Wat is de verkoopgraad van een project?
     a: Het deel van de units van het project dat verkocht is. Kent CPM de units niet, dan gebruikt ze het percentage uit de advertentie zelf. Dat zie je aan het info-bolletje.
   - q: Waar komen de gegevens vandaan en hoe vaak worden ze bijgewerkt?
-    a: De gegevens komen uit advertenties op vastgoedwebsites. De bron staat bij elk project. [VRAAG: hoe vaak worden de gegevens bijgewerkt en welke bronnen zijn er precies?]
+    a: De gegevens komen uit advertenties op vastgoedwebsites. De bron staat bij elk project. De bronnen zijn Immoweb en Zimmo. Immoweb wordt ongeveer dagelijks opnieuw opgehaald, Zimmo om de drie dagen. Een advertentie die zeven dagen niet meer verschijnt, telt niet meer mee. De analyse rekent live met de laatst opgehaalde gegevens. Een ophaaltijdstip toont ze niet.
 ---
 ## Een gemeente kiezen
 

@@ -11,6 +11,9 @@ Public Enum SalesDisplayStatus As Integer
     <Display(Name:="Lancering")>
     Lancering = 3
 
+    <Display(Name:="Inschrijving")>
+    Inschrijving = 4
+
     <Display(Name:="Uitverkocht")>
     Uitverkocht = 8
 

@@ -46,6 +46,8 @@ namespace ServiceCore.Translators
                 bo.ParcelCost = _entity.ParcelCost;
             bo.SalesDisplayStatus = _entity.SalesDisplayStatus;
             bo.IsFeatured = _entity.IsFeatured;
+            bo.InschrijvingTitle = _entity.InschrijvingTitle;
+            bo.InschrijvingText = _entity.InschrijvingText;
 
             return ErrorCode.Success;
         }
@@ -72,6 +74,8 @@ namespace ServiceCore.Translators
             _entity.ParcelCost = bo.ParcelCost;
             _entity.SalesDisplayStatus = bo.SalesDisplayStatus;
             _entity.IsFeatured = bo.IsFeatured;
+            _entity.InschrijvingTitle = bo.InschrijvingTitle;
+            _entity.InschrijvingText = bo.InschrijvingText;
 
             return ErrorCode.Success;
         }

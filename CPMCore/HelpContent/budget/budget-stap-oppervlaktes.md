@@ -55,7 +55,7 @@ De tabel heeft veel kolommen. Ze staan in groepen. Met de knoppen bij **Kolommen
 | Grond | Grond m², Grond 2 m² |
 
 Vul alleen de kolommen in die voor een eenheid gelden. De laatste kolom, **Gered. m²**, is het resultaat. Je vult ze niet zelf in.
-[VRAAG: wat betekenen de afkortingen T. prefab, T. gvl., Dakt., Gar. bgr., Berg. ond., Berg. gvl. en Doorrit precies?]
+De afkortingen betekenen: **T. prefab** terras prefab, **T. gvl.** terras gelijkvloers, **Dakt.** dakterras, **Gar. bgr.** garages bovengronds, **Berg. ond.** garage of berging ondergronds, **Berg. gvl.** berging gelijkvloers en **Doorrit** doorrit gelijkvloers.
 
 ### Grond in twee zones
 
@@ -80,7 +80,7 @@ De kolom **Poorten** is het aantal garagepoorten van die rij. Hoe je het invult,
 
 Een factor bepaalt hoeveel een oppervlakte meetelt in de gereduceerde oppervlakte. Bij de factor 0,05 telt 100 m² tuin mee voor 5 m².
 De factoren gelden alleen voor deze versie. Het verkoopvoorstel in stap 8 rekent ermee.
-Met **Standaard VMSW herstellen** zet je alle factoren terug. [VRAAG: waar komen de standaardfactoren vandaan, en wie mag ze aanpassen?]
+Met **Standaard VMSW herstellen** zet je alle factoren terug. De standaardfactoren zijn de vaste VMSW-reductiefactoren. Ze staan vast in CPM en je vindt ze niet in Instellingen. Je past ze enkel per versie aan, met een waarde tussen 0 en 2.
 
 ## Resultaat
 

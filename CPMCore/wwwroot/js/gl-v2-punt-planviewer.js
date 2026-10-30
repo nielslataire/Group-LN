@@ -4,7 +4,7 @@
 // x en y zijn genormaliseerd (0..1) ten opzichte van de pagina, dus onafhankelijk van zoom of schermgrootte.
 (function () {
     "use strict";
-    var WORKER = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+    var WORKER = "/lib/vendor/pdfjs-3.11.174/pdf.worker.min.js";
 
     function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html) e.innerHTML = html; return e; }
 

@@ -188,4 +188,24 @@ Public Class ProjectSalesSettingsBO
             _isfeatured = value
         End Set
     End Property
+    Private _inschrijvingtitle As String
+    <Display(Name:="Titel inschrijvingspagina")>
+    Public Property InschrijvingTitle() As String
+        Get
+            Return _inschrijvingtitle
+        End Get
+        Set(ByVal value As String)
+            _inschrijvingtitle = value
+        End Set
+    End Property
+    Private _inschrijvingtext As String
+    <Display(Name:="Tekst inschrijvingspagina")>
+    Public Property InschrijvingText() As String
+        Get
+            Return _inschrijvingtext
+        End Get
+        Set(ByVal value As String)
+            _inschrijvingtext = value
+        End Set
+    End Property
 End Class

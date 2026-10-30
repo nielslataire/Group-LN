@@ -99,14 +99,22 @@
 
         // ── paneel ─────────────────────────────────────────────────────────────────────────────────
         function position() {
-            if (window.innerWidth < 768) { panel.style.top = panel.style.left = panel.style.width = panel.style.maxHeight = ""; return; }   // gsm: CSS + GlV2MobileSearch bepalen de plek
+            if (window.innerWidth < 768) { panel.style.top = panel.style.bottom = panel.style.left = panel.style.width = panel.style.maxHeight = ""; return; }   // gsm: CSS + GlV2MobileSearch bepalen de plek
             var r = field.getBoundingClientRect();
             var full = root.getBoundingClientRect();
             var width = Math.max(full.width, 240);
             panel.style.width = width + "px";
             panel.style.left = Math.max(8, Math.min(full.left, window.innerWidth - width - 8)) + "px";
-            panel.style.top = (r.bottom + 4) + "px";
-            panel.style.maxHeight = Math.max(160, Math.min(340, window.innerHeight - r.bottom - 16)) + "px";
+            // Past de lijst niet onder het veld (bv. de laatste rij van een tabel)? Dan naar boven openklappen.
+            panel.style.maxHeight = "340px";
+            var natuurlijk = Math.min(panel.scrollHeight, 340), onder = window.innerHeight - r.bottom - 16, boven = r.top - 16;
+            if (natuurlijk > onder && boven > onder) {
+                panel.style.top = ""; panel.style.bottom = (window.innerHeight - r.top + 4) + "px";
+                panel.style.maxHeight = Math.max(160, Math.min(340, boven)) + "px";
+            } else {
+                panel.style.bottom = ""; panel.style.top = (r.bottom + 4) + "px";
+                panel.style.maxHeight = Math.max(160, Math.min(340, onder)) + "px";
+            }
         }
         function open() {
             if (isLocked()) return;

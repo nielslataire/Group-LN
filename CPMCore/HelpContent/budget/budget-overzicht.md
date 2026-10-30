@@ -97,4 +97,4 @@ Klik op **Nieuw budget** of op de lege kaart naast de budgetten. Je start leeg o
 ## Let op
 
 - Een nieuwe versie maken, doe je altijd via **Nieuwe versie op basis van de huidige**. Zo behoud je de oude cijfers.
-- Een budget dat niet het actieve budget is, kan verwijderd worden. [VRAAG: waar verwijder je een budget? Op de pagina Budgetten vond ik geen knop.]
+- Een budget dat niet het actieve budget is, kan verwijderd worden. Je verwijdert een versie met het prullenbakje dat verschijnt als je over de rij van de versie beweegt. Daarvoor heb je verwijderrecht nodig, en een definitieve versie kan niet verwijderd worden. Verwijder je de laatste versie, dan verdwijnt het hele budget.

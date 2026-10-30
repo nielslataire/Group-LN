@@ -362,6 +362,7 @@ else
                     Items = alleVersies.Where(x => x.Versie.Status != "Definitief").Select(x => new GlV2SelectItem { Value = x.Versie.Id.ToString(), Text = $"v{x.Versie.Versienummer}" + (string.IsNullOrWhiteSpace(x.Versie.VersieNaam) ? "" : " · " + x.Versie.VersieNaam) + $" ({x.Versie.Status})", Group = x.Master.Naam }).ToList()
                 })
                 <div class="gl-v2-notice gl-v2-notice-compact is-warning"><i class="ph ph-warning" aria-hidden="true"></i><span>De huidige definitieve versie wordt weer bewerkbaar ("Afgerond"); de gekozen versie wordt alleen-lezen.</span></div>
+                <label class="gl-v2-bw-calcswitch" title="Zet de grondwaarde en bouwwaarde van de verkooplijnen naar de gekoppelde units. Verkochte units blijven ongemoeid."><input type="checkbox" class="gl-v2-toggle-switch" name="doorzetten" value="true" checked /> Prijzen doorzetten naar de gekoppelde units</label>
             </div>
             <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-lock-key" aria-hidden="true"></i>Definitief maken</button></div>
         </form>

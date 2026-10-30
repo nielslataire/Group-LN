@@ -26,7 +26,7 @@
     var statusItems = new[]
     {
         new GlV2SelectItem { Value = "1", Text = "Beschikbaar" }, new GlV2SelectItem { Value = "2", Text = "Binnenkort" },
-        new GlV2SelectItem { Value = "3", Text = "Lancering" }, new GlV2SelectItem { Value = "8", Text = "Uitverkocht" },
+        new GlV2SelectItem { Value = "3", Text = "Lancering" }, new GlV2SelectItem { Value = "4", Text = "Inschrijving" }, new GlV2SelectItem { Value = "8", Text = "Uitverkocht" },
     }.ToList();
     var bankItems = Model.BankAccounts.Select(b => new GlV2SelectItem { Value = b.Value, Text = b.Text }).ToList();
     bankItems.Add(new GlV2SelectItem { Value = "new", Text = "+ Nieuwe rekening toevoegen" });
@@ -160,7 +160,7 @@
                             <label class="gl-v2-toggle-row" for="vs-featured"><input type="checkbox" id="vs-featured" name="featured" value="1" class="gl-v2-toggle-switch" @(w.IsFeatured ? "checked" : "") /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Uitgelicht project</span><span class="gl-v2-toggle-hint">bovenaan de homepage</span></span></label>
                         </div>
                         <div class="gl-v2-col-6">
-                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "displaystatus", Id = "vs-status", Label = "Website status", Value = w.DisplayStatus?.ToString() ?? "", EmptyText = "Automatisch bepalen", Items = statusItems, Help = "automatisch volgt uit de status van de eenheden" })
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "displaystatus", Id = "vs-status", Label = "Website status", Value = w.DisplayStatus?.ToString() ?? "", EmptyText = "Automatisch bepalen", Items = statusItems, Help = "automatisch volgt uit de status van de eenheden · Inschrijving toont de inschrijvingspagina in plaats van de projectpagina" })
                         </div>
                         <div class="gl-v2-col-12">
                             <div class="gl-v2-field"><label class="gl-v2-field-label" for="vs-title">Titel</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="vs-title" name="title" value="@w.Title" placeholder="Titel voor de website" autocomplete="off" /></div><span class="gl-v2-field-help" id="vs-title-count"></span></div>
@@ -177,6 +177,22 @@
                                     <input type="hidden" id="vs-text" name="text" />
                                 </div>
                                 <span class="gl-v2-field-help" id="vs-text-count"></span>
+                            </div>
+                        </div>
+                        <div class="gl-v2-col-12" id="vs-ins" @(w.DisplayStatus == 4 ? "" : "hidden")>
+                            <div class="gl-v2-field"><label class="gl-v2-field-label" for="vs-ins-title">Titel inschrijvingspagina</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="vs-ins-title" name="institle" value="@w.InschrijvingTitle" maxlength="200" placeholder="Titel voor de inschrijvingspagina" autocomplete="off" /></div><span class="gl-v2-field-help">verplicht bij de status Inschrijving · blijft verborgen op de site zolang die status niet gekozen is</span></div>
+                        </div>
+                        <div class="gl-v2-col-12" id="vs-ins-text-wrap" @(w.DisplayStatus == 4 ? "" : "hidden")>
+                            <div class="gl-v2-field"><span class="gl-v2-field-label">Tekst inschrijvingspagina</span>
+                                <div class="gl-v2-vs-rte">
+                                    <div class="gl-v2-vs-rte-bar" role="toolbar" aria-label="Opmaak inschrijvingstekst">
+                                        <button type="button" data-cmd="bold" title="Vet" aria-label="Vet"><i class="ph ph-text-b" aria-hidden="true"></i></button>
+                                        <button type="button" data-cmd="italic" title="Cursief" aria-label="Cursief"><i class="ph ph-text-italic" aria-hidden="true"></i></button>
+                                        <button type="button" data-cmd="insertUnorderedList" title="Lijst" aria-label="Lijst"><i class="ph ph-list-bullets" aria-hidden="true"></i></button>
+                                    </div>
+                                    <div class="gl-v2-vs-rte-body" id="vs-ins-edit" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Tekst voor de inschrijvingspagina">@Html.Raw(w.InschrijvingText)</div>
+                                    <input type="hidden" id="vs-ins-text" name="instext" />
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -25,7 +25,7 @@ faq:
 
 De linkerkaart toont de huidige fase van het traject en de eerstvolgende mijlpaal met haar datum.
 Is een mijlpaal achterstallig, dan verschijnt ze ook in het paneel **Vraagt actie**.
-[VRAAG: wat is een mijlpaal en wie vinkt ze af?]
+Een mijlpaal is een belangrijk moment in het traject. Je vinkt ze zelf af. CPM doet het ook automatisch zodra het gekoppelde gegeven er is, bijvoorbeeld een document, een datum of een betaalde schijf. Dat controleert CPM elke nacht.
 
 ## De eenheden bekijken
 

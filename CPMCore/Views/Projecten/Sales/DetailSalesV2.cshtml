@@ -57,12 +57,16 @@
         <a class="gl-v2-btn gl-v2-btn-secondary" href="@berekenUrl"><i class="ph ph-calculator" aria-hidden="true"></i><span>Berekenen</span></a>
     }
     <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-vk-export"><i class="ph ph-export" aria-hidden="true"></i><span>Exporteren</span></button>
+    @if (Context.RequestServices.GetRequiredService<FacadeCore.IPermissionService>().HasRead(BOCore.PermissionCodes.ProjectsSalesSettings)) {
     <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("SalesSettings", "Projecten", new { projectid = Model.ProjectId })"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i><span>Instellingen</span></a>
+    }
 }
 @section MobileQuickActions
 {
     <button type="button" class="gl-v2-mobile-quickaction js-vk-export"><i class="ph ph-export" aria-hidden="true"></i>Exporteren</button>
+    @if (Context.RequestServices.GetRequiredService<FacadeCore.IPermissionService>().HasRead(BOCore.PermissionCodes.ProjectsSalesSettings)) {
     <a class="gl-v2-mobile-quickaction" href="@Url.Action("SalesSettings", "Projecten", new { projectid = Model.ProjectId })"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i>Instellingen</a>
+    }
 }
 @section ProjectMenu
 {

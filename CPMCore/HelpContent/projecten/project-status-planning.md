@@ -30,7 +30,7 @@ faq:
 ![Status, type project, grondaandelen en publicatie](/img/help/projecten/project-status-planning/1-status.png)
 
 De status staat als badge op de projectkaart en op de projectpagina. **Opgeleverd** betekent dat het
-volledige gebouw of project voorlopig is opgeleverd. [VRAAG: heeft een status nog andere gevolgen, bijvoorbeeld voor de voortgangscijfers op de projectkaart?]
+volledige gebouw of project voorlopig is opgeleverd. Een opgeleverd project wordt niet meer elke nacht herberekend voor Fysiek en Financieel. Opgeleverde en stopgezette projecten tellen niet meer als actief bij het koppelen van inkomende facturen en staan niet in de lijst met woonprojecten op de website.
 
 ## Het type project, de grondaandelen en de foto invullen
 

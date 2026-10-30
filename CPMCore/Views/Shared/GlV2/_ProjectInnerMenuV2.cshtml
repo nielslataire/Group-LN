@@ -57,6 +57,7 @@
     var canSeePostCalc     = PermissionService.HasRead(PermissionCodes.ProjectsPostCalculation);
     var canSeeChangeOrders = PermissionService.HasRead(PermissionCodes.ProjectsChangeOrders);
     var canSeeForSale      = PermissionService.HasRead(PermissionCodes.ProjectsForSale);
+    var canSeeSalesSettings = PermissionService.HasRead(PermissionCodes.ProjectsSalesSettings);
     var canSeeContacts     = PermissionService.HasRead(PermissionCodes.ProjectsContacts);
     // Elektronisch ondertekenen (ONDERTEKENEN_VOORTGANG.md, fase 1): eigen permissiecode én de
     // feature-vlag — de module blijft onzichtbaar tot Features:EnableSigning aanstaat.
@@ -120,7 +121,7 @@
 
     var verkoopItems = new List<(string Text, string Icon, string Href, bool Active, int? Count)>();
     if (canSeeForSale) verkoopItems.Add(("Te koop", "ph-tag", Url.Action("DetailSales", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailSales"), CountFor("Te koop")));
-    if (canSeeForSale) verkoopItems.Add(("Instellingen", "ph-sliders-horizontal", Url.Action("SalesSettings", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "SalesSettings"), null));
+    if (canSeeSalesSettings) verkoopItems.Add(("Instellingen", "ph-sliders-horizontal", Url.Action("SalesSettings", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "SalesSettings"), null));
     if (showContacts) verkoopItems.Add(("Contacten", "ph-address-book", Url.Action("DetailContacts", "Projecten", new { projectid = projectId }) ?? "#", IsHere("Projecten", "DetailContacts"), CountFor("Contacten")));
     if (verkoopItems.Count > 0) groups.Add(("verkoop", "Verkoop", verkoopItems));
 

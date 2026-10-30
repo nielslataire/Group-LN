@@ -137,11 +137,28 @@ namespace CPMCore.Controllers
         }
 
         [HttpPost, ValidateAntiForgeryToken]
-        public async Task<IActionResult> BudgetVersieDefinitief(int versieId)
+        public async Task<IActionResult> BudgetVersieDefinitief(int versieId, bool doorzetten = false)
         {
             var blok = await FoutenBlokkerenAsync(versieId); if (blok != null) return StatusResultaat(false, blok, versieId, nameof(BudgetResultaat));
             var r = _budgetService.MaakDefinitief(versieId, User?.Identity?.Name);
-            return StatusResultaat(r.Success, r.Messages.FirstOrDefault()?.Message ?? "", versieId, nameof(BudgetResultaat));
+            var melding = r.Messages.FirstOrDefault()?.Message ?? "";
+            // Optioneel meteen de grond- en bouwwaarde van de gekoppelde verkooplijnen naar de units doorzetten (dezelfde logica als de knop
+            // "Doorzetten naar units" in stap 8: verkochte units blijven ongemoeid, de bouwwaarde komt als basis-constructiewaarde op de unit).
+            // Een mislukte doorzetting maakt het definitief maken niet ongedaan: ze wordt als aparte melding teruggegeven.
+            if (r.Success && doorzetten)
+            {
+                try
+                {
+                    var d = await _verkoopVoorstelService.DoorzettenNaarUnitsAsync(versieId);
+                    var tekst = string.Join(" ", d.Messages.Select(m => m.Message).Where(t => !string.IsNullOrWhiteSpace(t)));
+                    melding = (melding + " " + (d.Success ? "Units: " : "De units zijn niet bijgewerkt: ") + tekst).Trim();
+                }
+                catch (Exception ex)
+                {
+                    melding = (melding + " De units zijn niet bijgewerkt: " + ex.Message).Trim();
+                }
+            }
+            return StatusResultaat(r.Success, melding, versieId, nameof(BudgetResultaat));
         }
 
         [HttpPost, ValidateAntiForgeryToken]

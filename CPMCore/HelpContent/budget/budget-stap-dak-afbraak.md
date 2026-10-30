@@ -60,4 +60,4 @@ CPM slaat de rijen meteen op. Klik onderaan op **Volgende: Activiteiten**.
 - Staat geen enkel daktype aan, dan is dat een fout. Je kunt dan niet afronden.
 - Veluxen bij een plat dak geven een waarschuwing.
 - Vul je een dakoppervlakte in zonder daktype in stap 1, dan is dat een fout.
-- [VRAAG: wat zijn dakoversteken en onderkant doorrit, en voor welke activiteit gebruikt CPM ze?]
+- Dakoversteken en onderkant doorrit zijn oppervlaktes in m². CPM telt ze in stap 6 mee bij de activiteit Daktimmerwerk, samen met het hellend dak.

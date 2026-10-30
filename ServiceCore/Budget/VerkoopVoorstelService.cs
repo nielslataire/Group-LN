@@ -157,6 +157,15 @@ namespace ServiceCore.Budget
                 return response;
             }
 
+            // Oppervlaktes uit stap 3 (per eenheidsnaam, zoals de verkooplijnen): grondoppervlakte = alle grondzones samen,
+            // bewoonbare oppervlakte = bewoonbaar + zolder, zonder VMSW-coëfficiënten (dus niet OppGereduceerd).
+            var oppResp = _budgetService.GetBudgetOppervlaktes(budgetVersieId);
+            var opps = (oppResp.Success && oppResp.Values != null ? oppResp.Values : new List<BudgetOppervlaktesBO>())
+                .Where(o => !string.IsNullOrWhiteSpace(o.EenheidNaam))
+                .GroupBy(o => o.EenheidNaam.Trim(), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+            static decimal? Opp(decimal v) => v > 0m ? Math.Round(v, 2) : null;
+
             var waarden = lijnen
                 .GroupBy(l => l.UnitId!.Value)
                 .Select(g => g.Last())
@@ -165,7 +174,9 @@ namespace ServiceCore.Budget
                     UnitId      = l.UnitId!.Value,
                     EenheidNaam = l.EenheidNaam,
                     Grondwaarde = (l.Grondwaarde.HasValue || l.GrondwaardeAgrarisch.HasValue) ? (l.Grondwaarde ?? 0m) + (l.GrondwaardeAgrarisch ?? 0m) : (decimal?)null,
-                    Bouwwaarde  = l.Bouwwaarde
+                    Bouwwaarde  = l.Bouwwaarde,
+                    GrondOppervlakte      = opps.TryGetValue((l.EenheidNaam ?? "").Trim(), out var o) ? Opp(o.Grondopp + o.GrondoppAgrarisch) : null,
+                    BewoonbareOppervlakte = opps.TryGetValue((l.EenheidNaam ?? "").Trim(), out var o2) ? Opp(o2.BewoonbareOpp + o2.Zolder) : null
                 })
                 .ToList();
 

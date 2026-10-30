@@ -55,4 +55,4 @@ welk bedrijf een factuur uitschrijft.
 
 ## Let op
 
-[VRAAG: wat gebeurt er met bestaande facturen als je later een ander facturatiebedrijf kiest?]
+Kies je later een ander facturatiebedrijf, dan blijven bestaande facturen op het oude bedrijf staan. Enkel nieuwe facturen en nieuwe meerwerken gebruiken het nieuwe bedrijf. CPM waarschuwt hier niet voor.

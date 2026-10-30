@@ -57,7 +57,10 @@
     // ── tekst ──
     var edit = $("#vs-text-edit"), hid = $("#vs-text"), title = $("#vs-title");
     $$(".gl-v2-vs-rte-bar button").forEach(function (b) { b.addEventListener("mousedown", function (e) { e.preventDefault(); document.execCommand(b.dataset.cmd, false, null); refresh(); }); });
-    edit.addEventListener("paste", function (e) { e.preventDefault(); var t = (e.clipboardData || window.clipboardData).getData("text/plain"); document.execCommand("insertText", false, t); });
+    var insEdit = $("#vs-ins-edit"), insHid = $("#vs-ins-text"), status = $("#vs-status");
+    [edit, insEdit].forEach(function (el) { if (el) el.addEventListener("paste", function (e) { e.preventDefault(); var t = (e.clipboardData || window.clipboardData).getData("text/plain"); document.execCommand("insertText", false, t); }); });
+    // titel en tekst van de inschrijvingspagina tonen we enkel als de status Inschrijving (4) gekozen is
+    function insRefresh() { var on = status && status.value === "4"; $("#vs-ins").hidden = !on; $("#vs-ins-text-wrap").hidden = !on; }
     // enkel p, br, b, i, ul, li bewaren; geen attributen
     function clean(html) {
         var d = document.createElement("div"); d.innerHTML = html;
@@ -66,8 +69,10 @@
                 if (c.nodeType === 1) {
                     var tag = c.tagName.toLowerCase();
                     if (tag === "strong") tag = "b"; if (tag === "em") tag = "i";
+                    // Enter in het tekstvak maakt een <div> per regel: bewaar die als alinea, anders vallen de regels samen
+                    if (tag === "div") { var par = document.createElement("p"); while (c.firstChild) par.appendChild(c.firstChild); n.replaceChild(par, c); c = par; tag = "p"; }
                     walk(c);
-                    if (["p", "br", "b", "i", "ul", "li"].indexOf(tag) < 0) { while (c.firstChild) n.insertBefore(c.firstChild, c); n.removeChild(c); if (tag === "div") n.insertBefore(document.createElement("br"), null); }
+                    if (["p", "br", "b", "i", "ul", "li"].indexOf(tag) < 0) { while (c.firstChild) n.insertBefore(c.firstChild, c); n.removeChild(c); }
                     else { while (c.attributes.length) c.removeAttribute(c.attributes[0].name); }
                 } else if (c.nodeType !== 3) n.removeChild(c);
             });
@@ -123,10 +128,11 @@
     function snapshot() {
         var o = {};
         $$("input[name], select[name]", form).forEach(function (el) {
-            if (el.name === "__RequestVerificationToken" || el.name === "text") return;
+            if (el.name === "__RequestVerificationToken" || el.name === "text" || el.name === "instext") return;
             var k = el.name; if (el.type === "checkbox") o[k] = el.checked ? "1" : "0"; else o[k] = (o[k] == null ? "" : o[k] + "|") + el.value;
         });
         o.text = clean(edit.innerHTML);
+        o.instext = clean(insEdit.innerHTML);
         return o;
     }
     var start = snapshot();
@@ -137,18 +143,19 @@
         $("#vs-changes").textContent = n > 0 ? n + (n === 1 ? " wijziging" : " wijzigingen") + " niet opgeslagen" : "";
         $("#vs-dirty-badge").hidden = n === 0;
     }
-    form.addEventListener("input", refresh); form.addEventListener("change", function () { bankRefresh(); refresh(); });
+    form.addEventListener("input", refresh); form.addEventListener("change", function () { bankRefresh(); insRefresh(); refresh(); });
     if (bank) bank.addEventListener("change", function () { bankRefresh(); });
 
     // ── opslaan ──
     form.addEventListener("submit", function (e) {
         e.preventDefault(); if (!canWrite) return;
         hid.value = clean(edit.innerHTML);
+        insHid.value = clean(insEdit.innerHTML);
         var btn = $("#vs-save"); btn.disabled = true;
         fetch(form.dataset.saveUrl, { method: "POST", body: new FormData(form), credentials: "same-origin" })
             .then(function (r) { return r.json(); })
             .then(function (j) { if (j.ok) { window.onbeforeunload = null; location.href = j.redirect; } else { toast(j.error || "Opslaan is mislukt."); btn.disabled = false; } })
             .catch(function () { toast("Opslaan is mislukt."); btn.disabled = false; });
     });
-    bankRefresh(); refresh();
+    bankRefresh(); insRefresh(); refresh();
 })();

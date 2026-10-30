@@ -30,4 +30,12 @@ faq:
 
 ![De kaarten Type & vergoeding, Contractschijven en Uurtarieven](/img/help/projecten/project-coordinatie/1-coordinatie.png)
 
-[VRAAG: wat is het verschil tussen Puur coördinatieproject en Heeft coördinatie? En wanneer kies je Schijven, Regie of Gemengd?]
+**Heeft coördinatie** zet het contract en de pagina Coördinatie open. Zonder die vlag bewaart CPM het contracttype, de contractschijven en de uurtarieven niet. **Puur coördinatieproject** verbergt Foto's en Contacten in het projectmenu en houdt het project van de website-hero.
+
+Het contracttype bepaalt wat je invult:
+
+- **Schijven**: je vult contractschijven in. Samen moeten ze 100% zijn.
+- **Regie**: je vult uren, uurtarieven en kilometervergoeding in.
+- **Gemengd**: je vult beide in.
+
+Is er geen type gekozen, dan toont de pagina Coördinatie de waarschuwing Geen contracttype geconfigureerd.

@@ -15,7 +15,7 @@
 	<link rel="stylesheet" href="~/lib/bootstrap-multiselect/css/bootstrap-multiselect.css">
 	<link rel="stylesheet" href="~/lib/dropzone/basic.css" />
 	<link rel="stylesheet" href="~/lib/dropzone/dropzone.css" />
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/inputmask/5.0.8/jquery.inputmask.min.js"></script>
+	<script src="~/lib/vendor/inputmask-5.0.8/jquery.inputmask.min.js"></script>
 
 }
 <div class="row">
@@ -215,6 +215,19 @@
 							<label class="col-lg-3 control-label text-lg-end pt-2 col-lg-3">@Html.LabelFor(m => m.Project.CommercialTextNL)</label>
 							<div class="col-lg-9">
 								@Html.TextAreaFor(m => m.Project.CommercialTextNL, new { placeholder = "Tekst voor website", @class = "form-control form-control-modern", @rows="5" })
+							</div>
+						</div>
+						<div class="row  align-items-center pb-3">
+							<label class="col-lg-3 control-label text-lg-end pt-2 col-lg-3">@Html.LabelFor(m => m.Settings.InschrijvingTitle)</label>
+							<div class="col-lg-9">
+								@Html.TextBoxFor(m => m.Settings.InschrijvingTitle, new { placeholder = "Titel voor de inschrijvingspagina (status Inschrijving)", @class = "form-control form-control-modern", maxlength = "200" })
+								@Html.ValidationMessageFor(m => m.Settings.InschrijvingTitle, "", new { @class = "text-danger" })
+							</div>
+						</div>
+						<div class="row  align-items-center pb-3">
+							<label class="col-lg-3 control-label text-lg-end pt-2 col-lg-3">@Html.LabelFor(m => m.Settings.InschrijvingText)</label>
+							<div class="col-lg-9">
+								@Html.TextAreaFor(m => m.Settings.InschrijvingText, new { placeholder = "Tekst voor de inschrijvingspagina (status Inschrijving)", @class = "form-control form-control-modern", @rows="5" })
 							</div>
 						</div>
 						</div>

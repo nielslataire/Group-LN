@@ -84,7 +84,7 @@ public class VerkoopService
         return new VerkoopWebsite
         {
             SaleVisible = s?.SaleVisible ?? false, IsFeatured = s?.IsFeatured ?? false, DisplayStatus = s?.SalesDisplayStatus,
-            Title = p?.CommercialTitleNl ?? "", Text = p?.CommercialTextNl ?? "", BankAccountId = s?.BankAccountId, BuilderCompanyId = p?.IssuerCompanyIdBuilder,
+            Title = p?.CommercialTitleNl ?? "", Text = p?.CommercialTextNl ?? "", InschrijvingTitle = s?.InschrijvingTitle ?? "", InschrijvingText = s?.InschrijvingText ?? "", BankAccountId = s?.BankAccountId, BuilderCompanyId = p?.IssuerCompanyIdBuilder,
         };
     }
 
@@ -101,6 +101,8 @@ public class VerkoopService
         s.MortageRegistrationCost = i.MortgageRegistrationCost; s.BaseCertificateCost = i.BaseCertificateCost;
         s.ParcelCost = i.ParcelCost; s.ConnectionFees = i.ConnectionFees; s.SurveyorCost = i.SurveyorCost;
         s.SaleVisible = w.SaleVisible; s.IsFeatured = w.IsFeatured; s.SalesDisplayStatus = w.DisplayStatus;
+        s.InschrijvingTitle = string.IsNullOrWhiteSpace(w.InschrijvingTitle) ? null : w.InschrijvingTitle.Trim();
+        s.InschrijvingText = string.IsNullOrWhiteSpace(w.InschrijvingText) ? null : w.InschrijvingText;
         if (w.BankAccountId.HasValue) { s.BankAccountId = w.BankAccountId; if (!string.IsNullOrWhiteSpace(bankIban)) s.BankAccountNumber = bankIban; }
 
         var p = await _db.Project.FirstOrDefaultAsync(x => x.ProjectId == projectId);
@@ -272,6 +274,9 @@ public class VerkoopWebsite
     public int? DisplayStatus { get; set; }
     public string Title { get; set; } = "";
     public string Text { get; set; } = "";
+    /// <summary>Eigen titel en tekst van de inschrijvingspagina; enkel zichtbaar op de site bij DisplayStatus = Inschrijving (4).</summary>
+    public string InschrijvingTitle { get; set; } = "";
+    public string InschrijvingText { get; set; } = "";
     public int? BankAccountId { get; set; }
     public int? BuilderCompanyId { get; set; }
 }

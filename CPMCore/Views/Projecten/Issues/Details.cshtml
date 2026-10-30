@@ -123,7 +123,7 @@
 })
 
 @section PageScripts {
-    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script src="~/lib/vendor/pdfjs-3.11.174/pdf.min.js"></script>
     <script>
         (() => {
             const projectId = @projectId;
@@ -147,7 +147,7 @@
             let pdfDoc = null;
             let currentUrl = '';
 
-            if (pdfJsApi) pdfJsApi.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+            if (pdfJsApi) pdfJsApi.GlobalWorkerOptions.workerSrc = '@Url.Content("~/lib/vendor/pdfjs-3.11.174/pdf.worker.min.js")';
 
             function drawMarker(){
                 if (markerX == null || markerY == null) { marker.style.display = 'none'; return; }

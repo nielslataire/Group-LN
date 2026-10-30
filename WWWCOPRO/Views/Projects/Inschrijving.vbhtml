@@ -31,8 +31,10 @@
 
     Dim imgSrc As String = If(Model.Data.DefaultPicture IsNot Nothing, Url.Content(imgBase & "pictures/800/" & Model.Data.DefaultPicture.Name), Url.Content("~/Content/img/no_image.jpg"))
     Dim imgAlt As String = If(Model.Data.DefaultPicture IsNot Nothing AndAlso Not String.IsNullOrEmpty(Model.Data.DefaultPicture.Caption), Model.Data.DefaultPicture.Caption, Model.Data.Name)
-    Dim titel As String = If(Not String.IsNullOrEmpty(Model.Data.CommercialTitleNL), Model.Data.CommercialTitleNL, Model.Data.Name)
-    Dim tekst As String = Model.Data.CommercialTextNL
+    ' Aparte titel en tekst voor de inschrijvingspagina (CPMCore > Verkoopinstellingen > Website, status Inschrijving),
+    ' los van de commerciële titel en tekst van de gewone projectpagina.
+    Dim titel As String = If(settings IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(settings.InschrijvingTitle), settings.InschrijvingTitle, Model.Data.Name)
+    Dim tekst As String = If(settings IsNot Nothing, settings.InschrijvingText, Nothing)
 
     Dim totalUnits As Integer = If(livingUnits > 0, livingUnits, numberAppartments + numberHouses + numberCommercial)
 

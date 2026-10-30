@@ -696,7 +696,7 @@
 @section PageScripts {
     <script src="~/lib/datatables/media/js/jquery.dataTables.min.js"></script>
     <script src="~/lib/datatables/media/js/dataTables.bootstrap5.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@@4.4.4/dist/chart.umd.min.js"></script>
+    <script src="~/lib/vendor/chartjs-4.4.4/chart.umd.js"></script>
 
     <!-- Locatie autocomplete + auto-submit + localStorage -->
     <script>
@@ -1102,7 +1102,7 @@ new Chart(document.getElementById('chartVerkoopgraad'), {
 
                 // ── Projecten DataTable ───────────────────────────────────────
                 var dtP = $('#tblProjecten').DataTable({
-                    language: { url: 'https://cdn.datatables.net/plug-ins/2.0.8/i18n/nl-NL.json' },
+                    language: { url: '@Url.Content("~/lib/datatables-2.2.2/nl-NL.json")' },
                     order: [[7, 'desc']],
                     pageLength: 10,
                     dom: domStr,
@@ -1120,7 +1120,7 @@ new Chart(document.getElementById('chartVerkoopgraad'), {
 
                 // ── Losse eenheden DataTable ──────────────────────────────────
                 var dtE = $('#tblLosseEenheden').DataTable({
-                    language: { url: 'https://cdn.datatables.net/plug-ins/2.0.8/i18n/nl-NL.json' },
+                    language: { url: '@Url.Content("~/lib/datatables-2.2.2/nl-NL.json")' },
                     order: [[0, 'asc']],
                     pageLength: 10,
                     dom: domStr,

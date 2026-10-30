@@ -697,6 +697,12 @@ namespace ServiceCore
                 if (w.Grondwaarde.HasValue)
                     unit.LandValue = w.Grondwaarde;
 
+                // Oppervlaktes uit het budget (grond = alle grondzones, bewoonbaar = bewoonbaar + zolder, bruto maten); enkel zetten als het budget ze kent.
+                if (w.GrondOppervlakte is > 0m)
+                    unit.GroundSurface = w.GrondOppervlakte;
+                if (w.BewoonbareOppervlakte is > 0m)
+                    unit.Surface = w.BewoonbareOppervlakte;
+
                 if (w.Bouwwaarde.HasValue)
                 {
                     var basis = basisWaarden.Where(cv => cv.UnitId == unit.Id).ToList();

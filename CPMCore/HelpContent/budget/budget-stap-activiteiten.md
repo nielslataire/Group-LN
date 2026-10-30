@@ -50,7 +50,7 @@ De kaart **Nacalculatie** vergelijkt het budget met afgewerkte projecten. Zo zie
 2. Klik op **Toepassen**.
 
 Onder de kaart staat hoe CPM de referentie berekent: de werkelijke kost, maal een indexfactor, gedeeld door het aantal eenheden van het referentieproject, maal het aantal eenheden van dit budget.
-Met **Referentieprojecten** rechtsboven in de kaart open je de lijst met projecten die je kunt kiezen. [VRAAG: wie beheert die lijst, en welke projecten komen erin?]
+Met **Referentieprojecten** rechtsboven in de kaart open je de lijst met projecten die je kunt kiezen. Die lijst beheer je in Instellingen, bij de referentieprojecten. Het zijn Excel-imports of projecten uit CPM die je daar als referentie hebt bewaard.
 
 ## De activiteiten per lot lezen
 

@@ -117,7 +117,9 @@
                         <span class="gl-v2-field-divider"></span>
                         <span class="gl-v2-section-card-desc">uit Verkoopinstellingen · notaris berekend</span>
                         <span class="gl-v2-section-card-spacer"></span>
+                        @if (Context.RequestServices.GetRequiredService<FacadeCore.IPermissionService>().HasRead(BOCore.PermissionCodes.ProjectsSalesSettings)) {
                         <a class="gl-v2-vb-link" href="@Url.Action("SalesSettings", "Projecten", new { projectid = Model.ProjectId })">Instellingen openen</a>
+                        }
                     </div>
                     <div class="gl-v2-vb-kbody" id="vb-kosten">
                         @if (u.IsAppartement) { @Html.Raw(Kost("vb-k-basecert", "Aandeel basisakte", i.BaseCertificateCost, "21")) }

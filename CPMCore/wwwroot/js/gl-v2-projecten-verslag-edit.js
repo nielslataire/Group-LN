@@ -214,7 +214,7 @@
             });
         }
         if (!lib) return Promise.reject(new Error("pdf.js ontbreekt"));
-        lib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+        lib.GlobalWorkerOptions.workerSrc = "/lib/vendor/pdfjs-3.11.174/pdf.worker.min.js";
         var docP = pdfCache[def.url] || (pdfCache[def.url] = lib.getDocument({ url: def.url, withCredentials: true }).promise);
         return docP.then(function (doc) { return doc.getPage(def.page || 1); }).then(function (pg) {
             var base = pg.getViewport({ scale: 1 }), scale = 2000 / base.width, vp = pg.getViewport({ scale: scale });

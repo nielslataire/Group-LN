@@ -20,7 +20,7 @@ faq:
   - q: Wat is onderfacturatie?
     a: De werf staat verder dan wat er al gefactureerd is.
   - q: Vanaf wanneer is een afwijking groot?
-    a: Dit antwoord volgt nog. [VRAAG: vanaf welk verschil in procent tussen fysieke en financiële voortgang meldt CPM een grote afwijking?]
+    a: Bij een verschil van meer dan 25 procentpunten tussen Fysiek en Financieel. Daaronder meldt CPM al overfacturatie (Financieel meer dan 15 punten boven Fysiek) of onderfacturatie (Fysiek meer dan 20 punten boven Financieel).
 ---
 ## Een actiepunt openen
 

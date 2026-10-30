@@ -1135,7 +1135,7 @@ else
             if ($('#tblUnits').length) {
                 var dt = $('#tblUnits').DataTable({
                     language: {
-                        url: 'https://cdn.datatables.net/plug-ins/2.0.8/i18n/nl-NL.json'
+                        url: '@Url.Content("~/lib/datatables-2.2.2/nl-NL.json")'
                     },
                     order: [[0, 'asc']],
                     pageLength: 10,

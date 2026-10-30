@@ -315,14 +315,14 @@
 <input type="hidden" id="cpAft" value="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
 
 @section PageScripts {
-<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="~/lib/vendor/pdfjs-3.11.174/pdf.min.js"></script>
 <script>
     var antiforgeryToken = document.getElementById('cpAft')?.value ?? '';
 
     // ── PDF.js setup ──────────────────────────────────────
     var pdfJsApi = window.pdfjsLib || window['pdfjs-dist/build/pdf'] || null;
     if (pdfJsApi) {
-        pdfJsApi.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+        pdfJsApi.GlobalWorkerOptions.workerSrc = '@Url.Content("~/lib/vendor/pdfjs-3.11.174/pdf.worker.min.js")';
     }
 
     // Pending photos per issue (array of File objects, not yet uploaded)

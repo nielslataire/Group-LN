@@ -147,6 +147,7 @@ namespace CPMCore.Controllers
 
         [HttpGet]
         [Breadcrumb("Verkoopsinstellingen", FromAction = "DetailSales")]
+        [CPMCore.Filters.PermissionRead(PermissionCodes.ProjectsSalesSettings)]
         //[Breadcrumb("Verkoopsinstellingen")]
         public async Task<IActionResult> SalesSettings(int projectid)
         {
@@ -205,8 +206,13 @@ namespace CPMCore.Controllers
         }
 
         [HttpPost]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsSalesSettings)]
         public async Task<IActionResult> SalesSettings(ProjectSalesSettingsModel model)
         {
+            if (model.Settings?.SalesDisplayStatus == (int)BOCore.SalesDisplayStatus.Inschrijving
+                && (string.IsNullOrWhiteSpace(model.Settings.InschrijvingTitle) || string.IsNullOrWhiteSpace(model.Settings.InschrijvingText)))
+                ModelState.AddModelError("Settings.InschrijvingTitle", "Vul een titel en een tekst in voor de inschrijvingspagina om de status Inschrijving te kunnen kiezen.");
+
             if (!ModelState.IsValid)
             {
                 await PopulateBankAccountsAsync(model);

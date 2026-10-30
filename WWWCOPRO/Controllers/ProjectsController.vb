@@ -220,6 +220,8 @@ Namespace Controllers
                 Return RedirectToRoutePermanent("CommercieelBySlug", New With {.slug = slug})
             End If
 
+            If IsInschrijvingActief(service, data.Id) Then Return RedirectToRoute("ProjectInschrijvingBySlug", New With {.slug = slug})
+
             Return RenderProjectDetail(data, service)
         End Function
 
@@ -252,6 +254,7 @@ Namespace Controllers
             If data.ProjectType = ProjectType.Commerciëel Then
                 Return RedirectToRoutePermanent("CommercieelBySlug", New With {.slug = slug})
             End If
+            If IsInschrijvingActief(service, data.Id) Then Return RedirectToRoute("ProjectInschrijvingBySlug", New With {.slug = slug})
 
             data.Pictures = data.Pictures.Where(Function(m) Not m.Type = PictureType.Nieuws).OrderByDescending(Function(m) m.DateTimeUploaded).ToList
 
@@ -316,6 +319,8 @@ Namespace Controllers
             If data.ProjectType = ProjectType.Woonproject Then
                 Return RedirectToRoutePermanent("ProjectBySlug", New With {.slug = slug})
             End If
+
+            If IsInschrijvingActief(service, data.Id) Then Return RedirectToRoute("ProjectInschrijvingBySlug", New With {.slug = slug})
 
             Return RenderProjectDetail(data, service)
         End Function
@@ -1257,6 +1262,23 @@ Namespace Controllers
             Return New CompanyBO
         End Function
 
+        ' Website-status "Inschrijving" (SalesDisplayStatus = 4): enkel dan toont het project de inschrijvingspagina
+        ' i.p.v. de gewone projectpagina, en enkel als de aparte inschrijvingstitel en -tekst ingevuld zijn.
+        ' Zo kan alles klaargezet worden zonder dat de pagina getoond wordt.
+        Private Const SalesDisplayStatusInschrijving As Integer = 4
+
+        Private Shared Function IsInschrijvingActief(settings As ProjectSalesSettingsBO) As Boolean
+            Return settings IsNot Nothing AndAlso
+                   settings.SalesDisplayStatus.HasValue AndAlso settings.SalesDisplayStatus.Value = SalesDisplayStatusInschrijving AndAlso
+                   Not String.IsNullOrWhiteSpace(settings.InschrijvingTitle) AndAlso
+                   Not String.IsNullOrWhiteSpace(settings.InschrijvingText)
+        End Function
+
+        Private Function IsInschrijvingActief(service As IProjectService, projectId As Integer) As Boolean
+            Dim resp = service.GetSalesSettings(projectId)
+            Return resp.Success AndAlso IsInschrijvingActief(resp.Value)
+        End Function
+
         <Route("Projects/Inschrijving/{slug}", Name:="ProjectInschrijvingBySlug")>
         <HttpGet>
         Function Inschrijving(slug As String) As ActionResult
@@ -1264,6 +1286,7 @@ Namespace Controllers
             Dim service = ServiceFactory.GetProjectService
             Dim response = service.GetProjectBySlug(slug)
             If response.Success Then model.Data = response.Values.FirstOrDefault
+            If model.Data Is Nothing OrElse model.Data.Id = 0 Then Return HttpNotFound()
             model.Data.Pictures = model.Data.Pictures.Where(Function(m) Not m.Type = PictureType.Nieuws).ToList
 
             Dim ids As New List(Of Integer)
@@ -1273,6 +1296,12 @@ Namespace Controllers
             If model.SalesSetttings Is Nothing Then
                 model.SalesSetttings = New ProjectSalesSettingsBO
                 model.SalesSetttings.SaleVisible = False
+            End If
+
+            ' Status niet (of nog niet volledig) op Inschrijving: gewoon de normale projectpagina tonen.
+            If Not IsInschrijvingActief(model.SalesSetttings) Then
+                If model.Data.ProjectType = ProjectType.Commerciëel Then Return RedirectToRoute("CommercieelBySlug", New With {.slug = slug})
+                Return RedirectToRoute("ProjectBySlug", New With {.slug = slug})
             End If
 
             ViewData("Title") = "Inschrijving " & model.Data.Name & " | Group LN"
@@ -1303,6 +1332,7 @@ Namespace Controllers
             Dim projectResp = service.GetProjectBySlug(slug)
             If Not projectResp.Success Then Return Json(New With {.success = False})
             Dim project As ProjectBO = projectResp.Values.FirstOrDefault
+            If project Is Nothing OrElse Not IsInschrijvingActief(service, project.Id) Then Return Json(New With {.success = False})
 
             Dim interestText As String = If(Not String.IsNullOrEmpty(model.Interest), model.Interest, "/")
             Dim questionText As String = "Interesse: " & interestText & If(Not String.IsNullOrEmpty(model.Remarks), " | Opmerkingen: " & model.Remarks, "")
