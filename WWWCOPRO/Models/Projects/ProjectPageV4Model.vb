@@ -3,7 +3,7 @@ Imports System.Linq
 Imports System.Web
 Imports System.Web.Mvc
 
-' ViewModel voor Views/Projects/DetailV4 (design "Project Detail v4 Split").
+' ViewModel voor Views/Projects/Detail (design "Project Detail v4 Split").
 '
 ' Alles wat de pagina toont zit in dit model: per blok een Visible-vlag + de teksten en
 ' beeld-URL's. De view bevat zelf geen projectspecifieke tekst. Het model is bewust een
@@ -477,7 +477,8 @@ Public Class V4BuildPhaseBlock
     Public Property Title As String = "Bouwfase"
     Public Property ProgressPercent As Integer
     Public Property Milestones As List(Of V4Milestone)
-    Public Property ShowUpdatesCta As Boolean = True
+    ' Uit zolang UpdatesPostUrl nergens aan een echte verzending gekoppeld is (anders toont het formulier een bevestiging zonder dat er iets bewaard wordt).
+    Public Property ShowUpdatesCta As Boolean = False
     Public Property UpdatesTitle As String = "Volg de werf"
     Public Property UpdatesText As String = "Ontvang maandelijks een korte update met foto's van de bouw."
     Public Property UpdatesButton As String = "Hou mij op de hoogte"

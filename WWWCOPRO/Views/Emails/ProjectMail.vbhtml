@@ -52,7 +52,7 @@ color:#445566;
  table[class=devicewidthsocial] {width:210px!important; text-align:center!important; padding-left:60px!important;}
 }</style>
         
-                <table width="100%" bgcolor="#f0f1f4" cellpadding="0" cellspacing="0" border="0" id="backgroundTable" style="border-top: 20px solid rgb(240, 241, 244);">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" id="backgroundTable">
                     <tbody>
                         <tr>
                             <td>
@@ -80,7 +80,7 @@ color:#445566;
 
 
 
-                <table width="100%" bgcolor="#f0f1f4" cellpadding="0" cellspacing="0" border="0" id="backgroundTable">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" id="backgroundTable">
                     <tbody>
                         <tr>
                             <td>
@@ -135,7 +135,7 @@ color:#445566;
                     </tbody>
                 </table>
 
-                <table width="100%" bgcolor="#f0f1f4" cellpadding="0" cellspacing="0" border="0" id="backgroundTable">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" id="backgroundTable">
                     <tbody>
                         <tr>
                             <td>
@@ -155,7 +155,7 @@ color:#445566;
                                                                         <tr>
                                                                             <td align="left" class="protext2" style="color: rgb(90, 90, 90); font-family: helvetica, arial, sans-serif; font-size: 13px; line-height: 22px; padding-top: 25px; padding-bottom: 25px; padding-right: 35px;">
                                                                                 <b style="font-size: 15px;">@ViewBag.Title</b><br><br>
-                                                                                @ViewBag.Text
+                                                                                @Html.Raw(ViewBag.Text)
                                                                             </td>
                                                                         </tr>
                                                                     </tbody>
@@ -164,7 +164,7 @@ color:#445566;
                                                         </tr>
                                                     </tbody>
                                                 </table>
-                                                <img class="emailImage" width="640" src="https://www.groupln.be/uploads/pictures/@(ViewBag.Image)" alt="@(If(Not String.IsNullOrWhiteSpace(CStr(ViewBag.Imagecaption)), CStr(ViewBag.Imagecaption), CStr(ViewBag.Projectname)))" saveddisplaymode="block">
+                                                <img class="emailImage" width="640" src="@WWWCOPRO.MailImageHelper.Url(CStr(ViewBag.Image))" alt="@(If(Not String.IsNullOrWhiteSpace(CStr(ViewBag.Imagecaption)), CStr(ViewBag.Imagecaption), CStr(ViewBag.Projectname)))" saveddisplaymode="block">
                                                 <table bgcolor="#FFFFFF" width="640" cellpadding="0" cellspacing="0" border="0" align="center" class="devicewidth">
                                                     <tbody>
                                                         <tr>
@@ -196,7 +196,7 @@ color:#445566;
                     </tbody>
                 </table>
 
-                  <table width="100%" bgcolor="#f0f1f4" cellpadding="0" cellspacing="0" border="0" id="backgroundTable">
+                  <table width="100%" cellpadding="0" cellspacing="0" border="0" id="backgroundTable">
                     <tbody>
                         
                         <tr>
@@ -252,7 +252,7 @@ color:#445566;
 
 
 
-                <table width="100%" bgcolor="#f0f1f4" cellpadding="0" cellspacing="0" border="0" id="backgroundTable">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" id="backgroundTable">
                     <tbody>
                         <tr>
                             <td>

@@ -239,7 +239,7 @@ end section
                 formData.push({ name: 'Interest', value: interestChecked.join(', ') });
 
                 var $btn = $form.find('.inschrijving-btn');
-                $btn.prop('disabled', true).text('Bezig...');
+                if (window.glBusy) { window.glBusy($btn[0], true, 'Bezig met verzenden…'); } else { $btn.prop('disabled', true).text('Bezig...'); }
 
                 function doSubmit() {
                     $.ajax({
@@ -275,7 +275,8 @@ end section
                             '</div>'
                         ).show();
                     } else {
-                        $btn.prop('disabled', false).html('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> Schrijf mij in');
+                        if (window.glBusy) { window.glBusy($btn[0], false); }
+                    $btn.prop('disabled', false).html('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> Schrijf mij in');
                         $('#inschrijving-result').html(
                             '<p class="inschrijving-fout">Er is een fout opgetreden. Probeer het later opnieuw of neem telefonisch contact op.</p>'
                         ).show();
@@ -283,6 +284,7 @@ end section
                 }
 
                 function onError() {
+                    if (window.glBusy) { window.glBusy($btn[0], false); }
                     $btn.prop('disabled', false).html('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> Schrijf mij in');
                     $('#inschrijving-result').html(
                         '<p class="inschrijving-fout">Er is een fout opgetreden. Probeer het later opnieuw of neem telefonisch contact op.</p>'

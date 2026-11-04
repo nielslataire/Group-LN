@@ -3,8 +3,8 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 </head>
-<body style="margin:0; padding:0; background-color:#f0f1f4; font-family:Arial, Helvetica, sans-serif;">
-    <table width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f0f1f4; padding-top:20px; padding-bottom:20px;">
+<body style="margin:0; padding:0; font-family:Arial, Helvetica, sans-serif;">
+    <table width="100%" cellspacing="0" cellpadding="0" border="0" style="padding-top:20px; padding-bottom:20px;">
         <tr>
             <td align="center">
                 <table width="640" cellspacing="0" cellpadding="0" border="0" style="background-color:#ffffff; border-radius:6px; overflow:hidden; font-family:Arial, Helvetica, sans-serif;">

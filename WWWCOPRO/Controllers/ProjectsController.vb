@@ -36,49 +36,11 @@ Namespace Controllers
                         Optional PriceMax As Decimal? = Nothing,
                         Optional UnitCategory As String = Nothing) As ActionResult
             If Not id = 0 Then
-                Dim model As New ProjectDetailModel
-                Dim service = ServiceFactory.GetProjectService
-                Dim response = service.GetProjectByID(id)
-                If (response.Success) Then model.Data = response.Values.FirstOrDefault
-                If model.Data Is Nothing OrElse model.Data.Id = 0 Then Return HttpNotFound()
-                'sort pictures
-                model.Data.Pictures = model.Data.Pictures.Where(Function(m) Not m.Type = PictureType.Nieuws).ToList
-                model.Data.Pictures = model.Data.Pictures.OrderByDescending(Function(m) m.DateTimeUploaded).ToList
-
-                model.News = service.GetNewsByProjectId(id).Values.OrderByDescending(Function(m) m.NewsDate).ToList
-                'sort news
-                'Units
-                Dim unitservice = ServiceFactory.GetUnitService
-                Dim response3 = unitservice.GetUnitsWithDetailsByProjectId(model.Data.Id)
-                If (response3.Success) Then model.Units = response3.Values
-                'Docs
-                model.Docs = service.GetProjectDocs(id, ProjectDocType.Sales).Values
-                If model.Docs Is Nothing Then model.Docs = New List(Of ProjectDocBO)
-                model.BrochureDoc = model.Docs.FirstOrDefault(Function(d) d.IsBrochure)
-                'Salessettings
-                model.SalesSetttings = service.GetSalesSettings(model.Data.Id).Value
-                If model.SalesSetttings Is Nothing Then
-                    model.SalesSetttings = New ProjectSalesSettingsBO
-                    model.SalesSetttings.SaleVisible = False
-                End If
-                'Developer
-                Dim companyservice = ServiceFactory.GetCompanyService
-                model.Developer = GetCompanySafe(companyservice, model.Data.Developer)
-                'Builder
-                model.Builder = GetCompanySafe(companyservice, model.Data.Builder)
-                'Architect
-                model.Architect = GetCompanySafe(companyservice, model.Data.Architect)
-                'Engineer
-                model.Engineer = GetCompanySafe(companyservice, model.Data.Engineer)
-                'Securitycoordinator
-                model.SecurityCoordinator = GetCompanySafe(companyservice, model.Data.SecurityCoordinator)
-                'EPB Reporter
-                model.EpbReporter = GetCompanySafe(companyservice, model.Data.EpbReporter)
-
-                LoadProjectSeoFields(model.Data)
-                SetProjectSeoViewData(model.Data)
-                ApplyRecaptchaSettings()
-                Return View("Detail", model)
+                ' Oude /Projects/{id}-URL: permanent doorsturen naar de slug-URL van het project.
+                Dim byIdResponse = ServiceFactory.GetProjectService.GetProjectByID(id)
+                Dim byIdData = If(byIdResponse.Success, byIdResponse.Values.FirstOrDefault, Nothing)
+                If byIdData Is Nothing OrElse byIdData.Id = 0 OrElse String.IsNullOrWhiteSpace(byIdData.Slug) Then Return HttpNotFound()
+                Return RedirectToRoutePermanent("ProjectBySlug", New With {.slug = byIdData.Slug})
             Else
                 ' Type=0 bestaat niet als enum-waarde (Woonproject=1, Commerciëel=2) — zonder
                 ' expliciete Type valt GetProjectsForList terug op "geen filter" (gemengde lijst).
@@ -222,40 +184,38 @@ Namespace Controllers
 
             If IsInschrijvingActief(service, data.Id) Then Return RedirectToRoute("ProjectInschrijvingBySlug", New With {.slug = slug})
 
-            Return RenderProjectDetail(data, service)
+            Return RenderProjectPage(data, service)
         End Function
 
-        ' Nieuw ontwerp "Project Detail v4 Split" — losstaande view naast de bestaande Detail.
-        ' Alle inhoud (zichtbare blokken, teksten, beelden, loten) komt uit ProjectPageV4Model.
-        <Route("projectpagina-v4/{slug?}", Name:="ProjectV4")>
-        Function ProjectV4(Optional slug As String = Nothing) As ActionResult
-            ' Zonder slug: voorbeeldinhoud uit de design-handoff (handig om het ontwerp te bekijken).
-            If String.IsNullOrWhiteSpace(slug) Then
-                Dim sample = ProjectPageV4Provider.Load(Nothing)
-                ViewData("Title") = sample.MetaTitle
-                ViewData("MetaDescription") = sample.MetaDescription
-                ViewData("canonical") = sample.CanonicalUrl
-                ViewData("ogtitle") = sample.MetaTitle
-                ViewData("ogdescription") = sample.MetaDescription
-                ViewData("ogurl") = sample.CanonicalUrl
-                Return View("DetailV4", sample)
-            End If
 
-            ' Met slug: echte projectdata, dezelfde bronnen als /woonprojecten/{slug}.
+        <Route("commerciele-projecten/{slug}", Name:="CommercieelBySlug")>
+        Function CommercieelBySlug(slug As String) As ActionResult
+
             Dim service = ServiceFactory.GetProjectService
             Dim response = service.GetProjectBySlug(slug)
             Dim data = If(response.Success, response.Values.FirstOrDefault, Nothing)
             If data Is Nothing OrElse data.Id = 0 Then Return HttpNotFound()
 
-            ' Zelfde doorverwijzingen als /woonprojecten/{slug}: opgeleverd -> realisaties, commercieel -> commerciele-projecten
             If data.Status IsNot Nothing AndAlso data.Status.Id = CInt(ProjectStatusType.Opgeleverd) Then
                 Return RedirectToRoutePermanent("ReferenceBySlug", New With {.slug = slug})
             End If
-            If data.ProjectType = ProjectType.Commerciëel Then
-                Return RedirectToRoutePermanent("CommercieelBySlug", New With {.slug = slug})
+
+            ' Woonprojecten horen bij /woonprojecten, niet bij /commerciele-projecten.
+            If data.ProjectType = ProjectType.Woonproject Then
+                Return RedirectToRoutePermanent("ProjectBySlug", New With {.slug = slug})
             End If
+
             If IsInschrijvingActief(service, data.Id) Then Return RedirectToRoute("ProjectInschrijvingBySlug", New With {.slug = slug})
 
+            Return RenderProjectPage(data, service)
+        End Function
+
+        ' Gedeelde weergavelogica voor zowel /woonprojecten/{slug} als /commerciele-projecten/{slug} —
+        ' enige verschil tussen de twee is welke route ernaartoe leidt en welke canonical
+        ' SetProjectSeoViewData op basis van data.ProjectType kiest.
+        ' Ontwerp "Project Detail v4 Split": alle inhoud (zichtbare blokken, teksten, beelden, loten)
+        ' komt uit ProjectPageV4Model.
+        Private Function RenderProjectPage(data As ProjectBO, service As IProjectService) As ActionResult
             data.Pictures = data.Pictures.Where(Function(m) Not m.Type = PictureType.Nieuws).OrderByDescending(Function(m) m.DateTimeUploaded).ToList
 
             Dim units As New List(Of UnitWithDetailsBO)
@@ -272,7 +232,8 @@ Namespace Controllers
             SetProjectSeoViewData(data)
             ApplyRecaptchaSettings()
 
-            Dim canonical As String = "https://www.groupln.be/woonprojecten/" & If(data.Slug, "").ToLowerInvariant()
+            Dim canonicalBase As String = If(data.ProjectType = ProjectType.Commerciëel, "commerciele-projecten", "woonprojecten")
+            Dim canonical As String = "https://www.groupln.be/" & canonicalBase & "/" & If(data.Slug, "").ToLowerInvariant()
             Dim imageBase As String = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL")
             Dim web = ProjectWebsiteReader.Load(data.Id)
             Dim picInfo = ProjectPictureInfoReader.Load(data.Id)
@@ -300,84 +261,14 @@ Namespace Controllers
                 ViewData("ogimage") = shareUrl
                 ViewData("twitterimage") = shareUrl
             End If
-            Return View("DetailV4", model)
-        End Function
-
-        <Route("commerciele-projecten/{slug}", Name:="CommercieelBySlug")>
-        Function CommercieelBySlug(slug As String) As ActionResult
-
-            Dim service = ServiceFactory.GetProjectService
-            Dim response = service.GetProjectBySlug(slug)
-            Dim data = If(response.Success, response.Values.FirstOrDefault, Nothing)
-            If data Is Nothing OrElse data.Id = 0 Then Return HttpNotFound()
-
-            If data.Status IsNot Nothing AndAlso data.Status.Id = CInt(ProjectStatusType.Opgeleverd) Then
-                Return RedirectToRoutePermanent("ReferenceBySlug", New With {.slug = slug})
-            End If
-
-            ' Woonprojecten horen bij /woonprojecten, niet bij /commerciele-projecten.
-            If data.ProjectType = ProjectType.Woonproject Then
-                Return RedirectToRoutePermanent("ProjectBySlug", New With {.slug = slug})
-            End If
-
-            If IsInschrijvingActief(service, data.Id) Then Return RedirectToRoute("ProjectInschrijvingBySlug", New With {.slug = slug})
-
-            Return RenderProjectDetail(data, service)
-        End Function
-
-        ' Gedeelde weergavelogica voor zowel /woonprojecten/{slug} als /commerciele-projecten/{slug} —
-        ' enige verschil tussen de twee is welke route ernaartoe leidt en welke canonical
-        ' SetProjectSeoViewData op basis van data.ProjectType kiest.
-        Private Function RenderProjectDetail(data As ProjectBO, service As IProjectService) As ActionResult
-            Dim model As New ProjectDetailModel
-            model.Data = data
-
-            'sort pictures
-            model.Data.Pictures = model.Data.Pictures.Where(Function(m) Not m.Type = PictureType.Nieuws).ToList
-            model.Data.Pictures = model.Data.Pictures.OrderByDescending(Function(m) m.DateTimeUploaded).ToList
-
-            model.News = service.GetNewsByProjectId(model.Data.Id).Values.OrderByDescending(Function(m) m.NewsDate).ToList
-            'Docs
-            model.Docs = service.GetProjectDocs(model.Data.Id, ProjectDocType.Sales).Values
-            If model.Docs Is Nothing Then model.Docs = New List(Of ProjectDocBO)
-            model.BrochureDoc = model.Docs.FirstOrDefault(Function(d) d.IsBrochure)
-            Dim unitservice = ServiceFactory.GetUnitService
-            Dim response3 = unitservice.GetUnitsWithDetailsByProjectId(model.Data.Id)
-            If (response3.Success) Then model.Units = response3.Values
-            Dim ids As New List(Of Integer)
-            ids.Add(model.Data.Id)
-            'Salesdata
-            model.SalesData = service.GetProjectSalesData(ids).Values.FirstOrDefault
-            'Salessettings
-            model.SalesSetttings = service.GetSalesSettings(model.Data.Id).Value
-            If model.SalesSetttings Is Nothing Then
-                model.SalesSetttings = New ProjectSalesSettingsBO
-                model.SalesSetttings.SaleVisible = False
-            End If
-            'Developer
-            Dim companyservice = ServiceFactory.GetCompanyService
-            model.Developer = GetCompanySafe(companyservice, model.Data.Developer)
-            'Builder
-            model.Builder = GetCompanySafe(companyservice, model.Data.Builder)
-            'Architect
-            model.Architect = GetCompanySafe(companyservice, model.Data.Architect)
-            'Engineer
-            model.Engineer = GetCompanySafe(companyservice, model.Data.Engineer)
-            'Securitycoordinator
-            model.SecurityCoordinator = GetCompanySafe(companyservice, model.Data.SecurityCoordinator)
-            'EPB Reporter
-            model.EpbReporter = GetCompanySafe(companyservice, model.Data.EpbReporter)
-
-            LoadProjectSeoFields(model.Data)
-            SetProjectSeoViewData(model.Data)
-            ApplyRecaptchaSettings()
             Return View("Detail", model)
         End Function
-        Function Detail(model As ProjectDetailModel) As ActionResult
-            If model Is Nothing OrElse model.Data Is Nothing OrElse model.Data.Id = 0 Then Return HttpNotFound()
 
-            Return View(model)
-
+        ' Tijdelijke testroute van het v4-ontwerp: permanent doorsturen naar de definitieve projectpagina.
+        <Route("projectpagina-v4/{slug?}", Name:="ProjectV4")>
+        Function ProjectV4(Optional slug As String = Nothing) As ActionResult
+            If String.IsNullOrWhiteSpace(slug) Then Return RedirectPermanent("/woonprojecten")
+            Return RedirectToRoutePermanent("ProjectBySlug", New With {.slug = slug})
         End Function
 
         <HttpGet>
@@ -390,12 +281,16 @@ Namespace Controllers
         Function SendPlan(model As ProjectSendPlanModel) As PartialViewResult
 
             If Not ModelState.IsValid Then
+                LogError("SENDPLAN: VALIDATIE MISLUKT | " & String.Join(" ; ", ModelState.Where(Function(kv) kv.Value.Errors.Count > 0).Select(Function(kv) kv.Key)))
                 Return PartialView("ModalFailPlan")
             End If
 
             If Not String.IsNullOrEmpty(Request.Form("website_url")) Then Return PartialView("ModalFailPlan")
             Dim captchaResult = ReCaptchaValidator.ValidateV3(Request.Form("g-recaptcha-response"), SendPlanReCaptchaAction, ReCaptchaMinimumScore)
-            If Not captchaResult.Success Then Return PartialView("ModalFailPlan")
+            If Not captchaResult.Success Then
+                LogError("SENDPLAN: CAPTCHA GEWEERD | " & String.Join(", ", If(captchaResult.ErrorCodes, New List(Of String)())))
+                Return PartialView("ModalFailPlan")
+            End If
 
             Try
                 Dim externalMailStatus As String = "Niet verzonden"
@@ -558,12 +453,16 @@ Namespace Controllers
         Function SendDoc(model As ProjectSendDocModel) As PartialViewResult
 
             If Not ModelState.IsValid Then
+                LogError("SENDDOC: VALIDATIE MISLUKT | " & String.Join(" ; ", ModelState.Where(Function(kv) kv.Value.Errors.Count > 0).Select(Function(kv) kv.Key)))
                 Return PartialView("ModalFailDoc")
             End If
 
             If Not String.IsNullOrEmpty(Request.Form("website_url")) Then Return PartialView("ModalFailDoc")
             Dim captchaResult = ReCaptchaValidator.ValidateV3(Request.Form("g-recaptcha-response"), SendDocReCaptchaAction, ReCaptchaMinimumScore)
-            If Not captchaResult.Success Then Return PartialView("ModalFailDoc")
+            If Not captchaResult.Success Then
+                LogError("SENDDOC: CAPTCHA GEWEERD | " & String.Join(", ", If(captchaResult.ErrorCodes, New List(Of String)())))
+                Return PartialView("ModalFailDoc")
+            End If
 
             Try
                 Dim externalMailStatus As String = "Niet verzonden"
@@ -871,12 +770,16 @@ Namespace Controllers
         Function SendBrochure(model As ProjectSendBrochureModel) As PartialViewResult
 
             If Not ModelState.IsValid Then
+                LogError("SENDBROCHURE: VALIDATIE MISLUKT | " & String.Join(" ; ", ModelState.Where(Function(kv) kv.Value.Errors.Count > 0).Select(Function(kv) kv.Key)))
                 Return PartialView("ModalFailDoc")
             End If
 
             If Not String.IsNullOrEmpty(Request.Form("website_url")) Then Return PartialView("ModalFailDoc")
             Dim captchaResult = ReCaptchaValidator.ValidateV3(Request.Form("g-recaptcha-response"), SendBrochureReCaptchaAction, ReCaptchaMinimumScore)
-            If Not captchaResult.Success Then Return PartialView("ModalFailDoc")
+            If Not captchaResult.Success Then
+                LogError("SENDBROCHURE: CAPTCHA GEWEERD | " & String.Join(", ", If(captchaResult.ErrorCodes, New List(Of String)())))
+                Return PartialView("ModalFailDoc")
+            End If
 
             Try
                 Dim externalMailStatus As String = "Niet verzonden"
@@ -1102,8 +1005,14 @@ Namespace Controllers
             ' Honeypot: als het veld ingevuld is, is het een bot
             If Not String.IsNullOrEmpty(Request.Form("website_url")) Then Return PartialView("ModalFailMail")
             Dim captchaResult = ReCaptchaValidator.ValidateV3(Request.Form("g-recaptcha-response"), SendMailReCaptchaAction, ReCaptchaMinimumScore)
-            If Not captchaResult.Success Then Return PartialView("ModalFailMail")
-            If (Not ModelState.IsValid) Then Return PartialView("ModalFailMail")
+            If Not captchaResult.Success Then
+                LogError("SENDMAIL: CAPTCHA GEWEERD | " & String.Join(", ", If(captchaResult.ErrorCodes, New List(Of String)())))
+                Return PartialView("ModalFailMail")
+            End If
+            If (Not ModelState.IsValid) Then
+                LogError("SENDMAIL: VALIDATIE MISLUKT | " & String.Join(" ; ", ModelState.Where(Function(kv) kv.Value.Errors.Count > 0).Select(Function(kv) kv.Key)))
+                Return PartialView("ModalFailMail")
+            End If
             If (ModelState.IsValid) Then
                 Dim project As New ProjectBO
                 Dim service2 = ServiceFactory.GetProjectService
@@ -1143,7 +1052,7 @@ Namespace Controllers
                     ViewBag.Project = project.Name
                     ViewBag.Phone = model.Phone
                     ViewBag.Name = model.Name
-                    ViewBag.Fistname = model.Firstname
+                    ViewBag.Firstname = model.Firstname
                     ViewBag.Email = model.Email
                     ViewBag.Question = model.Question
 
@@ -1346,10 +1255,11 @@ Namespace Controllers
                 ViewBag.Project = project.Name
                 ViewBag.Phone = model.Phone
                 ViewBag.Name = model.Name
-                ViewBag.Fistname = model.Firstname
+                ViewBag.Firstname = model.Firstname
                 ViewBag.Email = model.Email
                 ViewBag.Question = questionText
 
+                ViewBag.RequestTitle = "Nieuwe inschrijving"
                 Dim internalHtml As String = RenderViewToString("~/Views/Emails/ProjectInternalMail.vbhtml", Nothing)
 
                 Dim internalMsg As New Net.Mail.MailMessage()

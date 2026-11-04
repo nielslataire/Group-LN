@@ -339,6 +339,13 @@
                     // gevuld"; onbezet (de meeste pagina's) blijft het oude gedrag exact hetzelfde.
                     var hasMobileQuickActions = IsSectionDefined("MobileQuickActions")
                         && (ViewData["HasMobileQuickActions"] as bool? ?? true);
+                    // Een view die de sectie registreert maar HasMobileQuickActions op false zet (bv.
+                    // Home/Index voor niet-Projectleider dashboards) moet de sectie toch "consumeren":
+                    // Razor gooit anders "sections have been defined but have not been rendered".
+                    if (!hasMobileQuickActions && IsSectionDefined("MobileQuickActions"))
+                    {
+                        IgnoreSection("MobileQuickActions");
+                    }
                 }
                 <main id="gl-v2-main" class="gl-v2-content @(hasMobileQuickActions ? "has-mobile-quickactions" : "")" tabindex="-1">
                     @RenderBody()

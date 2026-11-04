@@ -1,31 +1,78 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
-    <!-- Web Fonts  -->
-
-    <link href="https://www.groupln.be/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://www.groupln.be/vendor/font-awesome/css/font-awesome.min.css" rel="stylesheet">
-    <link href="https://www.groupln.be/content/theme.css" rel="stylesheet">
-    <link href="https://www.groupln.be/content/theme-elements.css" rel="stylesheet">
-    <link href="https://www.groupln.be/content/custom.css" rel="stylesheet">
-    <link href="https://www.groupln.be/content/skins/skin-corporate-3.css" rel="stylesheet">
-
-
-
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 </head>
-<body>
-    <div class="body" style="font-family:Arial, Helvetica, sans-serif">
-        <p>Project : @ViewBag.Project</p>
-        <p>Naam : @ViewBag.Name</p>
-        <p>Voornaam : @ViewBag.Fistname</p>
-        <p>Email : @ViewBag.Email</p>
-        <p>Telefoon : @ViewBag.Phone</p>
-        <p>Vraag : @ViewBag.Question</p>
-
-    </div>
-
-
+<body style="margin:0; padding:0; background-color:#f0f1f4; font-family:Arial, Helvetica, sans-serif;">
+    @Code
+        Dim requestTitle As String = If(String.IsNullOrWhiteSpace(CStr(ViewBag.RequestTitle)), "Nieuwe informatieaanvraag", CStr(ViewBag.RequestTitle))
+        Dim fullName As String = (CStr(ViewBag.Firstname) & " " & CStr(ViewBag.Name)).Trim()
+    End Code
+    <table width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f0f1f4; padding-top:20px; padding-bottom:20px;">
+        <tr>
+            <td align="center">
+                <table width="640" cellspacing="0" cellpadding="0" border="0" style="background-color:#ffffff; border-radius:6px; overflow:hidden; font-family:Arial, Helvetica, sans-serif;">
+                    <tr>
+                        <td style="padding:18px 22px 10px 22px;">
+                            <table width="100%" cellspacing="0" cellpadding="0" border="0">
+                                <tr>
+                                    <td style="width:220px;" valign="middle">
+                                        <a href="https://www.groupln.be" target="_blank" style="text-decoration:none; color:#009336;">
+                                            <img src="https://www.groupln.be/content/img/logo-default.png" alt="Group LN" height="54" style="display:block; border:0;" />
+                                        </a>
+                                    </td>
+                                    <td align="right" style="color:#8a8a8a; font-size:11px; font-weight:bold; letter-spacing:0.5px; text-transform:uppercase;">
+                                        Interne melding
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background-color:#009336; color:#ffffff; padding:24px 22px 18px 22px; text-align:center;">
+                            <div style="font-size:24px; font-weight:700; line-height:30px;">@requestTitle</div>
+                            @If Not String.IsNullOrWhiteSpace(CStr(ViewBag.Project)) Then
+                                @<div style="margin-top:6px; font-size:16px; line-height:22px;">@ViewBag.Project</div>
+                            End If
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:22px 22px 14px 22px; color:#4a4a4a; font-size:14px; line-height:22px;">
+                            <div style="margin-bottom:10px; font-size:16px; font-weight:600; color:#222;">Aanvraaggegevens</div>
+                            <table width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;">
+                                <tr>
+                                    <td style="padding:8px 6px; color:#777; width:34%;">Project</td>
+                                    <td style="padding:8px 6px; color:#222;">@ViewBag.Project</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:8px 6px; color:#777; width:34%;">Naam</td>
+                                    <td style="padding:8px 6px; color:#222;">@fullName</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:8px 6px; color:#777; width:34%;">Email</td>
+                                    <td style="padding:8px 6px; color:#222;"><a href="mailto:@ViewBag.Email" style="color:#009336;">@ViewBag.Email</a></td>
+                                </tr>
+                                @If Not String.IsNullOrWhiteSpace(CStr(ViewBag.Phone)) Then
+                                    @<tr>
+                                        <td style="padding:8px 6px; color:#777; width:34%;">Telefoon</td>
+                                        <td style="padding:8px 6px; color:#222;">@ViewBag.Phone</td>
+                                    </tr>
+                                End If
+                                <tr>
+                                    <td style="padding:8px 6px; color:#777; width:34%; vertical-align:top;">Vraag</td>
+                                    <td style="padding:8px 6px; color:#222; white-space:pre-wrap;">@ViewBag.Question</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:18px 22px 24px 22px; color:#9a9a9a; font-size:12px; line-height:18px; text-align:center; border-top:1px solid #e6e6e6;">
+                            Deze melding werd automatisch verstuurd vanuit de website.
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>
-
-

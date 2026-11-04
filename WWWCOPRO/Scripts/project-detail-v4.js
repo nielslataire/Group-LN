@@ -1,4 +1,4 @@
-/* Projectpagina v4 (split) — gedrag voor Views/Projects/DetailV4.vbhtml.
+/* Projectpagina v4 (split) — gedrag voor Views/Projects/Detail.vbhtml.
    Alle data komt uit <script type="application/json" id="pdv4-data"> (server-side model).
    Vanilla JS, geen afhankelijkheden behalve Leaflet (optioneel, voor de buurtkaart). */
 (function () {
@@ -22,6 +22,13 @@
 
     // reCAPTCHA v3 wordt pas geladen wanneer iemand echt een formulier verstuurt (niet bij elk paginabezoek).
     var recaptchaLoading = null;
+
+    // Verzendknop met draaiende spinner (Scripts/form-busy.js); zonder dat script enkel blokkeren en het label wisselen.
+    function busy(btn, on, label) {
+        if (window.glBusy) { window.glBusy(btn, on, label); return; }
+        btn.disabled = on;
+        if (label) { btn.textContent = label; }
+    }
     function loadRecaptcha() {
         if (window.grecaptcha) { return Promise.resolve(); }
         if (!window.reCaptchaSiteKey) { return Promise.reject(); }
@@ -235,9 +242,9 @@
             if (bad) { bad.focus(); return; }
             var btn = document.getElementById(cfg.submit), err = document.getElementById(cfg.error);
             err.setAttribute('hidden', '');
-            btn.disabled = true; btn.textContent = 'Even geduld…';
+            busy(btn, true, 'Bezig met verzenden…');
             var email = form.elements.Email.value.trim();
-            function reset() { btn.disabled = false; btn.textContent = cfg.submitLabel; }
+            function reset() { busy(btn, false, cfg.submitLabel); }
             function fail() {
                 reset();
                 err.textContent = 'Het versturen is niet gelukt. Probeer het opnieuw of bel ons op 09/216.49.50.';
@@ -703,7 +710,7 @@
             else { ce.setAttribute('hidden', ''); }
             if (!ok) { var first = form.querySelector('.has-error'); if (first) { first.focus(); } return; }
 
-            var btn = form.querySelector('button[type=submit]'); btn.disabled = true;
+            var btn = form.querySelector('button[type=submit]'); busy(btn, true, 'Bezig met verzenden…');
             var errEl = $('#pdv4FormError'); errEl.setAttribute('hidden', '');
             var firstName = f.firstName.value.trim(), lastName = f.lastName.value.trim();
             sendContact({
@@ -716,7 +723,7 @@
                 if (sec) { sec.classList.add('is-sent'); }
                 try { thanks.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); thanks.focus({ preventScroll: true }); } catch (err) { /* oudere browsers */ }
             }).catch(function () {
-                btn.disabled = false;
+                busy(btn, false);
                 showFormError(errEl, 'Het versturen is niet gelukt. Probeer het opnieuw of bel ons op 09/216.49.50.');
             });
         });
@@ -730,12 +737,12 @@
             var mail = input.value.trim();
             if (!emailRe.test(mail)) { showFormError(err, 'Vul een geldig e-mailadres in.'); input.focus(); return; }
             err.setAttribute('hidden', '');
-            var btn = $('button[type=submit]', fm); btn.disabled = true;
+            var btn = $('button[type=submit]', fm); busy(btn, true, 'Bezig met verzenden…');
             post(D.endpoints[kind], { project: D.project.name, email: mail }).then(function () {
                 fm.setAttribute('hidden', '');
                 var done = fm.parentNode.querySelector('.pdv4-inline-done'); if (done) { done.removeAttribute('hidden'); }
             }).catch(function () {
-                btn.disabled = false; showFormError(err, 'Het versturen is niet gelukt. Probeer het opnieuw of bel ons op 09/216.49.50.');
+                busy(btn, false); showFormError(err, 'Het versturen is niet gelukt. Probeer het opnieuw of bel ons op 09/216.49.50.');
             });
         });
     });

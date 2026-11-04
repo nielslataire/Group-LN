@@ -142,7 +142,7 @@ Public Class HomeHeroDataHelper
                 (project.DefaultPicture.MediaType = 1 OrElse videoExts.Contains(System.IO.Path.GetExtension(project.DefaultPicture.Name)))
 
             ' Breedte-varianten (srcset) voor de foto: zelfde ProjectPictureInfoReader/V4Pic-mechanisme
-            ' als Projects/DetailV4, zodat deze foto ook op gsm een gsm-grote download is i.p.v. de
+            ' als Projects/Detail, zodat deze foto ook op gsm een gsm-grote download is i.p.v. de
             ' vaste 800px-versie. Geen varianten gevonden (oude upload) -> Pic blijft Nothing en
             ' ImageSrc (de vaste 800px-URL hieronder) is dan gewoon de enige bron, zoals voorheen.
             Dim pic As V4Pic = Nothing

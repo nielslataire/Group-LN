@@ -151,11 +151,15 @@ End Section
 
 @section scripts
     <script src="https://www.google.com/recaptcha/api.js?render=@ViewBag.ReCaptchaSiteKey"></script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBixojVqE0nNXAPAjgQ9Q5Gnvk5K4zEcLM"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBMPTfiKtFSCwwoXJFh_D8dBapI4tgcxEI"></script>
     <script>
         // reCAPTCHA v3-token ophalen vlak vóór het versturen (onzichtbaar voor de gebruiker)
         (function () {
             var form = document.getElementById('contactForm');
+            // Direct zichtbaar dat het formulier verstuurd wordt (de browser heeft de verplichte velden al gecontroleerd)
+            if (form && window.glBusy) {
+                form.addEventListener('submit', function () { window.glBusy(form.querySelector('button[type=submit]'), true, 'Bezig met verzenden…'); });
+            }
             var recaptchaSiteKey = '@ViewBag.ReCaptchaSiteKey';
             var recaptchaAction = '@ViewBag.ReCaptchaAction';
             var recaptchaInput = document.getElementById('gRecaptchaResponse');

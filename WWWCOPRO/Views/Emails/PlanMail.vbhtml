@@ -237,7 +237,7 @@
 
 
             <!-- HEADER BANNER -->
-            <table width="100%" bgcolor="#f0f1f4" cellpadding="0" cellspacing="0" border="0">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tbody>
                     <tr>
                         <td>
@@ -285,7 +285,7 @@
                     <tr>
                         <td align="left" style="padding:25px 35px; color:#5a5a5a; font-size:13px; line-height:22px;">
                             <b style="font-size:15px;">@Model.Title</b><br><br>
-                            @Model.Text
+                            @Html.Raw(Model.Text)
                         </td>
                     </tr>
                 </tbody>
@@ -298,7 +298,7 @@
                         <td>
                             <img class="emailImage"
                                  width="640"
-                                 src="https://cpm.groupln.be/assets/pictures/@Model.Image"
+                                 src="@WWWCOPRO.MailImageHelper.Url(Model.Image)"
                                  alt="@(If(Not String.IsNullOrWhiteSpace(Model.Imagecaption), Model.Imagecaption, Model.Projectname))">
                         </td>
                     </tr>

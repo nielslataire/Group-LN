@@ -7,6 +7,7 @@ using DALCore.Models;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Graph;
+using Microsoft.Identity.Web;
 
 namespace CPMCore.Services;
 
@@ -368,7 +369,10 @@ public class CpmUserAccessService : ICpmUserAccessService
 
         try
         {
-            using var photoStream = await _graphClient.Me.Photo.Content.Request().GetAsync(ct);
+            using var photoStream = await _graphClient.Me.Photo.Content.Request()
+                // DefaultScheme is Cookies; zonder dit leidt Identity.Web daar het Entra-schema van af en faalt met IDW10503
+                .WithAuthenticationScheme(Microsoft.AspNetCore.Authentication.OpenIdConnect.OpenIdConnectDefaults.AuthenticationScheme)
+                .GetAsync(ct);
             if (photoStream == null)
                 return;
 

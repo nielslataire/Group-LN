@@ -130,8 +130,6 @@ End Code
             End If
         Next
     End Code
-    @* Testfase: de v4-pagina is nog niet bedoeld voor zoekmachines (canonical wijst naar /woonprojecten/{slug}). Verwijderen bij livegang. *@
-    <meta name="robots" content="noindex, follow" />
     @If Not String.IsNullOrEmpty(geoRegion) Then
         @<meta name="geo.region" content="@geoRegion" />
     End If

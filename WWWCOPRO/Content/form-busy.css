@@ -1,0 +1,21 @@
+/* Verzendstatus voor formulierknoppen (zie Scripts/form-busy.js): spinner + label, knop geblokkeerd. */
+.is-sending {
+    pointer-events: none;
+    cursor: progress;
+    opacity: .85;
+}
+.gl-spin {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    margin-right: .55em;
+    vertical-align: -.15em;
+    border: .14em solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: gl-spin .7s linear infinite;
+}
+@keyframes gl-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+    .gl-spin { animation-duration: 1.8s; }
+}

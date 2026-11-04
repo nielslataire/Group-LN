@@ -149,7 +149,9 @@ builder.Services.AddDataProtection()
 var domainDbOptions = new DbContextOptionsBuilder<cpmRunningContext>()
     .UseSqlServer(
         connection,
-        sqlServerOptions => sqlServerOptions.CommandTimeout(5000))
+        sqlServerOptions => sqlServerOptions.CommandTimeout(5000)
+            // meerdere collection-Includes: één query per collectie i.p.v. cartesisch product
+            .UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
     .Options;
 
 // ⬇️ JOUW DOMEIN CONTEXT (DALCore) — gebruikt dezelfde connection
@@ -158,7 +160,9 @@ builder.Services.AddScoped<CPMCore.Services.Verzekeringen.PendingBuyerLinks>();
 builder.Services.AddDbContext<cpmRunningContext>((sp, options) =>
     options.UseSqlServer(
         connection,
-        sqlServerOptions => sqlServerOptions.CommandTimeout(5000))
+        sqlServerOptions => sqlServerOptions.CommandTimeout(5000)
+            // meerdere collection-Includes: één query per collectie i.p.v. cartesisch product
+            .UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
         // Verzekeringen: een eenheid die een koper krijgt, krijgt ook de tienjarige polissen en attesten (zie BuyerLinkInterceptor)
         .AddInterceptors(sp.GetRequiredService<CPMCore.Services.Verzekeringen.BuyerLinkInterceptor>())
 );

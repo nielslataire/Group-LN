@@ -864,7 +864,7 @@ static class AssetFolders
 
     public static bool IsValid(string folder) =>
         PhotoProcessor.IsWidthFolder(folder)
-        || folder is PhotoProcessor.OriginalFolder or Pictures or Pictures447 or Pictures800
+        || folder is PhotoProcessor.OriginalFolder or PhotoProcessor.MailFolder or Pictures or Pictures447 or Pictures800
             or PicturesNews or PicturesNewsOriginal or PicturesNews800
             or PicturesBlog
             or Videos or Plans or Docs or Guarantees or Signing;

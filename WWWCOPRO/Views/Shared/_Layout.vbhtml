@@ -136,6 +136,7 @@ End Code
     @Styles.Render("~/Content/theme")
     @Styles.Render("~/Content/skin")
     <link rel="stylesheet" href="@Url.Content("~/Content/footer.css")" />
+    <link rel="stylesheet" href="@Url.Content("~/Content/form-busy.css")" />
     <link rel="stylesheet" href="@Url.Content("~/Content/reveal.css")" />
     <link rel="stylesheet" href="@Url.Content("~/Content/cookie-consent.css")" />
     <script>
@@ -334,6 +335,7 @@ End Code
     @Scripts.Render("~/Vendor/headlibs")
     @Scripts.Render("~/Vendor/jsbundle")
     @Scripts.Render("~/Scripts/jsbundle")
+    <script src="@Url.Content("~/Scripts/form-busy.js")"></script>
     @RenderSection("scripts", required:=False)
     @*@section scripts
             <script>

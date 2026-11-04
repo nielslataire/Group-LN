@@ -469,7 +469,7 @@ End If
                             successEl.style.display = '';
                         } else {
                             fieldsWrap.style.display = '';
-                            if (submitBtn) submitBtn.disabled = false;
+                            if (window.glBusy) { window.glBusy(submitBtn, false); } else if (submitBtn) { submitBtn.disabled = false; }
                             clearFieldErrors();
                             if (data && data.errors && Object.keys(data.errors).length > 0) {
                                 errorBanner.textContent = 'Oeps, hier mist nog een steentje. Vul de rode velden even aan.';
@@ -484,7 +484,7 @@ End If
                     .catch(function () {
                         loadingEl.style.display = 'none';
                         fieldsWrap.style.display = '';
-                        if (submitBtn) submitBtn.disabled = false;
+                        if (window.glBusy) { window.glBusy(submitBtn, false); } else if (submitBtn) { submitBtn.disabled = false; }
                         errorBanner.textContent = 'Er ging iets mis bij het versturen. Probeer het opnieuw of mail naar info@groupln.be.';
                         errorBanner.style.display = '';
                     });
@@ -492,7 +492,7 @@ End If
 
             form.addEventListener('submit', function (e) {
                 e.preventDefault();
-                if (submitBtn) submitBtn.disabled = true;
+                if (window.glBusy) { window.glBusy(submitBtn, true, 'Bezig met verzenden…'); } else if (submitBtn) { submitBtn.disabled = true; }
 
                 if (recaptchaSiteKey && typeof grecaptcha !== 'undefined') {
                     grecaptcha.ready(function () {

@@ -10,7 +10,9 @@ using SixLabors.ImageSharp.Processing;
 ///   2. Master-JPEG: korte zijde max 5000 px (nooit vergroten), kwaliteit 92 → map pictures/original.
 ///   3. WebP-varianten op breedte (320/640/960/1280/1920/2560 — hoogte volgt, niets afgesneden, nooit vergroten,
 ///      kwaliteit 80) → mappen pictures/w{breedte}. Ze worden van de master afgeleid.
-///   4. De bestaande varianten blijven: pictures (past in 1280×960), pictures/800 en pictures/447 (vierkant, bijgesneden).
+///   4. Mail-JPEG: breedte max 640 px (nooit vergroten), kwaliteit 82 → map pictures/mail. WebP wordt door veel mailclients (o.a. Outlook)
+///      niet getoond, en de master is te zwaar voor een mail.
+///   5. De bestaande varianten blijven: pictures (past in 1280×960), pictures/800 en pictures/447 (vierkant, bijgesneden).
 /// Het geüploade origineel wordt niet bewaard: de aanroeper verwijdert het tijdelijke bestand.
 /// Limieten (aanroeper en endpoint): max 50 MB, max 10.000 px aan de lange zijde.
 /// </summary>
@@ -24,6 +26,9 @@ public static class PhotoProcessor
     public static readonly int[] Widths = { 320, 640, 960, 1280, 1920, 2560 };
 
     public const string OriginalFolder = "pictures/original";
+    public const string MailFolder = "pictures/mail";
+    public const int MailWidth = 640;
+    public const int MailJpegQuality = 82;
     public static string WidthFolder(int width) => $"pictures/w{width}";
 
     public static bool IsWidthFolder(string folder) =>
@@ -85,6 +90,11 @@ public static class PhotoProcessor
                     (img, path) => img.SaveAsWebpAsync(path, webp, ct));
                 made.Add(w);
             }
+
+            // Mail-JPEG (max 640 px breed, nooit vergroten)
+            using (var mail = image.Clone(x => x.Resize(Math.Min(MailWidth, masterWidth), 0)))
+                await SaveAsync(mail, Path.Combine(storageRoot, MailFolder), baseName + ".jpg", created,
+                    (img, path) => img.SaveAsJpegAsync(path, new JpegEncoder { Quality = MailJpegQuality }, ct));
 
             // Bestaande varianten: pictures (past in 1280×960, niet vergroten), pictures/800 en pictures/447 (vierkant, bijgesneden)
             var fit = Math.Min(1.0, Math.Min(1280.0 / masterWidth, 960.0 / masterHeight));
@@ -153,6 +163,15 @@ public static class PhotoProcessor
             }
             made.Add(w);
         }
+
+        // Mail-JPEG voor oudere foto's (ontbreekt er nog geen) — alleen als de bron geen transparantie nodig heeft (png wordt ook JPEG)
+        var mailTarget = Path.Combine(storageRoot, MailFolder, Path.GetFileNameWithoutExtension(fileName) + ".jpg");
+        if (!File.Exists(mailTarget))
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(mailTarget)!);
+            using var mail = image.Clone(x => x.Resize(Math.Min(MailWidth, image.Width), 0));
+            await mail.SaveAsJpegAsync(mailTarget, new JpegEncoder { Quality = MailJpegQuality }, ct);
+        }
         return (image.Width, image.Height, made.ToArray());
     }
 
@@ -163,6 +182,7 @@ public static class PhotoProcessor
         var targets = new List<string>
         {
             Path.Combine(storageRoot, OriginalFolder, baseName + ".jpg"),
+            Path.Combine(storageRoot, MailFolder, baseName + ".jpg"),
             Path.Combine(storageRoot, "pictures", fileName),
             Path.Combine(storageRoot, "pictures", "800", fileName),
             Path.Combine(storageRoot, "pictures", "447", fileName),

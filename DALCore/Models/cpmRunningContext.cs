@@ -3387,6 +3387,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Notitie).HasMaxLength(1000);
             entity.Property(e => e.CreatedAt).HasColumnType("datetime2");
             entity.Property(e => e.IsHuidig).HasDefaultValue(false);
+            entity.Property(e => e.TotaalKosten).HasColumnType("decimal(18, 2)");          // migratie 080
 
             entity.HasOne(d => d.BudgetMaster).WithMany(p => p.BudgetVersies)
                 .HasForeignKey(d => d.BudgetMasterId)
@@ -3424,6 +3425,9 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.GevelMetselwerkPrijsPerM2).HasColumnType("decimal(8, 2)").HasDefaultValue(165m);
             entity.Property(e => e.GipswerkenPrijsPerM2).HasColumnType("decimal(8, 2)").HasDefaultValue(2759m);
             entity.Property(e => e.TerrasPrijsPerM2).HasColumnType("decimal(8, 2)");
+            entity.Property(e => e.DiepteFunderingCm).HasColumnType("decimal(8, 2)");     // migratie 089
+            entity.Property(e => e.DiepteOndergrondsCm).HasColumnType("decimal(8, 2)");   // migratie 089
+            entity.Property(e => e.OppOndergronds).HasColumnType("decimal(10, 2)");       // migratie 089
             entity.Property(e => e.UpdatedAt).HasColumnType("datetime2");
 
             entity.HasOne(d => d.BudgetVersie).WithOne(p => p.BudgetGegevens)
@@ -3457,6 +3461,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.GemeenschappelijkeDelen).HasColumnType("decimal(8, 2)").HasDefaultValue(0m);
             entity.Property(e => e.Wegenis).HasColumnType("decimal(8, 2)").HasDefaultValue(0m);
             entity.Property(e => e.Grondopp).HasColumnType("decimal(8, 2)").HasDefaultValue(0m);
+            entity.Property(e => e.GrondoppAgrarisch).HasColumnType("decimal(8, 2)").HasDefaultValue(0m);   // migratie 096
 
             entity.HasOne(d => d.BudgetVersie).WithMany()
                 .HasForeignKey(d => d.BudgetVersieId)
@@ -3607,6 +3612,8 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Vraagprijs).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.BouwPrijsPerM2).HasColumnType("decimal(18, 2)");   // migratie 075
             entity.Property(e => e.GrondPrijsPerM2).HasColumnType("decimal(18, 2)");  // migratie 075
+            entity.Property(e => e.GrondAgrPrijsPerM2).HasColumnType("decimal(18, 2)");      // migratie 096
+            entity.Property(e => e.GrondwaardeAgrarisch).HasColumnType("decimal(18, 2)");    // migratie 096
             entity.Property(e => e.IsRuil).HasDefaultValue(false);
             entity.Property(e => e.SortOrder).HasDefaultValue(0);
 
