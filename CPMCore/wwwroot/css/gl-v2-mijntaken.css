@@ -387,9 +387,14 @@
     .gl-v2-mt-vandaag .gl-v2-mt-day { max-height: 78vh; }
 }
 
-/* Nieuwe afspraak op een project (modal): datum, van en tot naast elkaar; verborgen delen echt verbergen. */
-#mt-afspraak-nieuw-modal .gl-v2-mt-pop-tijden { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); }
-#mt-afspraak-nieuw-modal .gl-v2-mt-pop-tijden .gl-v2-field:first-child { grid-column: auto; }
+/* Nieuwe afspraak op een project (modal): rijen met gelijk uitgelijnde velden (alles bovenaan uitgelijnd), datum + van + tot ruim genoeg om te lezen. */
+.gl-v2-mt-an { display: flex; flex-direction: column; gap: 16px; }
+.gl-v2-mt-an .gl-v2-field { margin: 0; }
+.gl-v2-mt-an-rij { display: grid; gap: 16px; align-items: start; }
+.gl-v2-mt-an-rij--2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.gl-v2-mt-an-rij--3 { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); }
+@media (max-width: 575.98px) { .gl-v2-mt-an-rij--2, .gl-v2-mt-an-rij--3 { grid-template-columns: minmax(0, 1fr); } }
+.gl-v2-mt-an-vink { display: flex; align-items: center; gap: 10px; margin: 0; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); cursor: pointer; }
 #mt-an-deelnemers-rij[hidden], #mt-an-nota[hidden] { display: none; }
-#mt-afspraak-nieuw-modal .modal-body > * + * { margin-top: 14px; }
-#mt-afspraak-nieuw-modal .gl-v2-mp-check-row { display: flex; align-items: center; gap: 10px; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); cursor: pointer; }
+#mt-an-chips { margin-top: 8px; }
+#mt-an-chips:empty { display: none; }

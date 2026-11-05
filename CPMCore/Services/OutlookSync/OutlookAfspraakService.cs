@@ -23,6 +23,46 @@ public class OutlookAfspraakService
 
     private const int MaxUitnodigingen = 25;
 
+    /// <summary>Een mogelijke deelnemer in de keuzelijst van "Deelnemers uitnodigen".</summary>
+    public sealed record DeelnemerKeuze(string Email, string Naam, string Sub);
+
+    /// <summary>Zoekt deelnemers voor een uitnodiging. De collega's (actieve gebruikers, jezelf niet) staan altijd bovenaan, ook zonder zoekterm; daaronder komen contactpersonen van klanten
+    /// en leveranciers (vanaf 2 tekens). Is de zoekterm zelf een geldig e-mailadres dat nog niet in de lijst staat, dan komt het als extern adres onderaan. Geen dubbele adressen.</summary>
+    public async Task<List<DeelnemerKeuze>> ZoekDeelnemersAsync(int userId, string? term, CancellationToken ct = default)
+    {
+        term = (term ?? "").Trim();
+        var t = term.ToLowerInvariant();
+        var resultaat = new List<DeelnemerKeuze>();
+        var gezien = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        bool Voeg(string? email, string? naam, string soort)
+        {
+            email = email?.Trim();
+            if (string.IsNullOrEmpty(email) || !System.Net.Mail.MailAddress.TryCreate(email, out var a) || a.Address != email || !gezien.Add(email)) return false;
+            resultaat.Add(new DeelnemerKeuze(email, string.IsNullOrWhiteSpace(naam) ? email : naam.Trim(), $"{soort} · {email}"));
+            return true;
+        }
+
+        var collegas = await _db.Users.AsNoTracking().Where(u => u.IsActive && u.Email != null && u.Id != userId).Select(u => new { u.Voornaam, u.Familienaam, u.Email }).ToListAsync(ct);
+        foreach (var u in collegas.Select(u => new { Naam = $"{u.Voornaam} {u.Familienaam}".Trim(), u.Email }).OrderBy(u => u.Naam, StringComparer.CurrentCultureIgnoreCase)
+                     .Where(u => t.Length == 0 || u.Naam.ToLowerInvariant().Contains(t) || u.Email!.ToLowerInvariant().Contains(t)).Take(30))
+            Voeg(u.Email, u.Naam, "Collega");
+
+        if (t.Length >= 2)
+        {
+            var klantContacten = await _db.ClientContacts.AsNoTracking().Where(c => c.Email != null && ((c.Name ?? "").ToLower().Contains(t) || c.Email.ToLower().Contains(t)))
+                .OrderBy(c => c.Name).Take(10).Select(c => new { Naam = c.Name, c.Email }).ToListAsync(ct);
+            foreach (var c in klantContacten) Voeg(c.Email, c.Naam, "Klant");
+            var klanten = await _db.ClientAccount.AsNoTracking().Where(k => k.Email != null && (k.Name.ToLower().Contains(t) || k.Email.ToLower().Contains(t)))
+                .OrderBy(k => k.Name).Take(10).Select(k => new { k.Name, k.Email }).ToListAsync(ct);
+            foreach (var k in klanten) Voeg(k.Email, k.Name, "Klant");
+            var leveranciers = await _db.CompanyContacts.AsNoTracking().Where(c => c.Email != null && ((c.ContactVoornaam + " " + c.ContactNaam).ToLower().Contains(t) || c.Email.ToLower().Contains(t)))
+                .OrderBy(c => c.ContactNaam).Take(10).Select(c => new { Naam = c.ContactVoornaam + " " + c.ContactNaam, c.Email }).ToListAsync(ct);
+            foreach (var c in leveranciers) Voeg(c.Email, c.Naam, "Contactpersoon");
+            Voeg(term, null, "Extern e-mailadres");   // een getypt adres dat nog niet in de lijst staat
+        }
+        return resultaat;
+    }
+
     /// <summary>Maakt een afspraak op een project aan in de Outlook-agenda van de gebruiker (ticket #8) en koppelt ze meteen aan het project. Standaard gaat er geen uitnodiging uit:
     /// enkel als <paramref name="uitnodigen"/> aanstaat, komen de opgegeven e-mailadressen als deelnemers op de afspraak en stuurt Outlook de uitnodigingen. Later wijzigen in CPM
     /// (<c>MijnTakenAssistent.AgendaWijzig</c>) of in Outlook werkt via het onthouden event-id in beide richtingen door; de agenda zelf blijft de bron.</summary>

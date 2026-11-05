@@ -5,7 +5,7 @@
 //
 //   data-lookup-url      POST {term, countryId} → [{id, text, extra|sub}]   (server-zoekopdracht, 250 ms debounce)
 //   data-options         JSON [{id, text, sub}]                              (statische lijst, filtert lokaal)
-//   data-min-chars       minimum tekens voor een server-zoekopdracht (standaard 2; statisch: 0)
+//   data-min-chars       minimum tekens voor een server-zoekopdracht (standaard 2; statisch: 0; 0 bij een server-lijst = bij het openen meteen zoeken)
 //   data-country-source  CSS-selector van een landveld (of `[data-gl-v2-address-block]` + `[data-role=country-select]`)
 //   data-allow-new="true"  toont "Nieuw" + de "… aanmaken"-rij; klik → event `gl-v2:combo-new` {term}
 //   data-new-entity      woord in "… aanmaken als nieuw <bedrijf>"
@@ -243,11 +243,12 @@
             if (isLocked()) return;
             if (!typing) { term = ""; if (options) { items = options.slice(); } else { items = []; } hi = Math.max(0, items.findIndex(function (it) { return hasValue() && String(it.id) === String(hidden.value); })); render(); }
             open();
+            if (url && !options && minChars === 0) search();   // server-lijst zonder minimumlengte (bv. deelnemers uitnodigen): meteen de eerste resultaten tonen
             if (hasValue() && input.select) window.setTimeout(function () { try { input.select(); } catch (e) { } }, 0);
         });
         input.addEventListener("click", function () {
             // Het veld heeft al focus maar de lijst is dicht (na een keuze/Esc): een klik opent hem opnieuw.
-            if (!isLocked() && !panel.classList.contains("is-open")) { if (!typing) { items = options ? options.slice() : []; } open(); render(); }
+            if (!isLocked() && !panel.classList.contains("is-open")) { if (!typing) { items = options ? options.slice() : []; } open(); render(); if (url && !options && minChars === 0) search(); }
         });
         input.addEventListener("blur", function () {
             // Een klik in het paneel mag het veld niet eerst sluiten: pointerdown houdt de lijst vast.

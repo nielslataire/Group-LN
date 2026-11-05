@@ -90,7 +90,17 @@ public partial class MijnTakenController
         return Fout(fout ?? "De afspraak kon niet aangemaakt worden.");
     }
 
-    [HttpPost("AfspraakOntkoppel"), ValidateAntiForgeryToken, CPMCore.Filters.PermissionWrite(BOCore.PermissionCodes.MijnTaken)]
+    // Keuzelijst "Deelnemers uitnodigen": collega's bovenaan, daaronder contactpersonen, en een getypt e-mailadres als extern adres (combo-lookup: { term } → [{ id, text, sub }]).
+    [HttpPost("UitnodigingZoek")]
+    public async Task<IActionResult> UitnodigingZoek(string? term)
+    {
+        var c = await _assistent.Context(User);
+        if (c == null) return Forbid();
+        var lijst = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.OutlookSync.OutlookAfspraakService>().ZoekDeelnemersAsync(c.UserId, term);
+        return Json(lijst.Select(d => new { id = d.Email, text = d.Naam, sub = d.Sub }));
+    }
+
+    [HttpPost("AfspraakOntkoppel"),ValidateAntiForgeryToken, CPMCore.Filters.PermissionWrite(BOCore.PermissionCodes.MijnTaken)]
     public async Task<IActionResult> AfspraakOntkoppel(string eventId)
     {
         var c = await _assistent.Context(User);

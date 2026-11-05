@@ -290,6 +290,54 @@ public class OutlookAfspraakTests
         Assert.Empty(db.OutlookAfspraak);
     }
 
+    // ── Deelnemers zoeken ────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Zonder_zoekterm_staan_alleen_de_collega_s_in_de_lijst_en_jezelf_niet()
+    {
+        var (_, afspraken, _, _) = Bouw();
+
+        var lijst = await afspraken.ZoekDeelnemersAsync(1, null);
+
+        Assert.Equal(new[] { "bo@groupln.be" }, lijst.Select(d => d.Email));
+    }
+
+    [Fact]
+    public async Task Collega_s_staan_altijd_boven_de_contactpersonen()
+    {
+        var (_, afspraken, db, _) = Bouw();
+        db.Users.Add(new Users { Id = 3, UserId = "u3", Voornaam = "Cas", Familienaam = "C", Email = "cas@example.com", IsActive = true });
+        db.SaveChanges();
+
+        var lijst = await afspraken.ZoekDeelnemersAsync(1, "example");
+
+        Assert.Equal(new[] { "cas@example.com", "meer@example.com", "klant@example.com" }, lijst.Select(d => d.Email));
+    }
+
+    [Fact]
+    public async Task Een_getypt_adres_wordt_een_extern_adres_en_een_bekend_adres_komt_maar_een_keer()
+    {
+        var (_, afspraken, _, _) = Bouw();
+
+        var nieuw = await afspraken.ZoekDeelnemersAsync(1, "iemand@buiten.be");
+        var bekend = await afspraken.ZoekDeelnemersAsync(1, "klant@example.com");
+
+        Assert.Equal("iemand@buiten.be", nieuw.Last().Email);
+        Assert.Contains("Extern", nieuw.Last().Sub);
+        Assert.Single(bekend);
+    }
+
+    [Fact]
+    public async Task Inactieve_gebruikers_en_gebruikers_zonder_adres_staan_niet_in_de_lijst()
+    {
+        var (_, afspraken, db, _) = Bouw();
+        db.Users.Add(new Users { Id = 3, UserId = "u3", Voornaam = "Weg", Familienaam = "W", Email = "weg@groupln.be", IsActive = false });
+        db.Users.Add(new Users { Id = 4, UserId = "u4", Voornaam = "Zonder", Familienaam = "Z", IsActive = true });
+        db.SaveChanges();
+
+        Assert.Equal(new[] { "bo@groupln.be" }, (await afspraken.ZoekDeelnemersAsync(1, "")).Select(d => d.Email));
+    }
+
     [Fact]
     public async Task Wijzigingen_in_cpm_en_in_outlook_komen_door_en_de_koppeling_blijft()
     {
