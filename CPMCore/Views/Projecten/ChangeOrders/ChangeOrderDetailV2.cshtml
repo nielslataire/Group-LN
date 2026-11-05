@@ -284,27 +284,33 @@
                         }
                         else
                         {
-                            <label class="gl-v2-field-label" for="gl-v2-co-client">Klant · eenheid <span class="gl-v2-co-req">*</span></label>
-                            <div class="gl-v2-field-box"><select class="gl-v2-field-input" id="gl-v2-co-client" name="clientAccountId">
-                                <option value="">— kies een klant —</option>
-                                @foreach (var c in Model.ClientOptions)
+                            @await Html.PartialAsync("GlV2/_SelectList", new CPMCore.Models.GlV2.GlV2SelectListVm
+                            {
+                                Name = "clientAccountId", Id = "gl-v2-co-client", Label = "Klant · eenheid", Required = true,
+                                Placeholder = "— kies een klant —", Value = "",
+                                Items = Model.ClientOptions.Select(c => new CPMCore.Models.GlV2.GlV2SelectItem
                                 {
-                                    <option value="@c.Id" data-vat="@c.VatPercentage.ToString(CultureInfo.InvariantCulture)" data-vat-type="@c.VatTypeId" data-vat-label="@c.VatLabel">@c.Display@(string.IsNullOrWhiteSpace(c.UnitName) ? "" : " · " + c.UnitName)</option>
-                                }
-                            </select></div>
+                                    Value = c.Id.ToString(),
+                                    Text = c.Display + (string.IsNullOrWhiteSpace(c.UnitName) ? "" : " · " + c.UnitName),
+                                    Data = new Dictionary<string, string>
+                                    {
+                                        ["data-vat"] = c.VatPercentage.ToString(CultureInfo.InvariantCulture),
+                                        ["data-vat-type"] = c.VatTypeId?.ToString() ?? "",
+                                        ["data-vat-label"] = c.VatLabel ?? ""
+                                    }
+                                }).ToList()
+                            })
                         }
                     </div>
                     <div class="gl-v2-field gl-v2-co-span2">
                         @if (editable)
                         {
-                            <label class="gl-v2-field-label" for="gl-v2-co-contractactivity">Leverancier · contract <span class="gl-v2-co-req">*</span></label>
-                            <div class="gl-v2-field-box"><select class="gl-v2-field-input" id="gl-v2-co-contractactivity" name="contractActivityId">
-                                <option value="">— kies —</option>
-                                @foreach (var a in Model.ContractActivities)
-                                {
-                                    <option value="@a.ID" selected="@(a.ID == Model.ContractActivityId)">@a.Display</option>
-                                }
-                            </select></div>
+                            @await Html.PartialAsync("GlV2/_SelectList", new CPMCore.Models.GlV2.GlV2SelectListVm
+                            {
+                                Name = "contractActivityId", Id = "gl-v2-co-contractactivity", Label = "Leverancier · contract", Required = true,
+                                Placeholder = "— kies —", Value = Model.ContractActivityId > 0 ? Model.ContractActivityId.ToString() : "",
+                                Items = Model.ContractActivities.Select(a => new CPMCore.Models.GlV2.GlV2SelectItem { Value = a.ID.ToString(), Text = a.Display }).ToList()
+                            })
                         }
                         else
                         {
@@ -708,6 +714,11 @@
                     {
                         <p class="gl-v2-field-help">Elektronisch ondertekenen staat uit: verzenden kan enkel als PDF die je zelf bezorgt.</p>
                     }
+                    @if (editable && !isQuote && !Model.IsNew && !hasActiveCase && Model.CanWrite)
+                    {
+                        @* Buiten de digitale ondertekening: de klant tekende op papier of per mail — zonder te verzenden registreren, met het getekende exemplaar erbij. *@
+                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-co-side-btn" data-bs-toggle="modal" data-bs-target="#gl-v2-co-regsigned-modal"><i class="ph ph-signature" aria-hidden="true"></i><span>Reeds ondertekend registreren</span></button>
+                    }
                     @if (isSent && hasActiveCase && canSign)
                     {
                         <label class="gl-v2-btn gl-v2-btn-secondary gl-v2-co-side-btn" for="gl-v2-co-signed-file"><i class="ph ph-upload-simple" aria-hidden="true"></i><span>Getekende versie opladen</span></label>
@@ -1032,6 +1043,36 @@
         </div>
     }
 
+    @if (editable && !isQuote && !Model.IsNew && !hasActiveCase && Model.CanWrite)
+    {
+        <div class="modal fade gl-v2-modal-form" id="gl-v2-co-regsigned-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-co-regsigned-title">
+            <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+                <form class="modal-content" method="post" enctype="multipart/form-data" action="@Url.Action("ChangeOrderDetailV2RegisterSigned")">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="projectId" value="@Model.ProjectId" />
+                    <input type="hidden" name="changeOrderId" value="@Model.ChangeOrderId" />
+                    <div class="modal-header">
+                        <span class="gl-v2-co-send-icon"><i class="ph ph-signature" aria-hidden="true"></i></span>
+                        <div class="gl-v2-stack gl-v2-co-send-header-text">
+                            <h2 class="modal-title" id="gl-v2-co-regsigned-title">@Model.Number als ondertekend registreren</h2>
+                            <span class="gl-v2-co-send-header-sub">zonder te verzenden — de klant tekende buiten de digitale ondertekening</span>
+                        </div>
+                        <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="modal-body">
+                        @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "signedOn", Id = "gl-v2-co-regsigned-date", Label = "Ondertekend op", Required = true, IsoValue = DateTime.Today.ToString("yyyy-MM-dd"), DisplayValue = DateTime.Today.ToString("dd/MM/yyyy") })
+                        @await Html.PartialAsync("GlV2/_Dropzone", new GlV2DropzoneVm { Id = "gl-v2-co-regsigned-file", Name = "file", Label = "Getekend exemplaar (PDF of foto)", Accept = "application/pdf,image/*", Layout = "bar", Mode = "row", Sub = "optioneel — wordt bewaard bij de documenten van het project" })
+                        <p class="gl-v2-field-help">Bedragen en facturatieplan liggen daarna vast; de wijzigingsopdracht staat op ondertekend en de termijnen worden factureerbaar volgens het plan.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                        <button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-check" aria-hidden="true"></i><span>Registreren als ondertekend</span></button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    }
+
     @if (Model.CanDelete)
     {
         @await Html.PartialAsync("GlV2/_ModalConfirm", new GlV2ModalConfirmVm
@@ -1095,9 +1136,12 @@
         "vatKlantTypeId": @(Model.VatKlantTypeId?.ToString() ?? "null"),
         "addRowUrl": "@Url.Action("ChangeOrderDetailV2AddRow")",
         "addTermUrl": "@Url.Action("ChangeOrderDetailV2AddTerm")",
+        "stagesUrl": "@Url.Action("ChangeOrderDetailV2Stages")",
+        "clientAccountId": @Model.ClientAccountId,
         "listUrl": @Html.Raw(System.Text.Json.JsonSerializer.Serialize(listUrl))
     }
     </script>
+    <script src="~/js/currency.js"></script>
     <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-projecten-convertquote.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-projecten-changeorderdetail.js" asp-append-version="true"></script>

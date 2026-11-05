@@ -140,6 +140,20 @@ public partial class UserAdminController
 
     [HttpPost, ValidateAntiForgeryToken]
     [CPMCore.Filters.PermissionWrite(PermissionCodes.SettingsUsers)]
+    public async Task<IActionResult> GebruikerDashboardV2(int userId, int? dashboardType)
+    {
+        // Leeg = geen dashboardtype: de startpagina toont dan de gewone projectenlijst.
+        if (dashboardType.HasValue && (dashboardType.Value == (int)Models.DashboardType.Geen || !Enum.IsDefined(typeof(Models.DashboardType), dashboardType.Value)))
+            dashboardType = null;
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
+        if (user == null) return Fout("Deze gebruiker bestaat niet meer.");
+        user.DashboardType = dashboardType;
+        await _db.SaveChangesAsync();
+        return Json(new { ok = true, stand = await RechtenState(userId) });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.SettingsUsers)]
     public async Task<IActionResult> GebruikerToegangV2(int userId, bool actief)
     {
         if (User.GetCpmUserId() == userId && !actief) return Fout("Je kunt je eigen toegang niet uitschakelen.");

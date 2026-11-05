@@ -52,6 +52,42 @@
     initActiveProject();
     initSearchModals();
     initProjectPickerModal();
+    initBoekhoudingTabs();
+
+    // ── Boekhouding-dashboard (design-handoff 1a): tabbladen van de kaart "Inkomende facturen" ──────
+    // Alle drie de panelen staan server-side in de pagina; dit wisselt enkel welke zichtbaar is.
+    function initBoekhoudingTabs() {
+        initBoekhoudingMore();
+        var card = document.getElementById("gl-v2-bk-incoming");
+        if (!card) return;
+        var tabs = card.querySelectorAll("[data-bk-tab]");
+        var panels = card.querySelectorAll("[data-bk-panel]");
+        tabs.forEach(function (tab) {
+            tab.addEventListener("click", function () {
+                var key = tab.getAttribute("data-bk-tab");
+                tabs.forEach(function (t) {
+                    var active = t === tab;
+                    t.classList.toggle("is-active", active);
+                    t.setAttribute("aria-selected", active ? "true" : "false");
+                });
+                panels.forEach(function (p) { p.hidden = p.getAttribute("data-bk-panel") !== key; });
+            });
+        });
+    }
+
+    // "Toon alle n": toont de verborgen rijen (data-bk-more-item) van de lijst vlak boven de knop, in Klaar om te factureren.
+    function initBoekhoudingMore() {
+        document.querySelectorAll("[data-bk-more]").forEach(function (btn) {
+            var list = btn.previousElementSibling;
+            if (!list) return;
+            btn.addEventListener("click", function () {
+                var expanded = btn.getAttribute("aria-expanded") === "true";
+                list.querySelectorAll("[data-bk-more-item]").forEach(function (li) { li.hidden = expanded; });
+                btn.setAttribute("aria-expanded", expanded ? "false" : "true");
+                btn.textContent = btn.getAttribute(expanded ? "data-more-text" : "data-less-text");
+            });
+        });
+    }
 
     // ── Belletje (topbar) → paneel openen/sluiten ──────────────────────────────────────────────
     // Desktop: het paneel zit al vast in de kolom, deze knop bestaat daar niet eens (gl-v2-shell.css,

@@ -52,7 +52,7 @@ public class HomeController : BaseController
     }
 
     [DefaultBreadcrumb("Dashboard")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? bedrijven = null)
     {
         SetPageHeader("bx bx-home-alt", "Dashboard");
 
@@ -271,6 +271,40 @@ public class HomeController : BaseController
             var warningsPage = await _incomingInvoiceService.GetPagedAsync(
                 new IncomingInvoiceFilterVm { HasWarnings = true, PageSize = 1 });
             model.IncomingInvoiceWarningCount = warningsPage.TotalCount;
+
+            if (model.DashboardType == Models.DashboardType.Boekhouding)
+            {
+                // Alles op dit dashboard geldt enkel voor de facturatiebedrijven waartoe de gebruiker toegang heeft.
+                var allCompanies = await CPMCore.Services.Security.BillingCompanyScope.ReadableCompaniesAsync(
+                    HttpContext.RequestServices.GetRequiredService<IPermissionService>(), _issuerCompanyService);
+                // Filterpillen: ?bedrijven=1,2 beperkt de cijfers tot die bedrijven (enkel toegelaten bedrijven tellen), leeg = alle.
+                var picked = (bedrijven ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(v => int.TryParse(v, out var id) ? id : (int?)null).Where(id => id.HasValue).Select(id => id!.Value)
+                    .Where(id => allCompanies.Any(c => c.Id == id)).ToHashSet();
+                var companies = picked.Count == 0 ? allCompanies : allCompanies.Where(c => picked.Contains(c.Id)).ToList();
+                var selectedIds = companies.Select(c => c.Id).ToHashSet();
+                model.OutgoingInvoiceSummary = await _invoiceQueryService.GetDashboardSummaryForIssuersAsync(companies.Select(c => c.Id).ToList());
+                model.Boekhouding = await CPMCore.Models.Home.BoekhoudingDashboardBuilder.BuildAsync(
+                    _db, companies, model.OutgoingInvoiceSummary, DateOnly.FromDateTime(DateTime.Today));
+                model.Boekhouding.CompanyFilter = allCompanies.Select(c =>
+                {
+                    var next = new HashSet<int>(picked.Count == 0 ? Enumerable.Empty<int>() : selectedIds);
+                    if (!next.Add(c.Id)) next.Remove(c.Id);
+                    // niets of alles gekozen = geen filter
+                    var value = next.Count == 0 || next.Count == allCompanies.Count ? null : string.Join(',', next.OrderBy(i => i));
+                    return new CPMCore.Models.Home.BkCompanyOptionVm
+                    {
+                        Id = c.Id,
+                        Name = c.Name ?? "",
+                        Selected = picked.Count > 0 && selectedIds.Contains(c.Id),
+                        ToggleValue = value
+                    };
+                }).ToList();
+                // Belletje in de gl-v2-topbar: zelfde regel als bij de projectleider (enkel "actie vereist" + "op te lossen").
+                // Moet hier vaststaan, niet in de partial: ViewData uit de body bereikt de al gerenderde topbar niet meer.
+                ViewData["HasNotificationsBell"] = true;
+                ViewData["NotificationsBellCount"] = model.Boekhouding.Meldingen.Count(m => m.Group <= 1);
+            }
         }
 
         // CeoCfo: bedrijfsnamen voor de badge op elke kaart in de multi-company werven-grid.

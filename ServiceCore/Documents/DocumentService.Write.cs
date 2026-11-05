@@ -22,6 +22,14 @@ public partial class DocumentService
         d.Type = DocumentRules.LegacyTypeAfterChange(d.Type, folderCode, d.Status, d.Links.Count, clientLink != null);
     }
 
+    /// <summary>Leest de gekozen soort uit een formulierwaarde. Leeg of onbekend = null; 1 (Verkoopsdocument) enkel als <paramref name="allowSales"/>.</summary>
+    private static int? ParseDocType(string? raw, bool allowSales)
+    {
+        if (!int.TryParse(raw, out var v)) return null;
+        if (DocumentRules.DocTypeName(v) == null) return null;
+        return v == 1 && !allowSales ? null : v;
+    }
+
     private static void ApplyShares(ProjectDocs d, bool shareClients, bool shareSuppliers)
     {
         if (shareClients)
@@ -108,7 +116,9 @@ public partial class DocumentService
                 DocumentNumber = dto.Number,
                 AuthoredBy = dto.AuthoredBy,
                 Perceel = dto.Perceel ?? req?.Perceel,
-                Type = req?.LegacyDocType,
+                // Soort document: de keuze in het uploadvenster, anders dat van het verwachte document. Type 1 (Verkoopsdocument, publieke site) wordt
+                // nooit rechtstreeks gezet: dat gebeurt pas bij goedkeuring (SyncLegacyColumns).
+                Type = ParseDocType(dto.DocType, allowSales: false) ?? req?.LegacyDocType,
                 CreatedDate = now,
                 CreatedByUserId = dto.UserId,
                 Status = DocumentStatus.Concept
@@ -215,6 +225,20 @@ public partial class DocumentService
         d.Date = dto.DocDate;
         d.ExpiresOn = dto.ExpiresOn;
         d.Perceel = string.IsNullOrWhiteSpace(dto.Perceel) ? null : dto.Perceel.Trim();
+
+        // Soort document: null = niet meegestuurd (ongewijzigd), "" = geen type. Type 1 komt op de website en mag enkel voor een goedgekeurd,
+        // ongekoppeld verkoopdocument; een bestaand type 1 laten staan mag altijd.
+        if (dto.DocType != null)
+        {
+            var wanted = ParseDocType(dto.DocType, allowSales: true);
+            if (wanted != d.Type)
+            {
+                if (wanted == 1 && !DocumentRules.CanBeSalesType(d.Folder?.Code ?? "overige", d.Status, d.Links.Count, d.Links.Any(l => l.ClientAccountId.HasValue)))
+                    return DocResult.Fail("Een verkoopsdocument komt op de website. Dat kan enkel voor een goedgekeurd document in de map Verkoop dat nergens aan gekoppeld is.");
+                d.Type = wanted;
+            }
+        }
+
         d.ModifiedDate = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         return DocResult.Success("Document bijgewerkt.");

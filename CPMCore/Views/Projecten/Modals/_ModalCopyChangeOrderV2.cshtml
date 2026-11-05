@@ -10,34 +10,39 @@
 <input type="hidden" name="projectId" value="@Model.ProjectId" />
 
 <div class="gl-v2-field gl-v2-field-full">
-    <label class="gl-v2-field-label" for="gl-v2-cc-order">Offerte of wijzigingsopdracht <span class="gl-v2-cq-req">*</span></label>
-    <div class="gl-v2-field-box"><select class="gl-v2-field-input" id="gl-v2-cc-order" name="changeOrderId" required>
-        <option value="">— kies een offerte of wijzigingsopdracht —</option>
-        @foreach (var o in Model.Sources)
+    @await Html.PartialAsync("GlV2/_SelectList", new CPMCore.Models.GlV2.GlV2SelectListVm
+    {
+        Name = "changeOrderId", Id = "gl-v2-cc-order", Label = "Offerte of wijzigingsopdracht", Required = true,
+        Placeholder = "— kies een offerte of wijzigingsopdracht —", Value = Model.ChangeOrderId > 0 ? Model.ChangeOrderId.ToString() : "",
+        Items = Model.Sources.Select(o => new CPMCore.Models.GlV2.GlV2SelectItem
         {
-            <option value="@o.Id" data-quote="@(o.IsQuote ? "true" : "false")" selected="@(o.Id == Model.ChangeOrderId)">@o.Display</option>
-        }
-    </select></div>
+            Value = o.Id.ToString(), Text = o.Display,
+            Data = new Dictionary<string, string> { ["data-quote"] = o.IsQuote ? "true" : "false" }
+        }).ToList()
+    })
 </div>
 
 <div class="gl-v2-field gl-v2-field-full">
     <span class="gl-v2-field-label">Kopie als</span>
-    <div style="display:flex;gap:18px;flex-wrap:wrap">
-        <label style="display:flex;align-items:center;gap:6px"><input type="radio" name="asQuote" value="true" id="gl-v2-cc-as-quote" /> Offerte</label>
-        <label style="display:flex;align-items:center;gap:6px"><input type="radio" name="asQuote" value="false" id="gl-v2-cc-as-wo" checked /> Wijzigingsopdracht</label>
+    <div class="gl-v2-radio-group" role="radiogroup" aria-label="Kopie als">
+        <label class="gl-v2-radio"><input type="radio" name="asQuote" value="true" id="gl-v2-cc-as-quote" /><span>Offerte</span></label>
+        <label class="gl-v2-radio"><input type="radio" name="asQuote" value="false" id="gl-v2-cc-as-wo" checked /><span>Wijzigingsopdracht</span></label>
     </div>
     <span class="gl-v2-field-help" id="gl-v2-cc-as-hint">Van een offerte maak je een kopie als offerte; omzetten naar een wijzigingsopdracht doe je via “Omzetten →”.</span>
 </div>
 
 <div class="gl-v2-field gl-v2-field-full">
-    <label class="gl-v2-field-label" for="gl-v2-cc-client">Voor welke eenheid <span class="gl-v2-cq-req">*</span></label>
-    <div class="gl-v2-field-box"><select class="gl-v2-field-input" id="gl-v2-cc-client" name="clientAccountId" required>
-        <option value="">— kies een klant · eenheid —</option>
-        @foreach (var c in Model.Clients)
+    @await Html.PartialAsync("GlV2/_SelectList", new CPMCore.Models.GlV2.GlV2SelectListVm
+    {
+        Name = "clientAccountId", Id = "gl-v2-cc-client", Label = "Voor welke eenheid", Required = true,
+        Placeholder = "— kies een klant · eenheid —", Value = "",
+        Items = Model.Clients.Select(c => new CPMCore.Models.GlV2.GlV2SelectItem
         {
-            <option value="@c.Id" data-vat-label="@c.VatLabel">@c.Display@(string.IsNullOrWhiteSpace(c.UnitName) ? "" : " · " + c.UnitName)</option>
-        }
-    </select></div>
+            Value = c.Id.ToString(),
+            Text = c.Display + (string.IsNullOrWhiteSpace(c.UnitName) ? "" : " · " + c.UnitName),
+            Data = new Dictionary<string, string> { ["data-vat-label"] = c.VatLabel ?? "" }
+        }).ToList()
+    })
     <span class="gl-v2-field-help" id="gl-v2-cc-client-hint">btw klant volgt de betalingsgroep van de gekozen eenheid</span>
 </div>
 

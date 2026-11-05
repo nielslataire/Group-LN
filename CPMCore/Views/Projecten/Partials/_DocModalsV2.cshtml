@@ -26,6 +26,9 @@
         Id = id, Name = name, Label = label, Value = value, Items = items.ToList(), Placeholder = placeholder, EmptyText = emptyText, Required = required, Bare = bare
     };
     var folderItems = ov.Folders.Select(f => new GlV2SelectItem { Value = f.Id.ToString(), Text = f.Name }).ToList();
+    // Soort document (de oude lijst Attest, Gaskeuring, Bouwvergunning ...). Verkoopsdocument (1) komt op de website: enkel kiesbaar bij het bewerken van een document dat daarvoor in aanmerking komt (de server controleert dat).
+    var docTypeItems = ServiceCore.Documents.DocumentRules.DocTypeOptions.Where(t => t.Value != 1).Select(t => new GlV2SelectItem { Value = t.Value.ToString(), Text = t.Name }).ToList();
+    var docTypeEditItems = ServiceCore.Documents.DocumentRules.DocTypeOptions.Select(t => new GlV2SelectItem { Value = t.Value.ToString(), Text = t.Name }).ToList();
     var unitItems = ov.Units.Select(u => new GlV2SelectItem { Value = u.Id.ToString(), Text = u.Name }).ToList();
     var companyItems = ov.Companies.Select(c => new GlV2SelectItem { Value = c.Id.ToString(), Text = c.Name }).ToList();
     var clientItems = ov.Clients.Select(c => new GlV2SelectItem { Value = c.Id.ToString(), Text = c.Name }).ToList();
@@ -71,6 +74,9 @@
                         </div>
                         <div data-dd-new-only>
                             @await Html.PartialAsync("GlV2/_SelectList", Sel("gl-v2-dd-up-folder", "folderId", "MAP", activeFolderId > 0 ? activeFolderId.ToString() : null, folderItems, "Kies een map …", required: true))
+                        </div>
+                        <div data-dd-new-only>
+                            @await Html.PartialAsync("GlV2/_SelectList", Sel("gl-v2-dd-up-type", "docType", "SOORT DOCUMENT", "", docTypeItems, "Geen soort", "Geen soort"))
                         </div>
                         <div>
                             @await Html.PartialAsync("GlV2/_DateField", DateVm("gl-v2-dd-up-date", "docDate", "DOCUMENTDATUM", today))
@@ -261,6 +267,11 @@
                     {
                         Name = "folderId", Id = "gl-v2-dd-ed-folder", Label = "MAP", Placeholder = "Kies een map …",
                         Items = ov.Folders.Select(f => new GlV2SelectItem { Value = f.Id.ToString(), Text = f.Name }).ToList()
+                    })
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                    {
+                        Name = "docType", Id = "gl-v2-dd-ed-type", Label = "SOORT DOCUMENT", Placeholder = "Geen soort", EmptyText = "Geen soort", Value = "",
+                        Items = docTypeEditItems
                     })
                     <div class="gl-v2-field">
                         <label class="gl-v2-field-label" for="gl-v2-dd-ed-number">DOCUMENTNR.</label>

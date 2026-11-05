@@ -62,7 +62,8 @@ public class ChangeOrderDetailV2Vm
     // Facturatieplan
     public string FacturatieplanPreset { get; set; } = "laatste-schijf"; // laatste-schijf | voorschot-saldo | na-ondertekening | eigen
     public List<ChangeOrderTermV2> Terms { get; set; } = new();
-    public List<IdNameBO> Stages { get; set; } = new(); // voor de "bij schijf"-trigger-dropdown
+    /// <summary>Schijven van de betalingsgroep(en) van de klant · eenheid die nog niet gefactureerd zijn — voor de "bij schijf"-trigger-dropdown.</summary>
+    public List<ChangeOrderStageOptionV2> Stages { get; set; } = new();
     public string ConditionsText { get; set; } = "";
 
     // Ondertekening (rechterkolom) — rechtstreeks de signing-status, geen eigen kopie
@@ -189,6 +190,14 @@ public class ChangeOrderDetailRowV2
     /// <summary>Enkel weergave (nooit vertrouwd bij het posten): een uit de offerte overgenomen WO-regel —
     /// prijs, commissie en btw liggen vast, aantal en omschrijving niet (ChangeOrderDetail.SourceDetailId).</summary>
     public bool PriceLocked { get; set; }
+}
+
+public class ChangeOrderStageOptionV2
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = "";
+    /// <summary>Naam van de betalingsgroep (de keuzelijst toont ze als kop zodra er meer dan één groep is).</summary>
+    public string Group { get; set; } = "";
 }
 
 public class ChangeOrderTermV2

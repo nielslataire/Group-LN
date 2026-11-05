@@ -20,6 +20,8 @@ faq:
     a: Nee. Alle tabbladen horen bij één formulier. Je bewaart pas met Bedrijf opslaan. Een stipje op het tabblad toont niet-opgeslagen wijzigingen.
   - q: Wat betekent Standaard voor externe coördinatiecontracten?
     a: Contracten zonder eigen facturatiebedrijf komen onder dit bedrijf. Aanzetten verplaatst de markering van een ander bedrijf, er kan er maar één zo gemarkeerd zijn.
+  - q: Welke datum hoort bij de btw-aangifte?
+    a: Uiterlijk de 20e van de maand na de periode. Bij Maandelijks is dat de 20e van de volgende maand. Bij Per kwartaal valt de datum op 20 januari, 20 april, 20 juli en 20 oktober.
   - q: Wat doet Actief uitzetten?
     a: Het bedrijf verschijnt niet meer bij nieuwe facturen. Bestaande facturen blijven bestaan.
   - q: Welk logo mag ik gebruiken?
@@ -40,6 +42,7 @@ Onder **Identiteit** vul je in:
 - **Weergavenaam**: de naam die je in CPM ziet.
 - **Wettelijke naam** en **Rechtsvorm**.
 - **Btw-nummer** en **Ondernemingsnummer**.
+- **Btw-aangifte**: kies **Maandelijks** of **Per kwartaal**. Het dashboard van de boekhouding rekent met die keuze de uiterste datum van de volgende aangifte uit, per bedrijf. Staat er **Niet ingesteld**, dan toont het dashboard geen datum voor dit bedrijf.
 
 Met de schakelaars bepaal je of het bedrijf actief is en of het de standaard is voor externe coördinatiecontracten.
 

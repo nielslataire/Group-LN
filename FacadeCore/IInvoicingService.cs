@@ -29,6 +29,9 @@ namespace FacadeCore
         /// <summary>Openstaand/vervallen-overzicht voor de Boekhouding- en CeoCfo-dashboards.</summary>
         Task<InvoiceDashboardSummaryBO> GetDashboardSummaryAsync(CancellationToken ct = default);
 
+        /// <summary>Zelfde cijfers, beperkt tot de opgegeven facturatiebedrijven (dashboard Boekhouding).</summary>
+        Task<InvoiceDashboardSummaryBO> GetDashboardSummaryForIssuersAsync(IReadOnlyCollection<int> issuerCompanyIds, CancellationToken ct = default);
+
         /// <summary>Openstaand/vervallen-overzicht voor één project (Detail-hub).</summary>
         Task<InvoiceDashboardSummaryBO> GetDashboardSummaryForProjectAsync(int projectId, CancellationToken ct = default);
     }

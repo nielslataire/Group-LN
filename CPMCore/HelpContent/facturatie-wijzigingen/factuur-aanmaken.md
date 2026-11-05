@@ -48,7 +48,7 @@ faq:
 
 1. Kies de **Factuurdatum**. Bij **Betaaltermijn** zie je meteen op welke dag de factuur vervalt.
 2. Kies bij **Opbouw** hoe de lijnen gevuld worden: **Vrije lijnen**, **Uit openstaande posten** of **Uit offerte**.
-3. Kies het **Btw-tarief (standaard)**. Je kan het in stap 3 per lijn aanpassen.
+3. Kies het **Btw-tarief (standaard)**. Je kan het in stap 3 per lijn aanpassen. Houd de muis boven een tarief in de lijst om de volledige naam van de btw-code te zien.
 4. Onder **Verzenden** zie je hoe de factuur straks vertrekt. Dat volgt de gegevens van de klant en gebeurt pas bij het nummeren.
 
 ## Lijnen invullen

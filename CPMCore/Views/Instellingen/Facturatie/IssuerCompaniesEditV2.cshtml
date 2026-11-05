@@ -101,6 +101,18 @@
                             </div>
                             <div class="gl-v2-col-6">@Html.EditorFor(m => m.VatNumber, "GlV2BtwNummer")</div>
                             <div class="gl-v2-col-6">@Html.EditorFor(m => m.EnterpriseNumber, "GlV2OndernemingsNummer")</div>
+                            <div class="gl-v2-col-6">
+                                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                                {
+                                    Name = "VatReturnFrequency", Id = "ice-vatreturn", Label = "Btw-aangifte", Value = Model.VatReturnFrequency ?? "", EmptyText = "Niet ingesteld",
+                                    Help = "bepaalt de datum van de btw-aangifte op het dashboard Boekhouding (uiterlijk de 20e na de periode)",
+                                    Items = new List<GlV2SelectItem>
+                                    {
+                                        new GlV2SelectItem { Value = "Monthly", Text = "Maandelijks" },
+                                        new GlV2SelectItem { Value = "Quarterly", Text = "Per kwartaal" }
+                                    }
+                                })
+                            </div>
                             <div class="gl-v2-col-12 gl-v2-ice-toggles">
                                 @Html.EditorFor(m => m.IsActive, "GlV2ToggleSwitch", new { Hint = "inactieve bedrijven verschijnen niet bij nieuwe facturen" })
                                 @Html.EditorFor(m => m.IsExternalCoordinationDefault, "GlV2ToggleSwitch", new { Label = "Standaard voor externe coördinatiecontracten", Hint = "contracten zonder eigen facturatiebedrijf (bv. coördinatie voor een externe bouwheer) komen onder dit bedrijf — aanzetten verplaatst de markering, er kan er maar één zo gemarkeerd zijn" })

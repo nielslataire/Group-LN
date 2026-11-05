@@ -21,6 +21,9 @@
 
     function getNum(el) {
         if (!el) return 0;
+        // Valutaveld (AutoNumeric): de zichtbare tekst is "1.234,50"; het kale getal komt uit het component.
+        var an = window.AutoNumeric && AutoNumeric.getAutoNumericElement(el);
+        if (an) { var n = an.getNumber(); return n == null || isNaN(n) ? 0 : n; }
         var v = (el.value || "").toString().trim();
         return parseFloat(v.replace(",", ".")) || 0;
     }
@@ -43,7 +46,12 @@
 
     // ── 1. Regels: herberekening ────────────────────────────────────────────────────────────────────
     var rowsBody = document.getElementById("gl-v2-co-rows-body");
+    function initCurrency(scope) { if (window.CurrencyMask && scope) CurrencyMask.init(scope.querySelectorAll(".Currencymask")); }
+    initCurrency(rowsBody);
     var defaultCommission = document.getElementById("gl-v2-co-default-commission");
+
+    // Omschrijving: begint op één regel en groeit mee met wat je typt (field-sizing in de CSS; dit is de terugval voor browsers zonder).
+    function autoGrow(ta) { ta.style.height = "auto"; ta.style.height = ta.scrollHeight + "px"; }
 
     function recalcRow(tr) {
         var number = getNum($(".js-co-number", tr));
@@ -102,6 +110,7 @@
         rowsBody.addEventListener("input", function (e) {
             var tr = e.target.closest(".js-co-row");
             if (!tr) return;
+            if (e.target.classList.contains("js-co-description")) autoGrow(e.target);
             recalcRow(tr);
             recomputeTotals();
         });
@@ -124,6 +133,7 @@
             }
         });
         $$(".js-co-row", rowsBody).forEach(recalcRow);
+        $$(".js-co-description", rowsBody).forEach(autoGrow);
     }
 
     // Volgorde (28a): de greep verplaatst een rij — slepen met muis/vinger (pointer events, werkt ook op
@@ -194,39 +204,39 @@
         });
     }
 
-    // Btw-code per regel (migratie 073): gesloten = "6 % · CODE", open lijst = "6 % - omschrijving" (zonder code).
-    // Een native select toont in beide standen dezelfde optietekst, dus de tekst wisselt bij openen/sluiten.
-    function setVatLabels(sel, attr) {
-        Array.prototype.forEach.call(sel.options, function (o) { o.textContent = o.getAttribute(attr); });
-    }
-    if (rowsBody) {
-        rowsBody.addEventListener("mousedown", function (e) {
-            var sel = e.target.closest ? e.target.closest(".js-co-vattype") : null;
-            if (sel) setVatLabels(sel, "data-long");
-        });
-        rowsBody.addEventListener("focusin", function (e) {
-            var sel = e.target.closest ? e.target.closest(".js-co-vattype") : null;
-            if (sel) setVatLabels(sel, "data-long");
-        });
-        rowsBody.addEventListener("focusout", function (e) {
-            var sel = e.target.closest ? e.target.closest(".js-co-vattype") : null;
-            if (sel) setVatLabels(sel, "data-short");
+    // Keuzelijsten = de gedeelde Basis-keuzelijst (GlV2/_SelectList): de waarde staat in de verborgen input, de gekozen
+    // optieknop (.is-selected) draagt de data-attributen. Btw-code: zichtbaar "6 % · CODE", tooltip = volledige omschrijving.
+    function selectWrap(el) { return el && el.closest ? el.closest(".gl-v2-select") : null; }
+    function chosenOption(wrap) { return wrap ? wrap.querySelector(".gl-v2-select-option.is-selected") : null; }
+    function setSelectValue(wrap, value) { // zonder change-event; de aanroeper rekent zelf door
+        if (!wrap) return;
+        var hidden = wrap.querySelector("input[type=hidden]"), label = wrap.querySelector(".gl-v2-select-trigger-label");
+        wrap.querySelectorAll(".gl-v2-select-option").forEach(function (o) {
+            var on = o.getAttribute("data-value") === String(value);
+            o.classList.toggle("is-selected", on);
+            if (on) { hidden.value = String(value); if (label) label.textContent = o.textContent.trim(); }
         });
     }
+    function initSelects(scope) { if (window.GlV2Select && window.GlV2Select.init) window.GlV2Select.init(scope); }
 
     // Btw-code per regel (migratie 073): het verborgen percentage volgt de gekozen code.
     if (rowsBody) {
         rowsBody.addEventListener("change", function (e) {
-            var sel = e.target.closest ? e.target.closest(".js-co-vattype") : null;
-            if (!sel) return;
-            var tr = sel.closest(".js-co-row");
-            var opt = sel.options[sel.selectedIndex];
+            var wrap = selectWrap(e.target);
+            if (!wrap || wrap.getAttribute("data-role") !== "vattype") return;
+            var tr = wrap.closest(".js-co-row");
+            var opt = chosenOption(wrap);
             var input = tr ? $(".js-co-vat", tr) : null;
             if (input && opt) input.value = opt.getAttribute("data-vat");
-            setVatLabels(sel, "data-short"); // meteen compact na de keuze
             if (tr) recalcRow(tr);
             recomputeTotals();
         });
+    }
+
+    // Klant · eenheid: vast (cfg) of gekozen in het scherm zelf (Leeg beginnen) — de schijven van de termijnen horen bij die klant.
+    function currentClientId() {
+        var picker = document.getElementById("gl-v2-co-client");
+        return (picker && picker.value) || cfg.clientAccountId || 0;
     }
 
     // "Leeg beginnen" (28b): de klant · eenheid wordt hier gekozen — de btw klant volgt de betalingsgroep
@@ -234,8 +244,14 @@
     var clientSelect = document.getElementById("gl-v2-co-client");
     if (clientSelect) {
         clientSelect.addEventListener("change", function () {
-            var opt = clientSelect.selectedIndex > 0 ? clientSelect.options[clientSelect.selectedIndex] : null;
+            var opt = clientSelect.value ? chosenOption(selectWrap(clientSelect)) : null;
             if (!opt) return;
+            // Andere klant = andere schijven: de keuzelijsten van de termijnen opnieuw vullen.
+            fetch(cfg.stagesUrl + "?projectId=" + encodeURIComponent(cfg.projectId) + "&clientAccountId=" + encodeURIComponent(clientSelect.value))
+                .then(function (r) { return r.json(); })
+                .then(function (items) {
+                    $$('.gl-v2-select[data-role="term-stage"]').forEach(function (w) { window.GlV2Select.setItems(w, items, items.length ? items[0].value : ""); });
+                });
             cfg.vatKlant = getNum({ value: opt.getAttribute("data-vat") });
             cfg.vatKlantTypeId = opt.getAttribute("data-vat-type") || null;
             var label = document.getElementById("gl-v2-co-vat-label");
@@ -245,8 +261,8 @@
                     var input = $(".js-co-vat", tr);
                     if (input) input.value = cfg.vatKlant;
                     // De btw-code volgt de betalingsgroep van de gekozen klant (migratie 073).
-                    var sel = $(".js-co-vattype", tr);
-                    if (sel && cfg.vatKlantTypeId) sel.value = cfg.vatKlantTypeId;
+                    var sel = $('.gl-v2-select[data-role="vattype"]', tr);
+                    if (sel && cfg.vatKlantTypeId) setSelectValue(sel, cfg.vatKlantTypeId);
                     recalcRow(tr);
                 });
                 recomputeTotals();
@@ -264,6 +280,9 @@
                 .then(function (html) {
                     rowsBody.insertAdjacentHTML("beforeend", html);
                     var tr = rowsBody.lastElementChild;
+                    initSelects(tr);
+                    initCurrency(tr);
+                    var d0 = $(".js-co-description", tr); if (d0) autoGrow(d0);
                     recalcRow(tr);
                     recomputeTotals();
                     var desc = $(".js-co-description", tr);
@@ -327,7 +346,8 @@
             }
         });
         termsBody.addEventListener("change", function (e) {
-            if (e.target.classList.contains("js-co-term-trigger")) {
+            var wrap = selectWrap(e.target);
+            if (wrap && wrap.getAttribute("data-role") === "term-trigger") {
                 var tr = e.target.closest(".js-co-term-row");
                 var stageBox = $(".js-co-term-stagebox", tr);
                 if (stageBox) stageBox.classList.toggle("is-hidden", e.target.value !== "2");
@@ -347,13 +367,14 @@
 
     function addTermRow(kind, percentage, beforeSaldo) {
         var index = termsBody ? $$(".js-co-term-row", termsBody).length : 0;
-        var url = cfg.addTermUrl + "?index=" + index + "&projectId=" + cfg.projectId + "&kind=" + kind +
+        var url = cfg.addTermUrl + "?index=" + index + "&projectId=" + cfg.projectId + "&kind=" + kind + "&clientAccountId=" + currentClientId() +
             (percentage != null ? "&percentage=" + percentage : "");
         return fetch(url).then(function (r) { return r.text(); }).then(function (html) {
             var saldoRow = beforeSaldo ? $('.js-co-term-row[data-kind="3"]', termsBody) : null;
             if (saldoRow) saldoRow.insertAdjacentHTML("beforebegin", html);
             else termsBody.insertAdjacentHTML("beforeend", html);
             renumberTerms();
+            initSelects(termsBody);
         });
     }
 
@@ -406,7 +427,9 @@
             var contract = document.getElementById("gl-v2-co-contractactivity");
             if ((client && !client.value) || (contract && !contract.value)) {
                 e.preventDefault();
-                (client && !client.value ? client : contract).focus();
+                var missing = client && !client.value ? client : contract;
+                var trigger = document.getElementById(missing.id + "_trigger");
+                if (trigger) trigger.focus();
                 toast("warning", "Nog niet compleet", "Kies eerst een klant · eenheid en een leverancier · contract.");
                 return;
             }

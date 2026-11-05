@@ -1,0 +1,447 @@
+﻿@model CPMCore.Models.Home.HomeModel
+@using BOCore
+@using CPMCore.Models.GlV2
+@using CPMCore.Models.Home
+@* gl-v2 dashboard Boekhouding (design-handoff "Dashboards per rol", punt 1a): geld in en uit, met de wettelijke controles
+   bovenaan. Alles is hergebruik van bestaande gl-v2-componenten (GlV2/_KpiStrip, GlV2/_MeldingenPaneel, .gl-v2-card,
+   .gl-v2-badge, .gl-v2-snelacties-card/.gl-v2-snelactie-row, GlV2/_SearchModal); de paar eigen klassen (.gl-v2-bk-*) staan in
+   gl-v2-dashboard-boekhouding.css. Gegevens komen uit HomeModel.Boekhouding (BoekhoudingDashboardBuilder) en
+   HomeModel.OutgoingInvoiceSummary. Wat nog niet beschikbaar is (geblokkeerde betalingen, schijven klaar om te factureren,
+   boekhoudpakket-export, betaalruns) toont een lege staat of een gedimde rij, geen verzonnen cijfers.
+   Alles is beperkt tot de facturatiebedrijven waartoe de gebruiker toegang heeft (BillingCompanyScope) en toont per rij zijn bedrijf. *@
+@{
+    var nl = System.Globalization.CultureInfo.GetCultureInfo("nl-BE");
+    var vm = Model.Boekhouding ?? new BoekhoudingDashboardVm();
+    var summary = Model.OutgoingInvoiceSummary;
+    var outstanding = summary?.OutstandingAmount ?? 0m;
+    string Eur(decimal v) => "€ " + v.ToString("N2", nl);
+    string Eur0(decimal v) => "€ " + v.ToString("N0", nl);
+    string Pct(decimal part) => (outstanding > 0 ? Math.Round((double)(part / outstanding) * 100, 1) : 0).ToString(System.Globalization.CultureInfo.InvariantCulture) + "%";
+
+    // ── KPI-strip (4 kaarten → ruime kaartvorm) ──
+    var companyCount = vm.Companies.Count;
+    string CompanyWord(int n) => n == 1 ? "bedrijf" : "bedrijven";
+    var nextVat = vm.NextVatReturn;
+    var vatNotSet = vm.VatReturns.Count(v => v.Deadline is null);
+    var kpis = new List<GlV2KpiItemVm>
+    {
+        new()
+        {
+            Label = "Inkomend te goedkeuren", Value = vm.ToApproveCount.ToString(), IconClass = "ph-receipt",
+            Hint = $"{Eur(vm.ToApproveAmount)} · {(vm.ToApproveDueThisWeek == 0 ? "geen vervallen deze week" : vm.ToApproveDueThisWeek + " vervallen deze week")}",
+            Tone = vm.ToApproveDueThisWeek > 0 ? GlV2KpiTone.Warning : GlV2KpiTone.Primary
+        },
+        new()
+        {
+            Label = "Openstaand bij klanten", Value = Eur0(outstanding), IconClass = "ph-wallet",
+            Hint = $"{summary?.OutstandingCount ?? 0} {((summary?.OutstandingCount ?? 0) == 1 ? "factuur" : "facturen")} · {companyCount} {CompanyWord(companyCount)}",
+            Tone = GlV2KpiTone.Primary
+        },
+        new()
+        {
+            Label = "Vervallen", Value = (summary?.OverdueCount ?? 0).ToString(), IconClass = "ph-timer",
+            Hint = (summary?.OverdueCount ?? 0) == 0 ? "niets vervallen" : $"{Eur(summary!.OverdueAmount)} · oudste {summary.OldestOverdueDays} dagen",
+            Tone = (summary?.OverdueCount ?? 0) > 0 ? GlV2KpiTone.Danger : GlV2KpiTone.Primary
+        },
+        new()
+        {
+            Label = nextVat is null ? "Btw-aangifte" : $"Btw-aangifte {nextVat.PeriodLabel}",
+            Value = nextVat is null ? "—" : nextVat.Deadline!.Value.ToString("dd/MM"),
+            IconClass = "ph-calendar-check",
+            Hint = nextVat is null
+                ? "nog niet ingesteld"
+                : $"{nextVat.IssuerName} · nog {nextVat.DaysLeft} {(nextVat.DaysLeft == 1 ? "dag" : "dagen")}" + (vatNotSet > 0 ? $" · {vatNotSet} niet ingesteld" : ""),
+            Tone = nextVat is not null && nextVat.DaysLeft <= 7 ? GlV2KpiTone.Warning : GlV2KpiTone.Primary
+        },
+    };
+
+    // ── Meldingenpaneel: dezelfde drie dringendheidsgroepen als bij de projectleider ──
+    string BekijkUrl(BkMeldingVm m) => m.Target switch
+    {
+        "Incoming" when m.IncomingId.HasValue => Url.Action("Detail", "DocumentenCentrum", new { id = m.IncomingId.Value }) ?? "#",
+        "Incoming" => Url.Action("Index", "DocumentenCentrum") ?? "#",
+        "IncomingWarnings" => Url.Action("Index", "DocumentenCentrum", new { hasWarnings = true }) ?? "#",
+        "Invoice" when m.InvoiceId.HasValue => Url.Action("Detail", "Invoices", new { id = m.InvoiceId.Value }) ?? "#",
+        "Settings" when m.IssuerCompanyId.HasValue => Url.Action("IssuerCompaniesEdit", "Instellingen", new { id = m.IssuerCompanyId.Value }) ?? "#",
+        _ => "#"
+    };
+    List<GlV2MeldingItemVm> Items(int group) => vm.Meldingen.Where(m => m.Group == group).Select(m => new GlV2MeldingItemVm
+    {
+        Text = m.Text,
+        Meta = m.Meta,
+        IconClass = m.IconClass,
+        BekijkUrl = BekijkUrl(m),
+        CanSnooze = false
+    }).ToList();
+    var actie = Items(0);
+    var oplossen = Items(1);
+    var info = Items(2);
+    var meldingenVm = new GlV2MeldingenPanelVm
+    {
+        BadgeCount = actie.Count + oplossen.Count,
+        Groups = new List<GlV2MeldingGroupVm>
+        {
+            new() { Title = "ACTIE VEREIST", Accent = "#B4331F", Bg = "#FBEDEA", Items = actie },
+            new() { Title = "OP TE LOSSEN", Accent = "#C79320", Bg = "#FCF5E6", Items = oplossen },
+            new() { Title = "TER INFO", Accent = "#00532D", Bg = "#EDF3E8", Items = info },
+        }
+    };
+
+    string ToneClass(BkTone t) => t switch
+    {
+        BkTone.Positive => "is-positive",
+        BkTone.Attention => "is-attention",
+        BkTone.Blocked => "is-blocked",
+        BkTone.Info => "is-info",
+        _ => "is-neutral"
+    };
+
+    var overdueTop = summary?.TopOverdue.Take(3).ToList() ?? new List<OverdueInvoiceLineBO>();
+    // Nog niet op punt: zie BoekhoudingDashboardFeatures.
+    var showIncoming = BoekhoudingDashboardFeatures.ShowIncomingInvoices;
+    var showOpen = BoekhoudingDashboardFeatures.ShowOpenCustomers;
+}
+
+<h1 class="visually-hidden">Dashboard Boekhouding</h1>
+
+@await Html.PartialAsync("GlV2/_KpiStrip", kpis)
+
+@* Altijd zichtbaar welke facturatiebedrijven in deze cijfers zitten (enkel die waartoe je toegang hebt). *@
+<div class="gl-v2-bk-companies" id="gl-v2-bk-companies" role="group" aria-label="Filter op facturatiebedrijf">
+    <span class="gl-v2-bk-companies-label"><i class="ph ph-buildings" aria-hidden="true"></i> Facturatiebedrijven</span>
+    @if (vm.CompanyFilter.Count == 0)
+    {
+        <span class="gl-v2-bk-muted">Je hebt geen toegang tot een facturatiebedrijf. Vraag een beheerder om je rechten bij Facturatie te controleren.</span>
+    }
+    else
+    {
+        @* Pillen zijn een filter: een klik zet een bedrijf aan of uit (meerdere mogelijk), zonder keuze tellen alle bedrijven mee. De pagina laadt opnieuw met ?bedrijven=. *@
+        <a href="@Url.Action("Index", "Home")" class="gl-v2-bk-company-chip @(vm.IsFiltered ? "" : "is-active")" aria-pressed="@(vm.IsFiltered ? "false" : "true")">Alle</a>
+        foreach (var c in vm.CompanyFilter)
+        {
+            <a href="@Url.Action("Index", "Home", new { bedrijven = c.ToggleValue })" class="gl-v2-bk-company-chip @(c.Selected ? "is-active" : "")" aria-pressed="@(c.Selected ? "true" : "false")">@c.Name</a>
+        }
+    }
+</div>
+
+<div class="row pt-3 gl-dashboard gl-v2-bk">
+
+    <div class="col-auto gl-v2-mc-col">
+        @await Html.PartialAsync("GlV2/_MeldingenPaneel", meldingenVm)
+    </div>
+
+    <div class="col gl-v2-bk-main">
+
+        @* ── Inkomende facturen (verborgen tot dit op punt staat, zie BoekhoudingDashboardFeatures) ── *@
+        @if (showIncoming)
+        {
+        <section class="gl-v2-card gl-v2-bk-card" id="gl-v2-bk-incoming">
+            <header class="gl-v2-card-header">
+                <span class="gl-v2-card-header-icon"><i class="ph ph-receipt" aria-hidden="true"></i></span>
+                <span class="gl-v2-card-header-title">Inkomende facturen</span>
+                <span class="gl-v2-card-header-spacer"></span>
+                <a href="@Url.Action("Index", "DocumentenCentrum")" class="gl-v2-card-header-action">Naar documentencentrum</a>
+            </header>
+
+            <div class="gl-v2-tabbar gl-v2-bk-tabs" role="tablist">
+                <button type="button" class="gl-v2-tabbar-tab is-active" role="tab" aria-selected="true" data-bk-tab="goedkeuren">Te goedkeuren <span class="gl-v2-tabbar-count">@vm.ToApproveCount</span></button>
+                <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" data-bk-tab="betalen">Klaar om te betalen <span class="gl-v2-tabbar-count">@vm.ReadyToPayCount</span></button>
+                <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" data-bk-tab="geblokkeerd">Geblokkeerd <span class="gl-v2-tabbar-count">@vm.BlockedCount</span></button>
+            </div>
+
+            @{
+                void Panel(string key, List<BkIncomingRowVm> rows, bool active, string emptyTitle, string emptyText)
+                {
+                    <div class="gl-v2-bk-panel" data-bk-panel="@key" hidden="@(active ? null : "hidden")">
+                        @if (rows.Count == 0)
+                        {
+                            <div class="gl-v2-list-empty">
+                                <span class="t">@emptyTitle</span>
+                                <span class="s">@emptyText</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="gl-v2-bk-table" role="table">
+                                <div class="gl-v2-list-head gl-v2-bk-row" role="row">
+                                    <span role="columnheader">Leverancier</span>
+                                    <span role="columnheader">Project · post</span>
+                                    <span role="columnheader" class="is-num">Bedrag</span>
+                                    <span role="columnheader">Vervalt</span>
+                                    <span role="columnheader">Status</span>
+                                    <span role="columnheader"></span>
+                                </div>
+                                @foreach (var r in rows)
+                                {
+                                    var late = r.DueDate.HasValue && r.DueDate.Value < DateOnly.FromDateTime(DateTime.Today);
+                                    <div class="gl-v2-bk-row" role="row">
+                                        <span class="gl-v2-bk-cell-main" role="cell">
+                                            <span class="t">@r.Supplier</span>
+                                            <span class="m">@r.Reference</span>
+                                            <span class="gl-v2-bk-co">@r.IssuerName</span>
+                                        </span>
+                                        <span class="gl-v2-bk-cell-main" role="cell">
+                                            @if (string.IsNullOrWhiteSpace(r.ProjectName))
+                                            {
+                                                <span class="t is-muted">— Kies een project</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="t">@r.ProjectName</span>
+                                            }
+                                        </span>
+                                        <span class="is-num gl-v2-bk-amount" role="cell">@Eur(r.Amount)</span>
+                                        <span class="gl-v2-bk-due @(late ? "is-late" : "")" role="cell">@(r.DueDate.HasValue ? r.DueDate.Value.ToString("dd/MM") : "—")</span>
+                                        <span role="cell"><span class="gl-v2-badge @ToneClass(r.Tone)">@r.StatusLabel</span></span>
+                                        <span class="gl-v2-bk-action" role="cell">
+                                            <a href="@Url.Action("Detail", "DocumentenCentrum", new { id = r.Id })" class="gl-v2-btn gl-v2-btn-secondary gl-v2-bk-mini">@r.ActionLabel</a>
+                                        </span>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                Panel("goedkeuren", vm.ToApprove, true, "Niets te goedkeuren", "Nieuwe inkomende facturen verschijnen hier zodra ze binnenkomen.");
+                Panel("betalen", vm.ReadyToPay, false, "Niets klaar om te betalen", "Goedgekeurde en geboekte facturen die nog niet betaald zijn, staan hier.");
+                Panel("geblokkeerd", vm.Blocked, false, "Geen geblokkeerde betalingen", "Blokkades door een inhoudingsplicht of een ontbrekend attest verschijnen hier zodra die gegevens beschikbaar zijn.");
+            }
+        </section>
+
+        }
+
+        <div class="gl-v2-bk-pair @(showOpen ? "" : "is-single")">
+
+            @* ── Openstaand bij klanten (verborgen tot dit op punt staat) ── *@
+            @if (showOpen)
+            {
+            <section class="gl-v2-card gl-v2-bk-card" id="gl-v2-bk-open">
+                <header class="gl-v2-card-header">
+                    <span class="gl-v2-card-header-icon"><i class="ph ph-wallet" aria-hidden="true"></i></span>
+                    <span class="gl-v2-card-header-title">Openstaand bij klanten</span>
+                </header>
+                <div class="gl-v2-card-body">
+                    <div class="gl-v2-bk-big">
+                        <span class="v">@Eur0(outstanding)</span>
+                        <span class="s">waarvan @Eur0(summary?.OverdueAmount ?? 0m) vervallen</span>
+                    </div>
+
+                    <div class="gl-v2-bk-bar" role="img" aria-label="Openstaand saldo verdeeld naar vervaldatum">
+                        <span class="seg is-ok" style="width:@Pct(summary?.AmountNotDue ?? 0m)"></span>
+                        <span class="seg is-1" style="width:@Pct(summary?.AmountOverdue1To30 ?? 0m)"></span>
+                        <span class="seg is-2" style="width:@Pct(summary?.AmountOverdue31To60 ?? 0m)"></span>
+                        <span class="seg is-3" style="width:@Pct(summary?.AmountOverdueOver60 ?? 0m)"></span>
+                    </div>
+
+                    <ul class="gl-v2-bk-legend">
+                        <li><span class="dot is-ok"></span><span>Niet vervallen</span><b>@Eur0(summary?.AmountNotDue ?? 0m)</b></li>
+                        <li><span class="dot is-1"></span><span>1 – 30 dagen</span><b>@Eur0(summary?.AmountOverdue1To30 ?? 0m)</b></li>
+                        <li><span class="dot is-2"></span><span>31 – 60 dagen</span><b>@Eur0(summary?.AmountOverdue31To60 ?? 0m)</b></li>
+                        <li><span class="dot is-3"></span><span>Meer dan 60 dagen</span><b>@Eur0(summary?.AmountOverdueOver60 ?? 0m)</b></li>
+                    </ul>
+
+                    <div class="gl-v2-bk-eyebrow">PER FACTURATIEBEDRIJF</div>
+                    <ul class="gl-v2-bk-percompany">
+                        @foreach (var c in vm.Companies)
+                        {
+                            <li>
+                                <span class="n">@c.Name</span>
+                                <span class="gl-v2-bk-amount">@Eur0(c.OutstandingAmount)</span>
+                                <span class="gl-v2-bk-days @(c.OverdueCount > 0 ? "is-hard" : "")">@(c.OverdueCount > 0 ? Eur0(c.OverdueAmount) + " vervallen" : "niets vervallen")</span>
+                            </li>
+                        }
+                    </ul>
+
+                    <div class="gl-v2-bk-eyebrow">LANGST VERVALLEN</div>
+                    @if (overdueTop.Count == 0)
+                    {
+                        <div class="gl-v2-bk-muted">Geen vervallen facturen.</div>
+                    }
+                    else
+                    {
+                        <ul class="gl-v2-bk-overdue">
+                            @foreach (var l in overdueTop)
+                            {
+                                <li>
+                                    <a href="@Url.Action("Detail", "Invoices", new { id = l.InvoiceId })" class="gl-v2-bk-overdue-main">
+                                        <span class="t">@l.ClientName</span>
+                                        <span class="m">@(l.ProjectName ?? l.PublicId)</span>
+                                        <span class="gl-v2-bk-co">@(l.IssuerCompanyId.HasValue ? vm.Companies.FirstOrDefault(c => c.Id == l.IssuerCompanyId.Value)?.Name : "")</span>
+                                    </a>
+                                    <span class="gl-v2-bk-amount">@Eur(l.Balance)</span>
+                                    <span class="gl-v2-bk-days @(l.DaysOverdue > 60 ? "is-hard" : "")">@l.DaysOverdue d</span>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </section>
+
+            }
+
+            @* ── Klaar om te factureren ── *@
+            <section class="gl-v2-card gl-v2-bk-card" id="gl-v2-bk-tobill">
+                <header class="gl-v2-card-header">
+                    <span class="gl-v2-card-header-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
+                    <span class="gl-v2-card-header-title">Klaar om te factureren</span>
+                    <span class="gl-v2-card-header-spacer"></span>
+                    <span class="gl-v2-card-header-count">@Eur0(vm.ProformaAmount + vm.ToBillAmount)</span>
+                </header>
+                <div class="gl-v2-card-body">
+
+                    <div class="gl-v2-bk-eyebrow">PROFORMA'S · NOG DEFINITIEF TE MAKEN <span class="gl-v2-bk-eyebrow-count">@vm.Proformas.Count</span></div>
+                    @if (vm.Proformas.Count == 0)
+                    {
+                        <div class="gl-v2-bk-muted">Geen proforma's die op een definitieve factuur wachten.</div>
+                    }
+                    else
+                    {
+                        <ul class="gl-v2-bk-tobill">
+                            @for (var i = 0; i < vm.Proformas.Count; i++)
+                            {
+                                var p = vm.Proformas[i];
+                                <li hidden="@(i >= 5 ? "hidden" : null)" data-bk-more-item="@(i >= 5 ? "1" : null)">
+                                    <span class="gl-v2-bk-cell-main">
+                                        <span class="t">@p.ClientName</span>
+                                        <span class="m">@(string.IsNullOrWhiteSpace(p.ProjectName) ? "Geen project" : p.ProjectName) · opgemaakt @p.Date.ToString("dd/MM")</span>
+                                        <span class="gl-v2-bk-co">@p.IssuerName</span>
+                                    </span>
+                                    <span class="gl-v2-bk-amount">@Eur(p.Amount)</span>
+                                    <a href="@Url.Action("Detail", "Invoices", new { id = p.InvoiceId })" class="gl-v2-btn gl-v2-btn-secondary gl-v2-bk-mini">Definitief maken</a>
+                                </li>
+                            }
+                        </ul>
+                        @if (vm.Proformas.Count > 5)
+                        {
+                            <button type="button" class="gl-v2-card-header-action gl-v2-bk-more" data-bk-more data-more-text="Toon alle @vm.Proformas.Count" data-less-text="Toon minder">Toon alle @vm.Proformas.Count</button>
+                        }
+                    }
+
+                    <div class="gl-v2-bk-eyebrow">TE FACTUREREN PER KLANT · SCHIJVEN EN WIJZIGINGSOPDRACHTEN <span class="gl-v2-bk-eyebrow-count">@vm.ToBillAccountCount</span></div>
+                    @if (vm.ToBill.Count == 0)
+                    {
+                        <div class="gl-v2-bk-muted">Niets te factureren. Schijven verschijnen hier zodra ze bereikt zijn en de akte van de klant verleden is. Ondertekende wijzigingsopdrachten verschijnen hier zodra ze nog te factureren zijn.</div>
+                    }
+                    else
+                    {
+                        <ul class="gl-v2-bk-tobill">
+                            @for (var i = 0; i < vm.ToBill.Count; i++)
+                            {
+                                var a = vm.ToBill[i];
+                                <li hidden="@(i >= 5 ? "hidden" : null)" data-bk-more-item="@(i >= 5 ? "1" : null)">
+                                    <span class="gl-v2-bk-cell-main">
+                                        <span class="t">@a.ClientName</span>
+                                        <span class="m">@a.ProjectName@(a.Units.Count > 0 ? " · " + string.Join(", ", a.Units) : "")</span>
+                                        @if (a.Stages.Count > 0)
+                                        {
+                                            <span class="m">@string.Join(", ", a.Stages.Distinct()) · akte @(a.DeedDate.HasValue ? a.DeedDate.Value.ToString("dd/MM/yyyy") : "—")</span>
+                                        }
+                                        @if (a.ChangeOrders.Count > 0)
+                                        {
+                                            <span class="m">Wijzigingsopdracht: @string.Join(", ", a.ChangeOrders)</span>
+                                        }
+                                        <span class="gl-v2-bk-co">@a.IssuerName</span>
+                                    </span>
+                                    <span class="gl-v2-bk-amount">@Eur(a.Amount)</span>
+                                    <a href="@Url.Action("InvoicingV2", "Projecten", new { projectid = a.ProjectId })" class="gl-v2-btn gl-v2-btn-secondary gl-v2-bk-mini">Factuur maken</a>
+                                </li>
+                            }
+                        </ul>
+                        @if (vm.ToBill.Count > 5)
+                        {
+                            <button type="button" class="gl-v2-card-header-action gl-v2-bk-more" data-bk-more data-more-text="Toon alle @vm.ToBill.Count" data-less-text="Toon minder">Toon alle @vm.ToBill.Count</button>
+                        }
+                    }
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    @* Desktop (≥1400px): Snelacties + Deze maand in een eigen kolom; op tablet/gsm neemt de actiebalk (MobileQuickActions) over. *@
+    <div class="col-xxl-2 d-none d-xxl-block gl-v2-bk-side">
+
+        <section class="gl-v2-snelacties-card" id="gl-v2-snelacties-card">
+            <header class="gl-v2-snelacties-header">
+                <i class="ph ph-lightning" aria-hidden="true"></i>
+                <span>Snelacties</span>
+            </header>
+            <div class="gl-v2-snelacties-group">
+                <span class="gl-v2-snelacties-group-label">Facturatie</span>
+                <a href="@Url.Action("Index", "DocumentenCentrum")" class="gl-v2-snelactie-row">
+                    <i class="ph ph-receipt" aria-hidden="true"></i><span>Inkomende facturen verwerken</span><span class="gl-v2-snelactie-row-chevron">›</span>
+                </a>
+                <a href="@Url.Action("Create", "Invoices")" class="gl-v2-snelactie-row">
+                    <i class="ph ph-file-plus" aria-hidden="true"></i><span>Factuur aanmaken</span><span class="gl-v2-snelactie-row-chevron">›</span>
+                </a>
+                <a href="@Url.Action("Create", "Invoices", new { creditNote = true })" class="gl-v2-snelactie-row">
+                    <i class="ph ph-file-minus" aria-hidden="true"></i><span>Creditnota maken</span><span class="gl-v2-snelactie-row-chevron">›</span>
+                </a>
+                <span class="gl-v2-snelactie-row is-dimmed" title="Nog niet beschikbaar" aria-disabled="true">
+                    <i class="ph ph-bank" aria-hidden="true"></i><span>Betaling registreren</span><span class="gl-v2-snelactie-row-chevron">›</span>
+                </span>
+                <span class="gl-v2-snelactie-row is-dimmed" title="Nog niet beschikbaar" aria-disabled="true">
+                    <i class="ph ph-paper-plane-tilt" aria-hidden="true"></i><span>Herinnering versturen</span><span class="gl-v2-snelactie-row-chevron">›</span>
+                </span>
+            </div>
+            <div class="gl-v2-snelacties-group is-bordered">
+                <span class="gl-v2-snelacties-group-label">Boekhouding</span>
+                <span class="gl-v2-snelactie-row is-dimmed" title="Nog niet beschikbaar" aria-disabled="true">
+                    <i class="ph ph-export" aria-hidden="true"></i><span>Export naar boekhoudpakket</span><span class="gl-v2-snelactie-row-chevron">›</span>
+                </span>
+                <span class="gl-v2-snelactie-row is-dimmed" title="Nog niet beschikbaar" aria-disabled="true">
+                    <i class="ph ph-upload-simple" aria-hidden="true"></i><span>Bankafschrift importeren</span><span class="gl-v2-snelactie-row-chevron">›</span>
+                </span>
+                <span class="gl-v2-snelactie-row is-dimmed" title="Nog niet beschikbaar" aria-disabled="true">
+                    <i class="ph ph-chart-bar" aria-hidden="true"></i><span>Btw-overzicht</span><span class="gl-v2-snelactie-row-chevron">›</span>
+                </span>
+            </div>
+            <div class="gl-v2-snelacties-group is-bordered">
+                <span class="gl-v2-snelacties-group-label">Algemeen</span>
+                <button type="button" class="gl-v2-snelactie-row" data-bs-toggle="modal" data-bs-target="#glV2LevSearchModal">
+                    <i class="ph ph-magnifying-glass" aria-hidden="true"></i><span>Leverancier zoeken</span><span class="gl-v2-snelactie-row-chevron">›</span>
+                </button>
+                <button type="button" class="gl-v2-snelactie-row" data-bs-toggle="modal" data-bs-target="#glV2KlantSearchModal">
+                    <i class="ph ph-magnifying-glass" aria-hidden="true"></i><span>Klant zoeken</span><span class="gl-v2-snelactie-row-chevron">›</span>
+                </button>
+            </div>
+        </section>
+
+        <section class="gl-v2-card gl-v2-bk-card gl-v2-bk-agenda" id="gl-v2-bk-agenda">
+            <header class="gl-v2-card-header">
+                <span class="gl-v2-card-header-icon"><i class="ph ph-calendar-blank" aria-hidden="true"></i></span>
+                <span class="gl-v2-card-header-title">Deze maand</span>
+            </header>
+            <ul class="gl-v2-bk-agenda-list">
+                @foreach (var a in vm.Agenda)
+                {
+                    <li>
+                        <span class="d">@a.Date.ToString("dd/MM")</span>
+                        <span class="x"><span class="t">@a.Title</span><span class="m">@a.Sub</span></span>
+                    </li>
+                }
+            </ul>
+        </section>
+    </div>
+</div>
+
+@await Html.PartialAsync("GlV2/_SearchModal", new GlV2SearchModalVm
+{
+    Id = "glV2LevSearchModal",
+    Title = "Leverancier zoeken",
+    Placeholder = "Naam leverancier…",
+    LookupUrl = Url.Action("Lookup", "Leveranciers") ?? "",
+    DetailUrlTemplate = "/Leveranciers/Details/{id}",
+    CreateUrl = Url.Action("Create", "Leveranciers"),
+    CreateLabel = "Nieuwe leverancier aanmaken"
+})
+@await Html.PartialAsync("GlV2/_SearchModal", new GlV2SearchModalVm
+{
+    Id = "glV2KlantSearchModal",
+    Title = "Klant zoeken",
+    Placeholder = "Naam klant…",
+    LookupUrl = Url.Action("Lookup", "Klanten") ?? "",
+    DetailUrlTemplate = "/Klanten/Details/{id}",
+    CreateUrl = Url.Action("Create", "Klanten"),
+    CreateLabel = "Nieuwe klant aanmaken"
+})

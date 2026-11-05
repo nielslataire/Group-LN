@@ -92,13 +92,18 @@
             .then(function (r) { if (!r.ok) throw new Error(); return r.text(); })
             .then(function (html) {
                 body.innerHTML = html;
+                if (window.GlV2Select && window.GlV2Select.init) window.GlV2Select.init(body); // AJAX-inhoud: keuzelijsten zelf bedraden
                 // Soort van de kopie: een offerte kopieer je enkel als offerte (omzetten gaat via "Omzetten →");
                 // een wijzigingsopdracht kan als offerte of als wijzigingsopdracht, standaard dezelfde soort.
                 var source = $("#gl-v2-cc-order", body);
+                function chosen(hiddenInput) { // gekozen optieknop van de gedeelde keuzelijst
+                    var wrap = hiddenInput ? hiddenInput.closest(".gl-v2-select") : null;
+                    return wrap && hiddenInput.value ? wrap.querySelector(".gl-v2-select-option.is-selected") : null;
+                }
                 var asQuote = $("#gl-v2-cc-as-quote", body);
                 var asWo = $("#gl-v2-cc-as-wo", body);
                 function applySource() {
-                    var opt = source && source.selectedIndex > 0 ? source.options[source.selectedIndex] : null;
+                    var opt = chosen(source);
                     var isQuote = !!opt && opt.getAttribute("data-quote") === "true";
                     if (!asQuote || !asWo) return;
                     asWo.disabled = isQuote;
@@ -110,10 +115,18 @@
                 var hint = $("#gl-v2-cc-client-hint", body);
                 if (client && hint) {
                     client.addEventListener("change", function () {
-                        var opt = client.selectedIndex > 0 ? client.options[client.selectedIndex] : null;
+                        var opt = chosen(client);
                         hint.textContent = opt ? "btw klant: " + opt.getAttribute("data-vat-label") : "btw klant volgt de betalingsgroep van de gekozen eenheid";
                     });
                 }
+                var form = body.closest("form");
+                if (form) form.addEventListener("submit", function (e) { // verplichte keuzes (de verborgen input van de keuzelijst kent geen "required")
+                    var empty = ["gl-v2-cc-order", "gl-v2-cc-client"].filter(function (id) { var h = document.getElementById(id); return h && !h.value; })[0];
+                    if (!empty) return;
+                    e.preventDefault();
+                    var trig = document.getElementById(empty + "_trigger"); if (trig) trig.focus();
+                    if (window.GlV2Toast) window.GlV2Toast.show({ tone: "warning", title: "Nog niet compleet", body: "Kies een offerte of wijzigingsopdracht en een eenheid." });
+                });
             })
             .catch(function () { body.innerHTML = '<div class="gl-v2-cq-loading">Kon het formulier niet laden.</div>'; });
     }

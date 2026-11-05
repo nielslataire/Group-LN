@@ -16,7 +16,18 @@
     function $(sel, root) { return (root || document).querySelector(sel); }
     function $$(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
     function token() { var el = $('input[name="__RequestVerificationToken"]'); return el ? el.value : ""; }
-    function getNum(el) { if (!el) return 0; var v = (el.value || "").toString().trim(); return parseFloat(v.replace(",", ".")) || 0; }
+    function getNum(el) {
+        if (!el) return 0;
+        var an = window.AutoNumeric && AutoNumeric.getAutoNumericElement(el); // valutaveld: kaal getal uit het component
+        if (an) { var n = an.getNumber(); return n == null || isNaN(n) ? 0 : n; }
+        var v = (el.value || "").toString().trim(); return parseFloat(v.replace(",", ".")) || 0;
+    }
+    function initWidgets(scope) { // keuzelijsten en valutavelden van nieuwe rijen
+        if (window.GlV2Select && window.GlV2Select.init) window.GlV2Select.init(scope);
+        if (window.CurrencyMask) window.CurrencyMask.init(scope.querySelectorAll(".Currencymask"));
+    }
+    function setPrice(el, value) { var an = window.AutoNumeric && AutoNumeric.getAutoNumericElement(el); if (an) an.set(value); else el.value = value; }
+    function focusSelect(hidden) { var t = document.getElementById(hidden.id + "_trigger"); if (t) t.focus(); }
     function formatEUR(n) { return n.toLocaleString("nl-BE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €"; }
 
     if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = cfg.pdfWorkerUrl;
@@ -64,7 +75,7 @@
     // volgende in de werkbalk) rendert de gevraagde pagina opnieuw op dezelfde canvas. Kaders teken je
     // dus per pagina — elke selectie wordt apart ingelezen/gehangen, over pagina's heen stapelen de
     // herkende regels gewoon op in de tabel rechts.
-    var pdfDoc = null, pdfPage = 1;
+    var pdfDoc = null, pdfPage = 1, pageTops = [];
     var pageNav = document.getElementById("gl-v2-qi-pagenav");
     var pageLabel = document.getElementById("gl-v2-qi-pagelabel");
     var pagePrev = document.getElementById("gl-v2-qi-page-prev");
@@ -75,27 +86,72 @@
         var multi = pdfDoc && pdfDoc.numPages > 1;
         pageNav.hidden = !multi;
         if (!multi) return;
-        pageLabel.textContent = "pagina " + pdfPage + " van " + pdfDoc.numPages;
+        pageLabel.textContent = "pagina " + pdfPage + " van " + pdfDoc.numPages + " — scroll door het document";
         pagePrev.disabled = pdfPage <= 1;
         pageNext.disabled = pdfPage >= pdfDoc.numPages;
     }
 
-    function renderPdfPage(n) {
+    // Alle paginas staan onder elkaar op één canvas (scrolbaar): een kader kan zo ook over een paginagrens heen getrokken worden.
+    // De pagina-knoppen springen enkel naar het begin van een pagina.
+    var scrollWrap = document.getElementById("gl-v2-qi-file_zone");
+    function renderPdfAll() {
         if (!pdfDoc) return Promise.resolve();
-        pdfPage = Math.max(1, Math.min(n, pdfDoc.numPages));
-        setStatus("Pagina " + pdfPage + " laden…");
-        return pdfDoc.getPage(pdfPage).then(function (page) {
-            var viewport = page.getViewport({ scale: 1.8 });
-            canvas.width = viewport.width;
-            canvas.height = viewport.height;
-            return page.render({ canvasContext: ctx, viewport: viewport }).promise;
+        setStatus("PDF laden…");
+        var GAP = 14, MAXH = 30000, pages = [];
+        for (var i = 1; i <= pdfDoc.numPages; i++) pages.push(pdfDoc.getPage(i));
+        return Promise.all(pages).then(function (list) {
+            var scale = 1.8, total;
+            function measure() {
+                var h = 0, w = 0;
+                list.forEach(function (p) { var vp = p.getViewport({ scale: scale }); h += vp.height; w = Math.max(w, vp.width); });
+                total = { w: w, h: h + GAP * (list.length - 1) };
+            }
+            measure();
+            if (total.h > MAXH) { scale = scale * MAXH / total.h; measure(); }
+            canvas.width = Math.ceil(total.w);
+            canvas.height = Math.ceil(total.h);
+            ctx.fillStyle = "#E6EBE2";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            pageTops = [];
+            var top = 0, chain = Promise.resolve();
+            list.forEach(function (page) {
+                var vp = page.getViewport({ scale: scale }), y = top;
+                pageTops.push(y);
+                chain = chain.then(function () {
+                    var pc = document.createElement("canvas");
+                    pc.width = Math.ceil(vp.width); pc.height = Math.ceil(vp.height);
+                    return page.render({ canvasContext: pc.getContext("2d"), viewport: vp }).promise.then(function () {
+                        ctx.drawImage(pc, Math.round((canvas.width - pc.width) / 2), y);
+                    });
+                });
+                top += vp.height + GAP;
+            });
+            return chain;
         }).then(function () {
+            pdfPage = 1;
             syncOverlaySize();
             showStage();
             updatePageNav();
-            setStatus("PDF geladen (pagina " + pdfPage + " van " + pdfDoc.numPages + ") — teken een kader.");
+            setStatus("PDF geladen (" + pdfDoc.numPages + (pdfDoc.numPages === 1 ? " pagina" : " paginas") + ") — teken een kader.");
         });
     }
+    function pageFromScroll() {
+        if (!pageTops.length || !scrollWrap) return 1;
+        var k = canvas.clientHeight / canvas.height, y = (scrollWrap.scrollTop - stage.offsetTop + 40) / k, p = 1;
+        pageTops.forEach(function (t, i) { if (t <= y) p = i + 1; });
+        return p;
+    }
+    function jumpToPage(n) {
+        if (!pageTops.length || !scrollWrap) return;
+        pdfPage = Math.max(1, Math.min(n, pageTops.length));
+        scrollWrap.scrollTo({ top: stage.offsetTop + pageTops[pdfPage - 1] * (canvas.clientHeight / canvas.height) - 12, behavior: "smooth" });
+        updatePageNav();
+    }
+    if (scrollWrap) scrollWrap.addEventListener("scroll", function () {
+        if (!pdfDoc) return;
+        var p = pageFromScroll();
+        if (p !== pdfPage) { pdfPage = p; updatePageNav(); }
+    });
 
     function loadPdfFile(file) {
         if (!window.pdfjsLib) { setStatus("PDF-weergave is niet beschikbaar."); return; }
@@ -104,15 +160,15 @@
             return window.pdfjsLib.getDocument({ data: buf }).promise;
         }).then(function (pdf) {
             pdfDoc = pdf;
-            return renderPdfPage(1);
+            return renderPdfAll();
         }).catch(function (err) {
             setStatus("Kon de PDF niet weergeven.");
             console.error(err);
         });
     }
 
-    if (pagePrev) pagePrev.addEventListener("click", function () { renderPdfPage(pdfPage - 1); });
-    if (pageNext) pageNext.addEventListener("click", function () { renderPdfPage(pdfPage + 1); });
+    if (pagePrev) pagePrev.addEventListener("click", function () { jumpToPage(pageFromScroll() - 1); });
+    if (pageNext) pageNext.addEventListener("click", function () { jumpToPage(pageFromScroll() + 1); });
 
     function loadSource(file) {
         if (!file) return;
@@ -203,6 +259,10 @@
     });
     overlay.addEventListener("pointermove", function (e) {
         if (!dragging) return;
+        if (scrollWrap) { // dicht bij de rand van het zichtbare deel: het document meescrollen
+            var r = scrollWrap.getBoundingClientRect();
+            if (e.clientY > r.bottom - 36) scrollWrap.scrollTop += 18; else if (e.clientY < r.top + 36) scrollWrap.scrollTop -= 18;
+        }
         var p = canvasPoint(e);
         var x = Math.min(startX, p.x), y = Math.min(startY, p.y);
         var w = Math.abs(p.x - startX), h = Math.abs(p.y - startY);
@@ -256,12 +316,12 @@
                     if (!tr) return;
                     $(".js-qi-description", tr).value = line.description || "";
                     if (line.unit) {
-                        var unitSelect = $(".js-qi-munit", tr);
-                        var opt = Array.prototype.find.call(unitSelect.options, function (o) { return o.text.toLowerCase() === (line.unit || "").toLowerCase(); });
-                        if (opt) unitSelect.value = opt.value;
+                        var unitWrap = $('.gl-v2-select[data-role="munit"]', tr);
+                        var opt = unitWrap && Array.prototype.find.call(unitWrap.querySelectorAll(".gl-v2-select-option"), function (o) { return o.textContent.trim().toLowerCase() === (line.unit || "").toLowerCase(); });
+                        if (opt) opt.click(); // via de keuzelijst zelf: waarde, label en markering
                     }
                     if (line.number != null) $(".js-qi-number", tr).value = line.number;
-                    if (line.price != null) $(".js-qi-price", tr).value = line.price;
+                    if (line.price != null) setPrice($(".js-qi-price", tr), line.price);
                     setRowNeedsReview(tr, !!line.needsReview);
                     recomputeTotal();
                 });
@@ -371,6 +431,7 @@
             .then(function (r) { return r.text(); })
             .then(function (html) {
                 rowsBody.insertAdjacentHTML("beforeend", html);
+                initWidgets(rowsBody.lastElementChild);
                 return rowsBody.lastElementChild;
             })
             .catch(function () { return null; });
@@ -414,6 +475,7 @@
     var addRowBtn = document.getElementById("gl-v2-qi-add-row");
     if (addRowBtn) addRowBtn.addEventListener("click", function () { addBlankRow(); });
 
+    if (window.CurrencyMask) CurrencyMask.init(rowsBody.querySelectorAll(".Currencymask"));
     recomputeTotal();
 
     // ── 5. Opslaan ───────────────────────────────────────────────────────────────────────────────────
@@ -436,12 +498,12 @@
             var contract = $("#gl-v2-qi-contractactivity");
             if (contract && !contract.value) {
                 setStatus("Kies eerst een leverancier · contract.");
-                contract.focus();
+                focusSelect(contract);
                 return;
             }
             if (client && !client.value) {
                 setStatus("Kies voor welke klant de offerte is.");
-                client.focus();
+                focusSelect(client);
                 return;
             }
             // Deze pagina heeft geen "omschrijving voor de klant"-veld (dat komt op het opmaakscherm) —

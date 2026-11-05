@@ -7,9 +7,11 @@
 @using CPMCore.Models.Projecten
 @{
     var index = ViewData["Index"] as int? ?? 0;
-    var stages = ViewData["Stages"] as List<IdNameBO> ?? new();
+    var stages = ViewData["Stages"] as List<ChangeOrderStageOptionV2> ?? new();
+    var multiGroup = stages.Select(s => s.Group).Distinct().Count() > 1; // groepskop enkel als de klant meer dan één schijfgroep heeft
     var isLocked = ViewData["IsLocked"] as bool? ?? false;
     var prefix = $"terms[{index}]";
+    var uid = Guid.NewGuid().ToString("N")[..8];
 }
 <tr class="gl-v2-co-term-row js-co-term-row" data-index="@index" data-kind="@Model.Kind">
     <td>
@@ -29,17 +31,28 @@
         }
         else
         {
-            <div class="gl-v2-field-box"><select class="gl-v2-field-input js-co-term-trigger" name="@(prefix).triggerType" @(isLocked ? "disabled" : "")>
-                <option value="1" selected="@(Model.TriggerType == 1)">Na ondertekening</option>
-                <option value="2" selected="@(Model.TriggerType == 2)">Bij een schijf</option>
-                <option value="3" selected="@(Model.TriggerType == 3)">Manueel vrijgeven</option>
-            </select></div>
-            <div class="gl-v2-field-box js-co-term-stagebox @(Model.TriggerType == 2 ? "" : "is-hidden")"><select class="gl-v2-field-input js-co-term-stage" name="@(prefix).triggerStageId">
-                @foreach (var s in stages)
+            @await Html.PartialAsync("GlV2/_SelectList", new CPMCore.Models.GlV2.GlV2SelectListVm
+            {
+                Name = prefix + ".triggerType", Id = "co-tt-" + uid, Bare = true, Disabled = isLocked,
+                Value = (Model.TriggerType is 1 or 2 or 3 ? Model.TriggerType : 1).ToString(),
+                Data = new Dictionary<string, string> { ["data-role"] = "term-trigger" },
+                Items = new List<CPMCore.Models.GlV2.GlV2SelectItem>
                 {
-                    <option value="@s.ID" selected="@(s.ID == Model.TriggerStageId)">@s.Display</option>
+                    new() { Value = "1", Text = "Na ondertekening" },
+                    new() { Value = "2", Text = "Bij een schijf" },
+                    new() { Value = "3", Text = "Manueel vrijgeven" }
                 }
-            </select></div>
+            })
+            <div class="js-co-term-stagebox @(Model.TriggerType == 2 ? "" : "is-hidden")">
+            @await Html.PartialAsync("GlV2/_SelectList", new CPMCore.Models.GlV2.GlV2SelectListVm
+            {
+                Name = prefix + ".triggerStageId", Id = "co-ts-" + uid, Bare = true,
+                Value = (stages.Any(s => s.Id == Model.TriggerStageId) ? Model.TriggerStageId : stages.FirstOrDefault()?.Id)?.ToString(),
+                Placeholder = "Geen schijf beschikbaar",
+                Data = new Dictionary<string, string> { ["data-role"] = "term-stage" },
+                Items = stages.Select(s => new CPMCore.Models.GlV2.GlV2SelectItem { Value = s.Id.ToString(), Text = s.Name, Group = multiGroup ? s.Group : null }).ToList()
+            })
+            </div>
         }
     </td>
     <td class="is-right">

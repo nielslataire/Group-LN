@@ -20,6 +20,8 @@ faq:
     a: PDF, DWG, Word, Excel en afbeeldingen. Het uploadvak noemt ze.
   - q: Wat is het verschil tussen Goedgekeurd, Ter goedkeuring en Concept?
     a: Enkel een goedgekeurde revisie is de huidige versie en kan gedeeld worden in een portaal. Ter goedkeuring wacht op iemand die ze goedkeurt. Een concept is nog niet af.
+  - q: Hoe pas ik het soort document aan?
+    a: Open het document en klik bij **Gegevens** op **Bewerken**. Kies bij **Soort document** een ander soort, of Geen soort. Het soort Verkoopsdocument komt op de website en kan alleen voor een goedgekeurd document in de map Verkoop dat nergens aan gekoppeld is.
   - q: Wat als ik de verkeerde map koos?
     a: Open het document en klik bij **Gegevens** op **Bewerken**. Daar kies je een andere map.
   - q: Kan ik hetzelfde document aan twee eenheden hangen?
@@ -44,6 +46,7 @@ faq:
 
 1. Vul de **Naam** in. Dit veld is verplicht.
 2. Kies de **Map**. Dit veld is verplicht en staat voor je ingevuld als je in een map begon.
+   Kies daarna eventueel het **Soort document**, bijvoorbeeld Attest, Gaskeuring of Bouwvergunning. Het soort staat daarna in de lijst onder de naam van het document.
 3. Pas indien nodig de **Documentdatum** aan. Standaard is dat vandaag.
 4. Vul de **Vervalt op** in als het document een geldigheidsduur heeft, zoals een keuring.
 5. Vul eventueel het **Documentnr.** en **Opgesteld door** in.

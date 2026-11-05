@@ -30,6 +30,8 @@
     Public Property EInvoiceEnabled As Boolean
     Public Property PeppolParticipantId As String
     Public Property UblAttachPdf As Boolean
+    ''' <summary>"Monthly", "Quarterly" of Nothing (nog niet ingesteld): hoe vaak dit bedrijf de btw-aangifte indient.</summary>
+    Public Property VatReturnFrequency As String
 
     Public Property EmailSubjectTemplate As String
     Public Property EmailBodyTemplate As String

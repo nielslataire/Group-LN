@@ -404,6 +404,11 @@
 }
 .gl-v2-field-box > i:first-child { font-size: 16px; color: var(--gl-v2-muted); flex: none; }
 
+/* Knop als laatste kind van het vak (bv. "Nieuwe rol" + Maken): ligt vlak tegen de rechterrand, met dezelfde 3px ruimte rondom als bovenaan en onderaan.
+   De verticale ruimte volgt uit de hoogte: 40px vak min 2 x 1px rand = 38px, dus de knop is 32px hoog en heeft 3px lucht boven en onder. */
+.gl-v2-field-box:has(> .gl-v2-btn:last-child) { padding-right: 2px; }
+.gl-v2-field-box > .gl-v2-btn:last-child { flex: none; height: 32px; }
+
 .gl-v2-field-input {
     flex: 1;
     min-width: 0;
@@ -534,3 +539,50 @@
     .gl-v2-field-box.gl-v2-field-box-textarea { height: auto; min-height: 104px; }
 }
 
+/* ── Keuzerondje (.gl-v2-radio) en keuzekaart (.gl-v2-radio-card) ───────────────────────────────────────────────
+   Opt-in: de klasse staat op het <label> rond een gewone <input type="radio"> (zo blijft elke bestaande radio met eigen opmaak,
+   zoals segmentknoppen en kaarten met verborgen input, ongemoeid). Standaard, hover, gekozen, toetsenbordfocus en uitgeschakeld. */
+.gl-v2-radio input[type="radio"],
+.gl-v2-radio-card input[type="radio"] {
+    appearance: none; -webkit-appearance: none;
+    width: 18px; height: 18px; margin: 0; flex: none;
+    border: 1.5px solid #9AA898; border-radius: 50%; background: #fff;
+    display: inline-grid; place-content: center; cursor: pointer;
+    transition: border-color .15s;
+}
+.gl-v2-radio input[type="radio"]::before,
+.gl-v2-radio-card input[type="radio"]::before {
+    content: ""; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--gl-v2-primary, #00532D);
+    transform: scale(0); transition: transform .15s;
+}
+.gl-v2-radio input[type="radio"]:hover,
+.gl-v2-radio-card input[type="radio"]:hover,
+.gl-v2-radio input[type="radio"]:checked,
+.gl-v2-radio-card input[type="radio"]:checked { border-color: var(--gl-v2-primary, #00532D); }
+.gl-v2-radio input[type="radio"]:checked::before,
+.gl-v2-radio-card input[type="radio"]:checked::before { transform: scale(1); }
+.gl-v2-radio input[type="radio"]:focus-visible,
+.gl-v2-radio-card input[type="radio"]:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(0, 83, 45, .18); }
+.gl-v2-radio input[type="radio"]:disabled,
+.gl-v2-radio-card input[type="radio"]:disabled { background: #F2F5EF; border-color: #C9D1C5; cursor: default; }
+.gl-v2-radio input[type="radio"]:disabled::before,
+.gl-v2-radio-card input[type="radio"]:disabled::before { background: #C9D1C5; }
+
+/* label naast het rondje */
+.gl-v2-radio { display: inline-flex; align-items: center; gap: 9px; font: 500 13.5px var(--gl-v2-font-sans, 'IBM Plex Sans', sans-serif); color: var(--gl-v2-ink, #2C3B2A); cursor: pointer; }
+.gl-v2-radio:has(> input[type="radio"]:checked) { font-weight: 600; }
+.gl-v2-radio:has(> input[type="radio"]:disabled) { color: var(--gl-v2-muted, #6B7A68); cursor: default; }
+.gl-v2-radio-group { display: flex; flex-wrap: wrap; gap: 8px 22px; }
+
+/* keuzekaart: elke optie heeft uitleg (titel + gedimde regel) */
+.gl-v2-radio-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+.gl-v2-radio-card { display: flex; align-items: flex-start; gap: 10px; padding: 11px 13px; border: 1px solid var(--gl-v2-hairline, #DDE3D8); border-radius: var(--gl-v2-radius-md, 10px); background: #fff; cursor: pointer; transition: border-color .15s, background-color .15s; }
+.gl-v2-radio-card > input[type="radio"] { margin-top: 1px; }
+.gl-v2-radio-card > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gl-v2-radio-card b { font: 600 13px var(--gl-v2-font-sans, 'IBM Plex Sans', sans-serif); color: var(--gl-v2-ink, #2C3B2A); }
+.gl-v2-radio-card small { font: 450 11px/1.4 var(--gl-v2-font-sans, 'IBM Plex Sans', sans-serif); color: var(--gl-v2-muted, #6B7A68); }
+.gl-v2-radio-card:hover { border-color: var(--gl-v2-primary, #00532D); }
+.gl-v2-radio-card:has(> input[type="radio"]:checked) { border: 1.5px solid var(--gl-v2-primary, #00532D); padding: 10.5px 12.5px; background: #EEF3EA; }
+.gl-v2-radio-card:has(> input[type="radio"]:disabled) { opacity: .6; cursor: default; }
+.gl-v2-radio-card:has(> input[type="radio"]:disabled):hover { border-color: var(--gl-v2-hairline, #DDE3D8); }

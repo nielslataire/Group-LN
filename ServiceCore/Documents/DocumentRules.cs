@@ -67,6 +67,27 @@ public static class DocumentRules
         return null;
     }
 
+    /// <summary>De soorten document uit de oude lijst (BOCore.ProjectDocType), op naam gesorteerd: (waarde, weergavenaam).</summary>
+    public static IReadOnlyList<(int Value, string Name)> DocTypeOptions { get; } = Enum.GetValues<BOCore.ProjectDocType>()
+        .Select(t => (Value: (int)t, Name: DocTypeDisplay(t)))
+        .OrderBy(t => t.Name, StringComparer.CurrentCultureIgnoreCase)
+        .ToList();
+
+    private static string DocTypeDisplay(BOCore.ProjectDocType t)
+    {
+        var member = typeof(BOCore.ProjectDocType).GetField(t.ToString());
+        var attr = member?.GetCustomAttributes(typeof(System.ComponentModel.DataAnnotations.DisplayAttribute), false)
+            .OfType<System.ComponentModel.DataAnnotations.DisplayAttribute>().FirstOrDefault();
+        return attr?.Name ?? t.ToString();
+    }
+
+    public static string? DocTypeName(int? type) => type.HasValue ? DocTypeOptions.Where(o => o.Value == type.Value).Select(o => o.Name).FirstOrDefault() : null;
+
+    /// <summary>Mag dit document het type 1 (Verkoopsdocument) krijgen? Dat type zet het op de publieke website (WWWCOPRO leest Type = 1 zonder klant),
+    /// dus enkel voor een goedgekeurd, ongekoppeld document in de map Verkoop: dezelfde voorwaarde als <see cref="LegacyTypeAfterChange"/>.</summary>
+    public static bool CanBeSalesType(string folderCode, byte status, int linkCount, bool hasClientLink)
+        => folderCode == "verkoop" && status == DocumentStatus.Goedgekeurd && linkCount == 0 && !hasClientLink;
+
     public static string StatusKey(byte status) => status switch
     {
         DocumentStatus.Concept => "concept",

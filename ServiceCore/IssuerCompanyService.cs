@@ -62,6 +62,7 @@ namespace ServiceCore
                     DefaultVatTypeId = x.company.DefaultVatTypeId,
                     IsActive = x.company.IsActive,
                     IsExternalCoordinationDefault = x.company.IsExternalCoordinationDefault,
+                    VatReturnFrequency = x.company.VatReturnFrequency,
                     CompanyLegalFormId = x.company.CompanyLegalFormId,
                     CompanyLegalFormName = x.company.CompanyLegalForm != null ? x.company.CompanyLegalForm.Name : null,
                     CompanyLegalFormAbbreviation = x.company.CompanyLegalForm != null ? x.company.CompanyLegalForm.Abbreviation : null,
@@ -449,6 +450,7 @@ namespace ServiceCore
                 EInvoiceEnabled = x.EinvoiceEnabled,
                 PeppolParticipantId = x.PeppolParticipantId,
                 UblAttachPdf = x.UblAttachPdf,
+                VatReturnFrequency = x.VatReturnFrequency,
                 EmailSubjectTemplate = x.EmailSubjectTemplate,
                 EmailBodyTemplate = x.EmailBodyTemplate,
                 EmailPaidBodyTemplate = x.EmailPaidBodyTemplate,
@@ -514,6 +516,7 @@ namespace ServiceCore
             e.EinvoiceEnabled = bo.EInvoiceEnabled;
             e.PeppolParticipantId = bo.PeppolParticipantId?.Trim();
             e.UblAttachPdf = bo.UblAttachPdf;
+            e.VatReturnFrequency = string.IsNullOrWhiteSpace(bo.VatReturnFrequency) ? null : bo.VatReturnFrequency;
             e.EmailSubjectTemplate = bo.EmailSubjectTemplate;
             e.EmailBodyTemplate = bo.EmailBodyTemplate;
             e.EmailPaidBodyTemplate = bo.EmailPaidBodyTemplate;

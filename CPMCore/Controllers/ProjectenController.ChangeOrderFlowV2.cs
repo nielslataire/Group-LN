@@ -1127,6 +1127,77 @@ namespace CPMCore.Controllers
             return BackToChangeOrder(projectId, changeOrderId);
         }
 
+        /// <summary>Een concept-wijzigingsopdracht als ondertekend registreren zonder ze te verzenden (de klant tekende op papier of per mail):
+        /// zet verzenddatum en akkoorddatum op de gekozen dag en bewaart het getekende exemplaar, indien opgeladen, bij de documenten van het project.</summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [RequestSizeLimit(200_000_000)]
+        public async Task<IActionResult> ChangeOrderDetailV2RegisterSigned(int projectId, int changeOrderId, DateOnly? signedOn, IFormFile? file)
+        {
+            var co = await _db.ChangeOrder.Include(c => c.ContractActivity).ThenInclude(a => a.Contract).FirstOrDefaultAsync(c => c.Id == changeOrderId);
+            if (co is null || co.ContractActivity.Contract.ProjectId != projectId) return NotFound();
+            if (co.IsQuote || co.DateAgreement.HasValue)
+            {
+                AddMessage("error", co.IsQuote ? "Een offerte registreer je niet als ondertekend; zet ze eerst om naar een wijzigingsopdracht." : "Deze wijzigingsopdracht is al ondertekend.", "Niet geregistreerd");
+                return BackToChangeOrder(projectId, changeOrderId);
+            }
+            if (await ActiveSigningCaseAsync(changeOrderId) is not null)
+            {
+                AddMessage("error", SigningLockedMessage, "Niet geregistreerd");
+                return BackToChangeOrder(projectId, changeOrderId);
+            }
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            if (!signedOn.HasValue || signedOn.Value > today)
+            {
+                AddMessage("error", "Geef de datum van de ondertekening op (niet in de toekomst).", "Niet geregistreerd");
+                return BackToChangeOrder(projectId, changeOrderId);
+            }
+            if (co.ClientAccountId <= 0)
+            {
+                AddMessage("error", "Kies eerst een klant · eenheid en sla de wijzigingsopdracht op.", "Niet geregistreerd");
+                return BackToChangeOrder(projectId, changeOrderId);
+            }
+
+            string? docMessage = null;
+            if (file is { Length: > 0 })
+            {
+                var stored = await UploadAssetToStorageAsync(file, "docs");
+                if (string.IsNullOrWhiteSpace(stored))
+                {
+                    AddMessage("error", "Upload naar de opslag is mislukt; er is niets geregistreerd.", "Niet geregistreerd");
+                    return BackToChangeOrder(projectId, changeOrderId);
+                }
+                try { await GenerateDocThumbnailViaStorageAsync(stored); }
+                catch (Exception ex) { _logger.LogWarning(ex, "Thumbnail voor {File} kon niet gemaakt worden.", stored); }
+
+                // Een wijzigingsopdracht hoort bij "Offertes & bestellingen" (zoals bij de digitale ondertekening).
+                var folderId = await _db.DocumentFolders.AsNoTracking().Where(f => f.Code == "offertes").Select(f => f.Id).FirstOrDefaultAsync();
+                var name = ("Wijzigingsopdracht " + CoNo(co.Id) + " — " + (co.Description ?? "").Trim()).TrimEnd(' ', '—');
+                if (name.Length > 200) name = name[..200];
+                var up = await DocsSvc.Upload(new DocUploadDto
+                {
+                    ProjectId = projectId, Mode = "new", Name = name, FolderId = folderId == 0 ? null : folderId, DocDate = signedOn,
+                    StoredFilename = stored, OriginalFilename = file.FileName, SizeBytes = file.Length,
+                    Links = new List<DocLinkRef> { new() { Type = "client", Id = co.ClientAccountId } },
+                    Status = DocumentStatus.Getekend, UploaderKind = DocumentUploaderKind.Intern, UserId = DocUserId, UserName = DocUserName,
+                    Note = "Getekend exemplaar, handmatig geregistreerd (ondertekend op " + signedOn.Value.ToString("dd/MM/yyyy") + ")"
+                });
+                if (!up.Ok || !up.Id.HasValue)
+                {
+                    AddMessage("error", up.Message ?? "Het document kon niet bewaard worden; er is niets geregistreerd.", "Niet geregistreerd");
+                    return BackToChangeOrder(projectId, changeOrderId);
+                }
+                await _db.Database.ExecuteSqlInterpolatedAsync($"UPDATE dbo.ProjectDocs SET ChangeOrderId = {changeOrderId} WHERE Id = {up.Id.Value}");
+                docMessage = " Het getekende exemplaar staat bij de documenten.";
+            }
+
+            co.DateSendToClient ??= signedOn;
+            co.DateAgreement = signedOn;
+            await _db.SaveChangesAsync();
+            AddMessage("success", "De wijzigingsopdracht is geregistreerd als ondertekend op " + signedOn.Value.ToString("dd/MM/yyyy") + "." + (docMessage ?? " Voeg het getekende exemplaar toe bij de documenten van het project."), "Ondertekend");
+            return BackToChangeOrder(projectId, changeOrderId);
+        }
+
         /// <summary>Enkel wanneer elektronisch ondertekenen uitstaat (of er nooit een dossier liep): de
         /// stappen Verzonden/Ondertekend met de hand zetten, zoals het oude scherm deed met datumvelden.
         /// step = "sent" | "signed" | "concept".</summary>

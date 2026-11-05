@@ -113,11 +113,7 @@ namespace CPMCore.Controllers
             if (vm.ClientAccountId <= 0)
                 vm.ClientOptions = await LoadClientOptionsAsync(projectid);
 
-            vm.Stages = _db.InvoicingPaymentStages.AsNoTracking()
-                .Where(s => s.Group.ProjectId == projectid)
-                .OrderBy(s => s.Id)
-                .Select(s => new IdNameBO { ID = s.Id, Display = s.Name })
-                .ToList();
+            vm.Stages = await LoadClientStageOptionsAsync(projectid, vm.ClientAccountId);
 
             // ── Statusfeiten (zelfde bron als de lijst) + het ondertekendossier ────────────────────────
             var facts = await LoadChangeOrderFlowFactsAsync(projectid, co is null ? Array.Empty<ChangeOrder>() : new[] { co });
@@ -241,11 +237,11 @@ namespace CPMCore.Controllers
 
         private static string Pct(decimal v) => v.ToString("0.##");
 
-        private static string TriggerLabel(byte kind, byte triggerType, int? stageId, List<IdNameBO> stages) => triggerType switch
+        private static string TriggerLabel(byte kind, byte triggerType, int? stageId, List<ChangeOrderStageOptionV2> stages) => triggerType switch
         {
             1 => "Na ondertekening",
             2 when kind == 3 || !stageId.HasValue => "Bij de laatste schijf",
-            2 => "Bij schijf · " + (stages.FirstOrDefault(s => s.ID == stageId.Value)?.Display ?? "onbekend"),
+            2 => "Bij schijf · " + (stages.FirstOrDefault(s => s.Id == stageId.Value)?.Name ?? "onbekend"),
             3 => "Manueel vrijgeven",
             _ => "",
         };
@@ -734,6 +730,37 @@ namespace CPMCore.Controllers
             return types.Select(v => new VatTypeOptionV2 { Id = v.Id, Code = v.Code, Description = v.Description, Percentage = v.BasePercentage }).ToList();
         }
 
+        /// <summary>Schijven waarop een termijn kan wachten: enkel die van de betalingsgroep(en) van de eenheden van de klantenaccount, en enkel
+        /// wat voor die eenheden nog niet gefactureerd is (zelfde "reeds gefactureerd"-regel als Facturatie: een schijfregel op een factuur van de eenheid).</summary>
+        private async Task<List<ChangeOrderStageOptionV2>> LoadClientStageOptionsAsync(int projectId, int clientAccountId)
+        {
+            if (clientAccountId <= 0) return new();
+            var unitIds = await _db.Units.AsNoTracking()
+                .Where(u => u.ProjectId == projectId && u.ClientAccountId == clientAccountId).Select(u => u.Id).ToListAsync();
+            if (unitIds.Count == 0) return new();
+            var groupIds = await _db.UnitConstructionValue.AsNoTracking()
+                .Where(v => unitIds.Contains(v.UnitId) && v.PaymentGroupId.HasValue).Select(v => v.PaymentGroupId.Value).Distinct().ToListAsync();
+            var stages = await _db.InvoicingPaymentStages.AsNoTracking()
+                .Where(s => groupIds.Contains(s.GroupId))
+                .OrderBy(s => s.GroupId).ThenBy(s => s.Id)
+                .Select(s => new { s.Id, s.Name, Group = s.Group.Name })
+                .ToListAsync();
+            var invoiced = (await _db.InvoicesDetails.AsNoTracking()
+                .Where(d => d.LineType == "Stages" && d.PaymentStageId.HasValue && d.UnitId.HasValue && unitIds.Contains(d.UnitId.Value))
+                .Select(d => d.PaymentStageId.Value).Distinct().ToListAsync()).ToHashSet();
+            return stages.Where(s => !invoiced.Contains(s.Id))
+                .Select(s => new ChangeOrderStageOptionV2 { Id = s.Id, Name = s.Name, Group = s.Group ?? "" }).ToList();
+        }
+
+        /// <summary>JSON voor de schijven-keuzelijst van de termijnen na het kiezen van een andere klant · eenheid (Leeg beginnen).</summary>
+        [HttpGet]
+        public async Task<IActionResult> ChangeOrderDetailV2Stages(int projectId, int clientAccountId)
+        {
+            var stages = await LoadClientStageOptionsAsync(projectId, clientAccountId);
+            var multi = stages.Select(s => s.Group).Distinct().Count() > 1;
+            return Json(stages.Select(s => new { value = s.Id.ToString(), text = s.Name, group = multi ? s.Group : null }));
+        }
+
         [HttpGet]
         public async Task<IActionResult> ChangeOrderDetailV2AddRow(int index, decimal vatKlant, int projectId, int? vatKlantTypeId = null, decimal commission = 0)
         {
@@ -746,13 +773,9 @@ namespace CPMCore.Controllers
         }
 
         [HttpGet]
-        public IActionResult ChangeOrderDetailV2AddTerm(int index, int projectId, byte kind = 2, decimal? percentage = null)
+        public async Task<IActionResult> ChangeOrderDetailV2AddTerm(int index, int projectId, byte kind = 2, decimal? percentage = null, int clientAccountId = 0)
         {
-            var stages = _db.InvoicingPaymentStages.AsNoTracking()
-                .Where(s => s.Group.ProjectId == projectId)
-                .OrderBy(s => s.Id)
-                .Select(s => new IdNameBO { ID = s.Id, Display = s.Name })
-                .ToList();
+            var stages = await LoadClientStageOptionsAsync(projectId, clientAccountId);
             ViewData["Index"] = index;
             ViewData["Stages"] = stages;
             ViewData["IsLocked"] = false;

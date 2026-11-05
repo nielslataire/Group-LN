@@ -109,6 +109,7 @@ a.gl-v2-co-quote-preview:hover { border-color: var(--gl-v2-primary); color: var(
 .gl-v2-co-table tfoot td { border-bottom: 0; padding-top: 6px; padding-bottom: 6px; font: 500 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
 .gl-v2-co-table tfoot .gl-v2-co-sum-total td { font: 700 15px var(--gl-v2-font-sans); color: var(--gl-v2-primary); border-top: 1px solid var(--gl-v2-hairline); padding-top: 12px; padding-bottom: 12px; }
 /* Intern: kostprijs en commissie staan ná de klantregels, gedempt — ze horen niet bij wat de klant betaalt. */
+.gl-v2-co-table tfoot tr:last-child td { padding-bottom: 28px; } /* witruimte onder de laatste rij ("Commissie · intern") van de kaart Regels */
 .gl-v2-co-table tfoot .gl-v2-co-sum-total ~ tr td { color: var(--gl-v2-muted); }
 .gl-v2-co-sum-total td { font: 700 13px var(--gl-v2-font-sans); color: var(--gl-v2-primary); border-top: 1px solid var(--gl-v2-hairline); padding-top: 10px; padding-bottom: 14px; }
 .gl-v2-co-tabular { font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -132,8 +133,9 @@ a.gl-v2-co-quote-preview:hover { border-color: var(--gl-v2-primary); color: var(
 /* Omschrijving als textarea: 20c vouwt de specificatierijen van de offerte in deze tekst, dus die moet
    leesbaar blijven (vorige versie: één regel, afgekapt). Groeit mee met de inhoud waar de browser
    field-sizing kent, anders minimaal twee regels. */
-.gl-v2-co-table .gl-v2-field-box.gl-v2-co-descbox { height: auto; min-height: 52px; min-width: 260px; padding: 7px 9px; align-items: stretch; }
-.gl-v2-co-table .gl-v2-co-descbox .gl-v2-field-input { height: auto; min-height: 36px; resize: vertical; line-height: 1.4; field-sizing: content; }
+.gl-v2-co-table .js-co-term-stagebox { margin-top: 6px; }
+.gl-v2-co-table .gl-v2-field-box.gl-v2-co-descbox { height: auto; min-height: 36px; min-width: 260px; padding: 7px 9px; align-items: stretch; }
+.gl-v2-co-table .gl-v2-co-descbox .gl-v2-field-input { height: auto; min-height: 20px; resize: none; overflow: hidden; line-height: 1.4; field-sizing: content; }
 /* Sleepgreep (28a): eerste, smalle kolom. Staat NA de :first-child-regel hierboven zodat de kleinere
    inspringing wint (zelfde specificiteit). touch-action:none: slepen met de vinger scrolt de pagina niet. */
 .gl-v2-co-table th.gl-v2-co-handle-cell, .gl-v2-co-table td.gl-v2-co-handle-cell { width: 30px; padding-left: 10px; padding-right: 0; }

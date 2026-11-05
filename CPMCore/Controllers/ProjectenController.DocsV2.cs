@@ -172,7 +172,7 @@ namespace CPMCore.Controllers
         [ValidateAntiForgeryToken]
         [RequestSizeLimit(200_000_000)]
         public async Task<IActionResult> DocumentUploadV2(int projectid, string? mode, int? documentId, int? requestId, string? name, int? folderId,
-            DateOnly? docDate, DateOnly? expiresOn, string? number, string? authoredBy, string? perceel, decimal? amount, string? note,
+            DateOnly? docDate, DateOnly? expiresOn, string? number, string? authoredBy, string? perceel, string? docType, decimal? amount, string? note,
             List<string>? links, bool shareClients, bool shareSuppliers, byte? status, IFormFile? file)
         {
             if (file == null || file.Length <= 0) return DocJson(DocResult.Fail("Kies eerst een bestand."));
@@ -196,7 +196,7 @@ namespace CPMCore.Controllers
             {
                 ProjectId = projectid, Mode = mode ?? "new", DocumentId = documentId, RequestId = requestId, Name = name,
                 FolderId = folderId, DocDate = docDate, ExpiresOn = expiresOn, Number = number, AuthoredBy = authoredBy,
-                Perceel = perceel, Amount = amount, Note = note, Links = refs, ShareClients = shareClients, ShareSuppliers = shareSuppliers,
+                Perceel = perceel, DocType = docType, Amount = amount, Note = note, Links = refs, ShareClients = shareClients, ShareSuppliers = shareSuppliers,
                 Status = status, UploaderKind = DocumentUploaderKind.Intern, StoredFilename = stored, OriginalFilename = file.FileName,
                 SizeBytes = file.Length, UserId = DocUserId, UserName = DocUserName
             });
@@ -216,10 +216,10 @@ namespace CPMCore.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DocumentUpdateV2(int projectid, int id, string? name, int? folderId, string? number, string? authoredBy,
-            DateOnly? docDate, DateOnly? expiresOn, string? perceel) =>
+            DateOnly? docDate, DateOnly? expiresOn, string? perceel, string? docType) =>
             DocJson(await DocsSvc.UpdateDocument(projectid, id, new DocUpdateDto
             {
-                Name = name ?? "", FolderId = folderId, Number = number, AuthoredBy = authoredBy, DocDate = docDate, ExpiresOn = expiresOn, Perceel = perceel
+                Name = name ?? "", FolderId = folderId, Number = number, AuthoredBy = authoredBy, DocDate = docDate, ExpiresOn = expiresOn, Perceel = perceel, DocType = docType
             }, DocUserId));
 
         [HttpPost]

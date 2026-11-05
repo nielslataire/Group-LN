@@ -143,14 +143,12 @@
             </div>
             <div class="gl-v2-card-body gl-v2-co-form-grid">
                 <div class="gl-v2-field">
-                    <label class="gl-v2-field-label" for="gl-v2-qi-contractactivity">Leverancier · contract</label>
-                    <div class="gl-v2-field-box"><select class="gl-v2-field-input" id="gl-v2-qi-contractactivity" name="contractActivityId">
-                        <option value="">— kies —</option>
-                        @foreach (var a in Model.ContractActivities)
-                        {
-                            <option value="@a.ID" selected="@(a.ID == Model.ContractActivityId)">@a.Display</option>
-                        }
-                    </select></div>
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                    {
+                        Name = "contractActivityId", Id = "gl-v2-qi-contractactivity", Label = "Leverancier · contract",
+                        Placeholder = "— kies —", Value = Model.ContractActivityId > 0 ? Model.ContractActivityId.ToString() : "",
+                        Items = Model.ContractActivities.Select(a => new GlV2SelectItem { Value = a.ID.ToString(), Text = a.Display }).ToList()
+                    })
                 </div>
                 <div class="gl-v2-field">
                     @if (Model.ClientAccountId > 0)
@@ -160,15 +158,13 @@
                     }
                     else
                     {
-                        <label class="gl-v2-field-label" for="gl-v2-qi-client">Klant <span style="color:#8B2A2A">*</span></label>
-                        <div class="gl-v2-field-box"><select class="gl-v2-field-input" id="gl-v2-qi-client" name="clientAccountId">
-                            <option value="">— kies een klant —</option>
-                            @foreach (var c in Model.ClientAccounts)
-                            {
-                                <option value="@c.ID">@c.Display</option>
-                            }
-                        </select></div>
-                        <span class="gl-v2-field-help">voor wie de offerte bedoeld is — de btw volgt de betalingsgroep van de eenheid</span>
+                        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                        {
+                            Name = "clientAccountId", Id = "gl-v2-qi-client", Label = "Klant", Required = true,
+                            Placeholder = "— kies een klant —", Value = "",
+                            Help = "voor wie de offerte bedoeld is — de btw volgt de betalingsgroep van de eenheid",
+                            Items = Model.ClientAccounts.Select(c => new GlV2SelectItem { Value = c.ID.ToString(), Text = c.Display }).ToList()
+                        })
                     }
                 </div>
                 <div class="gl-v2-field">
@@ -276,6 +272,7 @@
     }
     </script>
     <script src="~/lib/pdfjs/pdf.min.js"></script>
+    <script src="~/js/currency.js"></script>
     <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-projecten-quoteintake.js" asp-append-version="true"></script>
 }

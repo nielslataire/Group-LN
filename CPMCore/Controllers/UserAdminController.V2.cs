@@ -251,7 +251,8 @@ public partial class UserAdminController
             bedrijvenRol = CompanyAccess(baseMap, issuers),
             bedrijven = CompanyAccess(map, issuers),
             bedrijvenAfwijkend = ovs.Any(o => IsCompanyCode(o.PermissionCode)),
-            actief = user.IsActive
+            actief = user.IsActive,
+            dashboard = user.DashboardType
         };
     }
 
@@ -289,6 +290,14 @@ public partial class UserAdminController
             rollen = allRoles.Select(r => new { id = r.RoleId, naam = r.Name }),
             boom = Items().Select(i => new { code = i.Code, naam = i.Name, ouder = i.Parent, bedrijf = i.PerCompany, info = Info.GetValueOrDefault(i.Code) }),
             bedrijven = (await ActiveIssuersAsync()).Select(i => new { id = i.Id, naam = i.Name }),
+            dashboards = new[]
+            {
+                new { id = (int)Models.DashboardType.Projectleider, naam = "Projectleider" },
+                new { id = (int)Models.DashboardType.Boekhouding, naam = "Boekhouding" },
+                new { id = (int)Models.DashboardType.CeoCfo, naam = "CEO / CFO" },
+                new { id = (int)Models.DashboardType.Ontwikkelaar, naam = "Projectontwikkelaar" },
+                new { id = (int)Models.DashboardType.Verkoper, naam = "Verkoper" },
+            },
             stand = await RechtenState(id),
             kanSchrijven = perms.HasWrite(PermissionCodes.SettingsUsers)
         });

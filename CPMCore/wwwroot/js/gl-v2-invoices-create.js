@@ -17,6 +17,7 @@
     // NL/BE: punt = duizendtal, komma = decimaal (zoals InvoicesUtil.parseLocaleNumber van het oude scherm)
     function parseNum(v) {
         if (v == null) return 0;
+        if (typeof v === "number") return isFinite(v) ? v : 0; // een echt getal (bv. uit AutoNumeric) niet als tekst herlezen: 1.23 is geen duizendtal
         var s = String(v).replace(/[\s   ]/g, "").replace(/−/g, "-");
         if (!s) return 0;
         var hasC = s.indexOf(",") >= 0, hasD = s.indexOf(".") >= 0;
@@ -289,8 +290,22 @@
     function lineVat(l) { return (l.vat != null && vatById(l.vat)) || defaultVat(); }
     function lineNet(l) { return round2((parseNum(l.qty) || 1) * parseNum(l.price)); }
 
-    function vatOptions(selected) {
-        return cfg.vatTypes.map(function (v) { return '<option value="' + esc(v.id) + '"' + (String(v.id) === String(selected) ? " selected" : "") + '>' + esc(v.code + " · " + v.pct + " %") + '</option>'; }).join("");
+    // Btw per lijn = de gedeelde Basis-keuzelijst (GlV2/_SelectList, Bare-variant) in dezelfde markup, bedraad via window.GlV2Select.init().
+    // De zichtbare tekst blijft kort (code + percentage); de volledige naam van de btw-code staat als tooltip op elke optie en op het veld.
+    function vatShort(v) { return v.code + " · " + String(v.pct).replace(".", ",") + " %"; }
+    function vatFull(v) { return v.code + (v.description ? " · " + v.description : "") + " (" + String(v.pct).replace(".", ",") + " %)"; }
+    function vatSelect(selectedId, n) {
+        var sel = vatById(selectedId) || cfg.vatTypes[0] || { id: "", code: "", pct: 0 }, id = "ic-vat-" + n;
+        return '<div class="gl-v2-field gl-v2-field-bare gl-v2-ic-vatfield">' +
+            '<div class="gl-v2-select" data-gl-v2-select id="' + id + '_select" title="' + esc(vatFull(sel)) + '">' +
+            '<input type="hidden" id="' + id + '" data-f="vat" value="' + esc(sel.id) + '" />' +
+            '<div id="' + id + '_trigger" class="gl-v2-select-trigger is-filled" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false" aria-label="Btw van lijn ' + n + '">' +
+            '<span class="gl-v2-select-trigger-label">' + esc(vatShort(sel)) + '</span><i class="ph ph-caret-down gl-v2-select-trigger-caret" aria-hidden="true"></i></div>' +
+            '<div class="gl-v2-select-panel" role="listbox">' +
+            cfg.vatTypes.map(function (v) {
+                return '<button type="button" class="gl-v2-select-option' + (String(v.id) === String(sel.id) ? " is-selected" : "") + '" role="option" data-value="' + esc(v.id) + '" title="' + esc(vatFull(v)) + '">' +
+                    '<i class="ph ph-check" aria-hidden="true"></i><span>' + esc(vatShort(v)) + '</span></button>';
+            }).join("") + '</div></div></div>';
     }
     function renderFreeLines() {
         var body = $("#ic-lines-body");
@@ -299,28 +314,44 @@
                 '<button type="button" class="gl-v2-ic-grip" draggable="true" aria-label="Lijn ' + (i + 1) + ' verslepen"><i class="ph ph-dots-six-vertical" aria-hidden="true"></i></button>' +
                 '<div class="gl-v2-field-box"><input class="gl-v2-field-input" data-f="text" maxlength="200" autocomplete="off" aria-label="Omschrijving van lijn ' + (i + 1) + '" value="' + esc(l.text) + '" /></div>' +
                 '<div class="gl-v2-field-box"><input class="gl-v2-field-input is-num" data-f="qty" inputmode="decimal" autocomplete="off" aria-label="Aantal van lijn ' + (i + 1) + '" value="' + esc(l.qty === "" ? "" : String(l.qty).replace(".", ",")) + '" /></div>' +
-                '<div class="gl-v2-field-box"><input class="gl-v2-field-input is-num" data-f="price" inputmode="decimal" autocomplete="off" aria-label="Eenheidsprijs van lijn ' + (i + 1) + '" placeholder="0,00" value="' + esc(l.price === "" ? "" : fmt(parseNum(l.price))) + '" /></div>' +
-                '<select class="gl-v2-ic-vat" data-f="vat" aria-label="Btw van lijn ' + (i + 1) + '">' + vatOptions(lineVat(l).id) + '</select>' +
+                '<div class="gl-v2-field-box"><input class="gl-v2-field-input is-num Currencymask" data-f="price" inputmode="decimal" autocomplete="off" aria-label="Eenheidsprijs van lijn ' + (i + 1) + '" placeholder="0,00" value="' + esc(l.price === "" || l.price == null ? "" : parseNum(l.price).toFixed(2)) + '" /><span class="gl-v2-field-suffix">€</span></div>' +
+                vatSelect(lineVat(l).id, i + 1) +
                 '<span class="is-total" data-total>' + euro(lineNet(l)) + '</span>' +
                 '<button type="button" class="gl-v2-ic-del" aria-label="Lijn ' + (i + 1) + ' verwijderen"' + (state.lines.length === 1 ? " disabled" : "") + '><i class="ph ph-trash" aria-hidden="true"></i></button></div>';
         }).join("");
+        if (window.GlV2Select) window.GlV2Select.init(body);
+        if (window.CurrencyMask) window.CurrencyMask.init(body.querySelectorAll(".Currencymask"));
+    }
+    // Waarde van een valutaveld: het kale getal van AutoNumeric (de zichtbare tekst is "1.234,50"), met een terugval op parseNum.
+    function priceOf(el) {
+        var an = window.AutoNumeric && AutoNumeric.getAutoNumericElement(el);
+        if (an) { var n = an.getNumber(); return n == null || isNaN(n) ? "" : n; }
+        return el.value;
     }
     var linesBody = $("#ic-lines-body");
     linesBody.addEventListener("input", function (e) {
         var row = e.target.closest(".gl-v2-ic-line"), f = e.target.getAttribute("data-f"); if (!row || !f) return;
         var l = state.lines[parseInt(row.getAttribute("data-i"), 10)];
-        if (f === "text") l.text = e.target.value; else if (f === "qty") l.qty = e.target.value; else if (f === "price") l.price = e.target.value;
+        if (f === "text") l.text = e.target.value; else if (f === "qty") l.qty = e.target.value; else if (f === "price") l.price = priceOf(e.target);
         $("[data-total]", row).textContent = euro(lineNet(l)); draw();
+    });
+    // AutoNumeric formatteert pas na het input-event; zijn eigen melding geeft de definitieve waarde door.
+    linesBody.addEventListener("autoNumeric:rawValueModified", function (e) {
+        var row = e.target.closest(".gl-v2-ic-line"); if (!row || e.target.getAttribute("data-f") !== "price") return;
+        var l = state.lines[parseInt(row.getAttribute("data-i"), 10)];
+        l.price = priceOf(e.target); $("[data-total]", row).textContent = euro(lineNet(l)); draw();
     });
     linesBody.addEventListener("change", function (e) {
         var row = e.target.closest(".gl-v2-ic-line"); if (!row) return;
         var l = state.lines[parseInt(row.getAttribute("data-i"), 10)], f = e.target.getAttribute("data-f");
-        if (f === "vat") { l.vat = e.target.value; $("[data-total]", row).textContent = euro(lineNet(l)); draw(); }
+        if (f === "vat") {
+            l.vat = e.target.value; $("[data-total]", row).textContent = euro(lineNet(l)); draw();
+            var v = vatById(l.vat), wrap = e.target.closest(".gl-v2-select"); if (v && wrap) wrap.title = vatFull(v);
+        }
     });
     linesBody.addEventListener("focusout", function (e) {
-        var f = e.target.getAttribute && e.target.getAttribute("data-f"); if (f !== "price" && f !== "qty") return;
+        var f = e.target.getAttribute && e.target.getAttribute("data-f"); if (f !== "qty") return;
         var row = e.target.closest(".gl-v2-ic-line"), l = state.lines[parseInt(row.getAttribute("data-i"), 10)];
-        if (f === "price" && String(e.target.value).trim() !== "") { l.price = parseNum(e.target.value); e.target.value = fmt(l.price); }
         if (f === "qty") { if (String(e.target.value).trim() === "") { l.qty = 1; e.target.value = "1"; } else { l.qty = parseNum(e.target.value); e.target.value = String(l.qty).replace(".", ","); } }
     });
     linesBody.addEventListener("keydown", function (e) {

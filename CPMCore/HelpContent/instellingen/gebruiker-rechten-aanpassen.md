@@ -36,6 +36,10 @@ faq:
 
 Links staat het **Account**. Kies bij **Rol** de rol van de gebruiker. Heeft de gebruiker afwijkingen, dan vraagt CPM eerst of je ze wilt terugzetten.
 
+## Het dashboard kiezen
+
+Kies bij **Dashboard** wat de gebruiker ziet op de startpagina: **Projectleider**, **Boekhouding**, **CEO / CFO**, **Projectontwikkelaar** of **Verkoper**. Zonder dashboard ziet de gebruiker de lijst met projecten. De keuze geldt meteen en staat los van de rol.
+
 ## De bedrijfstoegang instellen
 
 Onder **Bedrijfstoegang** staan de facturatiebedrijven. Een groen bedrijf heeft toegang. Een goud bedrijf is toegevoegd bovenop de rol. Klik op een bedrijf om het toe te voegen of weg te halen.

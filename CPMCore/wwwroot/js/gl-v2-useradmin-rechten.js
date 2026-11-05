@@ -9,7 +9,7 @@
     var data = JSON.parse(document.getElementById("ua-r-data").textContent);
     var token = (root.querySelector('input[name="__RequestVerificationToken"]') || {}).value || "";
     var U = {
-        rol: root.dataset.urlRol, niveau: root.dataset.urlNiveau, reset: root.dataset.urlReset, bedrijf: root.dataset.urlBedrijf,
+        rol: root.dataset.urlRol, dashboard: root.dataset.urlDashboard, niveau: root.dataset.urlNiveau, reset: root.dataset.urlReset, bedrijf: root.dataset.urlBedrijf,
         toegang: root.dataset.urlToegang, uitnodiging: root.dataset.urlUitnodiging, kopieren: root.dataset.urlKopieren, kandidaten: root.dataset.urlKandidaten
     };
     var g = data.gebruiker, canWrite = !!data.kanSchrijven;
@@ -52,6 +52,10 @@
     function setRol(v) {
         window.GlV2Select.setItems($("ur-rol_select"), data.rollen.map(function (r) { return { value: r.id, text: r.naam }; }), v == null ? "" : v, "Geen rol");
     }
+    // Dashboard van de startpagina: dezelfde keuzelijst, opties uit de pagina-data (data.dashboards).
+    function setDash(v) {
+        window.GlV2Select.setItems($("ur-dash_select"), data.dashboards.map(function (d) { return { value: d.id, text: d.naam }; }), v == null ? "" : v, "Geen dashboard");
+    }
     function renderAccount() {
         $("ur-avatar").textContent = g.initialen; $("ur-avatar").className = "gl-v2-ua-avatar is-lg is-" + g.type;
         $("ur-naam").textContent = g.naam; $("ur-mail").textContent = g.email;
@@ -59,6 +63,8 @@
         setRol(stand.roleId);
         var rolTrigger = $("ur-rol_trigger"); var rolLocked = !canWrite || g.ikzelf; rolTrigger.setAttribute("aria-disabled", rolLocked ? "true" : "false"); rolTrigger.tabIndex = rolLocked ? -1 : 0;
         if (g.ikzelf) $("ur-rol-help").textContent = "Je kunt je eigen rol niet wijzigen.";
+        setDash(stand.dashboard);
+        var dashTrigger = $("ur-dash_trigger"); dashTrigger.setAttribute("aria-disabled", canWrite ? "false" : "true"); dashTrigger.tabIndex = canWrite ? 0 : -1;
         $("ur-actief").checked = stand.actief; $("ur-actief").disabled = !canWrite || g.ikzelf;
         $("ur-actief-hint").textContent = g.ikzelf ? "je kunt je eigen toegang niet uitschakelen" : stand.actief ? "kan inloggen" : "toegang ingetrokken, de historiek blijft bewaard";
         $("ur-entra").innerHTML = g.entraId ? '<i class="ph ph-link" aria-hidden="true"></i> Gekoppeld <span class="mono">' + esc(String(g.entraId).slice(0, 8)) + "…</span>" : "Niet gekoppeld";
@@ -94,6 +100,13 @@
         if (tree.deviations().length || stand.bedrijvenAfwijkend) {
             window.GlV2Bevestig({ title: "Rol wijzigen?", desc: voornaam + " heeft afwijkingen op de huidige rol. Een andere rol zet die allemaal terug.", ok: "Rol wijzigen", tone: "warning" }).then(function (ok) { if (ok) doen(); else setRol(stand.roleId); });
         } else doen();
+    });
+    $("ur-dash").addEventListener("change", function () {
+        if (!canWrite) { setDash(stand.dashboard); return; }
+        post(U.dashboard, { userId: g.id, dashboardType: this.value }).then(function (r) {
+            if (r.ok) { stand = r.stand; setDash(stand.dashboard); toast("success", "Dashboard gewijzigd", "De gebruiker ziet dit bij de volgende keer openen van de startpagina."); }
+            else { fout(r); setDash(stand.dashboard); }
+        }).catch(function (x) { fout(x); setDash(stand.dashboard); });
     });
     $("ur-actief").addEventListener("change", function () {
         var aan = this.checked, el = this;

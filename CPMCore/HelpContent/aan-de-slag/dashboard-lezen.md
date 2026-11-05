@@ -7,7 +7,7 @@ minutes: 5
 updated: 2026-10-26
 newsTag: Nieuw
 screens: dashboard
-related: mijn-taken-vandaag, meldingen-instellen, account-en-rol, gebruiker-rechten-aanpassen
+related: dashboard-boekhouding-lezen, mijn-taken-vandaag, meldingen-instellen, account-en-rol, gebruiker-rechten-aanpassen
 synonyms: startpagina, home, meldingen, snooze, kpi, werven, snelacties, project vastzetten, rangschikken, actie vereist
 description: de startpagina met je werven, meldingen en snelacties
 intro: |
@@ -91,7 +91,7 @@ Onder **Algemeen** vind je **Leverancier toevoegen**, **Leverancier zoeken** en 
 
 ## De dashboards van de andere rollen
 
-- **Boekhouding**: tellers voor Openstaand, Vervallen, Te verwerken en Waarschuwingen. Het paneel **Aandacht vereist** toont facturen die opvolging vragen.
+- **Boekhouding**: tellers voor inkomende facturen, openstaand bij klanten, vervallen en de btw-aangifte, met inkomende facturen in tabbladen. Een uitleg staat in het artikel **Het dashboard van de boekhouding lezen**.
 - **CEO / CFO**: tellers voor Actieve projecten, Vervallen, Contracten en Waarschuwingen. Het paneel **Aandacht vereist** en de kaarten onder **Alle werven** tonen alle projecten van alle bedrijven.
 - **Projectontwikkelaar**: Projecten, Vergunningen in opvolging en Achterstallige mijlpalen, met de blokken **Projecten per fase** en **Vergunningen in opvolging**. De tegel **Alle deadlines** opent het overzicht van deadlines.
 - **Verkoper**: Projecten, Eenheden in opvolging en Achterstallig, met **Eenheden per verkoopstatus** en een lijst met de eerstvolgende deadlines per eenheid.

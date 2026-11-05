@@ -618,7 +618,7 @@ window.GlV2.byId = function (id) { return document.getElementById(id); };
     // afhankelijk veld in/uitschakelen, gewoon blijft werken — hetzelfde contract als een native
     // <select>'s eigen change-event).
     // Client-side opties vervangen op een bestaand .gl-v2-select[data-gl-v2-select] (afhankelijke
-    // keuzelijst). items: [{value, text, group?, disabled?}]. De gekozen waarde blijft behouden als ze
+    // keuzelijst). items: [{value, text, group?, disabled?, title?}] (title = tooltip met de volledige naam). De gekozen waarde blijft behouden als ze
     // nog voorkomt, anders wordt de trigger weer een placeholder. Geen "change" — de aanroeper beslist.
     window.GlV2Select = {
         setItems: function (wrap, items, value, emptyText) {
@@ -629,13 +629,14 @@ window.GlV2.byId = function (id) { return document.getElementById(id); };
             if (!hidden || !trigger || !panel) return;
             var wanted = value == null ? hidden.value : String(value);
             panel.innerHTML = "";
-            function addOption(v, text, isSelected, disabled) {
+            function addOption(v, text, isSelected, disabled, title) {
                 var b = document.createElement("button");
                 b.type = "button";
                 b.className = "gl-v2-select-option" + (isSelected ? " is-selected" : "");
                 b.setAttribute("role", "option");
                 b.setAttribute("data-value", v);
                 if (disabled) b.disabled = true;
+                if (title) b.setAttribute("title", title);
                 var i = document.createElement("i");
                 i.className = "ph ph-check";
                 i.setAttribute("aria-hidden", "true");
@@ -659,7 +660,7 @@ window.GlV2.byId = function (id) { return document.getElementById(id); };
                 }
                 var sel = String(item.value) === wanted;
                 if (sel) found = item;
-                addOption(String(item.value), item.text, sel, !!item.disabled);
+                addOption(String(item.value), item.text, sel, !!item.disabled, item.title);
             });
             var label = trigger.querySelector(".gl-v2-select-trigger-label");
             if (found) {

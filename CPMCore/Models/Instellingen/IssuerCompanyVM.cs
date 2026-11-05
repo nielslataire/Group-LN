@@ -87,6 +87,9 @@ namespace CPMCore.Models.Instellingen
         [Display(Name = "PDF bijvoegen (UBL)")]
         public bool UblAttachPdf { get; set; } = true;
 
+        [Display(Name = "Btw-aangifte")]
+        public string? VatReturnFrequency { get; set; }
+
         [Display(Name = "Email onderwerp template")]
         public string? EmailSubjectTemplate { get; set; }
         [Display(Name = "Email body template")]

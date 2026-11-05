@@ -317,12 +317,15 @@ namespace ServiceCore
         }
 
         public async Task<InvoiceDashboardSummaryBO> GetDashboardSummaryAsync(CancellationToken ct = default)
-            => await BuildDashboardSummaryAsync(null, ct);
+            => await BuildDashboardSummaryAsync(null, null, ct);
+
+        public async Task<InvoiceDashboardSummaryBO> GetDashboardSummaryForIssuersAsync(IReadOnlyCollection<int> issuerCompanyIds, CancellationToken ct = default)
+            => await BuildDashboardSummaryAsync(null, issuerCompanyIds, ct);
 
         public async Task<InvoiceDashboardSummaryBO> GetDashboardSummaryForProjectAsync(int projectId, CancellationToken ct = default)
-            => await BuildDashboardSummaryAsync(projectId, ct);
+            => await BuildDashboardSummaryAsync(projectId, null, ct);
 
-        private async Task<InvoiceDashboardSummaryBO> BuildDashboardSummaryAsync(int? projectId, CancellationToken ct)
+        private async Task<InvoiceDashboardSummaryBO> BuildDashboardSummaryAsync(int? projectId, IReadOnlyCollection<int>? issuerCompanyIds, CancellationToken ct)
         {
             // Concept/Cancelled/Generating tellen niet mee als "openstaand" — geen
             // reële vordering. Balance>0 sluit Betaald vanzelf uit.
@@ -336,6 +339,7 @@ namespace ServiceCore
                 where i.StatusId != draft && i.StatusId != cancelled && i.StatusId != generating
                       && bal.Balance > 0
                       && (projectId == null || i.ProjectId == projectId)
+                      && (issuerCompanyIds == null || (i.IssuerCompanyId != null && issuerCompanyIds.Contains(i.IssuerCompanyId.Value)))
                 select new
                 {
                     i.Id,
@@ -343,6 +347,7 @@ namespace ServiceCore
                     i.ClientName,
                     i.ExpirationDate,
                     i.ProjectId,
+                    i.IssuerCompanyId,
                     Balance = bal.Balance.Value
                 };
 
@@ -353,6 +358,8 @@ namespace ServiceCore
                 .Where(x => x.ExpirationDate.HasValue && x.ExpirationDate.Value < today)
                 .OrderBy(x => x.ExpirationDate)
                 .ToList();
+
+            int DaysLate(DateOnly? due) => (today.ToDateTime(TimeOnly.MinValue) - due!.Value.ToDateTime(TimeOnly.MinValue)).Days;
 
             var projectIds = overdue
                 .Where(x => x.ProjectId.HasValue)
@@ -369,6 +376,23 @@ namespace ServiceCore
                 OutstandingAmount = outstanding.Sum(x => x.Balance),
                 OverdueCount = overdue.Count,
                 OverdueAmount = overdue.Sum(x => x.Balance),
+                AmountNotDue = outstanding.Where(x => !x.ExpirationDate.HasValue || x.ExpirationDate.Value >= today).Sum(x => x.Balance),
+                AmountOverdue1To30 = overdue.Where(x => DaysLate(x.ExpirationDate) <= 30).Sum(x => x.Balance),
+                AmountOverdue31To60 = overdue.Where(x => DaysLate(x.ExpirationDate) is > 30 and <= 60).Sum(x => x.Balance),
+                AmountOverdueOver60 = overdue.Where(x => DaysLate(x.ExpirationDate) > 60).Sum(x => x.Balance),
+                OldestOverdueDays = overdue.Count > 0 ? DaysLate(overdue[0].ExpirationDate) : 0,
+                ByCompany = outstanding
+                    .Where(x => x.IssuerCompanyId.HasValue)
+                    .GroupBy(x => x.IssuerCompanyId!.Value)
+                    .Select(g => new IssuerSummaryLineBO
+                    {
+                        IssuerCompanyId = g.Key,
+                        OutstandingCount = g.Count(),
+                        OutstandingAmount = g.Sum(x => x.Balance),
+                        OverdueCount = g.Count(x => x.ExpirationDate.HasValue && x.ExpirationDate.Value < today),
+                        OverdueAmount = g.Where(x => x.ExpirationDate.HasValue && x.ExpirationDate.Value < today).Sum(x => x.Balance)
+                    })
+                    .ToList(),
                 TopOverdue = overdue
                     .Take(5)
                     .Select(x => new OverdueInvoiceLineBO
@@ -379,7 +403,8 @@ namespace ServiceCore
                         ProjectName = x.ProjectId.HasValue && projectNames.TryGetValue(x.ProjectId.Value, out var pn) ? pn : null,
                         Balance = x.Balance,
                         ExpirationDate = x.ExpirationDate,
-                        DaysOverdue = (today.ToDateTime(TimeOnly.MinValue) - x.ExpirationDate!.Value.ToDateTime(TimeOnly.MinValue)).Days
+                        DaysOverdue = (today.ToDateTime(TimeOnly.MinValue) - x.ExpirationDate!.Value.ToDateTime(TimeOnly.MinValue)).Days,
+                        IssuerCompanyId = x.IssuerCompanyId
                     })
                     .ToList()
             };

@@ -122,6 +122,9 @@ namespace CPMCore.Models.Home
         /// <summary>Inkomende facturen met onopgeloste documentwaarschuwingen.</summary>
         public int IncomingInvoiceWarningCount { get; set; }
 
+        /// <summary>Gegevens voor het gl-v2 boekhoudingsdashboard (alleen gevuld voor <c>DashboardType.Boekhouding</c>).</summary>
+        public BoekhoudingDashboardVm? Boekhouding { get; set; }
+
         // ── CeoCfo: bedrijfsnamen (IssuerCompanyId → naam) voor de multi-company werven-grid ──
         public Dictionary<int, string> IssuerCompanyNames { get; set; } = new();
 

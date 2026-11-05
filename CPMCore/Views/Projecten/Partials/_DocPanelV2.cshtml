@@ -54,6 +54,7 @@
      data-date="@d.DocumentDate?.ToString("yyyy-MM-dd")"
      data-expires="@d.ExpiresOn?.ToString("yyyy-MM-dd")"
      data-perceel="@d.Perceel"
+     data-doc-type="@d.DocType"
      data-frozen="@(d.IsFrozen ? "1" : "0")"
      data-signers="@sigSuggest">
 
@@ -101,6 +102,10 @@
             <div class="gl-v2-dd-p-kv"><span>Documentdatum</span><b>@DateOnlyText(d.DocumentDate)</b></div>
             <div class="gl-v2-dd-p-kv"><span>Opgesteld door</span><b>@(string.IsNullOrWhiteSpace(d.AuthoredBy) ? "—" : d.AuthoredBy)</b></div>
             <div class="gl-v2-dd-p-kv"><span>Vervalt op</span><b>@DateOnlyText(d.ExpiresOn)</b></div>
+            @if (!string.IsNullOrWhiteSpace(d.DocTypeName))
+            {
+                <div class="gl-v2-dd-p-kv"><span>Soort</span><b>@d.DocTypeName</b></div>
+            }
             @if (!string.IsNullOrWhiteSpace(d.Perceel))
             {
                 <div class="gl-v2-dd-p-kv"><span>Perceel</span><b>@d.Perceel</b></div>

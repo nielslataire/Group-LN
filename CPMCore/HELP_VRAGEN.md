@@ -42,3 +42,9 @@ Legende: **[Niels]** = hangt af van jullie werkwijze, **[beslissing]** = de code
 
 **Puntenlijst** (`punten-lijst-overzicht`)
 - krijgt de aannemer een melding als je in de lijst Goedkeuren kiest? Code: Goedkeuren en doorsturen op de detailpagina mailt de aannemer, de bulkactie in de lijst zet enkel de status. Te bevestigen met een test.
+
+## aan-de-slag
+
+**Het dashboard van de boekhouding lezen** (`dashboard-boekhouding-lezen`)
+- wat is de bedoeling van het tabblad Geblokkeerd en welke gegevens bepalen een blokkade (RSZ-schuld met inhoudingsplicht, ontbrekend attest tienjarige aansprakelijkheid)? Code: nog niet beschikbaar, het tabblad blijft leeg.
+- hoe tel je een schijf of wijzigingsopdracht die op een proforma staat mee in het totaal? Code: ze tellen enkel bij de proforma, niet bij Te factureren per klant.

@@ -497,6 +497,7 @@
         up.form.reset();
         // form.reset() zet enkel de verborgen waarden terug, niet de tekst in de aangepaste keuzelijsten.
         selSet("gl-v2-dd-up-folder", cfg.activeFolderId || "");
+        selSet("gl-v2-dd-up-type", "");
         selSet("gl-v2-dd-up-status", "2");
         selSet("gl-v2-dd-up-linkadd", "");
         selSet("gl-v2-dd-up-replaces", "");
@@ -625,6 +626,7 @@
         byId("gl-v2-dd-ed-number").value = root.getAttribute("data-number") || "";
         byId("gl-v2-dd-ed-author").value = root.getAttribute("data-author") || "";
         byId("gl-v2-dd-ed-perceel").value = root.getAttribute("data-perceel") || "";
+        selSet("gl-v2-dd-ed-type", root.getAttribute("data-doc-type") || "");
         setDate("gl-v2-dd-ed-date", root.getAttribute("data-date") || "");
         setDate("gl-v2-dd-ed-expires", root.getAttribute("data-expires") || "");
         showError("gl-v2-dd-ed-error", "");

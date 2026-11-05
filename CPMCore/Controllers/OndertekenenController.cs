@@ -54,7 +54,10 @@ public class OndertekenenController : Controller
     {
         HttpOnly = true,
         Secure = true,
-        SameSite = SameSiteMode.Strict,
+        // Lax, niet Strict: de klant komt via een link uit zijn mail (andere site) en wordt na het inwisselen doorgestuurd naar het
+        // document; een Strict-cookie wordt op die doorverwijzing niet meegestuurd en de pagina meldde dan "Uw sessie is verlopen".
+        // Lax stuurt het cookie enkel mee bij navigatie (GET), nooit bij een POST vanaf een andere site; de POST's hebben bovendien een antiforgery-token.
+        SameSite = SameSiteMode.Lax,
         Path = "/tekenen",
         MaxAge = TimeSpan.FromHours(12),
     });

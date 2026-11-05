@@ -177,6 +177,8 @@ public partial class DocumentService : IDocumentService
             ShareSupplier = shareSupplier,
             Amount = cur?.Amount,
             Perceel = d.Perceel,
+            DocType = d.Type,
+            DocTypeName = DocumentRules.DocTypeName(d.Type),
             Responsible = supplier,
             SignedCount = signed,
             SignTotal = total,
@@ -184,7 +186,7 @@ public partial class DocumentService : IDocumentService
             IsDraft = d.Status == DocumentStatus.Concept,
             Audiences = string.Join(' ', audiences),
             Scopes = string.Join(' ', scopes),
-            SearchText = string.Join(' ', new[] { d.Name, d.DocumentNumber, d.AuthoredBy, d.Perceel, d.Folder?.Name, string.Join(' ', d.Links.Select(l => l.Unit?.Name ?? l.ClientAccount?.Name ?? l.Company?.BedrijfsNaam)), string.Join(' ', d.Revisions.Select(r => r.Note)) }.Where(x => !string.IsNullOrWhiteSpace(x))).ToLowerInvariant()
+            SearchText = string.Join(' ', new[] { d.Name, d.DocumentNumber, d.AuthoredBy, d.Perceel, DocumentRules.DocTypeName(d.Type), d.Folder?.Name, string.Join(' ', d.Links.Select(l => l.Unit?.Name ?? l.ClientAccount?.Name ?? l.Company?.BedrijfsNaam)), string.Join(' ', d.Revisions.Select(r => r.Note)) }.Where(x => !string.IsNullOrWhiteSpace(x))).ToLowerInvariant()
         };
     }
 
@@ -502,6 +504,8 @@ public partial class DocumentService : IDocumentService
             DocumentDate = d.Date,
             ExpiresOn = d.ExpiresOn,
             Perceel = d.Perceel,
+            DocType = d.Type,
+            DocTypeName = DocumentRules.DocTypeName(d.Type),
             ShareAllBuyers = d.ShareAllBuyers,
             IsFrozen = DocumentRules.IsFrozen(d.Status, d.Signatures.Select(s => s.Status)),
             CurrentRevisionId = d.CurrentRevisionId,

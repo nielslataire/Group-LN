@@ -58,7 +58,7 @@
                         <span class="gl-v2-select-group-rule"></span>
                     </div>
                 }
-                <button type="button" class="gl-v2-select-option@(item.Value == current ? " is-selected" : "")" role="option" data-value="@item.Value" disabled="@(item.Disabled ? "disabled" : null)">
+                <button type="button" class="gl-v2-select-option@(item.Value == current ? " is-selected" : "")" role="option" data-value="@item.Value" title="@item.Title" disabled="@(item.Disabled ? "disabled" : null)" @Html.Raw(string.Join(" ", item.Data.Select(kv => kv.Key + "=\"" + System.Net.WebUtility.HtmlEncode(kv.Value) + "\"")))>
                     <i class="ph ph-check" aria-hidden="true"></i><span>@item.Text</span>
                 </button>
             }

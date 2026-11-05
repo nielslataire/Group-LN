@@ -38,6 +38,10 @@ public class GlV2SelectItem
     /// <summary>Groepskop (opeenvolgende items met dezelfde Group vallen onder één kop).</summary>
     public string? Group { get; set; }
     public bool Disabled { get; set; }
+    /// <summary>Tooltip (title) met de volledige naam, voor opties waarvan de zichtbare tekst ingekort is (bv. een btw-code).</summary>
+    public string? Title { get; set; }
     /// <summary>Tweede, gedimde regel onder de tekst (bv. "staanplaats · buiten").</summary>
     public string? Sub { get; set; }
+    /// <summary>Extra data-attributen op de optieknop (bv. "data-vat" → "21"), door de pagina-JS te lezen via de gekozen .is-selected-knop.</summary>
+    public Dictionary<string, string> Data { get; set; } = new();
 }

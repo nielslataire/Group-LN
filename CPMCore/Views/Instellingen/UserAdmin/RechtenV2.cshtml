@@ -23,7 +23,7 @@
 }
 
 <div class="gl-v2-ua" id="gl-v2-ua-r"
-     data-url-rol="@Url.Action("GebruikerRolV2", "UserAdmin")" data-url-niveau="@Url.Action("GebruikerNiveauV2", "UserAdmin")" data-url-reset="@Url.Action("GebruikerResetV2", "UserAdmin")"
+     data-url-rol="@Url.Action("GebruikerRolV2", "UserAdmin")" data-url-dashboard="@Url.Action("GebruikerDashboardV2", "UserAdmin")" data-url-niveau="@Url.Action("GebruikerNiveauV2", "UserAdmin")" data-url-reset="@Url.Action("GebruikerResetV2", "UserAdmin")"
      data-url-bedrijf="@Url.Action("GebruikerBedrijfV2", "UserAdmin")" data-url-toegang="@Url.Action("GebruikerToegangV2", "UserAdmin")" data-url-uitnodiging="@Url.Action("UitnodigingV2", "UserAdmin")"
      data-url-kopieren="@Url.Action("GebruikerKopierenV2", "UserAdmin")" data-url-kandidaten="@Url.Action("GebruikerKandidatenV2", "UserAdmin")">
     @Html.AntiForgeryToken()
@@ -49,6 +49,12 @@
                     <label class="gl-v2-ua-block-label" for="ur-rol_trigger">Rol</label>
                     @await Html.PartialAsync("GlV2/_SelectList", new CPMCore.Models.GlV2.GlV2SelectListVm { Name = "rol", Id = "ur-rol", Value = "", EmptyText = "Geen rol", Items = new List<CPMCore.Models.GlV2.GlV2SelectItem>() })
                     <span class="gl-v2-ua-help" id="ur-rol-help">De gebruiker volgt de rechten van zijn rol. Een andere rol zet de afwijkingen terug.</span>
+                </div>
+
+                <div class="gl-v2-ua-block">
+                    <label class="gl-v2-ua-block-label" for="ur-dash_trigger">Dashboard</label>
+                    @await Html.PartialAsync("GlV2/_SelectList", new CPMCore.Models.GlV2.GlV2SelectListVm { Name = "dashboard", Id = "ur-dash", Value = "", EmptyText = "Geen dashboard", Items = new List<CPMCore.Models.GlV2.GlV2SelectItem>() })
+                    <span class="gl-v2-ua-help" id="ur-dash-help">Bepaalt wat deze gebruiker ziet op de startpagina. Zonder dashboard ziet de gebruiker de lijst met projecten.</span>
                 </div>
 
                 <div class="gl-v2-ua-block">

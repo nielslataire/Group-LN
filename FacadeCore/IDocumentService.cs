@@ -167,6 +167,9 @@ public class DocRow
     public bool ShareSupplier { get; set; }
     public decimal? Amount { get; set; }
     public string? Perceel { get; set; }
+    /// <summary>Soort document (ProjectDocType: Attest, Gaskeuring, Bouwvergunning, ...), de oude kolom ProjectDocs.Type.</summary>
+    public int? DocType { get; set; }
+    public string? DocTypeName { get; set; }
     public string? Responsible { get; set; }
     public string? DueText { get; set; }
     public int SignedCount { get; set; }
@@ -268,6 +271,8 @@ public class DocDetail
     public DateOnly? DocumentDate { get; set; }
     public DateOnly? ExpiresOn { get; set; }
     public string? Perceel { get; set; }
+    public int? DocType { get; set; }
+    public string? DocTypeName { get; set; }
     public bool ShareAllBuyers { get; set; }
     public bool IsFrozen { get; set; }
     public int? CurrentRevisionId { get; set; }
@@ -332,6 +337,8 @@ public class DocUploadDto
     public string? Number { get; set; }
     public string? AuthoredBy { get; set; }
     public string? Perceel { get; set; }
+    /// <summary>Soort document bij een nieuw document (ProjectDocType-waarde); leeg = geen type.</summary>
+    public string? DocType { get; set; }
     public decimal? Amount { get; set; }
     public string? Note { get; set; }
     public List<DocLinkRef> Links { get; set; } = new();
@@ -362,6 +369,8 @@ public class DocUpdateDto
     public DateOnly? DocDate { get; set; }
     public DateOnly? ExpiresOn { get; set; }
     public string? Perceel { get; set; }
+    /// <summary>null = ongewijzigd laten, "" = geen type, anders de waarde van ProjectDocType.</summary>
+    public string? DocType { get; set; }
 }
 
 public class DocRequestDto

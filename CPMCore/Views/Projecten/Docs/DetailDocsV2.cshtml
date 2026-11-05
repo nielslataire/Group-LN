@@ -374,6 +374,7 @@
                                                         <span class="gl-v2-dd-doc-sub">
                                                             @{
                                                                 var subBits = new List<string>();
+                                                                if (r.Kind == "doc" && !string.IsNullOrWhiteSpace(r.DocTypeName)) subBits.Add(r.DocTypeName!);
                                                                 if (ov.ActiveFolder == null && group.Kind != "folder") subBits.Add(r.FolderName);
                                                                 var subText = kind == "keuringen" && r.Kind == "request" ? r.DueText : r.SubLine;
                                                                 if (!string.IsNullOrWhiteSpace(subText)) subBits.Add(subText!);

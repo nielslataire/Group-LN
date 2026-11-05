@@ -130,3 +130,13 @@ Pad-prefix: `CPMCore/wwwroot/img/help/<topic>/<slug>/<n>-<naam>.png`. Nooit een 
 | outlook-sync-bekijken | 1 | CPMCore/wwwroot/img/help/instellingen/outlook-sync-bekijken/1-lijst.png | /UserAdmin/OutlookSync | lijst met enkele gebruikers | namen en e-mailadressen |
 | mijn-taken-vandaag | 4 | CPMCore/wwwroot/img/help/aan-de-slag/mijn-taken-vandaag/koppelen.png | /MijnTaken (Vandaag) | popover van een afspraak met de knop Koppel aan een project | projectnamen, titel van de afspraak |
 | mijn-taken-week | 4 | CPMCore/wwwroot/img/help/aan-de-slag/mijn-taken-week/koppelen.png | /MijnTaken/Week | afspraak met projectlabel in het blok | projectnamen, titel van de afspraak |
+
+# Dashboard Boekhouding (punt 1a)
+
+| artikel-slug | stap | pad | route/pagina | uitsnede | anonimiseren |
+|---|---|---|---|---|---|
+| dashboard-boekhouding-lezen | 1 | CPMCore/wwwroot/img/help/aan-de-slag/dashboard-boekhouding-lezen/1-kerncijfers.png | / (dashboardtype Boekhouding) | KPI-strip met 4 kaarten | bedragen mogen blijven |
+| dashboard-boekhouding-lezen | 3 | CPMCore/wwwroot/img/help/aan-de-slag/dashboard-boekhouding-lezen/3-inkomende-facturen.png | / | kaart Inkomende facturen, tabblad Te goedkeuren | leveranciers- en projectnamen |
+| dashboard-boekhouding-lezen | 5 | CPMCore/wwwroot/img/help/aan-de-slag/dashboard-boekhouding-lezen/5-klaar-om-te-factureren.png | / | kaart Klaar om te factureren met proforma's en schijven | klantnamen, projectnamen |
+| mijn-taken-vandaag | 5 | CPMCore/wwwroot/img/help/aan-de-slag/mijn-taken-vandaag/nieuwe-afspraak.png | /MijnTaken (Vandaag) | modal Nieuwe afspraak op een project, met Deelnemers uitnodigen aangevinkt en een paar gekozen deelnemers | projectnamen, namen en e-mailadressen |
+| mijn-taken-week | 5 | CPMCore/wwwroot/img/help/aan-de-slag/mijn-taken-week/nieuwe-afspraak.png | /MijnTaken/Week | modal Nieuwe afspraak op een project | projectnamen |

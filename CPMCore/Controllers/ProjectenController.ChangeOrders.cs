@@ -597,8 +597,21 @@ namespace CPMCore.Controllers
                 return Json(new { success = false, message = SigningCompletedLockedMessage });
             }
 
-            var service = _projectService;
-            var response = service.DeleteChangeOrders(new List<int> { id });
+            var blocker = await ChangeOrderDeleteBlockerAsync(id);
+            if (blocker is not null)
+                return Json(new { success = false, message = blocker });
+
+            BOCore.Response response;
+            try
+            {
+                await UnlinkChangeOrderReferencesAsync(id);
+                response = _projectService.DeleteChangeOrders(new List<int> { id });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Verwijderen van wijzigingsopdracht {ChangeOrderId} mislukt.", id);
+                return Json(new { success = false, message = "Verwijderen mislukt: er hangt nog iets anders aan deze wijzigingsopdracht." });
+            }
 
             if (response.Success)
             {
