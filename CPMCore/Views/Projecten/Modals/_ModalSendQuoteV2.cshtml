@@ -19,6 +19,11 @@
         </div>
     }
 
+    @if (Model.AttachmentNames.Count > 0)
+    {
+        <p class="gl-v2-field-help"><i class="ph ph-paperclip" aria-hidden="true"></i> Gaat mee als bijlage: @string.Join(", ", Model.AttachmentNames)</p>
+    }
+
     <div class="gl-v2-field">
         <span class="gl-v2-field-label">Ontvangers — eigenaars van het account</span>
         <div class="gl-v2-co-send-parties">

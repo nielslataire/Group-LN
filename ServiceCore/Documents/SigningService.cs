@@ -65,10 +65,9 @@ public class SigningService : ISigningService
     {
         var fail = (string m) => new SigningCreateResult { Ok = false, Message = m };
         var co = await _db.ChangeOrder.AsNoTracking()
-            .Include(c => c.ContractActivity).ThenInclude(a => a.Contract)
             .FirstOrDefaultAsync(c => c.Id == changeOrderId);
         if (co == null) return fail("De wijzigingsopdracht bestaat niet meer.");
-        var projectId = co.ContractActivity.Contract.ProjectId;
+        var projectId = co.ProjectId;
 
         var signers = dto.Signers.Where(s => !string.IsNullOrWhiteSpace(s.Name) || !string.IsNullOrWhiteSpace(s.Email)).ToList();
         if (signers.Count == 0) return fail("Voeg minstens één ondertekenaar toe.");

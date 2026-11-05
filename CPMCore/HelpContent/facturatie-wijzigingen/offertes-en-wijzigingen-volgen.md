@@ -79,6 +79,20 @@ Klik rechtsboven op **Nieuw**. Je kiest onder NIEUWE WIJZIGINGSOPDRACHT:
 - **Kopie van een offerte of wijzigingsopdracht**: bijvoorbeeld dezelfde buitenkraan voor een ander lot.
 - **Offerte inlezen en bewaren**: enkel bewaren. Je maakt ze later op en verzendt ze vanuit de lijst.
 
+## Een bijlage bij een offerte voegen
+
+Onder de regels van een offerte staat de kaart **Bijlagen**, bijvoorbeeld voor een plan of een fiche.
+
+1. Sla de offerte eerst op. Bijlagen toevoegen kan pas daarna.
+2. Klik op **Bijlage toevoegen** en kies één of meer bestanden (maximaal 15 MB per bestand).
+3. Verwijder een bijlage met het prullenbakje achter de naam.
+
+Bijlagen gaan samen met de offerte-pdf mee in de mail naar de klant. Is de offerte verzonden of omgezet, dan liggen de bijlagen vast.
+
+## Een contract koppelen (optioneel)
+
+Een offerte hoeft niet aan een contract te hangen. Zonder contract toont de projectpagina de waarschuwing **Offerte zonder contract** tot je er een koppelt via **Leverancier · contract**.
+
 ## Een offerte omzetten naar een wijzigingsopdracht
 
 1. Klik op de drie puntjes achter de offerte.

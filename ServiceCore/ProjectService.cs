@@ -2007,7 +2007,7 @@ namespace ServiceCore
             var response = new GetResponse<ChangeOrderBO>();
             var entities = _uow.ChangeOrders.GetNoTracking()
                 .Where(m =>
-                   m.ContractActivity.Contract.ProjectId == projectid &&
+                   m.ProjectId == projectid &&
                     m.Invoiceable &&
                     m.DateAgreement != null &&
                     m.ChangeOrderDetail.Any(i => i.Invoicable != false && i.Invoiced != true) &&
@@ -2559,7 +2559,7 @@ namespace ServiceCore
         {
             var response = new GetResponse<ChangeOrderBO>();
             var entities = _uow.ChangeOrders.GetNoTracking()
-                .Where(m => m.ContractActivity.Contract.ProjectId == projectid)
+                .Where(m => m.ProjectId == projectid)
                 .Include(m => m.ClientAccount)
                 .Include(m => m.ContractActivity)
                     .ThenInclude(m => m.Contract)
@@ -4017,15 +4017,9 @@ namespace ServiceCore
                     on co.Id equals d.ChangeOrderId
                 where d.Invoicable != false                        // true of NULL
                    && (d.Invoiced == null || d.Invoiced == false)  // nog niet (volledig) gefactureerd
-                                                                   // LEFT JOIN ContractActivity → Contract → Project
-                join ca0 in _db.ContractActivity.AsNoTracking()
-                    on co.ContractActivityId equals ca0.Id into caGrp
-                from ca in caGrp.DefaultIfEmpty()
-                join c0 in _db.Contract.AsNoTracking()
-                    on ca.ContractId equals c0.Id into cGrp
-                from c in cGrp.DefaultIfEmpty()
+                                                                   // LEFT JOIN Project (ChangeOrder.ProjectId, los van het optionele contract)
                 join p0 in _db.Project.AsNoTracking()
-                    on c.ProjectId equals p0.ProjectId into pGrp
+                    on co.ProjectId equals p0.ProjectId into pGrp
                 from p in pGrp.DefaultIfEmpty()
                 select new
                 {
@@ -4038,7 +4032,7 @@ namespace ServiceCore
                     Commission = d.Commission,
                     // NEGATIEF TOEGESTAAN: creditnota's
                     BaseAmountExcl = (d.Invoiced == true ? 0m : ((d.Price * d.Number) + (d.Price * d.Number * d.Commission / 100))),
-                    ProjectId = (int?)c.ProjectId,
+                    ProjectId = (int?)co.ProjectId,
                     ProjectName = p != null ? p.ProjectName : null,
                     ProjectStreet = p != null ? p.Street : null,
                     ProjectCity = p != null ? p.PostalCode.Gemeente : null,

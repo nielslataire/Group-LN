@@ -55,11 +55,11 @@ public sealed class ChangeOrderPdfBuilder
             .Include(c => c.ChangeOrderDetail)
             .Include(c => c.ChangeOrderPaymentTerm)
             .Include(c => c.ClientAccount).ThenInclude(ca => ca.PostalCode)
-            .Include(c => c.ContractActivity).ThenInclude(a => a.Contract).ThenInclude(k => k.Project).ThenInclude(p => p.PostalCode)
+            .Include(c => c.Project).ThenInclude(p => p.PostalCode)
             .FirstOrDefaultAsync(c => c.Id == changeOrderId, ct);
         if (co is null) return null;
 
-        var project = co.ContractActivity?.Contract?.Project;
+        var project = co.Project;
         var projectId = project?.ProjectId ?? 0;
 
         // Zelfde regel als ClientService.GetClientAccountUnitsNameById, maar beperkt tot dit project.

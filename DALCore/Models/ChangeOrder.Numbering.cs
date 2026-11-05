@@ -1,11 +1,18 @@
 #nullable disable
 using System;
+using System.Collections.Generic;
 
 namespace DALCore.Models;
 
 // Migratie 070_ChangeOrderNumbering.sql: publieke nummering los van het interne Id.
 public partial class ChangeOrder
 {
+    /// <summary>Migratie 131 — het project van het document. Staat los van het contract (dat optioneel is);
+    /// een rij die zonder ProjectId aangemaakt wordt krijgt het uit haar contract in cpmRunningContext.SaveChanges.</summary>
+    public int ProjectId { get; set; }
+    public virtual Project Project { get; set; }
+    public virtual ICollection<ChangeOrderAttachment> Attachments { get; set; } = new List<ChangeOrderAttachment>();
+
     public int? NumberProjectId { get; set; }
     public int? NumberYear { get; set; }
     public int? NumberSeq { get; set; }

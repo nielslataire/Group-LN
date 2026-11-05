@@ -53,6 +53,8 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<ChangeOrder> ChangeOrder { get; set; }
 
+    public virtual DbSet<ChangeOrderAttachment> ChangeOrderAttachment { get; set; }
+
     public virtual DbSet<ChangeOrderDetail> ChangeOrderDetail { get; set; }
 
     public virtual DbSet<ChangeOrderPaymentTerm> ChangeOrderPaymentTerm { get; set; }
@@ -728,13 +730,31 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.ContractActivity).WithMany(p => p.ChangeOrder)
                 .HasForeignKey(d => d.ContractActivityId)
                 .HasConstraintName("FK_ChangeOrder_ContractActivity");
+
+            entity.Property(e => e.ProjectId).HasColumnName("ProjectID");
+            entity.HasOne(d => d.Project).WithMany()
+                .HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ChangeOrder_Project");
+        });
+
+        modelBuilder.Entity<ChangeOrderAttachment>(entity =>
+        {
+            entity.ToTable("ChangeOrderAttachment");
+            entity.Property(e => e.FileName).IsRequired().HasMaxLength(260);
+            entity.Property(e => e.StoragePath).IsRequired().HasMaxLength(300);
+            entity.Property(e => e.ContentType).HasMaxLength(100);
+            entity.HasOne(d => d.ChangeOrder).WithMany(p => p.Attachments)
+                .HasForeignKey(d => d.ChangeOrderId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_ChangeOrderAttachment_ChangeOrder");
         });
 
         modelBuilder.Entity<ChangeOrderDetail>(entity =>
         {
             entity.Property(e => e.Id).HasColumnName("ID");
             entity.Property(e => e.ChangeOrderId).HasColumnName("ChangeOrderID");
-            entity.Property(e => e.Commission).HasColumnType("decimal(18, 0)");
+            entity.Property(e => e.Commission).HasColumnType("decimal(9, 2)");
             // 250 → 1000 in migratie 065: 20c (Offerte inlezen) vouwt de specificatierijen van een
             // leveranciersofferte in deze omschrijving, dat past niet in 250 tekens.
             entity.Property(e => e.Description)

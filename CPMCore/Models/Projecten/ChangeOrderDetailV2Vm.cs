@@ -74,6 +74,9 @@ public class ChangeOrderDetailV2Vm
 
     public List<ChangeOrderHistoryItemV2> History { get; set; } = new();
 
+    /// <summary>Bijlagen bij de offerte (plan, fiche, …) — gaan mee met de offertemail (migratie 131).</summary>
+    public List<ChangeOrderAttachmentV2> Attachments { get; set; } = new();
+
     // ── Scherm per stap (design-handoff punt 28) ─────────────────────────────────────────────────────
     // Eén scherm, de fase bepaalt wat het toont: melding, vergrendeling, facturatieplan, ondertekening,
     // facturen en knoppen. Alles hieronder wordt in de controller afgeleid (BuildScreenState) — de view
@@ -146,6 +149,14 @@ public class ChangeOrderDetailV2Vm
     public int? ConvertedToChangeOrderId { get; set; }
     /// <summary>Wie de offertemail krijgt (voorstel: klantenaccount + mede-eigenaars) — kaart "Verzending".</summary>
     public List<ChangeOrderSignerV2> Recipients { get; set; } = new();
+}
+
+public class ChangeOrderAttachmentV2
+{
+    public int Id { get; set; }
+    public string FileName { get; set; } = "";
+    public string SizeText { get; set; } = "";
+    public string? Url { get; set; }
 }
 
 public class ChangeOrderSignerV2
@@ -318,6 +329,8 @@ public class SendQuoteModalV2Vm
     public string? PdfUrl { get; set; }
     public string? PdfFileName { get; set; }
     public string? TestRecipient { get; set; }
+    /// <summary>Namen van de bijlagen die samen met de offerte-PDF meegaan (migratie 131).</summary>
+    public List<string> AttachmentNames { get; set; } = new();
 }
 
 /// <summary>Post-body van ChangeOrderQuoteSendV2 (offertemail "Verzenden").</summary>

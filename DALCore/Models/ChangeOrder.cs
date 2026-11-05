@@ -25,7 +25,9 @@ public partial class ChangeOrder
 
     public bool Invoiceable { get; set; }
 
-    public int ContractActivityId { get; set; }
+    /// <summary>Migratie 131 — optioneel: een offerte of wijzigingsopdracht kan nog zonder contract bestaan
+    /// (het project toont dan een waarschuwing). Het project zelf staat in ProjectId.</summary>
+    public int? ContractActivityId { get; set; }
 
     public string ChangeOrderConditions { get; set; }
 

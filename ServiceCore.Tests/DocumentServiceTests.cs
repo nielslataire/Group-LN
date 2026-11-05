@@ -321,7 +321,7 @@ public class SigningServiceTests
         db.Units.Add(new Units { Id = 100, Name = "Lot 1", ProjectId = 1, ClientAccountId = 10, IsOption = true });
         db.Contract.Add(new Contract { Id = 5, ProjectId = 1, CompanyId = 1 });
         db.ContractActivity.Add(new ContractActivity { Id = 7, ContractId = 5, ActivityId = 1 });
-        db.ChangeOrder.Add(new ChangeOrder { Id = 3, ClientAccountId = 10, Description = "Extra stopcontacten", Date = new DateOnly(2026, 9, 1), ExpirationDate = new DateOnly(2026, 10, 1), ContractActivityId = 7 });
+        db.ChangeOrder.Add(new ChangeOrder { Id = 3, ProjectId = 1, ClientAccountId = 10, Description = "Extra stopcontacten", Date = new DateOnly(2026, 9, 1), ExpirationDate = new DateOnly(2026, 10, 1), ContractActivityId = 7 });
         db.SaveChanges();
         var docs = new DocumentService(db);
         return (db, new SigningService(db, docs), docs, 3);

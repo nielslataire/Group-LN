@@ -68,7 +68,7 @@
     var commissionTotal = Model.Rows.Sum(r => r.Number * r.Price * r.Commission / 100m);
     var excl = cost + commissionTotal;
     var vatTotal = Model.Rows.Sum(r => r.Number * r.Price * (1 + r.Commission / 100m) * r.VatPercentage / 100m);
-    var contractLabel = Model.ContractActivities.FirstOrDefault(a => a.ID == Model.ContractActivityId)?.Display ?? "—";
+    var contractLabel = Model.ContractActivities.FirstOrDefault(a => a.ID == Model.ContractActivityId)?.Display ?? "Geen contract gekoppeld";
     // Kaart "Offerte leverancier" (28a) bovenaan: bij een offerte aan de klant altijd zodra er een
     // leveranciersofferte aan hangt; bij een WO enkel in concept zonder eigen herkomst.
     var showQuoteCard = isQuote ? Model.HasQuoteSource : (editable && Model.HasQuoteSource && !Model.SourceChangeOrderId.HasValue);
@@ -307,8 +307,10 @@
                         {
                             @await Html.PartialAsync("GlV2/_SelectList", new CPMCore.Models.GlV2.GlV2SelectListVm
                             {
-                                Name = "contractActivityId", Id = "gl-v2-co-contractactivity", Label = "Leverancier · contract", Required = true,
-                                Placeholder = "— kies —", Value = Model.ContractActivityId > 0 ? Model.ContractActivityId.ToString() : "",
+                                Name = "contractActivityId", Id = "gl-v2-co-contractactivity", Label = "Leverancier · contract",
+                                Placeholder = "— nog te koppelen —", EmptyText = "Geen contract (nog te koppelen)",
+                                Help = "optioneel — het project toont een waarschuwing zolang er geen contract aan hangt",
+                                Value = Model.ContractActivityId > 0 ? Model.ContractActivityId.ToString() : "",
                                 Items = Model.ContractActivities.Select(a => new CPMCore.Models.GlV2.GlV2SelectItem { Value = a.ID.ToString(), Text = a.Display }).ToList()
                             })
                         }
@@ -322,7 +324,7 @@
                         @if (editable)
                         {
                             <label class="gl-v2-field-label" for="gl-v2-co-default-commission">Commissie %</label>
-                            <div class="gl-v2-field-box"><input type="number" step="0.01" min="0" class="gl-v2-field-input" id="gl-v2-co-default-commission" value="@Model.DefaultCommission.ToString(CultureInfo.InvariantCulture)" /></div>
+                            <div class="gl-v2-field-box"><input type="number" step="0.01" min="0" class="gl-v2-field-input" id="gl-v2-co-default-commission" value="@Model.DefaultCommission.ToString("0.00", CultureInfo.InvariantCulture)" /></div>
                             <span class="gl-v2-field-help">intern — geldt voor elke regel, per regel bij te sturen</span>
                         }
                         else
@@ -554,6 +556,54 @@
                     </div>
                 }
             </div>
+
+            @* ── Bijlagen (offerte aan de klant: plan, fiche, … — gaan mee met de offertemail) ────────── *@
+            @if (isQuote)
+            {
+                var canEditAttachments = editable && Model.CanWrite && !Model.IsNew;
+                <div class="gl-v2-card gl-v2-co-card" id="gl-v2-co-attachments">
+                    <div class="gl-v2-card-header">
+                        <span class="gl-v2-card-header-icon"><i class="ph ph-paperclip" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-card-header-title">Bijlagen</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-card-header-count">Plan, fiche, … — gaan mee met de offertemail naar de klant</span>
+                    </div>
+                    <div class="gl-v2-card-body gl-v2-co-attach">
+                        <ul class="gl-v2-co-attach-list" id="gl-v2-co-attach-list">
+                            @foreach (var a in Model.Attachments)
+                            {
+                                <li class="gl-v2-co-attach-item" data-id="@a.Id">
+                                    <i class="ph ph-file" aria-hidden="true"></i>
+                                    @if (!string.IsNullOrWhiteSpace(a.Url))
+                                    {
+                                        <a class="gl-v2-co-link gl-v2-co-attach-name" href="@a.Url" target="_blank" rel="noopener">@a.FileName</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="gl-v2-co-attach-name">@a.FileName</span>
+                                    }
+                                    <span class="gl-v2-co-attach-size">@a.SizeText</span>
+                                    @if (canEditAttachments)
+                                    {
+                                        <button type="button" class="gl-v2-co-row-delete js-co-attach-delete" title="Bijlage verwijderen" aria-label="Bijlage @a.FileName verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                        <p class="gl-v2-field-help gl-v2-co-attach-empty" id="gl-v2-co-attach-empty" @(Model.Attachments.Count > 0 ? "hidden" : "")>Geen bijlagen.</p>
+                        @if (canEditAttachments)
+                        {
+                            <label class="gl-v2-co-dashed-btn" for="gl-v2-co-attach-file"><i class="ph ph-plus" aria-hidden="true"></i>Bijlage toevoegen</label>
+                            <input type="file" id="gl-v2-co-attach-file" hidden multiple />
+                            <span class="gl-v2-field-help" id="gl-v2-co-attach-status" role="status"></span>
+                        }
+                        else if (editable && Model.IsNew)
+                        {
+                            <p class="gl-v2-field-help">Bijlagen toevoegen kan zodra de offerte opgeslagen is.</p>
+                        }
+                    </div>
+                </div>
+            }
 
             @* ── Facturatieplan ────────────────────────────────────────────────────────────────────── *@
             @if (!isQuote)
@@ -1135,6 +1185,8 @@
         "vatKlant": @Model.VatKlantPercentage.ToString(CultureInfo.InvariantCulture),
         "vatKlantTypeId": @(Model.VatKlantTypeId?.ToString() ?? "null"),
         "addRowUrl": "@Url.Action("ChangeOrderDetailV2AddRow")",
+        "attachAddUrl": "@Url.Action("ChangeOrderAttachmentAddV2")",
+        "attachDeleteUrl": "@Url.Action("ChangeOrderAttachmentDeleteV2")",
         "addTermUrl": "@Url.Action("ChangeOrderDetailV2AddTerm")",
         "stagesUrl": "@Url.Action("ChangeOrderDetailV2Stages")",
         "clientAccountId": @Model.ClientAccountId,

@@ -1060,6 +1060,9 @@ system, apply the part that's real" approach used elsewhere in this pilot.
   — a small pill-chip like a currency-code badge) and the **meerregelig** variant
   (`.gl-v2-field-box-textarea`, 104px, top-aligned content, 1.6 line-height) are built per the
   reference but unused today — no field on any gl-v2 page needs a suffix or multiple lines yet.
+  A `.Currencymask` field with a `.gl-v2-field-suffix` (`€`) hides the suffix when the value no longer fits:
+  `currency.js` toggles `.is-suffix-hidden` on the `.gl-v2-field-box` (CSS in `gl-v2/forms.css`).
+  Give such a box at least ~110px so `10.000,00` stays visible next to the `€`.
 - **Field group** (`.gl-v2-field-group`) — two `.gl-v2-field`s in a row (e.g. street + number),
   sharing the same 40/44px height as the dropdown so a row mixing a field and a dropdown still
   lines up. `.gl-v2-field-narrow` fixes one member to 92px instead of splitting the row evenly.
@@ -6027,6 +6030,11 @@ Vaste opbouw: stappenplan (lijn · sm) → melding (`.gl-v2-notice-expanded`, pu
 Regels / Facturatieplan (bewerkbaar in concept, anders leesweergave met slotje `.gl-v2-co-lock` in de
 kaartkop) → zijkolom Ondertekening / Facturen / Bron / Historiek → `.gl-v2-form-actionbar` met contexttekst
 links en de knoppen van die stap rechts. Statuspillen staan in `@section PageTitleBadges`.
+Een offerte krijgt tussen Regels en (het ontbrekende) Facturatieplan de kaart **Bijlagen**
+(`#gl-v2-co-attachments`, `.gl-v2-co-attach-*`): AJAX opladen/verwijderen, tabel `ChangeOrderAttachment`
+(migratie 131), mee als mailbijlage bij `ChangeOrderQuoteSendV2`. Het contract (`ContractActivityId`) is
+optioneel; het project staat los in `ChangeOrder.ProjectId`, en `Projecten/DetailV2` toont "… zonder contract"
+in de lijst "Vraagt actie" zolang het ontbreekt.
 
 Twee valkuilen die hier opnieuw opdoken (pagina-CSS laadt vóór `gl-v2-shell.css`):
 - een eigen raster op een `.gl-v2-card-body` moet met dubbele klasse (`.gl-v2-card-body.gl-v2-co-form-grid`),

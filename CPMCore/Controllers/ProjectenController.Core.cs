@@ -476,6 +476,21 @@ namespace CPMCore.Controllers
             model.UnsignedContracts = contracts.Where(c => !c.ContractSigned).ToList();
             model.GuaranteeMissingContracts = contracts.Where(c => c.GuaranteeDocumentMissing).ToList();
 
+            // Offertes en wijzigingsopdrachten zonder contract (het contract is optioneel, migratie 131): waarschuwing
+            // tot ze gekoppeld zijn. Een omgezette offerte telt niet mee — de wijzigingsopdracht ervan staat er al.
+            var noContract = await _db.ChangeOrder.AsNoTracking()
+                .Where(c => c.ProjectId == projectid && c.ContractActivityId == null && !c.QuoteConvertedAt.HasValue)
+                .OrderBy(c => c.Id)
+                .Select(c => new { c.Id, c.IsQuote, c.Description, c.NumberYear, c.NumberSeq, c.VersionNo })
+                .ToListAsync();
+            model.ChangeOrdersWithoutContract = noContract.Select(c => new ChangeOrderNoContractItem
+            {
+                Id = c.Id,
+                IsQuote = c.IsQuote,
+                Description = c.Description ?? "",
+                Number = ChangeOrderNumbering.Format(c.IsQuote, c.NumberYear, c.NumberSeq, c.VersionNo, c.Id),
+            }).ToList();
+
             // Verzekeringen: CheckInsurances() heeft geen project-specifieke overload,
             // dus alle projecten ophalen en hier filteren (zelfde aanpak als HomeController
             // voor het projectleider-dashboard).

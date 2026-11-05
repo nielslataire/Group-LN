@@ -317,7 +317,7 @@ namespace CPMCore.Controllers
         private async Task<decimal> DefaultCommissionAsync(int projectId)
         {
             return await _db.ChangeOrderDetail.AsNoTracking()
-                .Where(d => d.ChangeOrder.ContractActivity.Contract.ProjectId == projectId && !d.ChangeOrder.IsQuote && d.Commission > 0)
+                .Where(d => d.ChangeOrder.ProjectId == projectId && !d.ChangeOrder.IsQuote && d.Commission > 0)
                 .OrderByDescending(d => d.Id)
                 .Select(d => d.Commission)
                 .FirstOrDefaultAsync(HttpContext.RequestAborted);
@@ -416,6 +416,7 @@ namespace CPMCore.Controllers
                 Comment = quote.Comment,
                 Invoiceable = quote.Invoiceable,
                 ContractActivityId = quote.ContractActivityId,
+                ProjectId = quote.ProjectId,
                 ChangeOrderConditions = conditions is { Length: > 1000 } ? conditions[..1000] : conditions,
                 IsQuote = false,
                 QuoteSupplierReference = quote.QuoteSupplierReference,
@@ -561,7 +562,7 @@ namespace CPMCore.Controllers
                 list.Add(new QuoteSenderV2 { Key = "me", Label = $"Mezelf ({User.GetCpmDisplayName()})", Email = myEmail.Trim() });
             var lead = await _db.ChangeOrder.AsNoTracking()
                 .Where(c => c.Id == co.Id)
-                .Select(c => c.ContractActivity.Contract.Project.AspNetUser)
+                .Select(c => c.Project.AspNetUser)
                 .FirstOrDefaultAsync(HttpContext.RequestAborted);
             if (lead != null && !string.IsNullOrWhiteSpace(lead.Email) && !list.Any(s => string.Equals(s.Email, lead.Email.Trim(), StringComparison.OrdinalIgnoreCase)))
             {
@@ -598,7 +599,8 @@ namespace CPMCore.Controllers
                 .Include(c => c.ChangeOrderDetail)
                 .Include(c => c.ChangeOrderPaymentTerm)
                 .Include(c => c.ClientAccount)
-                .Include(c => c.ContractActivity).ThenInclude(a => a.Contract).ThenInclude(k => k.Project)
+                .Include(c => c.Project)
+                .Include(c => c.Attachments)
                 .FirstOrDefaultAsync(c => c.Id == changeOrderId);
             if (co is null || !co.IsQuote)
             {
@@ -609,7 +611,7 @@ namespace CPMCore.Controllers
 
             var be = System.Globalization.CultureInfo.GetCultureInfo("nl-BE");
             var incl = co.ChangeOrderDetail.Sum(d => d.Number * d.Price * (1 + d.Commission / 100m) * (1 + (d.VatPercentage ?? 0m) / 100m));
-            var projectName = co.ContractActivity?.Contract?.Project?.ProjectName;
+            var projectName = co.Project?.ProjectName;
             var vm = new SendQuoteModalV2Vm
             {
                 ProjectId = projectId,
@@ -626,6 +628,7 @@ namespace CPMCore.Controllers
                 Senders = await QuoteSendersAsync(co),
                 Subject = QuoteMailSubject(co) + (string.IsNullOrWhiteSpace(projectName) ? "" : $" — {projectName}"),
                 PdfUrl = Url.Action("ChangeOrderPDF", "Projecten", new { changeorderid = co.Id }),
+                AttachmentNames = co.Attachments.OrderBy(a => a.Id).Select(a => a.FileName).ToList(),
                 TestRecipient = HttpContext.RequestServices.GetRequiredService<IOptions<ServiceCore.Signing.SigningOptions>>().Value.TestRecipientOverride,
             };
             return PartialView("Modals/_ModalSendQuoteV2", vm);
@@ -673,6 +676,23 @@ namespace CPMCore.Controllers
                 return BackToChangeOrder(model.ProjectId, co.Id);
             }
             var attachment = new EmailAttachment(Services.Signing.ChangeOrderPdfBuilder.FileName(pdfModel), pdf, "application/pdf");
+            var mailAttachments = new List<EmailAttachment> { attachment };
+            // Bijlagen bij de offerte (plan, fiche, …) gaan mee; lukt het ophalen van één niet, dan wordt er niet gemaild.
+            var storedAttachments = await _db.ChangeOrderAttachment.AsNoTracking().Where(a => a.ChangeOrderId == co.Id).OrderBy(a => a.Id).ToListAsync(ct);
+            if (storedAttachments.Count > 0)
+            {
+                var storage = HttpContext.RequestServices.GetRequiredService<DocStorageService>();
+                foreach (var a in storedAttachments)
+                {
+                    var bytes = await storage.DownloadAsync(a.StoragePath, "quotes");
+                    if (bytes is null)
+                    {
+                        AddMessage("error", $"De bijlage \"{a.FileName}\" kon niet opgehaald worden; de offerte is niet verzonden.", "Niet verzonden");
+                        return BackToChangeOrder(model.ProjectId, co.Id);
+                    }
+                    mailAttachments.Add(new EmailAttachment(a.FileName, bytes, string.IsNullOrWhiteSpace(a.ContentType) ? "application/octet-stream" : a.ContentType));
+                }
+            }
 
             var subject = string.IsNullOrWhiteSpace(model.Subject) ? QuoteMailSubject(co) : model.Subject.Trim();
             static string H(string x) => System.Net.WebUtility.HtmlEncode(x ?? "");
@@ -704,8 +724,8 @@ namespace CPMCore.Controllers
                     // Eerst echt namens de mailbox van de afzender (Graph, komt in diens "Verzonden items");
                     // lukt dat niet (niet geconfigureerd, recht ontbreekt), dan via de vaste SMTP-account met
                     // het adres van de afzender als From.
-                    var viaGraph = await graph.TrySendMailAsync(sender!.Email, address, mailSubject, body, new[] { attachment }, ct);
-                    if (!viaGraph) await email.SendEmailAsync(address, mailSubject, body, new[] { attachment }, fromEmail: sender.Email);
+                    var viaGraph = await graph.TrySendMailAsync(sender!.Email, address, mailSubject, body, mailAttachments.ToArray(), ct);
+                    if (!viaGraph) await email.SendEmailAsync(address, mailSubject, body, mailAttachments.ToArray(), fromEmail: sender.Email);
                     sent.Add(r.Name);
                 }
                 catch (Exception ex)
@@ -882,7 +902,7 @@ namespace CPMCore.Controllers
         public async Task<IActionResult> CopyChangeOrderModalV2(int projectId, int changeOrderId = 0)
         {
             var orders = await _db.ChangeOrder.AsNoTracking()
-                .Where(c => c.ContractActivity.Contract.ProjectId == projectId)
+                .Where(c => c.ProjectId == projectId)
                 .OrderByDescending(c => c.Id)
                 .Select(c => new { c.Id, c.Description, c.Subject, c.IsQuote, Client = c.ClientAccount.Name })
                 .ToListAsync();
@@ -976,6 +996,7 @@ namespace CPMCore.Controllers
                 Comment = src.Comment,
                 Invoiceable = src.Invoiceable,
                 ContractActivityId = src.ContractActivityId,
+                ProjectId = src.ProjectId,
                 // Offerte: standaardvoorwaarden met de nieuwe vervaldatum, tenzij de bronofferte een eigen tekst had;
                 // de voorwaarden van een wijzigingsopdracht horen niet op een offerte.
                 ChangeOrderConditions = !asQuote ? src.ChangeOrderConditions
@@ -1134,8 +1155,8 @@ namespace CPMCore.Controllers
         [RequestSizeLimit(200_000_000)]
         public async Task<IActionResult> ChangeOrderDetailV2RegisterSigned(int projectId, int changeOrderId, DateOnly? signedOn, IFormFile? file)
         {
-            var co = await _db.ChangeOrder.Include(c => c.ContractActivity).ThenInclude(a => a.Contract).FirstOrDefaultAsync(c => c.Id == changeOrderId);
-            if (co is null || co.ContractActivity.Contract.ProjectId != projectId) return NotFound();
+            var co = await _db.ChangeOrder.FirstOrDefaultAsync(c => c.Id == changeOrderId);
+            if (co is null || co.ProjectId != projectId) return NotFound();
             if (co.IsQuote || co.DateAgreement.HasValue)
             {
                 AddMessage("error", co.IsQuote ? "Een offerte registreer je niet als ondertekend; zet ze eerst om naar een wijzigingsopdracht." : "Deze wijzigingsopdracht is al ondertekend.", "Niet geregistreerd");

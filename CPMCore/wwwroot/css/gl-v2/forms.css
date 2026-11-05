@@ -470,6 +470,8 @@
 .gl-v2-field-input:disabled::placeholder { color: #A8B3A6; }
 
 .gl-v2-field-prefix { flex: none; font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+/* Te smal vak voor de waarde: currency.js zet is-suffix-hidden en het €-teken verdwijnt. */
+.gl-v2-field-box.is-suffix-hidden > .gl-v2-field-suffix { display: none; }
 .gl-v2-field-suffix {
     flex: none;
     height: 32px;

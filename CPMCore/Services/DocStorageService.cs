@@ -41,6 +41,21 @@ public class DocStorageService
         return json.RootElement.TryGetProperty("fileName", out var name) ? name.GetString() : null;
     }
 
+    /// <summary>Haalt de inhoud van een opgeslagen bestand op (via de getekende leesurl), of null.</summary>
+    public async Task<byte[]?> DownloadAsync(string fileName, string folder)
+    {
+        var url = await GetSignedUrlAsync(fileName, folder);
+        if (url is null) return null;
+        using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
+        var response = await http.GetAsync(url);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Storage-download van {File} mislukt: HTTP {Status}", fileName, (int)response.StatusCode);
+            return null;
+        }
+        return await response.Content.ReadAsByteArrayAsync();
+    }
+
     /// <summary>Tijdelijk geldige leesurl van een opgeslagen bestand, of null.</summary>
     public async Task<string?> GetSignedUrlAsync(string fileName, string folder)
     {

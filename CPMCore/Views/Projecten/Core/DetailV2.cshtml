@@ -85,6 +85,12 @@
         urgentItems.Add(("Bankwaarborg ontbreekt", c.Company?.Display ?? "onbekende leverancier", c.ContractName,
             Url.Action("EditContract", "Projecten", new { projectid = projectId, contractid = c.Id }), "ph-shield-warning", "Contracten", null));
     }
+    foreach (var co in Model.ChangeOrdersWithoutContract)
+    {
+        urgentItems.Add((co.IsQuote ? "Offerte zonder contract" : "Wijzigingsopdracht zonder contract", co.Number,
+            string.IsNullOrWhiteSpace(co.Description) ? "Koppel ze aan een contract" : co.Description + " — koppel ze aan een contract",
+            Url.Action("ChangeOrderDetailV2", "Projecten", new { projectid = projectId, coid = co.Id }), "ph-file-text", "Contracten", null));
+    }
     if (Model.Project.Status?.Id == (int)ProjectStatusType.Uitvoering)
     {
         var werfmeldingEditUrl = Url.Action("Edit", "Projecten", new { projectid = projectId });

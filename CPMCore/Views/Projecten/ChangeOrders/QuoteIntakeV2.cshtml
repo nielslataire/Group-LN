@@ -146,7 +146,7 @@
                     @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
                     {
                         Name = "contractActivityId", Id = "gl-v2-qi-contractactivity", Label = "Leverancier · contract",
-                        Placeholder = "— kies —", Value = Model.ContractActivityId > 0 ? Model.ContractActivityId.ToString() : "",
+                        Placeholder = "— nog te koppelen —", EmptyText = "Geen contract (nog te koppelen)", Value = Model.ContractActivityId > 0 ? Model.ContractActivityId.ToString() : "",
                         Items = Model.ContractActivities.Select(a => new GlV2SelectItem { Value = a.ID.ToString(), Text = a.Display }).ToList()
                     })
                 </div>

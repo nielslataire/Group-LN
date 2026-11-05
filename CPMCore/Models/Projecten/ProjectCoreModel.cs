@@ -362,6 +362,15 @@ namespace CPMCore.Models.Projecten
     }
 
     // Detail
+    /// <summary>Een offerte of wijzigingsopdracht zonder contract — voor het aandachtspaneel van Projecten/Detail.</summary>
+    public class ChangeOrderNoContractItem
+    {
+        public int Id { get; set; }
+        public string Number { get; set; } = "";
+        public bool IsQuote { get; set; }
+        public string Description { get; set; } = "";
+    }
+
     public class ShowProjectDetail
     {
         public ShowProjectDetail()
@@ -650,6 +659,10 @@ namespace CPMCore.Models.Projecten
 
         /// <summary>Contracten op dit project met een ontbrekend waarborgdocument.</summary>
         public List<ContractBO> GuaranteeMissingContracts { get; set; } = new();
+
+        /// <summary>Offertes en wijzigingsopdrachten van dit project die nog aan een contract gekoppeld moeten worden
+        /// (ChangeOrder.ContractActivityId is leeg, migratie 131). Omgezette offertes tellen niet mee.</summary>
+        public List<ChangeOrderNoContractItem> ChangeOrdersWithoutContract { get; set; } = new();
 
         /// <summary>Verzekeringswaarschuwingen voor dit project.</summary>
         public List<WarningBO> ProjectInsuranceWarnings { get; set; } = new();

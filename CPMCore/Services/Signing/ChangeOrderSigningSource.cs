@@ -149,7 +149,7 @@ public sealed class ChangeOrderSigningSource : ISigningDocumentSource
     public async Task OnCaseCompletedAsync(int sourceEntityId, int caseId, DateTime completedAtUtc, CancellationToken ct = default)
     {
         var co = await _db.ChangeOrder
-            .Include(c => c.ContractActivity).ThenInclude(a => a.Contract).ThenInclude(k => k.Project)
+            .Include(c => c.Project)
             .FirstOrDefaultAsync(c => c.Id == sourceEntityId, ct);
         if (co is null) return;
         co.DateAgreement = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(completedAtUtc, Brussels));
@@ -190,7 +190,7 @@ public sealed class ChangeOrderSigningSource : ISigningDocumentSource
             var existing = await _db.ProjectDocs.FirstOrDefaultAsync(d => d.ChangeOrderId == co.Id, ct);
             var dto = new FacadeCore.DocUploadDto
             {
-                ProjectId = co.ContractActivity?.Contract?.Project?.ProjectId ?? existing?.ProjectId ?? 0,
+                ProjectId = co.ProjectId > 0 ? co.ProjectId : existing?.ProjectId ?? 0,
                 Mode = existing is null ? "new" : "revision",
                 DocumentId = existing?.Id,
                 // Een wijzigingsopdracht hoort bij "Offertes & bestellingen", niet bij "Contracten" (verkoopcontracten).
@@ -242,7 +242,7 @@ public sealed class ChangeOrderSigningSource : ISigningDocumentSource
         var inv = CultureInfo.InvariantCulture;
         var parts = new List<string?>
         {
-            co.Id.ToString(inv), co.ClientAccountId.ToString(inv), co.ContractActivityId.ToString(inv),
+            co.Id.ToString(inv), co.ClientAccountId.ToString(inv), co.ContractActivityId?.ToString(inv),
             co.Description, co.Date.ToString("O", inv), co.ExpirationDate.ToString("O", inv),
             co.Comment, co.ChangeOrderConditions, co.Invoiceable ? "1" : "0",
         };
@@ -263,7 +263,7 @@ public sealed class ChangeOrderSigningSource : ISigningDocumentSource
     public async Task<string?> GetProjectNameAsync(int sourceEntityId, CancellationToken ct = default)
         => await _db.ChangeOrder.AsNoTracking()
             .Where(c => c.Id == sourceEntityId)
-            .Select(c => c.ContractActivity.Contract.Project.ProjectName)
+            .Select(c => c.Project.ProjectName)
             .FirstOrDefaultAsync(ct);
 
     /// <summary>Het facturatiebedrijf dat de wijzigingsopdracht uitgeeft (zelfde regel als de PDF: <see cref="ChangeOrderIssuerResolver"/>).</summary>
@@ -271,7 +271,7 @@ public sealed class ChangeOrderSigningSource : ISigningDocumentSource
     {
         var project = await _db.ChangeOrder.AsNoTracking()
             .Where(c => c.Id == sourceEntityId)
-            .Select(c => c.ContractActivity.Contract.Project)
+            .Select(c => c.Project)
             .FirstOrDefaultAsync(ct);
         var issuerId = await ChangeOrderIssuerResolver.ResolveIssuerCompanyIdAsync(_db, project!, ct);
         if (issuerId is null) return null;
@@ -294,7 +294,7 @@ public sealed class ChangeOrderSigningSource : ISigningDocumentSource
     {
         var co = await _db.ChangeOrder.AsNoTracking()
             .Where(c => c.Id == sourceEntityId)
-            .Select(c => new { c.ClientAccountId, ProjectId = (int?)c.ContractActivity.Contract.ProjectId })
+            .Select(c => new { c.ClientAccountId, ProjectId = (int?)c.ProjectId })
             .FirstOrDefaultAsync(ct);
         if (co?.ProjectId is not int projectId) return null;
 
@@ -313,7 +313,7 @@ public sealed class ChangeOrderSigningSource : ISigningDocumentSource
     {
         var project = await _db.ChangeOrder.AsNoTracking()
             .Where(c => c.Id == sourceEntityId)
-            .Select(c => c.ContractActivity.Contract.Project)
+            .Select(c => c.Project)
             .Include(p => p.SalesResponsibleAspNetUser)
             .Include(p => p.AspNetUser)
             .FirstOrDefaultAsync(ct);

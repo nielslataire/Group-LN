@@ -213,6 +213,9 @@ namespace CPMCore.Controllers
                 vm.Status = ChangeOrderStatus.Opgemaakt;
             }
 
+            if (co is not null && isQuote)
+                vm.Attachments = await LoadAttachmentsAsync(co.Id, HttpContext.RequestServices.GetRequiredService<DocStorageService>());
+
             vm.DefaultCommission = vm.Rows.Count > 0 ? vm.Rows[0].Commission : await DefaultCommissionAsync(projectid);
 
             if (isQuote)
@@ -808,9 +811,10 @@ namespace CPMCore.Controllers
             var activeSigning = await ActiveSigningCaseAsync(model.ChangeOrderId);
             if (activeSigning is not null) return Refuse(SigningLockedMessage);
 
-            if (model.ClientAccountId <= 0 || model.ContractActivityId <= 0)
+            // Het contract is optioneel (offerte én wijzigingsopdracht): het project toont een waarschuwing zolang het ontbreekt.
+            if (model.ClientAccountId <= 0)
             {
-                AddMessage("error", "Kies een klant/eenheid en een leverancier·contract.", "Kon niet opslaan");
+                AddMessage("error", "Kies een klant/eenheid.", "Kon niet opslaan");
                 // Terug naar het scherm van herkomst — bij een nog niet opgeslagen offerte uit 20c zou een
                 // omleiding naar een leeg opmaakscherm de net ingelezen regels kwijtspelen.
                 return BackToOrigin();
@@ -836,6 +840,7 @@ namespace CPMCore.Controllers
             {
                 co = new ChangeOrder
                 {
+                    ProjectId = model.ProjectId,
                     ClientAccountId = model.ClientAccountId,
                     // Een nieuwe rij is een offerte aan de klant (vanuit 20c altijd, anders zoals gestart via
                     // "+ Nieuw") of rechtstreeks een wijzigingsopdracht. Daarna verandert de soort nooit meer.
@@ -853,7 +858,7 @@ namespace CPMCore.Controllers
             // ze was; nieuwe regels krijgen de commissie van de rij en de btw van de eenheid.
             var intakeOnExisting = fromIntake && isExisting;
 
-            co.ContractActivityId = model.ContractActivityId;
+            co.ContractActivityId = model.ContractActivityId > 0 ? model.ContractActivityId : null;
             co.QuoteSupplierReference = string.IsNullOrWhiteSpace(model.QuoteSupplierReference) ? null : model.QuoteSupplierReference.Trim();
             co.QuoteVatPercentage = model.QuoteVatPercentage;
             if (!string.IsNullOrWhiteSpace(model.QuoteSourcePath))

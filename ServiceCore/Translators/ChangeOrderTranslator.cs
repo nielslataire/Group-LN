@@ -26,10 +26,10 @@ namespace ServiceCore.Translators
             bo.DateSendToClient = _entity.DateSendToClient;
             bo.DateAgreement = _entity.DateAgreement;
             bo.Invoiceable = _entity.Invoiceable;
-            bo.ContractActivityID = _entity.ContractActivity.Id;
-            bo.ProjectId = _entity.ContractActivity.Contract.ProjectId;
+            bo.ContractActivityID = _entity.ContractActivityId ?? 0;
+            bo.ProjectId = _entity.ProjectId;
             bo.ChangeOrderConditions = _entity.ChangeOrderConditions;
-            bo.ContractCompanyName = _entity.ContractActivity.Contract.Company?.BedrijfsNaam;
+            bo.ContractCompanyName = _entity.ContractActivity?.Contract?.Company?.BedrijfsNaam;
             if (_entity.ClientAccount.Name != null)
                 bo.ClientName = _entity.ClientAccount.Name;
             else
@@ -63,7 +63,8 @@ namespace ServiceCore.Translators
             _entity.DateSendToClient = bo.DateSendToClient;
             _entity.DateAgreement = bo.DateAgreement;
             _entity.Invoiceable = bo.Invoiceable;
-            _entity.ContractActivityId = bo.ContractActivityID;
+            _entity.ContractActivityId = bo.ContractActivityID > 0 ? bo.ContractActivityID : null;
+            if (bo.ProjectId > 0) _entity.ProjectId = bo.ProjectId;
             _entity.ChangeOrderConditions = bo.ChangeOrderConditions;
 
             var err = HandleDetails(_entity, bo.Details, uow);

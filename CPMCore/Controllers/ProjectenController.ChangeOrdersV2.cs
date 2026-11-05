@@ -39,7 +39,7 @@ namespace CPMCore.Controllers
             ViewData["BreadcrumbNode"] = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode(nameof(ChangeOrdersV2), "Projecten", "Offertes & wijzigingen") { Parent = projectDetail, RouteValues = new { projectid = projectid } };
 
             var orders = await _db.ChangeOrder.AsNoTracking()
-                .Where(c => c.ContractActivity.Contract.ProjectId == projectid)
+                .Where(c => c.ProjectId == projectid)
                 .Include(c => c.ChangeOrderDetail)
                 .Include(c => c.ChangeOrderPaymentTerm)
                 .Include(c => c.ClientAccount)

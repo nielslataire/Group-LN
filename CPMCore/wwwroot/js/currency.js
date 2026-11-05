@@ -42,7 +42,28 @@ if (!window.CurrencyMask) window.CurrencyMask = (function () {
             }
 
             new AutoNumeric(el, defaultOptions);
+            watchSuffix(el);
         });
+    }
+
+    // Een geldveld met een €-teken (.gl-v2-field-suffix) in een te smal vak: het teken verdwijnt (klasse
+    // is-suffix-hidden op het vak) zodra de waarde anders niet meer volledig zichtbaar is. Het teken komt terug
+    // als het vak weer breed genoeg is of de waarde korter wordt.
+    function fitSuffix(el) {
+        const box = el.closest('.gl-v2-field-box');
+        if (!box || !box.querySelector('.gl-v2-field-suffix')) return;
+        box.classList.remove('is-suffix-hidden');
+        if (el.scrollWidth > el.clientWidth + 1) box.classList.add('is-suffix-hidden');
+    }
+
+    function watchSuffix(el) {
+        const box = el.closest('.gl-v2-field-box');
+        if (!box || !box.querySelector('.gl-v2-field-suffix') || el.dataset.suffixWatched) return;
+        el.dataset.suffixWatched = '1';
+        const fit = () => fitSuffix(el);
+        ['input', 'change', 'blur', 'focus', 'autoNumeric:formatted', 'autoNumeric:rawValueModified'].forEach(ev => el.addEventListener(ev, fit));
+        if (window.ResizeObserver) new ResizeObserver(fit).observe(box);
+        fit();
     }
 
     // Een formulier dat via new FormData(form) verstuurd wordt (autosave) slaat de submit-unformat over: "1.500" zou als 1,5 gelezen worden.

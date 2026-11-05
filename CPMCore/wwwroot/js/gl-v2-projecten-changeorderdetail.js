@@ -191,6 +191,84 @@
         });
     }
 
+    // ── Bijlagen bij de offerte: direct opladen/verwijderen (AJAX), het formulier blijft ongemoeid ───────────
+    var attachList = document.getElementById("gl-v2-co-attach-list");
+    var attachFile = document.getElementById("gl-v2-co-attach-file");
+    if (attachList && cfg.changeOrderId > 0) {
+        var attachEmpty = document.getElementById("gl-v2-co-attach-empty");
+        var attachStatus = document.getElementById("gl-v2-co-attach-status");
+        var antiforgery = function () { var t = document.querySelector("#gl-v2-co-form input[name='__RequestVerificationToken']"); return t ? t.value : ""; };
+        var setStatus = function (text) { if (attachStatus) attachStatus.textContent = text || ""; };
+        var syncEmpty = function () { if (attachEmpty) attachEmpty.hidden = attachList.children.length > 0; };
+
+        function addAttachmentItem(a) {
+            var li = document.createElement("li");
+            li.className = "gl-v2-co-attach-item";
+            li.dataset.id = a.id;
+            var icon = document.createElement("i"); icon.className = "ph ph-file"; icon.setAttribute("aria-hidden", "true");
+            var name = document.createElement(a.url ? "a" : "span");
+            name.className = "gl-v2-co-attach-name" + (a.url ? " gl-v2-co-link" : "");
+            name.textContent = a.fileName;
+            if (a.url) { name.href = a.url; name.target = "_blank"; name.rel = "noopener"; }
+            var size = document.createElement("span"); size.className = "gl-v2-co-attach-size"; size.textContent = a.sizeText;
+            var del = document.createElement("button");
+            del.type = "button"; del.className = "gl-v2-co-row-delete js-co-attach-delete"; del.title = "Bijlage verwijderen";
+            del.setAttribute("aria-label", "Bijlage " + a.fileName + " verwijderen");
+            del.innerHTML = '<i class="ph ph-trash" aria-hidden="true"></i>';
+            li.appendChild(icon); li.appendChild(name); li.appendChild(size); li.appendChild(del);
+            attachList.appendChild(li);
+            syncEmpty();
+        }
+
+        function postAttachment(url, body) {
+            body.append("projectId", cfg.projectId);
+            body.append("changeOrderId", cfg.changeOrderId);
+            body.append("__RequestVerificationToken", antiforgery());
+            return fetch(url, { method: "POST", body: body }).then(function (r) { return r.json(); });
+        }
+
+        if (attachFile) {
+            attachFile.addEventListener("change", function () {
+                var files = Array.prototype.slice.call(attachFile.files || []);
+                attachFile.value = "";
+                var chain = Promise.resolve();
+                files.forEach(function (file) {
+                    chain = chain.then(function () {
+                        setStatus("Bezig met opladen: " + file.name + " …");
+                        var fd = new FormData();
+                        fd.append("file", file, file.name);
+                        return postAttachment(cfg.attachAddUrl, fd).then(function (res) {
+                            if (res.success) { addAttachmentItem(res); setStatus(""); }
+                            else { setStatus(""); toast("danger", "Bijlage niet toegevoegd", res.message || file.name); }
+                        }).catch(function () { setStatus(""); toast("danger", "Bijlage niet toegevoegd", file.name); });
+                    });
+                });
+            });
+        }
+
+        attachList.addEventListener("click", function (e) {
+            var btn = e.target.closest ? e.target.closest(".js-co-attach-delete") : null;
+            if (!btn) return;
+            var li = btn.closest(".gl-v2-co-attach-item");
+            if (!li) return;
+            btn.disabled = true;
+            var fd = new FormData();
+            fd.append("attachmentId", li.dataset.id);
+            postAttachment(cfg.attachDeleteUrl, fd).then(function (res) {
+                if (res.success) { li.remove(); syncEmpty(); }
+                else { btn.disabled = false; toast("danger", "Bijlage niet verwijderd", res.message || ""); }
+            }).catch(function () { btn.disabled = false; toast("danger", "Bijlage niet verwijderd", ""); });
+        });
+    }
+
+    // Commissie met twee cijfers na de komma (5 → 5.00) zodra je het veld verlaat; opgeslagen als decimal(9,2).
+    document.addEventListener("change", function (e) {
+        var t = e.target;
+        if (!t || !t.classList || !(t.classList.contains("js-co-commission") || t === defaultCommission)) return;
+        var n = parseFloat((t.value || "").toString().replace(",", "."));
+        if (!isNaN(n)) t.value = n.toFixed(2);
+    });
+
     // Commissie % op de kaart Opdracht: één waarde voor alle regels (per regel nog bij te sturen).
     if (defaultCommission && rowsBody) {
         defaultCommission.addEventListener("input", function () {

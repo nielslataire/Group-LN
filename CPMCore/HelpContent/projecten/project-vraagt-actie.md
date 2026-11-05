@@ -32,7 +32,7 @@ faq:
 
 ## De soorten regels
 
-- **Contracten**: een contract dat nog niet getekend is, of waarvan de bankwaarborg ontbreekt.
+- **Contracten**: een contract dat nog niet getekend is, of waarvan de bankwaarborg ontbreekt. Ook een offerte of wijzigingsopdracht die nog aan geen enkel contract hangt, staat hier. Klik erop en kies bij **Leverancier · contract** het juiste contract.
 - **Financieel**: een grote afwijking tussen fysieke en financiële voortgang, of onderfacturatie.
 - **Traject**: een mijlpaal die achterstallig is.
 

@@ -79,11 +79,14 @@ namespace DALCore
 
         private static int? ResolveProjectId(cpmRunningContext db, ChangeOrder co)
         {
-            if (co.ContractActivityId <= 0) return null;
-            return db.ContractActivity.AsNoTracking()
-                .Where(a => a.Id == co.ContractActivityId)
+            if (co.ProjectId > 0) return co.ProjectId;
+            if (co.ContractActivityId is not int activityId || activityId <= 0) return null;
+            var fromContract = db.ContractActivity.AsNoTracking()
+                .Where(a => a.Id == activityId)
                 .Select(a => (int?)a.Contract.ProjectId)
                 .FirstOrDefault();
+            if (fromContract.HasValue) co.ProjectId = fromContract.Value;   // legacy-paden die enkel een contract meegeven
+            return fromContract;
         }
     }
 }

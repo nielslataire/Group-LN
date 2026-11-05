@@ -113,11 +113,23 @@ a.gl-v2-co-quote-preview:hover { border-color: var(--gl-v2-primary); color: var(
 .gl-v2-co-table tfoot .gl-v2-co-sum-total ~ tr td { color: var(--gl-v2-muted); }
 .gl-v2-co-sum-total td { font: 700 13px var(--gl-v2-font-sans); color: var(--gl-v2-primary); border-top: 1px solid var(--gl-v2-hairline); padding-top: 10px; padding-bottom: 14px; }
 .gl-v2-co-tabular { font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Bijlagen bij de offerte */
+.gl-v2-co-attach { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.gl-v2-co-attach-list { list-style: none; margin: 0; padding: 0; width: 100%; }
+.gl-v2-co-attach-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--gl-v2-hairline-soft); font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-co-attach-item:last-child { border-bottom: 0; }
+.gl-v2-co-attach-item > i { color: var(--gl-v2-muted); font-size: 16px; flex: none; }
+.gl-v2-co-attach-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-co-attach-size { flex: none; color: var(--gl-v2-muted); font-variant-numeric: tabular-nums; }
 /* Invoervelden in een tabelcel: het gedeelde veldkader (.gl-v2-field-box), compacter dan in een
    formulier (34px i.p.v. 40px) zodat een rij niet hoger wordt dan nodig. */
 .gl-v2-co-table .gl-v2-field-box { --gl-v2-field-pad: 9px; height: 34px; padding: 0 9px; gap: 6px; border-radius: var(--gl-v2-radius-s, 7px); }
 .gl-v2-co-table .gl-v2-field-box .gl-v2-field-input { font-size: 12.5px; width: 100%; }
 .gl-v2-co-table .gl-v2-field-box.gl-v2-co-numbox { width: 84px; margin-left: auto; }
+/* Aantal is smal (enkele cijfers); het bedrag is breed genoeg voor minstens 10.000,00 naast het €-teken
+   (zakt het vak toch te smal, dan verbergt currency.js het teken). */
+.gl-v2-co-table .gl-v2-field-box.gl-v2-co-numbox.is-qty { width: 60px; }
+.gl-v2-co-table .gl-v2-field-box.gl-v2-co-numbox.is-money { width: 128px; }
 /* Btw-code: gesloten veld compact ("6 % · CODE"), de open lijst toont de lange tekst en mag breder zijn. */
 .gl-v2-co-table .gl-v2-field-box.gl-v2-co-vatbox { width: 96px; margin-left: auto; }
 /* Een keuzelijst in een cel mag niet tot enkel haar pijltje krimpen (de tabel verdeelt de breedte zelf). */
