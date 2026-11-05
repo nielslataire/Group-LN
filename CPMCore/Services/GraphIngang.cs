@@ -63,6 +63,10 @@ public interface IGraphIngang
     /// <summary>Wijzigt titel en tijd van een afspraak. Geeft een foutmelding terug, of null bij succes.</summary>
     Task<string?> BijwerkenAfspraakAsync(string? gebruiker, string eventId, string? titel, DateTime start, DateTime einde, CancellationToken ct = default);
 
+    /// <summary>Maakt een afspraak in de Outlook-agenda aan. Zonder <paramref name="uitnodigen"/> komen er geen deelnemers op de afspraak en gaat er dus geen uitnodiging uit;
+    /// met e-mailadressen stuurt Outlook de uitnodigingen. Geeft het event-id terug, of een foutmelding.</summary>
+    Task<(string? EventId, string? Fout)> MaakAfspraakAsync(string? gebruiker, string titel, DateTime start, DateTime einde, string? plaats, IReadOnlyList<string> uitnodigen, CancellationToken ct = default);
+
     /// <summary>True als Graph de mail aanvaardde; false (de aanroeper valt terug op SMTP) bij geen configuratie of een fout.</summary>
     Task<bool> TrySendMailAsync(string fromMailbox, string to, string subject, string html, IEnumerable<EmailAttachment>? attachments, CancellationToken ct = default);
 
@@ -344,6 +348,45 @@ public sealed class GraphIngang : IGraphIngang
         {
             _logger.LogWarning(ex, "Outlook-afspraak wijzigen mislukt voor {Gebruiker}.", gebruiker);
             return "De afspraak kon niet gewijzigd worden. Probeer het later opnieuw.";
+        }
+    }
+
+    /// <summary>Maakt een afspraak aan (POST <c>/users/{id}/events</c>). Vereist <c>Calendars.ReadWrite</c> (toepassing). Deelnemers worden alleen meegegeven als de aanroeper ze doorgeeft: Outlook stuurt dan de uitnodigingen.</summary>
+    public async Task<(string? EventId, string? Fout)> MaakAfspraakAsync(string? gebruiker, string titel, DateTime start, DateTime einde, string? plaats, IReadOnlyList<string> uitnodigen, CancellationToken ct = default)
+    {
+        if (_client == null || string.IsNullOrWhiteSpace(gebruiker)) return (null, "De Outlook-agenda is niet gekoppeld.");
+        if (string.IsNullOrWhiteSpace(titel)) return (null, "Geef de afspraak een titel.");
+        if (einde <= start) return (null, "Het einde moet na het begin liggen.");
+        try
+        {
+            var nieuw = new Event
+            {
+                Subject = titel.Trim(),
+                Start = new DateTimeTimeZone { DateTime = start.ToString("yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture), TimeZone = Tijdzone },
+                End = new DateTimeTimeZone { DateTime = einde.ToString("yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture), TimeZone = Tijdzone }
+            };
+            if (!string.IsNullOrWhiteSpace(plaats)) nieuw.Location = new Location { DisplayName = plaats.Trim() };
+            if (uitnodigen.Count > 0)
+                nieuw.Attendees = uitnodigen.Select(a => new Attendee { Type = AttendeeType.Required, EmailAddress = new EmailAddress { Address = a } }).ToList();
+            var gemaakt = await _client.Users[gebruiker].Events.Request().AddAsync(nieuw, ct);
+            foreach (var k in _cache.Keys.Where(k => k.StartsWith(gebruiker + "|", StringComparison.Ordinal)).ToList()) _cache.TryRemove(k, out _);
+            return (gemaakt.Id, null);
+        }
+        catch (ServiceException ex)
+        {
+            _logger.LogWarning(ex, "Outlook-afspraak aanmaken mislukt voor {Gebruiker} (status {Status}).", gebruiker, (int)ex.StatusCode);
+            return (null, ex.StatusCode switch
+            {
+                System.Net.HttpStatusCode.Forbidden or System.Net.HttpStatusCode.Unauthorized =>
+                    "De app mag geen afspraken in je agenda maken. Een beheerder moet de Graph-machtiging Calendars.ReadWrite (toepassing) toekennen en goedkeuren.",
+                System.Net.HttpStatusCode.NotFound => "Voor je account is geen Outlook-mailbox gevonden.",
+                _ => "De afspraak kon niet aangemaakt worden. Probeer het later opnieuw."
+            });
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Outlook-afspraak aanmaken mislukt voor {Gebruiker}.", gebruiker);
+            return (null, "De afspraak kon niet aangemaakt worden. Probeer het later opnieuw.");
         }
     }
 

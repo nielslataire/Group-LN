@@ -390,6 +390,42 @@
         openNieuw(datum, van, van + 30, nieuwKnop.getBoundingClientRect());
     });
 
+    // Nieuwe afspraak op een project: komt in de Outlook-agenda en is meteen gekoppeld. Uitnodigen staat standaard uit; enkel met het vinkje gaan de adressen mee.
+    var nieuwAfspraakModal = $("mt-afspraak-nieuw-modal"), nieuwAfspraakKnop = $("mt-afspraak-nieuw");
+    if (nieuwAfspraakModal && nieuwAfspraakKnop) {
+        var naV = $, vinkje = naV("mt-an-uitnodigen");
+        var toonUitnodigen = function () {
+            naV("mt-an-deelnemers-rij").hidden = !vinkje.checked;
+            naV("mt-an-nota").hidden = vinkje.checked;
+        };
+        vinkje.addEventListener("change", toonUitnodigen);
+        nieuwAfspraakKnop.addEventListener("click", function (e) {
+            e.stopPropagation(); sluitPop();
+            var datum = (week && !week.querySelector(".gl-v2-mt-daycol.is-today")) ? week.querySelector(".gl-v2-mt-daycol").dataset.datum : (dag ? dag.dataset.datum : vandaagIso());
+            var van = volgendHalfuur();
+            naV("mt-an-titel").value = ""; naV("mt-an-plaats").value = ""; naV("mt-an-deelnemers").value = "";
+            naV("mt-an-datum").value = datum; naV("mt-an-van").value = hm(van); naV("mt-an-tot").value = hm(van + 60);
+            nieuwAfspraakModal.querySelector("[name=projectId]").value = ""; vinkje.checked = false; toonUitnodigen();
+            if (window.bootstrap) window.bootstrap.Modal.getOrCreateInstance(nieuwAfspraakModal).show();
+        });
+        nieuwAfspraakModal.querySelector("form").addEventListener("submit", function (e) {
+            e.preventDefault();
+            var knop = e.target.querySelector("[type=submit]"), project = nieuwAfspraakModal.querySelector("[name=projectId]").value;
+            var a = parseHM(naV("mt-an-van").value), z = parseHM(naV("mt-an-tot").value);
+            if (!naV("mt-an-titel").value.trim()) { toast("warning", "Titel ontbreekt", "Geef de afspraak een titel."); return; }
+            if (!project) { toast("warning", "Kies een project", "De afspraak hoort bij een project."); return; }
+            if (a == null || z == null || z <= a || !naV("mt-an-datum").value) { toast("warning", "Controleer de tijden", "Het einde moet na het begin liggen."); return; }
+            knop.disabled = true;
+            post("AfspraakMaak", {
+                projectId: project, titel: naV("mt-an-titel").value.trim(), start: naV("mt-an-datum").value + "T" + hm(a), minuten: z - a, plaats: naV("mt-an-plaats").value.trim(),
+                uitnodigen: vinkje.checked ? "true" : "", deelnemers: vinkje.checked ? naV("mt-an-deelnemers").value.trim() : ""
+            }).then(function (j) {
+                if (!j.waarschuwing) return herlaad();
+                toast("warning", "Afspraak gemaakt", j.waarschuwing); setTimeout(herlaad, 2500);
+            }, function () { knop.disabled = false; });
+        });
+    }
+
     // Klik of tik op een blok of een volgende actie opent de popover; Enter of spatie doet hetzelfde met het toetsenbord.
     document.addEventListener("click", function (e) {
         if (zojuist) return;

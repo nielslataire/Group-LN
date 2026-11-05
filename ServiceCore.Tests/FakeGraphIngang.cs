@@ -53,7 +53,26 @@ public sealed class FakeGraphIngang : IGraphIngang
     public Task<string?> BijwerkenAfspraakAsync(string? gebruiker, string eventId, string? titel, DateTime start, DateTime einde, CancellationToken ct = default)
     {
         Wijzigingen.Add((gebruiker, eventId, titel, start, einde));
+        var a = gebruiker != null && Agenda.TryGetValue(gebruiker, out var lijst) ? lijst.FirstOrDefault(x => x.Id == eventId) : null;
+        if (a != null) { if (!string.IsNullOrWhiteSpace(titel)) a.Titel = titel; a.Start = start; a.Einde = einde; }
         return Task.FromResult<string?>(null);
+    }
+
+    public List<(string? Gebruiker, string Titel, string? Plaats, string[] Uitnodigen)> Aangemaakt { get; } = new();
+    public string? AanmaakFout { get; set; }
+
+    /// <summary>Maakt de afspraak ook echt aan in de fake-agenda, zodat een volgende lezing ze terugvindt (zoals Outlook).</summary>
+    public Task<(string? EventId, string? Fout)> MaakAfspraakAsync(string? gebruiker, string titel, DateTime start, DateTime einde, string? plaats, IReadOnlyList<string> uitnodigen, CancellationToken ct = default)
+    {
+        if (AanmaakFout != null) return Task.FromResult<(string?, string?)>((null, AanmaakFout));
+        Aangemaakt.Add((gebruiker, titel, plaats, uitnodigen.ToArray()));
+        var id = "evt-nieuw-" + Aangemaakt.Count;
+        if (gebruiker != null)
+        {
+            if (!Agenda.TryGetValue(gebruiker, out var lijst)) Agenda[gebruiker] = lijst = new();
+            lijst.Add(new AgendaAfspraak { Id = id, Titel = titel, Start = start, Einde = einde, Plaats = plaats, HeeftDeelnemers = uitnodigen.Count > 0, Deelnemers = uitnodigen.ToList() });
+        }
+        return Task.FromResult<(string?, string?)>((id, null));
     }
 
     public Task<bool> TrySendMailAsync(string fromMailbox, string to, string subject, string html, IEnumerable<EmailAttachment>? attachments, CancellationToken ct = default)

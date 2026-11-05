@@ -129,6 +129,7 @@
             <span class="gl-v2-mt-day-title">@MijnTakenAssistent.Vol(vandaag)</span>
             <span class="gl-v2-section-card-spacer"></span>
             <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-mt-mini" id="mt-nieuw"><i class="ph ph-plus" aria-hidden="true"></i>Nieuwe taak</button>
+            <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-mt-mini" id="mt-afspraak-nieuw"><i class="ph ph-calendar-plus" aria-hidden="true"></i>Nieuwe afspraak</button>
             <span class="gl-v2-mt-legend"><i class="is-worked"></i>gewerkt</span>
             <span class="gl-v2-mt-legend"><i class="is-planned"></i>gepland</span>
             <span class="gl-v2-mt-legend"><i class="is-meet"></i>afspraak</span>
@@ -220,6 +221,7 @@
 </div>
 
 @await Html.PartialAsync("Partials/_MtAfspraakKoppelV2", Model.Shell)
+@await Html.PartialAsync("Partials/_MtAfspraakNieuwV2", Model.Shell)
 @await Html.PartialAsync("Partials/_MtSnelStartV2", Model.Shell)
 
 @section PageScripts

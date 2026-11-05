@@ -12,11 +12,48 @@ public class OutlookAfspraakService
 {
     private readonly cpmRunningContext _db;
     private readonly OutlookMailSyncService _context;
+    private readonly IGraphIngang _graph;
 
-    public OutlookAfspraakService(cpmRunningContext db, OutlookMailSyncService context)
+    public OutlookAfspraakService(cpmRunningContext db, OutlookMailSyncService context, IGraphIngang graph)
     {
         _db = db;
         _context = context;
+        _graph = graph;
+    }
+
+    private const int MaxUitnodigingen = 25;
+
+    /// <summary>Maakt een afspraak op een project aan in de Outlook-agenda van de gebruiker (ticket #8) en koppelt ze meteen aan het project. Standaard gaat er geen uitnodiging uit:
+    /// enkel als <paramref name="uitnodigen"/> aanstaat, komen de opgegeven e-mailadressen als deelnemers op de afspraak en stuurt Outlook de uitnodigingen. Later wijzigen in CPM
+    /// (<c>MijnTakenAssistent.AgendaWijzig</c>) of in Outlook werkt via het onthouden event-id in beide richtingen door; de agenda zelf blijft de bron.</summary>
+    /// <remarks>Mislukt alleen het koppelen, dan komt de afspraak toch met haar event-id terug, samen met een melding: de afspraak bestaat in Outlook en mag niet opnieuw gemaakt worden.</remarks>
+    public async Task<(string? EventId, string? Fout)> MaakAsync(int userId, string? agendaGebruiker, int projectId, IReadOnlyCollection<int> toegestaneProjecten,
+        string? titel, DateTime start, int minuten, string? plaats, bool uitnodigen, string? deelnemers, CancellationToken ct = default)
+    {
+        titel = (titel ?? "").Trim();
+        if (titel.Length == 0) return (null, "Geef de afspraak een titel.");
+        if (titel.Length > 200) return (null, "De titel is te lang.");
+        if (minuten < 5 || minuten > 960) return (null, "Een afspraak duurt tussen 5 minuten en 16 uur.");
+        if (!toegestaneProjecten.Contains(projectId)) return (null, "Kies een project voor de afspraak.");
+
+        var uitnodigingen = new List<string>();
+        if (uitnodigen)
+        {
+            foreach (var a in (deelnemers ?? "").Split(new[] { ',', ';', ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (!System.Net.Mail.MailAddress.TryCreate(a, out var adres) || adres.Address != a) return (null, $"'{a}' is geen geldig e-mailadres.");
+                if (!uitnodigingen.Contains(a, StringComparer.OrdinalIgnoreCase)) uitnodigingen.Add(a);
+            }
+            if (uitnodigingen.Count == 0) return (null, "Geef minstens één e-mailadres op, of zet het uitnodigen uit.");
+            if (uitnodigingen.Count > MaxUitnodigingen) return (null, $"Je kan hoogstens {MaxUitnodigingen} mensen uitnodigen.");
+        }
+
+        var (eventId, fout) = await _graph.MaakAfspraakAsync(agendaGebruiker, titel, start, start.AddMinutes(minuten),
+            string.IsNullOrWhiteSpace(plaats) ? null : plaats.Trim(), uitnodigingen, ct);
+        if (fout != null || string.IsNullOrEmpty(eventId)) return (null, fout ?? "De afspraak kon niet aangemaakt worden.");
+
+        var koppelFout = await KoppelAsync(userId, eventId, projectId, toegestaneProjecten, ct);
+        return koppelFout == null ? (eventId, null) : (eventId, "De afspraak staat in Outlook, maar kon niet aan het project gekoppeld worden. Koppel ze via de afspraak.");
     }
 
     /// <summary>Vult per afspraak het gekoppelde project en, voor een niet-gekoppelde afspraak, het voorstel in. Overschrijft altijd alle velden, zodat een bewaarde (gecachte) afspraak nooit een oude koppeling toont.</summary>

@@ -64,6 +64,7 @@
     <section class="gl-v2-section-card gl-v2-mt-weekcard">
         <div class="gl-v2-mt-weeknav">
             <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-mt-mini" id="mt-nieuw"><i class="ph ph-plus" aria-hidden="true"></i>Nieuwe taak</button>
+            <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-mt-mini" id="mt-afspraak-nieuw"><i class="ph ph-calendar-plus" aria-hidden="true"></i>Nieuwe afspraak</button>
             <span class="gl-v2-dl-spacer" style="flex:1"></span>
             <a class="gl-v2-btn gl-v2-btn-text" href="@Url.Action("WeekV2", new { datum = Model.Maandag.AddDays(-7).ToString("yyyy-MM-dd") })"><i class="ph ph-caret-left" aria-hidden="true"></i>Vorige week</a>
             <a class="gl-v2-btn gl-v2-btn-text" href="@Url.Action("WeekV2")">Deze week</a>
@@ -109,6 +110,7 @@
 </div>
 
 @await Html.PartialAsync("Partials/_MtAfspraakKoppelV2", Model.Shell)
+@await Html.PartialAsync("Partials/_MtAfspraakNieuwV2", Model.Shell)
 @await Html.PartialAsync("Partials/_MtSnelStartV2", Model.Shell)
 
 @section PageScripts

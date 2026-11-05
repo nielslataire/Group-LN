@@ -4,7 +4,7 @@ topic: aan-de-slag
 role: Iedereen
 device: Desktop · tablet
 minutes: 4
-updated: 2026-10-28
+updated: 2026-11-05
 newsTag: Nieuw
 screens: mijn-taken-vandaag
 related: snel-een-taak-starten, mijn-taken-inbox, mijn-taken-week
@@ -16,6 +16,10 @@ intro: |
 before: |
   Je hebt leesrecht op **Mijn taken**. Je opent de pagina in het linkermenu. Schrijfrecht heb je nodig om taken te plannen, te starten of af te vinken.
 faq:
+  - q: Krijgen deelnemers een uitnodiging als ik een afspraak maak?
+    a: Nee, tenzij je Deelnemers uitnodigen aanvinkt en e-mailadressen invult. Zonder vinkje staat de afspraak enkel in je eigen agenda.
+  - q: Waarom lukt het aanmaken van een afspraak niet?
+    a: CPM mag dan niet in je Outlook-agenda schrijven. Meld het aan de beheerder. Die moet de toegang tot agenda's goedkeuren.
   - q: Verandert een afspraak in Outlook als ik ze aan een project koppel?
     a: Nee. CPM onthoudt enkel welke afspraak bij welk project hoort. Titel, tijd en deelnemers blijven in Outlook.
   - q: Waarom stelt CPM geen project voor?
@@ -98,6 +102,18 @@ Rechts staat hoeveel je al hebt gewerkt tegenover wat je hebt gepland, verdeeld 
 
 CPM stelt een project voor als de titel een projectnaam, projectcode of straat met nummer bevat, of als een deelnemer een bekende contactpersoon is met één lopend project. CPM koppelt nooit zelf.
 Een gekoppelde afspraak toont de projectnaam in het blok. Met **Ontkoppelen** haal je de koppeling weg. De afspraak zelf in Outlook verandert niet.
+
+## Een afspraak op een project maken
+
+![Het formulier Nieuwe afspraak op een project](/img/help/aan-de-slag/mijn-taken-vandaag/nieuwe-afspraak.png)
+
+1. Klik op **Nieuwe afspraak**.
+2. Vul de titel in, kies het project en stel datum, begin en einde in. De plaats is optioneel.
+3. Klik op **Afspraak maken**.
+
+De afspraak staat meteen in je Outlook-agenda en is aan het project gekoppeld. Je ziet de projectnaam in het blok.
+Standaard krijgt niemand een uitnodiging en staat de afspraak enkel in je eigen agenda. Wil je mensen uitnodigen, vink dan **Deelnemers uitnodigen** aan en vul hun e-mailadressen in, gescheiden door een komma. Outlook stuurt hen dan een uitnodiging.
+Pas je de tijd of titel later aan in CPM of in Outlook, dan staat dat aan beide kanten. De koppeling met het project blijft behouden.
 
 ## Let op
 

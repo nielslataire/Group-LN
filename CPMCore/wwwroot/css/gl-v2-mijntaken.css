@@ -386,3 +386,10 @@
     .gl-v2-mt-vandaag { grid-template-rows: none; }
     .gl-v2-mt-vandaag .gl-v2-mt-day { max-height: 78vh; }
 }
+
+/* Nieuwe afspraak op een project (modal): datum, van en tot naast elkaar; verborgen delen echt verbergen. */
+#mt-afspraak-nieuw-modal .gl-v2-mt-pop-tijden { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); }
+#mt-afspraak-nieuw-modal .gl-v2-mt-pop-tijden .gl-v2-field:first-child { grid-column: auto; }
+#mt-an-deelnemers-rij[hidden], #mt-an-nota[hidden] { display: none; }
+#mt-afspraak-nieuw-modal .modal-body > * + * { margin-top: 14px; }
+#mt-afspraak-nieuw-modal .gl-v2-mp-check-row { display: flex; align-items: center; gap: 10px; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); cursor: pointer; }

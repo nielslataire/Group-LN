@@ -23,7 +23,7 @@ public class MijnTakenAgendaTests
     {
         var db = new TestDb(Guid.NewGuid().ToString());
         var graph = new FakeGraphIngang();
-        var afspraken = new OutlookAfspraakService(db, new OutlookMailSyncService(db, graph, NullLogger<OutlookMailSyncService>.Instance));
+        var afspraken = new OutlookAfspraakService(db, new OutlookMailSyncService(db, graph, NullLogger<OutlookMailSyncService>.Instance), graph);
         var svc = new MijnTakenAssistent(db, null!, graph, afspraken);
         var ctx = new MtContext { UserId = 1, UserStr = "1", UserCode = "u1", Nu = Nu, AgendaGebruiker = gebruiker };
         return (svc, ctx, graph);

@@ -39,7 +39,7 @@ public class OutlookAfspraakTests
         db.SaveChanges();
         var graph = new FakeGraphIngang();
         var mail = new OutlookMailSyncService(db, graph, NullLogger<OutlookMailSyncService>.Instance);
-        var afspraken = new OutlookAfspraakService(db, mail);
+        var afspraken = new OutlookAfspraakService(db, mail, graph);
         return (new MijnTakenAssistent(db, null!, graph, afspraken), afspraken, db, graph);
     }
 
@@ -207,5 +207,104 @@ public class OutlookAfspraakTests
         await assistent.Vandaag(Ctx());
 
         Assert.Empty(db.OutlookAfspraak);
+    }
+
+    // ── Afspraak aanmaken in CPM (ticket #8) ─────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Een_afspraak_vanuit_cpm_komt_in_outlook_en_is_aan_het_project_gekoppeld()
+    {
+        var (assistent, afspraken, db, graph) = Bouw();
+
+        var (eventId, fout) = await afspraken.MaakAsync(1, "entra-an", 2, Zichtbaar, " Werfoverleg ", Nu.AddHours(3), 60, "Op de werf", false, null);
+
+        Assert.Null(fout);
+        Assert.Equal("Werfoverleg", graph.Aangemaakt.Single().Titel);
+        Assert.Equal("entra-an", graph.Aangemaakt.Single().Gebruiker);
+        Assert.Equal(2, db.OutlookAfspraak.Single(k => k.EventId == eventId).ProjectId);
+
+        var vm = await assistent.Vandaag(Ctx());
+        var a = vm.Afspraken.Single(x => x.Id == eventId);
+        Assert.Equal("Villa Cauxyde", a.ProjectNaam);
+        Assert.Equal(Nu.AddHours(4), a.Einde);
+    }
+
+    [Fact]
+    public async Task Standaard_gaat_er_geen_uitnodiging_uit_ook_niet_als_er_adressen_ingevuld_zijn()
+    {
+        var (_, afspraken, _, graph) = Bouw();
+
+        await afspraken.MaakAsync(1, "entra-an", 1, Zichtbaar, "Overleg", Nu.AddHours(3), 30, null, false, "klant@example.com");
+
+        Assert.Empty(graph.Aangemaakt.Single().Uitnodigen);
+    }
+
+    [Fact]
+    public async Task Met_het_vinkje_gaan_de_uitnodigingen_naar_de_opgegeven_adressen_zonder_dubbels()
+    {
+        var (_, afspraken, _, graph) = Bouw();
+
+        var (_, fout) = await afspraken.MaakAsync(1, "entra-an", 1, Zichtbaar, "Overleg", Nu.AddHours(3), 30, null, true, "klant@example.com; meer@example.com KLANT@example.com");
+
+        Assert.Null(fout);
+        Assert.Equal(new[] { "klant@example.com", "meer@example.com" }, graph.Aangemaakt.Single().Uitnodigen);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("geen-adres")]
+    public async Task Uitnodigen_zonder_geldig_adres_wordt_geweigerd_en_maakt_niets_aan(string deelnemers)
+    {
+        var (_, afspraken, db, graph) = Bouw();
+
+        var (eventId, fout) = await afspraken.MaakAsync(1, "entra-an", 1, Zichtbaar, "Overleg", Nu.AddHours(3), 30, null, true, deelnemers);
+
+        Assert.NotNull(fout);
+        Assert.Null(eventId);
+        Assert.Empty(graph.Aangemaakt);
+        Assert.Empty(db.OutlookAfspraak);
+    }
+
+    [Fact]
+    public async Task Een_project_buiten_bereik_een_lege_titel_of_een_ongeldige_duur_maken_niets_aan()
+    {
+        var (_, afspraken, _, graph) = Bouw();
+
+        Assert.NotNull((await afspraken.MaakAsync(1, "entra-an", 99, Zichtbaar, "Overleg", Nu, 30, null, false, null)).Fout);
+        Assert.NotNull((await afspraken.MaakAsync(1, "entra-an", 1, Zichtbaar, "  ", Nu, 30, null, false, null)).Fout);
+        Assert.NotNull((await afspraken.MaakAsync(1, "entra-an", 1, Zichtbaar, "Overleg", Nu, 2, null, false, null)).Fout);
+
+        Assert.Empty(graph.Aangemaakt);
+    }
+
+    [Fact]
+    public async Task Als_outlook_weigert_blijft_er_geen_koppeling_achter()
+    {
+        var (_, afspraken, db, graph) = Bouw();
+        graph.AanmaakFout = "De app mag geen afspraken in je agenda maken.";
+
+        var (eventId, fout) = await afspraken.MaakAsync(1, "entra-an", 1, Zichtbaar, "Overleg", Nu.AddHours(3), 30, null, false, null);
+
+        Assert.Equal("De app mag geen afspraken in je agenda maken.", fout);
+        Assert.Null(eventId);
+        Assert.Empty(db.OutlookAfspraak);
+    }
+
+    [Fact]
+    public async Task Wijzigingen_in_cpm_en_in_outlook_komen_door_en_de_koppeling_blijft()
+    {
+        var (assistent, afspraken, db, graph) = Bouw();
+        var (eventId, _) = await afspraken.MaakAsync(1, "entra-an", 1, Zichtbaar, "Overleg", Nu.AddHours(3), 60, null, false, null);
+
+        // CPM → Outlook: de bestaande wijzigactie van Mijn taken schrijft naar dezelfde afspraak.
+        Assert.Null(await assistent.AgendaWijzig(Ctx(), eventId!, "Overleg verplaatst", Nu.AddHours(5), 30));
+        Assert.Equal(eventId, graph.Wijzigingen.Single().EventId);
+
+        // Outlook → CPM: de afspraak wordt live uit de agenda gelezen, dus een wijziging daar (hier: titel en tijd in de fake-agenda) is meteen zichtbaar, met het project.
+        graph.Agenda["entra-an"].Single(x => x.Id == eventId).Titel = "Overleg in Outlook aangepast";
+        var vm = await assistent.Vandaag(Ctx());
+        var a = vm.Afspraken.Single(x => x.Id == eventId);
+        Assert.Equal(("Overleg in Outlook aangepast", "Residentie De Linde", Nu.AddHours(5)), (a.Titel, a.ProjectNaam, a.Start));
+        Assert.Single(db.OutlookAfspraak);
     }
 }

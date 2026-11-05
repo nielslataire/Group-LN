@@ -76,6 +76,20 @@ public partial class MijnTakenController
         return fout == null ? Json(new { ok = true }) : Fout(fout);
     }
 
+    // Afspraak op een project aanmaken (ticket #8): komt in de Outlook-agenda van de gebruiker en is meteen aan het project gekoppeld. Uitnodigen staat standaard uit.
+    [HttpPost("AfspraakMaak"), ValidateAntiForgeryToken, CPMCore.Filters.PermissionWrite(BOCore.PermissionCodes.MijnTaken)]
+    public async Task<IActionResult> AfspraakMaak(int projectId, string? titel, string start, int minuten, string? plaats, bool uitnodigen, string? deelnemers)
+    {
+        var c = await _assistent.Context(User);
+        if (c == null) return Forbid();
+        var tijd = Tijd(start);
+        if (tijd == null) return Fout("Ongeldig tijdstip.");
+        var (eventId, fout) = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.OutlookSync.OutlookAfspraakService>()
+            .MaakAsync(c.UserId, c.AgendaGebruiker, projectId, c.ProjectIds, titel, tijd.Value, minuten, plaats, uitnodigen, deelnemers);
+        if (eventId != null) return Json(new { ok = true, eventId, waarschuwing = fout });   // de afspraak bestaat al in Outlook: niet opnieuw laten maken
+        return Fout(fout ?? "De afspraak kon niet aangemaakt worden.");
+    }
+
     [HttpPost("AfspraakOntkoppel"), ValidateAntiForgeryToken, CPMCore.Filters.PermissionWrite(BOCore.PermissionCodes.MijnTaken)]
     public async Task<IActionResult> AfspraakOntkoppel(string eventId)
     {
