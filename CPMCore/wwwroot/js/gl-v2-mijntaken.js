@@ -138,16 +138,30 @@
     // ── Plaatshouder en onmiddellijk plaatsen ──
     // Tijdens het slepen toont de kalender op het doel een gestippeld vak op de plek waar het blok zou komen (afgerond op 15 minuten, met het uur erin).
     // Bij het loslaten staat het blok meteen op die plek; pas daarna wordt het opgeslagen. Lukt dat niet, dan springt het blok terug naar waar het stond.
-    var plek = null, plekVast = false;
-    function gastheer(doel) { return doel === tl ? (tl.querySelector(".gl-v2-mt-lane.is-main") || tl) : doel; }
-    function toonPlek(doel, min, minuten) {
-        var host = gastheer(doel);
-        if (!plek) { plek = el("div", "gl-v2-mt-plek"); plek.setAttribute("aria-hidden", "true"); plek.appendChild(el("span", "m")); }
-        if (plek.parentNode !== host) host.appendChild(plek);
-        plek.style.top = yVanMin(min) + "px"; plek.style.height = Math.max(minuten / 60 * PX - 2, 20) + "px";
-        plek.firstChild.textContent = hm(min) + "\u2013" + hm(Math.min(min + minuten, 24 * 60));
+    var plek = null, plek2 = null, plekVast = false;
+    // Een afspraak en haar blok Reistijd (data-koppel) schuiven samen: het andere blok behoudt zijn afstand tot het versleepte blok, in minuten.
+    function partnerVan(blok) {
+        var k = blok && blok.dataset.koppel; if (!k) return null;
+        var p = $$(".gl-v2-mt-block").filter(function (x) { return x !== blok && x.dataset.koppel === k; })[0]; if (!p) return null;
+        var t = function (iso) { return new Date(iso).getTime() / 60000; };
+        return { el: p, offset: Math.round(t(p.dataset.start) - t(blok.dataset.start)), minuten: Math.round(t(p.dataset.einde) - t(p.dataset.start)) };
     }
-    function wisPlek(ook) { if (plek && (ook || !plekVast)) { plek.remove(); plekVast = false; } }
+    function gastheer(doel) { return doel === tl ? (tl.querySelector(".gl-v2-mt-lane.is-main") || tl) : doel; }
+    function zetPlekVak(vak, host, min, minuten) {
+        if (vak.parentNode !== host) host.appendChild(vak);
+        vak.style.top = yVanMin(min) + "px"; vak.style.height = Math.max(minuten / 60 * PX - 2, 20) + "px";
+        vak.firstChild.textContent = hm(Math.max(0, min)) + "\u2013" + hm(Math.min(min + minuten, 24 * 60));
+    }
+    function nieuwVak() { var v = el("div", "gl-v2-mt-plek"); v.setAttribute("aria-hidden", "true"); v.appendChild(el("span", "m")); return v; }
+    // Eén vak voor het versleepte blok, en een tweede voor het gekoppelde blok als er een is.
+    function toonPlek(doel, min, minuten, partner) {
+        var host = gastheer(doel);
+        if (!plek) plek = nieuwVak();
+        zetPlekVak(plek, host, min, minuten);
+        if (partner) { if (!plek2) { plek2 = nieuwVak(); plek2.classList.add("is-koppel"); } zetPlekVak(plek2, host, min + partner.offset, partner.minuten); }
+        else if (plek2) plek2.remove();
+    }
+    function wisPlek(ook) { if (plek && (ook || !plekVast)) { plek.remove(); if (plek2) plek2.remove(); plekVast = false; } }
     function herlaadBehoudScroll() { try { if (scroller) sessionStorage.setItem("mt-scroll", String(scroller.scrollTop)); } catch (e) { } herlaad(); }
     // Zet een bestaand blok direct op de nieuwe plek en geeft een functie terug die het weer terugzet.
     function plaatsBlok(blok, doel, datum, min, minuten) {
@@ -170,7 +184,12 @@
     // Eén plek voor muis en aanraking: toon het resultaat meteen, sla dan op, en zet alles terug als het niet lukt.
     function neerzetten(info, blok, doel, datum, min) {
         var terug = null;
-        if (blok) { wisPlek(true); terug = plaatsBlok(blok, doel, datum, min, info.min); }
+        if (blok) {
+            wisPlek(true);
+            var partner = partnerVan(blok), terugBlok = plaatsBlok(blok, doel, datum, min, info.min);
+            var terugPartner = partner ? plaatsBlok(partner.el, doel, datum, min + partner.offset, partner.minuten) : null;
+            terug = function () { terugBlok(); if (terugPartner) terugPartner(); };
+        }
         else if (plek) { plekVast = true; plek.classList.add("is-bezig"); }   // een taak uit de lijst: de plaatshouder blijft staan tot het opgeslagen is
         return verplaats(info, datum, min, info.min).then(herlaadBehoudScroll, function () {
             if (terug) terug(); else { if (plek) plek.classList.remove("is-bezig"); wisPlek(true); }
@@ -185,7 +204,7 @@
         if (!isBlok && !el.dataset.id) return;
         sluitPop();
         // Bij een bestaand blok onthouden we waar je het vastpakte, zodat het niet naar de cursor springt.
-        sleep = { blok: isBlok, info: isBlok ? blokInfo(el) : { kind: "taak", id: el.dataset.id, min: parseInt(el.dataset.min, 10) || 30 }, off: isBlok ? e.clientY - el.getBoundingClientRect().top : 0, el: isBlok ? el : null };
+        sleep = { blok: isBlok, info: isBlok ? blokInfo(el) : { kind: "taak", id: el.dataset.id, min: parseInt(el.dataset.min, 10) || 30 }, off: isBlok ? e.clientY - el.getBoundingClientRect().top : 0, el: isBlok ? el : null, partner: isBlok ? partnerVan(el) : null };
         e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", el.dataset.id || el.dataset.event || "");
         el.classList.add("is-dragging");
     });
@@ -193,7 +212,7 @@
     function maakDoel(doel, datumFn) {
         doel.addEventListener("dragover", function (e) {
             if (!sleep) return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; doel.classList.add("is-dropping");
-            toonPlek(doel, minOnder(doel, e.clientY, sleep.off), sleep.info.min);
+            toonPlek(doel, minOnder(doel, e.clientY, sleep.off), sleep.info.min, sleep.partner);
         });
         doel.addEventListener("dragleave", function (e) { if (!doel.contains(e.relatedTarget)) { doel.classList.remove("is-dropping"); if (plek && gastheer(doel).contains(plek)) wisPlek(false); } });
         doel.addEventListener("drop", function (e) {
@@ -245,7 +264,7 @@
         var isBlok = src.classList.contains("gl-v2-mt-block");
         var info = isBlok ? blokInfo(src) : { kind: "taak", id: src.dataset.id, min: parseInt(src.dataset.min, 10) || 30 };
         var x0 = e.clientX, y0 = e.clientY, off = isBlok ? e.clientY - src.getBoundingClientRect().top : 0;
-        var actief = false, ghost = null, timer = null;
+        var actief = false, ghost = null, timer = null, partnerBlok = isBlok ? partnerVan(src) : null;
         src.draggable = false;
         function blokkeer(ev) { if (actief) ev.preventDefault(); }
         function ruim() {
@@ -263,7 +282,7 @@
             ghost.style.left = (x - src.offsetWidth / 2) + "px"; ghost.style.top = (y - (isBlok ? off : 18)) + "px";
             $$(".is-dropping").forEach(function (z) { z.classList.remove("is-dropping"); });
             var d = doelOnder(x, y); if (d) d.el.classList.add("is-dropping");
-            if (d && !d.lijst) toonPlek(d.el, minOnder(d.el, y, isBlok ? off : 0), info.min); else wisPlek(false);
+            if (d && !d.lijst) toonPlek(d.el, minOnder(d.el, y, isBlok ? off : 0), info.min, partnerBlok); else wisPlek(false);
         }
         function beweeg(ev) {
             if (!actief) { if (Math.abs(ev.clientX - x0) > 8 || Math.abs(ev.clientY - y0) > 8) ruim(); return; }   // gewoon scrollen

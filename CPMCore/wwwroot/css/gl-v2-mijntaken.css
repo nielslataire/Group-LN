@@ -461,3 +461,5 @@
 .gl-v2-mt-block.is-short .gl-v2-mt-koppelicoon { position: static; flex: none; }
 .gl-v2-btn.gl-v2-mt-verwijder { color: var(--gl-v2-danger, #8B2A2A); }
 .gl-v2-btn.gl-v2-mt-verwijder:hover { background: var(--gl-v2-danger-tint, #F8EBEB); }
+.gl-v2-mt-plek.is-koppel { border-color: #2F4F7A; background: rgba(47, 79, 122, .08); }
+.gl-v2-mt-plek.is-koppel .m { color: #2F4F7A; }
