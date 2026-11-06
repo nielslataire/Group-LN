@@ -50,6 +50,10 @@ public static class MtFormat
         /// <summary>Een afspraak die je zelf mag wijzigen (jij bent de organisator).</summary>
         public bool Bewerkbaar { get; set; }
         public bool Deelnemers { get; set; }
+        /// <summary>Id van de afspraak waar dit item bij hoort als ze een blok Reistijd hebben (hetzelfde voor allebei); anders null.</summary>
+        public string? KoppelId { get; set; }
+        /// <summary>Dit item is het blok Reistijd van een afspraak.</summary>
+        public bool IsReistijd { get; set; }
         public int? TaakId { get; set; }
         public string Titel { get; set; } = "";
         public string Project { get; set; } = "";
@@ -78,7 +82,7 @@ public static class MtFormat
         var van = dag.Date.AddHours(uurVan); var tot = dag.Date.AddHours(uurTot);
         var lijst = new List<KalItem>();
         foreach (var a in afspraken)
-            lijst.Add(new KalItem { Afspraak = true, EventId = a.Id, Bewerkbaar = a.IsOrganisator && !string.IsNullOrEmpty(a.Id), Deelnemers = a.HeeftDeelnemers, Titel = a.Titel, Start = a.Start, Einde = a.Einde, Plaats = a.Plaats, Link = a.Link, Online = a.Online, Vrij = a.ToonAls == "free", Kleur = "#2F4F7A", ProjectId = a.ProjectId, Project = a.ProjectNaam ?? "", VoorstelProjectId = a.VoorstelProjectId, VoorstelProject = a.VoorstelProjectNaam });
+            lijst.Add(new KalItem { Afspraak = true, EventId = a.Id, Bewerkbaar = a.IsOrganisator && !string.IsNullOrEmpty(a.Id), Deelnemers = a.HeeftDeelnemers, KoppelId = a.KoppelId, IsReistijd = a.IsReistijd, Titel = a.Titel, Start = a.Start, Einde = a.Einde, Plaats = a.Plaats, Link = a.Link, Online = a.Online, Vrij = a.ToonAls == "free", Kleur = "#2F4F7A", ProjectId = a.ProjectId, Project = a.ProjectNaam ?? "", VoorstelProjectId = a.VoorstelProjectId, VoorstelProject = a.VoorstelProjectNaam });
         foreach (var b in taken)
             lijst.Add(new KalItem { TaakId = b.TaakId, Titel = b.Titel, Project = b.Project, Kleur = b.Kleur, Start = b.Start, Einde = b.Einde });
         lijst = lijst.Where(i => i.Einde > van && i.Start < tot).ToList();

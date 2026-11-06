@@ -452,3 +452,12 @@
 .gl-v2-mt-plek .m { font: 600 11px var(--gl-v2-font-mono, "IBM Plex Mono", monospace); color: var(--gl-v2-primary); }
 .gl-v2-mt-plek.is-bezig { background: rgba(0, 83, 45, .14); }
 .gl-v2-mt-block.is-bezig { opacity: .75; pointer-events: none; }
+
+/* Afspraak en blok Reistijd zijn zichtbaar gekoppeld: een icoon in de hoek, het reistijdblok gestippeld, en bij hover licht het paar samen op. */
+.gl-v2-mt-koppelicoon { position: absolute; top: 4px; right: 6px; font-size: 12px; color: var(--c, var(--gl-v2-primary)); opacity: .75; pointer-events: none; }
+.gl-v2-mt-block.is-reistijd { border-style: dashed; background: repeating-linear-gradient(135deg, rgba(47, 79, 122, .07) 0 6px, transparent 6px 12px), var(--gl-v2-surface); }
+.gl-v2-mt-block.is-reistijd .t { font-weight: 500; }
+.gl-v2-mt-block.is-koppel-hover { box-shadow: 0 0 0 2.5px rgba(47, 79, 122, .35); z-index: 5; }
+.gl-v2-mt-block.is-short .gl-v2-mt-koppelicoon { position: static; flex: none; }
+.gl-v2-btn.gl-v2-mt-verwijder { color: var(--gl-v2-danger, #8B2A2A); }
+.gl-v2-btn.gl-v2-mt-verwijder:hover { background: var(--gl-v2-danger-tint, #F8EBEB); }

@@ -134,6 +134,26 @@ public partial class MijnTakenController
         return Json(new { ok = true, bezet = bezet.Select(b => new { van = b.Van, tot = b.Tot, titel = b.Titel, plaats = b.Plaats }) });
     }
 
+    // Afspraak verwijderen (ticket #16): ook het blok Reistijd dat eraan gekoppeld is (of de afspraak, als je het blok verwijdert).
+    [HttpPost("AgendaVerwijder"), ValidateAntiForgeryToken, CPMCore.Filters.PermissionWrite(BOCore.PermissionCodes.MijnTaken)]
+    public async Task<IActionResult> AgendaVerwijder(string eventId)
+    {
+        var c = await _assistent.Context(User);
+        if (c == null) return Forbid();
+        var fout = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.OutlookSync.OutlookAfspraakService>().VerwijderAsync(c.UserId, c.AgendaGebruiker, eventId);
+        return fout == null ? Json(new { ok = true }) : Fout(fout);
+    }
+
+    // Een taak of actie verwijderen, ook als ze in de agenda staat.
+    [HttpPost("TaakVerwijder"), ValidateAntiForgeryToken, CPMCore.Filters.PermissionWrite(BOCore.PermissionCodes.MijnTaken)]
+    public async Task<IActionResult> TaakVerwijder(int id)
+    {
+        var c = await _assistent.Context(User);
+        if (c == null) return Forbid();
+        var fout = await _assistent.Verwijder(c, id);
+        return fout == null ? Json(new { ok = true }) : Fout(fout);
+    }
+
     [HttpPost("AfspraakOntkoppel"),ValidateAntiForgeryToken, CPMCore.Filters.PermissionWrite(BOCore.PermissionCodes.MijnTaken)]
     public async Task<IActionResult> AfspraakOntkoppel(string eventId)
     {

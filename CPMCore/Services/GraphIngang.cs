@@ -29,6 +29,10 @@ public sealed class AgendaAfspraak
     public bool Afgewezen { get; set; }
     /// <summary>E-mailadressen van de deelnemers en de organisator (voor het voorstel van een project). Niet bewaard.</summary>
     public List<string> Deelnemers { get; set; } = new();
+    /// <summary>Ingevuld door OutlookAfspraakService: het Graph-id van de afspraak waar dit item bij hoort, voor een afspraak en haar blok Reistijd (hetzelfde id, het id van de afspraak). Null zonder koppeling.</summary>
+    public string? KoppelId { get; set; }
+    /// <summary>Ingevuld door OutlookAfspraakService: dit item is het blok Reistijd van een afspraak.</summary>
+    public bool IsReistijd { get; set; }
     // Hierna: ingevuld door OutlookAfspraakService, nooit door Graph. Het gekoppelde project en het voorstel van CPM.
     public int? ProjectId { get; set; }
     public string? ProjectNaam { get; set; }
@@ -69,6 +73,9 @@ public interface IGraphIngang
 
     /// <summary>Wijzigt titel en tijd van een afspraak. Geeft een foutmelding terug, of null bij succes.</summary>
     Task<string?> BijwerkenAfspraakAsync(string? gebruiker, string eventId, string? titel, DateTime start, DateTime einde, CancellationToken ct = default);
+
+    /// <summary>Verwijdert een afspraak uit de Outlook-agenda. Is de gebruiker de organisator van een vergadering met deelnemers, dan stuurt Outlook hen een annulering. Een afspraak die er al niet meer is, telt als gelukt. Geeft een foutmelding terug, of null bij succes.</summary>
+    Task<string?> VerwijderAfspraakAsync(string? gebruiker, string eventId, CancellationToken ct = default);
 
     /// <summary>Maakt een afspraak in de Outlook-agenda aan. Zonder <see cref="NieuweAfspraak.Uitnodigen"/> komen er geen deelnemers op de afspraak en gaat er dus geen uitnodiging uit;
     /// met e-mailadressen stuurt Outlook de uitnodigingen. Geeft het event-id terug, of een foutmelding.</summary>
@@ -357,6 +364,36 @@ public sealed class GraphIngang : IGraphIngang
         {
             _logger.LogWarning(ex, "Outlook-afspraak wijzigen mislukt voor {Gebruiker}.", gebruiker);
             return "De afspraak kon niet gewijzigd worden. Probeer het later opnieuw.";
+        }
+    }
+
+    /// <summary>Verwijdert een afspraak (DELETE <c>/users/{id}/events/{id}</c>). Vereist <c>Calendars.ReadWrite</c>. Bestaat ze niet meer (404), dan is het doel bereikt.</summary>
+    public async Task<string?> VerwijderAfspraakAsync(string? gebruiker, string eventId, CancellationToken ct = default)
+    {
+        if (_client == null || string.IsNullOrWhiteSpace(gebruiker)) return "De Outlook-agenda is niet gekoppeld.";
+        if (string.IsNullOrWhiteSpace(eventId)) return "Deze afspraak is onbekend.";
+        try
+        {
+            await _client.Users[gebruiker].Events[eventId].Request().DeleteAsync(ct);
+            foreach (var k in _cache.Keys.Where(k => k.StartsWith(gebruiker + "|", StringComparison.Ordinal)).ToList()) _cache.TryRemove(k, out _);
+            return null;
+        }
+        catch (ServiceException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            foreach (var k in _cache.Keys.Where(k => k.StartsWith(gebruiker + "|", StringComparison.Ordinal)).ToList()) _cache.TryRemove(k, out _);
+            return null;
+        }
+        catch (ServiceException ex)
+        {
+            _logger.LogWarning(ex, "Outlook-afspraak verwijderen mislukt voor {Gebruiker} (status {Status}).", gebruiker, (int)ex.StatusCode);
+            return ex.StatusCode is System.Net.HttpStatusCode.Forbidden or System.Net.HttpStatusCode.Unauthorized
+                ? "Je mag deze afspraak niet verwijderen. De app heeft de Graph-machtiging Calendars.ReadWrite nodig."
+                : "De afspraak kon niet verwijderd worden. Probeer het later opnieuw.";
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Outlook-afspraak verwijderen mislukt voor {Gebruiker}.", gebruiker);
+            return "De afspraak kon niet verwijderd worden. Probeer het later opnieuw.";
         }
     }
 

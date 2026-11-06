@@ -200,6 +200,27 @@ public class OutlookAfspraakService
         return koppelFout == null ? (eventId, waarschuwing) : (eventId, "De afspraak staat in Outlook, maar kon niet aan het project gekoppeld worden. Koppel ze via de afspraak.");
     }
 
+    /// <summary>Verwijdert een afspraak uit de Outlook-agenda (ticket #16), samen met haar blok Reistijd, of omgekeerd als <paramref name="eventId"/> het blok is: wat gekoppeld is, gaat samen weg.
+    /// Is de afspraak aan een project gekoppeld, dan verdwijnt ook dat koppelrecord. Mislukt het verwijderen van de afspraak zelf, dan blijft alles staan (ook de koppelingen). Bestaat iets al niet meer in Outlook, dan telt dat als gelukt.</summary>
+    /// <returns>Een foutmelding, of null bij succes.</returns>
+    public async Task<string?> VerwijderAsync(int userId, string? agendaGebruiker, string eventId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(eventId)) return "Deze afspraak is onbekend.";
+        var link = await _db.OutlookAfspraakReistijd.FirstOrDefaultAsync(r => r.UserId == userId && (r.EventId == eventId || r.BlokEventId == eventId), ct);
+        var hoofdId = link?.EventId ?? eventId;
+
+        // Eerst de afspraak, dan het blok: mislukt de afspraak, dan blijft er niets half achter.
+        var fout = await _graph.VerwijderAfspraakAsync(agendaGebruiker, hoofdId, ct);
+        if (fout != null) return fout;
+        string? blokFout = null;
+        if (link != null) blokFout = await _graph.VerwijderAfspraakAsync(agendaGebruiker, link.BlokEventId, ct);
+
+        _db.OutlookAfspraakReistijd.RemoveRange(_db.OutlookAfspraakReistijd.Where(r => r.UserId == userId && r.EventId == hoofdId));
+        _db.OutlookAfspraak.RemoveRange(_db.OutlookAfspraak.Where(k => k.UserId == userId && k.EventId == hoofdId));
+        await _db.SaveChangesAsync(ct);
+        return blokFout == null ? null : "De afspraak is verwijderd, maar het blok Reistijd kon niet verwijderd worden. Verwijder het zelf in je agenda.";
+    }
+
     /// <summary>Het blok Reistijd dat bij een afspraak hoort, of null.</summary>
     public async Task<OutlookAfspraakReistijd?> ReistijdAsync(int userId, string eventId, CancellationToken ct = default) =>
         await _db.OutlookAfspraakReistijd.AsNoTracking().FirstOrDefaultAsync(r => r.UserId == userId && r.EventId == eventId, ct);
@@ -252,10 +273,16 @@ public class OutlookAfspraakService
 
         var ids = lijst.Select(a => a.Id).Distinct().ToList();
         var koppelingen = await _db.OutlookAfspraak.AsNoTracking().Where(k => k.UserId == userId && ids.Contains(k.EventId)).ToDictionaryAsync(k => k.EventId, k => k.ProjectId, ct);
+        var reisLinks = await _db.OutlookAfspraakReistijd.AsNoTracking().Where(r => r.UserId == userId && (ids.Contains(r.EventId) || ids.Contains(r.BlokEventId))).ToListAsync(ct);
 
         MailContext? ctx = null;
         foreach (var a in lijst)
         {
+            a.KoppelId = null; a.IsReistijd = false;
+            var als = reisLinks.FirstOrDefault(r => r.EventId == a.Id);
+            var alsBlok = als == null ? reisLinks.FirstOrDefault(r => r.BlokEventId == a.Id) : null;
+            if (als != null) a.KoppelId = als.EventId;
+            else if (alsBlok != null) { a.KoppelId = alsBlok.EventId; a.IsReistijd = true; }
             a.ProjectId = null; a.ProjectNaam = null; a.VoorstelProjectId = null; a.VoorstelProjectNaam = null;
             if (koppelingen.TryGetValue(a.Id, out var gekoppeld))
             {

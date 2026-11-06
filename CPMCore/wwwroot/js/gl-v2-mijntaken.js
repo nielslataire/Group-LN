@@ -282,6 +282,31 @@
     // Geen contextmenu of tekstselectie bij ingedrukt houden op een blok.
     document.addEventListener("contextmenu", function (e) { if (e.target.closest && e.target.closest(".gl-v2-mt-block, .gl-v2-mt-act") && e.pointerType !== "mouse" && "ontouchstart" in window) e.preventDefault(); });
 
+    // ── Verwijderen ──
+    // Het blok (of de twee gekoppelde blokken: afspraak en reistijd) verdwijnt meteen uit de agenda; pas daarna wordt het opgeslagen. Lukt dat niet, dan staat alles weer terug.
+    function bevestig(opties) {
+        if (window.GlV2Dialog) return window.GlV2Dialog.confirm(opties);
+        return Promise.resolve(window.confirm(opties.title));
+    }
+    function verwijderBlokken(blokken, aanvraag) {
+        var terug = blokken.map(function (b) { return { b: b, ouder: b.parentNode, volgend: b.nextSibling }; });
+        blokken.forEach(function (b) { b.remove(); });
+        return aanvraag().then(herlaadBehoudScroll, function () { terug.forEach(function (t) { if (t.ouder) t.ouder.insertBefore(t.b, t.volgend); }); });
+    }
+    function gekoppeldeBlokken(b) {
+        var k = b.dataset.koppel;
+        return k ? $$(".gl-v2-mt-block").filter(function (x) { return x.dataset.koppel === k; }) : [b];
+    }
+    // Wie op een afspraak of haar reistijd wijst, ziet ook het andere blok oplichten.
+    document.addEventListener("mouseover", function (e) {
+        var b = e.target.closest && e.target.closest(".gl-v2-mt-block[data-koppel]"); if (!b || !b.dataset.koppel) return;
+        gekoppeldeBlokken(b).forEach(function (x) { x.classList.add("is-koppel-hover"); });
+    });
+    document.addEventListener("mouseout", function (e) {
+        var b = e.target.closest && e.target.closest(".gl-v2-mt-block[data-koppel]"); if (!b) return;
+        $$(".is-koppel-hover").forEach(function (x) { x.classList.remove("is-koppel-hover"); });
+    });
+
     // ── Popover ──
     var pop = null;
     function sluitPop() { if (pop) { pop.remove(); pop = null; } }
@@ -370,6 +395,7 @@
             if (afspraak && b.dataset.plaats) body.appendChild(rij("ph-map-pin", b.dataset.plaats));
             if (afspraak && b.dataset.online === "1") body.appendChild(rij("ph-video-camera", "Online vergadering"));
             if (!afspraak && b.dataset.project) body.appendChild(rij("ph-buildings", b.dataset.project));
+            if (afspraak && b.dataset.koppel) body.appendChild(rij(b.dataset.reistijd === "1" ? "ph-link-simple" : "ph-car", b.dataset.reistijd === "1" ? "Reistijd bij een afspraak. Verplaats je dit blok, dan gaat de afspraak mee." : "Heeft een blok reistijd. Het gaat mee als je de afspraak verplaatst."));
             if (afspraak && b.dataset.deelnemers === "1") body.appendChild(el("div", "gl-v2-mt-pop-noot", "Deze afspraak heeft deelnemers. Outlook stuurt hen een update als je de tijd wijzigt."));
             if (afspraak) body.appendChild(el("div", "gl-v2-mt-pop-noot", "Je wijziging staat meteen in Outlook."));
         }
@@ -387,12 +413,31 @@
         if (!afspraak) {
             var start = knop("Start", "gl-v2-btn-secondary", "ph-play"), klaar = knop("Klaar", "gl-v2-btn-secondary", "ph-check"), weg = knop("Terug naar acties", "gl-v2-btn-text", "ph-arrow-u-up-left");
             ac.appendChild(start); ac.appendChild(klaar); ac.appendChild(el("span", "sp")); ac.appendChild(weg);
+            var verwijder = knop("Verwijderen", "gl-v2-btn-text gl-v2-mt-verwijder", "ph-trash"); ac.appendChild(verwijder);
+            verwijder.addEventListener("click", function () {
+                bevestig({ title: "Deze taak verwijderen?", description: "“" + b.dataset.titel + "” verdwijnt uit je agenda en je lijsten. De tijd die je er al aan werkte, blijft bewaard.", confirmLabel: "Verwijderen", cancelLabel: "Annuleren", tone: "danger", icon: "ph-trash" }).then(function (ja) {
+                    if (!ja) return; sluitPop();
+                    verwijderBlokken([b], function () { return post("TaakVerwijder", { id: b.dataset.id }); });
+                });
+            });
             start.addEventListener("click", function () { post("TimerStart", { taakId: b.dataset.id }).then(herlaad, mislukt); });
             klaar.addEventListener("click", function () { post("Afvinken", { id: b.dataset.id, klaar: true }).then(herlaad, mislukt); });
             weg.addEventListener("click", function () { post("Ontplan", { id: b.dataset.id }).then(herlaad, mislukt); });
         } else if (b.dataset.link) {
             var a = el("a", "gl-v2-btn gl-v2-btn-secondary"); a.href = b.dataset.link; a.target = "_blank"; a.rel = "noopener";
             a.innerHTML = '<i class="ph ph-arrow-square-out" aria-hidden="true"></i>Openen in Outlook'; ac.appendChild(a);
+        }
+        if (afspraak && bewerkbaar) {
+            var verwijderAfspraak = knop("Verwijderen", "gl-v2-btn-text gl-v2-mt-verwijder", "ph-trash"); ac.appendChild(verwijderAfspraak);
+            verwijderAfspraak.addEventListener("click", function () {
+                var paar = gekoppeldeBlokken(b), metBlok = paar.length > 1;
+                var uitleg = "“" + b.dataset.titel + "” verdwijnt uit je Outlook-agenda." + (metBlok ? " Het gekoppelde blok reistijd gaat samen met de afspraak weg." : "")
+                    + (b.dataset.deelnemers === "1" ? " Outlook stuurt de deelnemers een annulering." : "") + (b.dataset.projectId ? " De koppeling met het project verdwijnt ook." : "");
+                bevestig({ title: "Deze afspraak verwijderen?", description: uitleg, confirmLabel: "Verwijderen", cancelLabel: "Annuleren", tone: "danger", icon: "ph-trash" }).then(function (ja) {
+                    if (!ja) return; sluitPop();
+                    verwijderBlokken(paar, function () { return post("AgendaVerwijder", { eventId: b.dataset.event }); });
+                });
+            });
         }
         if (afspraak) koppelBlok(body, ac, b);
         if (ac.childNodes.length) body.appendChild(ac);
@@ -421,7 +466,15 @@
         var min = parseInt(card.dataset.min, 10) || 30, van = volgendHalfuur();
         var tv = tijdVelden(body, datum, van, van + min);
         var ac = el("div", "gl-v2-mt-pop-acties"), ok = knop("Inplannen", "gl-v2-btn-primary", "ph-calendar-plus"), nee = knop("Annuleren", "gl-v2-btn-text");
-        ac.appendChild(ok); ac.appendChild(nee); body.appendChild(ac);
+        var weg = knop("Verwijderen", "gl-v2-btn-text gl-v2-mt-verwijder", "ph-trash");
+        ac.appendChild(ok); ac.appendChild(nee); ac.appendChild(el("span", "sp")); ac.appendChild(weg); body.appendChild(ac);
+        weg.addEventListener("click", function () {
+            var naam = card.querySelector(".t").textContent;
+            bevestig({ title: "Deze actie verwijderen?", description: "“" + naam + "” verdwijnt uit je lijsten. De tijd die je er al aan werkte, blijft bewaard.", confirmLabel: "Verwijderen", cancelLabel: "Annuleren", tone: "danger", icon: "ph-trash" }).then(function (ja) {
+                if (!ja) return; sluitPop();
+                verwijderBlokken([card], function () { return post("TaakVerwijder", { id: card.dataset.id }); });
+            });
+        });
         ok.addEventListener("click", function () {
             var t = tv.lees(); if (!t) { toast("warning", "Controleer de tijden", "Het einde moet na het begin liggen."); return; }
             ok.disabled = true; post("PlanWijzig", { id: card.dataset.id, start: t.datum + "T" + hm(t.van), minuten: t.minuten }).then(herlaad, function () { ok.disabled = false; });

@@ -147,15 +147,32 @@ public class MijnTakenAssistent
         var shell = new MtShell { Tab = tab, Ondertitel = ondertitel, InboxAantal = inbox, Projecten = c.Projecten.Values.ToList(),
             RecenteProjecten = tab is "vandaag" or "week" ? await _afspraken.RecenteProjectenAsync(c.UserId, c.ProjectIds) : new List<int>() };
 
-        var laatste = await _db.TaakTijd.AsNoTracking().Where(x => x.UserId == c.UserId).OrderByDescending(x => x.Start).FirstOrDefaultAsync();
+        var laatste = await LaatsteTimer(c, false);
         if (laatste != null)
         {
             var lopend = laatste.Einde == null;
             var taakOpen = laatste.TaakId == null || await _db.ProjectTaak.AnyAsync(t => t.Id == laatste.TaakId && t.Status != StatusAfgerond && t.Status != StatusGeannuleerd);
             if (lopend || (taakOpen && laatste.Einde!.Value > c.Nu.AddHours(-6)))
+            {
                 shell.Timer = Blok(laatste, c);
+                // Hervat je een taak na een pauze, dan telt de tijd van eerdere sessies van die dag mee: de timer begint niet opnieuw. Het begin schuift daarvoor virtueel naar achter.
+                var dagStart = laatste.Start.Date;
+                var eerder = await _db.TaakTijd.AsNoTracking().Where(x => x.UserId == c.UserId && x.Id != laatste.Id && x.Einde != null && x.Start >= dagStart && x.Start < dagStart.AddDays(1)
+                    && (laatste.TaakId != null ? x.TaakId == laatste.TaakId : x.TaakId == null && x.Titel == laatste.Titel)).ToListAsync();
+                var basis = TimeSpan.FromSeconds(eerder.Sum(x => Math.Max(0, (x.Einde!.Value - x.Start).TotalSeconds)));
+                if (basis > TimeSpan.Zero) shell.Timer.Start -= basis;
+            }
         }
         return shell;
+    }
+
+    /// <summary>De timer waar het om gaat: een lopende gaat voor (ook als ze met terugwerkende kracht begon, dus vóór een eerder gestopte), anders de laatst gestopte.
+    /// <paramref name="metTracking"/> geeft een bewerkbare rij.</summary>
+    private async Task<TaakTijd?> LaatsteTimer(MtContext c, bool metTracking)
+    {
+        var q = metTracking ? _db.TaakTijd.Where(x => x.UserId == c.UserId) : _db.TaakTijd.AsNoTracking().Where(x => x.UserId == c.UserId);
+        var lopend = await q.Where(x => x.Einde == null).OrderByDescending(x => x.Start).FirstOrDefaultAsync();
+        return lopend ?? await q.OrderByDescending(x => x.Einde).ThenByDescending(x => x.Start).FirstOrDefaultAsync();
     }
 
     private MtBlok Blok(TaakTijd x, MtContext c) => new()
@@ -555,6 +572,18 @@ public class MijnTakenAssistent
     /// <summary>Titel van het blok reistijd bij een afspraak (zie <see cref="OutlookAfspraakService.MaakAsync"/>).</summary>
     public static string ReisBlokTitel(string afspraakTitel) => "Reistijd: " + afspraakTitel;
 
+    /// <summary>Verwijdert een taak of actie (ook uit de agenda): ze wordt geannuleerd en verdwijnt overal; de gemeten tijd blijft bewaard.</summary>
+    public async Task<string?> Verwijder(MtContext c, int id)
+    {
+        var t = await EigenTaak(c, id);
+        if (t == null) return "Taak niet gevonden.";
+        await StopLopende(c, DateTime.Now, id);
+        t.Status = StatusGeannuleerd; t.GeplandStart = null; t.GeplandMinuten = null;
+        t.ModifiedDate = DateTime.UtcNow; t.ModifiedByUserId = c.UserStr;
+        await _db.SaveChangesAsync();
+        return null;
+    }
+
     public async Task<string?> Ontplan(MtContext c, int id)
     {
         var t = await EigenTaak(c, id);
@@ -639,7 +668,7 @@ public class MijnTakenAssistent
 
     public async Task<string?> Klaar(MtContext c)
     {
-        var laatste = await _db.TaakTijd.Where(x => x.UserId == c.UserId).OrderByDescending(x => x.Start).FirstOrDefaultAsync();
+        var laatste = await LaatsteTimer(c, true);
         if (laatste == null) return "Er loopt geen timer.";
         if (laatste.Einde == null) laatste.Einde = DateTime.Now;
         if (laatste.TaakId != null)
@@ -654,7 +683,7 @@ public class MijnTakenAssistent
     /// <summary>Hervat de laatst gestopte taak.</summary>
     public async Task<string?> Hervat(MtContext c)
     {
-        var laatste = await _db.TaakTijd.AsNoTracking().Where(x => x.UserId == c.UserId).OrderByDescending(x => x.Start).FirstOrDefaultAsync();
+        var laatste = await LaatsteTimer(c, false);
         if (laatste == null) return "Er is niets om te hervatten.";
         if (laatste.Einde == null) return null;
         if (laatste.TaakId != null) return (await Start(c, laatste.TaakId, null, null, null, 0)).Fout;

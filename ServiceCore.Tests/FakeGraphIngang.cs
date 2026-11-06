@@ -58,6 +58,17 @@ public sealed class FakeGraphIngang : IGraphIngang
         return Task.FromResult<string?>(null);
     }
 
+    public List<string> Verwijderd { get; } = new();
+    public string? VerwijderFout { get; set; }
+
+    public Task<string?> VerwijderAfspraakAsync(string? gebruiker, string eventId, CancellationToken ct = default)
+    {
+        if (VerwijderFout != null) return Task.FromResult<string?>(VerwijderFout);
+        Verwijderd.Add(eventId);
+        if (gebruiker != null && Agenda.TryGetValue(gebruiker, out var lijst)) lijst.RemoveAll(a => a.Id == eventId);
+        return Task.FromResult<string?>(null);   // een afspraak die er niet (meer) is, telt als gelukt
+    }
+
     public List<(string? Gebruiker, NieuweAfspraak Afspraak)> Aangemaakt { get; } = new();
     public string? AanmaakFout { get; set; }
 

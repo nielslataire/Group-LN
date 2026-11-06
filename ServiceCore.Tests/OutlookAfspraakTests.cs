@@ -370,6 +370,130 @@ public class OutlookAfspraakTests
         Assert.Equal(60, db.OutlookAfspraakReistijd.Single().Minuten);
     }
 
+    // ── Verwijderen (ticket #16) ─────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Een_afspraak_verwijderen_verwijdert_ook_haar_blok_reistijd_en_de_koppelingen()
+    {
+        var (_, afspraken, db, graph) = Bouw();
+        var (eventId, _) = await afspraken.MaakAsync(1, "entra-an", 2, Zichtbaar, "Werfbezoek", Nu.AddHours(3), 60, "Keerstraat 12", false, null, 15, null, 30);
+        var blokId = db.OutlookAfspraakReistijd.Single().BlokEventId;
+
+        Assert.Null(await afspraken.VerwijderAsync(1, "entra-an", eventId!));
+
+        Assert.Equal(new[] { eventId!, blokId }, graph.Verwijderd);
+        Assert.Empty(graph.Agenda["entra-an"]);
+        Assert.Empty(db.OutlookAfspraak);
+        Assert.Empty(db.OutlookAfspraakReistijd);
+    }
+
+    [Fact]
+    public async Task Het_blok_reistijd_verwijderen_verwijdert_ook_de_afspraak()
+    {
+        var (_, afspraken, db, graph) = Bouw();
+        var (eventId, _) = await afspraken.MaakAsync(1, "entra-an", null, Zichtbaar, "Tandarts", Nu.AddHours(3), 30, "Gent", false, null, 15, null, 20);
+        var blokId = db.OutlookAfspraakReistijd.Single().BlokEventId;
+
+        Assert.Null(await afspraken.VerwijderAsync(1, "entra-an", blokId));
+
+        Assert.Empty(graph.Agenda["entra-an"]);
+        Assert.Contains(eventId!, graph.Verwijderd);
+        Assert.Empty(db.OutlookAfspraakReistijd);
+    }
+
+    [Fact]
+    public async Task Mislukt_het_verwijderen_dan_blijft_alles_staan_ook_de_koppelingen()
+    {
+        var (_, afspraken, db, graph) = Bouw();
+        var (eventId, _) = await afspraken.MaakAsync(1, "entra-an", 2, Zichtbaar, "Werfbezoek", Nu.AddHours(3), 60, "Keerstraat 12", false, null, 15, null, 30);
+        graph.VerwijderFout = "Geen toegang.";
+
+        Assert.Equal("Geen toegang.", await afspraken.VerwijderAsync(1, "entra-an", eventId!));
+
+        Assert.Equal(2, graph.Agenda["entra-an"].Count);
+        Assert.Single(db.OutlookAfspraak);
+        Assert.Single(db.OutlookAfspraakReistijd);
+    }
+
+    [Fact]
+    public async Task Een_afspraak_zonder_blok_en_zonder_project_kan_gewoon_verwijderd_worden()
+    {
+        var (_, afspraken, _, graph) = Bouw();
+        var (eventId, _) = await Maak(afspraken, null, "Tandarts", Nu.AddHours(3), 30);
+
+        Assert.Null(await afspraken.VerwijderAsync(1, "entra-an", eventId!));
+
+        Assert.Equal(new[] { eventId! }, graph.Verwijderd);
+    }
+
+    [Fact]
+    public async Task De_agenda_toont_welke_afspraak_en_welk_blok_bij_elkaar_horen()
+    {
+        var (assistent, afspraken, _, graph) = Bouw();
+        var (eventId, _) = await afspraken.MaakAsync(1, "entra-an", 2, Zichtbaar, "Werfbezoek", Nu.AddHours(3), 60, "Keerstraat 12", false, null, 15, null, 30);
+        await Maak(afspraken, 1, "Zonder reistijd", Nu.AddHours(6), 30);
+
+        var vm = await assistent.Vandaag(Ctx());
+
+        var hoofd = vm.Afspraken.Single(a => a.Id == eventId);
+        var blok = vm.Afspraken.Single(a => a.Titel == "Reistijd: Werfbezoek");
+        var los = vm.Afspraken.Single(a => a.Titel == "Zonder reistijd");
+        Assert.Equal((eventId, false, eventId, true, (string?)null, false), (hoofd.KoppelId, hoofd.IsReistijd, blok.KoppelId, blok.IsReistijd, los.KoppelId, los.IsReistijd));
+    }
+
+    // ── Timer ────────────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Een_timer_met_terugwerkende_kracht_gaat_voor_op_een_eerder_gestopte_timer_en_toont_de_tijd_al()
+    {
+        var (assistent, _, _, _) = Bouw();
+        var c = Ctx(); c.Nu = DateTime.Now;
+        await assistent.Start(c, null, "Eerste", null, null, 0);
+        await assistent.Pauze(c);
+        await assistent.Start(c, null, "Tweede", null, null, 20);
+
+        var timer = (await assistent.Shell(c, "vandaag", "")).Timer;
+
+        Assert.NotNull(timer);
+        Assert.True(timer!.Loopt);
+        Assert.Equal("Tweede", timer.Titel);
+        Assert.InRange((timer.Einde - timer.Start).TotalMinutes, 19.9, 21);
+    }
+
+    [Fact]
+    public async Task Na_pauzeren_en_hervatten_telt_de_timer_de_eerdere_tijd_van_dezelfde_taak_mee()
+    {
+        var (assistent, _, _, _) = Bouw();
+        var c = Ctx(); c.Nu = DateTime.Now;
+        await assistent.Start(c, null, "Werk", null, null, 20);
+        await assistent.Pauze(c);
+
+        Assert.Null(await assistent.Hervat(c));
+        var timer = (await assistent.Shell(c, "vandaag", "")).Timer;
+
+        Assert.True(timer!.Loopt);
+        Assert.InRange((timer.Einde - timer.Start).TotalMinutes, 19.9, 21);   // niet opnieuw vanaf nul
+    }
+
+    // ── Taak verwijderen ─────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Een_taak_verwijderen_haalt_ze_uit_de_agenda_en_stopt_haar_timer()
+    {
+        var (assistent, _, db, _) = Bouw();
+        var c = Ctx(); c.Nu = DateTime.Now;
+        await assistent.Start(c, null, "Werk", null, null, 0);
+        var taak = db.ProjectTaak.Single();
+        taak.GeplandStart = DateTime.Now; taak.GeplandMinuten = 30; db.SaveChanges();
+
+        Assert.Null(await assistent.Verwijder(c, taak.Id));
+
+        var na = db.ProjectTaak.Single();
+        Assert.Equal(((int)BOCore.TaakStatus.Geannuleerd, (DateTime?)null), (na.Status, na.GeplandStart));
+        Assert.NotNull(db.TaakTijd.Single().Einde);   // de tijd blijft bewaard, maar de timer loopt niet meer
+        Assert.Equal("Taak niet gevonden.", await assistent.Verwijder(c, 9999));
+    }
+
     [Fact]
     public async Task Zonder_reistijd_komt_er_geen_extra_blok()
     {

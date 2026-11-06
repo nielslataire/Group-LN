@@ -22,6 +22,10 @@ faq:
     a: Ja. Kies bij Project de optie Geen project. De afspraak staat dan in je Outlook-agenda, maar hangt aan geen project.
   - q: Hoe berekent CPM de reistijd?
     a: Met Google Maps, met de auto en zonder drukte. Lukt dat niet, dan staat er 30 minuten. Je kunt de reistijd altijd zelf bijstellen.
+  - q: Waarom begint mijn timer niet opnieuw als ik hervat?
+    a: Hervat je dezelfde taak dezelfde dag, dan telt CPM de tijd van eerdere sessies mee. Je ziet dus de totale tijd aan die taak.
+  - q: Wat doet +20 bij Snel starten?
+    a: De timer begint met terugwerkende kracht. Met +20 staat er meteen 20 minuten op en loopt de timer verder.
   - q: Hoe geef ik een uur in?
     a: Tik het uur gewoon in het veld, bijvoorbeeld 9, 930 of 9:30. Of kies een uur uit de lijst.
   - q: Waarom lukt het aanmaken van een afspraak niet?
@@ -127,6 +131,27 @@ Bij het kiezen van het uur zie je of je agenda vrij is. Overlapt de afspraak met
 De afspraak staat meteen in je Outlook-agenda. Met een project is ze eraan gekoppeld en zie je de projectnaam in het blok.
 Enkel de gekozen deelnemers krijgen een uitnodiging per mail. Kies je niemand, dan gaat er niets uit.
 Pas je de tijd of titel later aan in CPM of in Outlook, dan staat dat aan beide kanten. De koppeling met het project blijft behouden.
+
+## Een afspraak of taak verwijderen
+
+1. Klik op het blok in de agenda.
+2. Klik op **Verwijderen** en bevestig.
+
+Het blok verdwijnt meteen uit je agenda. Lukt het verwijderen niet, dan staat het er weer en krijg je een melding.
+- **Afspraak:** ze verdwijnt uit Outlook. Heeft ze deelnemers, dan stuurt Outlook hen een annulering. Een koppeling met een project verdwijnt ook. Enkel de organisator kan een afspraak verwijderen.
+- **Taak:** ze verdwijnt uit je agenda en je lijsten. De tijd die je er al aan werkte, blijft bewaard.
+- **Actie in de lijst Volgende acties:** klik erop en kies **Verwijderen**.
+
+## Afspraak en reistijd horen samen
+
+Maakte je een afspraak met een vertrekblok, dan staat er in je agenda een gestippeld blok **Reistijd** vlak voor de afspraak. Op allebei staat een klein icoon, en als je op het ene blok wijst, licht het andere op.
+- Verplaats je de afspraak, dan gaat de reistijd mee. Dat geldt ook als je de afspraak in Outlook verplaatst.
+- Sleep je het blok Reistijd naar een ander moment, dan gaat de afspraak mee. Trek je enkel aan de bovenrand, dan wordt alleen de reistijd langer of korter.
+- Verwijder je het ene blok, dan verdwijnt ook het andere.
+
+## Slepen in de agenda
+
+Sleep je een blok, dan toont een gestippeld vak waar het komt, met het uur erin. Laat je los, dan staat het blok meteen op die plek en wordt het daarna opgeslagen. Lukt dat niet, dan springt het terug.
 
 ## Let op
 
