@@ -39,8 +39,8 @@ public sealed class AgendaResultaat
     public List<AgendaAfspraak> Afspraken { get; set; } = new();
 }
 
-/// <summary>Wat er nodig is om een afspraak in Outlook aan te maken. <see cref="Online"/> voegt een Teams-vergadering toe; <see cref="HerinneringMinuten"/> null = geen herinnering.</summary>
-public sealed record NieuweAfspraak(string Titel, DateTime Start, DateTime Einde, string? Plaats, bool Online, IReadOnlyList<string> Uitnodigen, int? HerinneringMinuten, string? Notitie);
+/// <summary>Wat er nodig is om een afspraak in Outlook aan te maken. <see cref="Bezet"/> zet de afspraak expliciet op "bezet" (bv. een blok reistijd). <see cref="Online"/> voegt een Teams-vergadering toe; <see cref="HerinneringMinuten"/> null = geen herinnering.</summary>
+public sealed record NieuweAfspraak(string Titel, DateTime Start, DateTime Einde, string? Plaats, bool Online, IReadOnlyList<string> Uitnodigen, int? HerinneringMinuten, string? Notitie, bool Bezet = false);
 
 /// <summary>Uitkomst van <see cref="IGraphIngang.ControleerToegangAsync"/>.</summary>
 public enum GraphToegang { Ok, GeenToegang, GeenMailbox, Fout }
@@ -367,7 +367,8 @@ public sealed class GraphIngang : IGraphIngang
                 Subject = afspraak.Titel.Trim(),
                 Start = new DateTimeTimeZone { DateTime = afspraak.Start.ToString("yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture), TimeZone = Tijdzone },
                 End = new DateTimeTimeZone { DateTime = afspraak.Einde.ToString("yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture), TimeZone = Tijdzone },
-                IsReminderOn = afspraak.HerinneringMinuten.HasValue
+                IsReminderOn = afspraak.HerinneringMinuten.HasValue,
+                ShowAs = afspraak.Bezet ? FreeBusyStatus.Busy : null
             };
             if (afspraak.HerinneringMinuten.HasValue) nieuw.ReminderMinutesBeforeStart = afspraak.HerinneringMinuten.Value;
             if (!string.IsNullOrWhiteSpace(afspraak.Plaats)) nieuw.Location = new Location { DisplayName = afspraak.Plaats.Trim() };

@@ -78,14 +78,14 @@ public partial class MijnTakenController
 
     // Afspraak aanmaken (ticket #8): komt in de Outlook-agenda van de gebruiker en wordt, met een project, meteen gekoppeld. Er gaat enkel een uitnodiging uit naar de gekozen deelnemers.
     [HttpPost("AfspraakMaak"), ValidateAntiForgeryToken, CPMCore.Filters.PermissionWrite(BOCore.PermissionCodes.MijnTaken)]
-    public async Task<IActionResult> AfspraakMaak(int? projectId, string? titel, string start, int minuten, string? plaats, bool online, string? deelnemers, int herinnering, string? notitie)
+    public async Task<IActionResult> AfspraakMaak(int? projectId, string? titel, string start, int minuten, string? plaats, bool online, string? deelnemers, int herinnering, string? notitie, int reistijd)
     {
         var c = await _assistent.Context(User);
         if (c == null) return Forbid();
         var tijd = Tijd(start);
         if (tijd == null) return Fout("Ongeldig tijdstip.");
         var (eventId, fout) = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.OutlookSync.OutlookAfspraakService>()
-            .MaakAsync(c.UserId, c.AgendaGebruiker, projectId, c.ProjectIds, titel, tijd.Value, minuten, plaats, online, deelnemers, herinnering, notitie);
+            .MaakAsync(c.UserId, c.AgendaGebruiker, projectId, c.ProjectIds, titel, tijd.Value, minuten, plaats, online, deelnemers, herinnering, notitie, reistijd);
         if (eventId != null) return Json(new { ok = true, eventId, waarschuwing = fout });   // de afspraak bestaat al in Outlook: niet opnieuw laten maken
         return Fout(fout ?? "De afspraak kon niet aangemaakt worden.");
     }
@@ -111,6 +111,16 @@ public partial class MijnTakenController
         return Json(lijst.Select(p => new { text = p.Naam, sub = p.Adres, tag = p.Soort }));
     }
 
+    // Reistijd met de auto tussen twee adressen (Google Routes, goedkoopste SKU), voor het vertrekblok in Nieuwe afspraak. Zonder resultaat: minuten = null en vult de gebruiker zelf in.
+    [HttpPost("AfspraakReis"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> AfspraakReis(string van, string naar)
+    {
+        var c = await _assistent.Context(User);
+        if (c == null) return Forbid();
+        var minuten = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.IReisTijd>().MinutenAsync(van, naar);
+        return Json(new { ok = true, minuten });
+    }
+
     // Wanneer je op een dag al bezet bent, voor de overlapmelding in het formulier Nieuwe afspraak. Zonder werkende agenda is het antwoord een lege lijst.
     [HttpPost("AfspraakDag"), ValidateAntiForgeryToken]
     public async Task<IActionResult> AfspraakDag(string datum)
@@ -119,7 +129,7 @@ public partial class MijnTakenController
         if (c == null) return Forbid();
         if (!DateTime.TryParseExact(datum, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var dag)) return Json(new { ok = true, bezet = Array.Empty<object>() });
         var bezet = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.OutlookSync.OutlookAfspraakService>().BezetOpAsync(c.AgendaGebruiker, dag);
-        return Json(new { ok = true, bezet = bezet.Select(b => new { van = b.Van, tot = b.Tot, titel = b.Titel }) });
+        return Json(new { ok = true, bezet = bezet.Select(b => new { van = b.Van, tot = b.Tot, titel = b.Titel, plaats = b.Plaats }) });
     }
 
     [HttpPost("AfspraakOntkoppel"),ValidateAntiForgeryToken, CPMCore.Filters.PermissionWrite(BOCore.PermissionCodes.MijnTaken)]

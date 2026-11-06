@@ -260,6 +260,39 @@ public class OutlookAfspraakTests
     }
 
     [Fact]
+    public async Task Met_reistijd_komt_er_een_apart_bezet_blok_vlak_voor_de_afspraak_dat_niet_gekoppeld_wordt()
+    {
+        var (_, afspraken, db, graph) = Bouw();
+
+        var (eventId, fout) = await afspraken.MaakAsync(1, "entra-an", 2, Zichtbaar, "Werfbezoek", Nu.AddHours(3), 60, "Keerstraat 12", false, null, 15, null, 28);
+
+        Assert.Null(fout);
+        Assert.Equal(2, graph.Aangemaakt.Count);
+        var blok = graph.Aangemaakt[1].Afspraak;
+        Assert.Equal(("Reistijd: Werfbezoek", Nu.AddHours(3).AddMinutes(-28), Nu.AddHours(3), true), (blok.Titel, blok.Start, blok.Einde, blok.Bezet));
+        Assert.Equal(eventId, db.OutlookAfspraak.Single().EventId);   // enkel de afspraak is aan het project gekoppeld
+    }
+
+    [Fact]
+    public async Task Zonder_reistijd_komt_er_geen_extra_blok()
+    {
+        var (_, afspraken, _, graph) = Bouw();
+
+        await Maak(afspraken, 1, "Overleg", Nu.AddHours(3), 30);
+
+        Assert.Single(graph.Aangemaakt);
+    }
+
+    [Theory]
+    [InlineData("{\"routes\":[{\"duration\":\"1234s\"}]}", 25)]   // 20,6 min → 25
+    [InlineData("{\"routes\":[{\"duration\":\"480s\"}]}", 10)]
+    [InlineData("{\"routes\":[{\"duration\":\"0s\"}]}", 0)]
+    [InlineData("{}", null)]
+    [InlineData("{\"routes\":[]}", null)]
+    public void De_reistijd_uit_google_wordt_naar_boven_afgerond_op_vijf_minuten(string json, int? verwacht)
+        => Assert.Equal(verwacht, GoogleRoutesReisTijd.Parse(json));
+
+    [Fact]
     public async Task Zonder_deelnemers_gaat_er_geen_uitnodiging_uit()
     {
         var (_, afspraken, _, graph) = Bouw();

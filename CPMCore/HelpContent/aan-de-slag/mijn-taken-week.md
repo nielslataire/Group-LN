@@ -20,6 +20,8 @@ faq:
     a: Alleen de mensen die je bij Deelnemers kiest. Kies je niemand, dan staat de afspraak enkel in je eigen agenda.
   - q: Kan ik een afspraak zonder project maken?
     a: Ja. Kies bij Project de optie Geen project. De afspraak staat dan in je Outlook-agenda, maar hangt aan geen project.
+  - q: Hoe berekent CPM de reistijd?
+    a: Met Google Maps, met de auto en zonder drukte. Lukt dat niet, dan staat er 30 minuten. Je kunt de reistijd altijd zelf bijstellen.
   - q: Hoe geef ik een uur in?
     a: Tik het uur gewoon in het veld, bijvoorbeeld 9, 930 of 9:30. Of kies een uur uit de lijst.
   - q: Waarom lukt het aanmaken van een afspraak niet?
@@ -93,8 +95,9 @@ Een gekoppelde afspraak toont de projectnaam in het blok. Met **Ontkoppelen** ha
 4. Kies de datum. Tik het begin en het einde zelf in, of kies ze uit de lijst. Met de knoppen onder de uren kies je een duur.
 5. Kies de plaats: het adres van het project, het kantoor, een ander adres, online of telefonisch. Bij **Online** voegt Outlook een Teams-link toe.
 6. Kies de deelnemers. Eerst zie je je collega's, daarna de mensen van het project. Typ om te zoeken, of typ een volledig e-mailadres voor iemand van buiten.
-7. Stel eventueel een herinnering in en voeg een notitie toe. Gaat het om een adres, kies dan **Vertrektijd** en geef je reistijd in. De herinnering komt dan je reistijd plus 15 minuten vóór het begin.
-8. Klik op **Afspraak maken** of op **Maken en uitnodigen**.
+7. Bij een adres toont CPM een blok **Vertrek**: hoe laat je moet vertrekken. CPM rekent de reistijd met de auto uit vanaf je kantoor of je vorige afspraak. Je stelt ze bij met de knoppen min en plus, en kiest een marge. Met de schakelaar blokkeert CPM de reistijd in je agenda.
+8. Stel eventueel een herinnering in en voeg een notitie toe. Kies **Bij vertrek** om gewaarschuwd te worden als je moet vertrekken.
+9. Klik op **Afspraak maken** of op **Maken en uitnodigen**.
 
 Bij het kiezen van het uur zie je of je agenda vrij is. Overlapt de afspraak met iets anders, dan staat dat onder de uren. Je kunt de afspraak dan toch maken.
 De afspraak staat meteen in je Outlook-agenda. Met een project is ze eraan gekoppeld en zie je de projectnaam in het blok.

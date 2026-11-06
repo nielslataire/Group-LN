@@ -409,7 +409,7 @@
 .gl-v2-mt-an-duur .gl-v2-notice { margin-left: auto; }
 .gl-v2-mt-an-vrij { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font: 500 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); white-space: nowrap; }
 .gl-v2-mt-an-stip { width: 7px; height: 7px; border-radius: 50%; background: #2F9B4F; }
-#mt-an-vrij[hidden], #mt-an-reis[hidden], #mt-an-vertrek-knop[hidden], #mt-an-conflict[hidden], #mt-an-notitie-rij[hidden], #mt-an-plaats-help[hidden], #mt-an-plaatsen > button[hidden] { display: none; }
+#mt-an-vrij[hidden], #mt-an-vertrek[hidden], #mt-an-vertrek-conflict[hidden], #mt-an-vertrek-knop[hidden], #mt-an-vanaf > button[hidden], #mt-an-conflict[hidden], #mt-an-notitie-rij[hidden], #mt-an-plaats-help[hidden], #mt-an-plaatsen > button[hidden] { display: none; }
 .gl-v2-mt-an-plaatsen { align-self: flex-start; width: fit-content; max-width: 100%; margin-top: 5px; margin-bottom: 8px; flex-wrap: wrap; }
 .gl-v2-mt-an-extra { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 18px; }
 .gl-v2-mt-an-herinnering { display: flex; align-items: center; gap: 8px; }
@@ -420,5 +420,17 @@
     font: 600 10.5px var(--gl-v2-font-mono, 'IBM Plex Mono', monospace); color: var(--gl-v2-ink);
 }
 @media (max-width: 575.98px) { .gl-v2-mt-an-sneltoets { display: none; } }
-.gl-v2-mt-an-reis { flex-basis: 100%; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
-.gl-v2-mt-an-reis .gl-v2-field-box { width: 110px; height: 34px; }
+.gl-v2-mt-an-vertrek { display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--gl-v2-hairline); border-radius: 14px; background: #F4F7F1; }
+.gl-v2-mt-an-vertrek-kop { display: flex; align-items: center; gap: 12px; }
+.gl-v2-mt-an-vertrek-icoon { flex: none; width: 36px; height: 36px; border-radius: 10px; background: var(--gl-v2-primary); color: var(--gl-v2-surface); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.gl-v2-mt-an-vertrek-label { font: 600 9px var(--gl-v2-font-sans); letter-spacing: .12em; color: var(--gl-v2-primary); }
+.gl-v2-mt-an-vertrek-tijd { font: 600 20px var(--gl-v2-font-mono, "IBM Plex Mono", monospace); color: var(--gl-v2-primary); font-variant-numeric: tabular-nums; }
+.gl-v2-mt-an-reis { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.gl-v2-mt-an-stepper { display: flex; align-items: center; gap: 12px; font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-mt-an-stepper > button { width: 30px; height: 30px; padding: 0; border: 1px solid var(--gl-v2-hairline); border-radius: 8px; background: var(--gl-v2-surface); color: var(--gl-v2-ink); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.gl-v2-mt-an-stepper > button:hover { border-color: var(--gl-v2-primary); background: var(--gl-v2-hover-tint); }
+.gl-v2-mt-an-stepper > span { min-width: 52px; text-align: center; }
+.gl-v2-mt-an-reis-bron { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-mt-an-vertrek-rij { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.gl-v2-mt-an-vertrek-rij .gl-v2-mt-an-herinnering-label:not(:first-child) { margin-left: 8px; }
+.gl-v2-mt-an-vertrek .gl-v2-toggle-row { padding-top: 12px; border-top: 1px solid var(--gl-v2-hairline-soft); }

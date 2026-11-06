@@ -400,26 +400,57 @@
         var kantoor = nieuwAfspraakModal.dataset.kantoor || "", adressen = {};
         try { adressen = JSON.parse(nieuwAfspraakModal.dataset.adressen || "{}"); } catch (e) { adressen = {}; }
         var soortKnoppen = $$("#mt-an-soorten [data-soort]"), duurKnoppen = $$("#mt-an-duren [data-duur]"), locKnoppen = $$("#mt-an-plaatsen [data-loc]"), herinneringKnoppen = $$("#mt-an-herinnering [data-min]");
-        var state = { soort: null, project: "", projectNaam: "", loc: "office", herinnering: 15, titelAuto: "", bezet: [], bezetDatum: "", dur: 60 };
+        var state = { soort: null, project: "", projectNaam: "", loc: "office", herinnering: 15, titelAuto: "", bezet: [], bezetDatum: "", dur: 60, vanaf: "office", marge: 10, reis: 30, reisBron: "schatting" };
 
-        // Herinnering "Vertrektijd": bij een adres (project, kantoor, ander adres) komt de herinnering reistijd + 15 minuten vóór het begin. De reistijd is een eigen schatting, onthouden per browser.
-        var reisVeld = $("mt-an-reistijd"), vertrekKnop = $("mt-an-vertrek-knop");
-        try { var opgeslagen = parseInt(localStorage.getItem("mt-an-reistijd"), 10); if (opgeslagen >= 0) reisVeld.value = opgeslagen; } catch (e) { }
-        var herinneringMinuten = function () {
-            if (state.herinnering !== "vertrek") return state.herinnering;
-            return Math.max(0, Math.min(600, parseInt(reisVeld.value, 10) || 0)) + 15;
+        // Vertrekblok: bij een adres (project, kantoor, ander adres) rekent CPM de reistijd met de auto uit (Google Routes, zonder verkeer) tussen "vanaf" (kantoor of de vorige afspraak van die dag) en de plaats.
+        // Vertrek = begin - reistijd - marge. De reistijd kan je met de knoppen bijstellen; lukt de berekening niet, dan staat er 30 minuten. Aan: de reistijd komt als apart bezet blok in je agenda.
+        var vertrekKaart = $("mt-an-vertrek"), vertrekKnop = $("mt-an-vertrek-knop"), reisTimer = 0, reisSleutel = "";
+        var vorigeAfspraak = function () {
+            var a = vanMin(), best = null;
+            state.bezet.forEach(function (b) { if (b.plaats && b.tot <= (a == null ? 1440 : a) && (!best || b.tot > best.tot)) best = b; });
+            return best;
         };
+        var vanafAdres = function () { var v = vorigeAfspraak(); return state.vanaf === "vorige" && v ? v.plaats : kantoor; };
+        var bestemming = function () { return state.loc === "proj" || state.loc === "office" || state.loc === "other" ? plaats.value.trim() : ""; };
+        var herinneringMinuten = function () { return state.herinnering === "vertrek" ? state.reis + state.marge : state.herinnering; };
+        var reistijdBlok = function () { return !vertrekKaart.hidden && $("mt-an-blok").checked ? state.reis + state.marge : 0; };
         function toonVertrek() {
-            var adres = state.loc === "proj" || state.loc === "office" || state.loc === "other";
-            vertrekKnop.hidden = !adres;
-            if (!adres && state.herinnering === "vertrek") zetHerinnering(15);
-            $("mt-an-reis").hidden = !(adres && state.herinnering === "vertrek");
-            $("mt-an-reis-tekst").textContent = "+ 15 min marge: je herinnering komt " + herinneringMinuten() + " min vóór het begin.";
+            var a = vanMin(), naar = bestemming(), van = vanafAdres();
+            var toon = !!naar && !!van && naar.toLowerCase() !== van.toLowerCase() && a != null;
+            vertrekKaart.hidden = !toon;
+            vertrekKnop.hidden = !toon;
+            if (!toon) { if (state.herinnering === "vertrek") zetHerinnering(15); return; }
+            var vorige = vorigeAfspraak();
+            $$("#mt-an-vanaf [data-vanaf]").forEach(function (b) { if (b.dataset.vanaf === "vorige") b.hidden = !vorige; b.classList.toggle("is-active", b.dataset.vanaf === state.vanaf); });
+            $("mt-an-vanaf-adres").textContent = van;
+            var dep = Math.max(0, a - state.reis - state.marge);
+            $("mt-an-vertrek-tijd").textContent = hm(dep);
+            $("mt-an-reis-tekst").textContent = state.reis + " min";
+            $("mt-an-reis-bron").textContent = state.reisBron === "google" ? "geschat via Google Maps" : state.reisBron === "zelf" ? "zelf ingesteld" : state.reisBron === "bezig" ? "reistijd berekenen \u2026" : "schatting, stel zelf bij";
+            $("mt-an-blok-tekst").textContent = "Reistijd " + hm(dep) + "\u2013" + hm(a) + " wordt in je agenda geblokkeerd";
+            var botsing = state.bezet.filter(function (b) { return b.tot > dep && b.van < dep; })[0];
+            $("mt-an-vertrek-conflict").hidden = !botsing;
+            if (botsing) $("mt-an-vertrek-conflict-tekst").textContent = "Om " + hm(dep) + " te vertrekken moet \u201c" + botsing.titel + "\u201d (tot " + hm(botsing.tot) + ") eerder stoppen.";
+            $$("#mt-an-marge [data-marge]").forEach(function (b) { b.classList.toggle("is-active", parseInt(b.dataset.marge, 10) === state.marge); });
+        }
+        // Rekent de reistijd opnieuw als vertrekpunt of bestemming veranderde (met een korte wachttijd tijdens het typen). Een zelf ingestelde reistijd blijft staan zolang de route gelijk blijft.
+        function planReis() {
+            window.clearTimeout(reisTimer);
+            reisTimer = window.setTimeout(function () {
+                var naar = bestemming(), van = vanafAdres(), sleutel = van + "|" + naar;
+                toonVertrek();
+                if (!naar || !van || sleutel === reisSleutel || naar.toLowerCase() === van.toLowerCase()) return;
+                reisSleutel = sleutel; state.reisBron = "bezig"; toonVertrek();
+                post("AfspraakReis", { van: van, naar: naar }).then(function (j) {
+                    if (sleutel !== reisSleutel) return;
+                    if (j.minuten != null) { state.reis = j.minuten; state.reisBron = "google"; } else { state.reis = 30; state.reisBron = "schatting"; }
+                    toonVertrek();
+                }, function () { if (sleutel === reisSleutel) { state.reis = 30; state.reisBron = "schatting"; toonVertrek(); } });
+            }, 450);
         }
         function zetHerinnering(w) {
             state.herinnering = w;
             herinneringKnoppen.forEach(function (x) { x.classList.toggle("is-active", x.dataset.min === String(w)); });
-            toonVertrek();
         }
         var kortDuur = function (d) { return d < 60 ? d + " min" : Math.floor(d / 60) + "u" + (d % 60 ? pad(d % 60) : ""); };
         var vanMin = function () { return T.getMinutes(vanVeld); }, totMin = function () { return T.getMinutes(totVeld); };
@@ -442,6 +473,7 @@
             $("mt-an-vrij").hidden = !!botsing || !d;
             if (botsing) $("mt-an-conflict-tekst").textContent = "Overlapt met “" + botsing.titel + "” " + hm(botsing.van) + "–" + hm(botsing.tot);
             $("mt-an-opslaan").disabled = !titel.value.trim();
+            planReis();
         }
         function zetDuur(d) {
             state.dur = d;
@@ -466,7 +498,7 @@
             plaats.disabled = loc === "online";
             plaats.placeholder = loc === "phone" ? "Telefoonnummer (optioneel)" : loc === "other" ? "Zoek een adres, klant of leverancier — of typ een adres" : loc === "online" ? "Teams-link wordt automatisch toegevoegd" : "Adres of ruimte";
             window.GlV2Suggest.setEnabled(plaatsSuggest, loc === "other");
-            toonVertrek();
+            planReis();
             $("mt-an-plaats-help").hidden = loc !== "other";
         }
         function plaatsWaarde() {
@@ -518,7 +550,11 @@
             $("mt-an-opslaan").textContent = n ? "Maken en uitnodigen" : "Afspraak maken";
         });
         herinneringKnoppen.forEach(function (b) { b.addEventListener("click", function () { zetHerinnering(b.dataset.min === "vertrek" ? "vertrek" : parseInt(b.dataset.min, 10)); }); });
-        reisVeld.addEventListener("input", function () { try { localStorage.setItem("mt-an-reistijd", String(parseInt(reisVeld.value, 10) || 0)); } catch (e) { } toonVertrek(); });
+        plaats.addEventListener("input", planReis); plaats.addEventListener("change", planReis);
+        $("mt-an-reis-min").addEventListener("click", function () { state.reis = Math.max(0, state.reis - 5); state.reisBron = "zelf"; toonVertrek(); });
+        $("mt-an-reis-plus").addEventListener("click", function () { state.reis = Math.min(600, state.reis + 5); state.reisBron = "zelf"; toonVertrek(); });
+        $$("#mt-an-vanaf [data-vanaf]").forEach(function (b) { b.addEventListener("click", function () { state.vanaf = b.dataset.vanaf; state.reisBron = "schatting"; reisSleutel = ""; planReis(); }); });
+        $$("#mt-an-marge [data-marge]").forEach(function (b) { b.addEventListener("click", function () { state.marge = parseInt(b.dataset.marge, 10); toonVertrek(); }); });
         $("mt-an-notitie-knop").addEventListener("click", function () { $("mt-an-notitie-rij").hidden = false; this.hidden = true; $("mt-an-notitie").focus(); });
 
         // ── openen ─────────────────────────────────────────────────────────────────────────────
@@ -526,7 +562,8 @@
             e.stopPropagation(); sluitPop();
             var datum = (week && !week.querySelector(".gl-v2-mt-daycol.is-today")) ? week.querySelector(".gl-v2-mt-daycol").dataset.datum : (dag ? dag.dataset.datum : vandaagIso());
             var van = Math.min(volgendHalfuur(), 23 * 60 + 15);
-            state.soort = null; state.project = ""; state.projectNaam = ""; state.titelAuto = ""; state.bezet = []; state.bezetDatum = ""; state.herinnering = 15; state.dur = 60;
+            state.soort = null; state.project = ""; state.projectNaam = ""; state.titelAuto = ""; state.bezet = []; state.bezetDatum = ""; state.herinnering = 15; state.dur = 60; state.vanaf = "office"; state.marge = 10; state.reis = 30; state.reisBron = "schatting"; reisSleutel = "";
+            $("mt-an-blok").checked = true;
             titel.value = ""; $("mt-an-notitie").value = ""; $("mt-an-notitie-rij").hidden = true; $("mt-an-notitie-knop").hidden = false;
             soortKnoppen.forEach(function (b) { b.classList.remove("is-active"); b.setAttribute("aria-pressed", "false"); });
             herinneringKnoppen.forEach(function (b) { b.classList.toggle("is-active", b.dataset.min === "15"); });
@@ -552,7 +589,7 @@
             knop.disabled = true;
             post("AfspraakMaak", {
                 projectId: state.project, titel: titel.value.trim(), start: datumIso() + "T" + hm(a), minuten: z - a, plaats: plaatsWaarde(),
-                online: state.loc === "online" ? "true" : "", deelnemers: mensen.map(function (m) { return m.id; }).join(","), herinnering: herinneringMinuten(), notitie: $("mt-an-notitie").value.trim()
+                online: state.loc === "online" ? "true" : "", deelnemers: mensen.map(function (m) { return m.id; }).join(","), herinnering: herinneringMinuten(), reistijd: reistijdBlok(), notitie: $("mt-an-notitie").value.trim()
             }).then(function (j) {
                 if (!j.waarschuwing) return herlaad();
                 toast("warning", "Afspraak gemaakt", j.waarschuwing); setTimeout(herlaad, 2500);

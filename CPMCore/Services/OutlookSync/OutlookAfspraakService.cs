@@ -120,7 +120,7 @@ public class OutlookAfspraakService
     }
 
     /// <summary>Een bezet stuk van een dag, in minuten sinds middernacht, zodat het formulier kan tonen of een nieuwe afspraak overlapt.</summary>
-    public sealed record BezetBlok(int Van, int Tot, string Titel);
+    public sealed record BezetBlok(int Van, int Tot, string Titel, string? Plaats);
 
     /// <summary>Wanneer je op een dag al bezet bent. Hele dag en "vrij" tellen niet mee.</summary>
     public async Task<List<BezetBlok>> BezetOpAsync(string? agendaGebruiker, DateTime dag, CancellationToken ct = default)
@@ -129,7 +129,7 @@ public class OutlookAfspraakService
         var van = dag.Date;
         var agenda = await _graph.GetAgendaAsync(agendaGebruiker, van, van.AddDays(1), ct);
         return agenda.Afspraken.Where(a => !a.HeleDag && a.ToonAls != "free")
-            .Select(a => new BezetBlok((int)Math.Max(0, (a.Start - van).TotalMinutes), (int)Math.Min(1440, (a.Einde - van).TotalMinutes), a.Titel))
+            .Select(a => new BezetBlok((int)Math.Max(0, (a.Start - van).TotalMinutes), (int)Math.Min(1440, (a.Einde - van).TotalMinutes), a.Titel, a.Online ? null : a.Plaats))
             .Where(b => b.Tot > b.Van).OrderBy(b => b.Van).ToList();
     }
 
@@ -145,10 +145,11 @@ public class OutlookAfspraakService
     /// Standaard gaat er geen uitnodiging uit: enkel de opgegeven e-mailadressen komen als deelnemers op de afspraak, waarna Outlook de uitnodigingen stuurt. Later wijzigen in CPM
     /// (<c>MijnTakenAssistent.AgendaWijzig</c>) of in Outlook werkt via het onthouden event-id in beide richtingen door; de agenda zelf blijft de bron.</summary>
     /// <remarks>Mislukt alleen het koppelen, dan komt de afspraak toch met haar event-id terug, samen met een melding: de afspraak bestaat in Outlook en mag niet opnieuw gemaakt worden.</remarks>
+    /// <param name="reistijdMinuten">Groter dan 0: een apart blok "Reistijd" (bezet) van zoveel minuten vóór het begin.</param>
     /// <param name="online">Voegt een Teams-vergadering toe.</param>
     /// <param name="herinneringMinuten">Minuten vóór het begin; 0 of negatief = geen herinnering.</param>
     public async Task<(string? EventId, string? Fout)> MaakAsync(int userId, string? agendaGebruiker, int? projectId, IReadOnlyCollection<int> toegestaneProjecten,
-        string? titel, DateTime start, int minuten, string? plaats, bool online, string? deelnemers, int herinneringMinuten, string? notitie, CancellationToken ct = default)
+        string? titel, DateTime start, int minuten, string? plaats, bool online, string? deelnemers, int herinneringMinuten, string? notitie, int reistijdMinuten = 0, CancellationToken ct = default)
     {
         titel = (titel ?? "").Trim();
         if (titel.Length == 0) return (null, "Geef de afspraak een titel.");
@@ -171,9 +172,16 @@ public class OutlookAfspraakService
             string.IsNullOrWhiteSpace(plaats) ? null : plaats.Trim(), online, uitnodigingen, herinneringMinuten > 0 ? herinneringMinuten : null, notitie), ct);
         if (fout != null || string.IsNullOrEmpty(eventId)) return (null, fout ?? "De afspraak kon niet aangemaakt worden.");
 
-        if (!projectId.HasValue) return (eventId, null);
+        string? waarschuwing = null;
+        if (reistijdMinuten > 0 && reistijdMinuten <= 600)
+        {
+            // Een eigen blok "Reistijd" vóór de afspraak, zodat je agenda die tijd als bezet toont. Mislukt het, dan bestaat de afspraak toch en komt er enkel een melding.
+            var (_, blokFout) = await _graph.MaakAfspraakAsync(agendaGebruiker, new NieuweAfspraak("Reistijd: " + titel, start.AddMinutes(-reistijdMinuten), start, null, false, Array.Empty<string>(), null, null, true), ct);
+            if (blokFout != null) waarschuwing = "De afspraak staat in Outlook, maar het blok reistijd kon niet gemaakt worden.";
+        }
+        if (!projectId.HasValue) return (eventId, waarschuwing);
         var koppelFout = await KoppelAsync(userId, eventId, projectId.Value, toegestaneProjecten, ct);
-        return koppelFout == null ? (eventId, null) : (eventId, "De afspraak staat in Outlook, maar kon niet aan het project gekoppeld worden. Koppel ze via de afspraak.");
+        return koppelFout == null ? (eventId, waarschuwing) : (eventId, "De afspraak staat in Outlook, maar kon niet aan het project gekoppeld worden. Koppel ze via de afspraak.");
     }
 
     /// <summary>Vult per afspraak het gekoppelde project en, voor een niet-gekoppelde afspraak, het voorstel in. Overschrijft altijd alle velden, zodat een bewaarde (gecachte) afspraak nooit een oude koppeling toont.</summary>

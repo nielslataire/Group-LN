@@ -71,6 +71,44 @@
                     <span class="gl-v2-field-help" id="mt-an-plaats-help" hidden>Adressen van projecten, klanten, leveranciers en recente afspraken worden voorgesteld.</span>
                 </div>
 
+                <div class="gl-v2-mt-an-vertrek" id="mt-an-vertrek" hidden>
+                    <div class="gl-v2-mt-an-vertrek-kop">
+                        <span class="gl-v2-mt-an-vertrek-icoon" aria-hidden="true"><i class="ph ph-car"></i></span>
+                        <div class="gl-v2-stack is-flat">
+                            <span class="gl-v2-mt-an-vertrek-label">VERTREK</span>
+                            <span class="gl-v2-mt-an-vertrek-tijd" id="mt-an-vertrek-tijd">--:--</span>
+                        </div>
+                        <div class="gl-v2-mt-an-reis">
+                            <div class="gl-v2-mt-an-stepper">
+                                <button type="button" id="mt-an-reis-min" aria-label="5 minuten korter"><i class="ph ph-minus" aria-hidden="true"></i></button>
+                                <span id="mt-an-reis-tekst">30 min</span>
+                                <button type="button" id="mt-an-reis-plus" aria-label="5 minuten langer"><i class="ph ph-plus" aria-hidden="true"></i></button>
+                            </div>
+                            <span class="gl-v2-mt-an-reis-bron" id="mt-an-reis-bron"></span>
+                        </div>
+                    </div>
+                    <div class="gl-v2-mt-an-vertrek-rij">
+                        <span class="gl-v2-mt-an-herinnering-label" id="mt-an-vanaf-label">Vanaf</span>
+                        <div class="gl-v2-segmented is-sm" id="mt-an-vanaf" role="group" aria-labelledby="mt-an-vanaf-label">
+                            <button type="button" data-vanaf="office" class="is-active">Kantoor</button>
+                            <button type="button" data-vanaf="vorige" hidden>Vorige afspraak</button>
+                        </div>
+                        <span class="gl-v2-mt-an-herinnering-label" id="mt-an-marge-label">Marge</span>
+                        <div class="gl-v2-segmented is-sm" id="mt-an-marge" role="group" aria-labelledby="mt-an-marge-label">
+                            <button type="button" data-marge="0">geen</button>
+                            <button type="button" data-marge="10" class="is-active">+10</button>
+                            <button type="button" data-marge="15">+15</button>
+                            <button type="button" data-marge="30">+30</button>
+                        </div>
+                    </div>
+                    <span class="gl-v2-field-help" id="mt-an-vanaf-adres"></span>
+                    <label class="gl-v2-toggle-row" for="mt-an-blok">
+                        <input type="checkbox" id="mt-an-blok" class="gl-v2-toggle-switch" checked />
+                        <span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label" id="mt-an-blok-tekst">Reistijd wordt in je agenda geblokkeerd</span></span>
+                    </label>
+                    <div class="gl-v2-notice gl-v2-notice-compact is-warning" id="mt-an-vertrek-conflict" hidden role="status"><i class="ph ph-warning" aria-hidden="true"></i><span id="mt-an-vertrek-conflict-tekst"></span></div>
+                </div>
+
                 <div class="gl-v2-field">
                     <label class="gl-v2-field-label" for="mt-an-deelnemers_input">Deelnemers</label>
                     @await Html.PartialAsync("GlV2/_PersonPicker", new GlV2PersonPickerVm { Name = "deelnemers", Id = "mt-an-deelnemers", LookupUrl = Url.Content("~/MijnTaken/UitnodigingZoek"), ContextSelector = "#mt-an-project", Placeholder = "Naam of e-mail — laat leeg voor enkel jouw agenda", PlaceholderMore = "Nog iemand toevoegen" })
@@ -85,13 +123,8 @@
                             <button type="button" data-min="15" class="is-active">15 min</button>
                             <button type="button" data-min="60">1 uur</button>
                             <button type="button" data-min="1440">1 dag</button>
-                            <button type="button" data-min="vertrek" id="mt-an-vertrek-knop" hidden>Vertrektijd</button>
+                            <button type="button" data-min="vertrek" id="mt-an-vertrek-knop" hidden>Bij vertrek</button>
                         </div>
-                    </div>
-                    <div class="gl-v2-mt-an-reis" id="mt-an-reis" hidden>
-                        <span>Reistijd</span>
-                        <div class="gl-v2-field-box"><input class="gl-v2-field-input" id="mt-an-reistijd" type="number" inputmode="numeric" min="0" max="600" step="5" value="30" aria-label="Reistijd in minuten" /><span class="gl-v2-field-unit">min</span></div>
-                        <span id="mt-an-reis-tekst"></span>
                     </div>
                     <button type="button" class="gl-v2-btn gl-v2-btn-text" id="mt-an-notitie-knop"><i class="ph ph-plus" aria-hidden="true"></i>Notitie</button>
                 </div>
