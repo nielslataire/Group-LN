@@ -1,5 +1,44 @@
 # Gewenste schermafbeeldingen voor de nieuwe help-artikels (samengevoegd)
 
+## SAMENVATTING — stand 06/11/2026 (gecontroleerd tegen `HelpContent/` en `wwwroot/img/help/`)
+
+Bron: dit bestand, `HELPCENTRUM_VOORTGANG.md` (o.a. 27/10: 87 afbeeldingen gemaakt) en een controle van elke `![...]`-regel tegen het bestandssysteem. 172 artikels, 185 verwijzingen. De tabellen hieronder blijven het volledige archief; **wat nog moet staat in A tot D**. Alles wat in de tabellen niet in deze samenvatting staat, bestaat al en wordt gebruikt (de rijen "6-werfkaart", "6-units", "6-voorstel", "w4 verzekeringen" zijn achterhaald: bestanden zijn gemaakt, soms onder een ander stapnummer: `dashboard-lezen/4-werfkaart`, `marktproject-bekijken/5-units`, `project-factureren/5-voorstel`).
+
+### A. Artikel verwijst al naar een afbeelding die niet bestaat: 4 van de 10 nog open (06/11/2026: 6 gemaakt)
+**Gemaakt op 06/11/2026** (Playwright, eigen profiel, enkel gelezen, niets opgeslagen; namen, e-mails, projecten en onderwerpen vervangen door fictieve; elk beeld bekeken): `mijn-taken-inbox/2-mails`, `mijn-taken-vandaag/nieuwe-afspraak`, `mijn-taken-week/nieuwe-afspraak`, `mijn-taken-vandaag/koppelen`, `mijn-taken-week/koppelen` (zelfde popover als bij Vandaag: er staat in de testdata geen afspraak met projectlabel; in de week toont het blok dan dus geen label), `instellingen/outlook-sync-bekijken/1-lijst`.
+
+**Nog open (4):**
+| artikel | bestand | waarom nog niet |
+|---|---|---|
+| dashboard-boekhouding-lezen | `aan-de-slag/dashboard-boekhouding-lezen/1-kerncijfers.png`, `3-inkomende-facturen.png`, `5-klaar-om-te-factureren.png` | het dashboardtype staat per gebruiker in de database; het account van Niels is Projectleider. Omzetten naar Boekhouding verandert zijn gegevens: eerst akkoord vragen, daarna terugzetten |
+| mijn-profiel-bijwerken | `aan-de-slag/mijn-profiel-bijwerken/4-outlook.png` | het artikel toont de knop "Koppeling aanzetten" (uit-toestand); de koppeling staat voor Niels aan. Uitzetten wist mogelijk zijn sync-staat |
+
+### B. Niet gemaakt omdat de testdata de toestand niet had (4 + 1 aanvulling), `![...]`-regel staat nog niet in het artikel
+| artikel | wat er nodig is |
+|---|---|
+| traject-synchroniseren-met-sjabloon | stap 2: een traject dat afwijkt van zijn sjabloon, dan de modal Sync met sjabloon |
+| document-ondertekening | een contractdocument in de map Contracten, venster Ter ondertekening sturen |
+| document-revisie-uploaden | een revisie ter goedkeuring, kaart Revisies |
+| offerte-gunnen | een offerte met prijsvergelijking, sectie Prijsvergelijking |
+| coordinatie-factureren | de filterrij "Factureren t/m" (enkel bij een project met schijven + regie); de bestaande `1-selectiebalk.png` toont ze niet |
+
+### C. Artikels zonder één afbeelding die op de lijst ontbreken (nieuw sinds 27/10, rijen toegevoegd onderaan)
+- Verkoop (45): `te-koop-overzicht`, `verkoopinstellingen-aanpassen`, `eenheid-berekenen`. Pagina's nooit in de browser gezien (zie VERKOOP_VOORTGANG.md): eerst testen, dan pas fotograferen.
+- Nog te beslissen of ze een afbeelding nodig hebben (alle zonder `![...]`): contacten-CRM (`contacten-overzicht`, `contact-toevoegen`, `contact-opvolgen`, `contactenlijsten-en-export`), facturen (`factuur-bewerken`, `factuur-verzenden`, `factuur-nummeren-en-verzenden`, `terugkerende-facturen-beheren`/`-instellen`, `terugkerende-factuur-aanmaken`, `klant-aanmaken-vanuit-factuur`), `mijn-taken-overzicht`, `deadlines-overzicht`, `trajectsjablonen-overzicht`/`trajectsjabloon-bewerken`, `gebruikers-overzicht` en de overige beheerpagina's onder `instellingen/` (~35 artikels zonder afbeelding: bouwindexen, activiteiten, vacatures, blog, rollen, e-mailtemplates, enz.), `marktanalyse/` (3), `punten-verslagen/` (8, `punt-met-spraakbericht` en `punten-lijst-overzicht` hadden ooit afbeeldingen via een oude toestand).
+
+### D. Verouderd of te vervangen
+- `budget/budget-nieuw/1-nieuw-budget.png`, `2-nieuwe-versie.png` en `budget/budget-overzicht/1-overzicht.png`: tonen het oude scherm, worden door geen artikel meer gebruikt. Nieuwe opnames van de modal Nieuw budget, het overzicht en `budgetten-vergelijken` zijn nodig (zie HELPCENTRUM_VOORTGANG 14/10); daarna de oude bestanden verwijderen.
+- `budget/budget-stap-verkoop/1-prijscodes.png`: toont `€ 2 500` met spatie, de view toont nu punten (`€ 2.500`).
+- `budget-stap-resultaat` (PDF/Excel-sectie) en `budget-pdf-opmaken`: PDF-opmaakpagina is nieuw sinds de opnames, controleer of `1-pdf-menu` en `3-klaar` nog kloppen.
+- Maak de lijst "Bestaande artikels waarvan de afbeelding ontbreekt" (verzekeringen) niet opnieuw af: die 9 bestanden bestaan.
+
+### E. Open punten rond de opnames zelf
+- De eigen facturerende bedrijven (BCO, Group LN, Home-Estate, Coördinatie) staan herkenbaar op de afbeeldingen van Instellingen › Bedrijven: Niels moet beslissen of dat mag.
+- Voor elke nieuwe batch: Niels logt in (nieuw automatiseringsprofiel), cookie `gl_v2_preview=1`, migraties van de recente pagina's moeten gedraaid zijn (o.a. 115 Verkoop, 127 Dashboard Boekhouding, 133 terugkerende facturen), app herstart.
+- Totaal nog te maken: **4 (A) + 5 (B) + 3 (C, Verkoop, minstens 3) + 3 (D, nieuwe budgetopnames)** ≈ 15 afbeeldingen, plus de nog te beslissen artikels uit C.
+
+---
+
 Volg het Playwright-recept in CPMCore/DESIGN.md ("Schermafbeeldingen maken"): eigen profiel, Niels logt in, cookie `gl_v2_preview=1`, uitsnijden tot de kaart/sectie, echte namen vervangen. Daarna de `![...]`-regel als eerste regel van de stap in het artikel zetten.
 
 # Screenshots te maken (code w1)
@@ -140,3 +179,15 @@ Pad-prefix: `CPMCore/wwwroot/img/help/<topic>/<slug>/<n>-<naam>.png`. Nooit een 
 | dashboard-boekhouding-lezen | 5 | CPMCore/wwwroot/img/help/aan-de-slag/dashboard-boekhouding-lezen/5-klaar-om-te-factureren.png | / | kaart Klaar om te factureren met proforma's en schijven | klantnamen, projectnamen |
 | mijn-taken-vandaag | 5 | CPMCore/wwwroot/img/help/aan-de-slag/mijn-taken-vandaag/nieuwe-afspraak.png | /MijnTaken (Vandaag) | modal Nieuwe afspraak, met een soort gekozen, een project, uren, een plaats en een paar gekozen deelnemers (chips) | projectnamen, namen en e-mailadressen |
 | mijn-taken-week | 5 | CPMCore/wwwroot/img/help/aan-de-slag/mijn-taken-week/nieuwe-afspraak.png | /MijnTaken/Week | modal Nieuwe afspraak, met een soort, project, uren en deelnemers | projectnamen |
+
+# Verkoop (punt 45) — nog nooit gefotografeerd
+
+Eerst in de browser testen (zie VERKOOP_VOORTGANG.md), migratie 115 vóór gebruik. Pad-prefix `CPMCore/wwwroot/img/help/projecten/<slug>/`. Voeg de `![...]`-regel daarna toe als eerste regel van de stap.
+
+| artikel-slug | stap | pad | route/pagina | uitsnede | anonimiseren |
+|---|---|---|---|---|---|
+| te-koop-overzicht | De lijst lezen | CPMCore/wwwroot/img/help/projecten/te-koop-overzicht/1-lijst.png | Projecten/DetailSales?projectid=X | tabs, zoekveld en tabel met statussen | koper-, optant- en makelaarsnamen |
+| te-koop-overzicht | Meerdere eenheden tegelijk aanpassen | CPMCore/wwwroot/img/help/projecten/te-koop-overzicht/2-selectiebalk.png | idem, eenheden aangevinkt | donkere selectiebalk | niets |
+| verkoopinstellingen-aanpassen | Financieel / Kosten koper | CPMCore/wwwroot/img/help/projecten/verkoopinstellingen-aanpassen/1-financieel.png | Projecten/SalesSettings?projectid=X | kaarten Financieel en Kosten koper met voorbeeld | niets |
+| verkoopinstellingen-aanpassen | Website | CPMCore/wwwroot/img/help/projecten/verkoopinstellingen-aanpassen/2-website.png | idem | kaart Website (titel en tekst) | niets |
+| eenheid-berekenen | Een eenheid kiezen / Het resultaat lezen | CPMCore/wwwroot/img/help/projecten/eenheid-berekenen/1-resultaat.png | Projecten/SalesCalculate?projectid=X&unitid=Y | grond en bouw, kosten koper en vergelijking met budget | adres, kopernaam |

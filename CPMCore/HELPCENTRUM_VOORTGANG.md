@@ -350,3 +350,7 @@ het nieuwe punt 43 (`CRM Paginatypes.dc.html`, 11 vaste paginatypes — Help-art
 - **Mogelijke bug (niet aangepast):** `ProjectenController.InvoicingV2` (±regel 410) gaf een NullReferenceException in `ProjectSalesSettingsTranslator.GetSalesSettings` voor project 59 (waarschijnlijk een project zonder verkoopinstellingen) bij "Facturen opmaken". Project 64 werkte.
 - **Opmerking:** de draaiende app werd twee keer onbereikbaar tijdens het fotograferen (het ene keer na een serverfout, het andere keer tijdens de verzekeringenpagina); herstart door de hoofdsessie. Oorzaak niet vastgesteld.
 - **Opruimen gedaan:** de gestarte app is gestopt; de opgeslagen login (`state.json`, browserprofiel) en alle scratch-afbeeldingen zijn verwijderd. De screenshot-scripts staan nog in de scratchpad van de sessie (niet in de repo).
+
+## 06/11/2026 — controle schermafbeeldingen + 6 ontbrekende gemaakt
+- Alle `![...]`-verwijzingen in `HelpContent/` getoetst aan `wwwroot/img/help/`; samenvatting bovenaan `HELP_SCREENSHOTS.md` (secties A tot E). Verzekeringen-afbeeldingen bestonden al; enkele lijstrijen hadden een ander stapnummer dan het bestand.
+- Gemaakt (draaiende app via Visual Studio op 7046, Playwright met eigen profiel, enkel gelezen): Mijn taken inbox/koppelen/nieuwe afspraak (Vandaag en Week) en Outlook-sync-lijst, geanonimiseerd. Nog open: Dashboard Boekhouding (dashboardtype van het account), `mijn-profiel-bijwerken/4-outlook`, de 5 uit sectie B en Verkoop.
