@@ -13,13 +13,21 @@
             <span style="color:#8B2A2A">*</span>
         }
     </label>
-    <div class="gl-v2-select gl-v2-datepicker" data-gl-v2-datepicker id="@(Model.Id)_picker">
+    <div class="gl-v2-select gl-v2-datepicker" data-gl-v2-datepicker id="@(Model.Id)_picker" data-dim-past="@(Model.DimPast ? "true" : null)">
         <div class="gl-v2-field-box">
             <i class="ph ph-calendar" aria-hidden="true"></i>
             <input type="text" class="gl-v2-field-input" id="@(Model.Id)_text" data-role="date-text" value="@Model.DisplayValue" placeholder="dd/mm/jjjj" autocomplete="off" inputmode="numeric" maxlength="10" />
         </div>
         <input type="hidden" id="@Model.Id" name="@Model.Name" data-role="date-value" value="@Model.IsoValue" />
         <div class="gl-v2-select-panel gl-v2-datepicker-panel" data-role="panel">
+            @if (Model.QuickDates)
+            {
+                <div class="gl-v2-datepicker-quick">
+                    <button type="button" tabindex="-1" data-role="quick" data-quick="today">Vandaag</button>
+                    <button type="button" tabindex="-1" data-role="quick" data-quick="tomorrow">Morgen</button>
+                    <button type="button" tabindex="-1" data-role="quick" data-quick="nextmonday">Volgende ma</button>
+                </div>
+            }
             <div class="gl-v2-datepicker-nav-row">
                 <button type="button" tabindex="-1" class="gl-v2-datepicker-nav" data-role="prev" aria-label="Vorige maand"><i class="ph ph-caret-left" aria-hidden="true"></i></button>
                 <span class="gl-v2-datepicker-month" data-role="month-label"></span>
@@ -30,7 +38,10 @@
             </div>
             <div class="gl-v2-datepicker-days" data-role="days"></div>
             <div class="gl-v2-datepicker-footer">
-                <button type="button" tabindex="-1" class="gl-v2-datepicker-footer-link" data-role="today">Vandaag</button>
+                @if (!Model.QuickDates)
+                {
+                    <button type="button" tabindex="-1" class="gl-v2-datepicker-footer-link" data-role="today">Vandaag</button>
+                }
                 <button type="button" tabindex="-1" class="gl-v2-datepicker-footer-link is-muted" data-role="clear">Wissen</button>
             </div>
         </div>

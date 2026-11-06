@@ -1,0 +1,13 @@
+@model CPMCore.Models.GlV2.GlV2PersonPickerVm
+@*
+    gl-v2 — kiezer voor meerdere personen (ontwerp "CRM Nieuwe afspraak", deelnemers): gekozen mensen staan als chips met initialen IN het invoervak, je zoekt of tikt verder in datzelfde vak.
+    De lijst toont kopjes (COLLEGA'S, OP DIT PROJECT, CONTACTEN …) in de volgorde van de server; een volledig getypt e-mailadres kan altijd toegevoegd worden. Binnen een .gl-v2-field met
+    <label for="<id>_input">. Gedrag: wwwroot/js/gl-v2-people.js, opmaak: wwwroot/css/gl-v2/pickers.css; contract in DESIGN.md "Personen kiezen".
+*@
+<div class="gl-v2-people" data-gl-v2-people data-lookup-url="@Model.LookupUrl" data-context-source="@Model.ContextSelector" data-placeholder="@Model.Placeholder" data-placeholder-more="@Model.PlaceholderMore" data-empty-text="@Model.EmptyText">
+    <input type="hidden" id="@Model.Id" name="@Model.Name" data-role="people-value" value="" />
+    <div class="gl-v2-people-box" data-role="box">
+        <input type="text" id="@(Model.Id)_input" class="gl-v2-people-input" data-role="input" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-haspopup="listbox" autocomplete="off" placeholder="@Model.Placeholder" />
+    </div>
+    <div class="gl-v2-people-panel" data-role="panel" role="listbox"></div>
+</div>

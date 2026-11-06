@@ -96,6 +96,10 @@
 }
 .gl-v2 .gl-v2-combo-head span:first-child { flex: 1; }
 .gl-v2 .gl-v2-combo-head-keys { font: 450 10.5px var(--gl-v2-font-sans); letter-spacing: 0; text-transform: none; color: #9aa898; }
+.gl-v2 .gl-v2-combo-group {
+    padding: 8px 10px 4px;
+    font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; color: var(--gl-v2-muted); text-transform: uppercase;
+}
 .gl-v2 .gl-v2-combo-option {
     display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 4px 10px; border-radius: var(--gl-v2-radius-s, 7px);
     background: transparent; border: 0; width: 100%; text-align: left; cursor: pointer; font: inherit; color: inherit;

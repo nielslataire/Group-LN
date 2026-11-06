@@ -851,7 +851,11 @@ window.GlV2.byId = function (id) { return document.getElementById(id); };
     // eerste gebruik: Projecten/PaymentStagesV2's 21h-modal (Niels, 2026-09-30). Enkel veilig op een
     // pagina zonder een AL bestaand GlV2Date-veld (geen dubbel-init-wacht ingebouwd, zie initGlV2Select
     // voor dat patroon); voor deze modal-only-pagina's is dat geen probleem.
-    window.GlV2DatePicker = { init: function () { initGlV2DatePicker(); } };
+    window.GlV2DatePicker = {
+        init: function () { initGlV2DatePicker(); },
+        /** Zet de waarde van het datumveld met dit id (bv. "mt-an-datum") op een yyyy-MM-dd-datum; zonder datum wordt het veld gewist. */
+        setValue: function (id, iso) { var r = document.getElementById(id + "_picker"); if (r && r._glV2Date) r._glV2Date.set(iso); }
+    };
 
     // ── Datumkiezer (design-handoff punt 14d "6 · DATUM") — GlV2DateTime.cshtml. Shell-breed net
     //    als initGlV2Select() hierboven (generieke EditorTemplate), maar met een eigen closeAll()/
@@ -909,6 +913,7 @@ window.GlV2.byId = function (id) { return document.getElementById(id); };
             var nextBtn = root.querySelector('[data-role="next"]');
             var todayBtn = root.querySelector('[data-role="today"]');
             var clearBtn = root.querySelector('[data-role="clear"]');
+            var dimPast = root.getAttribute("data-dim-past") === "true";
             // Foutslot van het veld — hernoemd naar het generieke [data-role="field-error"] (het gedeelde
             // Foutoverzicht, punt 24, hergebruikt datzelfde element; zie GlV2/_DateField.cshtml).
             var errorEl = root.querySelector('[data-role="field-error"]');
@@ -997,6 +1002,7 @@ window.GlV2.byId = function (id) { return document.getElementById(id); };
                     if (selected && cell.y === selected.y && cell.m === selected.m && cell.d === selected.d) {
                         btn.classList.add("is-selected");
                     }
+                    if (dimPast && new Date(cell.y, cell.m - 1, cell.d) < new Date(today.getFullYear(), today.getMonth(), today.getDate())) btn.classList.add("is-past");
                     btn.addEventListener("click", function () {
                         setValue(cell.y, cell.m, cell.d);
                         closeAll();
@@ -1036,6 +1042,20 @@ window.GlV2.byId = function (id) { return document.getElementById(id); };
                 clearValue();
                 textInput.focus();
             });
+            // Snelknoppen (GlV2DateFieldVm.QuickDates): vandaag, morgen en de volgende maandag.
+            root.querySelectorAll('[data-role="quick"]').forEach(function (b) {
+                b.addEventListener("click", function () {
+                    var d = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                    var k = b.getAttribute("data-quick");
+                    if (k === "tomorrow") d.setDate(d.getDate() + 1);
+                    else if (k === "nextmonday") d.setDate(d.getDate() + (8 - (d.getDay() || 7)));
+                    setValue(d.getFullYear(), d.getMonth() + 1, d.getDate());
+                    closeAll();
+                    textInput.focus();
+                });
+            });
+            // Voor pagina-JS (bv. een formulier dat bij het openen een datum voorinvult): zet de datum met een yyyy-MM-dd-string, of wist ze zonder waarde.
+            root._glV2Date = { set: function (iso) { var p = parseIso(iso); if (p) setValue(p.y, p.m, p.d); else clearValue(); } };
 
             textInput.addEventListener("focus", function () {
                 if (!panel.classList.contains("is-open")) openPanel();

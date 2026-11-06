@@ -23,76 +23,156 @@ public class OutlookAfspraakService
 
     private const int MaxUitnodigingen = 25;
 
-    /// <summary>Een mogelijke deelnemer in de keuzelijst van "Deelnemers uitnodigen".</summary>
-    public sealed record DeelnemerKeuze(string Email, string Naam, string Sub);
+    /// <summary>Een mogelijke deelnemer in de keuzelijst. <paramref name="Groep"/> is het kopje waaronder de keuze staat (collega's, project, contacten).</summary>
+    public sealed record DeelnemerKeuze(string Email, string Naam, string Sub, string Groep);
 
-    /// <summary>Zoekt deelnemers voor een uitnodiging. De collega's (actieve gebruikers, jezelf niet) staan altijd bovenaan, ook zonder zoekterm; daaronder komen contactpersonen van klanten
-    /// en leveranciers (vanaf 2 tekens). Is de zoekterm zelf een geldig e-mailadres dat nog niet in de lijst staat, dan komt het als extern adres onderaan. Geen dubbele adressen.</summary>
-    public async Task<List<DeelnemerKeuze>> ZoekDeelnemersAsync(int userId, string? term, CancellationToken ct = default)
+    public const string GroepCollegas = "COLLEGA'S", GroepProject = "OP DIT PROJECT", GroepContacten = "CONTACTEN", GroepExtern = "EXTERN E-MAILADRES";
+
+    /// <summary>Zoekt deelnemers voor een uitnodiging. De collega's (actieve gebruikers, jezelf niet) staan altijd bovenaan, ook zonder zoekterm; daaronder komen de mensen van het gekozen project
+    /// (klanten van de eenheden en contactpersonen van de leveranciers met een contract), dan de andere contactpersonen van klanten en leveranciers (vanaf 2 tekens). Is de zoekterm zelf een geldig
+    /// e-mailadres dat nog niet in de lijst staat, dan komt het als extern adres onderaan. Geen dubbele adressen.</summary>
+    /// <param name="projectId">Het gekozen project; alleen als het in <paramref name="toegestaneProjecten"/> zit, anders genegeerd.</param>
+    public async Task<List<DeelnemerKeuze>> ZoekDeelnemersAsync(int userId, string? term, int? projectId = null, IReadOnlyCollection<int>? toegestaneProjecten = null, CancellationToken ct = default)
     {
         term = (term ?? "").Trim();
         var t = term.ToLowerInvariant();
         var resultaat = new List<DeelnemerKeuze>();
         var gezien = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        bool Voeg(string? email, string? naam, string soort)
+        bool Voeg(string? email, string? naam, string soort, string groep)
         {
             email = email?.Trim();
             if (string.IsNullOrEmpty(email) || !System.Net.Mail.MailAddress.TryCreate(email, out var a) || a.Address != email || !gezien.Add(email)) return false;
-            resultaat.Add(new DeelnemerKeuze(email, string.IsNullOrWhiteSpace(naam) ? email : naam.Trim(), $"{soort} · {email}"));
+            resultaat.Add(new DeelnemerKeuze(email, string.IsNullOrWhiteSpace(naam) ? email : naam.Trim(), $"{soort} · {email}", groep));
             return true;
         }
+        bool Past(string? naam, string? email) => t.Length == 0 || (naam ?? "").ToLowerInvariant().Contains(t) || (email ?? "").ToLowerInvariant().Contains(t);
 
         var collegas = await _db.Users.AsNoTracking().Where(u => u.IsActive && u.Email != null && u.Id != userId).Select(u => new { u.Voornaam, u.Familienaam, u.Email }).ToListAsync(ct);
         foreach (var u in collegas.Select(u => new { Naam = $"{u.Voornaam} {u.Familienaam}".Trim(), u.Email }).OrderBy(u => u.Naam, StringComparer.CurrentCultureIgnoreCase)
-                     .Where(u => t.Length == 0 || u.Naam.ToLowerInvariant().Contains(t) || u.Email!.ToLowerInvariant().Contains(t)).Take(30))
-            Voeg(u.Email, u.Naam, "Collega");
+                     .Where(u => Past(u.Naam, u.Email)).Take(30))
+            Voeg(u.Email, u.Naam, "Collega", GroepCollegas);
+
+        if (projectId is int pid && toegestaneProjecten != null && toegestaneProjecten.Contains(pid))
+        {
+            var klantIds = await _db.Units.AsNoTracking().Where(u => u.ProjectId == pid && u.ClientAccountId != null).Select(u => u.ClientAccountId!.Value).Distinct().ToListAsync(ct);
+            var klanten = await _db.ClientAccount.AsNoTracking().Where(k => klantIds.Contains(k.Id) && k.Email != null).OrderBy(k => k.Name).Select(k => new { k.Name, k.Email }).ToListAsync(ct);
+            foreach (var k in klanten.Where(k => Past(k.Name, k.Email)).Take(10)) Voeg(k.Email, k.Name, "Klant", GroepProject);
+            var klantContacten = await _db.ClientContacts.AsNoTracking().Where(c => klantIds.Contains(c.ClientAccountId) && c.Email != null).OrderBy(c => c.Name).Select(c => new { Naam = c.Name, c.Email }).ToListAsync(ct);
+            foreach (var c in klantContacten.Where(c => Past(c.Naam, c.Email)).Take(10)) Voeg(c.Email, c.Naam, "Klant", GroepProject);
+            var bedrijfIds = await _db.Contract.AsNoTracking().Where(c => c.ProjectId == pid).Select(c => c.CompanyId).Distinct().ToListAsync(ct);
+            var leverancierContacten = await _db.CompanyContacts.AsNoTracking().Where(c => bedrijfIds.Contains(c.CompanyId) && c.Email != null).OrderBy(c => c.ContactNaam)
+                .Select(c => new { Naam = c.ContactVoornaam + " " + c.ContactNaam, c.Email, c.Functie }).ToListAsync(ct);
+            foreach (var c in leverancierContacten.Where(c => Past(c.Naam, c.Email)).Take(15)) Voeg(c.Email, c.Naam, string.IsNullOrWhiteSpace(c.Functie) ? "Contactpersoon" : c.Functie!, GroepProject);
+        }
 
         if (t.Length >= 2)
         {
             var klantContacten = await _db.ClientContacts.AsNoTracking().Where(c => c.Email != null && ((c.Name ?? "").ToLower().Contains(t) || c.Email.ToLower().Contains(t)))
                 .OrderBy(c => c.Name).Take(10).Select(c => new { Naam = c.Name, c.Email }).ToListAsync(ct);
-            foreach (var c in klantContacten) Voeg(c.Email, c.Naam, "Klant");
+            foreach (var c in klantContacten) Voeg(c.Email, c.Naam, "Klant", GroepContacten);
             var klanten = await _db.ClientAccount.AsNoTracking().Where(k => k.Email != null && (k.Name.ToLower().Contains(t) || k.Email.ToLower().Contains(t)))
                 .OrderBy(k => k.Name).Take(10).Select(k => new { k.Name, k.Email }).ToListAsync(ct);
-            foreach (var k in klanten) Voeg(k.Email, k.Name, "Klant");
+            foreach (var k in klanten) Voeg(k.Email, k.Name, "Klant", GroepContacten);
             var leveranciers = await _db.CompanyContacts.AsNoTracking().Where(c => c.Email != null && ((c.ContactVoornaam + " " + c.ContactNaam).ToLower().Contains(t) || c.Email.ToLower().Contains(t)))
                 .OrderBy(c => c.ContactNaam).Take(10).Select(c => new { Naam = c.ContactVoornaam + " " + c.ContactNaam, c.Email }).ToListAsync(ct);
-            foreach (var c in leveranciers) Voeg(c.Email, c.Naam, "Contactpersoon");
-            Voeg(term, null, "Extern e-mailadres");   // een getypt adres dat nog niet in de lijst staat
+            foreach (var c in leveranciers) Voeg(c.Email, c.Naam, "Contactpersoon", GroepContacten);
+            Voeg(term, null, "Extern e-mailadres", GroepExtern);   // een getypt adres dat nog niet in de lijst staat
         }
         return resultaat;
     }
 
-    /// <summary>Maakt een afspraak op een project aan in de Outlook-agenda van de gebruiker (ticket #8) en koppelt ze meteen aan het project. Standaard gaat er geen uitnodiging uit:
-    /// enkel als <paramref name="uitnodigen"/> aanstaat, komen de opgegeven e-mailadressen als deelnemers op de afspraak en stuurt Outlook de uitnodigingen. Later wijzigen in CPM
+    /// <summary>Een voorgestelde plaats voor een afspraak: <paramref name="Naam"/> (bv. het project of de klant), <paramref name="Adres"/> en de soort ("Recent", "Klant", "Leverancier", "Project").</summary>
+    public sealed record PlaatsKeuze(string Naam, string Adres, string Soort);
+
+    /// <summary>Plaatsen om voor te stellen bij "Ander adres". Zonder zoekterm: de plaatsen van je afspraken van de voorbije maand ("Recent"). Vanaf 2 tekens: adressen van projecten, klanten en leveranciers.</summary>
+    public async Task<List<PlaatsKeuze>> ZoekPlaatsenAsync(string? agendaGebruiker, string? term, IReadOnlyCollection<int> toegestaneProjecten, CancellationToken ct = default)
+    {
+        var t = (term ?? "").Trim().ToLowerInvariant();
+        var lijst = new List<PlaatsKeuze>();
+        if (t.Length < 2)
+        {
+            if (!_graph.IsConfigured || string.IsNullOrWhiteSpace(agendaGebruiker)) return lijst;
+            var vandaag = DateTime.Today;
+            var agenda = await _graph.GetAgendaAsync(agendaGebruiker, vandaag.AddDays(-30), vandaag, ct);
+            return agenda.Afspraken.Where(a => !string.IsNullOrWhiteSpace(a.Plaats) && !a.Online).OrderByDescending(a => a.Start)
+                .Select(a => a.Plaats!.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(4).Select(p => new PlaatsKeuze(p, "", "Recent")).ToList();
+        }
+        string Adres(string? straat, string? nr, string? postcode, string? gemeente) =>
+            string.Join(", ", new[] { $"{straat} {nr}".Trim(), $"{postcode} {gemeente}".Trim() }.Where(x => x.Length > 0));
+
+        var projecten = await _db.Project.AsNoTracking().Where(p => toegestaneProjecten.Contains(p.ProjectId) && ((p.ProjectName ?? "").ToLower().Contains(t) || (p.Street ?? "").ToLower().Contains(t)))
+            .OrderBy(p => p.ProjectName).Take(4).Select(p => new { p.ProjectName, p.Street, p.Number, Postcode = p.PostalCodeId }).ToListAsync(ct);
+        var codeIds = projecten.Select(p => p.Postcode).Where(i => i != null).Select(i => i!.Value).ToList();
+        var codes = await _db.PostalCode.AsNoTracking().Where(c => codeIds.Contains(c.PostcodeId)).ToDictionaryAsync(c => c.PostcodeId, ct);
+        foreach (var p in projecten)
+        {
+            codes.TryGetValue(p.Postcode ?? 0, out var pc);
+            var adres = Adres(p.Street, p.Number, pc?.Postcode, pc?.Gemeente);
+            if (adres.Length > 0) lijst.Add(new PlaatsKeuze(p.ProjectName ?? "", adres, "Project"));
+        }
+        var klanten = await _db.ClientAccount.AsNoTracking().Where(k => k.Street != null && (k.Name.ToLower().Contains(t) || k.Street.ToLower().Contains(t)))
+            .OrderBy(k => k.Name).Take(4).Select(k => new { k.Name, k.Street, Nr = k.Housenumber, Pc = k.PostalCode != null ? k.PostalCode.Postcode : null, Gem = k.PostalCode != null ? k.PostalCode.Gemeente : null }).ToListAsync(ct);
+        foreach (var k in klanten) lijst.Add(new PlaatsKeuze(k.Name, Adres(k.Street, k.Nr, k.Pc, k.Gem), "Klant"));
+        var bedrijven = await _db.CompanyInfo.AsNoTracking().Where(c => c.Straat != null && (c.BedrijfsNaam.ToLower().Contains(t) || c.Straat.ToLower().Contains(t)))
+            .OrderBy(c => c.BedrijfsNaam).Take(4).Select(c => new { c.BedrijfsNaam, c.Straat, c.Huisnummer, c.Postcode, c.Gemeente }).ToListAsync(ct);
+        foreach (var c in bedrijven) lijst.Add(new PlaatsKeuze(c.BedrijfsNaam, Adres(c.Straat, c.Huisnummer, c.Postcode, c.Gemeente), "Leverancier"));
+        return lijst.Take(8).ToList();
+    }
+
+    /// <summary>Een bezet stuk van een dag, in minuten sinds middernacht, zodat het formulier kan tonen of een nieuwe afspraak overlapt.</summary>
+    public sealed record BezetBlok(int Van, int Tot, string Titel);
+
+    /// <summary>Wanneer je op een dag al bezet bent. Hele dag en "vrij" tellen niet mee.</summary>
+    public async Task<List<BezetBlok>> BezetOpAsync(string? agendaGebruiker, DateTime dag, CancellationToken ct = default)
+    {
+        if (!_graph.IsConfigured || string.IsNullOrWhiteSpace(agendaGebruiker)) return new();
+        var van = dag.Date;
+        var agenda = await _graph.GetAgendaAsync(agendaGebruiker, van, van.AddDays(1), ct);
+        return agenda.Afspraken.Where(a => !a.HeleDag && a.ToonAls != "free")
+            .Select(a => new BezetBlok((int)Math.Max(0, (a.Start - van).TotalMinutes), (int)Math.Min(1440, (a.Einde - van).TotalMinutes), a.Titel))
+            .Where(b => b.Tot > b.Van).OrderBy(b => b.Van).ToList();
+    }
+
+    /// <summary>De projecten waar je het laatst een afspraak aan koppelde (de recentste eerst), voor het kopje RECENT in de projectlijst.</summary>
+    public async Task<List<int>> RecenteProjectenAsync(int userId, IReadOnlyCollection<int> toegestaneProjecten, int aantal = 3, CancellationToken ct = default)
+    {
+        var rijen = await _db.OutlookAfspraak.AsNoTracking().Where(a => a.UserId == userId && toegestaneProjecten.Contains(a.ProjectId))
+            .OrderByDescending(a => a.GekoppeldOp).Select(a => a.ProjectId).Take(50).ToListAsync(ct);
+        return rijen.Distinct().Take(aantal).ToList();
+    }
+
+    /// <summary>Maakt een afspraak in de Outlook-agenda van de gebruiker (ticket #8) en koppelt ze, als er een project is gekozen, meteen aan dat project. Zonder project is het een persoonlijke afspraak.
+    /// Standaard gaat er geen uitnodiging uit: enkel de opgegeven e-mailadressen komen als deelnemers op de afspraak, waarna Outlook de uitnodigingen stuurt. Later wijzigen in CPM
     /// (<c>MijnTakenAssistent.AgendaWijzig</c>) of in Outlook werkt via het onthouden event-id in beide richtingen door; de agenda zelf blijft de bron.</summary>
     /// <remarks>Mislukt alleen het koppelen, dan komt de afspraak toch met haar event-id terug, samen met een melding: de afspraak bestaat in Outlook en mag niet opnieuw gemaakt worden.</remarks>
-    public async Task<(string? EventId, string? Fout)> MaakAsync(int userId, string? agendaGebruiker, int projectId, IReadOnlyCollection<int> toegestaneProjecten,
-        string? titel, DateTime start, int minuten, string? plaats, bool uitnodigen, string? deelnemers, CancellationToken ct = default)
+    /// <param name="online">Voegt een Teams-vergadering toe.</param>
+    /// <param name="herinneringMinuten">Minuten vóór het begin; 0 of negatief = geen herinnering.</param>
+    public async Task<(string? EventId, string? Fout)> MaakAsync(int userId, string? agendaGebruiker, int? projectId, IReadOnlyCollection<int> toegestaneProjecten,
+        string? titel, DateTime start, int minuten, string? plaats, bool online, string? deelnemers, int herinneringMinuten, string? notitie, CancellationToken ct = default)
     {
         titel = (titel ?? "").Trim();
         if (titel.Length == 0) return (null, "Geef de afspraak een titel.");
         if (titel.Length > 200) return (null, "De titel is te lang.");
         if (minuten < 5 || minuten > 960) return (null, "Een afspraak duurt tussen 5 minuten en 16 uur.");
-        if (!toegestaneProjecten.Contains(projectId)) return (null, "Kies een project voor de afspraak.");
+        if (projectId.HasValue && !toegestaneProjecten.Contains(projectId.Value)) return (null, "Kies een project uit de lijst, of kies geen project.");
+        if (herinneringMinuten > 20160) return (null, "De herinnering kan hoogstens twee weken vooraf.");
+        notitie = string.IsNullOrWhiteSpace(notitie) ? null : notitie.Trim();
+        if (notitie?.Length > 4000) return (null, "De notitie is te lang.");
 
         var uitnodigingen = new List<string>();
-        if (uitnodigen)
+        foreach (var a in (deelnemers ?? "").Split(new[] { ',', ';', ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries))
         {
-            foreach (var a in (deelnemers ?? "").Split(new[] { ',', ';', ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries))
-            {
-                if (!System.Net.Mail.MailAddress.TryCreate(a, out var adres) || adres.Address != a) return (null, $"'{a}' is geen geldig e-mailadres.");
-                if (!uitnodigingen.Contains(a, StringComparer.OrdinalIgnoreCase)) uitnodigingen.Add(a);
-            }
-            if (uitnodigingen.Count == 0) return (null, "Geef minstens één e-mailadres op, of zet het uitnodigen uit.");
-            if (uitnodigingen.Count > MaxUitnodigingen) return (null, $"Je kan hoogstens {MaxUitnodigingen} mensen uitnodigen.");
+            if (!System.Net.Mail.MailAddress.TryCreate(a, out var adres) || adres.Address != a) return (null, $"'{a}' is geen geldig e-mailadres.");
+            if (!uitnodigingen.Contains(a, StringComparer.OrdinalIgnoreCase)) uitnodigingen.Add(a);
         }
+        if (uitnodigingen.Count > MaxUitnodigingen) return (null, $"Je kan hoogstens {MaxUitnodigingen} mensen uitnodigen.");
 
-        var (eventId, fout) = await _graph.MaakAfspraakAsync(agendaGebruiker, titel, start, start.AddMinutes(minuten),
-            string.IsNullOrWhiteSpace(plaats) ? null : plaats.Trim(), uitnodigingen, ct);
+        var (eventId, fout) = await _graph.MaakAfspraakAsync(agendaGebruiker, new NieuweAfspraak(titel, start, start.AddMinutes(minuten),
+            string.IsNullOrWhiteSpace(plaats) ? null : plaats.Trim(), online, uitnodigingen, herinneringMinuten > 0 ? herinneringMinuten : null, notitie), ct);
         if (fout != null || string.IsNullOrEmpty(eventId)) return (null, fout ?? "De afspraak kon niet aangemaakt worden.");
 
-        var koppelFout = await KoppelAsync(userId, eventId, projectId, toegestaneProjecten, ct);
+        if (!projectId.HasValue) return (eventId, null);
+        var koppelFout = await KoppelAsync(userId, eventId, projectId.Value, toegestaneProjecten, ct);
         return koppelFout == null ? (eventId, null) : (eventId, "De afspraak staat in Outlook, maar kon niet aan het project gekoppeld worden. Koppel ze via de afspraak.");
     }
 

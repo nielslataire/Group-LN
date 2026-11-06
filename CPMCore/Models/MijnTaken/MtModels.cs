@@ -6,6 +6,8 @@ public class MtProject
     public int Id { get; set; }
     public string Naam { get; set; } = "";
     public string Kleur { get; set; } = "";
+    /// <summary>Straat, nummer en gemeente van het project (voor de projectlijst en het projectadres bij een afspraak).</summary>
+    public string Adres { get; set; } = "";
 }
 
 public class MtTaak
@@ -62,6 +64,8 @@ public class MtShell
     /// <summary>De lopende timer, of de laatst gestopte (Pauze) als er nog een taak openstaat.</summary>
     public MtBlok? Timer { get; set; }
     public List<MtProject> Projecten { get; set; } = new();
+    /// <summary>De projecten waar de gebruiker het laatst een afspraak aan koppelde (alleen Vandaag en Week), voor het kopje RECENT in Nieuwe afspraak.</summary>
+    public List<int> RecenteProjecten { get; set; } = new();
 }
 
 public class MtVandaagVm

@@ -387,14 +387,26 @@
     .gl-v2-mt-vandaag .gl-v2-mt-day { max-height: 78vh; }
 }
 
-/* Nieuwe afspraak op een project (modal): rijen met gelijk uitgelijnde velden (alles bovenaan uitgelijnd), datum + van + tot ruim genoeg om te lezen. */
-.gl-v2-mt-an { display: flex; flex-direction: column; gap: 16px; }
+/* Nieuwe afspraak (modal, ontwerp "CRM Nieuwe afspraak"): rijen met gelijk uitgelijnde velden; datum + van + tot ruim genoeg om te lezen. */
+.gl-v2-mt-an { display: flex; flex-direction: column; gap: 18px; }
 .gl-v2-mt-an .gl-v2-field { margin: 0; }
-.gl-v2-mt-an-rij { display: grid; gap: 16px; align-items: start; }
-.gl-v2-mt-an-rij--2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-.gl-v2-mt-an-rij--3 { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); }
-@media (max-width: 575.98px) { .gl-v2-mt-an-rij--2, .gl-v2-mt-an-rij--3 { grid-template-columns: minmax(0, 1fr); } }
-.gl-v2-mt-an-vink { display: flex; align-items: center; gap: 10px; margin: 0; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); cursor: pointer; }
-#mt-an-deelnemers-rij[hidden], #mt-an-nota[hidden] { display: none; }
-#mt-an-chips { margin-top: 8px; }
-#mt-an-chips:empty { display: none; }
+.gl-v2-mt-an .gl-v2-field > .gl-v2-pillrow { margin-top: 10px; }
+.gl-v2-mt-an-rij { display: grid; gap: 12px; align-items: start; }
+.gl-v2-mt-an-rij--3 { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); }
+@media (max-width: 575.98px) { .gl-v2-mt-an-rij--3 { grid-template-columns: minmax(0, 1fr); } }
+.gl-v2-mt-an-duur { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; margin-top: -6px; }
+.gl-v2-mt-an-duur .gl-v2-pillrow { gap: 4px; }
+.gl-v2-mt-an-duur .gl-v2-notice { margin-left: auto; }
+.gl-v2-mt-an-vrij { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font: 500 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); white-space: nowrap; }
+.gl-v2-mt-an-stip { width: 7px; height: 7px; border-radius: 50%; background: #2F9B4F; }
+#mt-an-vrij[hidden], #mt-an-conflict[hidden], #mt-an-notitie-rij[hidden], #mt-an-plaats-help[hidden], #mt-an-plaatsen > button[hidden] { display: none; }
+.gl-v2-mt-an-plaatsen { align-self: flex-start; width: fit-content; max-width: 100%; margin-top: 5px; margin-bottom: 8px; flex-wrap: wrap; }
+.gl-v2-mt-an-extra { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 18px; }
+.gl-v2-mt-an-herinnering { display: flex; align-items: center; gap: 8px; }
+.gl-v2-mt-an-herinnering-label { font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
+.gl-v2-mt-an-sneltoets { margin-right: auto; font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-mt-an-sneltoets kbd {
+    padding: 1px 5px; border: 1px solid rgba(44, 59, 42, .18); border-bottom-width: 2px; border-radius: 4px; background: var(--gl-v2-surface);
+    font: 600 10.5px var(--gl-v2-font-mono, 'IBM Plex Mono', monospace); color: var(--gl-v2-ink);
+}
+@media (max-width: 575.98px) { .gl-v2-mt-an-sneltoets { display: none; } }

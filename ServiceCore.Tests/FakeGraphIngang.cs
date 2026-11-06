@@ -58,19 +58,20 @@ public sealed class FakeGraphIngang : IGraphIngang
         return Task.FromResult<string?>(null);
     }
 
-    public List<(string? Gebruiker, string Titel, string? Plaats, string[] Uitnodigen)> Aangemaakt { get; } = new();
+    public List<(string? Gebruiker, NieuweAfspraak Afspraak)> Aangemaakt { get; } = new();
     public string? AanmaakFout { get; set; }
 
     /// <summary>Maakt de afspraak ook echt aan in de fake-agenda, zodat een volgende lezing ze terugvindt (zoals Outlook).</summary>
-    public Task<(string? EventId, string? Fout)> MaakAfspraakAsync(string? gebruiker, string titel, DateTime start, DateTime einde, string? plaats, IReadOnlyList<string> uitnodigen, CancellationToken ct = default)
+    public Task<(string? EventId, string? Fout)> MaakAfspraakAsync(string? gebruiker, NieuweAfspraak afspraak, CancellationToken ct = default)
     {
         if (AanmaakFout != null) return Task.FromResult<(string?, string?)>((null, AanmaakFout));
-        Aangemaakt.Add((gebruiker, titel, plaats, uitnodigen.ToArray()));
+        Aangemaakt.Add((gebruiker, afspraak));
         var id = "evt-nieuw-" + Aangemaakt.Count;
         if (gebruiker != null)
         {
             if (!Agenda.TryGetValue(gebruiker, out var lijst)) Agenda[gebruiker] = lijst = new();
-            lijst.Add(new AgendaAfspraak { Id = id, Titel = titel, Start = start, Einde = einde, Plaats = plaats, HeeftDeelnemers = uitnodigen.Count > 0, Deelnemers = uitnodigen.ToList() });
+            lijst.Add(new AgendaAfspraak { Id = id, Titel = afspraak.Titel, Start = afspraak.Start, Einde = afspraak.Einde, Plaats = afspraak.Plaats, Online = afspraak.Online,
+                HeeftDeelnemers = afspraak.Uitnodigen.Count > 0, Deelnemers = afspraak.Uitnodigen.ToList() });
         }
         return Task.FromResult<(string?, string?)>((id, null));
     }

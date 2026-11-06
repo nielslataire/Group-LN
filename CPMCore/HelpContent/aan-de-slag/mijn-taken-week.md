@@ -4,7 +4,7 @@ topic: aan-de-slag
 role: Iedereen
 device: Desktop
 minutes: 3
-updated: 2026-11-05
+updated: 2026-11-06
 newsTag: Nieuw
 screens: mijn-taken-week
 related: mijn-taken-vandaag, mijn-profiel-bijwerken
@@ -17,7 +17,11 @@ before: |
   Je hebt schrijfrecht op **Mijn taken** om taken te plannen.
 faq:
   - q: Krijgen deelnemers een uitnodiging als ik een afspraak maak?
-    a: Nee, tenzij je Deelnemers uitnodigen aanvinkt en deelnemers kiest. Zonder vinkje staat de afspraak enkel in je eigen agenda.
+    a: Alleen de mensen die je bij Deelnemers kiest. Kies je niemand, dan staat de afspraak enkel in je eigen agenda.
+  - q: Kan ik een afspraak zonder project maken?
+    a: Ja. Kies bij Project de optie Geen project. De afspraak staat dan in je Outlook-agenda, maar hangt aan geen project.
+  - q: Hoe geef ik een uur in?
+    a: Tik het uur gewoon in het veld, bijvoorbeeld 9, 930 of 9:30. Of kies een uur uit de lijst.
   - q: Waarom lukt het aanmaken van een afspraak niet?
     a: CPM mag dan niet in je Outlook-agenda schrijven. Meld het aan de beheerder. Die moet de toegang tot agenda's goedkeuren.
   - q: Verandert een afspraak in Outlook als ik ze aan een project koppel?
@@ -79,16 +83,22 @@ Gebruik **Vorige week**, **Deze week** en **Volgende week** boven de kalender.
 CPM stelt een project voor als de titel een projectnaam, projectcode of straat met nummer bevat, of als een deelnemer een bekende contactpersoon is met één lopend project. CPM koppelt nooit zelf.
 Een gekoppelde afspraak toont de projectnaam in het blok. Met **Ontkoppelen** haal je de koppeling weg. De afspraak zelf in Outlook verandert niet.
 
-## Een afspraak op een project maken
+## Een afspraak maken
 
-![Het formulier Nieuwe afspraak op een project](/img/help/aan-de-slag/mijn-taken-week/nieuwe-afspraak.png)
+![Het formulier Nieuwe afspraak](/img/help/aan-de-slag/mijn-taken-week/nieuwe-afspraak.png)
 
 1. Klik op **Nieuwe afspraak**.
-2. Vul de titel in, zoek en kies het project en stel datum, begin en einde in. De plaats is optioneel.
-3. Klik op **Afspraak maken**.
+2. Geef de afspraak een titel. Kies eventueel een soort, zoals **Werfbezoek**. Die vult een gewone duur en plaats al in.
+3. Kies het project. Zoek in de lijst of kies **Geen project** voor een persoonlijke afspraak.
+4. Kies de datum. Tik het begin en het einde zelf in, of kies ze uit de lijst. Met de knoppen onder de uren kies je een duur.
+5. Kies de plaats: het adres van het project, het kantoor, een ander adres, online of telefonisch. Bij **Online** voegt Outlook een Teams-link toe.
+6. Kies de deelnemers. Eerst zie je je collega's, daarna de mensen van het project. Typ om te zoeken, of typ een volledig e-mailadres voor iemand van buiten.
+7. Stel eventueel een herinnering in en voeg een notitie toe.
+8. Klik op **Afspraak maken** of op **Maken en uitnodigen**.
 
-De afspraak staat meteen in je Outlook-agenda en is aan het project gekoppeld. Je ziet de projectnaam in het blok.
-Standaard krijgt niemand een uitnodiging en staat de afspraak enkel in je eigen agenda. Wil je mensen uitnodigen, vink dan **Deelnemers uitnodigen** aan. Je ziet eerst je collega's. Typ in het veld om een contactpersoon te zoeken, of typ een e-mailadres om iemand van buiten uit te nodigen. Outlook stuurt de gekozen mensen dan een uitnodiging.
+Bij het kiezen van het uur zie je of je agenda vrij is. Overlapt de afspraak met iets anders, dan staat dat onder de uren. Je kunt de afspraak dan toch maken.
+De afspraak staat meteen in je Outlook-agenda. Met een project is ze eraan gekoppeld en zie je de projectnaam in het blok.
+Enkel de gekozen deelnemers krijgen een uitnodiging per mail. Kies je niemand, dan gaat er niets uit.
 Pas je de tijd of titel later aan in CPM of in Outlook, dan staat dat aan beide kanten. De koppeling met het project blijft behouden.
 
 ## Let op

@@ -90,9 +90,15 @@ public class MijnTakenAssistent
 
         var response = _projectService.GetProjectsForList(0, 0, code);
         c.ProjectIds = response.Success ? response.Values.Select(p => p.Id).ToList() : new List<int>();
-        c.Projecten = (await _db.Project.AsNoTracking().Where(p => c.ProjectIds.Contains(p.ProjectId))
-                .Select(p => new { p.ProjectId, p.ProjectName }).OrderBy(p => p.ProjectName).ToListAsync())
-            .ToDictionary(p => p.ProjectId, p => new MtProject { Id = p.ProjectId, Naam = p.ProjectName ?? "", Kleur = KleurVoor(p.ProjectId) });
+        var projectRijen = await _db.Project.AsNoTracking().Where(p => c.ProjectIds.Contains(p.ProjectId))
+            .Select(p => new { p.ProjectId, p.ProjectName, p.Street, p.Number, p.PostalCodeId }).OrderBy(p => p.ProjectName).ToListAsync();
+        var codeIds = projectRijen.Where(p => p.PostalCodeId != null).Select(p => p.PostalCodeId!.Value).Distinct().ToList();
+        var codes = await _db.PostalCode.AsNoTracking().Where(x => codeIds.Contains(x.PostcodeId)).ToDictionaryAsync(x => x.PostcodeId, x => x.Gemeente);
+        c.Projecten = projectRijen.ToDictionary(p => p.ProjectId, p => new MtProject
+        {
+            Id = p.ProjectId, Naam = p.ProjectName ?? "", Kleur = KleurVoor(p.ProjectId),
+            Adres = string.Join(", ", new[] { $"{p.Street} {p.Number}".Trim(), p.PostalCodeId != null && codes.TryGetValue(p.PostalCodeId.Value, out var gem) ? gem : "" }.Where(x => !string.IsNullOrWhiteSpace(x)))
+        });
 
         c.Inst = await _db.UserProfileSettings.AsNoTracking().FirstOrDefaultAsync(s => s.UserId == id.Value) ?? new UserProfileSettings();
         return c;
@@ -138,7 +144,8 @@ public class MijnTakenAssistent
     public async Task<MtShell> Shell(MtContext c, string tab, string ondertitel)
     {
         var inbox = await InboxAantal(c);
-        var shell = new MtShell { Tab = tab, Ondertitel = ondertitel, InboxAantal = inbox, Projecten = c.Projecten.Values.ToList() };
+        var shell = new MtShell { Tab = tab, Ondertitel = ondertitel, InboxAantal = inbox, Projecten = c.Projecten.Values.ToList(),
+            RecenteProjecten = tab is "vandaag" or "week" ? await _afspraken.RecenteProjectenAsync(c.UserId, c.ProjectIds) : new List<int>() };
 
         var laatste = await _db.TaakTijd.AsNoTracking().Where(x => x.UserId == c.UserId).OrderByDescending(x => x.Start).FirstOrDefaultAsync();
         if (laatste != null)

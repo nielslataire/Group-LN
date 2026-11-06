@@ -325,3 +325,10 @@
     .gl-v2-toggle-grid { grid-template-columns: 1fr; }
 }
 
+
+/* ── Grote titel — het eerste veld van een scherm waar de titel de hoofdzaak is (design-handoff "CRM Nieuwe afspraak"): geen kader, enkel een onderlijn die bij focus groen wordt.
+   Gebruik: <div class="gl-v2-field-box is-title"><input class="gl-v2-field-input" aria-label="Titel" …></div> (het label ontbreekt bewust; de placeholder zegt wat er hoort). ── */
+.gl-v2-field-box.is-title { height: 48px; padding: 0 2px; border: 0; border-bottom: 1.5px solid var(--gl-v2-hairline); border-radius: 0; background: transparent; }
+.gl-v2-field-box.is-title:focus-within { border-bottom-color: var(--gl-v2-primary); }
+.gl-v2-field-box.is-title .gl-v2-field-input { font: 500 18px var(--gl-v2-font-sans); }
+.gl-v2-field.is-error .gl-v2-field-box.is-title { border-bottom-color: var(--gl-v2-danger, #8B2A2A); }

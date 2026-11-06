@@ -211,15 +211,19 @@ public class OutlookAfspraakTests
 
     // ── Afspraak aanmaken in CPM (ticket #8) ─────────────────────────────────────────────────
 
+    private static Task<(string? EventId, string? Fout)> Maak(OutlookAfspraakService afspraken, int? project, string? titel, DateTime start, int minuten, string? plaats = null,
+        bool online = false, string? deelnemers = null, int herinnering = 15, string? notitie = null) =>
+        afspraken.MaakAsync(1, "entra-an", project, Zichtbaar, titel, start, minuten, plaats, online, deelnemers, herinnering, notitie);
+
     [Fact]
     public async Task Een_afspraak_vanuit_cpm_komt_in_outlook_en_is_aan_het_project_gekoppeld()
     {
         var (assistent, afspraken, db, graph) = Bouw();
 
-        var (eventId, fout) = await afspraken.MaakAsync(1, "entra-an", 2, Zichtbaar, " Werfoverleg ", Nu.AddHours(3), 60, "Op de werf", false, null);
+        var (eventId, fout) = await Maak(afspraken, 2, " Werfoverleg ", Nu.AddHours(3), 60, "Op de werf");
 
         Assert.Null(fout);
-        Assert.Equal("Werfoverleg", graph.Aangemaakt.Single().Titel);
+        Assert.Equal("Werfoverleg", graph.Aangemaakt.Single().Afspraak.Titel);
         Assert.Equal("entra-an", graph.Aangemaakt.Single().Gebruiker);
         Assert.Equal(2, db.OutlookAfspraak.Single(k => k.EventId == eventId).ProjectId);
 
@@ -230,39 +234,61 @@ public class OutlookAfspraakTests
     }
 
     [Fact]
-    public async Task Standaard_gaat_er_geen_uitnodiging_uit_ook_niet_als_er_adressen_ingevuld_zijn()
-    {
-        var (_, afspraken, _, graph) = Bouw();
-
-        await afspraken.MaakAsync(1, "entra-an", 1, Zichtbaar, "Overleg", Nu.AddHours(3), 30, null, false, "klant@example.com");
-
-        Assert.Empty(graph.Aangemaakt.Single().Uitnodigen);
-    }
-
-    [Fact]
-    public async Task Met_het_vinkje_gaan_de_uitnodigingen_naar_de_opgegeven_adressen_zonder_dubbels()
-    {
-        var (_, afspraken, _, graph) = Bouw();
-
-        var (_, fout) = await afspraken.MaakAsync(1, "entra-an", 1, Zichtbaar, "Overleg", Nu.AddHours(3), 30, null, true, "klant@example.com; meer@example.com KLANT@example.com");
-
-        Assert.Null(fout);
-        Assert.Equal(new[] { "klant@example.com", "meer@example.com" }, graph.Aangemaakt.Single().Uitnodigen);
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("geen-adres")]
-    public async Task Uitnodigen_zonder_geldig_adres_wordt_geweigerd_en_maakt_niets_aan(string deelnemers)
+    public async Task Een_afspraak_zonder_project_is_persoonlijk_en_wordt_niet_gekoppeld()
     {
         var (_, afspraken, db, graph) = Bouw();
 
-        var (eventId, fout) = await afspraken.MaakAsync(1, "entra-an", 1, Zichtbaar, "Overleg", Nu.AddHours(3), 30, null, true, deelnemers);
+        var (eventId, fout) = await Maak(afspraken, null, "Tandarts", Nu.AddHours(3), 30);
+
+        Assert.Null(fout);
+        Assert.NotNull(eventId);
+        Assert.Single(graph.Aangemaakt);
+        Assert.Empty(db.OutlookAfspraak);
+    }
+
+    [Fact]
+    public async Task Online_herinnering_en_notitie_gaan_mee_naar_outlook()
+    {
+        var (_, afspraken, _, graph) = Bouw();
+
+        await Maak(afspraken, 1, "Overleg", Nu.AddHours(3), 30, online: true, herinnering: 60, notitie: "  Toegangscode 1234  ");
+        await Maak(afspraken, 1, "Zonder herinnering", Nu.AddHours(5), 30, herinnering: 0);
+
+        var eerste = graph.Aangemaakt[0].Afspraak;
+        Assert.Equal((true, 60, "Toegangscode 1234"), (eerste.Online, eerste.HerinneringMinuten, eerste.Notitie));
+        Assert.Null(graph.Aangemaakt[1].Afspraak.HerinneringMinuten);
+    }
+
+    [Fact]
+    public async Task Zonder_deelnemers_gaat_er_geen_uitnodiging_uit()
+    {
+        var (_, afspraken, _, graph) = Bouw();
+
+        await Maak(afspraken, 1, "Overleg", Nu.AddHours(3), 30);
+
+        Assert.Empty(graph.Aangemaakt.Single().Afspraak.Uitnodigen);
+    }
+
+    [Fact]
+    public async Task De_gekozen_deelnemers_krijgen_een_uitnodiging_zonder_dubbels()
+    {
+        var (_, afspraken, _, graph) = Bouw();
+
+        var (_, fout) = await Maak(afspraken, 1, "Overleg", Nu.AddHours(3), 30, deelnemers: "klant@example.com; meer@example.com KLANT@example.com");
+
+        Assert.Null(fout);
+        Assert.Equal(new[] { "klant@example.com", "meer@example.com" }, graph.Aangemaakt.Single().Afspraak.Uitnodigen);
+    }
+
+    [Fact]
+    public async Task Een_ongeldig_adres_wordt_geweigerd_en_maakt_niets_aan()
+    {
+        var (_, afspraken, _, graph) = Bouw();
+        var (eventId, fout) = await Maak(afspraken, 1, "Overleg", Nu.AddHours(3), 30, deelnemers: "geen-adres");
 
         Assert.NotNull(fout);
         Assert.Null(eventId);
         Assert.Empty(graph.Aangemaakt);
-        Assert.Empty(db.OutlookAfspraak);
     }
 
     [Fact]
@@ -270,9 +296,9 @@ public class OutlookAfspraakTests
     {
         var (_, afspraken, _, graph) = Bouw();
 
-        Assert.NotNull((await afspraken.MaakAsync(1, "entra-an", 99, Zichtbaar, "Overleg", Nu, 30, null, false, null)).Fout);
-        Assert.NotNull((await afspraken.MaakAsync(1, "entra-an", 1, Zichtbaar, "  ", Nu, 30, null, false, null)).Fout);
-        Assert.NotNull((await afspraken.MaakAsync(1, "entra-an", 1, Zichtbaar, "Overleg", Nu, 2, null, false, null)).Fout);
+        Assert.NotNull((await Maak(afspraken, 99, "Overleg", Nu, 30)).Fout);
+        Assert.NotNull((await Maak(afspraken, 1, "  ", Nu, 30)).Fout);
+        Assert.NotNull((await Maak(afspraken, 1, "Overleg", Nu, 2)).Fout);
 
         Assert.Empty(graph.Aangemaakt);
     }
@@ -283,11 +309,49 @@ public class OutlookAfspraakTests
         var (_, afspraken, db, graph) = Bouw();
         graph.AanmaakFout = "De app mag geen afspraken in je agenda maken.";
 
-        var (eventId, fout) = await afspraken.MaakAsync(1, "entra-an", 1, Zichtbaar, "Overleg", Nu.AddHours(3), 30, null, false, null);
+        var (eventId, fout) = await Maak(afspraken, 1, "Overleg", Nu.AddHours(3), 30);
 
         Assert.Equal("De app mag geen afspraken in je agenda maken.", fout);
         Assert.Null(eventId);
         Assert.Empty(db.OutlookAfspraak);
+    }
+
+    // ── Bezetting van een dag (overlapmelding) en plaatsen ───────────────────────────────────
+
+    [Fact]
+    public async Task De_bezetting_van_een_dag_toont_enkel_afspraken_met_een_uur_die_niet_vrij_zijn()
+    {
+        var (_, afspraken, _, graph) = Bouw();
+        var dag = Nu.Date;
+        graph.Agenda["entra-an"] = new()
+        {
+            new AgendaAfspraak { Id = "a", Titel = "Werfbezoek", Start = dag.AddHours(8).AddMinutes(30), Einde = dag.AddHours(10) },
+            new AgendaAfspraak { Id = "b", Titel = "Verlof", Start = dag, Einde = dag.AddDays(1), HeleDag = true },
+            new AgendaAfspraak { Id = "c", Titel = "Optioneel", Start = dag.AddHours(14), Einde = dag.AddHours(15), ToonAls = "free" }
+        };
+
+        var bezet = await afspraken.BezetOpAsync("entra-an", dag);
+
+        var blok = Assert.Single(bezet);
+        Assert.Equal(("Werfbezoek", 510, 600), (blok.Titel, blok.Van, blok.Tot));
+    }
+
+    [Fact]
+    public async Task Recente_plaatsen_komen_uit_de_afspraken_van_de_voorbije_maand_zonder_online_of_dubbels()
+    {
+        var (_, afspraken, _, graph) = Bouw();
+        var dag = DateTime.Today;
+        graph.Agenda["entra-an"] = new()
+        {
+            new AgendaAfspraak { Id = "a", Titel = "A", Start = dag.AddDays(-2).AddHours(9), Einde = dag.AddDays(-2).AddHours(10), Plaats = "Notaris Van Hulle" },
+            new AgendaAfspraak { Id = "b", Titel = "B", Start = dag.AddDays(-5).AddHours(9), Einde = dag.AddDays(-5).AddHours(10), Plaats = "notaris van hulle" },
+            new AgendaAfspraak { Id = "c", Titel = "C", Start = dag.AddDays(-3).AddHours(9), Einde = dag.AddDays(-3).AddHours(10), Plaats = "Teams", Online = true }
+        };
+
+        var lijst = await afspraken.ZoekPlaatsenAsync("entra-an", "", Zichtbaar);
+
+        var recent = Assert.Single(lijst);
+        Assert.Equal(("Notaris Van Hulle", "Recent"), (recent.Naam, recent.Soort));
     }
 
     // ── Deelnemers zoeken ────────────────────────────────────────────────────────────────────
@@ -312,6 +376,29 @@ public class OutlookAfspraakTests
         var lijst = await afspraken.ZoekDeelnemersAsync(1, "example");
 
         Assert.Equal(new[] { "cas@example.com", "meer@example.com", "klant@example.com" }, lijst.Select(d => d.Email));
+    }
+
+    [Fact]
+    public async Task Met_een_project_staan_de_mensen_van_dat_project_onder_de_collega_s_en_boven_de_andere_contacten()
+    {
+        var (_, afspraken, _, _) = Bouw();
+
+        var zonderTerm = await afspraken.ZoekDeelnemersAsync(1, null, 2, Zichtbaar);
+        var metTerm = await afspraken.ZoekDeelnemersAsync(1, "example", 2, Zichtbaar);
+
+        Assert.Equal(new[] { ("bo@groupln.be", OutlookAfspraakService.GroepCollegas), ("meer@example.com", OutlookAfspraakService.GroepProject) }, zonderTerm.Select(d => (d.Email, d.Groep)));
+        Assert.Equal(new[] { "meer@example.com", "klant@example.com" }, metTerm.Select(d => d.Email));
+        Assert.Equal(OutlookAfspraakService.GroepContacten, metTerm.Last().Groep);
+    }
+
+    [Fact]
+    public async Task Een_project_buiten_bereik_geeft_geen_projectgroep()
+    {
+        var (_, afspraken, _, _) = Bouw();
+
+        var lijst = await afspraken.ZoekDeelnemersAsync(1, null, 3, Zichtbaar);
+
+        Assert.Equal(new[] { "bo@groupln.be" }, lijst.Select(d => d.Email));
     }
 
     [Fact]
@@ -342,7 +429,7 @@ public class OutlookAfspraakTests
     public async Task Wijzigingen_in_cpm_en_in_outlook_komen_door_en_de_koppeling_blijft()
     {
         var (assistent, afspraken, db, graph) = Bouw();
-        var (eventId, _) = await afspraken.MaakAsync(1, "entra-an", 1, Zichtbaar, "Overleg", Nu.AddHours(3), 60, null, false, null);
+        var (eventId, _) = await Maak(afspraken, 1, "Overleg", Nu.AddHours(3), 60);
 
         // CPM → Outlook: de bestaande wijzigactie van Mijn taken schrijft naar dezelfde afspraak.
         Assert.Null(await assistent.AgendaWijzig(Ctx(), eventId!, "Overleg verplaatst", Nu.AddHours(5), 30));

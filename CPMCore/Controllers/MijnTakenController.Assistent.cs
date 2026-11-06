@@ -76,28 +76,50 @@ public partial class MijnTakenController
         return fout == null ? Json(new { ok = true }) : Fout(fout);
     }
 
-    // Afspraak op een project aanmaken (ticket #8): komt in de Outlook-agenda van de gebruiker en is meteen aan het project gekoppeld. Uitnodigen staat standaard uit.
+    // Afspraak aanmaken (ticket #8): komt in de Outlook-agenda van de gebruiker en wordt, met een project, meteen gekoppeld. Er gaat enkel een uitnodiging uit naar de gekozen deelnemers.
     [HttpPost("AfspraakMaak"), ValidateAntiForgeryToken, CPMCore.Filters.PermissionWrite(BOCore.PermissionCodes.MijnTaken)]
-    public async Task<IActionResult> AfspraakMaak(int projectId, string? titel, string start, int minuten, string? plaats, bool uitnodigen, string? deelnemers)
+    public async Task<IActionResult> AfspraakMaak(int? projectId, string? titel, string start, int minuten, string? plaats, bool online, string? deelnemers, int herinnering, string? notitie)
     {
         var c = await _assistent.Context(User);
         if (c == null) return Forbid();
         var tijd = Tijd(start);
         if (tijd == null) return Fout("Ongeldig tijdstip.");
         var (eventId, fout) = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.OutlookSync.OutlookAfspraakService>()
-            .MaakAsync(c.UserId, c.AgendaGebruiker, projectId, c.ProjectIds, titel, tijd.Value, minuten, plaats, uitnodigen, deelnemers);
+            .MaakAsync(c.UserId, c.AgendaGebruiker, projectId, c.ProjectIds, titel, tijd.Value, minuten, plaats, online, deelnemers, herinnering, notitie);
         if (eventId != null) return Json(new { ok = true, eventId, waarschuwing = fout });   // de afspraak bestaat al in Outlook: niet opnieuw laten maken
         return Fout(fout ?? "De afspraak kon niet aangemaakt worden.");
     }
 
-    // Keuzelijst "Deelnemers uitnodigen": collega's bovenaan, daaronder contactpersonen, en een getypt e-mailadres als extern adres (combo-lookup: { term } → [{ id, text, sub }]).
+    // Deelnemerskiezer: collega's bovenaan, daaronder de mensen van het gekozen project en andere contactpersonen, en een getypt e-mailadres als extern adres
+    // (lookup: { term, context = projectId } → [{ id, text, sub, group }]).
     [HttpPost("UitnodigingZoek")]
-    public async Task<IActionResult> UitnodigingZoek(string? term)
+    public async Task<IActionResult> UitnodigingZoek(string? term, int? context)
     {
         var c = await _assistent.Context(User);
         if (c == null) return Forbid();
-        var lijst = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.OutlookSync.OutlookAfspraakService>().ZoekDeelnemersAsync(c.UserId, term);
-        return Json(lijst.Select(d => new { id = d.Email, text = d.Naam, sub = d.Sub }));
+        var lijst = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.OutlookSync.OutlookAfspraakService>().ZoekDeelnemersAsync(c.UserId, term, context, c.ProjectIds);
+        return Json(lijst.Select(d => new { id = d.Email, text = d.Naam, sub = d.Sub, group = d.Groep }));
+    }
+
+    // Adressuggesties bij "Ander adres" (lookup: { term } → [{ text, sub, tag }]).
+    [HttpPost("PlaatsZoek")]
+    public async Task<IActionResult> PlaatsZoek(string? term)
+    {
+        var c = await _assistent.Context(User);
+        if (c == null) return Forbid();
+        var lijst = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.OutlookSync.OutlookAfspraakService>().ZoekPlaatsenAsync(c.AgendaGebruiker, term, c.ProjectIds);
+        return Json(lijst.Select(p => new { text = p.Naam, sub = p.Adres, tag = p.Soort }));
+    }
+
+    // Wanneer je op een dag al bezet bent, voor de overlapmelding in het formulier Nieuwe afspraak. Zonder werkende agenda is het antwoord een lege lijst.
+    [HttpPost("AfspraakDag"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> AfspraakDag(string datum)
+    {
+        var c = await _assistent.Context(User);
+        if (c == null) return Forbid();
+        if (!DateTime.TryParseExact(datum, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var dag)) return Json(new { ok = true, bezet = Array.Empty<object>() });
+        var bezet = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.OutlookSync.OutlookAfspraakService>().BezetOpAsync(c.AgendaGebruiker, dag);
+        return Json(new { ok = true, bezet = bezet.Select(b => new { van = b.Van, tot = b.Tot, titel = b.Titel }) });
     }
 
     [HttpPost("AfspraakOntkoppel"),ValidateAntiForgeryToken, CPMCore.Filters.PermissionWrite(BOCore.PermissionCodes.MijnTaken)]

@@ -1,0 +1,25 @@
+/* gl-v2 — tijdveld (_TimeField, wwwroot/js/gl-v2-time.js). Zelfde veldkader als het datumveld; de lijst is een .gl-v2-select-panel (position:fixed, JS-gepositioneerd).
+   Uren staan in de monospace van het ontwerp ("CRM Nieuwe afspraak"). Alles twee klassen diep zodat de shell- en forms-regels op een gelijkspel niet winnen. */
+
+.gl-v2 .gl-v2-select.gl-v2-timefield { display: flex; width: 100%; min-width: 0; }
+.gl-v2 .gl-v2-timefield > .gl-v2-field-box { flex: 1 1 auto; width: 100%; min-width: 0; cursor: text; }
+.gl-v2 .gl-v2-timefield.is-open > .gl-v2-field-box,
+.gl-v2 .gl-v2-timefield > .gl-v2-field-box:focus-within { border-color: var(--gl-v2-primary); box-shadow: 0 0 0 3px rgba(0, 83, 45, .10); }
+.gl-v2 .gl-v2-field.is-error .gl-v2-timefield > .gl-v2-field-box { border-color: var(--gl-v2-danger, #8B2A2A); }
+.gl-v2 .gl-v2-time-input { font: 500 14px var(--gl-v2-font-mono, 'IBM Plex Mono', monospace); font-variant-numeric: tabular-nums; flex: 0 1 auto; width: 5.2ch; min-width: 5.2ch; }
+.gl-v2 .gl-v2-time-input::placeholder { font-weight: 450; color: var(--gl-v2-muted-light); }
+.gl-v2 .gl-v2-time-note { flex: 1; min-width: 0; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2 .gl-v2-time-note[hidden] { display: none; }
+.gl-v2 .gl-v2-time-caret { margin-left: auto; flex: none; font-size: 13px; color: var(--gl-v2-primary); transition: transform .12s; }
+.gl-v2 .gl-v2-timefield.is-open .gl-v2-time-caret { transform: rotate(180deg); }
+
+.gl-v2 .gl-v2-time-panel.gl-v2-select-panel { width: 230px; max-height: 280px; padding: 6px; }
+.gl-v2 .gl-v2-time-option {
+    display: flex; align-items: center; gap: 12px; width: 100%; padding: 7px 10px; border: 0; border-radius: var(--gl-v2-radius-s, 7px);
+    background: transparent; cursor: pointer; text-align: left;
+}
+.gl-v2 .gl-v2-time-option:hover { background: var(--gl-v2-bg); }
+.gl-v2 .gl-v2-time-option.is-selected { background: #EDF2E8; box-shadow: inset 2px 0 0 var(--gl-v2-primary); }
+.gl-v2 .gl-v2-time-option-t { font: 500 13px var(--gl-v2-font-mono, 'IBM Plex Mono', monospace); color: var(--gl-v2-ink); }
+.gl-v2 .gl-v2-time-option-n { flex: 1; min-width: 0; text-align: right; font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2 .gl-v2-time-option-n.is-busy { color: #8A6A32; font-weight: 500; font-size: 10.5px; }

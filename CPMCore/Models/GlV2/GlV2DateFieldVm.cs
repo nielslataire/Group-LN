@@ -11,5 +11,9 @@ namespace CPMCore.Models.GlV2
         public string DisplayValue { get; set; } = "";
         public bool HasError { get; set; }
         public string? ErrorMessage { get; set; }
+        /// <summary>Toont bovenaan de kalender de snelknoppen Vandaag, Morgen en Volgende maandag (bv. een afspraak plannen). De voettekst houdt dan enkel Wissen.</summary>
+        public bool QuickDates { get; set; }
+        /// <summary>Dagen vóór vandaag grijs in de kalender (ze blijven kiesbaar). Voor velden die over de toekomst gaan.</summary>
+        public bool DimPast { get; set; }
     }
 }

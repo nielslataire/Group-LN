@@ -390,70 +390,154 @@
         openNieuw(datum, van, van + 30, nieuwKnop.getBoundingClientRect());
     });
 
-    // Nieuwe afspraak op een project: komt in de Outlook-agenda en is meteen gekoppeld. Uitnodigen staat standaard uit; enkel met het vinkje gaan de gekozen deelnemers mee.
-    // Velden zijn de gedeelde componenten: _GlV2Combo (project en deelnemers), _DateField (datum) en _SelectList (van en tot, kwartierstappen).
+    // Nieuwe afspraak (ontwerp "CRM Nieuwe afspraak"): komt in de Outlook-agenda; met een project is ze meteen gekoppeld, zonder project is ze persoonlijk. Enkel de gekozen deelnemers krijgen een uitnodiging.
+    // Velden zijn de gedeelde componenten: titel-variant, .gl-v2-pill, _GlV2Combo (project), _DateField, _TimeField (van en tot), .gl-v2-segmented, _SuggestField, _PersonPicker.
     var nieuwAfspraakModal = $("mt-afspraak-nieuw-modal"), nieuwAfspraakKnop = $("mt-afspraak-nieuw");
-    if (nieuwAfspraakModal && nieuwAfspraakKnop) {
-        var vinkje = $("mt-an-uitnodigen"), chips = $("mt-an-chips"), uitgenodigd = [];
-        var toonUitnodigen = function () {
-            $("mt-an-deelnemers-rij").hidden = !vinkje.checked;
-            $("mt-an-nota").hidden = vinkje.checked;
-        };
-        var zetKeuze = function (id, waarde) {
-            var wrap = $(id + "_select"); if (!wrap || !window.GlV2Select) return;
-            var items = $$(".gl-v2-select-option", wrap).map(function (o) { return { value: o.dataset.value, text: o.textContent.trim() }; });
-            window.GlV2Select.setItems(wrap, items, waarde);
-        };
-        var zetDatum = function (iso) {
-            $("mt-an-datum").value = iso; $("mt-an-datum_text").value = iso.slice(8, 10) + "/" + iso.slice(5, 7) + "/" + iso.slice(0, 4);
-        };
-        var tekenChips = function () {
-            chips.innerHTML = "";
-            uitgenodigd.forEach(function (d, i) {
-                var c = el("span", "gl-v2-select-chip", d.naam === d.email ? d.email : d.naam), x = el("button", "gl-v2-select-chip-remove");
-                c.title = d.email; x.type = "button"; x.setAttribute("aria-label", d.naam + " verwijderen"); x.innerHTML = "<i class=\"ph ph-x\" aria-hidden=\"true\"></i>";
-                x.addEventListener("click", function () { uitgenodigd.splice(i, 1); tekenChips(); });
-                c.appendChild(x); chips.appendChild(c);
-            });
-        };
-        vinkje.addEventListener("change", toonUitnodigen);
-        $("mt-an-deelnemers-rij").addEventListener("gl-v2:combo-select", function (e) {
-            var d = e.detail || {}; if (!d.id) return;
-            if (!uitgenodigd.some(function (x) { return x.email.toLowerCase() === String(d.id).toLowerCase(); })) { uitgenodigd.push({ email: d.id, naam: d.text || d.id }); tekenChips(); }
+    if (nieuwAfspraakModal && nieuwAfspraakKnop) (function () {
+        var T = window.GlV2Time, vanVeld = T.byId("mt-an-van"), totVeld = T.byId("mt-an-tot");
+        var titel = $("mt-an-titel"), projectHidden = $("mt-an-project"), projectCombo = projectHidden.closest("[data-gl-v2-combo]");
+        var plaats = $("mt-an-plaats"), plaatsSuggest = plaats.closest("[data-gl-v2-suggest]"), deelnemersRoot = $("mt-an-deelnemers").closest("[data-gl-v2-people]");
+        var kantoor = nieuwAfspraakModal.dataset.kantoor || "", adressen = {};
+        try { adressen = JSON.parse(nieuwAfspraakModal.dataset.adressen || "{}"); } catch (e) { adressen = {}; }
+        var soortKnoppen = $$("#mt-an-soorten [data-soort]"), duurKnoppen = $$("#mt-an-duren [data-duur]"), locKnoppen = $$("#mt-an-plaatsen [data-loc]"), herinneringKnoppen = $$("#mt-an-herinnering [data-min]");
+        var state = { soort: null, project: "", projectNaam: "", loc: "office", herinnering: 15, titelAuto: "", bezet: [], bezetDatum: "", dur: 60 };
+
+        var kortDuur = function (d) { return d < 60 ? d + " min" : Math.floor(d / 60) + "u" + (d % 60 ? pad(d % 60) : ""); };
+        var vanMin = function () { return T.getMinutes(vanVeld); }, totMin = function () { return T.getMinutes(totVeld); };
+        var datumIso = function () { return $("mt-an-datum").value; };
+
+        // Wat er in de lijsten van Van en Tot staat, de duurknoppen en de overlapmelding volgen altijd uit datum, begin en einde.
+        function ververs() {
+            var a = vanMin(), z = totMin(), d = a != null && z != null && z > a ? z - a : null;
+            var inBezet = function (m) { return state.bezet.filter(function (b) { return m >= b.van && m < b.tot; })[0]; };
+            var vanLijst = [];
+            for (var m = 7 * 60; m <= 20 * 60; m += 15) { var b = inBezet(m); vanLijst.push({ minutes: m, note: b ? b.titel : "", busy: !!b }); }
+            T.setItems(vanVeld, vanLijst);
+            var totLijst = [];
+            if (a != null) for (var x = 15; x <= 480 && a + x <= 1439; x += x < 60 ? 15 : 30) totLijst.push({ minutes: a + x, note: kortDuur(x) });
+            T.setItems(totVeld, totLijst);
+            T.setNote(totVeld, d ? kortDuur(d) : "");
+            duurKnoppen.forEach(function (b) { b.classList.toggle("is-active", d === parseInt(b.dataset.duur, 10)); });
+            var botsing = d ? state.bezet.filter(function (b) { return a < b.tot && z > b.van; })[0] : null;
+            $("mt-an-conflict").hidden = !botsing;
+            $("mt-an-vrij").hidden = !!botsing || !d;
+            if (botsing) $("mt-an-conflict-tekst").textContent = "Overlapt met “" + botsing.titel + "” " + hm(botsing.van) + "–" + hm(botsing.tot);
+            $("mt-an-opslaan").disabled = !titel.value.trim();
+        }
+        function zetDuur(d) {
+            state.dur = d;
+            var a = vanMin(); if (a == null) return;
+            T.setValue(totVeld, Math.min(a + d, 1439));
+        }
+        function laadBezet() {
+            var dag = datumIso();
+            if (!dag) { state.bezet = []; ververs(); return; }
+            if (dag === state.bezetDatum) return;
+            state.bezetDatum = dag; state.bezet = []; ververs();
+            post("AfspraakDag", { datum: dag }).then(function (j) { if (dag === datumIso()) { state.bezet = j.bezet || []; ververs(); } }, function () { });
+        }
+
+        // ── plaats ─────────────────────────────────────────────────────────────────────────────
+        function zetLoc(loc, behoudTekst) {
+            if (loc === "proj" && !state.project) loc = "office";
+            state.loc = loc;
+            locKnoppen.forEach(function (b) { b.classList.toggle("is-active", b.dataset.loc === loc); if (b.dataset.loc === "proj") b.hidden = !state.project; });
+            var tekst = loc === "proj" ? (adressen[state.project] || "") : loc === "office" ? kantoor : "";
+            if (!behoudTekst) plaats.value = tekst;
+            plaats.disabled = loc === "online";
+            plaats.placeholder = loc === "phone" ? "Telefoonnummer (optioneel)" : loc === "other" ? "Zoek een adres, klant of leverancier — of typ een adres" : loc === "online" ? "Teams-link wordt automatisch toegevoegd" : "Adres of ruimte";
+            window.GlV2Suggest.setEnabled(plaatsSuggest, loc === "other");
+            $("mt-an-plaats-help").hidden = loc !== "other";
+        }
+        function plaatsWaarde() {
+            var v = plaats.value.trim();
+            if (state.loc === "online") return "";
+            if (state.loc === "phone") return v ? "Telefonisch: " + v : "Telefonisch";
+            return v;
+        }
+
+        // ── titel en soort ─────────────────────────────────────────────────────────────────────
+        function autoTitel() { return state.soort ? state.soort + (state.projectNaam ? " " + state.projectNaam : "") : ""; }
+        function zetSoort(soort, knop) {
+            state.soort = soort;
+            soortKnoppen.forEach(function (b) { b.classList.toggle("is-active", b === knop); b.setAttribute("aria-pressed", b === knop ? "true" : "false"); });
+            if (!soort) return;
+            zetDuur(parseInt(knop.dataset.duur, 10));
+            zetLoc(knop.dataset.loc);
+            if (!titel.value.trim() || titel.value === state.titelAuto) { state.titelAuto = autoTitel(); titel.value = state.titelAuto; }
+        }
+        soortKnoppen.forEach(function (b) { b.setAttribute("aria-pressed", "false"); b.addEventListener("click", function () { zetSoort(b.classList.contains("is-active") ? null : b.dataset.soort, b.classList.contains("is-active") ? null : b); ververs(); }); });
+        titel.addEventListener("input", ververs);
+
+        // ── project ────────────────────────────────────────────────────────────────────────────
+        projectCombo.addEventListener("gl-v2:combo-select", function (e) {
+            var d = e.detail || {};
+            state.project = d.id || ""; state.projectNaam = d.id ? (d.text || "") : "";
+            if (state.soort && (!titel.value.trim() || titel.value === state.titelAuto)) { state.titelAuto = autoTitel(); titel.value = state.titelAuto; }
+            zetLoc(state.loc, state.loc !== "proj");   // bij Projectadres volgt het adres het gekozen project; anders blijft de tekst staan
+            window.GlV2People.refresh(deelnemersRoot);
+            ververs();
         });
-        // Wie het begin later zet dan het einde, krijgt een einde een uur later (hoogstens 23:45).
-        $("mt-an-van").addEventListener("change", function () {
-            var a = parseHM($("mt-an-van").value), z = parseHM($("mt-an-tot").value);
-            if (a != null && (z == null || z <= a)) zetKeuze("mt-an-tot", hm(Math.min(a + 60, 23 * 60 + 45)));
+
+        // ── datum en tijd ──────────────────────────────────────────────────────────────────────
+        $("mt-an-datum").addEventListener("change", laadBezet);
+        vanVeld.addEventListener("change", function () {
+            // Het einde schuift mee zodat de duur gelijk blijft.
+            var a = vanMin();
+            if (a != null) T.setValue(totVeld, Math.min(a + state.dur, 1439), true);
+            ververs();
         });
+        totVeld.addEventListener("change", function () { var a = vanMin(), z = totMin(); if (a != null && z != null && z > a) state.dur = z - a; ververs(); });
+        duurKnoppen.forEach(function (b) { b.addEventListener("click", function () { zetDuur(parseInt(b.dataset.duur, 10)); ververs(); }); });
+
+        // ── plaats, deelnemers, herinnering, notitie ───────────────────────────────────────────
+        locKnoppen.forEach(function (b) { b.addEventListener("click", function () { zetLoc(b.dataset.loc); }); });
+        deelnemersRoot.addEventListener("gl-v2:people-change", function (e) {
+            var n = (e.detail && e.detail.items ? e.detail.items : []).length;
+            $("mt-an-uitnodiging-tekst").textContent = n ? n + (n === 1 ? " persoon krijgt" : " personen krijgen") + " een uitnodiging per mail, met een agenda-bestand voor Outlook of Google Agenda." : "Er gaat geen uitnodiging uit. De afspraak staat enkel in je eigen agenda.";
+            $("mt-an-opslaan").textContent = n ? "Maken en uitnodigen" : "Afspraak maken";
+        });
+        herinneringKnoppen.forEach(function (b) { b.addEventListener("click", function () { state.herinnering = parseInt(b.dataset.min, 10); herinneringKnoppen.forEach(function (x) { x.classList.toggle("is-active", x === b); }); }); });
+        $("mt-an-notitie-knop").addEventListener("click", function () { $("mt-an-notitie-rij").hidden = false; this.hidden = true; $("mt-an-notitie").focus(); });
+
+        // ── openen ─────────────────────────────────────────────────────────────────────────────
         nieuwAfspraakKnop.addEventListener("click", function (e) {
             e.stopPropagation(); sluitPop();
             var datum = (week && !week.querySelector(".gl-v2-mt-daycol.is-today")) ? week.querySelector(".gl-v2-mt-daycol").dataset.datum : (dag ? dag.dataset.datum : vandaagIso());
             var van = Math.min(volgendHalfuur(), 23 * 60 + 15);
-            $("mt-an-titel").value = ""; $("mt-an-plaats").value = "";
-            zetDatum(datum); zetKeuze("mt-an-van", hm(van)); zetKeuze("mt-an-tot", hm(Math.min(van + 60, 23 * 60 + 45)));
-            var project = $("mt-an-project").closest("[data-gl-v2-combo]"); if (window.GlV2Combo && project) window.GlV2Combo.setValue(project, "", "");
-            uitgenodigd = []; tekenChips(); vinkje.checked = false; toonUitnodigen();
+            state.soort = null; state.project = ""; state.projectNaam = ""; state.titelAuto = ""; state.bezet = []; state.bezetDatum = ""; state.herinnering = 15; state.dur = 60;
+            titel.value = ""; $("mt-an-notitie").value = ""; $("mt-an-notitie-rij").hidden = true; $("mt-an-notitie-knop").hidden = false;
+            soortKnoppen.forEach(function (b) { b.classList.remove("is-active"); b.setAttribute("aria-pressed", "false"); });
+            herinneringKnoppen.forEach(function (b) { b.classList.toggle("is-active", b.dataset.min === "15"); });
+            window.GlV2DatePicker.setValue("mt-an-datum", datum);
+            window.GlV2Combo.setValue(projectCombo, "", "");
+            window.GlV2People.clear(deelnemersRoot);
+            T.setValue(vanVeld, van, true); T.setValue(totVeld, Math.min(van + 60, 1439), true);
+            zetLoc("office");
+            ververs(); laadBezet();
             if (window.bootstrap) window.bootstrap.Modal.getOrCreateInstance(nieuwAfspraakModal).show();
         });
+        nieuwAfspraakModal.addEventListener("shown.bs.modal", function () { titel.focus(); });
+        nieuwAfspraakModal.addEventListener("keydown", function (e) { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); nieuwAfspraakModal.querySelector("form").requestSubmit(); } });
+
+        // ── opslaan ────────────────────────────────────────────────────────────────────────────
         nieuwAfspraakModal.querySelector("form").addEventListener("submit", function (e) {
             e.preventDefault();
-            var knop = e.target.querySelector("[type=submit]"), project = $("mt-an-project").value;
-            var a = parseHM($("mt-an-van").value), z = parseHM($("mt-an-tot").value);
-            if (!$("mt-an-titel").value.trim()) { toast("warning", "Titel ontbreekt", "Geef de afspraak een titel."); return; }
-            if (!project) { toast("warning", "Kies een project", "De afspraak hoort bij een project."); return; }
-            if (a == null || z == null || z <= a || !$("mt-an-datum").value) { toast("warning", "Controleer de tijden", "Het einde moet na het begin liggen."); return; }
-            if (vinkje.checked && !uitgenodigd.length) { toast("warning", "Kies deelnemers", "Kies minstens één deelnemer, of zet het uitnodigen uit."); return; }
+            var knop = $("mt-an-opslaan"), a = vanMin(), z = totMin();
+            if (!titel.value.trim()) { toast("warning", "Titel ontbreekt", "Geef de afspraak een titel."); return; }
+            if (!datumIso()) { toast("warning", "Datum ontbreekt", "Kies een datum voor de afspraak."); return; }
+            if (a == null || z == null || z <= a) { toast("warning", "Controleer de tijden", "Het einde moet na het begin liggen."); return; }
+            var mensen = window.GlV2People.get(deelnemersRoot);
             knop.disabled = true;
             post("AfspraakMaak", {
-                projectId: project, titel: $("mt-an-titel").value.trim(), start: $("mt-an-datum").value + "T" + hm(a), minuten: z - a, plaats: $("mt-an-plaats").value.trim(),
-                uitnodigen: vinkje.checked ? "true" : "", deelnemers: vinkje.checked ? uitgenodigd.map(function (d) { return d.email; }).join(",") : ""
+                projectId: state.project, titel: titel.value.trim(), start: datumIso() + "T" + hm(a), minuten: z - a, plaats: plaatsWaarde(),
+                online: state.loc === "online" ? "true" : "", deelnemers: mensen.map(function (m) { return m.id; }).join(","), herinnering: state.herinnering, notitie: $("mt-an-notitie").value.trim()
             }).then(function (j) {
                 if (!j.waarschuwing) return herlaad();
                 toast("warning", "Afspraak gemaakt", j.waarschuwing); setTimeout(herlaad, 2500);
             }, function () { knop.disabled = false; });
         });
-    }
+    })();
 
     // Klik of tik op een blok of een volgende actie opent de popover; Enter of spatie doet hetzelfde met het toetsenbord.
     document.addEventListener("click", function (e) {

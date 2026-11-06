@@ -1,0 +1,12 @@
+@model CPMCore.Models.GlV2.GlV2SuggestVm
+@*
+    gl-v2 — tekstveld met suggesties (ontwerp "CRM Nieuwe afspraak", plaats bij "Ander adres"): je typt vrij, de lijst stelt adressen voor (soort-label rechts) en een keuze vult het veld.
+    Binnen een .gl-v2-field met <label for="<id>">. Gedrag: wwwroot/js/gl-v2-suggest.js, opmaak: wwwroot/css/gl-v2/pickers.css; contract in DESIGN.md "Tekstveld met suggesties".
+*@
+<div class="gl-v2-suggest" data-gl-v2-suggest data-lookup-url="@Model.LookupUrl">
+    <div class="gl-v2-field-box">
+        <i class="ph @Model.Icon" aria-hidden="true"></i>
+        <input type="text" class="gl-v2-field-input" id="@Model.Id" name="@Model.Name" data-role="input" value="@Model.Value" placeholder="@Model.Placeholder" maxlength="@Model.MaxLength" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-haspopup="listbox" />
+    </div>
+    <div class="gl-v2-suggest-panel" data-role="panel" role="listbox"></div>
+</div>

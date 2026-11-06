@@ -1,0 +1,33 @@
+@model CPMCore.Models.GlV2.GlV2TimeFieldVm
+@*
+    gl-v2 — het ENIGE tijdveld: een uur ("uu:mm", 24 uur) dat je gewoon intikt (9, 930, 9:30, 9u30 of 09.30 worden 09:00, 09:30 …) of uit een lijst kiest
+    (kwartieren standaard). Naast het datumveld (_DateField): zelfde veldkader, gebonden waarde in een verborgen "HH:mm"-input die een bubbelend `change` vuurt.
+    Gedrag in wwwroot/js/gl-v2-time.js, opmaak in wwwroot/css/gl-v2/time.css; contract in DESIGN.md "Tijdveld".
+*@
+<div class="gl-v2-field@(Model.HasError ? " is-error" : "")">
+    <label class="gl-v2-field-label" for="@(Model.Id)_text">
+        @Model.Label
+        @if (Model.Required)
+        {
+            <span style="color:#8B2A2A">*</span>
+        }
+    </label>
+    <div class="gl-v2-select gl-v2-timefield" data-gl-v2-time id="@(Model.Id)_picker" data-step="@Model.StepMinutes" data-from="@Model.ListFrom" data-to="@Model.ListTo">
+        <div class="gl-v2-field-box">
+            <i class="ph ph-clock" aria-hidden="true"></i>
+            <input type="text" class="gl-v2-field-input gl-v2-time-input" id="@(Model.Id)_text" data-role="time-text" value="@Model.Value" placeholder="@Model.Placeholder" autocomplete="off" inputmode="numeric" maxlength="5" role="combobox" aria-expanded="false" aria-haspopup="listbox" />
+            <span class="gl-v2-time-note" data-role="note" hidden></span>
+            <i class="ph ph-caret-down gl-v2-time-caret" aria-hidden="true"></i>
+        </div>
+        <input type="hidden" id="@Model.Id" name="@Model.Name" data-role="time-value" value="@Model.Value" />
+        <div class="gl-v2-select-panel gl-v2-time-panel" data-role="panel" role="listbox"></div>
+    </div>
+    @if (Model.HasError)
+    {
+        <span class="gl-v2-field-help" data-role="field-error">@Model.ErrorMessage</span>
+    }
+    else
+    {
+        <span class="gl-v2-field-help" data-role="field-error" hidden></span>
+    }
+</div>

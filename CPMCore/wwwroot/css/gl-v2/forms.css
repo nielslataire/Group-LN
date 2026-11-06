@@ -207,6 +207,13 @@
 }
 .gl-v2-datepicker-day:hover { background: var(--gl-v2-hover-tint); }
 .gl-v2-datepicker-day.is-outside { color: var(--gl-v2-muted-light); }
+.gl-v2-datepicker-day.is-past:not(.is-selected) { color: var(--gl-v2-muted-light); }
+.gl-v2-datepicker-quick { display: flex; gap: 6px; flex-wrap: wrap; }
+.gl-v2-datepicker-quick > button {
+    height: 28px; padding: 0 10px; border: 0; border-radius: 14px; background: var(--gl-v2-bg);
+    font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); cursor: pointer;
+}
+.gl-v2-datepicker-quick > button:hover { background: var(--gl-v2-primary-tint); }
 .gl-v2-datepicker-day.is-today { box-shadow: inset 0 0 0 1px var(--gl-v2-primary); color: var(--gl-v2-primary); }
 .gl-v2-datepicker-day.is-selected { background: var(--gl-v2-primary); color: var(--gl-v2-surface); font-weight: 600; }
 .gl-v2-datepicker-footer { display: flex; justify-content: space-between; padding-top: 6px; border-top: 1px solid var(--gl-v2-hairline-soft); }

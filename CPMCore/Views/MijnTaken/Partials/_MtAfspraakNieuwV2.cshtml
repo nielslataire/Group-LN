@@ -1,50 +1,104 @@
 @model CPMCore.Models.MijnTaken.MtShell
 @using CPMCore.Models.GlV2
 @using System.Text.Json
+@using Microsoft.Extensions.Options
+@inject IOptions<CPMCore.Configuration.GlV2PdfCompanyOptions> Bedrijf
 @*
-    Mijn taken › Vandaag en Week: een nieuwe afspraak op een project maken (gl-v2-mijntaken.js). De afspraak komt in je Outlook-agenda en is meteen aan het project gekoppeld.
-    Componenten: _GlV2Combo (project, deelnemers), _DateField (datum), _SelectList (van en tot, kwartierstappen). Uitnodigen staat standaard uit: enkel met het vinkje komen de gekozen
-    deelnemers op de afspraak en stuurt Outlook de uitnodigingen. Het deelnemersveld toont altijd eerst de collega's; een getypt e-mailadres wordt een extern adres.
+    Mijn taken › Vandaag en Week: een nieuwe afspraak maken (gl-v2-mijntaken.js), naar het ontwerp "CRM Nieuwe afspraak". De afspraak komt in je Outlook-agenda; met een project is ze meteen aan dat project gekoppeld,
+    zonder project is ze persoonlijk. Er gaat enkel een uitnodiging uit naar de gekozen deelnemers.
+    Componenten: titel-variant van het tekstveld (.gl-v2-field-box.is-title), .gl-v2-pill (soort afspraak, duur), _GlV2Combo met groepskopjes (project), _DateField met snelknoppen (datum), _TimeField (van en tot, tikken of kiezen),
+    .gl-v2-segmented (plaats, herinnering), _SuggestField (adres bij "Ander adres"), _PersonPicker (deelnemers), .gl-v2-notice-compact (overlap), tekstveld met textarea (notitie).
 *@
 @{
-    var projecten = JsonSerializer.Serialize(Model.Projecten.Select(p => new { id = p.Id.ToString(), text = p.Naam }));
-    var kwartieren = Enumerable.Range(0, 96).Select(i => new GlV2SelectItem { Value = $"{i / 4:00}:{i % 4 * 15:00}", Text = $"{i / 4:00}:{i % 4 * 15:00}" }).ToList();
+    var recent = Model.RecenteProjecten;
+    var opties = new List<object>();
+    foreach (var id in recent) { var p = Model.Projecten.FirstOrDefault(x => x.Id == id); if (p != null) opties.Add(new { id = p.Id.ToString(), text = p.Naam, sub = p.Adres, group = "RECENT" }); }
+    foreach (var p in Model.Projecten.Where(x => !recent.Contains(x.Id))) opties.Add(new { id = p.Id.ToString(), text = p.Naam, sub = p.Adres, group = "ALLE PROJECTEN" });
+    opties.Add(new { id = "0", text = "Geen project — persoonlijke afspraak", sub = "", group = "ZONDER PROJECT" });
+    var projecten = JsonSerializer.Serialize(opties);
+    var adressen = JsonSerializer.Serialize(Model.Projecten.ToDictionary(p => p.Id.ToString(), p => p.Adres));
+    var kantoor = $"{Bedrijf.Value.Name} — {Bedrijf.Value.Street}, {Bedrijf.Value.PostalCity}";
     var vandaag = DateTime.Today;
 }
-<div class="modal fade gl-v2-modal-form" id="mt-afspraak-nieuw-modal" tabindex="-1" aria-hidden="true" aria-labelledby="mt-afspraak-nieuw-titel">
+<div class="modal fade gl-v2-modal-form" id="mt-afspraak-nieuw-modal" tabindex="-1" aria-hidden="true" aria-labelledby="mt-afspraak-nieuw-titel" data-kantoor="@kantoor" data-adressen="@adressen">
     <div class="modal-dialog modal-dialog-centered modal-lg modal-fullscreen-md-down">
         <form class="modal-content" novalidate>
-            <div class="modal-header"><h2 class="modal-title" id="mt-afspraak-nieuw-titel">Nieuwe afspraak op een project</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+            <div class="modal-header"><h2 class="modal-title" id="mt-afspraak-nieuw-titel">Nieuwe afspraak</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
             <div class="modal-body gl-v2-mt-an">
-                <div class="gl-v2-mt-an-rij gl-v2-mt-an-rij--2">
-                    <div class="gl-v2-field">
-                        <label class="gl-v2-field-label" for="mt-an-titel">Titel</label>
-                        <div class="gl-v2-field-box"><input class="gl-v2-field-input" id="mt-an-titel" maxlength="200" placeholder="bv. Werfvergadering" /></div>
-                    </div>
-                    <div class="gl-v2-field">
-                        <label class="gl-v2-field-label" for="mt-an-project_input">Project</label>
-                        @await Html.PartialAsync("GlV2/_GlV2Combo", new GlV2ComboVm { Name = "projectId", Id = "mt-an-project", Placeholder = "Zoek een project", OptionsJson = projecten, Icon = "ph-buildings", ListLabel = "ALLE PROJECTEN" })
-                    </div>
-                </div>
-                <div class="gl-v2-mt-an-rij gl-v2-mt-an-rij--3">
-                    @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "datum", Id = "mt-an-datum", Label = "Datum", IsoValue = vandaag.ToString("yyyy-MM-dd"), DisplayValue = vandaag.ToString("dd/MM/yyyy") })
-                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "van", Id = "mt-an-van", Label = "Van", Items = kwartieren, Placeholder = "Kies …" })
-                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "tot", Id = "mt-an-tot", Label = "Tot", Items = kwartieren, Placeholder = "Kies …" })
-                </div>
                 <div class="gl-v2-field">
-                    <label class="gl-v2-field-label" for="mt-an-plaats">Plaats</label>
-                    <div class="gl-v2-field-box"><input class="gl-v2-field-input" id="mt-an-plaats" maxlength="200" /></div>
+                    <div class="gl-v2-field-box is-title"><input class="gl-v2-field-input" id="mt-an-titel" maxlength="200" placeholder="Waarover gaat de afspraak?" aria-label="Titel van de afspraak" autocomplete="off" /></div>
+                    <div class="gl-v2-pillrow gl-v2-mt-an-soorten" id="mt-an-soorten" role="group" aria-label="Soort afspraak">
+                        <button type="button" class="gl-v2-pill is-sm" data-soort="Werfbezoek" data-duur="90" data-loc="proj">Werfbezoek</button>
+                        <button type="button" class="gl-v2-pill is-sm" data-soort="Overleg" data-duur="60" data-loc="office">Overleg</button>
+                        <button type="button" class="gl-v2-pill is-sm" data-soort="Bezoek klant" data-duur="60" data-loc="proj">Bezoek klant</button>
+                        <button type="button" class="gl-v2-pill is-sm" data-soort="Telefonisch" data-duur="15" data-loc="phone">Telefonisch</button>
+                        <button type="button" class="gl-v2-pill is-sm" data-soort="Online" data-duur="30" data-loc="online">Online</button>
+                    </div>
                 </div>
-                <label class="gl-v2-mt-an-vink"><span class="gl-v2-check"><input type="checkbox" id="mt-an-uitnodigen" /><label for="mt-an-uitnodigen"></label></span><span>Deelnemers uitnodigen</span></label>
-                <span class="gl-v2-field-help" id="mt-an-nota">Er gaat geen uitnodiging uit. De afspraak staat enkel in je eigen agenda.</span>
-                <div class="gl-v2-field" id="mt-an-deelnemers-rij" hidden>
-                    <label class="gl-v2-field-label" for="mt-an-zoek_input">Deelnemers</label>
-                    @await Html.PartialAsync("GlV2/_GlV2Combo", new GlV2ComboVm { Name = "deelnemerZoek", Id = "mt-an-zoek", Placeholder = "Kies een collega, zoek een contactpersoon of typ een e-mailadres", LookupUrl = Url.Content("~/MijnTaken/UitnodigingZoek"), MinChars = 0, ClearOnSelect = true, Avatar = true, Icon = "ph-user-plus" })
-                    <div class="gl-v2-select-chips" id="mt-an-chips"></div>
-                    <span class="gl-v2-field-help">Collega's staan bovenaan. Outlook stuurt de gekozen mensen meteen een uitnodiging.</span>
+
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="mt-an-project_input">Project</label>
+                    @await Html.PartialAsync("GlV2/_GlV2Combo", new GlV2ComboVm { Name = "projectId", Id = "mt-an-project", Placeholder = "Zoek een project", OptionsJson = projecten, Icon = "ph-buildings", EmptyValue = "0" })
+                </div>
+
+                <div class="gl-v2-mt-an-rij gl-v2-mt-an-rij--3">
+                    @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "datum", Id = "mt-an-datum", Label = "Datum", IsoValue = vandaag.ToString("yyyy-MM-dd"), DisplayValue = vandaag.ToString("dd/MM/yyyy"), QuickDates = true, DimPast = true })
+                    @await Html.PartialAsync("GlV2/_TimeField", new GlV2TimeFieldVm { Name = "van", Id = "mt-an-van", Label = "Van" })
+                    @await Html.PartialAsync("GlV2/_TimeField", new GlV2TimeFieldVm { Name = "tot", Id = "mt-an-tot", Label = "Tot" })
+                </div>
+                <div class="gl-v2-mt-an-duur">
+                    <div class="gl-v2-pillrow" id="mt-an-duren" role="group" aria-label="Duur">
+                        <button type="button" class="gl-v2-pill is-xs" data-duur="15">15 min</button>
+                        <button type="button" class="gl-v2-pill is-xs" data-duur="30">30 min</button>
+                        <button type="button" class="gl-v2-pill is-xs" data-duur="60">1u</button>
+                        <button type="button" class="gl-v2-pill is-xs" data-duur="90">1u30</button>
+                        <button type="button" class="gl-v2-pill is-xs" data-duur="120">2u</button>
+                    </div>
+                    <span class="gl-v2-mt-an-vrij" id="mt-an-vrij"><span class="gl-v2-mt-an-stip" aria-hidden="true"></span>Je agenda is vrij</span>
+                    <div class="gl-v2-notice gl-v2-notice-compact is-warning" id="mt-an-conflict" hidden role="status"><i class="ph ph-warning" aria-hidden="true"></i><span id="mt-an-conflict-tekst"></span></div>
+                </div>
+
+                <div class="gl-v2-field">
+                    <span class="gl-v2-field-label" id="mt-an-plaats-label">Plaats</span>
+                    <div class="gl-v2-segmented is-sm gl-v2-mt-an-plaatsen" id="mt-an-plaatsen" role="group" aria-labelledby="mt-an-plaats-label">
+                        <button type="button" data-loc="proj">Projectadres</button>
+                        <button type="button" data-loc="office">Kantoor</button>
+                        <button type="button" data-loc="other">Ander adres</button>
+                        <button type="button" data-loc="online">Online</button>
+                        <button type="button" data-loc="phone">Telefonisch</button>
+                    </div>
+                    @await Html.PartialAsync("GlV2/_SuggestField", new GlV2SuggestVm { Name = "plaats", Id = "mt-an-plaats", Placeholder = "Adres of ruimte", LookupUrl = Url.Content("~/MijnTaken/PlaatsZoek") })
+                    <span class="gl-v2-field-help" id="mt-an-plaats-help" hidden>Adressen van projecten, klanten, leveranciers en recente afspraken worden voorgesteld.</span>
+                </div>
+
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="mt-an-deelnemers_input">Deelnemers</label>
+                    @await Html.PartialAsync("GlV2/_PersonPicker", new GlV2PersonPickerVm { Name = "deelnemers", Id = "mt-an-deelnemers", LookupUrl = Url.Content("~/MijnTaken/UitnodigingZoek"), ContextSelector = "#mt-an-project", Placeholder = "Naam of e-mail — laat leeg voor enkel jouw agenda", PlaceholderMore = "Nog iemand toevoegen" })
+                    <span class="gl-v2-field-help" id="mt-an-uitnodiging-tekst">Er gaat geen uitnodiging uit. De afspraak staat enkel in je eigen agenda.</span>
+                </div>
+
+                <div class="gl-v2-mt-an-extra">
+                    <div class="gl-v2-mt-an-herinnering">
+                        <span class="gl-v2-mt-an-herinnering-label" id="mt-an-herinnering-label">Herinnering</span>
+                        <div class="gl-v2-segmented is-sm" id="mt-an-herinnering" role="group" aria-labelledby="mt-an-herinnering-label">
+                            <button type="button" data-min="0">Geen</button>
+                            <button type="button" data-min="15" class="is-active">15 min</button>
+                            <button type="button" data-min="60">1 uur</button>
+                            <button type="button" data-min="1440">1 dag</button>
+                        </div>
+                    </div>
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" id="mt-an-notitie-knop"><i class="ph ph-plus" aria-hidden="true"></i>Notitie</button>
+                </div>
+                <div class="gl-v2-field" id="mt-an-notitie-rij" hidden>
+                    <label class="gl-v2-field-label" for="mt-an-notitie">Notitie</label>
+                    <div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea class="gl-v2-field-input" id="mt-an-notitie" maxlength="4000" placeholder="Agenda, wat meebrengen, toegangscode werf…"></textarea></div>
                 </div>
             </div>
-            <div class="modal-footer"><button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button><button type="submit" class="gl-v2-btn gl-v2-btn-primary">Afspraak maken</button></div>
+            <div class="modal-footer">
+                <span class="gl-v2-mt-an-sneltoets"><kbd>Ctrl ↵</kbd> opslaan</span>
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="mt-an-opslaan">Afspraak maken</button>
+            </div>
         </form>
     </div>
 </div>

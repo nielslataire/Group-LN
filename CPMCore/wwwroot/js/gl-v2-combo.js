@@ -4,7 +4,7 @@
 // ("Keuzelijst met zoekveld en knop — punt 34").
 //
 //   data-lookup-url      POST {term, countryId} → [{id, text, extra|sub}]   (server-zoekopdracht, 250 ms debounce)
-//   data-options         JSON [{id, text, sub}]                              (statische lijst, filtert lokaal)
+//   data-options         JSON [{id, text, sub, group?}]                      (statische lijst, filtert lokaal; een item met een groep krijgt een kopje zodra de groep wisselt, enkel zonder zoekterm)
 //   data-min-chars       minimum tekens voor een server-zoekopdracht (standaard 2; statisch: 0; 0 bij een server-lijst = bij het openen meteen zoeken)
 //   data-country-source  CSS-selector van een landveld (of `[data-gl-v2-address-block]` + `[data-role=country-select]`)
 //   data-allow-new="true"  toont "Nieuw" + de "… aanmaken"-rij; klik → event `gl-v2:combo-new` {term}
@@ -150,7 +150,11 @@
             } else if (url && !options && term.length < minChars && !total) {
                 html += '<div class="gl-v2-combo-hint">' + (term ? "Typ nog minstens " + (minChars - term.length) + " teken(s) …" : "Typ om te zoeken …") + "</div>";
             }
+            var groep = null;
             items.forEach(function (it, k) {
+                // Optionele groepskopjes (item.group): alleen zonder zoekterm, want een zoekresultaat is één platte lijst.
+                if (!term && it.group && it.group !== groep) html += '<div class="gl-v2-combo-group">' + esc(it.group) + "</div>";
+                groep = it.group || null;
                 var isSel = hasValue() && String(it.id) === String(hidden.value);
                 html += '<button type="button" tabindex="-1" role="option" class="gl-v2-combo-option' + (k === hi ? " is-active" : "") + (isSel ? " is-selected" : "") + '" data-index="' + k + '">' +
                     (avatar ? '<span class="gl-v2-combo-avatar">' + esc(initials(it.text)) + "</span>" : "") +
@@ -188,7 +192,7 @@
                     .catch(function () { return []; })
                     .then(function (data) {
                         if (mySeq !== seq) return;
-                        items = (data || []).map(function (d) { return { id: d.id, text: d.text, sub: d.sub || d.extra || "" }; });
+                        items = (data || []).map(function (d) { return { id: d.id, text: d.text, sub: d.sub || d.extra || "", group: d.group || "" }; });
                         if (spinner) spinner.hidden = true;
                         hi = 0; explicitHi = false;
                         render();

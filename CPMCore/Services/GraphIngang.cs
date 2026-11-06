@@ -39,6 +39,9 @@ public sealed class AgendaResultaat
     public List<AgendaAfspraak> Afspraken { get; set; } = new();
 }
 
+/// <summary>Wat er nodig is om een afspraak in Outlook aan te maken. <see cref="Online"/> voegt een Teams-vergadering toe; <see cref="HerinneringMinuten"/> null = geen herinnering.</summary>
+public sealed record NieuweAfspraak(string Titel, DateTime Start, DateTime Einde, string? Plaats, bool Online, IReadOnlyList<string> Uitnodigen, int? HerinneringMinuten, string? Notitie);
+
 /// <summary>Uitkomst van <see cref="IGraphIngang.ControleerToegangAsync"/>.</summary>
 public enum GraphToegang { Ok, GeenToegang, GeenMailbox, Fout }
 
@@ -63,9 +66,9 @@ public interface IGraphIngang
     /// <summary>Wijzigt titel en tijd van een afspraak. Geeft een foutmelding terug, of null bij succes.</summary>
     Task<string?> BijwerkenAfspraakAsync(string? gebruiker, string eventId, string? titel, DateTime start, DateTime einde, CancellationToken ct = default);
 
-    /// <summary>Maakt een afspraak in de Outlook-agenda aan. Zonder <paramref name="uitnodigen"/> komen er geen deelnemers op de afspraak en gaat er dus geen uitnodiging uit;
+    /// <summary>Maakt een afspraak in de Outlook-agenda aan. Zonder <see cref="NieuweAfspraak.Uitnodigen"/> komen er geen deelnemers op de afspraak en gaat er dus geen uitnodiging uit;
     /// met e-mailadressen stuurt Outlook de uitnodigingen. Geeft het event-id terug, of een foutmelding.</summary>
-    Task<(string? EventId, string? Fout)> MaakAfspraakAsync(string? gebruiker, string titel, DateTime start, DateTime einde, string? plaats, IReadOnlyList<string> uitnodigen, CancellationToken ct = default);
+    Task<(string? EventId, string? Fout)> MaakAfspraakAsync(string? gebruiker, NieuweAfspraak afspraak, CancellationToken ct = default);
 
     /// <summary>True als Graph de mail aanvaardde; false (de aanroeper valt terug op SMTP) bij geen configuratie of een fout.</summary>
     Task<bool> TrySendMailAsync(string fromMailbox, string to, string subject, string html, IEnumerable<EmailAttachment>? attachments, CancellationToken ct = default);
@@ -352,22 +355,26 @@ public sealed class GraphIngang : IGraphIngang
     }
 
     /// <summary>Maakt een afspraak aan (POST <c>/users/{id}/events</c>). Vereist <c>Calendars.ReadWrite</c> (toepassing). Deelnemers worden alleen meegegeven als de aanroeper ze doorgeeft: Outlook stuurt dan de uitnodigingen.</summary>
-    public async Task<(string? EventId, string? Fout)> MaakAfspraakAsync(string? gebruiker, string titel, DateTime start, DateTime einde, string? plaats, IReadOnlyList<string> uitnodigen, CancellationToken ct = default)
+    public async Task<(string? EventId, string? Fout)> MaakAfspraakAsync(string? gebruiker, NieuweAfspraak afspraak, CancellationToken ct = default)
     {
         if (_client == null || string.IsNullOrWhiteSpace(gebruiker)) return (null, "De Outlook-agenda is niet gekoppeld.");
-        if (string.IsNullOrWhiteSpace(titel)) return (null, "Geef de afspraak een titel.");
-        if (einde <= start) return (null, "Het einde moet na het begin liggen.");
+        if (string.IsNullOrWhiteSpace(afspraak.Titel)) return (null, "Geef de afspraak een titel.");
+        if (afspraak.Einde <= afspraak.Start) return (null, "Het einde moet na het begin liggen.");
         try
         {
             var nieuw = new Event
             {
-                Subject = titel.Trim(),
-                Start = new DateTimeTimeZone { DateTime = start.ToString("yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture), TimeZone = Tijdzone },
-                End = new DateTimeTimeZone { DateTime = einde.ToString("yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture), TimeZone = Tijdzone }
+                Subject = afspraak.Titel.Trim(),
+                Start = new DateTimeTimeZone { DateTime = afspraak.Start.ToString("yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture), TimeZone = Tijdzone },
+                End = new DateTimeTimeZone { DateTime = afspraak.Einde.ToString("yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture), TimeZone = Tijdzone },
+                IsReminderOn = afspraak.HerinneringMinuten.HasValue
             };
-            if (!string.IsNullOrWhiteSpace(plaats)) nieuw.Location = new Location { DisplayName = plaats.Trim() };
-            if (uitnodigen.Count > 0)
-                nieuw.Attendees = uitnodigen.Select(a => new Attendee { Type = AttendeeType.Required, EmailAddress = new EmailAddress { Address = a } }).ToList();
+            if (afspraak.HerinneringMinuten.HasValue) nieuw.ReminderMinutesBeforeStart = afspraak.HerinneringMinuten.Value;
+            if (!string.IsNullOrWhiteSpace(afspraak.Plaats)) nieuw.Location = new Location { DisplayName = afspraak.Plaats.Trim() };
+            if (afspraak.Online) { nieuw.IsOnlineMeeting = true; nieuw.OnlineMeetingProvider = OnlineMeetingProviderType.TeamsForBusiness; }
+            if (!string.IsNullOrWhiteSpace(afspraak.Notitie)) nieuw.Body = new ItemBody { ContentType = BodyType.Text, Content = afspraak.Notitie.Trim() };
+            if (afspraak.Uitnodigen.Count > 0)
+                nieuw.Attendees = afspraak.Uitnodigen.Select(a => new Attendee { Type = AttendeeType.Required, EmailAddress = new EmailAddress { Address = a } }).ToList();
             var gemaakt = await _client.Users[gebruiker].Events.Request().AddAsync(nieuw, ct);
             foreach (var k in _cache.Keys.Where(k => k.StartsWith(gebruiker + "|", StringComparison.Ordinal)).ToList()) _cache.TryRemove(k, out _);
             return (gemaakt.Id, null);
