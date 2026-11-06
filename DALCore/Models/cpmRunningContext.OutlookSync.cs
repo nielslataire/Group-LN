@@ -9,6 +9,7 @@ public partial class cpmRunningContext
     public virtual DbSet<OutlookSyncStatus> OutlookSyncStatus { get; set; }
     public virtual DbSet<OutlookMail> OutlookMail { get; set; }
     public virtual DbSet<OutlookAfspraak> OutlookAfspraak { get; set; }
+    public virtual DbSet<OutlookAfspraakReistijd> OutlookAfspraakReistijd { get; set; }
     public virtual DbSet<OutlookGeblokkeerdeAfzender> OutlookGeblokkeerdeAfzender { get; set; }
 
     private void ConfigureOutlookSyncEntities(ModelBuilder modelBuilder)
@@ -57,6 +58,15 @@ public partial class cpmRunningContext
         {
             entity.Property(e => e.OutlookEventId).HasMaxLength(300);
             entity.HasIndex(e => new { e.UserId, e.OutlookEventId }, "UQ_ProjectRegieUur_User_OutlookEvent").IsUnique().HasFilter("([OutlookEventId] IS NOT NULL)");
+        });
+
+        modelBuilder.Entity<OutlookAfspraakReistijd>(entity =>
+        {
+            entity.ToTable("OutlookAfspraakReistijd");
+            entity.HasIndex(e => new { e.UserId, e.EventId }, "UQ_OutlookAfspraakReistijd_User_Event").IsUnique();
+            entity.Property(e => e.EventId).IsRequired().HasMaxLength(400);
+            entity.Property(e => e.BlokEventId).IsRequired().HasMaxLength(400);
+            entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("FK_OutlookAfspraakReistijd_Users");
         });
 
         modelBuilder.Entity<OutlookGeblokkeerdeAfzender>(entity =>

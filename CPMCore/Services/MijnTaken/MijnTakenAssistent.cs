@@ -213,6 +213,7 @@ public class MijnTakenAssistent
         var agenda = await _graph.GetAgendaAsync(c.AgendaGebruiker, dagStart, vrijdagEind > dagStart ? vrijdagEind : dagStart.AddDays(1));
         vm.AgendaFout = agenda.Fout;
         await VerrijkAfspraken(c, agenda.Afspraken);
+        await _afspraken.SynchroniseReistijdAsync(c.UserId, c.AgendaGebruiker, agenda.Afspraken);
         var vandaagAfspraken = agenda.Afspraken.Where(a => a.Start < dagStart.AddDays(1) && a.Einde > dagStart).ToList();
         vm.HeleDag = vandaagAfspraken.Where(a => a.HeleDag).ToList();
         vm.Afspraken = vandaagAfspraken.Where(a => !a.HeleDag).OrderBy(a => a.Start).ToList();
@@ -342,6 +343,7 @@ public class MijnTakenAssistent
         var agenda = await _graph.GetAgendaAsync(c.AgendaGebruiker, van, van.AddDays(7));
         vm.AgendaFout = agenda.Fout;
         await VerrijkAfspraken(c, agenda.Afspraken);
+        await _afspraken.SynchroniseReistijdAsync(c.UserId, c.AgendaGebruiker, agenda.Afspraken);
 
         for (var i = 0; i < 5; i++)
         {
@@ -517,11 +519,16 @@ public class MijnTakenAssistent
         // Het blok zoeken vóór de wijziging: daarna is het oude begin weg. Een venster van een week voor en na het nieuwe begin dekt ook slepen naar een andere dag.
         var agenda = await _graph.GetAgendaAsync(c.AgendaGebruiker, start.Date.AddDays(-7), start.Date.AddDays(8));
         var oud = agenda.Afspraken.FirstOrDefault(a => a.Id == eventId);
-        var blok = oud == null ? null : agenda.Afspraken.FirstOrDefault(a => a.Id != eventId && !a.HeleDag && a.Einde == oud.Start && string.Equals(a.Titel, ReisBlokTitel(oud.Titel), StringComparison.OrdinalIgnoreCase));
+        // Eerst de onthouden koppeling (migratie 134); voor afspraken van vóór die migratie het blok dat er vlak voor eindigt en haar titel draagt.
+        var link = await _afspraken.ReistijdAsync(c.UserId, eventId);
+        var blok = link != null ? agenda.Afspraken.FirstOrDefault(a => a.Id == link.BlokEventId)
+            : oud == null ? null : agenda.Afspraken.FirstOrDefault(a => a.Id != eventId && !a.HeleDag && a.Einde == oud.Start && string.Equals(a.Titel, ReisBlokTitel(oud.Titel), StringComparison.OrdinalIgnoreCase));
+        var blokId = link?.BlokEventId ?? blok?.Id;
+        var blokDuur = blok != null ? blok.Einde - blok.Start : link != null ? TimeSpan.FromMinutes(link.Minuten) : TimeSpan.Zero;
 
         var fout = await _graph.BijwerkenAfspraakAsync(c.AgendaGebruiker, eventId, titel, start, start.AddMinutes(minuten));
-        if (fout != null || blok == null) return fout;
-        var blokFout = await _graph.BijwerkenAfspraakAsync(c.AgendaGebruiker, blok.Id, ReisBlokTitel(string.IsNullOrWhiteSpace(titel) ? oud!.Titel : titel.Trim()), start - (blok.Einde - blok.Start), start);
+        if (fout != null || blokId == null) return fout;
+        var blokFout = await _graph.BijwerkenAfspraakAsync(c.AgendaGebruiker, blokId, ReisBlokTitel(string.IsNullOrWhiteSpace(titel) ? oud?.Titel ?? "" : titel.Trim()), start - blokDuur, start);
         return blokFout == null ? null : "De afspraak is gewijzigd, maar het blok Reistijd kon niet mee verplaatst worden.";
     }
 

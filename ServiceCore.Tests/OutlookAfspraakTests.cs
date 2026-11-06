@@ -301,6 +301,46 @@ public class OutlookAfspraakTests
     }
 
     [Fact]
+    public async Task Het_blok_reistijd_wordt_gekoppeld_aan_de_afspraak_ook_zonder_project()
+    {
+        var (_, afspraken, db, graph) = Bouw();
+
+        var (eventId, _) = await Maak(afspraken, null, "Tandarts", Nu.AddHours(3), 30);
+        await afspraken.MaakAsync(1, "entra-an", null, Zichtbaar, "Notaris", Nu.AddHours(6), 30, "Gent", false, null, 15, null, 20);
+
+        var link = Assert.Single(db.OutlookAfspraakReistijd);   // enkel de afspraak met reistijd
+        Assert.Equal(("evt-nieuw-3", 20), (link.BlokEventId, link.Minuten));
+        Assert.NotEqual(eventId, link.EventId);
+    }
+
+    [Fact]
+    public async Task Verplaats_je_de_afspraak_in_outlook_dan_gaat_het_blok_reistijd_mee_bij_het_laden_van_vandaag()
+    {
+        var (assistent, afspraken, _, graph) = Bouw();
+        var (eventId, _) = await afspraken.MaakAsync(1, "entra-an", 2, Zichtbaar, "Werfbezoek", Nu.AddHours(3), 60, "Keerstraat 12", false, null, 15, null, 30);
+        var hoofd = graph.Agenda["entra-an"].Single(a => a.Id == eventId);
+        var blok = graph.Agenda["entra-an"].Single(a => a.Titel == "Reistijd: Werfbezoek");
+
+        hoofd.Start = Nu.AddHours(5); hoofd.Einde = Nu.AddHours(6); hoofd.Titel = "Werfbezoek Villa";   // in Outlook aangepast
+        await assistent.Vandaag(Ctx());
+
+        Assert.Equal(("Reistijd: Werfbezoek Villa", Nu.AddHours(4).AddMinutes(30), Nu.AddHours(5)), (blok.Titel, blok.Start, blok.Einde));
+    }
+
+    [Fact]
+    public async Task Het_onthouden_blok_gaat_ook_mee_als_het_blok_een_andere_titel_kreeg()
+    {
+        var (assistent, afspraken, _, graph) = Bouw();
+        var (eventId, _) = await afspraken.MaakAsync(1, "entra-an", 2, Zichtbaar, "Werfbezoek", Nu.AddHours(3), 60, "Keerstraat 12", false, null, 15, null, 30);
+        var blok = graph.Agenda["entra-an"].Single(a => a.Titel == "Reistijd: Werfbezoek");
+        blok.Titel = "Rijden";
+
+        Assert.Null(await assistent.AgendaWijzig(Ctx(), eventId!, null, Nu.AddHours(5), 60));
+
+        Assert.Equal((Nu.AddHours(4).AddMinutes(30), Nu.AddHours(5)), (blok.Start, blok.Einde));
+    }
+
+    [Fact]
     public async Task Zonder_reistijd_komt_er_geen_extra_blok()
     {
         var (_, afspraken, _, graph) = Bouw();

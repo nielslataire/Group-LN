@@ -186,12 +186,49 @@ public class OutlookAfspraakService
         if (reistijdMinuten > 0 && reistijdMinuten <= 600)
         {
             // Een eigen blok "Reistijd" vóór de afspraak, zodat je agenda die tijd als bezet toont. Mislukt het, dan bestaat de afspraak toch en komt er enkel een melding.
-            var (_, blokFout) = await _graph.MaakAfspraakAsync(agendaGebruiker, new NieuweAfspraak(MijnTaken.MijnTakenAssistent.ReisBlokTitel(titel), start.AddMinutes(-reistijdMinuten), start, null, false, Array.Empty<string>(), null, null, true), ct);
-            if (blokFout != null) waarschuwing = "De afspraak staat in Outlook, maar het blok reistijd kon niet gemaakt worden.";
+            var (blokId, blokFout) = await _graph.MaakAfspraakAsync(agendaGebruiker, new NieuweAfspraak(MijnTaken.MijnTakenAssistent.ReisBlokTitel(titel), start.AddMinutes(-reistijdMinuten), start, null, false, Array.Empty<string>(), null, null, true), ct);
+            if (blokFout != null || string.IsNullOrEmpty(blokId)) waarschuwing = "De afspraak staat in Outlook, maar het blok reistijd kon niet gemaakt worden.";
+            else
+            {
+                // Onthouden welk blok bij deze afspraak hoort (migratie 134), ook zonder project: zo gaat het blok mee bij verplaatsen en verwijderen, in CPM en in Outlook.
+                _db.OutlookAfspraakReistijd.Add(new OutlookAfspraakReistijd { UserId = userId, EventId = eventId, BlokEventId = blokId, Minuten = reistijdMinuten, GemaaktOp = DateTime.UtcNow });
+                await _db.SaveChangesAsync(ct);
+            }
         }
         if (!projectId.HasValue) return (eventId, waarschuwing);
         var koppelFout = await KoppelAsync(userId, eventId, projectId.Value, toegestaneProjecten, ct);
         return koppelFout == null ? (eventId, waarschuwing) : (eventId, "De afspraak staat in Outlook, maar kon niet aan het project gekoppeld worden. Koppel ze via de afspraak.");
+    }
+
+    /// <summary>Het blok Reistijd dat bij een afspraak hoort, of null.</summary>
+    public async Task<OutlookAfspraakReistijd?> ReistijdAsync(int userId, string eventId, CancellationToken ct = default) =>
+        await _db.OutlookAfspraakReistijd.AsNoTracking().FirstOrDefaultAsync(r => r.UserId == userId && r.EventId == eventId, ct);
+
+    /// <summary>Houdt de blokken Reistijd bij hun afspraak, ook als je de afspraak in Outlook verplaatst of hernoemt: het blok eindigt op het begin van de afspraak en draagt haar titel.
+    /// Gebeurt bij het laden van Vandaag en Week, voor de afspraken die in <paramref name="afspraken"/> staan. Staat het blok niet in die lijst (de afspraak is naar een andere dag of week verhuisd),
+    /// dan wordt het op basis van het onthouden id en de lengte verplaatst. Bestaat het blok niet meer, dan verdwijnt de koppeling. Gooit nooit.</summary>
+    public async Task SynchroniseReistijdAsync(int userId, string? agendaGebruiker, IReadOnlyCollection<AgendaAfspraak> afspraken, CancellationToken ct = default)
+    {
+        try
+        {
+            var ids = afspraken.Select(a => a.Id).Where(i => i != "").ToList();
+            if (ids.Count == 0) return;
+            var koppelingen = await _db.OutlookAfspraakReistijd.Where(r => r.UserId == userId && ids.Contains(r.EventId)).ToListAsync(ct);
+            foreach (var k in koppelingen)
+            {
+                var hoofd = afspraken.First(a => a.Id == k.EventId);
+                var blok = afspraken.FirstOrDefault(a => a.Id == k.BlokEventId);
+                var titel = MijnTaken.MijnTakenAssistent.ReisBlokTitel(hoofd.Titel);
+                if (blok != null && blok.Einde == hoofd.Start && blok.Titel == titel) continue;
+                var duur = blok != null ? blok.Einde - blok.Start : TimeSpan.FromMinutes(k.Minuten);
+                var fout = await _graph.BijwerkenAfspraakAsync(agendaGebruiker, k.BlokEventId, titel, hoofd.Start - duur, hoofd.Start, ct);
+                if (fout != null && fout.Contains("bestaat niet meer", StringComparison.OrdinalIgnoreCase)) { _db.OutlookAfspraakReistijd.Remove(k); await _db.SaveChangesAsync(ct); }
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Het blok bijwerken is een gemak: een fout hier mag het tonen van de agenda nooit blokkeren.
+        }
     }
 
     /// <summary>Vult per afspraak het gekoppelde project en, voor een niet-gekoppelde afspraak, het voorstel in. Overschrijft altijd alle velden, zodat een bewaarde (gecachte) afspraak nooit een oude koppeling toont.</summary>
