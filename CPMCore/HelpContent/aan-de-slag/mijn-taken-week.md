@@ -93,7 +93,7 @@ Een gekoppelde afspraak toont de projectnaam in het blok. Met **Ontkoppelen** ha
 2. Geef de afspraak een titel. Kies eventueel een soort, zoals **Werfbezoek**. Die vult een gewone duur en plaats al in.
 3. Kies het project. Zoek in de lijst of kies **Geen project** voor een persoonlijke afspraak.
 4. Kies de datum. Tik het begin en het einde zelf in, of kies ze uit de lijst. Met de knoppen onder de uren kies je een duur.
-5. Kies de plaats: het adres van het project, het kantoor, een ander adres, online of telefonisch. Bij **Online** voegt Outlook een Teams-link toe.
+5. Kies de plaats: het adres van het project, het kantoor, een ander adres, online of telefonisch. Bij **Ander adres** tik je in het vak. CPM stelt adressen voor van projecten, klanten en leveranciers, en nieuwe adressen uit heel België met het label **Nieuw adres**. Bij **Online** voegt Outlook een Teams-link toe.
 6. Kies de deelnemers. Eerst zie je je collega's, daarna de mensen van het project. Typ om te zoeken, of typ een volledig e-mailadres voor iemand van buiten.
 7. Bij een adres toont CPM een blok **Vertrek**: hoe laat je moet vertrekken. CPM rekent de reistijd met de auto uit vanaf je kantoor of je vorige afspraak. Je stelt ze bij met de knoppen min en plus, en kiest een marge. Met de schakelaar blokkeert CPM de reistijd in je agenda.
 8. Stel eventueel een herinnering in en voeg een notitie toe. Kies **Bij vertrek** om gewaarschuwd te worden als je moet vertrekken.

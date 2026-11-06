@@ -369,6 +369,54 @@ public class OutlookAfspraakTests
         Assert.Equal(("Werfbezoek", 510, 600), (blok.Titel, blok.Van, blok.Tot));
     }
 
+    private sealed class FakeAdressen : IAdresVoorstel
+    {
+        public bool IsConfigured => true;
+        public List<string> Termen { get; } = new();
+        public Task<List<AdresSuggestie>> ZoekAsync(string term, CancellationToken ct = default)
+        {
+            Termen.Add(term);
+            return Task.FromResult(new List<AdresSuggestie> { new("Kerkstraat 8", "9000 Gent, België"), new("Keerstraat 12", "9031 Drongen, België") });
+        }
+    }
+
+    [Fact]
+    public async Task Nieuwe_adressen_komen_onder_de_bekende_met_het_label_nieuw_adres_en_zonder_dubbels()
+    {
+        var (_, _, db, graph) = Bouw();
+        db.Project.Single(p => p.ProjectId == 1).PostalCodeId = 1;
+        db.PostalCode.Add(new PostalCode { PostcodeId = 1, Postcode = "9031", Gemeente = "Drongen" });
+        db.SaveChanges();
+        var fake = new FakeAdressen();
+        var afspraken = new OutlookAfspraakService(db, new OutlookMailSyncService(db, graph, NullLogger<OutlookMailSyncService>.Instance), graph, fake);
+
+        var lijst = await afspraken.ZoekPlaatsenAsync("entra-an", "keer", Zichtbaar);
+
+        Assert.Equal(new[] { ("Residentie De Linde", "Project"), ("Kerkstraat 8", "Nieuw adres") }, lijst.Select(k => (k.Naam, k.Soort)));   // Keerstraat 12 Drongen kent CPM al
+        Assert.Equal(new[] { "keer" }, fake.Termen);
+    }
+
+    [Fact]
+    public async Task Zonder_zoekterm_vraagt_cpm_geen_nieuwe_adressen_op()
+    {
+        var (_, _, db, graph) = Bouw();
+        var fake = new FakeAdressen();
+        var afspraken = new OutlookAfspraakService(db, new OutlookMailSyncService(db, graph, NullLogger<OutlookMailSyncService>.Instance), graph, fake);
+
+        await afspraken.ZoekPlaatsenAsync("entra-an", "", Zichtbaar);
+
+        Assert.Empty(fake.Termen);
+    }
+
+    [Fact]
+    public void Google_places_voorstellen_worden_gesplitst_in_straat_en_rest()
+    {
+        var lijst = GooglePlacesAdresVoorstel.Parse("{\"suggestions\":[{\"placePrediction\":{\"text\":{\"text\":\"Kerkstraat 8, 9000 Gent, België\"},\"structuredFormat\":{\"mainText\":{\"text\":\"Kerkstraat 8\"},\"secondaryText\":{\"text\":\"9000 Gent, België\"}}}},{\"placePrediction\":{\"text\":{\"text\":\"Station Gent\"}}},{\"queryPrediction\":{}}]}");
+
+        Assert.Equal(new[] { new AdresSuggestie("Kerkstraat 8", "9000 Gent, België"), new AdresSuggestie("Station Gent", "") }, lijst);
+        Assert.Empty(GooglePlacesAdresVoorstel.Parse("{}"));
+    }
+
     [Fact]
     public async Task Recente_plaatsen_komen_uit_de_afspraken_van_de_voorbije_maand_zonder_online_of_dubbels()
     {

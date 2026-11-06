@@ -13,9 +13,11 @@ public class OutlookAfspraakService
     private readonly cpmRunningContext _db;
     private readonly OutlookMailSyncService _context;
     private readonly IGraphIngang _graph;
+    private readonly IAdresVoorstel? _adressen;
 
-    public OutlookAfspraakService(cpmRunningContext db, OutlookMailSyncService context, IGraphIngang graph)
+    public OutlookAfspraakService(cpmRunningContext db, OutlookMailSyncService context, IGraphIngang graph, IAdresVoorstel? adressen = null)
     {
+        _adressen = adressen;
         _db = db;
         _context = context;
         _graph = graph;
@@ -84,7 +86,7 @@ public class OutlookAfspraakService
     /// <summary>Een voorgestelde plaats voor een afspraak: <paramref name="Naam"/> (bv. het project of de klant), <paramref name="Adres"/> en de soort ("Recent", "Klant", "Leverancier", "Project").</summary>
     public sealed record PlaatsKeuze(string Naam, string Adres, string Soort);
 
-    /// <summary>Plaatsen om voor te stellen bij "Ander adres". Zonder zoekterm: de plaatsen van je afspraken van de voorbije maand ("Recent"). Vanaf 2 tekens: adressen van projecten, klanten en leveranciers.</summary>
+    /// <summary>Plaatsen om voor te stellen bij "Ander adres". Zonder zoekterm: de plaatsen van je afspraken van de voorbije maand ("Recent"). Vanaf 2 tekens: adressen van projecten, klanten en leveranciers, en vanaf 3 tekens ook nieuwe adressen uit Google Places (label "Nieuw adres").</summary>
     public async Task<List<PlaatsKeuze>> ZoekPlaatsenAsync(string? agendaGebruiker, string? term, IReadOnlyCollection<int> toegestaneProjecten, CancellationToken ct = default)
     {
         var t = (term ?? "").Trim().ToLowerInvariant();
@@ -116,7 +118,15 @@ public class OutlookAfspraakService
         var bedrijven = await _db.CompanyInfo.AsNoTracking().Where(c => c.Straat != null && (c.BedrijfsNaam.ToLower().Contains(t) || c.Straat.ToLower().Contains(t)))
             .OrderBy(c => c.BedrijfsNaam).Take(4).Select(c => new { c.BedrijfsNaam, c.Straat, c.Huisnummer, c.Postcode, c.Gemeente }).ToListAsync(ct);
         foreach (var c in bedrijven) lijst.Add(new PlaatsKeuze(c.BedrijfsNaam, Adres(c.Straat, c.Huisnummer, c.Postcode, c.Gemeente), "Leverancier"));
-        return lijst.Take(8).ToList();
+        lijst = lijst.Take(6).ToList();
+        // Daaronder adressen die CPM nog niet kent (Google Places): zo kan je een volledig nieuw adres opzoeken in hetzelfde vak. Een adres dat al in de lijst staat, komt niet nog eens.
+        if (_adressen != null)
+            foreach (var a in (await _adressen.ZoekAsync(term ?? "", ct)).Take(5))
+            {
+                var volledig = a.Adres.Length > 0 ? a.Naam + ", " + a.Adres : a.Naam;
+                if (!lijst.Any(k => k.Adres.Length > 0 && volledig.Contains(k.Adres.Split(',')[0], StringComparison.OrdinalIgnoreCase))) lijst.Add(new PlaatsKeuze(a.Naam, a.Adres, "Nieuw adres"));
+            }
+        return lijst;
     }
 
     /// <summary>Een bezet stuk van een dag, in minuten sinds middernacht, zodat het formulier kan tonen of een nieuwe afspraak overlapt.</summary>

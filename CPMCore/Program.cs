@@ -264,6 +264,7 @@ builder.Services.AddHttpClient<IPeppolDirectoryClient, PeppolDirectoryClient>(cl
 });
 builder.Services.AddHttpClient<IPeppolSender, PeppolSender>();
 builder.Services.AddHttpClient<CPMCore.Services.IReisTijd, CPMCore.Services.GoogleRoutesReisTijd>(c => c.Timeout = TimeSpan.FromSeconds(8));
+builder.Services.AddHttpClient<CPMCore.Services.IAdresVoorstel, CPMCore.Services.GooglePlacesAdresVoorstel>(c => c.Timeout = TimeSpan.FromSeconds(5));
 builder.Services.Configure<OctopusOptions>(builder.Configuration.GetSection("Octopus"));
 builder.Services.Configure<FeatureFlagsOptions>(builder.Configuration.GetSection("Features"));
 builder.Services.Configure<CPMCore.Configuration.GlV2PdfCompanyOptions>(builder.Configuration.GetSection("GlV2PdfCompany"));
