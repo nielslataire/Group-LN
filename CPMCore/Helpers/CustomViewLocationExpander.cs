@@ -29,7 +29,7 @@ namespace CPMCore.Helpers
             // Instellingen
             "Algemeen", "Facturatie", "Marktdata",
             // Klanten (Core, Lookups), Invoices (Core, Helpers), Leveranciers (Core, Lookups)
-            "ClientAccount", "Editor", "Send", "Portal",
+            "ClientAccount", "Editor", "Send", "Portal", "Recurring",
         };
 
         private static readonly Dictionary<string, string> ControllerFolders = new(StringComparer.OrdinalIgnoreCase)

@@ -48,7 +48,9 @@ beschrijven die pagina niet apart. Een eigen artikel blijft beter (zie C).
 | MijnTaken/Vandaag-, Week-, Inbox-, OverzichtV2 | MijnTaken.* | mijn-taken-vandaag/-week/-inbox/-overzicht | mijn-taken-* + snel-een-taak-starten |
 | Deadlines/IndexV2 | Deadlines.Index | deadlines-overzicht | deadlines-overzicht |
 | Invoices/Core/IndexV2 | Invoices.Index | invoices-index | facturen-doorboeken, factuur-nummeren-en-verzenden |
-| Invoices/Editor/CreateV2 | Invoices.Create/Edit (concept) | facturen-nieuw / facturen-concept-bewerken (view) | factuur-aanmaken, klant-aanmaken-vanuit-factuur / concept-bewerken |
+| Invoices/Recurring/RecurringIndexV2 | Invoices.Index?view=recurring | invoices-recurring | terugkerende-facturen-beheren, terugkerende-facturen-instellen |
+| Invoices/Recurring/RecurringDetailV2 | Invoices.RecurringDetail | invoices-recurring-detail | terugkerende-facturen-beheren |
+| Invoices/Editor/CreateV2 | Invoices.Create/Edit (concept) | facturen-nieuw / facturen-concept-bewerken (view) | factuur-aanmaken, klant-aanmaken-vanuit-factuur, terugkerende-factuur-aanmaken / concept-bewerken |
 | Invoices/Editor/EditV2 | Invoices.Edit | facturen-bewerken (view) | factuur-bewerken |
 | Invoices/Send/SendV2 | Invoices.Send | facturen-verzenden (view) | factuur-verzenden |
 | Marktanalyse/GemeenteanalyseV2, VergelijkbarePandenV2 | Marktanalyse.* | marktanalyse-gemeente / -vergelijkbaar | gemeenteanalyse-lezen / vergelijkbare-panden-zoeken, zoekprofiel-opslaan |

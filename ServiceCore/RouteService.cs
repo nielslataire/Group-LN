@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using FacadeCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace ServiceCore;
 
@@ -12,10 +13,12 @@ public class RouteService : IRouteService
 {
     private readonly HttpClient _http;
     private readonly string _apiKey;
+    private readonly ILogger<RouteService> _logger;
 
-    public RouteService(HttpClient http, IConfiguration config)
+    public RouteService(HttpClient http, IConfiguration config, ILogger<RouteService> logger)
     {
         _http = http;
+        _logger = logger;
         _apiKey = config["GoogleMaps:ApiKey"] ?? string.Empty;
     }
 
@@ -23,7 +26,10 @@ public class RouteService : IRouteService
         string originAddress, string destinationAddress, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(_apiKey))
+        {
+            _logger.LogWarning("Routeberekening overgeslagen: GoogleMaps:ApiKey is niet ingesteld.");
             return null;
+        }
 
         using var request = new HttpRequestMessage(
             HttpMethod.Post,
@@ -42,13 +48,21 @@ public class RouteService : IRouteService
         try
         {
             var response = await _http.SendAsync(request, ct);
-            if (!response.IsSuccessStatusCode) return null;
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync(ct);
+                _logger.LogWarning("Routeberekening {Origin} -> {Destination} mislukt: {Status} {Body}", originAddress, destinationAddress, (int)response.StatusCode, body.Length > 500 ? body[..500] : body);
+                return null;
+            }
 
             using var doc = await JsonDocument.ParseAsync(
                 await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
 
-            if (!doc.RootElement.TryGetProperty("routes", out var routesEl)) return null;
-            if (routesEl.GetArrayLength() == 0) return null;
+            if (!doc.RootElement.TryGetProperty("routes", out var routesEl) || routesEl.GetArrayLength() == 0)
+            {
+                _logger.LogWarning("Routeberekening {Origin} -> {Destination}: Google vond geen route.", originAddress, destinationAddress);
+                return null;
+            }
 
             var route = routesEl[0];
             if (!route.TryGetProperty("distanceMeters", out var distEl)) return null;
@@ -60,8 +74,9 @@ public class RouteService : IRouteService
 
             return new RouteResult(Math.Round(meters / 1000m, 2), seconds);
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogWarning(ex, "Routeberekening {Origin} -> {Destination} gaf een uitzondering.", originAddress, destinationAddress);
             return null;
         }
     }

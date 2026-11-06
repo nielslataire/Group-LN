@@ -88,7 +88,7 @@
                 <div class="gl-v2-field gl-v2-co-travel-field">
                     <span class="gl-v2-field-label">Verplaatsing</span>
                     <div class="gl-v2-co-travel" id="gl-v2-co-travel">
-                        <input type="checkbox" class="gl-v2-toggle-switch" id="regie-travel-on" aria-label="Verplaatsing" @(hasDefaultKm ? "checked" : "disabled") />
+                        <input type="checkbox" class="gl-v2-toggle-switch" id="regie-travel-on" aria-label="Verplaatsing" @(hasDefaultKm ? "checked" : null) />
                         <span class="gl-v2-co-travel-text" id="regie-travel-label">
                             @if (hasDefaultKm)
                             {
@@ -96,7 +96,7 @@
                             }
                             else
                             {
-                                <span class="gl-v2-co-muted">geen afstand berekend</span>
+                                <span class="gl-v2-co-muted">geen verplaatsing</span>
                             }
                         </span>
                         <button type="button" class="gl-v2-icon-btn gl-v2-co-icon-sm" id="regie-travel-edit" aria-label="Afwijkende afstand invullen" title="Afwijkende afstand voor deze prestatie" @(hasDefaultKm ? null : "disabled")><i class="ph ph-pencil-simple" aria-hidden="true"></i></button>

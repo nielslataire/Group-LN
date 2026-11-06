@@ -1,0 +1,157 @@
+@using CPMCore.Models.GlV2
+@*
+    Stap 2 · Instellingen van Nieuwe factuur, uitgebreid voor terugkerende facturen (design-handoff punt 49a): bovenaan kies je eenmalig of terugkerend. Kies je terugkerend, dan komt het schema
+    in de plaats van de factuurdatum (de betaaltermijn blijft) en zie je rechts meteen de planning. Dit partial levert twee blokken in CreateV2: "Soort" (altijd zichtbaar bij een nieuwe factuur)
+    en "Schema" met "Telkens als het zover is" (enkel bij Terugkerend). Gedrag: js/gl-v2-invoices-recurring-create.js, opmaak: css/gl-v2-invoices-recurring.css (.gl-v2-ri-*).
+    Componenten: .gl-v2-radio-card (keuzekaarten, 49a), .gl-v2-segmented (herhaal, factuurdag, periode, stopt), _DateField, _SelectList, GlV2ToggleSwitch-opmaak (.gl-v2-toggle-row).
+    "Automatisch nummeren en versturen" bestaat nog niet en staat uitgeschakeld.
+*@
+@{
+    string[] weekdays = { "ma", "di", "wo", "do", "vr" };
+    GlV2SegmentedVm Seg(string id, string label, params (string key, string val, string text)[] items) => new()
+    {
+        Id = id, Fill = true, AriaLabel = label, Size = "",
+        Items = items.Select((i, n) => new GlV2SegmentedItem { Text = i.text, Active = n == 0, Data = new() { [i.key] = i.val } }).ToList()
+    };
+    var dayItems = Enumerable.Range(1, 31).ToList();
+}
+@* ─── Soort: eenmalig of terugkerend (49a) ─── *@
+<div class="gl-v2-ic-block" id="ri-kind-block" hidden>
+    <div class="gl-v2-ic-block-head"><b>Soort</b><span>komt deze factuur één keer of regelmatig terug?</span></div>
+    <div class="gl-v2-radio-cards" role="radiogroup" aria-label="Soort factuur">
+        <label class="gl-v2-radio-card">
+            <input type="radio" name="ri-kind" value="once" checked />
+            <span><b>Eenmalig</b><small>Eén factuur met een vaste factuur- en vervaldatum.</small></span>
+        </label>
+        <label class="gl-v2-radio-card">
+            <input type="radio" name="ri-kind" value="rec" />
+            <span><b>Terugkerend</b><small>Dezelfde factuur volgens een schema: huur, beheer, onderhoud, vergoedingen.</small></span>
+        </label>
+    </div>
+</div>
+
+@* ─── Schema (enkel bij Terugkerend) ─── *@
+<div class="gl-v2-ic-block" id="ri-schema" hidden>
+    <div class="gl-v2-ic-block-head"><b>Schema</b><span>wanneer wordt er gefactureerd</span></div>
+
+    <div class="gl-v2-field">
+        <span class="gl-v2-field-label">HERHAAL</span>
+        @await Html.PartialAsync("GlV2/_Segmented", Seg("ri-freq", "Herhaal", ("freq", "1", "Week"), ("freq", "2", "Maand"), ("freq", "3", "Kwartaal"), ("freq", "4", "Jaar")))
+    </div>
+
+    <div class="gl-v2-field" id="ri-day-field">
+        <span class="gl-v2-field-label">FACTUURDAG</span>
+        <div id="ri-day-month">
+            @await Html.PartialAsync("GlV2/_Segmented", Seg("ri-daymode", "Factuurdag", ("daymode", "1", "Vaste dag"), ("daymode", "2", "Laatste dag van de maand")))
+            <div class="gl-v2-ri-daygrid" id="ri-daygrid" role="group" aria-label="Dag van de maand">
+                @foreach (var d in dayItems)
+                {
+                    <button type="button" data-day="@d" class="@(d > 28 ? "is-late" : "")">@d</button>
+                }
+            </div>
+        </div>
+        <div id="ri-day-week" hidden>
+            @await Html.PartialAsync("GlV2/_Segmented", new GlV2SegmentedVm { Id = "ri-weekday", Fill = true, AriaLabel = "Dag van de week", Items = weekdays.Select((w, n) => new GlV2SegmentedItem { Text = w, Active = n == 0, Data = new() { ["wd"] = (n + 1).ToString() } }).ToList() })
+        </div>
+        <span class="gl-v2-field-help" id="ri-day-help"></span>
+    </div>
+
+    <div class="gl-v2-ic-row3">
+        @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "FirstDate", Id = "ri-first", Label = "EERSTE FACTUUR", Required = true, IsoValue = "", DisplayValue = "" })
+        <div class="gl-v2-field">
+            <span class="gl-v2-field-label">PERIODE OP FACTUUR</span>
+            @await Html.PartialAsync("GlV2/_Segmented", Seg("ri-period", "Periode op de factuur", ("period", "1", "Lopende"), ("period", "2", "Vorige")))
+        </div>
+    </div>
+
+    <div class="gl-v2-field">
+        <span class="gl-v2-field-label">STOPT</span>
+        <div class="gl-v2-ri-stoprow">
+            @await Html.PartialAsync("GlV2/_Segmented", Seg("ri-end", "Einde van het schema", ("end", "0", "Nooit"), ("end", "1", "Na aantal"), ("end", "2", "Op datum")))
+            <div class="gl-v2-ri-stopextra" id="ri-end-count" hidden>
+                <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input is-num" id="ri-endcount" inputmode="numeric" maxlength="3" value="12" aria-label="Aantal facturen" /><span class="gl-v2-field-unit">facturen</span></div>
+            </div>
+            <div class="gl-v2-ri-stopextra" id="ri-end-date" hidden>
+                @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "EndDate", Id = "ri-enddate", Label = null, IsoValue = "", DisplayValue = "" })
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ─── Telkens als het zover is (enkel bij Terugkerend) ─── *@
+<div class="gl-v2-ic-block" id="ri-when" hidden>
+    <div class="gl-v2-ic-block-head"><b>Telkens als het zover is</b><span>wat doet het CRM met elke nieuwe factuur</span></div>
+    <div class="gl-v2-radio-cards" role="radiogroup" aria-label="Wat doet het CRM met elke nieuwe factuur">
+        <label class="gl-v2-radio-card">
+            <input type="radio" name="ri-send" value="1" checked />
+            <span><b>Klaarzetten ter controle</b><small>Concept <span id="ri-lead-text">3 dagen</span> vooraf; jij kijkt na en nummert. Aanbevolen als bedragen kunnen wijzigen.</small></span>
+        </label>
+        <label class="gl-v2-radio-card" title="Volgt later">
+            <input type="radio" name="ri-send" value="2" disabled />
+            <span><b>Automatisch versturen</b><small>Nummeren en versturen op de factuurdag, zonder tussenkomst. Volgt later.</small></span>
+        </label>
+    </div>
+
+    <div class="gl-v2-ic-row2">
+        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "ri_lead", Id = "ri-lead", Label = "CONCEPT KLAAR", Value = "3", Items = new[] { 1, 2, 3, 5, 7, 10, 14 }.Select(n => new GlV2SelectItem { Value = n.ToString(), Text = n + (n == 1 ? " dag vooraf" : " dagen vooraf") }).ToList() })
+        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "ri_weekend", Id = "ri-weekend", Label = "WEEKEND OF FEESTDAG", Value = "1", Items = new List<GlV2SelectItem> { new() { Value = "1", Text = "Volgende werkdag" }, new() { Value = "2", Text = "Vorige werkdag" }, new() { Value = "3", Text = "Ongewijzigd" } } })
+    </div>
+
+    <label class="gl-v2-toggle-row" for="ri-idx-on">
+        <input type="checkbox" id="ri-idx-on" class="gl-v2-toggle-switch" />
+        <span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Jaarlijks indexeren</span><span class="gl-v2-toggle-hint">Enkel lijnen met “Geïndexeerd” (stap 3). Je krijgt het nieuwe bedrag eerst ter bevestiging.</span></span>
+    </label>
+
+    <div class="gl-v2-ri-idx" id="ri-idx" hidden>
+        <div class="gl-v2-field">
+            <span class="gl-v2-field-label">WANNEER</span>
+            <div class="gl-v2-radio-cards gl-v2-ri-cards1" role="radiogroup" aria-label="Wanneer indexeren">
+                <label class="gl-v2-radio-card"><input type="radio" name="ri-idxwhen" value="1" checked /><span><b>Op 1 januari</b><small>Elk jaar op dezelfde datum voor alle huurders.</small></span></label>
+                <label class="gl-v2-radio-card"><input type="radio" name="ri-idxwhen" value="2" /><span><b>Op de verjaardag van de start</b><small>Elk jaar op de startdatum hieronder, zoals de wet voor woninghuur voorziet.</small></span></label>
+                <label class="gl-v2-radio-card"><input type="radio" name="ri-idxwhen" value="3" /><span><b>Op een andere datum</b><small>Bv. de datum uit het contract.</small></span></label>
+            </div>
+        </div>
+        <div class="gl-v2-field" id="ri-idxdate-field" hidden>
+            <label class="gl-v2-field-label" for="ri-idxdate">DATUM (DD/MM)</label>
+            <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="ri-idxdate" maxlength="5" placeholder="01/03" autocomplete="off" /></div>
+        </div>
+        <div class="gl-v2-field">
+            <span class="gl-v2-field-label">STARTDATUM VOOR INDEXERING</span>
+            @await Html.PartialAsync("GlV2/_Segmented", Seg("ri-idxbasemode", "Startdatum voor indexering", ("basemode", "first", "Eerste factuur"), ("basemode", "custom", "Andere datum")))
+            <span class="gl-v2-field-help">Bv. de ingangsdatum van het huurcontract, als die vóór de eerste factuur uit het CRM ligt. Bepaalt de basisindex en de verjaardag.</span>
+        </div>
+        <div id="ri-idxbase-field" hidden>
+            @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "IndexationBaseDate", Id = "ri-idxbase", Label = "STARTDATUM", IsoValue = "", DisplayValue = "" })
+        </div>
+        <div class="gl-v2-ic-row2">
+            <div class="gl-v2-field">
+                <span class="gl-v2-field-label">INDEX</span>
+                @await Html.PartialAsync("GlV2/_Segmented", Seg("ri-idxtype", "Soort index", ("idxtype", "1", "Gezondheidsindex"), ("idxtype", "2", "Consumptieprijzen"), ("idxtype", "3", "Vast %")))
+            </div>
+            <div class="gl-v2-field" id="ri-idxpct-field" hidden>
+                <label class="gl-v2-field-label" for="ri-idxpct">VERHOGING PER JAAR</label>
+                <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input is-num" id="ri-idxpct" inputmode="decimal" autocomplete="off" placeholder="bv. 2,1" /><span class="gl-v2-field-unit">%</span></div>
+                <span class="gl-v2-field-help">Consumptieprijzen en een vast percentage worden niet opgehaald: je vult het percentage in dat je toepast.</span>
+            </div>
+            <div class="gl-v2-field" id="ri-idxbaseindex-field">
+                <label class="gl-v2-field-label" for="ri-idxbaseindex">BASISINDEX <span class="gl-v2-ie-opt">· optioneel</span></label>
+                <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input is-num" id="ri-idxbaseindex" inputmode="decimal" autocomplete="off" placeholder="bv. 135,76" /></div>
+                <span class="gl-v2-field-help">Zonder invulling gebruikt het CRM de gezondheidsindex (Statbel, basis 2013 = 100) van de maand vóór de startdatum. Is die maand te oud om bewaard te zijn, vul dan zelf de basisindex in.</span>
+            </div>
+        </div>
+        <label class="gl-v2-toggle-row" for="ri-idxconfirm">
+            <input type="checkbox" id="ri-idxconfirm" class="gl-v2-toggle-switch" checked />
+            <span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Nieuw bedrag eerst laten bevestigen</span><span class="gl-v2-toggle-hint">Je ziet oud en nieuw bedrag naast elkaar voor de eerste geïndexeerde factuur.</span></span>
+        </label>
+        <p class="gl-v2-field-help gl-v2-ri-idxsum" id="ri-idxsum"></p>
+        <p class="gl-v2-field-help" id="ri-idxrule">Bij een indexatie neemt het CRM de gezondheidsindex van de maand vóór de verjaardag, gedeeld door de index van de maand vóór de startdatum. Het nieuwe bedrag is het basisbedrag × die verhouding. Het basisbedrag is het bedrag dat je in stap 3 invult, geldig op de startdatum.</p>
+    </div>
+
+    <label class="gl-v2-toggle-row" for="ri-warn">
+        <input type="checkbox" id="ri-warn" class="gl-v2-toggle-switch" checked />
+        <span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Melding als een vorige factuur nog openstaat</span><span class="gl-v2-toggle-hint">Bij een nieuwe factuur terwijl de vorige vervallen is.</span></span>
+    </label>
+    <div id="ri-resume-field" hidden>
+        <input type="hidden" id="ri-resume" value="1" />
+    </div>
+</div>

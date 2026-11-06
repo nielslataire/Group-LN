@@ -1,0 +1,279 @@
+@model CPMCore.Models.Invoicing.RecurringDetailVM
+@using System.Globalization
+@using System.Text.RegularExpressions
+@using DALCore.Models
+@*
+    gl-v2 — Schemadetail van een terugkerende factuur (design-handoff punt 50d): wat je opent na een klik op een rij in Facturen › Terugkerend of op het ↻-label in de lijst met facturen.
+    Bekijken, niet bewerken: Bewerken opent het formulier van 49a (Invoices/Create?scheduleId=…) met Terugkerend al gekozen. Pauzeren en Nu factuur maken staan bovenaan, stopzetten onderaan.
+    Componenten: .gl-v2-section-card (Schema, Lijnen, Aangemaakte facturen, Komende, Geschiedenis), .gl-v2-notice-expanded (concept klaar / indexatie), badge in de topbar (@@section PageTitleBadges),
+    TYPE 1-bevestigingen (_BevestigModal) en een eigen hervat-keuze. Opmaak: css/gl-v2-invoices-recurring.css; gedrag: js/gl-v2-invoices-recurring-detail.js.
+*@
+@{
+    var culture = CultureInfo.GetCultureInfo("nl-BE");
+    var s = Model.Schedule;
+    var issuerId = Model.IssuerCompanyId;
+    var listUrl = Url.Action("Index", "Invoices", new { issuerCompanyId = issuerId, view = "recurring" });
+    ViewData["BackUrl"] = listUrl;
+    ViewData["GlV2FullHeightBody"] = false;
+    var live = s.Status is RecurringInvoiceSchedule.StatusActive or RecurringInvoiceSchedule.StatusPaused or RecurringInvoiceSchedule.StatusConcept;
+    var badgeClass = Model.StatusKey switch { "active" => "is-positive", "pending" => "is-attention", "paused" => "is-neutral", "concept" => "is-neutral", _ => "is-neutral" };
+    var lead = s.DraftLeadDays;
+    var editUrl = Url.Action("Create", "Invoices", new { issuerId, scheduleId = s.Id });
+    string Var(string text)
+    {
+        var enc = System.Net.WebUtility.HtmlEncode(text ?? "");
+        return Regex.Replace(enc, @"\{(maand|jaar|kwartaal|periode|volgnr)\}", m => "<code class=\"gl-v2-ri-var\">" + m.Groups[1].Value + "</code>");
+    }
+    var sendText = Model.ClientPeppolText ?? "E-mail";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-invoices-recurring.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge @badgeClass">@Model.StatusLabel</span>
+}
+@section PageActions
+{
+    @if (Model.CanWrite)
+    {
+        @if (s.Status == RecurringInvoiceSchedule.StatusActive)
+        {
+            <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-ri-act="pause"><i class="ph ph-pause" aria-hidden="true"></i>Pauzeren</button>
+            <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-ri-act="generate" data-ri-held="@(Model.IndexationPending ? "1" : "0")"><i class="ph ph-plus" aria-hidden="true"></i>Nu factuur maken</button>
+        }
+        else if (s.Status == RecurringInvoiceSchedule.StatusPaused)
+        {
+            <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-ri-act="resume" data-ri-missed="@Model.MissedCount" data-ri-mode="@s.ResumeMode"><i class="ph ph-play" aria-hidden="true"></i>Hervatten</button>
+        }
+        else if (s.Status == RecurringInvoiceSchedule.StatusStopped)
+        {
+            <button type="button" class="gl-v2-btn gl-v2-btn-primary" data-ri-act="reactivate"><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i>Opnieuw activeren</button>
+        }
+        @if (live)
+        {
+            <a href="@editUrl" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-pencil-simple" aria-hidden="true"></i>Bewerken</a>
+        }
+    }
+}
+
+<div class="gl-v2-ri-detail" id="ri-detail" data-schedule-id="@s.Id" data-list-url="@listUrl">
+    <div class="gl-v2-ri-detail-main">
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <h2 class="gl-v2-section-card-title">Schema</h2>
+                <span class="gl-v2-field-divider"></span>
+                @if (Model.CanWrite && live) { <a class="gl-v2-ri-link" href="@editUrl">Bewerken</a> }
+            </div>
+            <dl class="gl-v2-ri-facts">
+                <div><dt>KLANT</dt><dd><b>@Model.ClientName</b><small>@(string.IsNullOrWhiteSpace(Model.ClientEmail) ? sendText : sendText + " · " + Model.ClientEmail)</small></dd></div>
+                <div><dt>PROJECT</dt><dd><b>@(string.IsNullOrWhiteSpace(Model.ProjectName) ? "—" : Model.ProjectName)</b>@if (string.IsNullOrWhiteSpace(Model.ProjectName)) { <small>niet gekoppeld</small> }</dd></div>
+                <div><dt>RITME</dt><dd><b>@Model.RhythmLong</b></dd></div>
+                <div><dt>BETAALTERMIJN</dt><dd><b>@(Model.PaymentTermText ?? "Standaard van het bedrijf")</b></dd></div>
+                <div><dt>BIJ AANMAAK</dt><dd><b>Ter controle</b><small>concept @lead dag@(lead == 1 ? "" : "en") vooraf</small></dd></div>
+                <div><dt>VERZENDWIJZE</dt><dd><b>@sendText</b><small>na nummeren · doorboeken naar Octopus</small></dd></div>
+                <div><dt>GESTART</dt><dd><b>@s.FirstDate.ToString("dd/MM/yyyy", culture)</b></dd></div>
+                <div><dt>STOPT</dt><dd><b>@Model.StopText</b></dd></div>
+                <div><dt>INDEXERING</dt><dd><b>@Model.IndexationText</b></dd></div>
+            </dl>
+        </section>
+
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header"><h2 class="gl-v2-section-card-title">Lijnen op elke factuur</h2></div>
+            <div class="gl-v2-ri-scroll">
+                <table class="gl-v2-ri-table gl-v2-ri-lines">
+                    <thead><tr><th>OMSCHRIJVING</th><th class="is-num">AANTAL</th><th class="is-num">PRIJS</th><th class="is-num">BTW</th><th class="is-num">TOTAAL</th></tr></thead>
+                    <tbody>
+                    @foreach (var l in Model.Lines)
+                    {
+                        <tr>
+                            <td>@Html.Raw(Var(l.Text))@if (l.FirstOnly) { <span class="gl-v2-ri-chip">enkel de eerste</span> }@if (l.Indexable) { <span class="gl-v2-ri-chip is-gold">geïndexeerd</span> }</td>
+                            <td class="is-num">@l.Quantity.ToString("0.###", culture)</td>
+                            <td class="is-num">@l.UnitPrice.ToString("C", culture)</td>
+                            <td class="is-num">@l.VatPercentage.ToString("0.##", culture) %</td>
+                            <td class="is-num">@((l.Quantity * l.UnitPrice).ToString("C", culture))</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+            <div class="gl-v2-ri-linetotals">
+                <span>BTW @Model.LinesVat.ToString("C", culture)</span>
+                <b>Te betalen @((Model.LinesNet + Model.LinesVat).ToString("C", culture))</b>
+            </div>
+            @if (!string.IsNullOrEmpty(Model.ExampleSentence)) { <p class="gl-v2-ri-example">@Model.ExampleSentence</p> }
+        </section>
+
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
+                <h2 class="gl-v2-section-card-title">Aangemaakte facturen</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-ri-meta">@Model.InvoiceTotal factu@(Model.InvoiceTotal == 1 ? "ur" : "ren") · @Model.InvoiceTotalNet.ToString("C", culture) excl. btw</span>
+            </div>
+            @if (Model.Invoices.Count == 0)
+            {
+                <p class="gl-v2-ri-empty">Er zijn nog geen facturen aangemaakt@(s.NextOccurrence.HasValue ? ". De eerste staat gepland voor " + s.NextOccurrence.Value.ToString("dd/MM/yyyy", culture) : "")@(".")</p>
+            }
+            else
+            {
+                <div class="gl-v2-ri-scroll">
+                    <table class="gl-v2-ri-table gl-v2-ri-created">
+                        <thead><tr><th>FACTUURNR</th><th>DATUM</th><th>PERIODE</th><th class="is-num">EXCL. BTW</th><th>STATUS</th><th class="is-chev"></th></tr></thead>
+                        <tbody>
+                        @foreach (var i in Model.Invoices)
+                        {
+                            <tr data-href="@Url.Action("Detail", "Invoices", new { id = i.Id, issuerCompanyId = issuerId })" tabindex="0" class="@(i.IsDraft ? "gl-v2-ri-review" : "")">
+                                <td class="gl-v2-ri-last">@(i.IsDraft ? "Proforma" : i.PublicId)</td>
+                                <td>@i.Date.ToString("dd/MM/yyyy", culture)</td>
+                                <td>@i.Period</td>
+                                <td class="is-num">@i.Net.ToString("C", culture)</td>
+                                <td><span class="gl-v2-ri-pill is-@i.StatusKey">@i.StatusLabel</span></td>
+                                <td class="is-chev"><i class="ph ph-caret-right" aria-hidden="true"></i></td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+                <a class="gl-v2-ri-link gl-v2-ri-showall" href="@Url.Action("Index", "Invoices", new { issuerCompanyId = issuerId })">Toon alle @Model.InvoiceTotal facturen in Facturen ›</a>
+            }
+        </section>
+    </div>
+
+    <aside class="gl-v2-ri-detail-side">
+        @if (Model.IndexationWaiting)
+        {
+            <div class="gl-v2-notice gl-v2-notice-expanded is-warning">
+                <span class="gl-v2-notice-expanded-icon"><i class="ph ph-warning" aria-hidden="true"></i></span>
+                <div class="gl-v2-notice-body">
+                    <span class="gl-v2-notice-title">Indexatie wacht op de gezondheidsindex</span>
+                    <span class="gl-v2-notice-text">@Model.IndexationExplain</span>
+                </div>
+            </div>
+        }
+        else if (Model.IndexationPending)
+        {
+            <div class="gl-v2-notice gl-v2-notice-expanded is-warning" id="ri-index-card">
+                <span class="gl-v2-notice-expanded-icon"><i class="ph ph-trend-up" aria-hidden="true"></i></span>
+                <div class="gl-v2-notice-body">
+                    <span class="gl-v2-notice-title">Indexatie wacht op bevestiging</span>
+                    <span class="gl-v2-notice-text">De factuur van @s.NextOccurrence?.ToString("dd/MM/yyyy", culture) wordt geïndexeerd: @Model.IndexationOldNet?.ToString("C", culture) → @Model.IndexationNewNet?.ToString("C", culture) excl. btw. @(Model.IndexationExplain) Het concept wordt klaargezet zodra je bevestigt.</span>
+                    @if (Model.CanWrite)
+                    {
+                        <div class="gl-v2-ri-idxrow">
+                            @if (!Model.IndexationIsHealth)
+                            {
+                            <div class="gl-v2-field-box"><input class="gl-v2-field-input is-num" id="ri-index-percent" inputmode="decimal" autocomplete="off" aria-label="Percentage van de indexering" value="@(s.IndexationPercent?.ToString("0.####", culture))" placeholder="bv. 2,1" /><span class="gl-v2-field-unit">%</span></div>
+                            }
+                            <button type="button" class="gl-v2-notice-action" data-ri-act="confirm-index">Bevestigen</button>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        else if (Model.DraftInvoiceId.HasValue)
+        {
+            <div class="gl-v2-notice gl-v2-notice-expanded is-warning">
+                <span class="gl-v2-notice-expanded-icon"><i class="ph ph-clock" aria-hidden="true"></i></span>
+                <div class="gl-v2-notice-body">
+                    <span class="gl-v2-notice-title">Concept @(Model.DraftPeriod?.ToLowerInvariant()) staat klaar</span>
+                    <span class="gl-v2-notice-text">Nakijken en nummeren vóór @(Model.DraftOccurrence?.ToString("dd/MM", culture)). Als Proforma ook zichtbaar in je facturenlijst.</span>
+                    <div class="gl-v2-notice-actions"><a class="gl-v2-notice-action" href="@Url.Action("Detail", "Invoices", new { id = Model.DraftInvoiceId, issuerCompanyId = issuerId })">Nakijken ›</a></div>
+                </div>
+            </div>
+        }
+        else if (s.Status == RecurringInvoiceSchedule.StatusPaused)
+        {
+            <div class="gl-v2-notice gl-v2-notice-expanded is-info">
+                <span class="gl-v2-notice-expanded-icon"><i class="ph ph-pause" aria-hidden="true"></i></span>
+                <div class="gl-v2-notice-body">
+                    <span class="gl-v2-notice-title">Schema gepauzeerd</span>
+                    <span class="gl-v2-notice-text">@(s.PausedAt.HasValue ? "Sinds " + s.PausedAt.Value.ToLocalTime().ToString("dd/MM/yyyy", culture) + ". " : "")Er worden geen concepten klaargezet.@(Model.MissedCount > 0 ? $" Er zijn intussen {Model.MissedCount} factuurdatum{(Model.MissedCount == 1 ? "" : "s")} voorbij: bij hervatten kies je of die alsnog gefactureerd worden." : "")</span>
+                </div>
+            </div>
+        }
+        else if (s.Status == RecurringInvoiceSchedule.StatusConcept)
+        {
+            <div class="gl-v2-notice gl-v2-notice-expanded is-info">
+                <span class="gl-v2-notice-expanded-icon"><i class="ph ph-note-pencil" aria-hidden="true"></i></span>
+                <div class="gl-v2-notice-body">
+                    <span class="gl-v2-notice-title">Schema nog niet geactiveerd</span>
+                    <span class="gl-v2-notice-text">Er worden geen facturen gemaakt tot je het schema activeert. Kies Bewerken en rond stap 4 af.</span>
+                </div>
+            </div>
+        }
+
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header"><h2 class="gl-v2-section-card-title">Komende</h2></div>
+            @if (Model.Upcoming.Count == 0)
+            {
+                <p class="gl-v2-ri-empty">@(s.Status == RecurringInvoiceSchedule.StatusActive ? "Geen komende facturen meer." : "Geen komende facturen zolang het schema niet actief is.")</p>
+            }
+            else
+            {
+                <ul class="gl-v2-ri-upcoming">
+                    @foreach (var u in Model.Upcoming)
+                    {
+                        <li class="@(u.IsDue ? "is-due" : "")">
+                            <i class="gl-v2-ri-dot" aria-hidden="true"></i>
+                            <div><b>@u.Date.ToString("dd/MM/yyyy", culture)</b><small>@u.Note</small></div>
+                            <span>@u.Net.ToString("C", culture)</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header"><h2 class="gl-v2-section-card-title">Geschiedenis</h2></div>
+            <ul class="gl-v2-ri-history">
+                @foreach (var e in Model.Events)
+                {
+                    <li><time>@e.At.ToString("dd/MM/yyyy", culture)</time><div><b>@e.Text</b>@if (!string.IsNullOrWhiteSpace(e.Detail)) { <small>@e.Detail</small> }</div></li>
+                }
+            </ul>
+        </section>
+
+        <div class="gl-v2-ri-dangerrow">
+            @if (Model.CanWrite && s.Status is RecurringInvoiceSchedule.StatusActive or RecurringInvoiceSchedule.StatusPaused)
+            {
+                <button type="button" class="gl-v2-ri-danger" data-ri-act="stop">Schema stopzetten</button>
+            }
+            @if (Model.CanDelete)
+            {
+                <button type="button" class="gl-v2-ri-danger" data-ri-act="delete" data-ri-created="@Model.InvoiceTotal">Schema verwijderen</button>
+            }
+        </div>
+    </aside>
+</div>
+
+@await Html.PartialAsync("GlV2/_BevestigModal")
+
+@* Hervatten met gemiste periodes: TYPE 1-bevestiging met twee uitkomsten (alsnog factureren of overslaan). *@
+<div class="modal fade gl-v2-modal-confirm" id="ri-resume-modal" tabindex="-1" aria-hidden="true" aria-labelledby="ri-resume-title">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content is-warning">
+            <div class="modal-body">
+                <span class="gl-v2-modal-icon is-warning"><i class="ph ph-play" aria-hidden="true"></i></span>
+                <div class="gl-v2-modal-text">
+                    <h2 class="gl-v2-modal-title" id="ri-resume-title">Gemiste periodes factureren?</h2>
+                    <p class="gl-v2-modal-desc" id="ri-resume-desc"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-ri-resume="skip">Overslaan</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-warning" data-ri-resume="backfill">Alsnog factureren</button>
+            </div>
+        </div>
+    </div>
+</div>
+<form id="ri-token-form" hidden>@Html.AntiForgeryToken()</form>
+
+@section PageScripts
+{
+    <script>
+        window.GlV2RecurringDetail = { actionUrl: '@Url.Action("RecurringAction", "Invoices")', invoicesUrl: '@Url.Action("Index", "Invoices", new { issuerCompanyId = issuerId })' };
+    </script>
+    <script src="~/js/gl-v2-invoices-recurring-detail.js" asp-append-version="true"></script>
+}

@@ -296,7 +296,7 @@
     function renderTravel() {
         if (!travelLabel) return;
         var checked = travelOn && travelOn.checked;
-        if (travelEdit) travelEdit.disabled = !checked || !cfg.defaultKm;
+        if (travelEdit) travelEdit.disabled = !checked; // ook zonder berekende standaardafstand kan je de km zelf invullen
         if (travelBox) travelBox.hidden = !(checked && travelCustom);
         if (!checked) {
             travelLabel.innerHTML = '<span class="gl-v2-co-muted">geen verplaatsing</span>';
@@ -330,17 +330,40 @@
 
     function escapeHtml(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
 
-    if (travelOn) travelOn.addEventListener("change", function () { if (!travelOn.checked) travelCustom = false; renderTravel(); renderHint(); });
+    if (travelOn) travelOn.addEventListener("change", function () {
+        if (!travelOn.checked) travelCustom = false;
+        else if (!cfg.defaultKm) { travelCustom = true; if (travelKm) { travelKm.value = ""; } } // geen standaardafstand: meteen de km vragen
+        renderTravel(); renderHint();
+        if (travelOn.checked && travelCustom && travelKm) travelKm.focus();
+    });
     if (travelEdit) {
         travelEdit.addEventListener("click", function () {
             travelCustom = !travelCustom;
-            if (travelCustom && travelKm) { travelKm.value = fmtNum(cfg.defaultKm, 1).replace(/[^0-9,]/g, "").replace(",", "."); travelKm.focus(); travelKm.select(); }
+            if (travelCustom && travelKm) { travelKm.value = cfg.defaultKm ? fmtNum(cfg.defaultKm, 1).replace(/[^0-9,]/g, "").replace(",", ".") : ""; travelKm.focus(); travelKm.select(); }
             renderTravel(); renderHint();
         });
     }
     if (travelKm) travelKm.addEventListener("input", renderHint);
     if (workerHidden) workerHidden.addEventListener("change", renderHint);
     if (hoursInput) hoursInput.addEventListener("input", renderHint);
+    // De laatst gebruikte medewerker blijft gekozen na het toevoegen (de pagina laadt opnieuw) — per project onthouden in de browser.
+    var lastWorkerKey = "gl-v2-regie-worker-" + cfg.projectId;
+    if (workerHidden) {
+        try {
+            var lastWorker = localStorage.getItem(lastWorkerKey);
+            var wrapSel = workerHidden.closest(".gl-v2-select");
+            var opt = lastWorker && wrapSel ? wrapSel.querySelector('.gl-v2-select-option[data-value="' + lastWorker.replace(/"/g, "") + '"]') : null;
+            if (opt && workerHidden.value !== lastWorker) opt.click();
+        } catch (e) { /* geen localStorage: standaardmedewerker blijft staan */ }
+    }
+    // Na het toevoegen: de cursor terug in de datum, klaar voor de volgende prestatie.
+    try {
+        if (sessionStorage.getItem("gl-v2-regie-focus-date")) {
+            sessionStorage.removeItem("gl-v2-regie-focus-date");
+            var dateText = document.getElementById("regie-date_text");
+            if (dateText) setTimeout(function () { dateText.focus(); dateText.select(); }, 0);
+        }
+    } catch (e) { }
     if (hint) { renderTravel(); renderHint(); }
 
     function addRegie() {
@@ -372,6 +395,7 @@
         })
             .then(function (r) { return r.ok ? r.json() : Promise.reject(r); })
             .then(function () {
+                try { localStorage.setItem(lastWorkerKey, workerHidden.value); sessionStorage.setItem("gl-v2-regie-focus-date", "1"); } catch (e) { }
                 reloadWithFlash({ tone: "success", title: "Prestatie toegevoegd", body: w.name + " · " + fmtNum(hours, 2) + " u op " + displayDate(date) + "." }, "regie");
             })
             .catch(function () {

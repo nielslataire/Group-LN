@@ -33,6 +33,9 @@ public partial class ClientAccount
 
     public int? OwnerTypeId { get; set; }
 
+    /// <summary>Bedrijfsvorm (BV, NV, ...) van een onderneming, uit CompanyLegalForm (migratie 136).</summary>
+    public int? CompanyLegalFormId { get; set; }
+
     public string Salutation { get; set; }
 
     public string Vatnumber { get; set; }

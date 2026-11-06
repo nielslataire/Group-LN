@@ -16,12 +16,26 @@
         </p>
     </div>
 </div>
-<div class="modal-footer">
-    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
-    <form asp-action="Delete" asp-controller="Invoices" method="post">
-        @Html.AntiForgeryToken()
-        <input type="hidden" name="id" value="@Model.Id" />
-        <input type="hidden" name="issuerCompanyId" value="@Model.IssuerCompanyId" />
+<form asp-action="Delete" asp-controller="Invoices" method="post" id="delete-invoice-form">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" value="@Model.Id" />
+    <input type="hidden" name="issuerCompanyId" value="@Model.IssuerCompanyId" />
+    @if (Model.RecurringScheduleId.HasValue)
+    {
+        @* Concept uit een terugkerend schema: terugzetten in het schema of de periode definitief overslaan (keuzekaarten, DESIGN.md "Keuzerondjes"). *@
+        <div class="gl-v2-radio-cards gl-v2-ri-deletechoice" role="radiogroup" aria-label="Wat gebeurt er met het schema?">
+            <label class="gl-v2-radio-card">
+                <input type="radio" name="scheduleChoice" value="restore" @(Model.CanRestoreToSchedule ? "checked" : null) @(Model.CanRestoreToSchedule ? null : "disabled") />
+                <span><b>Terug in het schema plaatsen</b><small>@(Model.CanRestoreToSchedule ? "Deze factuurdatum" + (string.IsNullOrEmpty(Model.RecurringPeriod) ? "" : " (" + Model.RecurringPeriod!.ToLowerInvariant() + ")") + " komt opnieuw onder Komende facturen en wordt later opnieuw als concept klaargezet." : "Niet mogelijk: enkel de laatst aangemaakte factuur van een lopend schema kan terug.")</small></span>
+            </label>
+            <label class="gl-v2-radio-card">
+                <input type="radio" name="scheduleChoice" value="discard" @(Model.CanRestoreToSchedule ? null : "checked") />
+                <span><b>Definitief verwijderen</b><small>Deze periode wordt niet opnieuw aangemaakt. Het schema gaat gewoon door met de volgende factuurdatum.</small></span>
+            </label>
+        </div>
+    }
+    <div class="modal-footer">
+        <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
         <button type="submit" class="gl-v2-btn gl-v2-btn-danger">Verwijderen</button>
-    </form>
-</div>
+    </div>
+</form>

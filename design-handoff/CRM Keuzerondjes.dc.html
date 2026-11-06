@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500&family=IBM+Plex+Sans:wght@400;450;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"><style>body{margin:0;background:#F2F5EF;font-family:'IBM Plex Sans',sans-serif}a{color:#00532D}a:hover{color:#B8935A}</style></helmet>
+<div data-screen-label="Keuzerondjes" style="padding:40px;display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+
+<div style="width:520px;max-width:100%;display:flex;flex-direction:column;gap:10px">
+<span style="font:600 12px 'IBM Plex Sans',sans-serif;color:#00532D">A · Zoals in je modal, in de huisstijl</span>
+<div style="background:#fff;border-radius:16px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 24px 48px -28px rgba(44,59,42,.45);padding:22px 24px;display:flex;flex-direction:column;gap:10px">
+<span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.09em;color:#5a6b58">KOPIE ALS</span>
+<div role="radiogroup" style="display:flex;gap:22px;flex-wrap:wrap"><sc-for list="{{ optsA }}" as="o" hint-placeholder-count="2"><div role="radio" onClick="{{ o.go }}" style="display:flex;align-items:center;gap:9px;cursor:pointer;padding:4px 0"><span style="{{ o.ring }}"><span style="{{ o.dot }}"></span></span><span style="{{ o.lbl }}">{{ o.n }}</span></div></sc-for></div>
+<span style="font:450 12px/1.55 'IBM Plex Sans',sans-serif;color:#5a6b58;text-wrap:pretty">Van een offerte maak je een kopie als offerte; omzetten naar een wijzigingsopdracht doe je via “Omzetten →”.</span>
+</div>
+</div>
+
+<div style="width:520px;max-width:100%;display:flex;flex-direction:column;gap:10px">
+<span style="font:600 12px 'IBM Plex Sans',sans-serif;color:#00532D">B · Als keuzekaarten, wanneer elke optie uitleg nodig heeft</span>
+<div style="background:#fff;border-radius:16px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 24px 48px -28px rgba(44,59,42,.45);padding:22px 24px;display:flex;flex-direction:column;gap:10px">
+<span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.09em;color:#5a6b58">KOPIE ALS</span>
+<div role="radiogroup" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px"><sc-for list="{{ optsB }}" as="o" hint-placeholder-count="2"><div role="radio" onClick="{{ o.go }}" style="{{ o.card }}"><span style="{{ o.ring }}"><span style="{{ o.dot }}"></span></span><div style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="{{ o.lbl }}">{{ o.n }}</span><span style="font:450 11.5px/1.45 'IBM Plex Sans',sans-serif;color:#5a6b58">{{ o.d }}</span></div></div></sc-for></div>
+</div>
+</div>
+
+<div style="width:520px;max-width:100%;display:flex;flex-direction:column;gap:10px">
+<span style="font:600 12px 'IBM Plex Sans',sans-serif;color:#00532D">Toestanden</span>
+<div style="background:#fff;border-radius:16px;box-shadow:0 1px 2px rgba(0,83,45,.05),0 24px 48px -28px rgba(44,59,42,.45);padding:20px 24px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px">
+<sc-for list="{{ states }}" as="s" hint-placeholder-count="5"><div style="display:flex;flex-direction:column;align-items:center;gap:10px"><span style="{{ s.ring }}"><span style="{{ s.dot }}"></span></span><span style="font:500 11px 'IBM Plex Sans',sans-serif;color:#5a6b58;text-align:center">{{ s.n }}</span></div></sc-for>
+</div>
+</div>
+
+<div style="width:520px;max-width:100%;display:flex;flex-direction:column;gap:10px">
+<span style="font:600 12px 'IBM Plex Sans',sans-serif;color:#00532D">CSS voor je codebase — stylet elke bestaande &lt;input type="radio"&gt;</span>
+<pre style="margin:0;background:#1F2A1E;color:#D6E5CC;border-radius:14px;padding:18px 20px;font:450 12px/1.65 'IBM Plex Mono',monospace;white-space:pre-wrap;overflow:auto">{{ css }}</pre>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1160,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = { a: 0, b: 0 };
+  renderVals() {
+    const G = '#00532D', F = "'IBM Plex Sans',sans-serif";
+    const ring = (on, s = {}) => `width:18px;height:18px;flex:none;box-sizing:border-box;border-radius:9px;display:flex;align-items:center;justify-content:center;background:${s.dis ? '#F2F5EF' : '#fff'};border:1.5px solid ${s.dis ? '#C9D1C5' : on || s.hov ? G : '#9aa898'};${s.foc ? 'box-shadow:0 0 0 3px rgba(0,83,45,.18);' : ''}transition:border-color .15s`;
+    const dot = (on, s = {}) => `width:8px;height:8px;border-radius:4px;background:${s.dis ? '#C9D1C5' : G};transform:scale(${on ? 1 : 0});transition:transform .15s`;
+    const lbl = on => `font:${on ? 600 : 500} 13.5px ${F};color:#2C3B2A`;
+    const A = [['Offerte', 'Nieuwe offerte met dezelfde regels, apart te versturen.'], ['Wijzigingsopdracht', 'Wordt meteen een getekende meer-/minderwerk na akkoord.']];
+    return {
+      optsA: A.map(([n], i) => { const on = this.state.a === i; return { n, go: () => this.setState({ a: i }), ring: ring(on), dot: dot(on), lbl: lbl(on) }; }),
+      optsB: A.map(([n, d], i) => { const on = this.state.b === i; return { n, d, go: () => this.setState({ b: i }), ring: ring(on) + ';margin-top:1px', dot: dot(on), lbl: lbl(on),
+        card: `display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:10px;cursor:pointer;${on ? 'background:#EDF2E8;box-shadow:inset 0 0 0 1.5px ' + G : 'box-shadow:inset 0 0 0 1px rgba(44,59,42,.14)'}` }; }),
+      states: [['Standaard', 0, {}], ['Hover', 0, { hov: 1 }], ['Gekozen', 1, {}], ['Focus (toetsenbord)', 1, { foc: 1 }], ['Uitgeschakeld', 1, { dis: 1 }]].map(([n, on, s]) => ({ n, ring: ring(on, s), dot: dot(on, s) })),
+      css: `input[type="radio"] {
+  appearance: none;
+  width: 18px; height: 18px; margin: 0;
+  flex: none;
+  border: 1.5px solid #9aa898;
+  border-radius: 50%;
+  background: #fff;
+  display: inline-grid; place-content: center;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+input[type="radio"]::before {
+  content: "";
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #00532D;
+  transform: scale(0);
+  transition: transform .15s;
+}
+input[type="radio"]:hover   { border-color: #00532D; }
+input[type="radio"]:checked { border-color: #00532D; }
+input[type="radio"]:checked::before { transform: scale(1); }
+input[type="radio"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0,83,45,.18);
+}
+input[type="radio"]:disabled {
+  background: #F2F5EF; border-color: #C9D1C5; cursor: default;
+}
+input[type="radio"]:disabled::before { background: #C9D1C5; }
+
+/* label naast het rondje */
+label:has(> input[type="radio"]) {
+  display: inline-flex; align-items: center; gap: 9px;
+  font: 500 13.5px 'IBM Plex Sans', sans-serif; color: #2C3B2A;
+  cursor: pointer;
+}
+label:has(> input[type="radio"]:checked) { font-weight: 600; }`
+    };
+  }
+}
+</script>
+</body>
+</html>

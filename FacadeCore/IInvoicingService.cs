@@ -22,6 +22,8 @@ namespace FacadeCore
         Task<IReadOnlyList<InvoiceListItemBO>> GetAllAsync(CancellationToken ct = default);
         //Filter op bedrijf
         Task<IReadOnlyList<InvoiceListItemBO>> GetByCompanyAsync(int issuerCompanyId, CancellationToken ct = default);
+        /// <summary>Zelfde lijst, beperkt tot facturen met een factuurdatum in dit bereik (een boekjaar): veel sneller dan alles laden. Null = geen grens.</summary>
+        Task<IReadOnlyList<InvoiceListItemBO>> GetByCompanyAsync(int issuerCompanyId, DateOnly? from, DateOnly? to, CancellationToken ct = default);
         //Filter op project — recente vorderingsstaten voor de Detail-hub.
         Task<IReadOnlyList<InvoiceListItemBO>> GetByProjectAsync(int projectId, CancellationToken ct = default);
         Task<InvoiceDetailBO> GetDetailAsync(int invoiceId, CancellationToken ct = default);

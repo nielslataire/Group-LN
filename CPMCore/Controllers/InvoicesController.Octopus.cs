@@ -521,25 +521,25 @@ namespace CPMCore.Controllers
         {
             var recipients = new List<string>();
 
+            // Een factuur aan één contact gaat naar dat contact zelf (het is de gefactureerde partij).
             if (invoice.ClientType == (int)InvoicePartyType.ClientContact && contact != null)
             {
-                if (contact.RequiresDigitalInvoice)
-                {
-                    AddRecipient(recipients, contact.InvoiceEmail, contact.Email);
-                }
-
+                AddRecipient(recipients, contact.InvoiceEmail, contact.Email);
                 return recipients;
             }
 
             if (invoice.ClientType == (int)InvoicePartyType.ClientAccount && account != null)
             {
-                if (account.RequiresDigitalInvoice)
-                {
-                    AddRecipient(recipients, account.InvoiceEmail, account.Email);
-                }
+                // Het hoofdadres van het klantenaccount krijgt de factuur altijd (ook een particulier zonder vlag "Digitale factuur":
+                // die vlag bepaalt enkel de digitale route/Peppol, niet of er een mail naar het hoofdadres gaat).
+                AddRecipient(recipients, account.InvoiceEmail, account.Email);
 
                 if (account.ClientContacts != null)
                 {
+                    // Contactpersonen enkel wanneer bij hen "Digitale factuur" aangeduid is. Mede-eigenaars staan hier bewust NIET bij:
+                    // een factuur op het klantenaccount gaat niet naar hen; hun eigen factuur (gefactureerde partij = die mede-eigenaar)
+                    // gaat via de ClientContact-tak hierboven naar hun eigen adres. Een adres dat al in de lijst staat (account + contact)
+                    // wordt door AddRecipient niet nog eens toegevoegd.
                     foreach (var accountContact in account.ClientContacts.Where(c => !c.IsCoOwner && c.RequiresDigitalInvoice))
                     {
                         AddRecipient(recipients, accountContact.InvoiceEmail, accountContact.Email);

@@ -517,6 +517,13 @@
                 bookyearLabel.textContent = label;
                 bookyearTrigger.classList.toggle("is-filled", value !== "");
                 closeBookyearSelect();
+                if (config.reloadOnBookyear) {
+                    // de server laadt enkel het gekozen boekjaar: opnieuw laden met ?bookyear=… ("alle" = alle boekjaren)
+                    var url = new URL(window.location.href);
+                    url.searchParams.set("bookyear", value === "" ? "alle" : value);
+                    window.location.assign(url.toString());
+                    return;
+                }
                 applyBookyearFilter(value);
             });
         });

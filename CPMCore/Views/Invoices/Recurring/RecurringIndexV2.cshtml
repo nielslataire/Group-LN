@@ -1,0 +1,161 @@
+@model CPMCore.Models.Invoicing.RecurringIndexVM
+@using System.Globalization
+@using System.Text.RegularExpressions
+@using CPMCore.Models.GlV2
+@using CPMCore.Models.Invoicing
+@*
+    gl-v2 — Facturen, tab Terugkerend (design-handoff punt 50b, "Terugkerend — dezelfde pagina, schakelaar op Terugkerend"). URL: Invoices?view=recurring.
+    Zelfde pagina als Invoices/IndexV2 (zelfde titel en kruimelpad + "Terugkerend"), enkel de knoppen wisselen: Instellingen (zijpaneel 50c) en + Nieuw schema (de gewone
+    Nieuwe factuur met Terugkerend gekozen, 49a). Boeken en exporteren staan hier niet: dat gebeurt per factuur. Een rij opent het schemadetail (50d).
+    Componenten: .gl-v2-toolbar-card, de schakelaar (_RecurringSwitchV2), .gl-v2-notice-bar (25c), .gl-v2-pill-rij (42f), .gl-v2-table-card, .gl-v2-empty-state, het zijpaneel .gl-v2-ri-panel.
+    Opmaak: css/gl-v2-invoices-recurring.css; gedrag (filter, zoeken, jaar, zijpaneel): js/gl-v2-invoices-recurring.js.
+*@
+@{
+    var culture = CultureInfo.GetCultureInfo("nl-BE");
+    var issuerId = Model.IssuerCompanyId;
+    var live = Model.Rows.Where(r => r.StatusKey is not ("stopped" or "finished")).ToList();
+    var ended = Model.Rows.Where(r => r.StatusKey is "stopped" or "finished").ToList();
+    var yearItems = new List<GlV2SelectItem>();
+    foreach (var y in Model.Years) yearItems.Add(new GlV2SelectItem { Value = y, Text = y });
+    ViewData["BackUrl"] = Url.Action("Index", "Invoices", new { issuerCompanyId = issuerId });
+    ViewData["HasMobileQuickActions"] = Model.CanWrite;
+}
+@functions {
+    // De variabelen in een omschrijving ({maand}, {jaar}) als kleine code-chip, zoals in het ontwerp.
+    Microsoft.AspNetCore.Html.HtmlString WithVariables(string text)
+    {
+        var enc = System.Net.WebUtility.HtmlEncode(text ?? "");
+        var html = Regex.Replace(enc, @"\{(maand|jaar|kwartaal|periode|volgnr)\}", m => "<code class=\"gl-v2-ri-var\">" + m.Groups[1].Value + "</code>");
+        return new Microsoft.AspNetCore.Html.HtmlString(html);
+    }
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-invoices.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-invoices-recurring.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @if (Model.CanWrite)
+    {
+        <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="ri-open-settings"><i class="ph ph-gear-six" aria-hidden="true"></i>Instellingen</button>
+        <a href="@Url.Action("Create", "Invoices", new { issuerId, recurring = true })" class="gl-v2-btn gl-v2-btn-primary">+ Nieuw schema</a>
+    }
+}
+@section MobileQuickActions
+{
+    @if (Model.CanWrite)
+    {
+        <a href="@Url.Action("Create", "Invoices", new { issuerId, recurring = true })" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary">
+            <i class="ph ph-plus" aria-hidden="true"></i>Nieuw schema
+        </a>
+        <button type="button" class="gl-v2-mobile-quickaction" id="ri-open-settings-mobile"><i class="ph ph-gear-six" aria-hidden="true"></i>Instellingen</button>
+    }
+}
+
+<div class="gl-v2-toolbar-card">
+    @await Html.PartialAsync("_RecurringSwitchV2", "recurring")
+    <div class="gl-v2-field gl-v2-toolbar-search">
+        <div class="gl-v2-field-box">
+            <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+            <input type="text" class="gl-v2-field-input" id="ri-search" placeholder="Zoek klant of omschrijving …" autocomplete="off">
+            <button type="button" class="gl-v2-field-clear" id="ri-search-clear" aria-label="Zoekterm wissen">&times;</button>
+        </div>
+    </div>
+    <div style="width:210px;flex:none">
+        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "ri-year", Id = "ri-year", Bare = true, Value = Model.DefaultYear, Items = yearItems, EmptyText = "Alle jaren", Icon = "ph-calendar", Placeholder = "Alle jaren" })
+    </div>
+</div>
+
+@if (Model.ReviewCount > 0)
+{
+    @* 25b — uitgebreide infokaart (geen paginabalk): de melding raakt enkel dit overzicht, niet de hele pagina. Ze verdwijnt vanzelf als er niets meer klaarstaat. *@
+    <div class="gl-v2-notice gl-v2-notice-expanded is-warning gl-v2-ri-reviewcard" role="status">
+        <span class="gl-v2-notice-expanded-icon"><i class="ph ph-warning" aria-hidden="true"></i></span>
+        <div class="gl-v2-notice-body">
+            <span class="gl-v2-notice-title">@Model.ReviewCount concept@(Model.ReviewCount == 1 ? "" : "en")@(Model.ReviewDate.HasValue ? " voor " + Model.ReviewDate.Value.ToString("dd/MM", culture) : "") @(Model.ReviewCount == 1 ? "staat" : "staan") klaar ter controle</span>
+            <span class="gl-v2-notice-text">Je vindt @(Model.ReviewCount == 1 ? "het" : "ze") als Proforma in Facturen. Kijk @(Model.ReviewCount == 1 ? "het" : "ze") na en nummer @(Model.ReviewCount == 1 ? "het" : "ze") voor de factuurdatum.</span>
+        </div>
+        <a class="gl-v2-notice-action gl-v2-ri-reviewaction" href="@Url.Action("Index", "Invoices", new { issuerCompanyId = issuerId, bookyear = ViewBag.BookyearParam as string })">Toon in Facturen ›</a>
+    </div>
+}
+
+@if (Model.Rows.Count == 0)
+{
+    <div class="gl-v2-table-card">
+        <div class="gl-v2-empty-state">
+            <span class="gl-v2-empty-state-icon"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-empty-state-title">Nog geen terugkerende facturen</h2>
+            <p class="gl-v2-empty-state-desc">Huur, beheer of onderhoud dat je regelmatig factureert? Maak één schema en het CRM zet elke periode zelf een concept klaar.</p>
+            @if (Model.CanWrite)
+            {
+                <div class="gl-v2-empty-state-actions">
+                    <a href="@Url.Action("Create", "Invoices", new { issuerId, recurring = true })" class="gl-v2-btn gl-v2-btn-primary">+ Nieuw schema</a>
+                </div>
+            }
+        </div>
+    </div>
+}
+else
+{
+    <div class="gl-v2-table-card gl-v2-ri-card">
+        <div class="gl-v2-ri-filterbar">
+            <div class="gl-v2-pillrow" id="ri-filters" role="group" aria-label="Filter op status">
+                <button type="button" class="gl-v2-pill is-sm is-active" data-ri-filter="all">Alle<span class="gl-v2-pill-count">@live.Count</span></button>
+                <button type="button" class="gl-v2-pill is-sm" data-ri-filter="active">Actief<span class="gl-v2-pill-count">@live.Count(r => r.StatusKey == "active")</span></button>
+                @if (live.Any(r => r.StatusKey == "pending")) { <button type="button" class="gl-v2-pill is-sm" data-ri-filter="pending">Nog niet gestart<span class="gl-v2-pill-count">@live.Count(r => r.StatusKey == "pending")</span></button> }
+                @if (live.Any(r => r.StatusKey == "concept")) { <button type="button" class="gl-v2-pill is-sm" data-ri-filter="concept">Concept<span class="gl-v2-pill-count">@live.Count(r => r.StatusKey == "concept")</span></button> }
+                @if (live.Any(r => r.StatusKey == "paused")) { <button type="button" class="gl-v2-pill is-sm" data-ri-filter="paused">Gepauzeerd<span class="gl-v2-pill-count">@live.Count(r => r.StatusKey == "paused")</span></button> }
+                @if (ended.Count > 0) { <button type="button" class="gl-v2-pill is-sm" data-ri-filter="ended">Gestopt<span class="gl-v2-pill-count">@ended.Count</span></button> }
+            </div>
+            <span class="gl-v2-ri-avg">Per maand gemiddeld <b>@Model.MonthlyAverage.ToString("C", culture)</b> excl. btw</span>
+        </div>
+        <div class="gl-v2-ri-scroll">
+            <table class="gl-v2-ri-table" id="ri-table">
+                <thead>
+                    <tr>
+                        <th>Klant</th><th>Omschrijving op factuur</th><th>Ritme</th><th>Volgende</th><th class="is-num">Excl. BTW</th><th>Bij aanmaak</th><th>Laatste factuur</th><th>Status</th><th class="is-chev"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var r in Model.Rows)
+                {
+                    var isEnded = r.StatusKey is "stopped" or "finished";
+                    <tr data-href="@Url.Action("RecurringDetail", "Invoices", new { id = r.Id })" data-status="@(isEnded ? "ended" : r.StatusKey)" data-first-year="@r.FirstYear" data-last-year="@(r.LastYear?.ToString() ?? "")" data-search="@((r.ClientName + " " + r.Text).ToLowerInvariant())" tabindex="0" class="@(r.StatusKey == "paused" || isEnded ? "is-muted" : "")" hidden="@(isEnded ? "hidden" : null)">
+                        <td class="gl-v2-ri-client">@r.ClientName</td>
+                        <td class="gl-v2-ri-desc">@WithVariables(r.Text)</td>
+                        <td>@r.Rhythm</td>
+                        <td class="gl-v2-ri-next">@(r.Next.HasValue ? r.Next.Value.ToString("dd/MM/yyyy", culture) : "—")</td>
+                        <td class="is-num">@r.Net.ToString("C", culture)</td>
+                        <td>@r.OnCreateText</td>
+                        <td class="gl-v2-ri-last">@(string.IsNullOrEmpty(r.LastInvoiceNumber) ? "—" : r.LastInvoiceNumber)</td>
+                        <td><span class="gl-v2-ri-pill is-@r.StatusKey">@r.StatusLabel</span></td>
+                        <td class="is-chev"><i class="ph ph-caret-right" aria-hidden="true"></i></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+            <div class="gl-v2-empty-state gl-v2-ri-nomatch" id="ri-nomatch" hidden>
+                <span class="gl-v2-empty-state-icon"><i class="ph ph-magnifying-glass" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-empty-state-title">Geen schema's gevonden</h2>
+                <p class="gl-v2-empty-state-desc">Pas de zoekterm, het jaar of het statusfilter aan.</p>
+            </div>
+        </div>
+        <p class="gl-v2-ri-foot">Klik een schema om de detailpagina te openen: komende datums, aangemaakte facturen, pauzeren, hervatten of stopzetten.</p>
+    </div>
+}
+
+@if (Model.CanWrite)
+{
+    @await Html.PartialAsync("_RecurringSettingsPanelV2", (RecurringSettingsVM)ViewBag.RecurringSettings)
+}
+
+@section PageScripts
+{
+    <script>
+        window.GlV2RecurringIndex = {
+            defaultYear: '@Model.DefaultYear'
+        };
+    </script>
+    <script src="~/js/gl-v2-invoices-recurring.js" asp-append-version="true"></script>
+}

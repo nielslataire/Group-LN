@@ -1,0 +1,24 @@
+@*
+    Rechterkolom van Nieuwe factuur bij een terugkerende factuur (design-handoff 49a en 49c): in stap 2 de PLANNING (de eerstvolgende facturen met datum, periode en bedrag),
+    in stap 3 "ZO KOMT HET OP DE FACTUREN" (de eerste drie facturen met de variabelen ingevuld). Wordt gevuld door js/gl-v2-invoices-recurring-create.js met de antwoorden van
+    InvoicesController.RecurringPlanV2, dezelfde rekenregels als bij het echt klaarzetten. In de andere stappen staat hier het gewone live voorbeeld.
+*@
+<div class="gl-v2-ri-side" id="ri-side" hidden>
+    <section class="gl-v2-ri-plan" id="ri-plan" aria-live="polite">
+        <div class="gl-v2-ri-plan-head">
+            <span class="gl-v2-ri-eyebrow">PLANNING</span>
+            <b class="gl-v2-ri-plan-sum" id="ri-plan-sum">—</b>
+            <span class="gl-v2-ri-plan-sum2" id="ri-plan-sum2"></span>
+        </div>
+        <ol class="gl-v2-ri-plan-list" id="ri-plan-list"></ol>
+        <p class="gl-v2-ri-plan-note" id="ri-plan-note"></p>
+    </section>
+    <div class="gl-v2-notice gl-v2-notice-compact is-info" id="ri-plan-info">
+        <i class="ph ph-info" aria-hidden="true"></i>
+        <span>Elke factuur krijgt zijn eigen nummer en gestructureerde mededeling op de dag dat ze gemaakt wordt. Je beheert het schema later onder <b>Facturen › Terugkerend</b>.</span>
+    </div>
+    <section class="gl-v2-ri-preview" id="ri-preview" hidden>
+        <span class="gl-v2-ri-eyebrow">ZO KOMT HET OP DE FACTUREN</span>
+        <div id="ri-preview-list"></div>
+    </section>
+</div>

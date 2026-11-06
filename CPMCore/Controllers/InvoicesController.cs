@@ -64,6 +64,8 @@ namespace CPMCore.Controllers
         private readonly UnitOfWorkCore _uow;
         private readonly cpmRunningContext _db;
         private readonly IDataProtector _downloadLinkProtector;
+        private readonly IRecurringInvoiceService _recurring;
+        private readonly IHealthIndexService _health;
         private static readonly HashSet<string> RefreshableOctopusStates = new(StringComparer.OrdinalIgnoreCase)
         {
             string.Empty,
@@ -101,7 +103,9 @@ namespace CPMCore.Controllers
             IOctopusApiClient octopusClient,
             IOctopusTokenManager octopusTokens,
             IDataProtectionProvider dataProtectionProvider,
-            UnitOfWorkCore uow)
+            UnitOfWorkCore uow,
+            IRecurringInvoiceService recurring,
+            IHealthIndexService health)
         {
             _invoices = invoices;
             _companies = companies;
@@ -121,6 +125,8 @@ namespace CPMCore.Controllers
             _octopusClient = octopusClient;
             _octopusTokens = octopusTokens;
             _uow = uow;
+            _recurring = recurring;
+            _health = health;
             _db = (cpmRunningContext)uow.Context;
             _downloadLinkProtector = dataProtectionProvider.CreateProtector("OctopusInvoiceDownload");
         }

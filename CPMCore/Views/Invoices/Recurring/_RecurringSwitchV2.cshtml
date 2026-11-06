@@ -1,0 +1,17 @@
+@model string
+@*
+    Schakelaar Facturen / Terugkerend (design-handoff 50a/50b): dezelfde pagina, geen extra menu. Gewone links (geen JS): de pagina verandert van ?view=recurring.
+    Telling per tab uit ViewBag.InvoiceCount en ViewBag.RecurringCount; opmaak in css/gl-v2-invoices-recurring.css (.gl-v2-ri-switch, gebaseerd op .gl-v2-segmented).
+*@
+@{
+    var issuerId = (int)(ViewBag.CompanyId ?? 0);
+    var recurring = Model == "recurring";
+    int invoiceCount = ViewBag.InvoiceCount is int ic ? ic : 0;
+    int scheduleCount = ViewBag.RecurringCount is int rc ? rc : 0;
+    // het gekozen boekjaar blijft behouden bij wisselen van tab; de teller bij Facturen telt enkel dat boekjaar
+    var bookyear = ViewBag.BookyearParam as string;
+}
+<nav class="gl-v2-segmented gl-v2-ri-switch" aria-label="Weergave">
+    <a href="@Url.Action("Index", "Invoices", new { issuerCompanyId = issuerId, bookyear })" class="@(recurring ? "" : "is-active")" title="Facturen van het gekozen boekjaar" aria-current="@(recurring ? null : "page")">Facturen<span class="gl-v2-ri-count">@invoiceCount</span></a>
+    <a href="@Url.Action("Index", "Invoices", new { issuerCompanyId = issuerId, view = "recurring", bookyear })" class="@(recurring ? "is-active" : "")" aria-current="@(recurring ? "page" : null)"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i>Terugkerend<span class="gl-v2-ri-count">@scheduleCount</span></a>
+</nav>

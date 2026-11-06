@@ -43,7 +43,7 @@ namespace CPMCore.Controllers
     {
 
         // LIST
-        public async Task<IActionResult> Index(int issuerCompanyId)
+        public async Task<IActionResult> Index(int issuerCompanyId, string? view = null, string? bookyear = null)
         {
             var readScope = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Read, HttpContext.RequestAborted);
             if (!readScope.HasAccess || (!readScope.HasAllIssuers && !readScope.AllowedIssuerIds.Contains(issuerCompanyId)))
@@ -53,7 +53,20 @@ namespace CPMCore.Controllers
             }
             var writeScope = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Write, HttpContext.RequestAborted);
             var deleteScope = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Delete, HttpContext.RequestAborted);
-            var bos = await _invoices.GetByCompanyAsync(issuerCompanyId);
+            // Terugkerende facturen (design-handoff 50b): dezelfde pagina, schakelaar op "Terugkerend" (Invoices?view=recurring).
+            if (string.Equals(view, "recurring", StringComparison.OrdinalIgnoreCase) && ViewData["UseGlV2Layout"] as bool? == true)
+                return await RecurringIndexAsync(issuerCompanyId, writeScope.HasAccess && (writeScope.HasAllIssuers || writeScope.AllowedIssuerIds.Contains(issuerCompanyId)), bookyear, HttpContext.RequestAborted);
+            // Het boekjaar bepaalt wat er geladen wordt (gl-v2): enkel de facturen van het gekozen boekjaar, niet de hele geschiedenis. "alle" laadt alles.
+            var glV2 = ViewData["UseGlV2Layout"] as bool? == true;
+            var yearScope = await ResolveBookyearScopeAsync(issuerCompanyId, bookyear, HttpContext.RequestAborted);
+            var bos = glV2
+                ? await _invoices.GetByCompanyAsync(issuerCompanyId, yearScope.From, yearScope.To, HttpContext.RequestAborted)
+                : await _invoices.GetByCompanyAsync(issuerCompanyId);
+            // Welke facturen uit een schema komen (het ↻-label, 50a): één extra query in plaats van de factuur-BO's aan te passen.
+            var recurringInfo = await _db.Invoices.AsNoTracking()
+                .Where(i => i.IssuerCompanyId == issuerCompanyId && i.RecurringScheduleId != null)
+                .Select(i => new { i.Id, ScheduleId = i.RecurringScheduleId!.Value, i.RecurringLabel })
+                .ToDictionaryAsync(i => i.Id, HttpContext.RequestAborted);
             var bookyears = await _db.OctopusBookyears
                 .Where(b => b.IssuerCompanyId == issuerCompanyId)
                 .OrderByDescending(b => b.EndDate)
@@ -110,20 +123,31 @@ namespace CPMCore.Controllers
                     OctopusBookyearId = x.OctopusBookyearId,
                     OctopusJournalKey = x.OctopusJournalKey,
                     OctopusDocumentSequenceNr = x.OctopusDocumentSequenceNr,
-                    OctopusBookedAt = x.OctopusBookedAt
+                    OctopusBookedAt = x.OctopusBookedAt,
+                    RecurringScheduleId = recurringInfo.TryGetValue(x.Id, out var rec) ? rec.ScheduleId : null,
+                    RecurringLabel = rec?.RecurringLabel
                 };
             })
                 .OrderByDescending(x => x.InvoiceSortValue)
                 .ThenByDescending(x => x.Id)
                 .ToList();
 
+            // Een boekjaar dat niet op kalenderjaren valt kan facturen uit een ander label meebrengen: de teller en de lijst volgen enkel het gekozen label.
+            if (glV2 && !string.IsNullOrEmpty(yearScope.Selected))
+                vms = vms.Where(v => v.BookyearLabel == yearScope.Selected).ToList();
             ViewBag.CompanyName = await _companies.GetIssuerNameAsync(issuerCompanyId);
             ViewBag.CompanyId = issuerCompanyId;
+            ViewBag.InvoiceCount = vms.Count;
+            ViewBag.BookyearParam = Request.Query.ContainsKey("bookyear") ? yearScope.Selected is { Length: > 0 } ? yearScope.Selected : "alle" : null;
+            ViewBag.BookyearLabels = yearScope.Labels;
+            ViewBag.RecurringCount = await _db.RecurringInvoiceSchedule.CountAsync(r => r.IssuerCompanyId == issuerCompanyId && r.Status != RecurringInvoiceSchedule.StatusStopped && r.Status != RecurringInvoiceSchedule.StatusFinished, HttpContext.RequestAborted);
             ViewBag.CanWriteInvoices = writeScope.HasAccess && (writeScope.HasAllIssuers || writeScope.AllowedIssuerIds.Contains(issuerCompanyId));
             ViewBag.CanDeleteInvoices = deleteScope.HasAccess && (deleteScope.HasAllIssuers || deleteScope.AllowedIssuerIds.Contains(issuerCompanyId));
-            ViewBag.DefaultBookyearLabel = bookyears.FirstOrDefault() is { } latestBookyear
-              ? FormatBookyearLabel(latestBookyear.StartDate, latestBookyear.EndDate)
-              : vms.Select(v => v.BookyearLabel).FirstOrDefault();
+            ViewBag.DefaultBookyearLabel = glV2
+              ? yearScope.Selected
+              : bookyears.FirstOrDefault() is { } latestBookyear
+                ? FormatBookyearLabel(latestBookyear.StartDate, latestBookyear.EndDate)
+                : vms.Select(v => v.BookyearLabel).FirstOrDefault();
             SetIndexBreadcrumb(issuerCompanyId, ViewBag.CompanyName as string);
             SetPageHeader("bx bx-receipt", $"Facturen - {ViewBag.CompanyName}");
             // Design-handoff punt 41d — koppelt dit scherm aan het Helpcentrum-zijpaneel.
@@ -501,7 +525,7 @@ namespace CPMCore.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [CPMCore.Filters.PermissionDelete(PermissionCodes.Invoicing)]
-        public async Task<IActionResult> Delete(int id, int issuerCompanyId, CancellationToken ct = default)
+        public async Task<IActionResult> Delete(int id, int issuerCompanyId, string? scheduleChoice = null, CancellationToken ct = default)
         {
             var deleteScope = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Delete, ct);
             if (!deleteScope.HasAllIssuers && !deleteScope.AllowedIssuerIds.Contains(issuerCompanyId))
@@ -512,8 +536,17 @@ namespace CPMCore.Controllers
 
             try
             {
+                // Een concept uit een terugkerend schema: onthoud waar het bij hoort voor het verdwijnt.
+                var fromSchedule = await _db.Invoices.AsNoTracking().Where(i => i.Id == id && i.RecurringScheduleId != null)
+                    .Select(i => new { ScheduleId = i.RecurringScheduleId!.Value, i.RecurringOccurrence, i.RecurringPeriodText }).FirstOrDefaultAsync(ct);
                 await _cmd.DeleteAsync(id, ct);
-                AddMessage("success", "Factuur verwijderd.", "Factuur");
+                if (fromSchedule?.RecurringOccurrence is DateOnly occ)
+                {
+                    var restored = await _recurring.HandleDeletedConceptAsync(fromSchedule.ScheduleId, occ, fromSchedule.RecurringPeriodText, string.Equals(scheduleChoice, "restore", StringComparison.OrdinalIgnoreCase), User?.Identity?.Name, ct);
+                    AddMessage("success", restored ? "Concept verwijderd. De factuurdatum staat weer in het schema." : "Factuur verwijderd.", "Factuur");
+                }
+                else
+                    AddMessage("success", "Factuur verwijderd.", "Factuur");
             }
             catch (InvalidOperationException ex)
             {
@@ -552,6 +585,14 @@ namespace CPMCore.Controllers
                 InvoiceDate = row.InvoiceDate,
                 Status = TranslateStatus(row.StatusId, row.StatusName)
             };
+            var rec = await _db.Invoices.AsNoTracking().Where(i => i.Id == id && i.RecurringScheduleId != null)
+                .Select(i => new { ScheduleId = i.RecurringScheduleId!.Value, i.RecurringOccurrence, i.RecurringPeriodText }).FirstOrDefaultAsync(ct);
+            if (rec != null && vm.Status == InvoiceStatus.Draft)
+            {
+                vm.RecurringScheduleId = rec.ScheduleId;
+                vm.RecurringPeriod = rec.RecurringPeriodText;
+                vm.CanRestoreToSchedule = rec.RecurringOccurrence.HasValue && await _recurring.CanRestoreAsync(rec.ScheduleId, rec.RecurringOccurrence.Value, ct);
+            }
             return (vm, null);
         }
 

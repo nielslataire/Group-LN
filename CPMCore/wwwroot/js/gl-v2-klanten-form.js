@@ -274,7 +274,7 @@
         function countryId() {
             var wrapper = root.closest('[data-role="be-address-wrapper"], [data-role="invoice-be-address-wrapper"]');
             if (wrapper && wrapper.getAttribute("data-role") === "invoice-be-address-wrapper") {
-                var invoiceCountrySelect = document.querySelector('[data-role="invoice-country-select"]');
+                var invoiceCountrySelect = document.getElementById("SelectedInvoiceCountryId");
                 if (invoiceCountrySelect && invoiceCountrySelect.value) return invoiceCountrySelect.value;
             }
             return config.beCountryId;
@@ -503,7 +503,7 @@
     //    vooral voor het BE-hidden-tegenpaar dat anders stil zou blijven als je nadien terugschakelt). ──
     function initAddressToggles() {
         wireAddressToggle({
-            countrySelect: document.querySelector('[data-role="country-select"]'),
+            countrySelect: document.getElementById("SelectedCountryId"),
             beWrapper: document.querySelector('[data-role="be-address-wrapper"]'),
             otherWrapper: document.querySelector('[data-role="other-address-wrapper"]'),
             bePostalHidden: document.querySelector('[data-role="be-postal-hidden"]'),
@@ -512,7 +512,7 @@
             otherCityInput: document.querySelector('[data-role="other-city-input"]')
         });
         wireAddressToggle({
-            countrySelect: document.querySelector('[data-role="invoice-country-select"]'),
+            countrySelect: document.getElementById("SelectedInvoiceCountryId"),
             beWrapper: document.querySelector('[data-role="invoice-be-address-wrapper"]'),
             otherWrapper: document.querySelector('[data-role="invoice-other-address-wrapper"]'),
             bePostalHidden: document.querySelector('[data-role="invoice-be-postal-hidden"]'),
@@ -526,8 +526,10 @@
         if (!refs.countrySelect || !refs.beWrapper || !refs.otherWrapper) return;
 
         function isBelgian() {
-            var opt = refs.countrySelect.options[refs.countrySelect.selectedIndex];
-            return opt && (opt.getAttribute("data-isocode") || "").toUpperCase() === "BE";
+            // het land is een gl-v2-keuzelijst: de verborgen input houdt het land-id, de optieknop de ISO-code (data-isocode)
+            var wrap = refs.countrySelect.closest(".gl-v2-select");
+            var opt = wrap && wrap.querySelector('.gl-v2-select-option[data-value="' + refs.countrySelect.value + '"]');
+            return !!opt && (opt.getAttribute("data-isocode") || "").toUpperCase() === "BE";
         }
 
         function apply() {
@@ -670,17 +672,19 @@
             var city = document.getElementById("gl-v2-vat-lookup-city").value;
             var iso = document.getElementById("gl-v2-vat-lookup-country").value;
 
-            if (name) document.getElementById("CompanyName").value = name;
+            // de dienst geeft de naam met de vorm vooraan ("BV DISO"): de naam wordt opgeschoond en de Bedrijfsvorm gekozen, zoals bij leveranciers
+            var gesplitst = window.GlV2Bedrijfsnaam ? window.GlV2Bedrijfsnaam.splits(name) : { naam: name, vorm: "" };
+            if (name) document.getElementById("CompanyName").value = gesplitst.naam;
+            if (gesplitst.vorm && window.GlV2Bedrijfsnaam) window.GlV2Bedrijfsnaam.kiesVorm(document.getElementById("SelectedLegalFormId"), gesplitst.vorm);
             if (street) document.getElementById("Street").value = street;
             if (nr) document.getElementById("HouseNumber").value = nr;
 
-            var countrySelect = document.querySelector('[data-role="country-select"]');
-            if (iso && countrySelect) {
-                Array.prototype.forEach.call(countrySelect.options, function (opt) {
-                    if ((opt.getAttribute("data-isocode") || "").toUpperCase() === iso.toUpperCase()) {
-                        countrySelect.value = opt.value;
-                        countrySelect.dispatchEvent(new Event("change"));
-                    }
+            var countrySelect = document.getElementById("SelectedCountryId");
+            var countryWrap = countrySelect && countrySelect.closest(".gl-v2-select");
+            if (iso && countryWrap) {
+                // een klik op de optie zet het land en meldt de wijziging (adresblok België of ander land)
+                Array.prototype.forEach.call(countryWrap.querySelectorAll(".gl-v2-select-option"), function (opt) {
+                    if ((opt.getAttribute("data-isocode") || "").toUpperCase() === iso.toUpperCase()) opt.click();
                 });
             }
 

@@ -15,5 +15,9 @@ namespace CPMCore.Models.Invoicing
         public DateOnly InvoiceDate { get; set; }
         public InvoiceStatus Status { get; set; } = InvoiceStatus.Unknown;
         public string StatusLabel => Status.GetDisplayName();
+        /// <summary>Het concept komt uit een terugkerend schema: bij verwijderen kies je of de factuurdatum terug in het schema komt.</summary>
+        public int? RecurringScheduleId { get; set; }
+        public bool CanRestoreToSchedule { get; set; }
+        public string? RecurringPeriod { get; set; }
     }
 }

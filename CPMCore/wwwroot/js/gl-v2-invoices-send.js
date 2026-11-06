@@ -55,7 +55,7 @@
     // ── kanaal ──
     var radios = $$('input[name="Channel"]');
     function channel() { var c = radios.filter(function (r) { return r.checked; })[0]; return c ? c.value : "email"; }
-    radios.forEach(function (r) { r.addEventListener("change", function () { $$(".gl-v2-is-channel").forEach(function (l) { l.classList.toggle("is-on", !!$("input:checked", l)); }); applyChannel(); }); });
+    radios.forEach(function (r) { r.addEventListener("change", function () { applyChannel(); }); });
     function applyChannel() {
         var c = channel(), mail = c !== "peppol";
         ["to", "cc"].forEach(function (k) { var box = $('[data-is-tags="' + k + '"]'); if (box) box.closest(".gl-v2-field").style.opacity = mail ? "" : ".5"; });

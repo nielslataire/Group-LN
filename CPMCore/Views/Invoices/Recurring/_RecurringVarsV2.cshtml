@@ -1,0 +1,14 @@
+@*
+    Variabelenbalk in stap 3 bij een terugkerende factuur (design-handoff 49c): je typt de omschrijving één keer, met variabelen als {maand} en {jaar}; ze worden ingevuld op de dag dat de factuur gemaakt wordt.
+    Klik in een omschrijving en daarna op een variabele om ze toe te voegen aan die lijn. Het voorbeeld van de ingevulde waarde komt van de server (RecurringPlanV2).
+*@
+<div class="gl-v2-ri-vars" id="ri-vars" hidden>
+    <div class="gl-v2-ri-vars-head"><b>Variabelen</b><span>klik om toe te voegen aan <span id="ri-vars-target">lijn 1</span> · ze worden ingevuld op de dag dat de factuur gemaakt wordt</span></div>
+    <div class="gl-v2-ri-vars-row" id="ri-vars-row">
+        <button type="button" class="gl-v2-ri-varbtn" data-var="{maand}"><code>{maand}</code><small data-ex="maand">december</small></button>
+        <button type="button" class="gl-v2-ri-varbtn" data-var="{jaar}"><code>{jaar}</code><small data-ex="jaar">2026</small></button>
+        <button type="button" class="gl-v2-ri-varbtn" data-var="{kwartaal}"><code>{kwartaal}</code><small data-ex="kwartaal">Q4</small></button>
+        <button type="button" class="gl-v2-ri-varbtn" data-var="{periode}"><code>{periode}</code><small data-ex="periode">van–tot</small></button>
+        <button type="button" class="gl-v2-ri-varbtn" data-var="{volgnr}"><code>{volgnr}</code><small data-ex="volgnr">3</small></button>
+    </div>
+</div>

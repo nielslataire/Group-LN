@@ -309,10 +309,15 @@ namespace CPMCore.Controllers
                     : null;
             var (vatCountryCode, vatNumber) = SplitEnterpriseNumber(client.Vatnumber);
 
+            var legalFormName = isCompany && client.CompanyLegalFormId.HasValue
+                ? await _db.CompanyLegalForm.AsNoTracking().Where(l => l.Id == client.CompanyLegalFormId).Select(l => l.Name + " (" + l.Abbreviation + ")").FirstOrDefaultAsync(ct)
+                : null;
             var model = new ClientFormViewModel
             {
                 Id = client.Id,
                 IsCompany = isCompany,
+                SelectedLegalFormId = isCompany ? client.CompanyLegalFormId : null,
+                LegalFormDisplay = legalFormName,
                 CompanyName = isCompany ? client.CompanyName ?? client.Name : null,
                 Name = client.Name,
                 Forename = client.Forename,
@@ -481,8 +486,11 @@ namespace CPMCore.Controllers
                 .Select(i => new IssuerCompanyOptionViewModel { Id = i.Id, Name = i.Name })
                 .ToListAsync(ct);
 
+            var legalForms = await _db.CompanyLegalForm.AsNoTracking().Where(l => l.IsActive).OrderBy(l => l.Name)
+                .Select(l => new CPMCore.Models.Leveranciers.LegalFormOptionViewModel { Id = l.Id, Name = l.Name, Abbreviation = l.Abbreviation }).ToListAsync(ct);
             var vm = new QuickCreateClientModalViewModel
             {
+                LegalForms = legalForms,
                 IssuerCompanyId = issuerCompanyId,
                 Countries = countries,
                 IssuerCompanies = issuers,
@@ -515,6 +523,10 @@ namespace CPMCore.Controllers
                 {
                     BedrijfsNaam = displayName,
                     Ondernemingsnummer = dto.IsCompany ? NormalizeEnterpriseNumber(dto.EnterpriseNumber) : null,
+                    // bij een leverancier bewaart CPM de bedrijfsvorm als afkorting (CompanyInfo.Type), zoals het volledige leveranciersformulier
+                    Type = dto.IsCompany && dto.LegalFormId.HasValue
+                        ? await _db.CompanyLegalForm.AsNoTracking().Where(l => l.Id == dto.LegalFormId).Select(l => l.Abbreviation).FirstOrDefaultAsync(ct)
+                        : null,
                     Email = dto.Email,
                     InvoiceEmail = dto.InvoiceEmail,
                     RequiresDigitalInvoice = dto.RequiresDigitalInvoice,
@@ -564,6 +576,7 @@ namespace CPMCore.Controllers
                         : (!string.IsNullOrWhiteSpace(dto.Name) ? dto.Name.Trim() : entityName),
                     Forename = dto.IsCompany || string.IsNullOrWhiteSpace(dto.Name) ? null : dto.Forename?.Trim(),
                     CompanyName = dto.IsCompany ? dto.CompanyName : null,
+                    CompanyLegalFormId = dto.IsCompany ? dto.LegalFormId : null,
                     Salutation = dto.IsCompany ? null : dto.Salutation,
                     Vatnumber = dto.IsCompany ? NormalizeEnterpriseNumber(dto.EnterpriseNumber) : null,
                     Email = dto.Email,
@@ -664,10 +677,15 @@ namespace CPMCore.Controllers
                 : null;
             var (vatCountryCode, vatNumber) = SplitEnterpriseNumber(client.Vatnumber);
 
+            var legalFormName = isCompany && client.CompanyLegalFormId.HasValue
+                ? await _db.CompanyLegalForm.AsNoTracking().Where(l => l.Id == client.CompanyLegalFormId).Select(l => l.Name + " (" + l.Abbreviation + ")").FirstOrDefaultAsync(ct)
+                : null;
             var model = new ClientFormViewModel
             {
                 Id = client.Id,
                 IsCompany = isCompany,
+                SelectedLegalFormId = isCompany ? client.CompanyLegalFormId : null,
+                LegalFormDisplay = legalFormName,
                 CompanyName = isCompany ? client.CompanyName ?? client.Name : null,
                 Name = client.Name,
                 Forename = client.Forename,
@@ -1031,10 +1049,11 @@ namespace CPMCore.Controllers
             }
 
 
-            if (model.Contacts == null || model.Contacts.Count == 0)
-            {
-                model.Contacts = new List<ContactInputViewModel> { new ContactInputViewModel() };
-            }
+            model.LegalForms = await _db.CompanyLegalForm.AsNoTracking().Where(l => l.IsActive).OrderBy(l => l.Name)
+                .Select(l => new CPMCore.Models.Leveranciers.LegalFormOptionViewModel { Id = l.Id, Name = l.Name, Abbreviation = l.Abbreviation }).ToListAsync(ct);
+
+            // Geen blanco contactrij meer voorzien: een klant krijgt enkel contacten die de gebruiker zelf toevoegt.
+            model.Contacts ??= new List<ContactInputViewModel>();
 
             return model;
         }
@@ -1120,6 +1139,8 @@ namespace CPMCore.Controllers
             entity.Name = model.IsCompany ? model.CompanyName : model.Name;
             entity.Forename = model.IsCompany ? null : model.Forename;
             entity.CompanyName = model.IsCompany ? model.CompanyName : null;
+            // de bedrijfsvorm hoort enkel bij een onderneming; wordt het een particulier, dan verdwijnt ze
+            entity.CompanyLegalFormId = model.IsCompany ? model.SelectedLegalFormId : null;
             entity.Salutation = model.IsCompany ? null : model.Salutation?.ToString();
             entity.Vatnumber = model.IsCompany
                  ? NormalizeEnterpriseNumber(model.EnterpriseNumber)

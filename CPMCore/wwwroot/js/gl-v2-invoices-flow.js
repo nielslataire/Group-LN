@@ -60,6 +60,8 @@
     function issue(opts) {
         var u = opts.urls || {};
         var detailUrl = function (id, issuer) { return u.detail + "?id=" + encodeURIComponent(id) + "&issuerCompanyId=" + encodeURIComponent(issuer || opts.issuerCompanyId || ""); };
+        // Na het nummeren terug naar de lijst van het juiste facturatiebedrijf (niet naar het detail van de factuur).
+        var indexUrl = function (issuer) { return u.index ? u.index.split("?")[0] + "?issuerCompanyId=" + encodeURIComponent(issuer || opts.issuerCompanyId || "") : ""; };
         var run = function () {
             show({
                 art: "invoice", busy: true, kicker: "Nummeren en verzenden", title: "De factuur wordt genummerd",
@@ -87,7 +89,7 @@
             else rows.push({ t: "Via Peppol", m: "niet gemeld", d: "Octopus meldt geen Peppol-levering. De klant is mogelijk niet bereikbaar via Peppol, of de status volgt later.", s: "skip" });
             if (r.email === "sent") rows.push({ t: "E-mail met pdf", m: "verzonden", d: r.clientEmail || "", s: "done" });
             else if (emailFailed) rows.push({ t: "E-mail met pdf", m: "mislukt", d: "Verstuur ze opnieuw via het verzendscherm.", s: "err" });
-            else rows.push({ t: "E-mail met pdf", m: "niet verzonden", d: r.clientEmail ? "Er is geen klassieke e-mail nodig of ze werd overgeslagen." : "Er is geen e-mailadres bij de klant.", s: "skip" });
+            else rows.push({ t: "E-mail met pdf", m: "niet verzonden", d: "Er is geen ontvanger voor de e-mail: vul een e-mailadres in bij de klant of verstuur de factuur zelf via het verzendscherm.", s: "skip" });
 
             var open = { label: "Factuur openen", href: detailUrl(r.invoiceId || opts.invoiceId, r.issuerCompanyId), primary: !(peppolFailed || emailFailed) };
             var sent = [];
@@ -116,10 +118,10 @@
             show({
                 art: "ok", kicker: "Verzonden · " + nowText(), title: number ? "Factuur " + number + " verzonden" : "Factuur genummerd",
                 sub: "Doorgestuurd naar Octopus" + (sent.length ? " en " + sent.join(" en ") : "") + "." + due,
-                steps: rows, note: "Je gaat vanzelf naar de factuur.",
-                actions: [open, { label: "Nieuwe factuur", href: u.create, primary: false }].filter(function (a) { return a.href; })
+                steps: rows, note: "Je gaat vanzelf terug naar de facturen.",
+                actions: [{ label: "Terug naar facturen", href: indexUrl(r.issuerCompanyId), primary: true }, { label: "Factuur openen", href: open.href, primary: false }, { label: "Nieuwe factuur", href: u.create, primary: false }].filter(function (a) { return a.href; })
             });
-            redirectTimer = setTimeout(function () { navigate(open.href); }, 6000);
+            redirectTimer = setTimeout(function () { navigate(indexUrl(r.issuerCompanyId) || open.href); }, 6000);
         };
         host().onclick = function (ev) {
             var b = ev.target.closest("[data-pscr]"); if (!b) return;

@@ -6,9 +6,14 @@
     var nodes = Model?.ToList() ?? new List<BreadcrumbNode>();
 
     // Optioneel: "Home" weghalen als je een vaste Dashboard-crumb toont
+    // Een wortel met titel "Home" wordt hier weggehaald; de lus hieronder begint dan bij 0. Voorheen sloeg ze altijd de eerste over
+    // en verdween daardoor ook de tweede kruimel (bv. "Klanten" bij Klanten/Bewerken). Een wortel "Dashboard" blijft staan en wordt (zoals altijd) overgeslagen
+    // omdat het huisje die plaats al inneemt.
+    var firstShown = 1;
     if (nodes.Count > 0 && string.Equals(nodes[0].Title, "Home", StringComparison.OrdinalIgnoreCase))
     {
         nodes.RemoveAt(0);
+        firstShown = 0;
     }
 
     string ResolveUrl(BreadcrumbNode node)
@@ -53,7 +58,7 @@
             </a>
         </li>
 
-        @for (int i = 1; i < nodes.Count; i++)
+        @for (int i = firstShown; i < nodes.Count; i++)
         {
             var node = nodes[i];
             var isLast = i == nodes.Count - 1 && ViewData["LastCrumbIsLink"] as bool? != true;

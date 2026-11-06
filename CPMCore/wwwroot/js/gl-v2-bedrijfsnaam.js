@@ -26,6 +26,19 @@
     function kiesVorm(select, vorm) {
         if (!select || !vorm) return false;
         var doel = sleutel(vorm), gevonden = null;
+        // gl-v2-keuzelijst (GlV2/_SelectList): verborgen input met optieknoppen; een klik op de passende optie zet de waarde en meldt de wijziging
+        if (!select.options) {
+            var wrap = select.closest ? select.closest(".gl-v2-select") : null;
+            if (!wrap) return false;
+            Array.prototype.forEach.call(wrap.querySelectorAll(".gl-v2-select-option"), function (b) {
+                if (gevonden || !b.getAttribute("data-value")) return;
+                var tekst = b.textContent || "", m2 = /\(([^)]+)\)\s*$/.exec(tekst);
+                if (sleutel(m2 ? m2[1] : tekst) === doel) gevonden = b;
+            });
+            if (!gevonden) return false;
+            gevonden.click();
+            return true;
+        }
         Array.prototype.forEach.call(select.options, function (o) {
             if (gevonden || !o.value) return;
             var m = /\(([^)]+)\)\s*$/.exec(o.textContent || ""), a = sleutel(m ? m[1] : o.textContent);

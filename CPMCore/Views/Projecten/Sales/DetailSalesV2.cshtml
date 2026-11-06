@@ -193,7 +193,7 @@
                     <button type="button" role="radio" aria-checked="false" data-vk-format="xlsx"><i class="ph ph-file-xls" aria-hidden="true"></i>Excel<small>alle kolommen, om verder te rekenen</small></button>
                 </div>
                 <span class="gl-v2-vk-x-label">WELKE EENHEDEN</span>
-                <div class="gl-v2-vk-x-opts" id="vk-x-scope">
+                <div class="gl-v2-segmented is-fill gl-v2-vk-x-seg" id="vk-x-scope" role="radiogroup" aria-label="Welke eenheden">
                     <label><input type="radio" name="vk-x-scope" value="all" checked /><span>Alle <b id="vk-x-n-all"></b></span></label>
                     <label><input type="radio" name="vk-x-scope" value="selection" /><span>Selectie <b id="vk-x-n-sel"></b></span></label>
                     <label><input type="radio" name="vk-x-scope" value="filter" /><span>Huidige filter <b id="vk-x-n-filter"></b></span></label>
@@ -205,7 +205,7 @@
                     <label><input type="checkbox" id="vk-x-option" /><span><b>Optie als “te koop” tonen</b><small>voor externe makelaars</small></span></label>
                 </div>
                 <span class="gl-v2-vk-x-label" data-vk-for="pdf">OPMAAK</span>
-                <div class="gl-v2-vk-x-opts" id="vk-x-layout" data-vk-for="pdf">
+                <div class="gl-v2-segmented is-fill gl-v2-vk-x-seg" id="vk-x-layout" data-vk-for="pdf" role="radiogroup" aria-label="Opmaak">
                     <label><input type="radio" name="vk-x-layout" value="1" checked /><span>A4 liggend</span></label>
                     <label><input type="radio" name="vk-x-layout" value="0" /><span>A4 staand</span></label>
                 </div>

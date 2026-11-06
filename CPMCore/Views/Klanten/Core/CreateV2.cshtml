@@ -150,6 +150,15 @@
                                 })
                                 @Html.HiddenFor(m => m.EnterpriseNumberCountryCode)
                             </div>
+                            <div class="gl-v2-col-3">
+                                @* Bedrijfsvorm: dezelfde lijst als bij leveranciers (Instellingen › bedrijfsvormen); enkel bij een onderneming *@
+                                @await Html.PartialAsync("GlV2/_SelectList", new CPMCore.Models.GlV2.GlV2SelectListVm
+                                {
+                                    Name = "SelectedLegalFormId", Id = "SelectedLegalFormId", Label = "Bedrijfsvorm", Value = Model.SelectedLegalFormId?.ToString(),
+                                    EmptyText = "Geen", Placeholder = "Kies een bedrijfsvorm",
+                                    Items = Model.LegalForms.Select(l => new CPMCore.Models.GlV2.GlV2SelectItem { Value = l.Id.ToString(), Text = l.Name + " (" + l.Abbreviation + ")" }).ToList()
+                                })
+                            </div>
                         </div>
                         <div class="gl-v2-section-grid" data-role="person-fields" hidden="@Model.IsCompany">
                             <div class="gl-v2-col-3">
@@ -242,17 +251,11 @@
                         </div>
                     </div>
                     <div class="gl-v2-col-3">
-                        <div class="gl-v2-field">
-                            <label class="gl-v2-field-label" for="@Html.IdFor(m => m.SelectedCountryId)">Land</label>
-                            <div class="gl-v2-field-box">
-                                <select id="@Html.IdFor(m => m.SelectedCountryId)" name="@Html.NameFor(m => m.SelectedCountryId)" class="gl-v2-field-input" data-role="country-select">
-                                    @foreach (var country in Model.Countries)
-                                    {
-                                        <option value="@country.Id" data-isocode="@country.IsoCode" selected="@(Model.SelectedCountryId == country.Id ? "selected" : null)">@country.Name</option>
-                                    }
-                                </select>
-                            </div>
-                        </div>
+                        @await Html.PartialAsync("GlV2/_SelectList", new CPMCore.Models.GlV2.GlV2SelectListVm
+                        {
+                            Name = "SelectedCountryId", Id = "SelectedCountryId", Label = "Land", Value = Model.SelectedCountryId?.ToString(), Placeholder = "Kies een land",
+                            Items = Model.Countries.Select(c => new CPMCore.Models.GlV2.GlV2SelectItem { Value = c.Id.ToString(), Text = c.Name, Data = new() { ["data-isocode"] = c.IsoCode } }).ToList()
+                        })
                     </div>
                     <div class="gl-v2-col-12">
                         <div class="gl-v2-switch-group">
@@ -318,17 +321,11 @@
                                 </div>
                             </div>
                             <div class="gl-v2-col-3">
-                                <div class="gl-v2-field">
-                                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.SelectedInvoiceCountryId)">Land (facturatie)</label>
-                                    <div class="gl-v2-field-box">
-                                        <select id="@Html.IdFor(m => m.SelectedInvoiceCountryId)" name="@Html.NameFor(m => m.SelectedInvoiceCountryId)" class="gl-v2-field-input" data-role="invoice-country-select">
-                                            @foreach (var country in Model.Countries)
-                                            {
-                                                <option value="@country.Id" data-isocode="@country.IsoCode" selected="@(Model.SelectedInvoiceCountryId == country.Id ? "selected" : null)">@country.Name</option>
-                                            }
-                                        </select>
-                                    </div>
-                                </div>
+                                @await Html.PartialAsync("GlV2/_SelectList", new CPMCore.Models.GlV2.GlV2SelectListVm
+                                {
+                                    Name = "SelectedInvoiceCountryId", Id = "SelectedInvoiceCountryId", Label = "Land (facturatie)", Value = Model.SelectedInvoiceCountryId?.ToString(), Placeholder = "Kies een land",
+                                    Items = Model.Countries.Select(c => new CPMCore.Models.GlV2.GlV2SelectItem { Value = c.Id.ToString(), Text = c.Name, Data = new() { ["data-isocode"] = c.IsoCode } }).ToList()
+                                })
                             </div>
                         </div>
                     </div>

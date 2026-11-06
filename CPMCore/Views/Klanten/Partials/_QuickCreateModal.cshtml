@@ -50,6 +50,13 @@
                             <input type="text" id="qc-company-name" class="form-control form-control-modern" placeholder="Bedrijfsnaam" />
                         </div>
                         <div class="col-md-6">
+                            @await Html.PartialAsync("GlV2/_SelectList", new CPMCore.Models.GlV2.GlV2SelectListVm
+                            {
+                                Name = "qc_legal_form", Id = "qc-legal-form", Label = "Bedrijfsvorm", EmptyText = "Geen", Placeholder = "Kies een bedrijfsvorm",
+                                Items = Model.LegalForms.Select(l => new CPMCore.Models.GlV2.GlV2SelectItem { Value = l.Id.ToString(), Text = l.Name + " (" + l.Abbreviation + ")" }).ToList()
+                            })
+                        </div>
+                        <div class="col-md-6">
                             <label class="form-label mb-1">Ondernemingsnummer</label>
                             <div class="input-group">
                                 <select id="qc-vat-country" class="form-control form-control-modern" style="max-width:130px">
@@ -293,6 +300,7 @@
             const d = r.ok ? await r.json() : null;
             if (!d || d.valid === false || !d.name) { errorEl.textContent = 'Dit ondernemingsnummer werd niet gevonden.'; errorEl.classList.remove('d-none'); return; }
             document.getElementById('qc-company-name').value = window.GlV2Bedrijfsnaam ? window.GlV2Bedrijfsnaam.schoon(d.name) : d.name;
+            if (window.GlV2Bedrijfsnaam) window.GlV2Bedrijfsnaam.kiesVorm(document.getElementById('qc-legal-form'), window.GlV2Bedrijfsnaam.splits(d.name).vorm);
         } catch (e) {
             errorEl.textContent = 'De controle is mislukt. Probeer het later opnieuw.'; errorEl.classList.remove('d-none');
         } finally { btn.disabled = false; btn.innerHTML = html; }
@@ -314,6 +322,7 @@
         data.append('IsSupplier', isSupplier);
         if (isCompany) {
             data.append('CompanyName', document.getElementById('qc-company-name').value);
+            data.append('LegalFormId', document.getElementById('qc-legal-form').value);
             data.append('EnterpriseNumber', document.getElementById('qc-enterprise-number').value);
             data.append('EnterpriseNumberCountryCode', document.getElementById('qc-vat-country').value);
         } else {

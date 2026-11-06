@@ -35,6 +35,11 @@ public class ClientFormViewModel
 
     [Display(Name = "Bedrijf of particulier")]
     public bool IsCompany { get; set; } = true;
+    /// <summary>Bedrijfsvorm (BV, NV, VZW, ...) van een onderneming; dezelfde lijst als bij leveranciers (CompanyLegalForm).</summary>
+    [Display(Name = "Bedrijfsvorm")]
+    public int? SelectedLegalFormId { get; set; }
+    public string? LegalFormDisplay { get; set; }
+    public IReadOnlyList<CPMCore.Models.Leveranciers.LegalFormOptionViewModel> LegalForms { get; set; } = new List<CPMCore.Models.Leveranciers.LegalFormOptionViewModel>();
 
     [Display(Name = "Bedrijfsnaam")]
     public string? CompanyName { get; set; }
@@ -133,7 +138,8 @@ public class ClientFormViewModel
 
     public List<CountryOptionViewModel> Countries { get; set; } = new();
     public List<IssuerCompanyOptionViewModel> IssuerCompanies { get; set; } = new();
-    public List<ContactInputViewModel> Contacts { get; set; } = new() { new ContactInputViewModel() };
+    // Geen vooraf aangemaakt (blanco) contact: een contact bestaat pas als je op "Contact toevoegen" klikt en een naam invult.
+    public List<ContactInputViewModel> Contacts { get; set; } = new();
     public bool CanEdit { get; init; }
     public bool CanDelete { get; init; }
 
@@ -213,6 +219,8 @@ public class IssuerCompanyOptionViewModel
 public class QuickCreateClientDto
 {
     public bool IsCompany { get; set; } = true;
+    /// <summary>Bedrijfsvorm van een onderneming (CompanyLegalForm.Id): bij een klant op ClientAccount, bij een leverancier als afkorting op CompanyInfo.Type.</summary>
+    public int? LegalFormId { get; set; }
     public bool IsSupplier { get; set; } = false;
     public string? CompanyName { get; set; }
     public string? Forename { get; set; }
@@ -241,4 +249,5 @@ public class QuickCreateClientModalViewModel
     public List<CountryOptionViewModel> Countries { get; set; } = new();
     public List<IssuerCompanyOptionViewModel> IssuerCompanies { get; set; } = new();
     public string DefaultCountryCode { get; set; } = "BE";
+    public List<CPMCore.Models.Leveranciers.LegalFormOptionViewModel> LegalForms { get; set; } = new();
 }

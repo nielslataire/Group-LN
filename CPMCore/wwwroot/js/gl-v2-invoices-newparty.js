@@ -69,6 +69,7 @@
             if (!d || d.valid === false || !d.name) { result("bad", "Niet gevonden", "Controleer het nummer (cijfers omgewisseld?) of vul de gegevens hieronder zelf in. Je kan de klant toch aanmaken."); st.found = false; return; }
             st.found = true;
             $("#np-company-name").value = window.GlV2Bedrijfsnaam ? window.GlV2Bedrijfsnaam.schoon(d.name) : d.name;
+            if (window.GlV2Bedrijfsnaam) window.GlV2Bedrijfsnaam.kiesVorm(document.getElementById("np-legal-form"), window.GlV2Bedrijfsnaam.splits(d.name).vorm);
             var a = d.address || {};
             if (a.street) $("#np-street").value = a.street;
             if (a.number) $("#np-house").value = a.number;
@@ -89,7 +90,7 @@
         fd.append("__RequestVerificationToken", opts.token);
         fd.append("IssuerCompanyId", opts.issuerId);
         fd.append("IsCompany", company); fd.append("IsSupplier", extra.supplier);
-        if (company) { fd.append("CompanyName", val("np-company-name")); fd.append("EnterpriseNumber", val("np-number")); fd.append("EnterpriseNumberCountryCode", "BE"); }
+        if (company) { fd.append("CompanyName", val("np-company-name")); fd.append("EnterpriseNumber", val("np-number")); fd.append("EnterpriseNumberCountryCode", "BE"); fd.append("LegalFormId", val("np-legal-form")); }
         else { fd.append("Salutation", st.sal || ""); fd.append("Forename", val("np-forename")); fd.append("Name", val("np-name")); }
         var email = company ? val("np-email") : val("np-email-p");
         fd.append("Email", email);

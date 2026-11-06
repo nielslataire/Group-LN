@@ -1,0 +1,99 @@
+@model CPMCore.Models.Invoicing.RecurringSettingsVM
+@using CPMCore.Models.GlV2
+@*
+    Zijpaneel "Instellingen terugkerende facturen" (design-handoff punt 50c): opent vanaf het Terugkerend-overzicht, zodat je je schema's blijft zien.
+    Enkel wat specifiek is voor terugkerende facturen; nummering, betaaltermijn, layout en verzendwijze volgen de gewone factuurinstellingen.
+    Deze waarden zijn de standaard voor NIEUWE schema's van dit facturatiebedrijf (RecurringInvoiceSettings); bestaande schema's behouden hun eigen waarden.
+    Opmaak: .gl-v2-ri-panel in css/gl-v2-invoices-recurring.css (zelfde schuif-van-rechts-patroon als het help-zijpaneel), keuzerondjes en -kaarten: .gl-v2-radio-card (forms.css).
+    "Automatisch nummeren en versturen" bestaat nog niet: de optie staat er uitgeschakeld bij, zodat duidelijk is wat later komt.
+*@
+@{
+    GlV2SelectListVm Sel(string name, string label, string value, params (string v, string t)[] items) => new()
+    {
+        Name = name, Id = "ris-" + name, Label = label, Value = value, Items = items.Select(i => new GlV2SelectItem { Value = i.v, Text = i.t }).ToList()
+    };
+}
+<div class="gl-v2-ri-backdrop" id="ri-panel-backdrop"></div>
+<aside class="gl-v2-ri-panel" id="ri-panel" role="dialog" aria-modal="true" aria-labelledby="ri-panel-title" aria-hidden="true">
+    <form id="ri-settings-form" data-url="@Url.Action("RecurringSettingsSave", "Invoices")" novalidate>
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="IssuerCompanyId" value="@Model.IssuerCompanyId" />
+        <header class="gl-v2-ri-panel-head">
+            <div class="gl-v2-ri-panel-headtext">
+                <h2 id="ri-panel-title">Instellingen terugkerende facturen</h2>
+                <p>Voor @Model.CompanyName · gelden als standaard voor nieuwe schema’s. Per schema kan je afwijken.</p>
+            </div>
+            <button type="button" class="gl-v2-modal-close" id="ri-panel-close" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+        </header>
+        <div class="gl-v2-ri-panel-body">
+            <div id="ri-settings-error" class="gl-v2-notice gl-v2-notice-compact is-danger" hidden><i class="ph ph-warning" aria-hidden="true"></i><span></span></div>
+
+            <section class="gl-v2-ri-section">
+                <span class="gl-v2-ri-eyebrow">BIJ AANMAAK VAN EEN FACTUUR</span>
+                <div class="gl-v2-radio-cards gl-v2-ri-cards1">
+                    <label class="gl-v2-radio-card">
+                        <input type="radio" name="OnCreateMode" value="1" checked />
+                        <span><b>Klaarzetten ter controle</b><small>Komt als Proforma in je lijst; jij kijkt na en nummert.</small></span>
+                    </label>
+                    <label class="gl-v2-radio-card" title="Volgt later">
+                        <input type="radio" name="OnCreateMode" value="2" disabled />
+                        <span><b>Automatisch nummeren en versturen</b><small>Zonder tussenkomst op de factuurdag. Volgt later.</small></span>
+                    </label>
+                </div>
+                <div class="gl-v2-ri-row2">
+                    @await Html.PartialAsync("GlV2/_SelectList", Sel("DraftLeadDays", "CONCEPT KLAAR", Model.DraftLeadDays.ToString(),
+                        ("1", "1 dag vooraf"), ("2", "2 dagen vooraf"), ("3", "3 dagen vooraf"), ("5", "5 dagen vooraf"), ("7", "7 dagen vooraf"), ("10", "10 dagen vooraf"), ("14", "14 dagen vooraf")))
+                    @await Html.PartialAsync("GlV2/_SelectList", Sel("WeekendRule", "WEEKEND OF FEESTDAG", Model.WeekendRule.ToString(),
+                        ("1", "Volgende werkdag"), ("2", "Vorige werkdag"), ("3", "Ongewijzigd")))
+                </div>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="ri-notify_input">MELDING VOOR CONCEPTEN NAAR</label>
+                    @await Html.PartialAsync("GlV2/_PersonPicker", new GlV2PersonPickerVm { Name = "NotifyUsers", Id = "ri-notify", LookupUrl = Url.Action("RecurringUsersLookup", "Invoices"), Placeholder = "Zoek een collega", PlaceholderMore = "Nog een collega toevoegen", EmptyText = "Geen medewerker gevonden." })
+                    <span class="gl-v2-field-help">Enkel medewerkers van het CRM. Zij krijgen een e-mail zodra een concept klaarstaat. Laat leeg voor geen melding.</span>
+                </div>
+            </section>
+
+            <section class="gl-v2-ri-section">
+                <span class="gl-v2-ri-eyebrow">INDEXERING</span>
+                <div class="gl-v2-ri-row2">
+                    @await Html.PartialAsync("GlV2/_SelectList", Sel("IndexationType", "INDEX", Model.IndexationType.ToString(),
+                        ("1", "Gezondheidsindex"), ("2", "Consumptieprijzen (percentage)"), ("3", "Vast percentage")))
+                    @await Html.PartialAsync("GlV2/_SelectList", Sel("IndexationWhen", "WANNEER", Model.IndexationWhen.ToString(),
+                        ("1", "Op 1 januari"), ("2", "Op de verjaardag van de start"), ("3", "Op een andere datum")))
+                </div>
+                <div class="gl-v2-ri-hi" id="ri-hi">
+                    <i class="ph ph-chart-line-up" aria-hidden="true"></i>
+                    <span id="ri-hi-text">@(ViewBag.HealthIndexStatus as string)</span>
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" id="ri-hi-refresh" data-url="@Url.Action("HealthIndexRefresh", "Invoices")">Nu ophalen</button>
+                </div>
+                <span class="gl-v2-field-help">De gezondheidsindex komt van Statbel en wordt automatisch opgehaald op de laatste dag van elke maand.</span>
+                @Html.EditorFor(m => m.IndexationConfirm, "GlV2ToggleSwitch", new { Label = "Nieuw bedrag eerst laten bevestigen", Hint = "Je ziet oud en nieuw bedrag naast elkaar voor de eerste geïndexeerde factuur." })
+            </section>
+
+            <section class="gl-v2-ri-section">
+                <span class="gl-v2-ri-eyebrow">NA HERVATTEN VAN EEN GEPAUZEERD SCHEMA</span>
+                <div class="gl-v2-radio-cards gl-v2-ri-cards1">
+                    <label class="gl-v2-radio-card">
+                        <input type="radio" name="ResumeMode" value="1" @(Model.ResumeMode != 2 ? "checked" : null) />
+                        <span><b>Telkens vragen</b><small>Kies per keer of gemiste periodes alsnog gefactureerd worden.</small></span>
+                    </label>
+                    <label class="gl-v2-radio-card">
+                        <input type="radio" name="ResumeMode" value="2" @(Model.ResumeMode == 2 ? "checked" : null) />
+                        <span><b>Gemiste periodes overslaan</b></span>
+                    </label>
+                </div>
+                @Html.EditorFor(m => m.WarnUnpaid, "GlV2ToggleSwitch", new { Label = "Waarschuwen als de vorige factuur nog openstaat", Hint = "Bij een nieuw concept terwijl de vorige vervallen en onbetaald is." })
+            </section>
+
+            <div class="gl-v2-notice gl-v2-notice-compact is-info">
+                <i class="ph ph-info" aria-hidden="true"></i>
+                <span>Nummering, betaaltermijn, layout en verzendwijze volgen je gewone factuurinstellingen.</span>
+            </div>
+        </div>
+        <footer class="gl-v2-ri-panel-foot">
+            <button type="button" class="gl-v2-btn gl-v2-btn-text" id="ri-panel-cancel">Annuleren</button>
+            <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="ri-panel-save">Opslaan</button>
+        </footer>
+    </form>
+    <script type="application/json" id="ri-settings-initial">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { notify = Model.NotifyUsers ?? "" }))</script>
+</aside>

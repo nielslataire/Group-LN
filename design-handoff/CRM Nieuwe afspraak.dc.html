@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=IBM+Plex+Sans:wght@400;450;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"><style>body{margin:0;background:#F2F5EF;font-family:'IBM Plex Sans',sans-serif}a{color:#00532D}a:hover{color:#B8935A}input::placeholder,textarea::placeholder{color:#9aa898}</style></helmet>
+<div data-screen-label="Nieuwe afspraak" style="position:relative;min-height:100vh;min-width:0;background:#F7F9F5;overflow:hidden">
+<div style="position:absolute;inset:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;padding:90px 40px 0 100px;opacity:.55"><sc-for list="{{ bgCols }}" as="c" hint-placeholder-count="5"><div style="border-left:1px solid rgba(44,59,42,.08);position:relative"><sc-for list="{{ c.b }}" as="b" hint-placeholder-count="2"><div style="{{ b }}"></div></sc-for></div></sc-for></div>
+<div style="position:absolute;inset:0;background:rgba(32,40,30,.42)"></div>
+
+<div style="position:relative;display:flex;justify-content:center;padding:56px 20px 80px">
+<div onClick="{{ closeAll }}" style="width:680px;max-width:100%;background:#fff;border-radius:18px;box-shadow:0 2px 4px rgba(0,0,0,.06),0 40px 80px -24px rgba(20,30,20,.5);display:flex;flex-direction:column">
+
+<div style="display:flex;align-items:center;gap:12px;padding:20px 24px 16px">
+<span style="flex:1;font:500 22px 'Playfair Display',Georgia,serif;color:#2C3B2A">Nieuwe afspraak</span>
+<div title="Sluiten (Esc)" style="width:34px;height:34px;border-radius:17px;border:1px solid rgba(44,59,42,.14);display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:#F2F5EF"><svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:none;stroke:#4A5B48;stroke-width:1.6;stroke-linecap:round"><path d="M4 4l8 8 M12 4l-8 8"></path></svg></div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:18px;padding:4px 24px 22px">
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<input value="{{ title }}" onChange="{{ onTitle }}" placeholder="Waarover gaat de afspraak?" style="height:48px;box-sizing:border-box;border:0;border-bottom:1.5px solid rgba(44,59,42,.16);padding:0 2px;font:500 18px 'IBM Plex Sans',sans-serif;color:#2C3B2A;outline:0;background:transparent;width:100%" style-focus="border-bottom-color:#00532D">
+<div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ types }}" as="t" hint-placeholder-count="5"><div onClick="{{ t.go }}" style="{{ t.st }}">{{ t.n }}</div></sc-for></div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:6px;position:relative">
+<span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.09em;color:#5a6b58">PROJECT</span>
+<div onClick="{{ openProj }}" style="{{ projBox }}">
+<svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M2.6 13.4V4.6L8 2.6v10.8 M8 6h5.4v7.4 M1.6 13.4h12.8"></path></svg>
+<sc-if value="{{ projOpen }}" hint-placeholder-val="{{ false }}"><input value="{{ projQ }}" onChange="{{ onProjQ }}" autofocus placeholder="Zoek een project" style="flex:1;min-width:0;border:0;outline:0;background:transparent;font:450 13.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A"></sc-if>
+<sc-if value="{{ projClosed }}" hint-placeholder-val="{{ true }}"><span style="{{ projLblSt }}">{{ projLbl }}</span><sc-if value="{{ hasProjAddr }}" hint-placeholder-val="{{ false }}"><span style="font:450 12px 'IBM Plex Sans',sans-serif;color:#7a8a78;white-space:nowrap">{{ projAddr }}</span></sc-if></sc-if>
+<svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 6.25 8 9.75l3.5-3.5"></path></svg>
+</div>
+<sc-if value="{{ projOpen }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:0;right:0;top:70px;z-index:20;background:#fff;border-radius:12px;border:1px solid rgba(44,59,42,.12);box-shadow:0 24px 48px -16px rgba(20,30,20,.35);padding:6px;max-height:300px;overflow:auto">
+<sc-for list="{{ projGroups }}" as="g" hint-placeholder-count="2"><div style="padding:8px 10px 4px;font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.09em;color:#7a8a78">{{ g.n }}</div><sc-for list="{{ g.items }}" as="p" hint-placeholder-count="4"><div onClick="{{ p.go }}" style="{{ p.st }}" style-hover="background:#F2F5EF"><span style="flex:1;font:500 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">{{ p.n }}</span><span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#7a8a78">{{ p.a }}</span></div></sc-for></sc-for>
+<div onClick="{{ noProj }}" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;border-top:1px solid rgba(44,59,42,.07);margin-top:4px" style-hover="background:#F2F5EF"><span style="font:500 13px 'IBM Plex Sans',sans-serif;color:#5a6b58">Geen project — persoonlijke afspraak</span></div>
+</div></sc-if>
+</div>
+
+<div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr);gap:12px">
+<div style="display:flex;flex-direction:column;gap:6px;position:relative">
+<span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.09em;color:#5a6b58">DATUM</span>
+<div onClick="{{ openDate }}" style="{{ dateBox }}"><svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#00532D;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M2.8 3.8h10.4v9.4H2.8z M2.8 6.6h10.4 M5.4 2.4v2.4 M10.6 2.4v2.4"></path></svg><span style="flex:1;font:500 13.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A;white-space:nowrap">{{ dateLbl }}</span></div>
+<sc-if value="{{ dateOpen }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:0;top:70px;width:290px;z-index:20;background:#fff;border-radius:12px;border:1px solid rgba(44,59,42,.12);box-shadow:0 24px 48px -16px rgba(20,30,20,.35);padding:14px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;gap:6px"><sc-for list="{{ quickDates }}" as="q" hint-placeholder-count="3"><div onClick="{{ q.go }}" style="height:28px;padding:0 10px;border-radius:14px;background:#F2F5EF;display:flex;align-items:center;font:600 11.5px 'IBM Plex Sans',sans-serif;color:#2F6038;cursor:pointer" style-hover="background:#D6E5CC">{{ q.n }}</div></sc-for></div>
+<span style="font:600 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">November 2026</span>
+<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px"><sc-for list="{{ wd }}" as="w" hint-placeholder-count="7"><span style="text-align:center;font:600 10px 'IBM Plex Sans',sans-serif;color:#7a8a78;padding:4px 0">{{ w }}</span></sc-for><sc-for list="{{ cal }}" as="d" hint-placeholder-count="35"><div onClick="{{ d.go }}" style="{{ d.st }}">{{ d.n }}</div></sc-for></div>
+</div></sc-if>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px;position:relative">
+<span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.09em;color:#5a6b58">VAN</span>
+<div onClick="{{ openFrom }}" style="{{ fromBox }}"><span style="flex:1;font:500 14px 'IBM Plex Mono',monospace;color:#2C3B2A">{{ fromLbl }}</span><svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 6.25 8 9.75l3.5-3.5"></path></svg></div>
+<sc-if value="{{ fromOpen }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:0;top:70px;width:230px;z-index:20;background:#fff;border-radius:12px;border:1px solid rgba(44,59,42,.12);box-shadow:0 24px 48px -16px rgba(20,30,20,.35);padding:6px;max-height:280px;overflow:auto"><sc-for list="{{ fromList }}" as="t" hint-placeholder-count="8"><div onClick="{{ t.go }}" style="{{ t.st }}" style-hover="background:#F2F5EF"><span style="font:500 13px 'IBM Plex Mono',monospace;color:#2C3B2A">{{ t.n }}</span><span style="{{ t.bs }}">{{ t.busy }}</span></div></sc-for></div></sc-if>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px;position:relative">
+<span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.09em;color:#5a6b58">TOT</span>
+<div onClick="{{ openTo }}" style="{{ toBox }}"><span style="font:500 14px 'IBM Plex Mono',monospace;color:#2C3B2A">{{ toLbl }}</span><span style="flex:1;font:450 12px 'IBM Plex Sans',sans-serif;color:#7a8a78;white-space:nowrap">{{ durLbl }}</span><svg viewBox="0 0 16 16" style="width:13px;height:13px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 6.25 8 9.75l3.5-3.5"></path></svg></div>
+<sc-if value="{{ toOpen }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;right:0;top:70px;width:230px;z-index:20;background:#fff;border-radius:12px;border:1px solid rgba(44,59,42,.12);box-shadow:0 24px 48px -16px rgba(20,30,20,.35);padding:6px;max-height:280px;overflow:auto"><sc-for list="{{ toList }}" as="t" hint-placeholder-count="8"><div onClick="{{ t.go }}" style="{{ t.st }}" style-hover="background:#F2F5EF"><span style="font:500 13px 'IBM Plex Mono',monospace;color:#2C3B2A">{{ t.n }}</span><span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#7a8a78">{{ t.d }}</span></div></sc-for></div></sc-if>
+</div>
+</div>
+
+<div style="display:flex;align-items:center;gap:10px;margin-top:-6px">
+<div style="display:flex;gap:4px"><sc-for list="{{ durs }}" as="d" hint-placeholder-count="5"><div onClick="{{ d.go }}" style="{{ d.st }}">{{ d.n }}</div></sc-for></div>
+<span style="flex:1"></span>
+<sc-if value="{{ conflict }}" hint-placeholder-val="{{ false }}"><span style="display:flex;align-items:center;gap:6px;white-space:nowrap;font:500 12px 'IBM Plex Sans',sans-serif;color:#8A6A32"><svg viewBox="0 0 16 16" style="width:14px;height:14px;flex:none;fill:none;stroke:#B8935A;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"><path d="M8 2.4 14 13H2z M8 6.4v3 M8 11.2v.1"></path></svg>{{ conflictT }}</span></sc-if>
+<sc-if value="{{ free }}" hint-placeholder-val="{{ true }}"><span style="display:flex;align-items:center;gap:6px;white-space:nowrap;font:500 12px 'IBM Plex Sans',sans-serif;color:#2F6038"><span style="width:7px;height:7px;border-radius:4px;background:#2F9B4F"></span>Je agenda is vrij</span></sc-if>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:6px">
+<span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.09em;color:#5a6b58">PLAATS</span>
+<div style="display:flex;gap:4px;padding:3px;border-radius:9px;background:#EDEFEB;align-self:flex-start"><sc-for list="{{ locs }}" as="l" hint-placeholder-count="4"><div onClick="{{ l.go }}" style="{{ l.st }}">{{ l.n }}</div></sc-for></div>
+<div onClick="{{ placeClick }}" style="position:relative;display:flex;flex-direction:column"><input value="{{ place }}" onChange="{{ onPlace }}" onFocus="{{ onPlaceFocus }}" placeholder="{{ placePh }}" style="height:40px;box-sizing:border-box;border:1px solid rgba(44,59,42,.14);border-radius:9px;padding:0 12px;font:450 13.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A;outline:0;background:#fff;width:100%" style-focus="border-color:#00532D;box-shadow:0 0 0 3px rgba(0,83,45,.12)">
+<sc-if value="{{ addrOpen }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:0;right:0;top:46px;z-index:20;background:#fff;border-radius:12px;border:1px solid rgba(44,59,42,.12);box-shadow:0 24px 48px -16px rgba(20,30,20,.35);padding:6px"><sc-for list="{{ adSugg }}" as="a" hint-placeholder-count="4"><div onClick="{{ a.go }}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer" style-hover="background:#F2F5EF"><svg viewBox="0 0 16 16" style="width:15px;height:15px;flex:none;fill:none;stroke:#5a6b58;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M8 14s4.6-4.2 4.6-7.6a4.6 4.6 0 0 0-9.2 0C3.4 9.8 8 14 8 14z M8 8.2a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6z"></path></svg><div style="flex:1;display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font:500 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">{{ a.n }}</span><span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#7a8a78;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.a }}</span></div><span style="font:600 10px 'IBM Plex Sans',sans-serif;color:#4A5B48;background:#EDEFEB;padding:2px 6px;border-radius:4px">{{ a.k }}</span></div></sc-for></div></sc-if>
+</div>
+<sc-if value="{{ isOther }}" hint-placeholder-val="{{ false }}"><span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#7a8a78">Adressen van klanten, leveranciers en recente afspraken worden voorgesteld. Een nieuw adres wordt bewaard voor de volgende keer.</span></sc-if>
+</div>
+
+<sc-if value="{{ hasTravel }}" hint-placeholder-val="{{ true }}"><div style="display:flex;flex-direction:column;gap:12px;padding:14px 16px;border-radius:12px;background:#F7F9F5;border:1px solid rgba(44,59,42,.10)">
+<div style="display:flex;align-items:center;gap:12px"><div style="width:36px;height:36px;flex:none;border-radius:10px;background:#00532D;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 16 16" style="width:17px;height:17px;fill:none;stroke:#fff;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"><path d="M2.4 10.6V8.2l1.4-3.4h8.4l1.4 3.4v2.4z M2.4 10.6v1.6h2v-1.6 M11.6 10.6v1.6h2v-1.6 M2.4 8.2h11.2 M4.6 9.4h.1 M11.4 9.4h.1"></path></svg></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.09em;color:#5a6b58">VERTREK</span><span style="font:600 20px 'IBM Plex Mono',monospace;color:#00532D;line-height:1.2">{{ depT }}</span></div>
+<div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px"><div style="display:flex;align-items:center;gap:6px"><div onClick="{{ tDown }}" style="width:28px;height:28px;border-radius:7px;border:1px solid rgba(44,59,42,.14);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font:600 14px 'IBM Plex Sans',sans-serif;color:#2C3B2A">−</div><span style="min-width:62px;text-align:center;font:600 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">{{ travelMin }} min</span><div onClick="{{ tUp }}" style="width:28px;height:28px;border-radius:7px;border:1px solid rgba(44,59,42,.14);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font:600 14px 'IBM Plex Sans',sans-serif;color:#2C3B2A">+</div></div><div style="display:flex;gap:6px;align-items:center"><span style="font:450 11px 'IBM Plex Sans',sans-serif;color:#7a8a78">{{ estT }}</span><sc-if value="{{ resetT }}" hint-placeholder-val="{{ false }}"><span onClick="{{ resetTravel }}" style="font:600 11px 'IBM Plex Sans',sans-serif;color:#00532D;cursor:pointer">herstel</span></sc-if></div></div>
+</div>
+<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+<div style="display:flex;align-items:center;gap:8px"><span style="font:500 12px 'IBM Plex Sans',sans-serif;color:#4A5B48">Vanaf</span><div style="display:flex;gap:2px;padding:3px;border-radius:8px;background:#EDEFEB"><sc-for list="{{ origins }}" as="o" hint-placeholder-count="3"><div onClick="{{ o.go }}" style="{{ o.st }}">{{ o.n }}</div></sc-for></div></div>
+<div style="display:flex;align-items:center;gap:8px"><span style="font:500 12px 'IBM Plex Sans',sans-serif;color:#4A5B48">Marge</span><div style="display:flex;gap:2px;padding:3px;border-radius:8px;background:#EDEFEB"><sc-for list="{{ bufs }}" as="o" hint-placeholder-count="4"><div onClick="{{ o.go }}" style="{{ o.st }}">{{ o.n }}</div></sc-for></div></div>
+</div>
+<span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#7a8a78;margin-top:-4px">{{ origSub }}</span>
+<div onClick="{{ blockGo }}" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding-top:10px;border-top:1px solid rgba(44,59,42,.08)"><span style="{{ blockTr }}"><span style="{{ blockKn }}"></span></span><span style="font:500 12.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A">{{ blockT }}</span></div>
+<sc-if value="{{ depWarn }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:8px;align-items:flex-start;padding:9px 11px;border-radius:8px;background:#FBF6EC;font:450 12px/1.5 'IBM Plex Sans',sans-serif;color:#6B5226"><svg viewBox="0 0 16 16" style="width:14px;height:14px;flex:none;fill:none;stroke:#B8935A;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;margin-top:2px"><path d="M8 2.4 14 13H2z M8 6.4v3 M8 11.2v.1"></path></svg>{{ depWarnT }}</div></sc-if>
+</div></sc-if>
+
+<div style="display:flex;flex-direction:column;gap:6px;position:relative">
+<span style="font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.09em;color:#5a6b58">DEELNEMERS</span>
+<div onClick="{{ openPpl }}" style="{{ pplBox }}">
+<sc-for list="{{ chosen }}" as="c" hint-placeholder-count="0"><span style="display:flex;align-items:center;gap:6px;height:28px;padding:0 4px 0 4px;border-radius:14px;background:#EDF2E8"><span style="width:22px;height:22px;border-radius:11px;background:#D6E5CC;display:flex;align-items:center;justify-content:center;font:600 9px 'IBM Plex Sans',sans-serif;color:#00532D">{{ c.i }}</span><span style="font:500 12.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A">{{ c.n }}</span><span onClick="{{ c.rm }}" style="width:20px;height:20px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:#D6E5CC"><svg viewBox="0 0 16 16" style="width:10px;height:10px;fill:none;stroke:#4A5B48;stroke-width:1.8;stroke-linecap:round"><path d="M4 4l8 8 M12 4l-8 8"></path></svg></span></span></sc-for>
+<input value="{{ pplQ }}" onChange="{{ onPplQ }}" placeholder="{{ pplPh }}" style="flex:1;min-width:140px;height:28px;border:0;outline:0;background:transparent;font:450 13.5px 'IBM Plex Sans',sans-serif;color:#2C3B2A">
+</div>
+<sc-if value="{{ pplOpen }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:0;right:0;bottom:calc(100% - 18px);z-index:20;background:#fff;border-radius:12px;border:1px solid rgba(44,59,42,.12);box-shadow:0 24px 48px -16px rgba(20,30,20,.35);padding:6px;max-height:300px;overflow:auto">
+<sc-for list="{{ pplGroups }}" as="g" hint-placeholder-count="2"><div style="padding:8px 10px 4px;font:600 9.5px 'IBM Plex Sans',sans-serif;letter-spacing:.09em;color:#7a8a78">{{ g.n }}</div><sc-for list="{{ g.items }}" as="p" hint-placeholder-count="3"><div onClick="{{ p.go }}" style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;cursor:pointer" style-hover="background:#F2F5EF"><span style="width:30px;height:30px;flex:none;border-radius:15px;background:#EDEFEB;display:flex;align-items:center;justify-content:center;font:600 10px 'IBM Plex Sans',sans-serif;color:#4A5B48">{{ p.i }}</span><div style="flex:1;display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font:500 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A">{{ p.n }}</span><span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#7a8a78;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.r }} · {{ p.e }}</span></div></div></sc-for></sc-for>
+<sc-if value="{{ pplNone }}" hint-placeholder-val="{{ false }}"><div style="padding:12px 10px;font:450 12.5px 'IBM Plex Sans',sans-serif;color:#5a6b58">Niemand gevonden. Typ een volledig e-mailadres om iemand van buiten het CRM uit te nodigen.</div></sc-if>
+</div></sc-if>
+<span style="{{ inviteSt }}">{{ inviteT }}</span>
+</div>
+
+<div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+<div style="display:flex;align-items:center;gap:8px"><span style="font:500 12.5px 'IBM Plex Sans',sans-serif;color:#4A5B48">Herinnering</span><div style="display:flex;gap:2px;padding:3px;border-radius:8px;background:#EDEFEB"><sc-for list="{{ rems }}" as="r" hint-placeholder-count="4"><div onClick="{{ r.go }}" style="{{ r.st }}">{{ r.n }}</div></sc-for></div></div>
+<sc-if value="{{ noteClosed }}" hint-placeholder-val="{{ true }}"><span onClick="{{ openNote }}" style="font:600 12.5px 'IBM Plex Sans',sans-serif;color:#00532D;cursor:pointer">+ Notitie</span></sc-if>
+</div>
+<sc-if value="{{ hasRemNote }}" hint-placeholder-val="{{ false }}"><span style="font:450 11.5px 'IBM Plex Sans',sans-serif;color:#2F6038;margin-top:-10px">{{ remNote }}</span></sc-if>
+<sc-if value="{{ noteOpen }}" hint-placeholder-val="{{ false }}"><textarea placeholder="Agenda, wat meebrengen, toegangscode werf…" style="height:72px;resize:vertical;box-sizing:border-box;border:1px solid rgba(44,59,42,.14);border-radius:9px;padding:10px 12px;font:450 13px/1.5 'IBM Plex Sans',sans-serif;color:#2C3B2A;outline:0;width:100%" style-focus="border-color:#00532D;box-shadow:0 0 0 3px rgba(0,83,45,.12)"></textarea></sc-if>
+</div>
+
+<div style="display:flex;align-items:center;gap:10px;padding:14px 24px;border-top:1px solid rgba(44,59,42,.08);background:#FAFBF8;border-radius:0 0 18px 18px">
+<span style="flex:1;font:450 11.5px 'IBM Plex Sans',sans-serif;color:#7a8a78"><span style="font:600 10.5px 'IBM Plex Mono',monospace;color:#2C3B2A;background:#fff;border:1px solid rgba(44,59,42,.18);border-bottom-width:2px;padding:1px 5px;border-radius:4px">Ctrl ↵</span> opslaan</span>
+<div style="height:40px;padding:0 16px;box-sizing:border-box;border-radius:9px;border:1px solid rgba(44,59,42,.16);display:flex;align-items:center;font:600 13px 'IBM Plex Sans',sans-serif;color:#2C3B2A;cursor:pointer" style-hover="background:#F2F5EF">Annuleren</div>
+<div style="{{ saveSt }}">{{ saveT }}</div>
+</div>
+
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:900,&quot;height&quot;:980}}">
+class Component extends DCLogic {
+  state = { title: '', type: null, proj: 'drongen', projQ: '', open: null, day: 5, from: 600, dur: 60, loc: 'proj', place: '', ppl: ['pd'], pplQ: '', rem: 15, note: false, orig: 'office', travel: null, buf: 10, block: true };
+  renderVals() {
+    const G = '#00532D', F = "'IBM Plex Sans',sans-serif", st = this.state;
+    const set = o => this.setState(o);
+    const P = { drongen: ['Drongen Luchterenstraat','Luchterenstraat 12, Drongen'], villa: ['Villa Cauxyde','Zeedijk 214, Koksijde'], keer: ['Verkaveling Keerstraat','Keerstraat, Vlekkem'], aalter: ['Aalter','Stationsstraat 40, Aalter'], opdorp: ['Opdorp Dries 10','Dries 10, Opdorp'], devos: ['De Vos','Kerkstraat 8, Lovendegem'], dela: ['Dela \u2013 Crematorium','Zeebrugge'], muel: ['Muelenaers','Nevele'], wesep: ['Van Wesepoel \u2013 Bremenhul','Bremenhul, Wichelen'] };
+    const recent = ['drongen','villa','keer'];
+    const fm = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+    const fd = d => d < 60 ? d + ' min' : (d % 60 ? Math.floor(d / 60) + 'u' + String(d % 60).padStart(2, '0') : d / 60 + 'u');
+    const box = (on, extra = '') => `height:42px;box-sizing:border-box;border:1px solid ${on ? G : 'rgba(44,59,42,.14)'};${on ? 'box-shadow:0 0 0 3px rgba(0,83,45,.12);' : ''}border-radius:9px;padding:0 12px;display:flex;align-items:center;gap:9px;cursor:pointer;background:#fff;${extra}`;
+    const seg = (on, pad = 11) => `height:28px;padding:0 ${pad}px;border-radius:7px;display:flex;align-items:center;cursor:pointer;white-space:nowrap;font:${on ? 600 : 500} 12px ${F};color:${on ? G : '#5a6b58'};${on ? 'background:#fff;box-shadow:0 1px 2px rgba(44,59,42,.12)' : ''}`;
+    const stop = fn => e => { e.stopPropagation(); fn(); };
+    const tog = k => stop(() => set({ open: st.open === k ? null : k }));
+    // types
+    const T = [['Werfbezoek', 90, 'proj'], ['Overleg', 60, 'office'], ['Bezoek klant', 60, 'proj'], ['Telefonisch', 15, 'phone'], ['Online', 30, 'online']];
+    const types = T.map(([n, d, l]) => { const on = st.type === n; return { n, go: () => set({ type: on ? null : n, dur: on ? st.dur : d, loc: on ? st.loc : l, title: st.title || (on ? '' : n + (st.proj ? ' ' + P[st.proj][0] : '')) }),
+      st: `height:30px;padding:0 12px;border-radius:15px;display:flex;align-items:center;cursor:pointer;white-space:nowrap;font:${on ? 600 : 500} 12px ${F};${on ? 'background:' + G + ';color:#fff' : 'background:#F2F5EF;color:#4A5B48'}` }; });
+    // project
+    const q = st.projQ.toLowerCase();
+    const mk = k => ({ n: P[k][0], a: P[k][1], go: stop(() => set({ proj: k, open: null, projQ: '' })), st: `display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;${st.proj === k ? 'background:#EDF2E8' : ''}` });
+    const keys = Object.keys(P).filter(k => !q || P[k][0].toLowerCase().includes(q) || P[k][1].toLowerCase().includes(q));
+    const projGroups = q ? [{ n: keys.length + ' GEVONDEN', items: keys.map(mk) }] : [{ n: 'RECENT', items: recent.map(mk) }, { n: 'ALLE PROJECTEN', items: keys.filter(k => !recent.includes(k)).sort((a, b) => P[a][0].localeCompare(P[b][0])).map(mk) }];
+    // date
+    const DN = ['zo','ma','di','wo','do','vr','za'];
+    const dow = d => (d - 1) % 7; // 1 nov 2026 = zondag
+    const cal = []; for (let i = 0; i < 6; i++) cal.push({ n: '', go: null, st: 'height:32px' });
+    for (let d = 1; d <= 30; d++) { const on = st.day === d, today = d === 5, wk = dow(d) === 0 || dow(d) === 6, past = d < 5;
+      cal.push({ n: String(d), go: stop(() => set({ day: d, open: null })), st: `height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font:${on || today ? 600 : 450} 12.5px ${F};${on ? 'background:' + G + ';color:#fff' : today ? 'box-shadow:inset 0 0 0 1.5px ' + G + ';color:' + G : past ? 'color:#B5C0B1' : wk ? 'color:#7a8a78' : 'color:#2C3B2A'}` }); }
+    const quickDates = [['Vandaag', 5], ['Morgen', 6], ['Volgende ma', 9]].map(([n, d]) => ({ n, go: stop(() => set({ day: d, open: null })) }));
+    const dateLbl = DN[dow(st.day)] + ' ' + st.day + ' nov' + (st.day === 5 ? ' \u00b7 vandaag' : st.day === 6 ? ' \u00b7 morgen' : '');
+    // busy
+    const BUSY = { 5: [[510, 600, 'Werfbezoek Villa'], [810, 870, 'Overleg architect']], 6: [[600, 690, 'Overleg bank']], 9: [[540, 600, 'Teamoverleg']] }[st.day] || [];
+    const busyAt = m => BUSY.find(b => m >= b[0] && m < b[1]);
+    const to = st.from + st.dur;
+    const hit = BUSY.find(b => st.from < b[1] && to > b[0]);
+    const fromList = []; for (let m = 420; m <= 1200; m += 15) { const b = busyAt(m), on = m === st.from;
+      fromList.push({ n: fm(m), busy: b ? b[2] : '', go: stop(() => set({ from: m, open: null })), st: `display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:7px;cursor:pointer;${on ? 'background:#EDF2E8;box-shadow:inset 2px 0 0 ' + G : ''}`, bs: `flex:1;text-align:right;font:500 10.5px ${F};color:#8A6A32;white-space:nowrap;overflow:hidden;text-overflow:ellipsis` }); }
+    const toList = []; for (let d = 15; d <= 480; d += d < 60 ? 15 : 30) toList.push({ n: fm(st.from + d), d: fd(d), go: stop(() => set({ dur: d, open: null })), st: `display:flex;align-items:center;gap:12px;padding:7px 10px;border-radius:7px;cursor:pointer;${d === st.dur ? 'background:#EDF2E8;box-shadow:inset 2px 0 0 ' + G : ''}` });
+    const durs = [15, 30, 60, 90, 120].map(d => ({ n: fd(d), go: () => set({ dur: d }), st: `height:26px;padding:0 9px;border-radius:13px;display:flex;align-items:center;cursor:pointer;font:${st.dur === d ? 600 : 500} 11.5px ${F};${st.dur === d ? 'background:#D6E5CC;color:' + G : 'color:#5a6b58;box-shadow:inset 0 0 0 1px rgba(44,59,42,.14)'}` }));
+    // location
+    const L = [['proj', 'Projectadres'], ['office', 'Kantoor'], ['other', 'Ander adres'], ['online', 'Online'], ['phone', 'Telefonisch']];
+    const locs = L.filter(l => l[0] !== 'proj' || st.proj).map(([id, n]) => ({ n, go: () => set({ loc: id, place: '' }), st: seg(st.loc === id) }));
+    const autoPlace = { proj: st.proj ? P[st.proj][1] : '', office: 'Group LN \u2014 Klaverdries 53, Drongen', online: 'Teams-link wordt automatisch toegevoegd', phone: '', other: '' }[st.loc];
+    const AD = [['Notaris Van Hulle','Kortrijksesteenweg 1012, Sint-Martens-Latem','Recent'],['Desmet Architecten','Nieuwstraat 22, Deinze','Leverancier'],['KBC Kantoor Drongen','Drongenplein 4, Drongen','Recent'],['Familie Peeters','Coupure Links 118, Gent','Klant'],['Bouwbedrijf Declercq','Industrielaan 7, Aalter','Leverancier']];
+    const aq = st.place.toLowerCase();
+    const adSugg = AD.filter(a => !aq || (a[0] + ' ' + a[1]).toLowerCase().includes(aq)).slice(0, 4).map(([n, a, k]) => ({ n, a, k, go: stop(() => set({ place: n + ' \u2014 ' + a, open: null })) }));
+    const place = st.place || autoPlace;
+    // people
+    const PE = { pd: ['Pieter Desmet','Architect','pieter@desmet-architecten.be','PD',['drongen','keer']], bd: ['Bouwbedrijf Declercq \u2014 Jan','Aannemer','jan@declercq-bouw.be','JD',['drongen','aalter']], el: ['Elisabeth Lataire','Collega','elisabeth.lataire@groupln.be','EL',[]], nl2: ['Nele Lataire','Collega','nele.lataire@groupln.be','NL',[]], ng: ['Nele Goovaerts','Klant','nele.goovaerts@gmail.com','NG',['villa']], nh: ["Nele D'Hoop",'Contactpersoon Isolteam','nele@isolteam.be','ND',['drongen']], sv: ['Sofie Vermeulen','Collega \u00b7 verkoop','sofie@groupln.be','SV',[]], fp: ['Familie Peeters','Klant','peeters.gent@telenet.be','FP',['villa']] };
+    const pq = st.pplQ.toLowerCase();
+    const avail = Object.keys(PE).filter(k => !st.ppl.includes(k) && (!pq || (PE[k][0] + ' ' + PE[k][2]).toLowerCase().includes(pq)));
+    const pi = k => ({ n: PE[k][0], r: PE[k][1], e: PE[k][2], i: PE[k][3], go: stop(() => set({ ppl: [...st.ppl, k], pplQ: '' })) });
+    const onP = avail.filter(k => st.proj && PE[k][4].includes(st.proj)), rest = avail.filter(k => !onP.includes(k));
+    const pplGroups = pq ? (avail.length ? [{ n: avail.length + ' GEVONDEN', items: avail.map(pi) }] : []) : [onP.length ? { n: 'OP DIT PROJECT', items: onP.map(pi) } : null, { n: 'COLLEGA\u2019S EN CONTACTEN', items: rest.slice(0, 4).map(pi) }].filter(Boolean);
+    const chosen = st.ppl.map(k => ({ n: PE[k][0], i: PE[k][3], rm: stop(() => set({ ppl: st.ppl.filter(x => x !== k) })) }));
+    const n = st.ppl.length, ok = !!st.title.trim();
+    const TT = { drongen: [8, 22, 20], villa: [58, 62, 55], keer: [24, 35, 30], aalter: [22, 18, 25], opdorp: [42, 55, 40], devos: [12, 25, 15], dela: [45, 38, 40], muel: [20, 30, 25], wesep: [38, 50, 35] };
+    const physical = st.loc === 'proj' || st.loc === 'other' || (st.loc === 'office' && st.orig !== 'office');
+    const prev = BUSY.filter(b => b[1] <= st.from).sort((a, b) => b[1] - a[1])[0];
+    const oi = { office: 0, home: 1, prev: 2 }[st.orig];
+    const est = st.loc === 'office' ? (st.orig === 'home' ? 25 : 15) : st.loc === 'other' ? 30 : st.proj && TT[st.proj] ? TT[st.proj][oi] : 20;
+    const travel = st.travel ?? est, dep = st.from - travel - st.buf;
+    const depHit = st.block ? BUSY.find(b => dep < b[1] && st.from > b[0] && !(st.from < b[1] && to > b[0])) : null;
+    const trv = {
+      hasTravel: physical, travelMin: travel, depT: fm(Math.max(0, dep)), estT: st.travel === null ? 'geschat via Google Maps' : 'aangepast \u00b7 schatting ' + est + ' min',
+      resetT: st.travel !== null, resetTravel: () => set({ travel: null }),
+      tUp: () => set({ travel: travel + 5 }), tDown: () => set({ travel: Math.max(5, travel - 5) }),
+      origins: [['office', 'Kantoor'], ['home', 'Thuis'], ['prev', prev ? 'Vorige afspraak' : 'Vorige afspraak']].map(([id, l]) => ({ n: l, go: () => set({ orig: id, travel: null }), st: seg(st.orig === id, 9) + (id === 'prev' && !prev ? ';opacity:.4;pointer-events:none' : '') })),
+      origSub: st.orig === 'prev' && prev ? 'na \u201c' + prev[2] + '\u201d tot ' + fm(prev[1]) : st.orig === 'home' ? 'Beekstraat 13, Beernem' : 'Klaverdries 53, Drongen',
+      bufs: [0, 10, 15, 30].map(v => ({ n: v ? '+' + v : 'geen', go: () => set({ buf: v }), st: seg(st.buf === v, 8) })),
+      blockGo: () => set({ block: !st.block }), blockTr: `width:34px;height:20px;border-radius:10px;background:${st.block ? G : '#C9D1C5'};position:relative;flex:none;cursor:pointer`, blockKn: `position:absolute;top:2px;left:${st.block ? 16 : 2}px;width:16px;height:16px;border-radius:8px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2)`,
+      blockT: st.block ? 'Reistijd ' + fm(Math.max(0, dep)) + '\u2013' + fm(st.from) + ' wordt in je agenda geblokkeerd' : 'Reistijd niet blokkeren in je agenda',
+      depWarn: !!depHit, depWarnT: depHit ? 'Om ' + fm(dep) + ' te vertrekken moet \u201c' + depHit[2] + '\u201d (tot ' + fm(depHit[1]) + ') eerder stoppen.' : '',
+      remNote: st.rem === -1 && physical ? 'Je krijgt een melding om ' + fm(Math.max(0, dep - 5)) + ', 5 min voor vertrek, met de route.' : '', hasRemNote: st.rem === -1 && physical
+    };
+    if (!physical && st.rem === -1) setTimeout(() => this.setState({ rem: 15 }));
+    return {
+      bgCols: [0,1,2,3,4].map(i => ({ b: [[120 + i * 40, 90], [380 - i * 20, 70], [620, 110]].slice(0, 2 + (i % 2)).map(([t, h]) => `position:absolute;left:6px;right:6px;top:${t}px;height:${h}px;border-radius:8px;background:repeating-linear-gradient(135deg,#E3EAF3 0 6px,#fff 6px 12px);border:1px solid #C8D3E0`) })),
+      closeAll: () => st.open && set({ open: null }),
+      title: st.title, onTitle: e => set({ title: e.target.value }), types,
+      openProj: stop(() => set({ open: 'proj' })), projOpen: st.open === 'proj', projClosed: st.open !== 'proj', projQ: st.projQ, onProjQ: e => set({ projQ: e.target.value }),
+      projBox: box(st.open === 'proj'), projLbl: st.proj ? P[st.proj][0] : 'Geen project', projLblSt: `flex:1;min-width:0;font:500 13.5px ${F};color:${st.proj ? '#2C3B2A' : '#7a8a78'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`,
+      hasProjAddr: !!st.proj, projAddr: st.proj ? P[st.proj][1] : '', projGroups,
+      noProj: stop(() => set({ proj: null, open: null, loc: st.loc === 'proj' ? 'office' : st.loc })),
+      openDate: tog('date'), dateOpen: st.open === 'date', dateBox: box(st.open === 'date'), dateLbl, cal, quickDates, wd: ['ma','di','wo','do','vr','za','zo'],
+      openFrom: tog('from'), fromOpen: st.open === 'from', fromBox: box(st.open === 'from'), fromLbl: fm(st.from), fromList,
+      openTo: tog('to'), toOpen: st.open === 'to', toBox: box(st.open === 'to'), toLbl: fm(to), durLbl: fd(st.dur), toList, durs,
+      conflict: !!hit, free: !hit, conflictT: hit ? 'Overlapt met \u201c' + hit[2] + '\u201d ' + fm(hit[0]) + '\u2013' + fm(hit[1]) : '',
+      locs, place, onPlace: e => set({ place: e.target.value, open: st.loc === 'other' ? 'addr' : st.open }), onPlaceFocus: e => { if (st.loc === 'other') set({ open: 'addr' }); }, placeClick: e => e.stopPropagation(),
+      addrOpen: st.open === 'addr' && st.loc === 'other' && adSugg.length > 0, adSugg, isOther: st.loc === 'other',
+      placePh: st.loc === 'phone' ? 'Telefoonnummer (optioneel)' : st.loc === 'other' ? 'Zoek een adres, klant of leverancier \u2014 of typ een adres' : 'Adres of ruimte',
+      openPpl: stop(() => set({ open: 'ppl' })), pplOpen: st.open === 'ppl', pplQ: st.pplQ, onPplQ: e => set({ pplQ: e.target.value }), pplPh: n ? 'Nog iemand toevoegen' : 'Naam of e-mail \u2014 laat leeg voor enkel jouw agenda',
+      pplBox: `min-height:44px;box-sizing:border-box;border:1px solid ${st.open === 'ppl' ? G : 'rgba(44,59,42,.14)'};${st.open === 'ppl' ? 'box-shadow:0 0 0 3px rgba(0,83,45,.12);' : ''}border-radius:9px;padding:7px 10px;display:flex;flex-wrap:wrap;align-items:center;gap:6px;cursor:text;background:#fff`,
+      chosen, pplGroups, pplNone: !!pq && !avail.length,
+      inviteT: n ? n + (n === 1 ? ' persoon krijgt' : ' personen krijgen') + ' een uitnodiging per mail, met een agenda-bestand voor Outlook of Google Agenda.' : 'Er gaat geen uitnodiging uit. De afspraak staat enkel in je eigen agenda.',
+      inviteSt: `font:450 11.5px/1.5 ${F};color:${n ? '#2F6038' : '#7a8a78'}`,
+      ...trv,
+      rems: [[0, 'Geen'], [15, '15 min'], [60, '1 uur'], [1440, '1 dag'], ...(trv.hasTravel ? [[-1, 'Bij vertrek']] : [])].map(([v, l]) => ({ n: l, go: () => set({ rem: v }), st: seg(st.rem === v, 9) })),
+      noteOpen: st.note, noteClosed: !st.note, openNote: () => set({ note: true }),
+      saveT: n ? 'Maken en uitnodigen' : 'Afspraak maken',
+      saveSt: `height:40px;padding:0 18px;border-radius:9px;display:flex;align-items:center;font:600 13px ${F};${ok ? 'background:' + G + ';color:#fff;cursor:pointer' : 'background:#C9D1C5;color:#fff;cursor:not-allowed'}`
+    };
+  }
+}
+</script>
+</body>
+</html>

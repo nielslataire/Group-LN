@@ -9,13 +9,15 @@ screens: invoices-index
 synonyms: nummeren, factuurnummer, definitief maken, peppol mislukt, octopus, gestructureerde mededeling, concept nummeren, verzenden
 newsTag: Nieuw
 description: wat er gebeurt bij het nummeren en wat je doet als een kanaal mislukt
-related: factuur-aanmaken, factuur-verzenden, facturen-doorboeken
+related: factuur-aanmaken, factuur-verzenden, facturen-doorboeken, terugkerende-facturen-beheren
 intro: |
   Een concept wordt pas een echte factuur als je ze nummert. Het nummeren heeft een eigen scherm dat toont wat er gebeurt: nummer toekennen, doorsturen naar Octopus en e-mail met pdf.
   Daarna zie je wat gelukt is en wat niet.
 before: |
   Je hebt het recht om facturen te nummeren. Het facturatiebedrijf moet gekoppeld zijn aan Octopus, anders lukt het nummeren niet.
 faq:
+  - q: Wat is een concept met de status Ter controle?
+    a: Dat is een Proforma die een terugkerend schema klaarzette. Het heeft een label met het teken ↻. Kijk het na en nummer het zoals elk ander concept. Lees meer in Terugkerende facturen opvolgen en beheren.
   - q: Kan ik het nummeren ongedaan maken?
     a: Nee. Na het nummeren kan je de factuur niet meer verwijderen of wijzigen op bedragen, klant en datums. Je kan ze enkel crediteren.
   - q: Welke datum krijgt de factuur?

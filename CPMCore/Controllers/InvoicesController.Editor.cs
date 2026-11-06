@@ -1,4 +1,4 @@
-using BOCore;
+﻿using BOCore;
 using CPMCore.Documents;
 using CPMCore.Extensions;
 using CPMCore.Models.Invoicing;
@@ -128,7 +128,7 @@ namespace CPMCore.Controllers
         // CREATE (GET)
         [HttpGet]
         [CPMCore.Filters.PermissionWrite(PermissionCodes.Invoicing)]
-        public async Task<IActionResult> Create(int? issuerId = null, int? duplicateInvoiceId = null, bool creditNote = false, bool classic = false, CancellationToken ct = default)
+        public async Task<IActionResult> Create(int? issuerId = null, int? duplicateInvoiceId = null, bool creditNote = false, bool classic = false, bool recurring = false, int? scheduleId = null, CancellationToken ct = default)
         {
             // gl-v2 (punt 47): CreateV2 bij de gl-v2-layout; ?classic=true houdt het oude scherm (o.a. voor nutsaansluitingen).
             if (classic) ViewData["UseGlV2Layout"] = false;
@@ -279,9 +279,31 @@ namespace CPMCore.Controllers
                 ViewBag.DuplicateInvoiceJson = initialJson;
             }
 
+            // Bedrijfsvorm in de snelle "Nieuwe klant"-modal (zelfde lijst als bij leveranciers)
+            ViewBag.LegalForms = await _db.CompanyLegalForm.AsNoTracking().Where(l => l.IsActive).OrderBy(l => l.Name)
+                .Select(l => new CPMCore.Models.Leveranciers.LegalFormOptionViewModel { Id = l.Id, Name = l.Name, Abbreviation = l.Abbreviation }).ToListAsync(ct);
+            // Terugkerende facturen (punt 49): dezelfde pagina met "Terugkerend" gekozen, of een bestaand schema bewerken (50d).
+            if (ViewData["UseGlV2Layout"] as bool? == true && selectedIssuerId > 0)
+                {
+                ViewBag.RecurringCfg = await BuildRecurringCreateConfigAsync(selectedIssuerId, scheduleId, recurring, vm, ct);
+                ViewBag.RecurringScheduleId = scheduleId ?? 0;
+            }
             if (selectedIssuerId > 0)
                 await SetIssuerViewBagsAsync(selectedIssuerId, ct);
             SetCreateBreadcrumb(selectedIssuerId, ViewBag.CompanyName as string);
+            // Terugkerende factuur: Facturen - BCO / Terugkerend / (klant /) Nieuw schema of Bewerken, in plaats van "Nieuwe factuur"
+            if (ViewBag.RecurringCfg != null && (recurring || scheduleId.HasValue))
+            {
+                var recNode = CreateRecurringNode(selectedIssuerId, ViewBag.CompanyName as string);
+                if (scheduleId is > 0 && vm.PartyType.HasValue && vm.PartyId.HasValue)
+                {
+                    var partyName = (await ResolvePartyNamesAsync(new[] { ((byte)(int)vm.PartyType.Value, vm.PartyId.Value) }, ct)).GetValueOrDefault(((byte)(int)vm.PartyType.Value, vm.PartyId.Value)).Name;
+                    var detailNode = new MvcBreadcrumbNode(nameof(RecurringDetail), ControllerName, string.IsNullOrWhiteSpace(partyName) ? "Schema" : partyName) { Parent = recNode, RouteValues = new { id = scheduleId } };
+                    ViewData["BreadcrumbNode"] = new MvcBreadcrumbNode(nameof(Create), ControllerName, "Bewerken") { Parent = detailNode, RouteValues = new { issuerId = selectedIssuerId, scheduleId } };
+                }
+                else
+                    ViewData["BreadcrumbNode"] = new MvcBreadcrumbNode(nameof(Create), ControllerName, "Nieuw schema") { Parent = recNode, RouteValues = new { issuerId = selectedIssuerId, recurring = true } };
+            }
             SetPageHeader("bx bx-receipt", "Nieuwe factuur");
 
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "CreateV2" : "Create", vm);

@@ -18,11 +18,15 @@
     // Dezelfde pagina bewerkt ook een concept (Invoices/Edit bij een conceptfactuur): dan is het model een InvoiceDraftEditVM.
     var edit = Model as InvoiceDraftEditVM;
     var isEdit = edit != null;
+    // Terugkerende facturen (punt 49): bij een nieuwe factuur kies je in stap 2 eenmalig of terugkerend; ?recurring=true of ?scheduleId=… opent meteen op Terugkerend.
+    var recCfg = isEdit ? null : ViewBag.RecurringCfg;
+    var recScheduleId = (int)(ViewBag.RecurringScheduleId ?? 0);
+    var recStartActive = recCfg != null && (recScheduleId > 0 || Context.Request.Query["recurring"].ToString().Equals("true", StringComparison.OrdinalIgnoreCase));
     var lockStages = isEdit && Model.Mode == InvoiceMode.Stages; // zoals het oude EditDraft: bij een concept uit schijven liggen bedrijf, klant, project, opbouw, btw en de schijven vast
     var backUrl = isEdit && !string.IsNullOrWhiteSpace(edit!.ReturnUrl)
         ? edit.ReturnUrl
         : isEdit ? Url.Action("Detail", "Invoices", new { id = edit!.InvoiceId, issuerCompanyId = issuerId }) : Url.Action("Index", "Invoices", new { issuerCompanyId = issuerId });
-    ViewData["Title"] = isEdit ? "Factuur bewerken" : "Nieuwe factuur";
+    ViewData["Title"] = isEdit ? "Factuur bewerken" : recStartActive ? (recScheduleId > 0 ? "Terugkerende factuur bewerken" : "Nieuwe terugkerende factuur") : "Nieuwe factuur";
     ViewData["HelpScreenId"] = isEdit ? "facturen-concept-bewerken" : "facturen-nieuw";
     ViewData["PageIcon"] = "ph ph-receipt";
     ViewData["GlV2FullHeightBody"] = true;
@@ -72,8 +76,11 @@
             detail = Url.Action("Detail", "Invoices"),
             edit = Url.Action("Edit", "Invoices"),
             send = Url.Action("Send", "Invoices"),
-            create = Url.Action("Create", "Invoices", new { issuerId })
+            create = Url.Action("Create", "Invoices", new { issuerId }),
+            saveRecurring = Url.Action("SaveRecurringV2", "Invoices")
         },
+        recurring = recCfg,
+        recurringStart = recStartActive,
         issuerId,
         issuerName = (ViewBag.CompanyName as string) ?? "",
         issuers = Model.Issuers.Select(i => new { id = i.Id, name = i.Name }),
@@ -129,6 +136,7 @@
 {
     <link rel="stylesheet" href="~/css/gl-v2-invoices-edit.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-invoices-create.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-invoices-recurring.css" asp-append-version="true" />
 }
 @section PageTitleBadges
 {
@@ -153,9 +161,9 @@
         <section class="gl-v2-section-card gl-v2-ic-main">
             <div class="gl-v2-section-card-header">
                 <span class="gl-v2-section-card-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
-                <h2 class="gl-v2-section-card-title">@(isEdit ? "Factuur bewerken" : "Nieuwe factuur")</h2>
+                <h2 class="gl-v2-section-card-title" id="ic-card-title">@(isEdit ? "Factuur bewerken" : recStartActive ? (recScheduleId > 0 ? "Terugkerende factuur bewerken" : "Nieuwe terugkerende factuur") : "Nieuwe factuur")</h2>
                 <span class="gl-v2-field-divider"></span>
-                <span class="gl-v2-section-card-desc">@(isEdit ? "concept " + edit!.DisplayId + " · je nummert het daarna in de lijst met facturen" : "concept · je nummert het daarna in de lijst met facturen")</span>
+                <span class="gl-v2-section-card-desc" id="ic-card-desc">@(isEdit ? "concept " + edit!.DisplayId + " · je nummert het daarna in de lijst met facturen" : "concept · je nummert het daarna in de lijst met facturen")</span>
             </div>
 
             <div class="gl-v2-ic-steps">
@@ -171,7 +179,7 @@
                 @* ─── Stap 1: Partijen (47a) ─── *@
                 <div class="gl-v2-ic-panel" data-ic-panel="1">
                     <div class="gl-v2-ic-row2">
-                        <div class="gl-v2-field">
+                        <div class="gl-v2-field" id="ic-kind-field">
                             <span class="gl-v2-field-label">SOORT</span>
                             @await Html.PartialAsync("GlV2/_Segmented", new GlV2SegmentedVm { Id = "ic-kind", Fill = true, AriaLabel = "Soort", Items = new List<GlV2SegmentedItem> {
                                 new() { Text = "Factuur", Active = !Model.IsCreditNote, Data = new() { ["kind"] = "invoice" } },
@@ -219,10 +227,16 @@
 
                 @* ─── Stap 2: Instellingen (47b) ─── *@
                 <div class="gl-v2-ic-panel" data-ic-panel="2" hidden>
-                    <div class="gl-v2-ic-block">
-                        <div class="gl-v2-ic-block-head"><b>Data</b><span>vervaldatum wordt berekend</span></div>
-                        <div class="gl-v2-ic-row2">
+                    @if (!isEdit)
+                    {
+                        @await Html.PartialAsync("_RecurringStep2V2")
+                    }
+                    <div class="gl-v2-ic-block" id="ic-block-data">
+                        <div class="gl-v2-ic-block-head"><b>Data</b><span id="ic-data-sub">vervaldatum wordt berekend</span></div>
+                        <div class="gl-v2-ic-row2" id="ic-data-row">
+                            <div id="ic-date-wrap">
                             @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "InvoiceDate", Id = "ic-date", Label = "FACTUURDATUM", Required = true, IsoValue = Model.InvoiceDate.ToString("yyyy-MM-dd"), DisplayValue = Model.InvoiceDate.ToString("dd/MM/yyyy") })
+                            </div>
                             <div>
                                 @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "PaymentTermId", Id = "PaymentTermId", Label = "BETAALTERMIJN", Value = Model.PaymentTermId?.ToString(), Items = termOptions, Placeholder = "Kies een termijn" })
                                 <span class="gl-v2-field-help" id="ic-due-help">&nbsp;</span>
@@ -230,7 +244,7 @@
                         </div>
                     </div>
 
-                    <div class="gl-v2-ic-block">
+                    <div class="gl-v2-ic-block" id="ic-block-modes">
                         <div class="gl-v2-ic-block-head"><b>Opbouw</b><span>hoe worden de lijnen gevuld</span></div>
                         @await Html.PartialAsync("GlV2/_Segmented", new GlV2SegmentedVm { Id = "ic-modes", Fill = true, AriaLabel = "Opbouw", Items = new List<GlV2SegmentedItem> {
                                 new() { Text = "Vrije lijnen", Active = Model.Mode == InvoiceMode.Free || (int)Model.Mode == 4, Data = new() { ["mode"] = "1" } },
@@ -255,6 +269,10 @@
                     {
                         <div class="gl-v2-notice gl-v2-notice-compact is-info"><span class="gl-v2-notice-icon"><i class="ph ph-info" aria-hidden="true"></i></span><span class="gl-v2-notice-text">Deze factuur is opgebouwd uit nutsaansluitingen. De lijnen zijn als vrije lijnen overgenomen: bedragen en btw kan je hier nog aanpassen.</span></div>
                     }
+                    @if (!isEdit)
+                    {
+                        @await Html.PartialAsync("_RecurringVarsV2")
+                    }
                     <div class="gl-v2-ic-block-head"><b id="ic-lines-title">Lijnen</b><span id="ic-lines-sub">sleep om te herschikken · Tab springt naar het volgende veld</span></div>
                     <div id="ic-lines-free">
                         <div class="gl-v2-ic-lines" role="table" aria-label="Factuurlijnen">
@@ -269,6 +287,10 @@
 
                 @* ─── Stap 4: Tekst (47d) ─── *@
                 <div class="gl-v2-ic-panel" data-ic-panel="4" hidden>
+                    @if (!isEdit)
+                    {
+                        @await Html.PartialAsync("_RecurringSummaryV2")
+                    }
                     <div class="gl-v2-field">
                         <label class="gl-v2-field-label" for="HeaderDescription">OMSCHRIJVING <span class="gl-v2-ie-opt">· optioneel</span></label>
                         <div class="gl-v2-field-box gl-v2-ie-ta"><textarea id="HeaderDescription" name="HeaderDescription" class="gl-v2-field-input" rows="3" data-ic-bind="header">@Model.HeaderDescription</textarea></div>
@@ -284,7 +306,7 @@
                         <div class="gl-v2-field-box gl-v2-ie-ta"><textarea id="FooterDescription" name="FooterDescription" class="gl-v2-field-input" rows="3" data-ic-bind="footer">@Model.FooterDescription</textarea></div>
                         <span class="gl-v2-field-help">staat onderaan de factuur, boven de betalingsgegevens. De btw-vermelding per tarief komt uit Instellingen en staat vast.</span>
                     </div>
-                    <div class="gl-v2-field">
+                    <div class="gl-v2-field" id="ic-appendix-field">
                         <span class="gl-v2-field-label">PDF-BIJLAGE <span class="gl-v2-ie-opt">· optioneel</span></span>
                         @await Html.PartialAsync("GlV2/_Dropzone", new GlV2DropzoneVm { Name = "PdfAppendix", Id = "PdfAppendix", Accept = "application/pdf,.pdf", Title = "Sleep een PDF hierheen of", LinkText = "kies een bestand", Sub = "komt achter de factuur en gaat ook mee via Peppol", CurrentName = isEdit ? edit!.CurrentPdfAppendixFileName : null, CurrentSub = "huidige bijlage · komt achter de factuur, gaat ook mee via Peppol", AriaLabel = "PDF-bijlage kiezen" })
                     </div>
@@ -294,9 +316,13 @@
 
         @* ─── Live voorbeeld (opmaak volgens 35b) ─── *@
         <aside class="gl-v2-ic-side" aria-label="Voorbeeld van de factuur">
-            <div class="gl-v2-ie-side-head"><span>VOORBEELD</span><small>Layout A · werkt live bij</small></div>
+            @if (!isEdit)
+            {
+                @await Html.PartialAsync("_RecurringSideV2")
+            }
+            <div class="gl-v2-ie-side-head" id="ic-sheet-head"><span>VOORBEELD</span><small>Layout A · werkt live bij</small></div>
             <div class="gl-v2-ps-wrap" id="ic-sheet"></div>
-            <span class="gl-v2-ie-side-note">opmaak volgens de factuurlayout van @((ViewBag.CompanyName as string) ?? "het facturatiebedrijf") · proforma tot het nummeren</span>
+            <span class="gl-v2-ie-side-note" id="ic-sheet-note">opmaak volgens de factuurlayout van @((ViewBag.CompanyName as string) ?? "het facturatiebedrijf") · proforma tot het nummeren</span>
         </aside>
     </div>
 
@@ -308,6 +334,7 @@
         <div class="gl-v2-form-actionbar-actions">
             <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="ic-prev" disabled>Vorige</button>
             <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="ic-next"><span>Volgende</span><i class="ph ph-caret-right" aria-hidden="true"></i></button>
+            <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="ic-activate" hidden>Schema activeren</button>
         </div>
     </div>
 </form>
@@ -320,4 +347,5 @@
     <script>window.GlV2InvoiceCreate = @Html.Raw(cfgJson);</script>
     <script src="~/js/gl-v2-invoices-newparty.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-invoices-create.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-invoices-recurring-create.js" asp-append-version="true"></script>
 }

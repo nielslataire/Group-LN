@@ -88,17 +88,17 @@
                     <div class="gl-v2-field">
                         <span class="gl-v2-field-label" id="is-channel-label">KANAAL</span>
                         <div class="gl-v2-is-channels" role="radiogroup" aria-labelledby="is-channel-label">
-                            <label class="gl-v2-is-channel @(channel == "email" ? "is-on" : "")">
-                                <span class="gl-v2-is-channel-top"><input type="radio" name="Channel" value="email" @(channel == "email" ? "checked" : "") /><i class="ph ph-envelope-simple" aria-hidden="true"></i><b>E-mail</b></span>
-                                <small>PDF en UBL als bijlage naar de ontvangers hieronder</small>
+                            <label class="gl-v2-radio-card">
+                                <input type="radio" name="Channel" value="email" @(channel == "email" ? "checked" : "") />
+                                <span><b><i class="ph ph-envelope-simple" aria-hidden="true"></i>E-mail</b><small>PDF en UBL als bijlage naar de ontvangers hieronder</small></span>
                             </label>
-                            <label class="gl-v2-is-channel @(channel == "peppol" ? "is-on" : "") @(!peppolOk || copyMode ? "is-off" : "")" title="@(peppolOk ? "" : Model.OctopusNote)">
-                                <span class="gl-v2-is-channel-top"><input type="radio" name="Channel" value="peppol" @(channel == "peppol" ? "checked" : "") @(!peppolOk || copyMode ? "disabled" : "") /><i class="ph ph-globe" aria-hidden="true"></i><b>Peppol via Octopus</b>@if (!peppolOk && !copyMode) { <span class="gl-v2-is-soft">Niet beschikbaar</span> }</span>
-                                <small>@(!peppolOk && !copyMode && !string.IsNullOrWhiteSpace(Model.OctopusNote) ? Model.OctopusNote : "doorsturen naar je Octopus, dat de factuur via Peppol naar de klant verstuurt")</small>
+                            <label class="gl-v2-radio-card" title="@(peppolOk ? "" : Model.OctopusNote)">
+                                <input type="radio" name="Channel" value="peppol" @(channel == "peppol" ? "checked" : "") @(!peppolOk || copyMode ? "disabled" : "") />
+                                <span><b><i class="ph ph-globe" aria-hidden="true"></i>Peppol via Octopus@if (!peppolOk && !copyMode) { <span class="gl-v2-is-soft">Niet beschikbaar</span> }</b><small>@(!peppolOk && !copyMode && !string.IsNullOrWhiteSpace(Model.OctopusNote) ? Model.OctopusNote : "doorsturen naar je Octopus, dat de factuur via Peppol naar de klant verstuurt")</small></span>
                             </label>
-                            <label class="gl-v2-is-channel @(channel == "both" ? "is-on" : "") @(!peppolOk || copyMode ? "is-off" : "")" title="@(peppolOk ? "" : Model.OctopusNote)">
-                                <span class="gl-v2-is-channel-top"><input type="radio" name="Channel" value="both" @(channel == "both" ? "checked" : "") @(!peppolOk || copyMode ? "disabled" : "") /><i class="ph ph-copy" aria-hidden="true"></i><b>Beide</b></span>
-                                <small>e-mail naar de klant en doorsturen naar Octopus voor Peppol</small>
+                            <label class="gl-v2-radio-card" title="@(peppolOk ? "" : Model.OctopusNote)">
+                                <input type="radio" name="Channel" value="both" @(channel == "both" ? "checked" : "") @(!peppolOk || copyMode ? "disabled" : "") />
+                                <span><b><i class="ph ph-copy" aria-hidden="true"></i>Beide</b><small>e-mail naar de klant en doorsturen naar Octopus voor Peppol</small></span>
                             </label>
                         </div>
                     </div>

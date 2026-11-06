@@ -45,6 +45,11 @@
                         <div class="gl-v2-field"><label class="gl-v2-field-label" for="np-company-name">BEDRIJFSNAAM</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="np-company-name" placeholder="Bedrijfsnaam" autocomplete="off" /></div></div>
                         <div class="gl-v2-field"><label class="gl-v2-field-label" for="np-email">E-MAIL</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="np-email" type="email" inputmode="email" placeholder="klant@bedrijf.be" autocomplete="off" /></div></div>
                     </div>
+                    @* Bedrijfsvorm: dezelfde lijst als bij leveranciers (CompanyLegalForm); bij een klant op ClientAccount, bij een leverancier als afkorting *@
+                    <div class="gl-v2-ic-row2">
+                        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "np_legal_form", Id = "np-legal-form", Label = "BEDRIJFSVORM", EmptyText = "Geen", Placeholder = "Kies een bedrijfsvorm",
+                            Items = (ViewBag.LegalForms as IEnumerable<CPMCore.Models.Leveranciers.LegalFormOptionViewModel> ?? Enumerable.Empty<CPMCore.Models.Leveranciers.LegalFormOptionViewModel>()).Select(l => new GlV2SelectItem { Value = l.Id.ToString(), Text = l.Name + " (" + l.Abbreviation + ")" }).ToList() })
+                    </div>
                     <div class="gl-v2-field"><span class="gl-v2-field-label">FACTURATIE E-MAIL</span>
                         @await Html.PartialAsync("GlV2/_Segmented", Seg("np-inv-mode", "Facturatie e-mail", ("Zelfde als e-mail", "same", true), ("Ander adres", "other", false)))
                         <div class="gl-v2-field-box" id="np-inv-box" hidden style="margin-top:8px"><input class="gl-v2-field-input" id="np-inv-email" type="email" placeholder="facturatie@bedrijf.be" autocomplete="off" aria-label="Ander facturatie e-mailadres" /></div>

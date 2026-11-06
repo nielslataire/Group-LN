@@ -25,20 +25,14 @@
     <input type="hidden" name="sourceGroupId" id="gl-v2-npg-source" value="" disabled />
 
     <div class="gl-v2-npg-section-label">VERTREK VAN</div>
-    <div class="gl-v2-npg-modes" role="radiogroup" aria-label="Vertrek van">
-        <label class="gl-v2-npg-mode@(hasSources ? "" : " is-disabled")">
+    <div class="gl-v2-radio-cards" role="radiogroup" aria-label="Vertrek van">
+        <label class="gl-v2-radio-card">
             <input type="radio" name="npgMode" value="copy" @(hasSources ? "checked" : "disabled") />
-            <span class="gl-v2-npg-mode-text">
-                <span class="gl-v2-npg-mode-title">Bestaande groep</span>
-                <span class="gl-v2-npg-mode-desc">Kopieer schijven en btw uit dit of een ander project.</span>
-            </span>
+            <span><b>Bestaande groep</b><small>Kopieer schijven en btw uit dit of een ander project.</small></span>
         </label>
-        <label class="gl-v2-npg-mode">
+        <label class="gl-v2-radio-card">
             <input type="radio" name="npgMode" value="empty" @(hasSources ? "" : "checked") />
-            <span class="gl-v2-npg-mode-text">
-                <span class="gl-v2-npg-mode-title">Leeg</span>
-                <span class="gl-v2-npg-mode-desc">Begin met één schijf “Bij de voorlopige oplevering (ontvangst van de sleutels)”.</span>
-            </span>
+            <span><b>Leeg</b><small>Begin met één schijf “Bij de voorlopige oplevering (ontvangst van de sleutels)”.</small></span>
         </label>
     </div>
 

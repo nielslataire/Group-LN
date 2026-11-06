@@ -183,7 +183,10 @@ namespace ServiceCore
 
             return items;
         }
-        public async Task<IReadOnlyList<InvoiceListItemBO>> GetByCompanyAsync(int issuerCompanyId, CancellationToken ct = default)
+        public Task<IReadOnlyList<InvoiceListItemBO>> GetByCompanyAsync(int issuerCompanyId, CancellationToken ct = default)
+            => GetByCompanyAsync(issuerCompanyId, null, null, ct);
+
+        public async Task<IReadOnlyList<InvoiceListItemBO>> GetByCompanyAsync(int issuerCompanyId, DateOnly? from, DateOnly? to, CancellationToken ct = default)
         {
             // legacy mapping ophalen (CompanyInfo.Id dat bij deze issuer hoort)
             var legacyId = await _db.Set<IssuerCompany>()
@@ -194,6 +197,8 @@ namespace ServiceCore
 
             var q = _db.Invoices.AsNoTracking()
                      .Where(i => i.IssuerCompanyId == issuerCompanyId);
+            if (from.HasValue) q = q.Where(i => i.Date >= from.Value);
+            if (to.HasValue) q = q.Where(i => i.Date <= to.Value);
 
             var result =
                 from i in q

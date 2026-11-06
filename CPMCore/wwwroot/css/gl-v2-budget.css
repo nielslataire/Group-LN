@@ -410,12 +410,10 @@ body.bw-show-calc tbody:not(.is-dicht) .bw-act-formule { display: table-row; }
 
 /* Startpunt: twee keuzekaarten met een radiocirkel; de gekozen kaart krijgt een groene rand en tint, de kopiekaart toont dan budget, versie en de stappen */
 .gl-v2 .bw-start { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(44,59,42,.12); cursor: default; margin: 0; }
-.gl-v2 .bw-start.is-aan { border: 1.5px solid var(--gl-v2-primary); padding: 11.5px 13.5px; background: #F2F5EF; }
+.gl-v2 .bw-start.is-aan { border: 1.5px solid var(--gl-v2-primary); padding: 11.5px 13.5px; background: #EEF3EA; }
 .gl-v2 .bw-start-kop { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; margin: 0; }
-.gl-v2 .bw-start input[type=radio], .gl-v2 .bw-overnemen input, .gl-v2 .bw-vg-rij input[type=checkbox] { position: absolute; opacity: 0; width: 0; height: 0; }
-.gl-v2 .bw-radio { width: 18px; height: 18px; flex: none; box-sizing: border-box; border-radius: 9px; border: 1.5px solid rgba(44,59,42,.3); background: #fff; margin-top: 1px; }
-.gl-v2 .bw-start.is-aan .bw-radio { border: 5px solid var(--gl-v2-primary); }
-.gl-v2 .bw-start input:focus-visible + .bw-radio { outline: 2.5px solid var(--gl-v2-gold, #C9A96E); outline-offset: 2px; }
+.gl-v2 .bw-overnemen input, .gl-v2 .bw-vg-rij input[type=checkbox] { position: absolute; opacity: 0; width: 0; height: 0; }
+.gl-v2 .bw-start-kop input[type=radio] { margin-top: 1px; }
 .gl-v2 .bw-start-tekst { display: flex; flex-direction: column; gap: 2px; }
 .gl-v2 .bw-start-tekst strong { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
 .gl-v2 .bw-start-tekst small { font: 450 11.5px/1.45 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }

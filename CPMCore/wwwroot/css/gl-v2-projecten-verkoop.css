@@ -61,6 +61,11 @@
 .gl-v2-vk-x-formats button:disabled { opacity: .5; cursor: not-allowed; }
 .gl-v2-vk-x-opts { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
 .gl-v2-vk-x-checks { display: grid; gap: 8px; margin-bottom: 18px; }
+.gl-v2-vk-x-seg { margin-bottom: 18px; }
+.gl-v2-vk-x-seg[hidden] { display: none; }
+.gl-v2-vk-x-seg b { margin-left: 4px; font-weight: 600; opacity: .7; font-variant-numeric: tabular-nums; }
+#vk-export-modal .gl-v2-vk-x-seg > label.is-disabled { opacity: 1; background: transparent; border-color: transparent; }
+.gl-v2-vk-x-cards { margin-bottom: 18px; }
 .gl-v2-vk-x-opts label, .gl-v2-vk-x-checks label { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--gl-v2-hairline); border-radius: 9px; background: var(--gl-v2-surface); font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); cursor: pointer; }
 .gl-v2-vk-x-opts label:has(input:checked), .gl-v2-vk-x-checks label:has(input:checked) { border-color: #00532D; background: #F2F5EF; }
 .gl-v2-vk-x-opts label.is-disabled { opacity: .5; cursor: not-allowed; }

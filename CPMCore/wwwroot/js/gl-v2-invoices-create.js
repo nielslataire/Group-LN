@@ -48,6 +48,9 @@
         lines: [], stages: null, orders: null, selStages: {}, selOrders: {}, orderPct: {}, issuer: null, file: null, busy: false
     };
     var CP = { ClientAccount: "ca", ClientContact: "cc", Supplier: "su" };
+    // Terugkerende facturen (punt 49): js/gl-v2-invoices-recurring-create.js hangt zich hier aan op (hooks.rec) zodra de pagina op Terugkerend staat.
+    var hooks = window.GlV2InvoiceCreateHooks = { rec: null };
+    function recOn() { return !!(hooks.rec && hooks.rec.active()); }
 
     // ───────────────────────── stappen ─────────────────────────
     var TOTAL = 4, prev = $("#ic-prev"), next = $("#ic-next"), saveDraft = $("#ic-save-draft"), now = $("#ic-step-now");
@@ -59,8 +62,10 @@
         prev.disabled = state.step === 1;
         next.hidden = state.step === TOTAL;
         // op de laatste stap is bewaren de hoofdactie; nummeren gebeurt nooit hier maar in de lijst met facturen
-        saveDraft.classList.toggle("gl-v2-btn-primary", state.step === TOTAL);
-        saveDraft.classList.toggle("gl-v2-btn-secondary", state.step !== TOTAL);
+        var primarySave = state.step === TOTAL && !recOn();
+        saveDraft.classList.toggle("gl-v2-btn-primary", primarySave);
+        saveDraft.classList.toggle("gl-v2-btn-secondary", !primarySave);
+        if (hooks.rec) hooks.rec.onStep(state.step);
         var body = $(".gl-v2-ic-body"); if (body && body.scrollIntoView) body.scrollIntoView({ block: "nearest" });
     }
     prev.addEventListener("click", function () { show(state.step - 1); });
@@ -284,7 +289,7 @@
 
     // ───────────────────────── lijnen ─────────────────────────
     var seqLine = 0;
-    function newLine(src) { src = src || {}; return { k: ++seqLine, text: src.text || "", qty: src.quantity != null ? src.quantity : 1, price: src.unitPrice != null ? src.unitPrice : "", vat: src.vatTypeId != null ? String(src.vatTypeId) : null }; }
+    function newLine(src) { src = src || {}; return { k: ++seqLine, text: src.text || "", qty: src.quantity != null ? src.quantity : 1, price: src.unitPrice != null ? src.unitPrice : "", vat: src.vatTypeId != null ? String(src.vatTypeId) : null, first: !!src.firstOnly, ix: !!src.indexable }; }
     state.lines = (cfg.lines && cfg.lines.length ? cfg.lines : [null]).map(function (l) { return newLine(l || {}); });
 
     function lineVat(l) { return (l.vat != null && vatById(l.vat)) || defaultVat(); }
@@ -317,7 +322,8 @@
                 '<div class="gl-v2-field-box"><input class="gl-v2-field-input is-num Currencymask" data-f="price" inputmode="decimal" autocomplete="off" aria-label="Eenheidsprijs van lijn ' + (i + 1) + '" placeholder="0,00" value="' + esc(l.price === "" || l.price == null ? "" : parseNum(l.price).toFixed(2)) + '" /><span class="gl-v2-field-suffix">€</span></div>' +
                 vatSelect(lineVat(l).id, i + 1) +
                 '<span class="is-total" data-total>' + euro(lineNet(l)) + '</span>' +
-                '<button type="button" class="gl-v2-ic-del" aria-label="Lijn ' + (i + 1) + ' verwijderen"' + (state.lines.length === 1 ? " disabled" : "") + '><i class="ph ph-trash" aria-hidden="true"></i></button></div>';
+                '<button type="button" class="gl-v2-ic-del" aria-label="Lijn ' + (i + 1) + ' verwijderen"' + (state.lines.length === 1 ? " disabled" : "") + '><i class="ph ph-trash" aria-hidden="true"></i></button>' +
+                (recOn() ? hooks.rec.lineExtras(l, i) : "") + '</div>';
         }).join("");
         if (window.GlV2Select) window.GlV2Select.init(body);
         if (window.CurrencyMask) window.CurrencyMask.init(body.querySelectorAll(".Currencymask"));
@@ -438,7 +444,7 @@
     function activeLines() {
         var out = [];
         if (state.mode === 1) {
-            state.lines.forEach(function (l) { var net = lineNet(l); if (!String(l.text).trim() && net === 0) return; var v = lineVat(l); out.push({ text: l.text, qty: parseNum(l.qty) || 1, unit: parseNum(l.price), net: net, pct: v.pct, vatId: v.id, vatCode: v.code, group: "" }); });
+            state.lines.forEach(function (l) { var net = lineNet(l); if (!String(l.text).trim() && net === 0) return; var v = lineVat(l); out.push({ text: l.text, qty: parseNum(l.qty) || 1, unit: parseNum(l.price), net: net, pct: v.pct, vatId: v.id, vatCode: v.code, group: "", src: l }); });
         } else if (state.mode === 2) {
             stageRows().forEach(function (s) { if (state.selStages[s.stageId]) out.push({ text: s.text, qty: 1, unit: s.amount, net: s.amount, pct: s.vat, group: s.groupName || "Schijven", stage: s }); });
         } else {
@@ -518,13 +524,14 @@
     function validate() {
         var errs = [];
         if (!state.party) errs.push({ field: "Klant of leverancier", message: "Kies een klant of leverancier.", location: "Partijen", target: $("#ic-party-field") });
-        if (!dateInput.value) errs.push({ field: "Factuurdatum", message: "Vul de factuurdatum in.", location: "Instellingen", target: $("#ic-date_picker") });
+        if (!dateInput.value && !recOn()) errs.push({ field: "Factuurdatum", message: "Vul de factuurdatum in.", location: "Instellingen", target: $("#ic-date_picker") });
         var lines = activeLines(), lt = state.mode === 1 ? $("#ic-lines-free") : $("#ic-lines-pick");
         if (state.mode === 1) {
             if (!lines.length) errs.push({ field: "Lijnen", message: "Voeg minstens één lijn met een omschrijving of bedrag toe.", location: "Lijnen", target: lt });
             else if (lines.some(function (l) { return !String(l.text).trim(); })) errs.push({ field: "Lijnen", message: "Elke lijn heeft een omschrijving nodig.", location: "Lijnen", target: lt });
         } else if (!lines.length) errs.push({ field: "Lijnen", message: state.mode === 2 ? "Kies minstens één openstaande post." : "Kies minstens één regel uit de offerte met een bedrag.", location: "Lijnen", target: lt });
-        if (state.file && !/\.pdf$/i.test(state.file.name) && state.file.type !== "application/pdf") errs.push({ field: "PDF-bijlage", message: "De bijlage moet een PDF-bestand zijn.", location: "Tekst", target: $("#PdfAppendix_zone") });
+        if (recOn()) hooks.rec.validate().forEach(function (e) { errs.push(e); });
+        if (state.file && !recOn() && !/\.pdf$/i.test(state.file.name) && state.file.type !== "application/pdf") errs.push({ field: "PDF-bijlage", message: "De bijlage moet een PDF-bestand zijn.", location: "Tekst", target: $("#PdfAppendix_zone") });
         return errs;
     }
     var errorSummary = window.GlV2ErrorSummary ? window.GlV2ErrorSummary.init({
@@ -548,6 +555,7 @@
                 add("Text", String(l.text).trim()); add("Quantity", postNum(l.qty, 3)); add("UnitPrice", postNum(l.unit)); add("Price", postNum(l.net));
                 add("VatPercentage", postNum(l.pct)); if (l.vatId !== "" && l.vatId != null) add("VatTypeId", l.vatId); if (l.vatCode) add("VatCode", l.vatCode);
                 add("IsSelected", "true"); add("LineType", "Free"); add("GroupName", "Vrije lijnen"); add("UtilityCost", "false");
+                if (recOn()) { add("FirstOnly", l.src && l.src.first ? "true" : "false"); add("Indexable", l.src && l.src.ix ? "true" : "false"); }
             } else if (state.mode === 2) {
                 var s = l.stage; add("IsSelected", "true"); add("Text", s.text); add("Price", postNum(s.amount)); add("VatPercentage", postNum(s.vat));
                 if (s.unitId != null) add("UnitId", s.unitId); add("PaymentStageId", s.stageId); add("LineType", "Stages"); if (s.groupName) add("GroupName", s.groupName); add("UtilityCost", "false");
@@ -559,12 +567,13 @@
             }
             i++;
         });
+        if (recOn()) hooks.rec.extend(fd);
         return fd;
     }
     function busy(on) { state.busy = on;[saveDraft, next, prev].forEach(function (b) { if (b) b.disabled = on || (b === prev && state.step === 1); }); }
     function save() {
         busy(true);
-        return fetch(cfg.urls.save, { method: "POST", body: buildData(), credentials: "same-origin", headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" } }).then(function (r) {
+        return fetch(recOn() ? cfg.urls.saveRecurring : cfg.urls.save, { method: "POST", body: buildData(), credentials: "same-origin", headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" } }).then(function (r) {
             if ((r.headers.get("content-type") || "").indexOf("json") < 0) throw new Error("De server gaf geen geldig antwoord (" + r.status + "). Meld je zo nodig opnieuw aan en probeer opnieuw.");
             return r.json();
         }).then(function (r) { busy(false); if (!r.ok) throw new Error(r.error || "De factuur kon niet bewaard worden."); return r; }, function (e) { busy(false); throw e; });
@@ -572,7 +581,8 @@
     saveDraft.addEventListener("click", function () {
         if (blocked()) return;
         save().then(function (r) {
-            if (edit) window.location.assign(r.returnUrl || (cfg.urls.detail + "?id=" + encodeURIComponent(r.invoiceId) + "&issuerCompanyId=" + encodeURIComponent(r.issuerCompanyId)));
+            if (r.redirect) window.location.assign(r.redirect);
+            else if (edit) window.location.assign(r.returnUrl || (cfg.urls.detail + "?id=" + encodeURIComponent(r.invoiceId) + "&issuerCompanyId=" + encodeURIComponent(r.issuerCompanyId)));
             else window.location.assign(cfg.urls.index);
         }).catch(function (e) { serverError(e.message); });
     });
@@ -595,4 +605,11 @@
         $("#ic-mode-help").textContent = "De opbouw ligt vast bij een concept uit schijven.";
     }
     drawDue(); show(1); draw();
+    // Voor js/gl-v2-invoices-recurring-create.js: de staat en de herteken-functies van dit formulier.
+    window.GlV2InvoiceCreateApi = {
+        state: state, show: show, draw: draw, drawDue: drawDue, setMode: setMode, renderLines: renderLinesPanel, activeLines: activeLines, totals: totals,
+        partyName: function () { return state.party ? ((state.detail && state.detail.name) || state.party.text || "") : ""; },
+        partyId: function () { return state.party ? state.party.id : ""; }
+    };
+    document.dispatchEvent(new CustomEvent("gl-v2-ic:ready"));
 })();

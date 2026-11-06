@@ -145,18 +145,12 @@
                         </div>
                     </div>
                     <div class="gl-v2-col-3">
-                        <div class="gl-v2-field">
-                            <label class="gl-v2-field-label" for="@Html.IdFor(m => m.SelectedLegalFormId)">Bedrijfsvorm</label>
-                            <div class="gl-v2-field-box">
-                                <select id="@Html.IdFor(m => m.SelectedLegalFormId)" name="@Html.NameFor(m => m.SelectedLegalFormId)" class="gl-v2-field-input">
-                                    <option value="">Kies …</option>
-                                    @foreach (var legal in Model.LegalForms)
-                                    {
-                                        <option value="@legal.Id" selected="@(Model.SelectedLegalFormId == legal.Id ? "selected" : null)">@legal.Name (@legal.Abbreviation)</option>
-                                    }
-                                </select>
-                            </div>
-                        </div>
+                        @await Html.PartialAsync("GlV2/_SelectList", new CPMCore.Models.GlV2.GlV2SelectListVm
+                        {
+                            Name = "SelectedLegalFormId", Id = "SelectedLegalFormId", Label = "Bedrijfsvorm", Value = Model.SelectedLegalFormId?.ToString(),
+                            EmptyText = "Geen", Placeholder = "Kies een bedrijfsvorm",
+                            Items = Model.LegalForms.Select(l => new CPMCore.Models.GlV2.GlV2SelectItem { Value = l.Id.ToString(), Text = l.Name + " (" + l.Abbreviation + ")" }).ToList()
+                        })
                     </div>
                     <div class="gl-v2-col-4">
                         <div class="gl-v2-field">

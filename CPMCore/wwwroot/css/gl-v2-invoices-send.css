@@ -18,16 +18,10 @@
 /* kanaal */
 .gl-v2-is-channels { display: flex; gap: 10px; }
 @media (max-width: 899.98px) { .gl-v2-is-channels { flex-direction: column; } }
-.gl-v2-is-channel { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(44, 59, 42, .12); background: #FAFBF8; cursor: pointer; }
-.gl-v2-is-channel.is-on { border: 1.5px solid #00532D; background: #F2F5EF; padding: 11.5px 13.5px; }
-.gl-v2-is-channel.is-off { cursor: not-allowed; }
-.gl-v2-is-channel-top { display: flex; align-items: center; gap: 8px; }
-.gl-v2-is-channel-top b { font: 600 13px var(--gl-v2-font-sans); color: #7a8a78; }
-.gl-v2-is-channel.is-on .gl-v2-is-channel-top b { color: var(--gl-v2-ink); }
-.gl-v2-is-channel-top > i { font-size: 15px; color: #7a8a78; }
-.gl-v2-is-channel.is-on .gl-v2-is-channel-top > i { color: #00532D; }
-.gl-v2-is-channel-top input { flex: none; width: 16px; height: 16px; margin: 0; accent-color: #00532D; }
-.gl-v2-is-channel small { padding-left: 24px; font: 450 11px/1.45 var(--gl-v2-font-sans); color: #7a8a78; }
+.gl-v2-is-channels .gl-v2-radio-card { flex: 1; min-width: 0; }
+.gl-v2-is-channels .gl-v2-radio-card b { display: flex; align-items: center; gap: 7px; }
+.gl-v2-is-channels .gl-v2-radio-card b > i { font-size: 15px; color: var(--gl-v2-muted, #6B7A68); }
+.gl-v2-is-channels .gl-v2-radio-card:has(> input:checked) b > i { color: #00532D; }
 .gl-v2-is-soft { margin-left: auto; padding: 3px 9px; border-radius: 10px; background: #F6EEDC; color: #8A6A32; font: 600 10.5px var(--gl-v2-font-sans); white-space: nowrap; }
 .gl-v2 .gl-v2-is-recheck { flex: none; align-self: center; }
 

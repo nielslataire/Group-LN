@@ -33,5 +33,8 @@ namespace CPMCore.Models.Invoicing
         public string? OctopusJournalKey { get; set; }
         public int? OctopusDocumentSequenceNr { get; set; }
         public DateTime? OctopusBookedAt { get; set; }
+        /// <summary>Terugkerende facturen (50a): het schema waaruit deze factuur komt en het label "Coördinatie · dec".</summary>
+        public int? RecurringScheduleId { get; set; }
+        public string? RecurringLabel { get; set; }
     }
 }
