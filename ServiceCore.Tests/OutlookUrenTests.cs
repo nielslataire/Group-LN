@@ -25,11 +25,11 @@ public class OutlookUrenTests
     private static (OutlookUrenService Uren, TestDb Db, FakeGraphIngang Graph) Bouw()
     {
         var db = new TestDb(Guid.NewGuid().ToString());
-        db.Users.Add(new Users { Id = 1, UserId = "u1", Voornaam = "An", Familienaam = "A", Email = "an@groupln.be", EntraObjectId = Gebruiker, IsActive = true });
+        db.Users.Add(new Users { Id = 1, UserId = "guid-an", Voornaam = "An", Familienaam = "A", Email = "an@groupln.be", EntraObjectId = Gebruiker, IsActive = true });
         db.Project.Add(new Project { ProjectId = 1, ProjectName = "Regieproject", ProjectType = 1, StatusId = 2, ContractType = 2 });
         db.Project.Add(new Project { ProjectId = 2, ProjectName = "Gemengd project", ProjectType = 1, StatusId = 2, ContractType = 3 });
         db.Project.Add(new Project { ProjectId = 3, ProjectName = "Schijvenproject", ProjectType = 1, StatusId = 2, ContractType = 1 });
-        db.ProjectHourlyRate.Add(new ProjectHourlyRate { ProjectId = 1, UserId = "u1", HourlyRate = 80m });
+        db.ProjectHourlyRate.Add(new ProjectHourlyRate { ProjectId = 1, UserId = "guid-an", HourlyRate = 80m });
         db.SaveChanges();
         var graph = new FakeGraphIngang();
         graph.Agenda[Gebruiker] = new();
@@ -46,7 +46,7 @@ public class OutlookUrenTests
         return a;
     }
 
-    private static Task<UrenOverzicht> Overzicht(OutlookUrenService s) => s.OverzichtAsync(1, "u1", Gebruiker, Maandag, Zichtbaar);
+    private static Task<UrenOverzicht> Overzicht(OutlookUrenService s) => s.OverzichtAsync(1, Gebruiker, Maandag, Zichtbaar);
 
     [Theory]
     [InlineData(50, 45)]
@@ -110,7 +110,7 @@ public class OutlookUrenTests
         var lijst = (await Overzicht(uren)).Voorstellen;
 
         Assert.Equal(new[] { false, true }, lijst.Select(v => v.GeenTarief));
-        Assert.Equal(2, await uren.KeurGoedAsync(1, "u1", Gebruiker, Maandag, Zichtbaar, new[] { "a", "b" }));
+        Assert.Equal(2, await uren.KeurGoedAsync(1, Gebruiker, Maandag, Zichtbaar, new[] { "a", "b" }));
     }
 
     [Fact]
@@ -119,11 +119,11 @@ public class OutlookUrenTests
         var (uren, db, graph) = Bouw();
         Afspraak(db, graph, "a", 1, 9, 50, "Werfbezoek Villa");
 
-        Assert.Equal(1, await uren.KeurGoedAsync(1, "u1", Gebruiker, Maandag, Zichtbaar, new[] { "a" }));
-        Assert.Equal(0, await uren.KeurGoedAsync(1, "u1", Gebruiker, Maandag, Zichtbaar, new[] { "a" }));
+        Assert.Equal(1, await uren.KeurGoedAsync(1, Gebruiker, Maandag, Zichtbaar, new[] { "a" }));
+        Assert.Equal(0, await uren.KeurGoedAsync(1, Gebruiker, Maandag, Zichtbaar, new[] { "a" }));
 
         var uur = db.ProjectRegieUur.Single();
-        Assert.Equal((1, "u1", new DateOnly(2026, 11, 3), 0.75m, "Werfbezoek Villa", "a", (int?)null), (uur.ProjectId, uur.UserId, uur.Date, uur.Hours, uur.Description, uur.OutlookEventId, uur.InvoiceId));
+        Assert.Equal((1, "guid-an", new DateOnly(2026, 11, 3), 0.75m, "Werfbezoek Villa", "a", (int?)null), (uur.ProjectId, uur.UserId, uur.Date, uur.Hours, uur.Description, uur.OutlookEventId, uur.InvoiceId));
         var rij = Assert.Single((await Overzicht(uren)).Voorstellen);
         Assert.True(rij.Goedgekeurd);
     }
@@ -135,7 +135,7 @@ public class OutlookUrenTests
         Afspraak(db, graph, "prive", 1, 9, 60, aanpassen: a => a.Prive = true);
         Afspraak(db, graph, "schijven", 3, 10, 60);
 
-        Assert.Equal(0, await uren.KeurGoedAsync(1, "u1", Gebruiker, Maandag, Zichtbaar, new[] { "prive", "schijven", "bestaat-niet" }));
+        Assert.Equal(0, await uren.KeurGoedAsync(1, Gebruiker, Maandag, Zichtbaar, new[] { "prive", "schijven", "bestaat-niet" }));
         Assert.Empty(db.ProjectRegieUur);
     }
 
@@ -145,7 +145,7 @@ public class OutlookUrenTests
         var (uren, db, graph) = Bouw();
         Afspraak(db, graph, "a", 1, 9, 60);
 
-        var lijst = await uren.OverzichtAsync(1, "u1", Gebruiker, Maandag, new[] { 2 });
+        var lijst = await uren.OverzichtAsync(1, Gebruiker, Maandag, new[] { 2 });
 
         Assert.Empty(lijst.Voorstellen);
     }
@@ -155,13 +155,13 @@ public class OutlookUrenTests
     {
         var (uren, db, graph) = Bouw();
         var a = Afspraak(db, graph, "a", 1, 9, 60);
-        await uren.KeurGoedAsync(1, "u1", Gebruiker, Maandag, Zichtbaar, new[] { "a" });
+        await uren.KeurGoedAsync(1, Gebruiker, Maandag, Zichtbaar, new[] { "a" });
 
         a.Einde = a.Start.AddMinutes(90);
         var rij = Assert.Single((await Overzicht(uren)).Voorstellen);
         Assert.Equal((true, 90), (rij.Gewijzigd != null, rij.NieuweMinuten ?? 0));
 
-        Assert.Null(await uren.BijwerkenAsync(1, "u1", Gebruiker, rij.UurId!.Value, Zichtbaar));
+        Assert.Null(await uren.BijwerkenAsync(1, Gebruiker, rij.UurId!.Value, Zichtbaar));
         Assert.Equal(1.5m, db.ProjectRegieUur.Single().Hours);
         Assert.Null(Assert.Single((await Overzicht(uren)).Voorstellen).Gewijzigd);
     }
@@ -171,7 +171,7 @@ public class OutlookUrenTests
     {
         var (uren, db, graph) = Bouw();
         var a = Afspraak(db, graph, "a", 1, 9, 60);
-        await uren.KeurGoedAsync(1, "u1", Gebruiker, Maandag, Zichtbaar, new[] { "a" });
+        await uren.KeurGoedAsync(1, Gebruiker, Maandag, Zichtbaar, new[] { "a" });
         var uur = db.ProjectRegieUur.Single();
         db.Invoices.Add(new Invoices { Id = 1, PublicId = Guid.NewGuid().ToString() });
         uur.InvoiceId = 1;
@@ -182,7 +182,7 @@ public class OutlookUrenTests
 
         Assert.True(rij.Gefactureerd);
         Assert.Null(rij.Gewijzigd);
-        Assert.NotNull(await uren.BijwerkenAsync(1, "u1", Gebruiker, uur.Id, Zichtbaar));
+        Assert.NotNull(await uren.BijwerkenAsync(1, Gebruiker, uur.Id, Zichtbaar));
         Assert.Equal(1m, db.ProjectRegieUur.Single().Hours);
     }
 
@@ -191,7 +191,7 @@ public class OutlookUrenTests
     {
         var (uren, db, graph) = Bouw();
         var a = Afspraak(db, graph, "a", 1, 9, 60);
-        await uren.KeurGoedAsync(1, "u1", Gebruiker, Maandag, Zichtbaar, new[] { "a" });
+        await uren.KeurGoedAsync(1, Gebruiker, Maandag, Zichtbaar, new[] { "a" });
 
         graph.Agenda[Gebruiker].Remove(a);
         var rij = Assert.Single((await Overzicht(uren)).Voorstellen);

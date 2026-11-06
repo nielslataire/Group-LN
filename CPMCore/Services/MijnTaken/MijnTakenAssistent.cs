@@ -510,9 +510,23 @@ public class MijnTakenAssistent
     }
 
     /// <summary>Wijzigt een afspraak in de Outlook-agenda van de gebruiker (titel en tijd).</summary>
-    public Task<string?> AgendaWijzig(MtContext c, string eventId, string? titel, DateTime start, int minuten) =>
-        minuten < 5 || minuten > 960 ? Task.FromResult<string?>("Een afspraak duurt tussen 5 minuten en 16 uur.")
-            : _graph.BijwerkenAfspraakAsync(c.AgendaGebruiker, eventId, titel, start, start.AddMinutes(minuten));
+    /// <remarks>Heeft de afspraak een blok "Reistijd: &lt;titel&gt;" dat er vlak voor eindigt (gemaakt bij Nieuwe afspraak), dan gaat dat blok mee: het blijft even lang, eindigt op het nieuwe begin en krijgt de nieuwe titel.</remarks>
+    public async Task<string?> AgendaWijzig(MtContext c, string eventId, string? titel, DateTime start, int minuten)
+    {
+        if (minuten < 5 || minuten > 960) return "Een afspraak duurt tussen 5 minuten en 16 uur.";
+        // Het blok zoeken vóór de wijziging: daarna is het oude begin weg. Een venster van een week voor en na het nieuwe begin dekt ook slepen naar een andere dag.
+        var agenda = await _graph.GetAgendaAsync(c.AgendaGebruiker, start.Date.AddDays(-7), start.Date.AddDays(8));
+        var oud = agenda.Afspraken.FirstOrDefault(a => a.Id == eventId);
+        var blok = oud == null ? null : agenda.Afspraken.FirstOrDefault(a => a.Id != eventId && !a.HeleDag && a.Einde == oud.Start && string.Equals(a.Titel, ReisBlokTitel(oud.Titel), StringComparison.OrdinalIgnoreCase));
+
+        var fout = await _graph.BijwerkenAfspraakAsync(c.AgendaGebruiker, eventId, titel, start, start.AddMinutes(minuten));
+        if (fout != null || blok == null) return fout;
+        var blokFout = await _graph.BijwerkenAfspraakAsync(c.AgendaGebruiker, blok.Id, ReisBlokTitel(string.IsNullOrWhiteSpace(titel) ? oud!.Titel : titel.Trim()), start - (blok.Einde - blok.Start), start);
+        return blokFout == null ? null : "De afspraak is gewijzigd, maar het blok Reistijd kon niet mee verplaatst worden.";
+    }
+
+    /// <summary>Titel van het blok reistijd bij een afspraak (zie <see cref="OutlookAfspraakService.MaakAsync"/>).</summary>
+    public static string ReisBlokTitel(string afspraakTitel) => "Reistijd: " + afspraakTitel;
 
     public async Task<string?> Ontplan(MtContext c, int id)
     {

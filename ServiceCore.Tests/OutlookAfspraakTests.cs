@@ -274,6 +274,33 @@ public class OutlookAfspraakTests
     }
 
     [Fact]
+    public async Task Als_je_de_afspraak_verplaatst_gaat_het_blok_reistijd_mee_met_dezelfde_lengte_en_de_nieuwe_titel()
+    {
+        var (assistent, afspraken, _, graph) = Bouw();
+        var (eventId, _) = await afspraken.MaakAsync(1, "entra-an", 2, Zichtbaar, "Werfbezoek", Nu.AddHours(3), 60, "Keerstraat 12", false, null, 15, null, 30);
+        var blok = graph.Agenda["entra-an"].Single(a => a.Titel == "Reistijd: Werfbezoek");
+
+        Assert.Null(await assistent.AgendaWijzig(Ctx(), eventId!, "Werfbezoek Villa", Nu.AddHours(5), 90));
+
+        Assert.Equal(("Reistijd: Werfbezoek Villa", Nu.AddHours(4).AddMinutes(30), Nu.AddHours(5)), (blok.Titel, blok.Start, blok.Einde));
+        var afspraak = graph.Agenda["entra-an"].Single(a => a.Id == eventId);
+        Assert.Equal((Nu.AddHours(5), Nu.AddHours(5).AddMinutes(90)), (afspraak.Start, afspraak.Einde));
+    }
+
+    [Fact]
+    public async Task Een_afspraak_zonder_blok_reistijd_verplaatst_alleen_zichzelf_ook_als_er_een_ander_blok_op_dezelfde_titel_lijkt()
+    {
+        var (assistent, afspraken, _, graph) = Bouw();
+        var (eventId, _) = await Maak(afspraken, 2, "Overleg", Nu.AddHours(3), 60);
+        graph.Agenda["entra-an"].Add(new AgendaAfspraak { Id = "los", Titel = "Reistijd: Overleg", Start = Nu.AddHours(6), Einde = Nu.AddHours(7) });
+
+        Assert.Null(await assistent.AgendaWijzig(Ctx(), eventId!, null, Nu.AddHours(4), 60));
+
+        var los = graph.Agenda["entra-an"].Single(a => a.Id == "los");
+        Assert.Equal((Nu.AddHours(6), Nu.AddHours(7)), (los.Start, los.Einde));
+    }
+
+    [Fact]
     public async Task Zonder_reistijd_komt_er_geen_extra_blok()
     {
         var (_, afspraken, _, graph) = Bouw();

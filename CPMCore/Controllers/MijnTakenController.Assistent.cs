@@ -61,7 +61,7 @@ public partial class MijnTakenController
         ViewData["HelpScreenId"] = "mijn-taken-overzicht";
         var maandag = Week(datum) ?? MijnTakenAssistent.Maandag(DateOnly.FromDateTime(DateTime.Today));
         var vm = await _assistent.Overzicht(c, maandag);
-        vm.Uren = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.OutlookSync.OutlookUrenService>().OverzichtAsync(c.UserId, c.UserStr, c.AgendaGebruiker, maandag, c.ProjectIds);
+        vm.Uren = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.OutlookSync.OutlookUrenService>().OverzichtAsync(c.UserId, c.AgendaGebruiker, maandag, c.ProjectIds);
         return View("OverzichtV2", vm);
     }
 
@@ -355,7 +355,7 @@ public partial class MijnTakenController
         var week = Week(datum);
         if (week == null) return Fout("Ongeldige week.");
         var ids = (events ?? "").Split('|', StringSplitOptions.RemoveEmptyEntries);
-        var aantal = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.OutlookSync.OutlookUrenService>().KeurGoedAsync(c.UserId, c.UserStr, c.AgendaGebruiker, week.Value, c.ProjectIds, ids);
+        var aantal = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.OutlookSync.OutlookUrenService>().KeurGoedAsync(c.UserId, c.AgendaGebruiker, week.Value, c.ProjectIds, ids);
         return Json(new { ok = true, aantal });
     }
 
@@ -365,7 +365,7 @@ public partial class MijnTakenController
     {
         var c = await _assistent.Context(User);
         if (c == null) return Forbid();
-        var fout = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.OutlookSync.OutlookUrenService>().BijwerkenAsync(c.UserId, c.UserStr, c.AgendaGebruiker, id, c.ProjectIds);
+        var fout = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.OutlookSync.OutlookUrenService>().BijwerkenAsync(c.UserId, c.AgendaGebruiker, id, c.ProjectIds);
         return fout == null ? Json(new { ok = true }) : Fout(fout);
     }
 

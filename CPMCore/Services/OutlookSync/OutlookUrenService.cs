@@ -53,6 +53,10 @@ public class OutlookUrenService
         _graph = graph;
     }
 
+    /// <summary>ProjectRegieUur en ProjectHourlyRate hangen aan <c>Users.UserId</c> (de sleutel als tekst), niet aan <c>Users.Id</c>.</summary>
+    private async Task<string?> UserSleutelAsync(int userId, CancellationToken ct) =>
+        await _db.Users.AsNoTracking().Where(u => u.Id == userId).Select(u => u.UserId).FirstOrDefaultAsync(ct);
+
     public static int Afronden(DateTime start, DateTime einde)
     {
         var minuten = (einde - start).TotalMinutes;
@@ -60,11 +64,13 @@ public class OutlookUrenService
     }
 
     /// <summary>Voorstellen en goedgekeurde uren voor de week die begint op <paramref name="maandag"/>, op de projecten waar de gebruiker aan kan.</summary>
-    public async Task<UrenOverzicht> OverzichtAsync(int userId, string userStr, string? agendaGebruiker, DateOnly maandag, IReadOnlyCollection<int> toegestaneProjecten, CancellationToken ct = default)
+    public async Task<UrenOverzicht> OverzichtAsync(int userId, string? agendaGebruiker, DateOnly maandag, IReadOnlyCollection<int> toegestaneProjecten, CancellationToken ct = default)
     {
         var van = maandag.ToDateTime(TimeOnly.MinValue);
         var tot = van.AddDays(7);
         var resultaat = new UrenOverzicht();
+        var userStr = await UserSleutelAsync(userId, ct);
+        if (userStr == null) { resultaat.Fout = "Je gebruiker is niet gevonden."; return resultaat; }
         var agenda = await _graph.GetAgendaAsync(agendaGebruiker, van, tot, ct);
         if (!agenda.Gekoppeld) { resultaat.Fout = agenda.Fout; return resultaat; }
 
@@ -120,9 +126,11 @@ public class OutlookUrenService
 
     /// <summary>Maakt van de gekozen voorstellen regie-uren. De voorstellen worden opnieuw uit de agenda gelezen: tijden en projecten van de browser tellen nooit. Een afspraak die al een uur heeft, wordt overgeslagen.</summary>
     /// <returns>Het aantal gemaakte uren.</returns>
-    public async Task<int> KeurGoedAsync(int userId, string userStr, string? agendaGebruiker, DateOnly maandag, IReadOnlyCollection<int> toegestaneProjecten, IReadOnlyCollection<string> eventIds, CancellationToken ct = default)
+    public async Task<int> KeurGoedAsync(int userId, string? agendaGebruiker, DateOnly maandag, IReadOnlyCollection<int> toegestaneProjecten, IReadOnlyCollection<string> eventIds, CancellationToken ct = default)
     {
-        var overzicht = await OverzichtAsync(userId, userStr, agendaGebruiker, maandag, toegestaneProjecten, ct);
+        var overzicht = await OverzichtAsync(userId, agendaGebruiker, maandag, toegestaneProjecten, ct);
+        var userStr = await UserSleutelAsync(userId, ct);
+        if (userStr == null) return 0;
         var gemaakt = 0;
         foreach (var v in overzicht.Voorstellen.Where(v => !v.Goedgekeurd && eventIds.Contains(v.EventId)))
         {
@@ -140,8 +148,9 @@ public class OutlookUrenService
     }
 
     /// <summary>Zet een goedgekeurd, nog niet gefactureerd uur op de gewijzigde afspraak. Geeft een foutmelding terug, of null bij succes.</summary>
-    public async Task<string?> BijwerkenAsync(int userId, string userStr, string? agendaGebruiker, int uurId, IReadOnlyCollection<int> toegestaneProjecten, CancellationToken ct = default)
+    public async Task<string?> BijwerkenAsync(int userId, string? agendaGebruiker, int uurId, IReadOnlyCollection<int> toegestaneProjecten, CancellationToken ct = default)
     {
+        var userStr = await UserSleutelAsync(userId, ct);
         var uur = await _db.ProjectRegieUur.FirstOrDefaultAsync(u => u.Id == uurId && u.UserId == userStr && u.OutlookEventId != null, ct);
         if (uur == null || !toegestaneProjecten.Contains(uur.ProjectId)) return "Dit uur bestaat niet.";
         if (uur.InvoiceId != null) return "Dit uur staat al op een factuur en blijft ongewijzigd.";

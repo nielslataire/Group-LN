@@ -186,7 +186,7 @@ public class OutlookAfspraakService
         if (reistijdMinuten > 0 && reistijdMinuten <= 600)
         {
             // Een eigen blok "Reistijd" vóór de afspraak, zodat je agenda die tijd als bezet toont. Mislukt het, dan bestaat de afspraak toch en komt er enkel een melding.
-            var (_, blokFout) = await _graph.MaakAfspraakAsync(agendaGebruiker, new NieuweAfspraak("Reistijd: " + titel, start.AddMinutes(-reistijdMinuten), start, null, false, Array.Empty<string>(), null, null, true), ct);
+            var (_, blokFout) = await _graph.MaakAfspraakAsync(agendaGebruiker, new NieuweAfspraak(MijnTaken.MijnTakenAssistent.ReisBlokTitel(titel), start.AddMinutes(-reistijdMinuten), start, null, false, Array.Empty<string>(), null, null, true), ct);
             if (blokFout != null) waarschuwing = "De afspraak staat in Outlook, maar het blok reistijd kon niet gemaakt worden.";
         }
         if (!projectId.HasValue) return (eventId, waarschuwing);
