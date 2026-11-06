@@ -341,6 +341,36 @@ public class OutlookAfspraakTests
     }
 
     [Fact]
+    public async Task Sleep_je_het_blok_reistijd_dan_gaat_de_afspraak_mee_met_dezelfde_duur()
+    {
+        var (assistent, afspraken, db, graph) = Bouw();
+        var (eventId, _) = await afspraken.MaakAsync(1, "entra-an", 2, Zichtbaar, "Werfbezoek", Nu.AddHours(3), 60, "Keerstraat 12", false, null, 15, null, 30);
+        var link = db.OutlookAfspraakReistijd.Single();
+        var hoofd = graph.Agenda["entra-an"].Single(a => a.Id == eventId);
+        var blok = graph.Agenda["entra-an"].Single(a => a.Id == link.BlokEventId);
+
+        Assert.Null(await assistent.AgendaWijzig(Ctx(), blok.Id, null, Nu.AddHours(5), 30));   // het blok naar 14:00–14:30
+
+        Assert.Equal((Nu.AddHours(5), Nu.AddHours(5).AddMinutes(30)), (blok.Start, blok.Einde));
+        Assert.Equal((Nu.AddHours(5).AddMinutes(30), Nu.AddHours(6).AddMinutes(30)), (hoofd.Start, hoofd.Einde));
+    }
+
+    [Fact]
+    public async Task Vergroot_je_het_blok_reistijd_aan_de_bovenkant_dan_blijft_de_afspraak_staan()
+    {
+        var (assistent, afspraken, db, graph) = Bouw();
+        var (eventId, _) = await afspraken.MaakAsync(1, "entra-an", 2, Zichtbaar, "Werfbezoek", Nu.AddHours(3), 60, "Keerstraat 12", false, null, 15, null, 30);
+        var link = db.OutlookAfspraakReistijd.Single();
+        var hoofd = graph.Agenda["entra-an"].Single(a => a.Id == eventId);
+        var blok = graph.Agenda["entra-an"].Single(a => a.Id == link.BlokEventId);
+
+        Assert.Null(await assistent.AgendaWijzig(Ctx(), blok.Id, null, Nu.AddHours(3).AddMinutes(-60), 60));   // 08:00–... eindigt nog op 12:00
+
+        Assert.Equal((Nu.AddHours(3), Nu.AddHours(4)), (hoofd.Start, hoofd.Einde));
+        Assert.Equal(60, db.OutlookAfspraakReistijd.Single().Minuten);
+    }
+
+    [Fact]
     public async Task Zonder_reistijd_komt_er_geen_extra_blok()
     {
         var (_, afspraken, _, graph) = Bouw();

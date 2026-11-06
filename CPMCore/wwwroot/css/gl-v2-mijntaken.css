@@ -446,3 +446,9 @@
 .gl-v2-mt-uren-let a { color: inherit; font-weight: 600; text-decoration: underline; }
 .gl-v2-mt-uren .gl-v2-mt-mini { align-self: flex-start; margin-top: 4px; }
 .gl-v2-mt-uren-voet { display: flex; justify-content: flex-end; padding-top: 4px; }
+
+/* Slepen in de kalender: de plaatshouder toont waar het blok komt; een blok dat nog wordt opgeslagen is iets lichter. */
+.gl-v2-mt-plek { position: absolute; left: 1px; right: 2px; z-index: 3; box-sizing: border-box; padding: 4px 8px; border: 2px dashed var(--gl-v2-primary); border-radius: var(--gl-v2-radius-sm, 8px); background: rgba(0, 83, 45, .08); pointer-events: none; overflow: hidden; }
+.gl-v2-mt-plek .m { font: 600 11px var(--gl-v2-font-mono, "IBM Plex Mono", monospace); color: var(--gl-v2-primary); }
+.gl-v2-mt-plek.is-bezig { background: rgba(0, 83, 45, .14); }
+.gl-v2-mt-block.is-bezig { opacity: .75; pointer-events: none; }

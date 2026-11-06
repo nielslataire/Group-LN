@@ -105,6 +105,7 @@
     if (scroller) {
         var nu = new Date(), doelUur = (dag || (week && week.querySelector(".gl-v2-mt-daycol.is-today"))) ? Math.max(7, nu.getHours() - 1) : 7;
         scroller.scrollTop = Math.max(0, (doelUur - UUR) * PX - 8);
+        try { var bewaard = sessionStorage.getItem("mt-scroll"); if (bewaard !== null) { scroller.scrollTop = parseInt(bewaard, 10) || 0; sessionStorage.removeItem("mt-scroll"); } } catch (e) { }
     }
 
     // Eén plek die een taak of afspraak naar een nieuw begin zet.
@@ -134,6 +135,48 @@
         return Math.max(UUR * 60, Math.min(min, 23 * 60 + 45));
     }
 
+    // ── Plaatshouder en onmiddellijk plaatsen ──
+    // Tijdens het slepen toont de kalender op het doel een gestippeld vak op de plek waar het blok zou komen (afgerond op 15 minuten, met het uur erin).
+    // Bij het loslaten staat het blok meteen op die plek; pas daarna wordt het opgeslagen. Lukt dat niet, dan springt het blok terug naar waar het stond.
+    var plek = null, plekVast = false;
+    function gastheer(doel) { return doel === tl ? (tl.querySelector(".gl-v2-mt-lane.is-main") || tl) : doel; }
+    function toonPlek(doel, min, minuten) {
+        var host = gastheer(doel);
+        if (!plek) { plek = el("div", "gl-v2-mt-plek"); plek.setAttribute("aria-hidden", "true"); plek.appendChild(el("span", "m")); }
+        if (plek.parentNode !== host) host.appendChild(plek);
+        plek.style.top = yVanMin(min) + "px"; plek.style.height = Math.max(minuten / 60 * PX - 2, 20) + "px";
+        plek.firstChild.textContent = hm(min) + "\u2013" + hm(Math.min(min + minuten, 24 * 60));
+    }
+    function wisPlek(ook) { if (plek && (ook || !plekVast)) { plek.remove(); plekVast = false; } }
+    function herlaadBehoudScroll() { try { if (scroller) sessionStorage.setItem("mt-scroll", String(scroller.scrollTop)); } catch (e) { } herlaad(); }
+    // Zet een bestaand blok direct op de nieuwe plek en geeft een functie terug die het weer terugzet.
+    function plaatsBlok(blok, doel, datum, min, minuten) {
+        var orig = { ouder: blok.parentNode, volgend: blok.nextSibling, top: blok.style.top, left: blok.style.left, width: blok.style.width,
+            start: blok.dataset.start, einde: blok.dataset.einde, tekst: blok.querySelector(".m") ? blok.querySelector(".m").textContent : null };
+        var eind = Math.min(min + minuten, 24 * 60);
+        gastheer(doel).appendChild(blok);
+        blok.style.top = yVanMin(min) + "px"; blok.style.left = "1px"; blok.style.width = "calc(100% - 3px)";
+        blok.dataset.start = datum + "T" + hm(min); blok.dataset.einde = datum + "T" + hm(eind);
+        var m = blok.querySelector(".m"); if (m) m.textContent = hm(min) + "\u2013" + hm(eind);
+        blok.classList.add("is-bezig");
+        return function () {
+            blok.classList.remove("is-bezig");
+            orig.ouder.insertBefore(blok, orig.volgend);
+            blok.style.top = orig.top; blok.style.left = orig.left; blok.style.width = orig.width;
+            blok.dataset.start = orig.start; blok.dataset.einde = orig.einde;
+            if (m && orig.tekst !== null) m.textContent = orig.tekst;
+        };
+    }
+    // Eén plek voor muis en aanraking: toon het resultaat meteen, sla dan op, en zet alles terug als het niet lukt.
+    function neerzetten(info, blok, doel, datum, min) {
+        var terug = null;
+        if (blok) { wisPlek(true); terug = plaatsBlok(blok, doel, datum, min, info.min); }
+        else if (plek) { plekVast = true; plek.classList.add("is-bezig"); }   // een taak uit de lijst: de plaatshouder blijft staan tot het opgeslagen is
+        return verplaats(info, datum, min, info.min).then(herlaadBehoudScroll, function () {
+            if (terug) terug(); else { if (plek) plek.classList.remove("is-bezig"); wisPlek(true); }
+        });
+    }
+
     // ── Verplaatsen met de muis (HTML5-slepen) ──
     var sleep = null;
     document.addEventListener("dragstart", function (e) {
@@ -142,18 +185,21 @@
         if (!isBlok && !el.dataset.id) return;
         sluitPop();
         // Bij een bestaand blok onthouden we waar je het vastpakte, zodat het niet naar de cursor springt.
-        sleep = { blok: isBlok, info: isBlok ? blokInfo(el) : { kind: "taak", id: el.dataset.id, min: parseInt(el.dataset.min, 10) || 30 }, off: isBlok ? e.clientY - el.getBoundingClientRect().top : 0 };
+        sleep = { blok: isBlok, info: isBlok ? blokInfo(el) : { kind: "taak", id: el.dataset.id, min: parseInt(el.dataset.min, 10) || 30 }, off: isBlok ? e.clientY - el.getBoundingClientRect().top : 0, el: isBlok ? el : null };
         e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", el.dataset.id || el.dataset.event || "");
         el.classList.add("is-dragging");
     });
-    document.addEventListener("dragend", function () { sleep = null; $$(".is-dragging, .is-dropping").forEach(function (x) { x.classList.remove("is-dragging", "is-dropping"); }); });
+    document.addEventListener("dragend", function () { sleep = null; wisPlek(false); $$(".is-dragging, .is-dropping").forEach(function (x) { x.classList.remove("is-dragging", "is-dropping"); }); });
     function maakDoel(doel, datumFn) {
-        doel.addEventListener("dragover", function (e) { if (!sleep) return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; doel.classList.add("is-dropping"); });
-        doel.addEventListener("dragleave", function (e) { if (e.target === doel) doel.classList.remove("is-dropping"); });
+        doel.addEventListener("dragover", function (e) {
+            if (!sleep) return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; doel.classList.add("is-dropping");
+            toonPlek(doel, minOnder(doel, e.clientY, sleep.off), sleep.info.min);
+        });
+        doel.addEventListener("dragleave", function (e) { if (!doel.contains(e.relatedTarget)) { doel.classList.remove("is-dropping"); if (plek && gastheer(doel).contains(plek)) wisPlek(false); } });
         doel.addEventListener("drop", function (e) {
             if (!sleep) return; e.preventDefault(); doel.classList.remove("is-dropping");
             var s = sleep; sleep = null;
-            verplaats(s.info, datumFn(), minOnder(doel, e.clientY, s.off), s.info.min).then(herlaad, mislukt);
+            neerzetten(s.info, s.el, doel, datumFn(), minOnder(doel, e.clientY, s.off));
         });
     }
     // Terugslepen naar de lijst met volgende acties: het blok is dan niet meer ingepland (enkel bij een taak, niet bij een Outlook-afspraak).
@@ -204,7 +250,7 @@
         function blokkeer(ev) { if (actief) ev.preventDefault(); }
         function ruim() {
             clearTimeout(timer); document.removeEventListener("pointermove", beweeg); document.removeEventListener("pointerup", los); document.removeEventListener("pointercancel", ruim);
-            document.removeEventListener("touchmove", blokkeer); if (ghost) ghost.remove(); src.classList.remove("is-dragging"); if (isBlok || src.dataset.id) src.draggable = true;
+            document.removeEventListener("touchmove", blokkeer); if (ghost) ghost.remove(); src.classList.remove("is-dragging"); wisPlek(false); if (isBlok || src.dataset.id) src.draggable = true;
             $$(".is-dropping").forEach(function (x) { x.classList.remove("is-dropping"); });
         }
         timer = setTimeout(function () {
@@ -217,6 +263,7 @@
             ghost.style.left = (x - src.offsetWidth / 2) + "px"; ghost.style.top = (y - (isBlok ? off : 18)) + "px";
             $$(".is-dropping").forEach(function (z) { z.classList.remove("is-dropping"); });
             var d = doelOnder(x, y); if (d) d.el.classList.add("is-dropping");
+            if (d && !d.lijst) toonPlek(d.el, minOnder(d.el, y, isBlok ? off : 0), info.min); else wisPlek(false);
         }
         function beweeg(ev) {
             if (!actief) { if (Math.abs(ev.clientX - x0) > 8 || Math.abs(ev.clientY - y0) > 8) ruim(); return; }   // gewoon scrollen
@@ -228,7 +275,7 @@
             if (!was) return;
             sluit();
             if (d && d.lijst) { if (isBlok && info.kind === "taak") post("Ontplan", { id: info.id }).then(herlaad, mislukt); }
-            else if (d) verplaats(info, d.datum, minOnder(d.el, ev.clientY, isBlok ? off : 0), info.min).then(herlaad, mislukt);
+            else if (d) neerzetten(info, isBlok ? src : null, d.el, d.datum, minOnder(d.el, ev.clientY, isBlok ? off : 0));
         }
         document.addEventListener("pointermove", beweeg); document.addEventListener("pointerup", los); document.addEventListener("pointercancel", ruim);
     });

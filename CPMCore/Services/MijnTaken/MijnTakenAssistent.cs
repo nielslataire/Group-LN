@@ -516,6 +516,9 @@ public class MijnTakenAssistent
     public async Task<string?> AgendaWijzig(MtContext c, string eventId, string? titel, DateTime start, int minuten)
     {
         if (minuten < 5 || minuten > 960) return "Een afspraak duurt tussen 5 minuten en 16 uur.";
+        // Sleep je het blok Reistijd zelf, dan gaat de afspraak mee (zie ReistijdBlokVerplaatsen).
+        var alsBlok = await _afspraken.ReistijdVanBlokAsync(c.UserId, eventId);
+        if (alsBlok != null) return await ReistijdBlokVerplaatsen(c, alsBlok, start, minuten);
         // Het blok zoeken vóór de wijziging: daarna is het oude begin weg. Een venster van een week voor en na het nieuwe begin dekt ook slepen naar een andere dag.
         var agenda = await _graph.GetAgendaAsync(c.AgendaGebruiker, start.Date.AddDays(-7), start.Date.AddDays(8));
         var oud = agenda.Afspraken.FirstOrDefault(a => a.Id == eventId);
@@ -530,6 +533,23 @@ public class MijnTakenAssistent
         if (fout != null || blokId == null) return fout;
         var blokFout = await _graph.BijwerkenAfspraakAsync(c.AgendaGebruiker, blokId, ReisBlokTitel(string.IsNullOrWhiteSpace(titel) ? oud?.Titel ?? "" : titel.Trim()), start - blokDuur, start);
         return blokFout == null ? null : "De afspraak is gewijzigd, maar het blok Reistijd kon niet mee verplaatst worden.";
+    }
+
+    /// <summary>Het blok Reistijd zelf is verplaatst of vergroot. Eindigt het nog op het begin van de afspraak (de rand is versleept), dan wijzigt enkel het blok. Eindigt het ergens anders
+    /// (het blok is verschoven), dan gaat de afspraak mee: ze begint op het nieuwe einde van het blok en behoudt haar duur. Is de afspraak niet meer te vinden, dan verhuist enkel het blok.</summary>
+    private async Task<string?> ReistijdBlokVerplaatsen(MtContext c, OutlookAfspraakReistijd link, DateTime start, int minuten)
+    {
+        var einde = start.AddMinutes(minuten);
+        var agenda = await _graph.GetAgendaAsync(c.AgendaGebruiker, start.Date.AddDays(-7), start.Date.AddDays(8));
+        var hoofd = agenda.Afspraken.FirstOrDefault(a => a.Id == link.EventId);
+
+        var fout = await _graph.BijwerkenAfspraakAsync(c.AgendaGebruiker, link.BlokEventId, null, start, einde);
+        if (fout != null) return fout;
+        await _afspraken.ZetReistijdMinutenAsync(link, minuten);
+        if (hoofd == null || hoofd.Start == einde) return null;
+
+        var hoofdFout = await _graph.BijwerkenAfspraakAsync(c.AgendaGebruiker, hoofd.Id, null, einde, einde + (hoofd.Einde - hoofd.Start));
+        return hoofdFout == null ? null : "Het blok Reistijd is verplaatst, maar de afspraak zelf kon niet mee. " + hoofdFout;
     }
 
     /// <summary>Titel van het blok reistijd bij een afspraak (zie <see cref="OutlookAfspraakService.MaakAsync"/>).</summary>

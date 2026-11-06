@@ -204,6 +204,18 @@ public class OutlookAfspraakService
     public async Task<OutlookAfspraakReistijd?> ReistijdAsync(int userId, string eventId, CancellationToken ct = default) =>
         await _db.OutlookAfspraakReistijd.AsNoTracking().FirstOrDefaultAsync(r => r.UserId == userId && r.EventId == eventId, ct);
 
+    /// <summary>De koppeling waarvan dit event het blok Reistijd is (dus <paramref name="blokEventId"/> is geen gewone afspraak), of null.</summary>
+    public async Task<OutlookAfspraakReistijd?> ReistijdVanBlokAsync(int userId, string blokEventId, CancellationToken ct = default) =>
+        await _db.OutlookAfspraakReistijd.FirstOrDefaultAsync(r => r.UserId == userId && r.BlokEventId == blokEventId, ct);
+
+    /// <summary>Onthoudt de nieuwe lengte van een blok Reistijd na het vergroten of verkleinen.</summary>
+    public async Task ZetReistijdMinutenAsync(OutlookAfspraakReistijd koppeling, int minuten, CancellationToken ct = default)
+    {
+        if (koppeling.Minuten == minuten) return;
+        koppeling.Minuten = minuten;
+        await _db.SaveChangesAsync(ct);
+    }
+
     /// <summary>Houdt de blokken Reistijd bij hun afspraak, ook als je de afspraak in Outlook verplaatst of hernoemt: het blok eindigt op het begin van de afspraak en draagt haar titel.
     /// Gebeurt bij het laden van Vandaag en Week, voor de afspraken die in <paramref name="afspraken"/> staan. Staat het blok niet in die lijst (de afspraak is naar een andere dag of week verhuisd),
     /// dan wordt het op basis van het onthouden id en de lengte verplaatst. Bestaat het blok niet meer, dan verdwijnt de koppeling. Gooit nooit.</summary>
