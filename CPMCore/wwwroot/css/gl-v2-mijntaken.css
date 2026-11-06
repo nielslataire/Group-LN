@@ -388,7 +388,17 @@
 }
 
 /* Nieuwe afspraak (modal, ontwerp "CRM Nieuwe afspraak"): rijen met gelijk uitgelijnde velden; datum + van + tot ruim genoeg om te lezen. */
-.gl-v2-mt-an { display: flex; flex-direction: column; gap: 18px; }
+/* De gedeelde formuliermodal (modals.css) maakt van .modal-body een raster van twee kolommen en zet de breedte op 500px; deze modal is één kolom en 680px breed (ontwerp). */
+@media (min-width: 768px) {
+    .gl-v2-modal-form .modal-dialog.gl-v2-mt-an-dialog { width: 680px; max-width: calc(100% - 32px); }
+    .gl-v2-modal-form .modal-dialog.gl-v2-mt-an-dialog .modal-content { border-radius: 18px; }
+    .gl-v2-modal-form .modal-dialog.gl-v2-mt-an-dialog .modal-header { padding: 20px 24px 16px; border-bottom: 0; }
+    .gl-v2-modal-form .modal-dialog.gl-v2-mt-an-dialog .modal-title { font-size: 22px; }
+    .gl-v2-modal-form .modal-dialog.gl-v2-mt-an-dialog .gl-v2-modal-close { width: 34px; height: 34px; border-radius: 17px; }
+    .gl-v2-modal-form .modal-dialog.gl-v2-mt-an-dialog .modal-body.gl-v2-mt-an { padding: 4px 24px 22px; }
+    .gl-v2-modal-form .modal-dialog.gl-v2-mt-an-dialog .modal-footer { padding: 14px 24px; align-items: center; background: #FAFBF8; }
+}
+.gl-v2-modal-form .modal-body.gl-v2-mt-an { display: flex; flex-direction: column; gap: 18px; }
 .gl-v2-mt-an .gl-v2-field { margin: 0; }
 .gl-v2-mt-an .gl-v2-field > .gl-v2-pillrow { margin-top: 10px; }
 .gl-v2-mt-an-rij { display: grid; gap: 12px; align-items: start; }
