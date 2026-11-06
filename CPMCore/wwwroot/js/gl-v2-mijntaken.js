@@ -818,6 +818,25 @@
         toon();
     }
 
+    // ── Uren goedkeuren (ticket #9): voorstellen uit afspraken op regieprojecten worden regie-uren; de server leest ze zelf opnieuw uit de agenda ──
+    var urenKnop = $("mt-uren-goedkeur");
+    if (urenKnop) {
+        var telUren = function () { var n = $$("[data-mt-uur]:checked").length; urenKnop.textContent = n ? "Goedkeuren (" + n + ")" : "Goedkeuren"; urenKnop.disabled = !n; };
+        $$("[data-mt-uur]").forEach(function (cb) { cb.addEventListener("change", telUren); });
+        telUren();
+        urenKnop.addEventListener("click", function () {
+            var ids = $$("[data-mt-uur]:checked").map(function (cb) { return cb.dataset.mtUur; });
+            if (!ids.length) return;
+            urenKnop.disabled = true;
+            post("UrenGoedkeur", { datum: document.querySelector(".gl-v2-mt-overzicht").dataset.week, events: ids.join("|") }).then(function (j) {
+                toast("success", j.aantal === 1 ? "1 uur goedgekeurd" : j.aantal + " uren goedgekeurd", "Je vindt ze bij Coördinatie van het project."); setTimeout(herlaad, 1200);
+            }, function () { urenKnop.disabled = false; });
+        });
+    }
+    $$("[data-mt-uur-bijwerken]").forEach(function (b) {
+        b.addEventListener("click", function () { b.disabled = true; post("UrenBijwerken", { id: b.dataset.mtUurBijwerken }).then(herlaad, function () { b.disabled = false; }); });
+    });
+
     // ── Wekelijkse review ────────────────────────────────────────────────────────────────────────
     var ov = document.querySelector(".gl-v2-mt-overzicht");
     if (ov) $$("[data-mt-review]").forEach(function (cb) {

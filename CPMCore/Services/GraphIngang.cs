@@ -23,6 +23,10 @@ public sealed class AgendaAfspraak
     public string? Link { get; set; }
     /// <summary>free, tentative, busy, oof of workingElsewhere.</summary>
     public string ToonAls { get; set; } = "busy";
+    /// <summary>Gemarkeerd als privé in Outlook.</summary>
+    public bool Prive { get; set; }
+    /// <summary>De gebruiker heeft de uitnodiging afgewezen. Een geannuleerde afspraak komt er niet eens in.</summary>
+    public bool Afgewezen { get; set; }
     /// <summary>E-mailadressen van de deelnemers en de organisator (voor het voorstel van een project). Niet bewaard.</summary>
     public List<string> Deelnemers { get; set; } = new();
     // Hierna: ingevuld door OutlookAfspraakService, nooit door Graph. Het gekoppelde project en het voorstel van CPM.
@@ -128,7 +132,7 @@ public sealed class GraphIngang : IGraphIngang
             };
             var pagina = await _client.Users[gebruiker].CalendarView.Request(opties)
                 .Header("Prefer", $"outlook.timezone=\"{Tijdzone}\"")
-                .Select("id,subject,start,end,isAllDay,isCancelled,location,showAs,isOnlineMeeting,webLink,isOrganizer,organizer,attendees")
+                .Select("id,subject,start,end,isAllDay,isCancelled,location,showAs,sensitivity,responseStatus,isOnlineMeeting,webLink,isOrganizer,organizer,attendees")
                 .Top(100).OrderBy("start/dateTime").GetAsync(ct);
 
             while (pagina != null)
@@ -148,7 +152,9 @@ public sealed class GraphIngang : IGraphIngang
                         Plaats = string.IsNullOrWhiteSpace(e.Location?.DisplayName) ? null : e.Location!.DisplayName,
                         Online = e.IsOnlineMeeting == true,
                         Link = e.WebLink,
-                        ToonAls = e.ShowAs?.ToString()?.ToLowerInvariant() ?? "busy"
+                        ToonAls = e.ShowAs?.ToString()?.ToLowerInvariant() ?? "busy",
+                        Prive = e.Sensitivity == Sensitivity.Private,
+                        Afgewezen = e.ResponseStatus?.Response == ResponseType.Declined
                     });
                 }
                 pagina = pagina.NextPageRequest != null ? await pagina.NextPageRequest.GetAsync(ct) : null;

@@ -76,6 +76,62 @@
     </div>
 
     <aside class="gl-v2-mt-ov-side">
+        @if (Model.Uren.Voorstellen.Any() || Model.Uren.Fout != null)
+        {
+            var nieuw = Model.Uren.Voorstellen.Where(v => !v.Goedgekeurd).ToList();
+            var nl = System.Globalization.CultureInfo.GetCultureInfo("nl-BE");
+            <section class="gl-v2-section-card" id="mt-uren">
+                <div class="gl-v2-section-card-header"><span class="gl-v2-section-card-icon"><i class="ph ph-clock-countdown" aria-hidden="true"></i></span><h3 class="gl-v2-section-card-title">Uren goedkeuren</h3><span class="gl-v2-section-card-spacer"></span><span class="gl-v2-mt-muted">@(nieuw.Count == 0 ? "alles verwerkt" : nieuw.Count + (nieuw.Count == 1 ? " voorstel" : " voorstellen"))</span></div>
+                <div class="gl-v2-mt-uren">
+                    <span class="gl-v2-mt-muted">Afspraken op projecten in regie. Goedgekeurde uren komen bij Coördinatie en worden gewoon gefactureerd. De duur is afgerond op 15 minuten.</span>
+                    @if (Model.Uren.Fout != null)
+                    {
+                        <div class="gl-v2-notice gl-v2-notice-compact is-warning" role="status"><i class="ph ph-warning" aria-hidden="true"></i><span>Je agenda is niet beschikbaar: @Model.Uren.Fout</span></div>
+                    }
+                    @foreach (var v in Model.Uren.Voorstellen)
+                    {
+                        var dag = DateOnly.FromDateTime(v.Start);
+                        var wanneer = $"{MijnTakenAssistent.DagNaam(dag)} {v.Start.Day} {nl.DateTimeFormat.GetAbbreviatedMonthName(v.Start.Month).TrimEnd('.')} · {v.Start:HH:mm}–{v.Einde:HH:mm}";
+                        var checkId = "mt-uur-" + System.Security.Cryptography.SHA1.HashData(System.Text.Encoding.UTF8.GetBytes(v.EventId)).Take(4).Select(b => b.ToString("x2")).Aggregate((a, b) => a + b);
+                        <div class="gl-v2-mt-uren-rij@(v.Goedgekeurd ? " is-klaar" : "")">
+                            @if (v.Goedgekeurd)
+                            {
+                                <span class="gl-v2-mt-uren-klaar" title="Goedgekeurd"><i class="ph ph-check-circle" aria-hidden="true"></i></span>
+                            }
+                            else
+                            {
+                                <span class="gl-v2-check"><input type="checkbox" data-mt-uur="@v.EventId" id="@checkId" checked /><label for="@checkId"></label></span>
+                            }
+                            <div class="gl-v2-stack">
+                                <span class="gl-v2-mt-uren-titel">@v.Titel</span>
+                                <span class="gl-v2-mt-muted">@wanneer · @v.ProjectNaam</span>
+                                @if (v.Overlap != null && !v.Goedgekeurd)
+                                {
+                                    <span class="gl-v2-mt-uren-let"><i class="ph ph-warning" aria-hidden="true"></i>Overlapt met “@v.Overlap”. Kies welke je telt.</span>
+                                }
+                                @if (v.GeenTarief)
+                                {
+                                    <span class="gl-v2-mt-uren-let"><i class="ph ph-warning" aria-hidden="true"></i><span>Geen uurtarief voor jou op dit project. <a href="@Url.Action("DetailCoordinatie", "Projecten", new { projectid = v.ProjectId })">Tarief aanmaken</a></span></span>
+                                }
+                                @if (v.Gewijzigd != null && !v.Gefactureerd)
+                                {
+                                    <span class="gl-v2-mt-uren-let"><i class="ph ph-warning" aria-hidden="true"></i>@v.Gewijzigd@(v.NieuweMinuten != null ? $" Nu {MtFormat.Duur(v.NieuweMinuten.Value)}, het uur staat op {MtFormat.Duur(v.Minuten)}." : "")</span>
+                                    @if (v.NieuweMinuten != null && v.UurId != null)
+                                    {
+                                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-mt-mini" data-mt-uur-bijwerken="@v.UurId">Uur bijwerken</button>
+                                    }
+                                }
+                            </div>
+                            <b class="gl-v2-mt-uren-duur">@MtFormat.Duur(v.Minuten)</b>
+                        </div>
+                    }
+                    @if (nieuw.Any())
+                    {
+                        <div class="gl-v2-mt-uren-voet"><button type="button" class="gl-v2-btn gl-v2-btn-primary" id="mt-uren-goedkeur">Goedkeuren</button></div>
+                    }
+                </div>
+            </section>
+        }
         <section class="gl-v2-section-card">
             <div class="gl-v2-section-card-header"><span class="gl-v2-section-card-icon"><i class="ph ph-list-checks" aria-hidden="true"></i></span><h3 class="gl-v2-section-card-title">Wekelijkse review</h3><span class="gl-v2-section-card-spacer"></span><span class="gl-v2-mt-muted" id="mt-review-teller">@reviewAf / @MijnTakenAssistent.ReviewPunten.Length</span></div>
             <div class="gl-v2-mt-review">

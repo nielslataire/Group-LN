@@ -60,7 +60,9 @@ public partial class MijnTakenController
         if (c == null) return Forbid();
         ViewData["HelpScreenId"] = "mijn-taken-overzicht";
         var maandag = Week(datum) ?? MijnTakenAssistent.Maandag(DateOnly.FromDateTime(DateTime.Today));
-        return View("OverzichtV2", await _assistent.Overzicht(c, maandag));
+        var vm = await _assistent.Overzicht(c, maandag);
+        vm.Uren = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.OutlookSync.OutlookUrenService>().OverzichtAsync(c.UserId, c.UserStr, c.AgendaGebruiker, maandag, c.ProjectIds);
+        return View("OverzichtV2", vm);
     }
 
     // ── Vastleggen en verwerken ──────────────────────────────────────────────────────────────────
@@ -342,6 +344,29 @@ public partial class MijnTakenController
         if (c == null) return Forbid();
         var (ok, fout) = await _assistent.MaakTaakVanMijlpaal(c, mijlpaalId);
         return ok ? Json(new { ok = true }) : Fout(fout ?? "Niet gelukt.");
+    }
+
+    // ── Uren goedkeuren (ticket #9): afspraken op regieprojecten worden regie-uren. De server leest de voorstellen zelf opnieuw uit de agenda; enkel de gekozen event-id's komen uit de browser.
+    [HttpPost("UrenGoedkeur"), ValidateAntiForgeryToken, CPMCore.Filters.PermissionWrite(BOCore.PermissionCodes.MijnTaken)]
+    public async Task<IActionResult> UrenGoedkeur(string datum, string? events)
+    {
+        var c = await _assistent.Context(User);
+        if (c == null) return Forbid();
+        var week = Week(datum);
+        if (week == null) return Fout("Ongeldige week.");
+        var ids = (events ?? "").Split('|', StringSplitOptions.RemoveEmptyEntries);
+        var aantal = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.OutlookSync.OutlookUrenService>().KeurGoedAsync(c.UserId, c.UserStr, c.AgendaGebruiker, week.Value, c.ProjectIds, ids);
+        return Json(new { ok = true, aantal });
+    }
+
+    // Zet een goedgekeurd, nog niet gefactureerd uur op de gewijzigde afspraak.
+    [HttpPost("UrenBijwerken"), ValidateAntiForgeryToken, CPMCore.Filters.PermissionWrite(BOCore.PermissionCodes.MijnTaken)]
+    public async Task<IActionResult> UrenBijwerken(int id)
+    {
+        var c = await _assistent.Context(User);
+        if (c == null) return Forbid();
+        var fout = await HttpContext.RequestServices.GetRequiredService<CPMCore.Services.OutlookSync.OutlookUrenService>().BijwerkenAsync(c.UserId, c.UserStr, c.AgendaGebruiker, id, c.ProjectIds);
+        return fout == null ? Json(new { ok = true }) : Fout(fout);
     }
 
     [HttpPost("ReviewZet"), ValidateAntiForgeryToken, CPMCore.Filters.PermissionWrite(BOCore.PermissionCodes.MijnTaken)]

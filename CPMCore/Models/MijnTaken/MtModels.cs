@@ -166,6 +166,8 @@ public class MtOverzichtVm
     public List<MtTaak> Focus { get; set; } = new();
     public int WachtenOpen { get; set; }
     public int WachtenTeLaat { get; set; }
+    /// <summary>Uren goedkeuren (ticket #9): voorstellen en goedgekeurde uren van afspraken op regieprojecten in deze week.</summary>
+    public CPMCore.Services.OutlookSync.UrenOverzicht Uren { get; set; } = new();
 }
 
 /// <summary>Deadlines (design-handoff punt 1b): mijlpalen per project met voortgang.</summary>

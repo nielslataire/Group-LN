@@ -52,6 +52,13 @@ public partial class cpmRunningContext
             entity.HasOne(e => e.Project).WithMany().HasForeignKey(e => e.ProjectId).OnDelete(DeleteBehavior.Cascade).HasConstraintName("FK_OutlookAfspraak_Project");
         });
 
+        // Regie-uren uit een afspraak (migratie 132): de nieuwe kolommen van het gegenereerde ProjectRegieUur.
+        modelBuilder.Entity<ProjectRegieUur>(entity =>
+        {
+            entity.Property(e => e.OutlookEventId).HasMaxLength(300);
+            entity.HasIndex(e => new { e.UserId, e.OutlookEventId }, "UQ_ProjectRegieUur_User_OutlookEvent").IsUnique().HasFilter("([OutlookEventId] IS NOT NULL)");
+        });
+
         modelBuilder.Entity<OutlookGeblokkeerdeAfzender>(entity =>
         {
             entity.ToTable("OutlookGeblokkeerdeAfzender");

@@ -688,6 +688,7 @@ builder.Services.AddScoped<CPMCore.Services.OutlookSync.OutlookMailSyncService>(
 builder.Services.AddScoped<CPMCore.Services.OutlookSync.OutlookSyncService>();
 builder.Services.AddScoped<CPMCore.Services.OutlookSync.OutlookMailActies>();
 builder.Services.AddScoped<CPMCore.Services.OutlookSync.OutlookAfspraakService>();
+builder.Services.AddScoped<CPMCore.Services.OutlookSync.OutlookUrenService>();
 builder.Services.AddHostedService<CPMCore.Services.OutlookSync.OutlookSyncHostedService>();   // Outlook-sync per opt-in gebruiker (migratie 121)
 
 // BREADCRUMBS
