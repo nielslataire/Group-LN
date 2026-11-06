@@ -85,7 +85,13 @@
                             <button type="button" data-min="15" class="is-active">15 min</button>
                             <button type="button" data-min="60">1 uur</button>
                             <button type="button" data-min="1440">1 dag</button>
+                            <button type="button" data-min="vertrek" id="mt-an-vertrek-knop" hidden>Vertrektijd</button>
                         </div>
+                    </div>
+                    <div class="gl-v2-mt-an-reis" id="mt-an-reis" hidden>
+                        <span>Reistijd</span>
+                        <div class="gl-v2-field-box"><input class="gl-v2-field-input" id="mt-an-reistijd" type="number" inputmode="numeric" min="0" max="600" step="5" value="30" aria-label="Reistijd in minuten" /><span class="gl-v2-field-unit">min</span></div>
+                        <span id="mt-an-reis-tekst"></span>
                     </div>
                     <button type="button" class="gl-v2-btn gl-v2-btn-text" id="mt-an-notitie-knop"><i class="ph ph-plus" aria-hidden="true"></i>Notitie</button>
                 </div>

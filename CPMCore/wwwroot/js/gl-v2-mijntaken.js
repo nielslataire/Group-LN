@@ -402,6 +402,25 @@
         var soortKnoppen = $$("#mt-an-soorten [data-soort]"), duurKnoppen = $$("#mt-an-duren [data-duur]"), locKnoppen = $$("#mt-an-plaatsen [data-loc]"), herinneringKnoppen = $$("#mt-an-herinnering [data-min]");
         var state = { soort: null, project: "", projectNaam: "", loc: "office", herinnering: 15, titelAuto: "", bezet: [], bezetDatum: "", dur: 60 };
 
+        // Herinnering "Vertrektijd": bij een adres (project, kantoor, ander adres) komt de herinnering reistijd + 15 minuten vóór het begin. De reistijd is een eigen schatting, onthouden per browser.
+        var reisVeld = $("mt-an-reistijd"), vertrekKnop = $("mt-an-vertrek-knop");
+        try { var opgeslagen = parseInt(localStorage.getItem("mt-an-reistijd"), 10); if (opgeslagen >= 0) reisVeld.value = opgeslagen; } catch (e) { }
+        var herinneringMinuten = function () {
+            if (state.herinnering !== "vertrek") return state.herinnering;
+            return Math.max(0, Math.min(600, parseInt(reisVeld.value, 10) || 0)) + 15;
+        };
+        function toonVertrek() {
+            var adres = state.loc === "proj" || state.loc === "office" || state.loc === "other";
+            vertrekKnop.hidden = !adres;
+            if (!adres && state.herinnering === "vertrek") zetHerinnering(15);
+            $("mt-an-reis").hidden = !(adres && state.herinnering === "vertrek");
+            $("mt-an-reis-tekst").textContent = "+ 15 min marge: je herinnering komt " + herinneringMinuten() + " min vóór het begin.";
+        }
+        function zetHerinnering(w) {
+            state.herinnering = w;
+            herinneringKnoppen.forEach(function (x) { x.classList.toggle("is-active", x.dataset.min === String(w)); });
+            toonVertrek();
+        }
         var kortDuur = function (d) { return d < 60 ? d + " min" : Math.floor(d / 60) + "u" + (d % 60 ? pad(d % 60) : ""); };
         var vanMin = function () { return T.getMinutes(vanVeld); }, totMin = function () { return T.getMinutes(totVeld); };
         var datumIso = function () { return $("mt-an-datum").value; };
@@ -447,6 +466,7 @@
             plaats.disabled = loc === "online";
             plaats.placeholder = loc === "phone" ? "Telefoonnummer (optioneel)" : loc === "other" ? "Zoek een adres, klant of leverancier — of typ een adres" : loc === "online" ? "Teams-link wordt automatisch toegevoegd" : "Adres of ruimte";
             window.GlV2Suggest.setEnabled(plaatsSuggest, loc === "other");
+            toonVertrek();
             $("mt-an-plaats-help").hidden = loc !== "other";
         }
         function plaatsWaarde() {
@@ -497,7 +517,8 @@
             $("mt-an-uitnodiging-tekst").textContent = n ? n + (n === 1 ? " persoon krijgt" : " personen krijgen") + " een uitnodiging per mail, met een agenda-bestand voor Outlook of Google Agenda." : "Er gaat geen uitnodiging uit. De afspraak staat enkel in je eigen agenda.";
             $("mt-an-opslaan").textContent = n ? "Maken en uitnodigen" : "Afspraak maken";
         });
-        herinneringKnoppen.forEach(function (b) { b.addEventListener("click", function () { state.herinnering = parseInt(b.dataset.min, 10); herinneringKnoppen.forEach(function (x) { x.classList.toggle("is-active", x === b); }); }); });
+        herinneringKnoppen.forEach(function (b) { b.addEventListener("click", function () { zetHerinnering(b.dataset.min === "vertrek" ? "vertrek" : parseInt(b.dataset.min, 10)); }); });
+        reisVeld.addEventListener("input", function () { try { localStorage.setItem("mt-an-reistijd", String(parseInt(reisVeld.value, 10) || 0)); } catch (e) { } toonVertrek(); });
         $("mt-an-notitie-knop").addEventListener("click", function () { $("mt-an-notitie-rij").hidden = false; this.hidden = true; $("mt-an-notitie").focus(); });
 
         // ── openen ─────────────────────────────────────────────────────────────────────────────
@@ -531,7 +552,7 @@
             knop.disabled = true;
             post("AfspraakMaak", {
                 projectId: state.project, titel: titel.value.trim(), start: datumIso() + "T" + hm(a), minuten: z - a, plaats: plaatsWaarde(),
-                online: state.loc === "online" ? "true" : "", deelnemers: mensen.map(function (m) { return m.id; }).join(","), herinnering: state.herinnering, notitie: $("mt-an-notitie").value.trim()
+                online: state.loc === "online" ? "true" : "", deelnemers: mensen.map(function (m) { return m.id; }).join(","), herinnering: herinneringMinuten(), notitie: $("mt-an-notitie").value.trim()
             }).then(function (j) {
                 if (!j.waarschuwing) return herlaad();
                 toast("warning", "Afspraak gemaakt", j.waarschuwing); setTimeout(herlaad, 2500);

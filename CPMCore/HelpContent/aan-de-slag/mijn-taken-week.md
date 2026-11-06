@@ -93,7 +93,7 @@ Een gekoppelde afspraak toont de projectnaam in het blok. Met **Ontkoppelen** ha
 4. Kies de datum. Tik het begin en het einde zelf in, of kies ze uit de lijst. Met de knoppen onder de uren kies je een duur.
 5. Kies de plaats: het adres van het project, het kantoor, een ander adres, online of telefonisch. Bij **Online** voegt Outlook een Teams-link toe.
 6. Kies de deelnemers. Eerst zie je je collega's, daarna de mensen van het project. Typ om te zoeken, of typ een volledig e-mailadres voor iemand van buiten.
-7. Stel eventueel een herinnering in en voeg een notitie toe.
+7. Stel eventueel een herinnering in en voeg een notitie toe. Gaat het om een adres, kies dan **Vertrektijd** en geef je reistijd in. De herinnering komt dan je reistijd plus 15 minuten vóór het begin.
 8. Klik op **Afspraak maken** of op **Maken en uitnodigen**.
 
 Bij het kiezen van het uur zie je of je agenda vrij is. Overlapt de afspraak met iets anders, dan staat dat onder de uren. Je kunt de afspraak dan toch maken.
