@@ -397,7 +397,7 @@
         var T = window.GlV2Time, vanVeld = T.byId("mt-an-van"), totVeld = T.byId("mt-an-tot");
         var titel = $("mt-an-titel"), projectHidden = $("mt-an-project"), projectCombo = projectHidden.closest("[data-gl-v2-combo]");
         var plaats = $("mt-an-plaats"), plaatsSuggest = plaats.closest("[data-gl-v2-suggest]"), deelnemersRoot = $("mt-an-deelnemers").closest("[data-gl-v2-people]");
-        var kantoor = nieuwAfspraakModal.dataset.kantoor || "", adressen = {};
+        var kantoor = nieuwAfspraakModal.dataset.kantoor || "", kantoorRoute = nieuwAfspraakModal.dataset.kantoorRoute || "", adressen = {};
         try { adressen = JSON.parse(nieuwAfspraakModal.dataset.adressen || "{}"); } catch (e) { adressen = {}; }
         var soortKnoppen = $$("#mt-an-soorten [data-soort]"), duurKnoppen = $$("#mt-an-duren [data-duur]"), locKnoppen = $$("#mt-an-plaatsen [data-loc]"), herinneringKnoppen = $$("#mt-an-herinnering [data-min]");
         var state = { soort: null, project: "", projectNaam: "", loc: "office", herinnering: 15, titelAuto: "", bezet: [], bezetDatum: "", dur: 60, vanaf: "office", marge: 10, reis: 30, reisBron: "schatting" };
@@ -441,7 +441,9 @@
                 toonVertrek();
                 if (!naar || !van || sleutel === reisSleutel || naar.toLowerCase() === van.toLowerCase()) return;
                 reisSleutel = sleutel; state.reisBron = "bezig"; toonVertrek();
-                post("AfspraakReis", { van: van, naar: naar }).then(function (j) {
+                // Voor de route telt enkel het adres: het kantoor zonder bedrijfsnaam, en "naam — adres" uit de suggesties als "naam, adres".
+                var routeAdres = function (a) { return a === kantoor && kantoorRoute ? kantoorRoute : a.replace(/\s+—\s+/g, ", "); };
+                post("AfspraakReis", { van: routeAdres(van), naar: routeAdres(naar) }).then(function (j) {
                     if (sleutel !== reisSleutel) return;
                     if (j.minuten != null) { state.reis = j.minuten; state.reisBron = "google"; } else { state.reis = 30; state.reisBron = "schatting"; }
                     toonVertrek();
