@@ -332,3 +332,5 @@
 .gl-v2-field-box.is-title:focus-within { border-bottom-color: var(--gl-v2-primary); }
 .gl-v2-field-box.is-title .gl-v2-field-input { font: 500 18px var(--gl-v2-font-sans); }
 .gl-v2-field.is-error .gl-v2-field-box.is-title { border-bottom-color: var(--gl-v2-danger, #8B2A2A); }
+.gl-v2 .gl-v2-field-box.is-title .gl-v2-field-input:focus,
+.gl-v2 .gl-v2-field-box.is-title .gl-v2-field-input:focus-visible { outline: none; box-shadow: none; }   /* de focus is de groene onderlijn, geen gouden ring */
