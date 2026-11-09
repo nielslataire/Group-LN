@@ -25,6 +25,27 @@
         if (deleteModal) deleteModal.show();
     });
 
+    // Werfleider aannemer (design-handoff 14i): gsm of e-mail kopiëren; het icoon wordt kort een vinkje.
+    document.addEventListener("click", function (e) {
+        var btn = e.target.closest(".js-gl-v2-pcd-copy");
+        if (!btn) return;
+        var text = btn.getAttribute("data-copy") || "";
+        var done = function () {
+            var icon = btn.querySelector("i");
+            if (!icon) return;
+            icon.className = "ph ph-check";
+            setTimeout(function () { icon.className = "ph ph-copy"; }, 1400);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () {});
+        } else {
+            var ta = document.createElement("textarea");
+            ta.value = text; document.body.appendChild(ta); ta.select();
+            try { document.execCommand("copy"); done(); } catch (err) {}
+            document.body.removeChild(ta);
+        }
+    });
+
     // Bij >1 contract (design-handoff 14e): elk contract is een eigen collapsible paneel. Enkel
     // een klik/toets op dít paneel se eigen header togglet — geen accordion (meerdere mogen open
     // staan), zelfde onafhankelijke-panelen-keuze als 14e se eigen "klik op een rij".

@@ -1,0 +1,93 @@
+@model FacadeCore.RetainmentBatchVm
+@*
+    gl-v2 — Een controlelijst inhoudingsplicht: de afdrukbare/PDF-versie is het bewijs (consultatiereferentie en trace-id per onderneming), het JSON-bestand bevat de ruwe RSZ-antwoorden.
+*@
+@{
+    ViewData["Title"] = "Controlelijst inhoudingsplicht";
+    ViewData["PageIcon"] = "ph ph-shield-check";
+    var simulation = Model.Environment == "Simulation";
+    var withObligation = Model.Items.Count(i => i.HasObligation);
+    var failed = Model.Items.Count(i => i.Failed);
+    string Situation(string s) => s switch
+    {
+        "obligation" => "Inhoudingsplicht",
+        "noObligation" => "Geen inhoudingsplicht",
+        "notInDomain" => "Buiten toepassing",
+        _ => "—"
+    };
+    string Tone(string s) => s == "obligation" ? "is-blocked" : s == "noObligation" ? "is-positive" : "is-neutral";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-inhoudingsplicht.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    <a asp-action="Index" class="gl-v2-btn gl-v2-btn-secondary gl-v2-ip-noprint"><i class="ph ph-arrow-left" aria-hidden="true"></i>Alle lijsten</a>
+    <a asp-action="Bewijs" asp-route-id="@Model.BatchId" class="gl-v2-btn gl-v2-btn-secondary gl-v2-ip-noprint"><i class="ph ph-download-simple" aria-hidden="true"></i>Ruw bewijs (JSON)</a>
+    <button type="button" class="gl-v2-btn gl-v2-btn-primary gl-v2-ip-noprint" onclick="window.print()"><i class="ph ph-printer" aria-hidden="true"></i>Afdrukken / PDF</button>
+}
+
+<div class="gl-v2-ip">
+    @if (simulation)
+    {
+        <div class="gl-v2-notice gl-v2-notice-compact is-warning" role="status"><i class="ph ph-flask" aria-hidden="true"></i><span>Dit resultaat komt uit de <strong>testomgeving van de RSZ</strong> (vaste testgegevens). Het is geen echte controle en heeft geen bewijswaarde.</span></div>
+    }
+
+    <div class="gl-v2-ip-kpis">
+        <div class="gl-v2-section-card"><span class="l">Gecontroleerd</span><span class="v">@Model.Items.Count</span></div>
+        <div class="gl-v2-section-card @(withObligation > 0 ? "is-bad" : "")"><span class="l">Met inhoudingsplicht</span><span class="v">@withObligation</span></div>
+        <div class="gl-v2-section-card @(failed > 0 ? "is-bad" : "")"><span class="l">Mislukt</span><span class="v">@failed</span></div>
+    </div>
+
+    <section class="gl-v2-card">
+        <div class="gl-v2-card-header">
+            <span class="gl-v2-card-header-icon"><i class="ph ph-shield-check" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-card-header-title">@(string.IsNullOrWhiteSpace(Model.Name) ? "Controle" : Model.Name) · @Model.CheckedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</h2>
+            <span class="gl-v2-card-header-count">@(string.IsNullOrEmpty(Model.CheckedBy) ? "" : "door " + Model.CheckedBy + " · ")lijst-ID @Model.BatchId</span>
+        </div>
+        <div class="gl-v2-ip-scroll">
+            <table class="gl-v2-ip-table">
+                <thead>
+                    <tr>
+                        <th>Onderneming</th>
+                        <th>Nummer</th>
+                        <th>Sociaal (RSZ)</th>
+                        <th>Fiscaal (FOD Financiën)</th>
+                        <th>Geldig tot</th>
+                        <th>Consultatiereferentie</th>
+                        <th>Trace-ID</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var i in Model.Items)
+                    {
+                        var validUntil = new[] { i.SocialValidUntil, i.FiscalValidUntil }.Where(d => d.HasValue).Select(d => d.Value).DefaultIfEmpty().Min();
+                        <tr>
+                            <td>@(string.IsNullOrEmpty(i.SupplierName) ? "—" : i.SupplierName)</td>
+                            <td class="nowrap">@(i.EnterpriseNumber ?? i.EnterpriseIdentifier)</td>
+                            @if (i.Failed)
+                            {
+                                <td colspan="4" class="err">@i.ErrorMessage</td>
+                                <td class="mono">@i.TraceId</td>
+                            }
+                            else
+                            {
+                                <td class="nowrap"><span class="gl-v2-badge @Tone(i.SocialSituation)">@Situation(i.SocialSituation)</span>@if (i.SocialObligation) { <span class="pct">@i.SocialWithholdingPercentage%</span> }</td>
+                                <td class="nowrap"><span class="gl-v2-badge @Tone(i.FiscalSituation)">@Situation(i.FiscalSituation)</span>@if (i.FiscalObligation) { <span class="pct">@i.FiscalWithholdingPercentage%</span> }</td>
+                                <td class="nowrap">@(!i.HasObligation && validUntil != default ? validUntil.ToLocalTime().ToString("dd/MM/yyyy") : "—")</td>
+                                <td class="nowrap">@i.RetainmentCheckReference</td>
+                                <td class="mono">@i.TraceId</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <p class="gl-v2-ip-foot">
+        Een resultaat zonder inhoudingsplicht blijft geldig tot de vermelde datum; controleer opnieuw als je later betaalt.
+        Bij inhoudingsplicht houd je het vermelde percentage in op de factuur en stort je het door.
+    </p>
+</div>

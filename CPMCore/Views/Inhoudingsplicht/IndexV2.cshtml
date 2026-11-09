@@ -1,0 +1,260 @@
+@using CPMCore.Models.GlV2
+@using CPMCore.Models.Inhoudingsplicht
+@model InhoudingsplichtIndexVm
+@*
+    gl-v2 — Inhoudingsplicht (30bis/30ter), design-handoff 57: aannemers kiezen (actieve werven · laatste 12 maanden · alle), extra btw-nummers plakken,
+    controleren en bewaren; eerdere lijsten eronder, het bewijs in een zijpaneel. Het filteren, aanvinken en het overzicht "Te controleren" doen
+    wwwroot/js/gl-v2-inhoudingsplicht.js; het bewaren en het bewijs (referentie, trace-id, ruw RSZ-antwoord) gebeuren op de server.
+*@
+@{
+    ViewData["Title"] = "Inhoudingsplicht";
+    ViewData["PageIcon"] = "ph ph-shield-check";
+    ViewData["HelpScreenId"] = "inhoudingsplicht";
+    var today = DateTime.Today;
+    var yearAgo = today.AddYears(-1);
+
+    (string Tone, string Icon, string Label) Status(FacadeCore.RetainmentCheckVm c)
+    {
+        if (c == null) return ("is-info", "ph-plus", "Nog nooit gecontroleerd");
+        if (c.Failed) return ("is-neutral", "ph-x", "Mislukt");
+        if (c.HasObligation)
+            return ("is-blocked", "ph-warning", c.SocialObligation && c.FiscalObligation ? "Inhouden: RSZ + fiscus" : c.SocialObligation ? "Inhouden: RSZ" : "Inhouden: fiscus");
+        if (c.SocialSituation == "notInDomain" && c.FiscalSituation == "notInDomain") return ("is-attention", "ph-question", "Buiten toepassing");
+        return ("is-positive", "ph-check", "Geen inhoudingsplicht");
+    }
+    string When(DateTime utc)
+    {
+        var l = utc.ToLocalTime();
+        return l.Date == today ? "vandaag om " + l.ToString("HH:mm") : l.ToString("dd/MM/yyyy");
+    }
+    var sourceItems = new List<(string Key, string Label, int Count)>
+    {
+        ("actief", "Actieve werven", Model.Suppliers.Count(s => s.Sites.Any(x => x.Active))),
+        ("jaar", "Laatste 12 maanden", Model.Suppliers.Count(s => s.LastInvoice.HasValue && s.LastInvoice.Value >= yearAgo)),
+        ("alle", "Alle leveranciers", Model.Suppliers.Count),
+    };
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-inhoudingsplicht.css" asp-append-version="true" />
+}
+<div class="gl-v2-ip" id="gl-v2-ip"
+     data-source="@Model.Source"
+     data-panel-url="@Url.Action("Paneel", "Inhoudingsplicht")"
+     data-rename-url="@Url.Action("Hernoem", "Inhoudingsplicht")"
+     data-open="@(Model.OpenBatchId?.ToString())">
+    @if (!Model.Configured)
+    {
+        <div class="gl-v2-notice gl-v2-notice-compact is-warning" role="alert"><i class="ph ph-warning" aria-hidden="true"></i><span>De koppeling met de RSZ is nog niet ingesteld (sectie <code>RszBillRetainment</code> in de configuratie).</span></div>
+    }
+    else if (Model.Simulation)
+    {
+        <div class="gl-v2-notice gl-v2-notice-compact is-warning" role="status"><i class="ph ph-flask" aria-hidden="true"></i><span><strong>Testomgeving van de RSZ.</strong> De antwoorden zijn vaste testgegevens en gelden niet als bewijs. Echte controles kunnen pas als de RSZ de productie-integratie toelaat.</span></div>
+    }
+
+    <form method="post" asp-action="Create" id="gl-v2-ip-form" class="gl-v2-ip-grid">
+        @Html.AntiForgeryToken()
+
+        @* ── Links: aannemers kiezen ─────────────────────────────────────────────────────────── *@
+        <section class="gl-v2-section-card gl-v2-ip-pick" aria-labelledby="gl-v2-ip-pick-t">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-list-checks" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title" id="gl-v2-ip-pick-t">Aannemers kiezen</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">Uit je leveranciers, met het laatste resultaat. Vink aan wie je wilt controleren.</span>
+            </div>
+
+            <div class="gl-v2-ip-toolbar">
+                <div class="gl-v2-segmented is-sm" role="tablist" aria-label="Bron" id="gl-v2-ip-sources">
+                    @foreach (var s in sourceItems)
+                    {
+                        <button type="button" role="tab" class="@(s.Key == Model.Source ? "is-active" : "")" aria-selected="@(s.Key == Model.Source ? "true" : "false")" data-source="@s.Key">@s.Label <span class="gl-v2-ip-count">@s.Count</span></button>
+                    }
+                </div>
+                <label class="gl-v2-field-box gl-v2-ip-search">
+                    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                    <input type="search" class="gl-v2-field-input" id="gl-v2-ip-q" placeholder="Zoek naam, activiteit of btw-nummer" aria-label="Aannemer zoeken" autocomplete="off" />
+                </label>
+            </div>
+
+            <div class="gl-v2-ip-chips" id="gl-v2-ip-sites" role="group" aria-label="Werven">
+                <span class="gl-v2-ip-chips-label">WERVEN</span>
+                @foreach (var w in Model.ActiveSites)
+                {
+                    <button type="button" class="gl-v2-ip-chip is-on" aria-pressed="true" data-site="@w.ProjectId"><i class="ph ph-check" aria-hidden="true"></i>@w.Name <span class="gl-v2-ip-count">@w.Count</span></button>
+                }
+            </div>
+            <p class="gl-v2-ip-yearnote" id="gl-v2-ip-yearnote" hidden>Aannemers met een factuur sinds @yearAgo.ToString("dd/MM/yyyy"), ook van afgewerkte werven.</p>
+
+            <div class="gl-v2-ip-scroll">
+                <table class="gl-v2-ip-table gl-v2-ip-picktable">
+                    <thead>
+                        <tr>
+                            <th class="chk"><span class="gl-v2-check"><input type="checkbox" id="gl-v2-ip-all" aria-label="Alle zichtbare aannemers selecteren" /><label for="gl-v2-ip-all"></label></span></th>
+                            <th>Aannemer</th>
+                            <th>Werven</th>
+                            <th class="nowrap">Laatste factuur</th>
+                            <th>Laatste controle</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gl-v2-ip-rows">
+                        @foreach (var s in Model.Suppliers)
+                        {
+                            var st = Status(s.Last);
+                            var activeIds = string.Join(",", s.Sites.Where(x => x.Active).Select(x => x.ProjectId));
+                            <tr data-id="@s.CompanyId" data-name="@s.Name" data-ident="@s.Identifier" data-ident-display="@s.IdentifierDisplay"
+                                data-sites="@activeIds" data-actief="@(activeIds.Length > 0 ? "1" : "0")"
+                                data-year="@(s.LastInvoice.HasValue && s.LastInvoice.Value >= yearAgo ? "1" : "0")"
+                                data-lastinvoice="@(s.LastInvoice?.ToString("yyyyMMdd") ?? "0")"
+                                data-warn="@(s.Last != null && (s.Last.HasObligation || s.Last.Failed) ? (s.Last.HasObligation ? "plicht" : "fout") : "")"
+                                data-search="@((s.Name + " " + s.Activity + " " + s.Identifier).ToLowerInvariant())"
+                                hidden>
+                                <td class="chk"><span class="gl-v2-check"><input type="checkbox" name="companyIds" value="@s.CompanyId" id="gl-v2-ip-cb-@s.CompanyId" @(Model.SelectedCompanyIds.Contains(s.CompanyId) ? "checked" : null) @(s.Identifier == null ? "disabled" : null) /><label for="gl-v2-ip-cb-@s.CompanyId"></label></span></td>
+                                <td>
+                                    <label for="gl-v2-ip-cb-@s.CompanyId" class="gl-v2-ip-name">
+                                        <strong>@s.Name</strong>
+                                        <span class="muted">@(string.IsNullOrEmpty(s.Activity) ? "" : s.Activity + " · ")@if (s.Identifier != null) { <span class="mono">@s.IdentifierDisplay</span> } else { <span class="err">geen btw- of ondernemingsnummer</span> }</span>
+                                    </label>
+                                </td>
+                                <td>
+                                    <div class="gl-v2-ip-sitetags">
+                                        @foreach (var w in s.Sites.Take(4))
+                                        {
+                                            <span class="gl-v2-ip-sitetag @(w.Active ? "is-active" : "")">@w.Name@(w.Active ? "" : " · afgewerkt")</span>
+                                        }
+                                        @if (s.Sites.Count > 4) { <span class="gl-v2-ip-sitetag">+@(s.Sites.Count - 4)</span> }
+                                    </div>
+                                </td>
+                                <td class="nowrap mono">@(s.LastInvoice?.ToString("dd/MM/yyyy") ?? "—")</td>
+                                <td>
+                                    <div class="gl-v2-ip-laststatus">
+                                        <span class="gl-v2-badge @st.Tone"><i class="ph @st.Icon" aria-hidden="true"></i>@st.Label</span>
+                                        @if (s.Last != null) { <span class="muted">@When(s.Last.CheckedAt)</span> }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="gl-v2-ip-empty" id="gl-v2-ip-norows" hidden>Geen aannemer gevonden. Staat hij niet bij je leveranciers? Plak zijn btw-nummer hieronder.</div>
+
+            <div class="gl-v2-ip-extra">
+                <label class="gl-v2-field-label" for="gl-v2-ip-extra">EXTRA BTW-NUMMERS</label>
+                <div class="gl-v2-field-box">
+                    <textarea name="extra" id="gl-v2-ip-extra" class="gl-v2-field-input" rows="4" placeholder="BE0767.412.093&#10;0532 118 409&#10;NL854312907B01">@Model.ExtraText</textarea>
+                </div>
+                <span class="gl-v2-field-help">Plak een lijst uit Excel of een mail: één nummer per lijn, of gescheiden door komma's. Met of zonder BE, punten of spaties. Een naam ervoor mag (<code>naam; nummer</code>).</span>
+                <span class="gl-v2-field-help">Een nummer van een bestaande leverancier wordt gewoon aangevinkt in de lijst hierboven.</span>
+            </div>
+        </section>
+
+        @* ── Rechts: te controleren ─────────────────────────────────────────────────────────── *@
+        <section class="gl-v2-section-card gl-v2-ip-sel" aria-labelledby="gl-v2-ip-sel-t">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-shield-check" aria-hidden="true"></i></span>
+                <div class="gl-v2-stack is-tight">
+                    <h2 class="gl-v2-section-card-title" id="gl-v2-ip-sel-t">Te controleren</h2>
+                    <small class="gl-v2-section-card-desc">Vlak vóór je betaalt; bewaard als bewijs.</small>
+                </div>
+                <span class="gl-v2-section-card-spacer"></span>
+                <span class="gl-v2-badge is-neutral" id="gl-v2-ip-total">0</span>
+            </div>
+
+            <div class="gl-v2-ip-sel-body">
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="gl-v2-ip-name">NAAM VAN DE LIJST</label>
+                    <div class="gl-v2-field-box"><input type="text" name="name" id="gl-v2-ip-name" class="gl-v2-field-input" maxlength="200" value="@Model.ListName" autocomplete="off" /></div>
+                </div>
+
+                <div class="gl-v2-ip-sel-head"><span id="gl-v2-ip-selcount">UIT DE SELECTIELIJST · 0</span><button type="button" class="gl-v2-btn gl-v2-btn-text" id="gl-v2-ip-clear" hidden>Leegmaken</button></div>
+                <ul class="gl-v2-ip-sel-list" id="gl-v2-ip-sellist"></ul>
+
+                <div id="gl-v2-ip-extra-block" hidden>
+                    <div class="gl-v2-ip-sel-head"><span id="gl-v2-ip-extracount">EXTRA BTW-NUMMERS · 0</span></div>
+                    <ul class="gl-v2-ip-sel-list" id="gl-v2-ip-extralist"></ul>
+                </div>
+
+                <div class="gl-v2-ip-empty" id="gl-v2-ip-selempty">Nog niemand gekozen. Vink aannemers aan of plak btw-nummers.</div>
+
+                <div class="gl-v2-notice gl-v2-notice-compact is-warning" id="gl-v2-ip-plichtnote" role="status" hidden><i class="ph ph-warning" aria-hidden="true"></i><span></span></div>
+            </div>
+
+            <div class="gl-v2-ip-sel-foot">
+                <span class="gl-v2-ip-skipnote" id="gl-v2-ip-skipnote"></span>
+                @if (Model.CanWrite)
+                {
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-ip-run" disabled="@(!Model.Configured)"><i class="ph ph-shield-check" aria-hidden="true"></i><span>Controleer en bewaar</span></button>
+                }
+            </div>
+        </section>
+    </form>
+
+    @* ── Eerdere controlelijsten ─────────────────────────────────────────────────────────────── *@
+    <section class="gl-v2-card" aria-labelledby="gl-v2-ip-hist-t">
+        <div class="gl-v2-card-header">
+            <span class="gl-v2-card-header-icon"><i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i></span>
+            <div class="gl-v2-stack is-tight">
+                <h2 class="gl-v2-card-header-title" id="gl-v2-ip-hist-t">Eerdere controlelijsten</h2>
+                <small class="gl-v2-section-card-desc">Openen voor het bewijs, of "Opnieuw selecteren" om dezelfde aannemers aan te vinken.</small>
+            </div>
+            <span class="gl-v2-card-header-count">@Model.Lists.Count</span>
+            <span class="gl-v2-section-card-spacer"></span>
+            <label class="gl-v2-field-box gl-v2-ip-search">
+                <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                <input type="search" class="gl-v2-field-input" id="gl-v2-ip-hq" placeholder="Zoek lijst of persoon" aria-label="Zoeken in eerdere lijsten" autocomplete="off" />
+            </label>
+        </div>
+        @if (!Model.Lists.Any())
+        {
+            <div class="gl-v2-ip-empty">Nog geen controlelijsten.</div>
+        }
+        else
+        {
+            <div class="gl-v2-ip-scroll">
+                <table class="gl-v2-ip-table">
+                    <thead>
+                        <tr>
+                            <th>Datum</th>
+                            <th>Lijst</th>
+                            <th>Door</th>
+                            <th class="num">Ondernemingen</th>
+                            <th class="num">Met inhoudingsplicht</th>
+                            <th class="num">Mislukt</th>
+                            <th>Omgeving</th>
+                            <th class="num">Acties</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gl-v2-ip-hist">
+                        @foreach (var b in Model.Lists)
+                        {
+                            var title = string.IsNullOrWhiteSpace(b.Name) ? "Zonder naam" : b.Name;
+                            <tr data-search="@((title + " " + b.CheckedBy).ToLowerInvariant())">
+                                <td class="nowrap">@b.CheckedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                <td><button type="button" class="gl-v2-ip-link" data-open="@b.BatchId">@title</button></td>
+                                <td>@b.CheckedBy</td>
+                                <td class="num">@b.Total</td>
+                                <td class="num">@if (b.WithObligation > 0) { <span class="gl-v2-badge is-blocked">@b.WithObligation</span> } else { <span>0</span> }</td>
+                                <td class="num">@if (b.Failed > 0) { <span class="gl-v2-badge is-attention">@b.Failed</span> } else { <span>0</span> }</td>
+                                <td>@if (b.Environment == "Simulation") { <span class="gl-v2-badge is-attention">TEST</span> } else { <span class="gl-v2-badge is-positive">PRODUCTIE</span> }</td>
+                                <td class="num nowrap"><a class="gl-v2-btn gl-v2-btn-secondary gl-v2-btn-sm" href="@Url.Action("Index", new { herhaal = b.BatchId })"><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i>Opnieuw selecteren</a></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="gl-v2-ip-empty" id="gl-v2-ip-nolists" hidden>Geen lijst gevonden.</div>
+        }
+    </section>
+</div>
+
+@* Zijpaneel: het bewijs van één controlelijst (wordt gevuld vanuit Inhoudingsplicht/Paneel). *@
+<div class="gl-v2-ip-backdrop" id="gl-v2-ip-backdrop" hidden></div>
+<aside class="gl-v2-ip-drawer" id="gl-v2-ip-drawer" role="dialog" aria-modal="true" aria-label="Controlelijst" hidden>
+    <div class="gl-v2-ip-drawer-body" id="gl-v2-ip-drawer-body"></div>
+</aside>
+
+@section PageScripts
+{
+    <script src="~/js/gl-v2-inhoudingsplicht.js" asp-append-version="true"></script>
+}

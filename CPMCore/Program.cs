@@ -211,6 +211,8 @@ builder.Services.AddScoped<FacadeCore.IRecurringInvoiceService, ServiceCore.Invo
 builder.Services.AddHostedService<CPMCore.Services.RecurringInvoiceHostedService>();
 builder.Services.AddHttpClient<FacadeCore.IHealthIndexService, ServiceCore.Invoicing.HealthIndexService>(c => c.Timeout = TimeSpan.FromSeconds(30));   // gezondheidsindex Statbel (migratie 135)
 builder.Services.AddHostedService<CPMCore.Services.HealthIndexHostedService>();
+builder.Services.AddHostedService<CPMCore.Services.RetainmentScheduleHostedService>();
+builder.Services.AddHttpClient<FacadeCore.IRetainmentCheckService, ServiceCore.IncomingInvoices.RetainmentCheckService>(c => c.Timeout = TimeSpan.FromSeconds(20));   // inhoudingsplicht leveranciers, RSZ BillRetainment (migratie 137)
 builder.Services.AddScoped<IInvoiceNumberingService, InvoiceNumberingService>();
 builder.Services.AddScoped<IProjectSupplierLookupService, ProjectSupplierLookupService>();
 builder.Services.AddScoped<IInvoiceCommunicationService, InvoiceCommunicationService>();

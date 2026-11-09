@@ -1,0 +1,104 @@
+@model CPMCore.Models.Leveranciers.SupplierDetailViewModel
+@*
+    gl-v2 — Inhoudingsplicht (30bis/30ter) op de leveranciersfiche: de laatste controle bovenaan (rood bij inhoudingsplicht), daaronder de historiek.
+    Gegevens komen uit ViewBag.RetainmentHistory (LeveranciersController.Details). De knop "Nu controleren" maakt een nieuwe, bewaarde controle.
+*@
+@{
+    var history = ViewBag.RetainmentHistory as IReadOnlyList<FacadeCore.RetainmentCheckVm> ?? Array.Empty<FacadeCore.RetainmentCheckVm>();
+    var configured = ViewBag.RetainmentConfigured is bool cf && cf;
+    var hasIdentifier = ViewBag.RetainmentHasIdentifier is bool hi && hi;
+    var canCheck = ViewBag.RetainmentCanCheck is bool cc && cc && configured && hasIdentifier;
+    var last = history.FirstOrDefault(h => !h.Failed);
+    string Situation(string s) => s switch
+    {
+        "obligation" => "Inhoudingsplicht",
+        "noObligation" => "Geen inhoudingsplicht",
+        "notInDomain" => "Buiten toepassing",
+        _ => "—"
+    };
+    string Tone(string s) => s == "obligation" ? "is-blocked" : s == "noObligation" ? "is-positive" : "is-neutral";
+}
+@if (configured || history.Count > 0)
+{
+    <div class="gl-v2-section-card" id="inhoudingsplicht">
+        <div class="gl-v2-section-card-header">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-shield-check" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-section-card-title">Inhoudingsplicht</h2>
+            <span class="gl-v2-field-divider"></span>
+            <span class="gl-v2-section-card-desc">Sociale (RSZ) en fiscale (FOD Financiën) schulden: moet je bij betaling inhouden?</span>
+            <span class="gl-v2-section-card-spacer"></span>
+            @if (last != null && last.HasObligation)
+            {
+                <span class="gl-v2-badge is-blocked">INHOUDINGSPLICHT</span>
+            }
+            else if (last != null)
+            {
+                <span class="gl-v2-badge is-positive">IN ORDE</span>
+            }
+        </div>
+
+        @if (last != null && last.HasObligation)
+        {
+            <div class="gl-v2-notice gl-v2-notice-compact is-danger" role="alert" style="margin: 12px 20px 0;">
+                <i class="ph ph-warning-circle" aria-hidden="true"></i>
+                <span>
+                    Bij betaling aan deze leverancier moet je
+                    @if (last.SocialObligation) { <strong>@last.SocialWithholdingPercentage% (sociale schulden)</strong> }
+                    @if (last.SocialObligation && last.FiscalObligation) { <text> en </text> }
+                    @if (last.FiscalObligation) { <strong>@last.FiscalWithholdingPercentage% (fiscale schulden)</strong> }
+                    inhouden en doorstorten. Controle van @last.CheckedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm").
+                    @if (last.Environment == "Simulation") { <text> Dit is een testresultaat.</text> }
+                </span>
+            </div>
+        }
+
+        <div class="gl-v2-ip-supplier-status">
+            @if (last == null)
+            {
+                <span class="t">@(hasIdentifier ? "Nog niet gecontroleerd." : "Geen btw- of ondernemingsnummer: controle niet mogelijk.")</span>
+            }
+            else
+            {
+                <span class="t">Laatste controle: <strong>@last.CheckedAt.ToLocalTime().ToString("dd/MM/yyyy")</strong> <small>@(string.IsNullOrEmpty(last.CheckedBy) ? "" : "door " + last.CheckedBy)</small></span>
+            }
+            @if (canCheck)
+            {
+                <form method="post" asp-controller="Inhoudingsplicht" asp-action="CheckSupplier">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="companyId" value="@Model.Id" />
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i>Nu controleren</button>
+                </form>
+            }
+        </div>
+
+        @if (history.Count > 0)
+        {
+            <div class="gl-v2-ip-scroll">
+                <table class="gl-v2-ip-table">
+                    <thead>
+                        <tr><th>Datum</th><th>Sociaal (RSZ)</th><th>Fiscaal (FOD)</th><th>Referentie</th><th>Door</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var h in history)
+                        {
+                            <tr>
+                                <td class="nowrap">@h.CheckedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")@if (h.Environment == "Simulation") { <span class="gl-v2-badge is-attention" style="margin-left:6px">TEST</span> }</td>
+                                @if (h.Failed)
+                                {
+                                    <td colspan="3" class="err">@h.ErrorMessage</td>
+                                }
+                                else
+                                {
+                                    <td class="nowrap"><span class="gl-v2-badge @Tone(h.SocialSituation)">@Situation(h.SocialSituation)</span>@if (h.SocialObligation) { <span class="pct">@h.SocialWithholdingPercentage%</span> }</td>
+                                    <td class="nowrap"><span class="gl-v2-badge @Tone(h.FiscalSituation)">@Situation(h.FiscalSituation)</span>@if (h.FiscalObligation) { <span class="pct">@h.FiscalWithholdingPercentage%</span> }</td>
+                                    <td class="nowrap">@h.RetainmentCheckReference</td>
+                                }
+                                <td>@h.CheckedBy</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+}

@@ -1,0 +1,103 @@
+@model FacadeCore.RetainmentBatchVm
+@{
+    string Situation(string s) => s switch
+    {
+        "obligation" => "Inhoudingsplicht",
+        "noObligation" => "Geen inhoudingsplicht",
+        "notInDomain" => "Buiten toepassing",
+        _ => "—"
+    };
+    string Badge(string s) => s == "obligation" ? "bg-danger" : s == "noObligation" ? "bg-success" : "bg-secondary";
+    var simulation = Model.Environment == "Simulation";
+}
+
+<style>
+    @@media print {
+        .no-print, .main-header, .main-sidebar, .main-footer, nav, .breadcrumb { display: none !important; }
+        .content-wrapper { margin: 0 !important; }
+        .badge { border: 1px solid #000; color: #000 !important; background: #fff !important; }
+        table { font-size: 10px; }
+    }
+</style>
+
+<section class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2 align-items-center">
+            <div class="col-sm-7">
+                <h1 class="m-0 fw-bold">Controle inhoudingsplicht (30bis/30ter)</h1>
+                <p class="text-muted mb-0 mt-1 small">
+                    Gecontroleerd op @Model.CheckedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")@(string.IsNullOrEmpty(Model.CheckedBy) ? "" : $" door {Model.CheckedBy}")
+                    bij de RSZ en de FOD Financiën (webservice BillRetainment). Lijst-ID: @Model.BatchId
+                </p>
+            </div>
+            <div class="col-sm-5 d-flex justify-content-end gap-2 no-print">
+                <a asp-action="Index" class="btn btn-outline-secondary btn-sm"><i class="bx bx-arrow-back me-1"></i>Alle lijsten</a>
+                <a asp-action="Bewijs" asp-route-id="@Model.BatchId" class="btn btn-outline-secondary btn-sm"><i class="bx bx-download me-1"></i>Ruw bewijs (JSON)</a>
+                <button type="button" class="btn btn-primary btn-sm" onclick="window.print()"><i class="bx bx-printer me-1"></i>Afdrukken / PDF</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="content">
+    <div class="container-fluid">
+        @if (simulation)
+        {
+            <div class="alert alert-warning">
+                Dit resultaat komt uit de <strong>testomgeving van de RSZ</strong> (statische testdata) en is geen echte controle. Het heeft geen bewijswaarde.
+            </div>
+        }
+
+        <div class="card">
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Onderneming</th>
+                            <th>Nummer</th>
+                            <th>Sociaal (RSZ)</th>
+                            <th>Fiscaal (FOD Financiën)</th>
+                            <th>Geldig tot</th>
+                            <th>Consultatiereferentie</th>
+                            <th>Trace-ID</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var i in Model.Items)
+                        {
+                            var validUntil = new[] { i.SocialValidUntil, i.FiscalValidUntil }.Where(d => d.HasValue).Select(d => d.Value).DefaultIfEmpty().Min();
+                            <tr>
+                                <td>@(string.IsNullOrEmpty(i.SupplierName) ? "—" : i.SupplierName)</td>
+                                <td class="text-nowrap">@(i.EnterpriseNumber ?? i.EnterpriseIdentifier)</td>
+                                @if (i.Failed)
+                                {
+                                    <td colspan="4" class="text-danger">@i.ErrorMessage</td>
+                                    <td class="small text-muted">@i.TraceId</td>
+                                }
+                                else
+                                {
+                                    <td>
+                                        <span class="badge @Badge(i.SocialSituation)">@Situation(i.SocialSituation)</span>
+                                        @if (i.SocialObligation) { <strong class="ms-1">@i.SocialWithholdingPercentage%</strong> }
+                                    </td>
+                                    <td>
+                                        <span class="badge @Badge(i.FiscalSituation)">@Situation(i.FiscalSituation)</span>
+                                        @if (i.FiscalObligation) { <strong class="ms-1">@i.FiscalWithholdingPercentage%</strong> }
+                                    </td>
+                                    <td class="text-nowrap">@(!i.HasObligation && validUntil != default ? validUntil.ToLocalTime().ToString("dd/MM/yyyy") : "—")</td>
+                                    <td class="text-nowrap">@i.RetainmentCheckReference</td>
+                                    <td class="small text-muted">@i.TraceId</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <p class="small text-muted mt-3">
+            Een geldig resultaat zonder inhoudingsplicht blijft geldig tot de vermelde datum; controleer opnieuw als je later betaalt.
+            Bij inhoudingsplicht houd je het vermelde percentage in op de factuur en stort je het door.
+        </p>
+    </div>
+</section>

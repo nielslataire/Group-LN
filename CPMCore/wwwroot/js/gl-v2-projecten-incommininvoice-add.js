@@ -170,6 +170,53 @@
             .catch(toonGeenContract);
     }
 
+    // ── Inhoudingsplicht (30bis/30ter) van de gekozen aannemer ──────────────────────────────────
+    // Zodra een leverancier of contract gekozen is, vraagt de pagina de server naar de laatste (of een nieuwe) controle.
+    var retainBox = document.getElementById('gln-ai-retainment');
+    var retainIcon = document.getElementById('gln-ai-retainment-icon');
+    var retainText = document.getElementById('gln-ai-retainment-text');
+    var retainSeq = 0;
+
+    function verbergInhoudingsplicht() { retainSeq++; if (retainBox) retainBox.hidden = true; }
+
+    function zetInhoudingsplicht(tone, icon, tekst) {
+        retainBox.className = 'gl-v2-notice gl-v2-notice-compact ' + tone;
+        retainIcon.className = 'ph ' + icon;
+        retainText.textContent = tekst;
+        retainBox.hidden = false;
+    }
+
+    function toonInhoudingsplicht(companyId, contractId) {
+        if (!retainBox || !cfg.retainmentUrl) return;
+        var seq = ++retainSeq;
+        if ((!companyId || companyId === '0') && (!contractId || contractId === '0')) { retainBox.hidden = true; return; }
+        zetInhoudingsplicht('is-info', 'ph-hourglass', 'Inhoudingsplicht wordt gecontroleerd…');
+        fetch(cfg.retainmentUrl, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'companyId=' + encodeURIComponent(companyId || 0) + '&contractId=' + encodeURIComponent(contractId || 0) })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (seq !== retainSeq) return; // ondertussen een andere aannemer gekozen
+                var test = d.simulation ? ' (testresultaat)' : '';
+                if (!d.success) { zetInhoudingsplicht('is-warning', 'ph-warning', 'De inhoudingsplicht kon niet gecontroleerd worden.'); return; }
+                switch (d.state) {
+                    case 'obligation':
+                        zetInhoudingsplicht('is-danger', 'ph-warning-circle', d.name + ' heeft een inhoudingsplicht. ' + d.message + ' Controle van ' + d.checkedAt + test + '.');
+                        break;
+                    case 'ok':
+                        zetInhoudingsplicht('is-info', 'ph-shield-check', d.name + ': geen inhoudingsplicht. Controle van ' + d.checkedAt + test + '.');
+                        break;
+                    case 'failed':
+                        zetInhoudingsplicht('is-warning', 'ph-warning', 'De inhoudingsplicht van ' + d.name + ' kon niet gecontroleerd worden' + (d.message ? ': ' + d.message : '.'));
+                        break;
+                    case 'noidentifier':
+                        zetInhoudingsplicht('is-warning', 'ph-warning', d.name + ' heeft geen btw- of ondernemingsnummer: de inhoudingsplicht kan niet gecontroleerd worden.');
+                        break;
+                    default:
+                        retainBox.hidden = true;
+                }
+            })
+            .catch(function () { if (seq === retainSeq) retainBox.hidden = true; });
+    }
+
     // ── Vervaldatum/korting (42e punt 03) — berekend, niet opgeslagen ───────────────────────────
     function parseIsoDate(iso) { if (!iso) return null; var p = iso.split('-'); return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])); }
     function fmtDate(d) { return d.getDate().toString().padStart(2, '0') + '/' + (d.getMonth() + 1).toString().padStart(2, '0') + '/' + d.getFullYear(); }
@@ -570,6 +617,7 @@
             if (metContract) wisCombo(companyField); else wisCombo(contractField);
             toonGeenContract();
             leegActiviteiten();
+            verbergInhoudingsplicht();
         });
     });
 
@@ -577,7 +625,8 @@
         contractHidden.addEventListener('change', function () {
             if (!isMetContract()) return;
             var contractId = contractHidden.value;
-            if (!contractId) { toonGeenContract(); leegActiviteiten(); return; }
+            if (!contractId) { toonGeenContract(); leegActiviteiten(); verbergInhoudingsplicht(); return; }
+            toonInhoudingsplicht('0', contractId);
             refreshActiviteiten(cfg.getContractActivitiesUrl, 'contractid=' + encodeURIComponent(contractId));
             document.getElementById('DetailRows').innerHTML = '';
             recomputeSomcontrole();
@@ -589,7 +638,8 @@
             if (isMetContract()) return;
             var companyId = companyHidden.value;
             toonGeenContract();
-            if (!companyId || companyId === '0') { leegActiviteiten(); return; }
+            if (!companyId || companyId === '0') { leegActiviteiten(); verbergInhoudingsplicht(); return; }
+            toonInhoudingsplicht(companyId, '0');
             refreshActiviteiten(cfg.getCompanyActivitiesUrl, 'companyid=' + encodeURIComponent(companyId));
             document.getElementById('DetailRows').innerHTML = '';
             recomputeSomcontrole();
@@ -598,10 +648,10 @@
 
     if (isMetContract()) {
         if (cfg.contractId) laadContractInfo(cfg.contractId); else toonGeenContract();
-        if (cfg.contractId) refreshActiviteiten(cfg.getContractActivitiesUrl, 'contractid=' + cfg.contractId);
+        if (cfg.contractId) { refreshActiviteiten(cfg.getContractActivitiesUrl, 'contractid=' + cfg.contractId); toonInhoudingsplicht('0', String(cfg.contractId)); }
     } else {
         toonGeenContract();
-        if (cfg.companyId) refreshActiviteiten(cfg.getCompanyActivitiesUrl, 'companyid=' + cfg.companyId);
+        if (cfg.companyId) { refreshActiviteiten(cfg.getCompanyActivitiesUrl, 'companyid=' + cfg.companyId); toonInhoudingsplicht(String(cfg.companyId), '0'); }
     }
 
     // ── "Toevoegen" — één activiteit per klik (design-handoff 42c se eigen toevoegrij: één dashed

@@ -307,6 +307,35 @@ public class HomeController : BaseController
             }
         }
 
+        // Inhoudingsplicht (30bis/30ter): leveranciers waarvan de laatste controle een inhoudingsplicht toont, voor boekhouding en CEO/CFO.
+        if (model.DashboardType == Models.DashboardType.Boekhouding || model.DashboardType == Models.DashboardType.CeoCfo)
+        {
+            try
+            {
+                var retainment = HttpContext.RequestServices.GetRequiredService<IRetainmentCheckService>();
+                model.RetainmentObligations = (await retainment.GetOpenObligationsAsync()).ToList();
+                if (model.Boekhouding != null)
+                {
+                    foreach (var o in model.RetainmentObligations)
+                    {
+                        var parts = new List<string>();
+                        if (o.SocialObligation) parts.Add($"RSZ {o.SocialWithholdingPercentage}%");
+                        if (o.FiscalObligation) parts.Add($"FOD {o.FiscalWithholdingPercentage}%");
+                        model.Boekhouding.Meldingen.Insert(0, new CPMCore.Models.Home.BkMeldingVm
+                        {
+                            Group = 0,
+                            Text = $"Inhoudingsplicht: {(string.IsNullOrWhiteSpace(o.SupplierName) ? o.EnterpriseNumber ?? o.EnterpriseIdentifier : o.SupplierName)}",
+                            Meta = $"{string.Join(" + ", parts)} · gecontroleerd {o.CheckedAt.ToLocalTime():dd/MM/yyyy}{(o.Environment == "Simulation" ? " · testresultaat" : "")}",
+                            IconClass = "ph-shield-warning",
+                            Target = "Inhoudingsplicht"
+                        });
+                    }
+                    ViewData["NotificationsBellCount"] = model.Boekhouding.Meldingen.Count(m => m.Group <= 1);
+                }
+            }
+            catch { /* de inhoudingsplicht mag het dashboard nooit blokkeren */ }
+        }
+
         // CeoCfo: bedrijfsnamen voor de badge op elke kaart in de multi-company werven-grid.
         if (model.DashboardType == Models.DashboardType.CeoCfo)
         {

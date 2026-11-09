@@ -203,7 +203,7 @@ namespace CPMCore.Controllers
             return View(model);
         }
         [HttpPost]
-        public ActionResult AddIncommingInvoice(ProjectIncommingInvoiceAddUpdateModel model, List<IncommingInvoiceDetailBO> details, bool saveAndNew = false)
+        public async Task<ActionResult> AddIncommingInvoice(ProjectIncommingInvoiceAddUpdateModel model, List<IncommingInvoiceDetailBO> details, bool saveAndNew = false)
         {
 
             if (!ModelState.IsValid)
@@ -279,6 +279,7 @@ namespace CPMCore.Controllers
             if (saveResponse.Success)
             {
                 AddMessage("success", $"De factuur is toegevoegd aan het project {model.ProjectName}", "Geslaagd!");
+                await CheckRetainmentForNewInvoiceAsync(model);
                 if (saveAndNew && ViewData["UseGlV2Layout"] as bool? == true)
                 {
                     // Opslaan en nieuwe (design-handoff 42c): leeg formulier voor hetzelfde project en dezelfde
@@ -307,6 +308,85 @@ namespace CPMCore.Controllers
                 return View(model);
             }
         }
+        /// <summary>
+        /// Inhoudingsplicht (30bis/30ter) bij elke ingegeven factuur: een nog geldige controle van de leverancier wordt hergebruikt, anders wordt de RSZ bevraagd.
+        /// De factuur zelf blijft altijd bewaard; bij inhoudingsplicht of een mislukte controle volgt een waarschuwing.
+        /// </summary>
+        private async Task CheckRetainmentForNewInvoiceAsync(ProjectIncommingInvoiceAddUpdateModel model)
+        {
+            try
+            {
+                var retainment = HttpContext.RequestServices.GetRequiredService<IRetainmentCheckService>();
+                if (!retainment.IsConfigured) return;
+
+                var companyId = model.IncommingInvoice.CompanyId;
+                if (companyId is null && model.IncommingInvoice.ContractID is > 0)
+                    companyId = await _db.Contract.AsNoTracking().Where(c => c.Id == model.IncommingInvoice.ContractID).Select(c => (int?)c.CompanyId).FirstOrDefaultAsync();
+                if (companyId is null) return;
+
+                var supplier = await _db.CompanyInfo.AsNoTracking().Where(c => c.CompanyId == companyId).Select(c => new { Name = c.BedrijfsNaam, c.VatNumber, c.Ondernemingsnummer }).FirstOrDefaultAsync();
+                if (supplier == null) return;
+
+                var check = await retainment.EnsureCheckedAsync(new RetainmentCheckInput { SupplierName = supplier.Name, Identifier = string.IsNullOrWhiteSpace(supplier.VatNumber) ? supplier.Ondernemingsnummer : supplier.VatNumber }, null, User.Identity?.Name);
+                if (check.HasObligation)
+                {
+                    var parts = new List<string>();
+                    if (check.SocialObligation) parts.Add($"{check.SocialWithholdingPercentage}% (sociale schulden)");
+                    if (check.FiscalObligation) parts.Add($"{check.FiscalWithholdingPercentage}% (fiscale schulden)");
+                    AddMessage("warning", $"{supplier.Name} heeft een inhoudingsplicht: bij betaling moet je {string.Join(" en ", parts)} inhouden en doorstorten.", "Inhoudingsplicht");
+                }
+                else if (check.Failed)
+                    AddMessage("warning", $"De inhoudingsplicht van {supplier.Name} kon niet gecontroleerd worden: {check.ErrorMessage}", "Inhoudingsplicht");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Controle inhoudingsplicht bij het toevoegen van een factuur mislukt.");
+            }
+        }
+
+        /// <summary>
+        /// Inhoudingsplicht van de gekozen leverancier (of de leverancier van het gekozen contract) in het factuurformulier:
+        /// zodra er een aannemer gekozen is, toont de pagina het resultaat. Een nog geldige controle wordt hergebruikt, anders wordt de RSZ bevraagd.
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> GetRetainmentForInvoiceFormV2(int companyId = 0, int contractId = 0)
+        {
+            try
+            {
+                var retainment = HttpContext.RequestServices.GetRequiredService<IRetainmentCheckService>();
+                if (!retainment.IsConfigured) return Json(new { success = true, state = "unconfigured" });
+
+                int? supplierId = companyId > 0 ? companyId : null;
+                if (supplierId is null && contractId > 0)
+                    supplierId = await _db.Contract.AsNoTracking().Where(c => c.Id == contractId).Select(c => (int?)c.CompanyId).FirstOrDefaultAsync();
+                if (supplierId is null) return Json(new { success = true, state = "none" });
+
+                var supplier = await _db.CompanyInfo.AsNoTracking().Where(c => c.CompanyId == supplierId).Select(c => new { Name = c.BedrijfsNaam, c.VatNumber, c.Ondernemingsnummer }).FirstOrDefaultAsync();
+                if (supplier == null) return Json(new { success = true, state = "none" });
+
+                var identifier = string.IsNullOrWhiteSpace(supplier.VatNumber) ? supplier.Ondernemingsnummer : supplier.VatNumber;
+                if (string.IsNullOrWhiteSpace(identifier)) return Json(new { success = true, state = "noidentifier", name = supplier.Name });
+
+                var check = await retainment.EnsureCheckedAsync(new RetainmentCheckInput { SupplierName = supplier.Name, Identifier = identifier }, null, User.Identity?.Name);
+                var checkedAt = check.CheckedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
+                if (check.Failed)
+                    return Json(new { success = true, state = "failed", name = supplier.Name, message = check.ErrorMessage });
+                if (check.HasObligation)
+                {
+                    var parts = new List<string>();
+                    if (check.SocialObligation) parts.Add($"{check.SocialWithholdingPercentage}% (sociale schulden)");
+                    if (check.FiscalObligation) parts.Add($"{check.FiscalWithholdingPercentage}% (fiscale schulden)");
+                    return Json(new { success = true, state = "obligation", name = supplier.Name, message = $"Bij betaling moet je {string.Join(" en ", parts)} inhouden en doorstorten.", checkedAt, simulation = check.Environment == "Simulation" });
+                }
+                return Json(new { success = true, state = "ok", name = supplier.Name, checkedAt, simulation = check.Environment == "Simulation" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Controle inhoudingsplicht in het factuurformulier mislukt.");
+                return Json(new { success = false });
+            }
+        }
+
         [HttpGet]
         //[Breadcrumb("Inkomende factuur bewerken")]
         [Breadcrumb("Inkomende factuur bewerken", FromAction = "DetailContracts")]

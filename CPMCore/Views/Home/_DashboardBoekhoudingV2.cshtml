@@ -61,6 +61,7 @@
         "Incoming" when m.IncomingId.HasValue => Url.Action("Detail", "DocumentenCentrum", new { id = m.IncomingId.Value }) ?? "#",
         "Incoming" => Url.Action("Index", "DocumentenCentrum") ?? "#",
         "IncomingWarnings" => Url.Action("Index", "DocumentenCentrum", new { hasWarnings = true }) ?? "#",
+        "Inhoudingsplicht" => Url.Action("Index", "Inhoudingsplicht") ?? "#",
         "Invoice" when m.InvoiceId.HasValue => Url.Action("Detail", "Invoices", new { id = m.InvoiceId.Value }) ?? "#",
         "Settings" when m.IssuerCompanyId.HasValue => Url.Action("IssuerCompaniesEdit", "Instellingen", new { id = m.IssuerCompanyId.Value }) ?? "#",
         _ => "#"

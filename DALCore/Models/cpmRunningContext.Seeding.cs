@@ -38,6 +38,7 @@ namespace DALCore.Models
             ConfigureBorgEntities(modelBuilder);
             ConfigureVerkoopEntities(modelBuilder);
             ConfigureRecurringInvoiceEntities(modelBuilder);
+            ConfigureRetainmentEntities(modelBuilder);
             ConfigurePuntRondgangEntities(modelBuilder);
             ConfigureCrmContactEntities(modelBuilder);
             ConfigureDocumentenEntities(modelBuilder);

@@ -38,6 +38,8 @@
 
 .gl-v2-ec-inline-group { display: flex; align-items: center; gap: 8px; }
 .gl-v2-ec-inline-group select.form-control { flex: 1; min-width: 0; }
+.gl-v2-ec-inline-group > .gl-v2-field-bare { flex: 1; min-width: 0; }
+.gl-v2-ec-inline-group > .gl-v2-field-bare .gl-v2-select { width: 100%; }
 .gl-v2-ec-inline-field { flex: 1; min-width: 0; }
 .gl-v2-ec-inline-label { font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); flex: none; }
 /* Korting-contant se schakelaar staat NIET in een klikbare .gl-v2-toggle-row (het is één losse
@@ -88,7 +90,9 @@
 }
 .gl-v2-ec-lot-row-name i { color: var(--gl-v2-muted); font-size: 15px; flex: none; }
 .gl-v2-ec-lot-row-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gl-v2-ec-lot-row-price .input-group { flex-wrap: nowrap; align-items: center; gap: 8px; }
+.gl-v2-ec-lot-row-price { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.gl-v2-ec-lot-row-price .gl-v2-field { flex: 1; min-width: 0; }
+.gl-v2-ec-lot-row-price .deleterow { flex: none; }
 
 /* Lot-verwijderen — de gedeelde CurrencyWithActions-template (EditContractV2's eigen scope-
    toelichting: bewust ongewijzigd) tekent zelf een bootstrap .btn.btn-danger.deleterow; hier

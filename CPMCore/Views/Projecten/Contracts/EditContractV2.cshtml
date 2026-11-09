@@ -76,7 +76,6 @@
     <link rel="stylesheet" href="~/lib/bootstrap-multiselect/css/bootstrap-multiselect.css">
     <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-projecten-editcontract.css" asp-append-version="true" />
-    <script src="~/lib/vendor/inputmask-5.0.8/jquery.inputmask.min.js"></script>
 }
 @section PageActions
 {
@@ -146,7 +145,16 @@
                 <div class="gl-v2-field gl-v2-ec-col-12">
                     @Html.LabelFor(m => m.Contract.SiteManagerContactId, new { @class = "gl-v2-field-label" })
                     <div class="gl-v2-ec-inline-group">
-                        @Html.DropDownListFor(m => m.Contract.SiteManagerContactId, new SelectList(Model.SiteManagers, "ID", "Display", Model.Contract.SiteManagerContactId), "Geen", new { @class = "form-control form-control-modern", id = "ddlSiteManager" })
+                        @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                        {
+                            Name = "Contract.SiteManagerContactId",
+                            Id = "ddlSiteManager",
+                            Bare = true,
+                            Value = Model.Contract.SiteManagerContactId?.ToString() ?? "",
+                            EmptyText = "Geen",
+                            Icon = "ph-user",
+                            Items = (Model.SiteManagers ?? new List<BOCore.IdNameBO>()).Select(s => new GlV2SelectItem { Value = s.ID.ToString(), Text = s.Display }).ToList()
+                        })
                         <button type="button" class="gl-v2-icon-btn" id="btnNewSiteManager" title="Nieuwe werfleider toevoegen" aria-label="Nieuwe werfleider toevoegen"><i class="ph ph-user-plus" aria-hidden="true"></i></button>
                     </div>
                 </div>
@@ -331,7 +339,7 @@
 
                 <div class="gl-v2-ec-lots-total">
                     <span>Contractprijs</span>
-                    <span>@((Model.Contract.Activities?.Sum(a => a.EffectivePrice) ?? 0m).ToString("C"))</span>
+                    <span id="gl-v2-ec-lots-total-value">@((Model.Contract.Activities?.Sum(a => a.EffectivePrice) ?? 0m).ToString("C"))</span>
                 </div>
             </div>
         </div>

@@ -256,6 +256,7 @@
                 var isCurrent = IsActive("Invoices") && currentIssuerCompanyId == issuer.Id;
                 <a class="gl-v2-flyout-link @(isCurrent ? "is-current" : "")" href="@Url.Action("Index", "Invoices", new { issuerCompanyId = issuer.Id })" role="menuitem">@issuer.Name</a>
             }
+            <a class="gl-v2-flyout-link @(IsActive("Inhoudingsplicht") ? "is-current" : "")" href="@Url.Action("Index", "Inhoudingsplicht")" role="menuitem">Inhoudingsplicht</a>
         </div>
     }
 
@@ -366,6 +367,7 @@
                 {
                     <a class="gl-v2-mobile-subitem" href="@Url.Action("Index", "Invoices", new { issuerCompanyId = issuer.Id })"><i class="ph ph-buildings" aria-hidden="true"></i>@issuer.Name</a>
                 }
+                <a class="gl-v2-mobile-subitem" href="@Url.Action("Index", "Inhoudingsplicht")"><i class="ph ph-shield-check" aria-hidden="true"></i>Inhoudingsplicht</a>
             </div>
         }
 

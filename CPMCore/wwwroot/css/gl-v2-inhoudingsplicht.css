@@ -1,0 +1,167 @@
+/* gl-v2 — Inhoudingsplicht (30bis/30ter): controlelijsten, bewijs en de kaart op de leveranciersfiche.
+   Kaart, badge, notice, knoppen en veldvak komen uit de gedeelde gl-v2-CSS; hier enkel de tabel en de nieuwe-lijst-invoer. */
+
+.gl-v2-ip { display: flex; flex-direction: column; gap: 14px; }
+.gl-v2-ip-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.gl-v2-ip-kpis .gl-v2-section-card { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; }
+.gl-v2-ip-kpis .l { font: 500 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-ip-kpis .v { font: 500 26px var(--gl-v2-font-serif, 'Playfair Display', Georgia, serif); color: var(--gl-v2-ink); }
+.gl-v2-ip-kpis .is-bad .v { color: var(--gl-v2-danger); }
+
+.gl-v2-ip-new { padding: 16px 20px 18px; display: flex; flex-direction: column; gap: 10px; }
+.gl-v2-ip-new p { margin: 0; font: 450 12.5px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-ip-new code { font: 500 12px ui-monospace, Consolas, monospace; background: var(--gl-v2-neutral-tint); padding: 1px 5px; border-radius: 4px; }
+.gl-v2-ip-new textarea.gl-v2-field-input { min-height: 120px; resize: vertical; padding-top: 10px; font-family: var(--gl-v2-font-sans); }
+.gl-v2-ip-new .gl-v2-field-box { height: auto; align-items: flex-start; }
+
+.gl-v2-ip-scroll { overflow-x: auto; }
+.gl-v2-ip-table { width: 100%; border-collapse: collapse; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-ip-table th {
+    text-align: left; padding: 10px 16px; font: 600 10.5px var(--gl-v2-font-sans); letter-spacing: .06em; text-transform: uppercase;
+    color: var(--gl-v2-muted); border-bottom: 1px solid var(--gl-v2-hairline-soft); white-space: nowrap;
+}
+.gl-v2-ip-table td { padding: 12px 16px; border-bottom: 1px solid var(--gl-v2-hairline-soft); vertical-align: top; }
+.gl-v2-ip-table tr:last-child td { border-bottom: 0; }
+.gl-v2-ip-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.gl-v2-ip-table .nowrap { white-space: nowrap; }
+.gl-v2-ip-table .muted { color: var(--gl-v2-muted); font-size: 12px; }
+.gl-v2-ip-table .mono { font: 450 11.5px ui-monospace, Consolas, monospace; color: var(--gl-v2-muted); word-break: break-all; }
+.gl-v2-ip-table .err { color: var(--gl-v2-danger); }
+.gl-v2-ip-table .pct { margin-left: 6px; font-weight: 700; }
+.gl-v2-ip-empty { padding: 22px 20px; text-align: center; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+.gl-v2-ip-foot { margin: 0; padding: 0 4px; font: 450 12px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* Leveranciersfiche: de kaart staat bovenaan het tabblad Algemeen. */
+.gl-v2-ip-supplier-status { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 14px 20px; }
+.gl-v2-ip-supplier-status .t { font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-ip-supplier-status .t small { color: var(--gl-v2-muted); font-size: 12px; }
+.gl-v2-ip-supplier-status form { margin-left: auto; }
+
+@media print {
+    .gl-v2-ip-noprint { display: none !important; }
+    .gl-v2-ip-table { font-size: 10px; }
+}
+
+@media (max-width: 720px) {
+    .gl-v2-ip-kpis { grid-template-columns: 1fr; }
+}
+
+/* ── Pagina Inhoudingsplicht (design-handoff 57): aannemers kiezen + te controleren + zijpaneel ─────────────── */
+.gl-v2-ip-grid { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 16px; align-items: start; }
+.gl-v2-ip-sel { position: sticky; top: 12px; }
+.gl-v2-ip-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 18px 10px; }
+.gl-v2-ip-search { flex: 1 1 260px; max-width: 380px; display: flex; align-items: center; gap: 8px; }
+.gl-v2-ip-search > i { color: var(--gl-v2-muted); flex: none; }
+.gl-v2-ip-count { font-weight: 500; color: var(--gl-v2-muted); margin-left: 4px; }
+.gl-v2-ip-chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 0 18px 12px; }
+.gl-v2-ip-chips[hidden] { display: none; }
+.gl-v2-ip-chips-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .09em; color: var(--gl-v2-muted); margin-right: 4px; }
+.gl-v2-ip-chip {
+    height: 30px; padding: 0 11px 0 9px; border-radius: 15px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    font: 500 12px var(--gl-v2-font-sans); border: 1px solid var(--gl-v2-hairline); background: var(--gl-v2-surface); color: var(--gl-v2-muted-soft);
+}
+.gl-v2-ip-chip i { font-size: 12px; opacity: 0; width: 0; margin-right: -6px; }
+.gl-v2-ip-chip.is-on { font-weight: 600; border-color: var(--gl-v2-primary); background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); }
+.gl-v2-ip-chip.is-on i { opacity: 1; width: auto; margin-right: 0; }
+.gl-v2-ip-yearnote { margin: 0; padding: 0 18px 12px; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-ip-yearnote[hidden] { display: none; }
+
+.gl-v2-ip-picktable th.chk, .gl-v2-ip-picktable td.chk { width: 44px; padding-right: 0; }
+.gl-v2-ip-picktable tr[hidden] { display: none; }
+.gl-v2-ip-picktable tbody tr.is-selected { background: var(--gl-v2-primary-tint); }
+.gl-v2-ip-name { display: flex; flex-direction: column; gap: 2px; cursor: pointer; margin: 0; }
+.gl-v2-ip-name strong { font-weight: 600; }
+.gl-v2-ip-name .muted { font-size: 11.5px; color: var(--gl-v2-muted); }
+.gl-v2-ip-name .mono { font: 500 11.5px ui-monospace, Consolas, monospace; }
+.gl-v2-ip-name .err { color: var(--gl-v2-danger); }
+.gl-v2-ip-sitetags { display: flex; gap: 4px; flex-wrap: wrap; }
+.gl-v2-ip-sitetag { font: 500 11px var(--gl-v2-font-sans); padding: 2px 7px; border-radius: 4px; white-space: nowrap; background: var(--gl-v2-neutral-tint); color: var(--gl-v2-muted); }
+.gl-v2-ip-sitetag.is-active { background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); }
+.gl-v2-ip-laststatus { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+.gl-v2-ip-laststatus .gl-v2-badge { gap: 5px; }
+.gl-v2-ip-laststatus .muted { font-size: 11px; color: var(--gl-v2-muted); }
+.gl-v2-ip-table .mono { word-break: normal; }
+
+.gl-v2-ip-extra { padding: 14px 18px 18px; border-top: 1px solid var(--gl-v2-hairline-soft); display: flex; flex-direction: column; gap: 6px; }
+.gl-v2-ip-extra .gl-v2-field-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .09em; color: var(--gl-v2-muted); }
+.gl-v2-ip-extra textarea.gl-v2-field-input { min-height: 96px; resize: vertical; padding-top: 10px; font: 500 12.5px ui-monospace, Consolas, monospace; }
+.gl-v2-ip-extra .gl-v2-field-box { height: auto; align-items: flex-start; }
+.gl-v2-ip-extra code { font: 500 11.5px ui-monospace, Consolas, monospace; background: var(--gl-v2-neutral-tint); padding: 1px 5px; border-radius: 4px; }
+
+.gl-v2-ip-sel-body { padding: 14px 18px; display: flex; flex-direction: column; gap: 12px; }
+.gl-v2-ip-sel-head { display: flex; align-items: center; justify-content: space-between; font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .09em; color: var(--gl-v2-muted); }
+.gl-v2-ip-sel-list { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; max-height: 300px; overflow: auto; }
+.gl-v2-ip-sel-list li { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--gl-v2-hairline-soft); font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-ip-sel-list li:first-child { border-top: 0; }
+.gl-v2-ip-sel-list li .n { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.gl-v2-ip-sel-list li .n small { font: 500 11px ui-monospace, Consolas, monospace; color: var(--gl-v2-muted); }
+.gl-v2-ip-sel-list li .x { border: 0; background: transparent; cursor: pointer; color: var(--gl-v2-muted); padding: 4px; border-radius: 6px; }
+.gl-v2-ip-sel-list li .x:hover { background: var(--gl-v2-neutral-tint); color: var(--gl-v2-ink); }
+.gl-v2-ip-sel-foot { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-ip-skipnote { flex: 1; font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+.gl-v2-ip-link { border: 0; background: none; padding: 0; cursor: pointer; font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-align: left; }
+.gl-v2-ip-link:hover { text-decoration: underline; }
+.gl-v2-ip-table tr[hidden] { display: none; }
+
+/* Zijpaneel met het bewijs van een controlelijst */
+.gl-v2-ip-backdrop { position: fixed; inset: 0; background: rgba(44, 59, 42, .35); z-index: 90000; }
+.gl-v2-ip-backdrop[hidden], .gl-v2-ip-drawer[hidden] { display: none; }
+.gl-v2-ip-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(640px, 100vw); background: var(--gl-v2-surface); z-index: 90001; box-shadow: -24px 0 60px -30px rgba(44, 59, 42, .5); overflow-y: auto; }
+.gl-v2-ip-drawer-body { display: flex; flex-direction: column; gap: 14px; padding: 18px 20px 24px; }
+.gl-v2-ip-drawer-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.gl-v2-ip-drawer-head h2 { margin: 0; font: 500 19px var(--gl-v2-font-serif, 'Playfair Display', Georgia, serif); color: var(--gl-v2-ink); }
+.gl-v2-ip-drawer-head .muted, .gl-v2-ip-drawer-foot .muted { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-ip-drawer-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 6px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-ip-titlerow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.gl-v2-ip-titlerow input { height: 34px; min-width: 260px; padding: 0 10px; border-radius: 8px; border: 1.5px solid var(--gl-v2-primary); font: 500 15px var(--gl-v2-font-sans); color: var(--gl-v2-ink); background: var(--gl-v2-surface); }
+.gl-v2-ip-closebtn { width: 32px; height: 32px; flex: none; border-radius: 8px; border: 0; background: var(--gl-v2-neutral-tint); cursor: pointer; color: var(--gl-v2-ink); display: inline-flex; align-items: center; justify-content: center; }
+.gl-v2-ip-kpistrip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-radius: 10px; box-shadow: inset 0 0 0 1px var(--gl-v2-hairline-soft); overflow: hidden; }
+.gl-v2-ip-kpistrip > div { display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; }
+.gl-v2-ip-kpistrip > div + div { border-left: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-ip-kpistrip .v { font: 600 20px var(--gl-v2-font-sans); font-variant-numeric: tabular-nums; line-height: 1.1; color: var(--gl-v2-ink); }
+.gl-v2-ip-kpistrip .v.is-bad { color: var(--gl-v2-danger); }
+.gl-v2-ip-kpistrip .v.is-neutral { color: var(--gl-v2-muted); }
+.gl-v2-ip-kpistrip .l { font: 500 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
+.gl-v2-ip-valid { display: flex; align-items: center; gap: 8px; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
+.gl-v2-ip-valid b { font-weight: 600; color: var(--gl-v2-ink); }
+.gl-v2-ip-cards { display: flex; flex-direction: column; gap: 10px; }
+.gl-v2-ip-card { border-radius: 10px; background: var(--gl-v2-surface); box-shadow: inset 0 0 0 1px var(--gl-v2-hairline); }
+.gl-v2-ip-card.is-plicht { box-shadow: inset 0 0 0 1.5px var(--gl-v2-danger-border, #D9A9A9); }
+.gl-v2-ip-card-main { display: grid; grid-template-columns: minmax(0, 1fr) 128px 128px; gap: 12px; align-items: start; padding: 12px 14px; }
+.gl-v2-ip-card-who { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.gl-v2-ip-card-who .n { font: 600 13.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-ip-card-who .n.is-unknown { font-style: italic; font-weight: 500; color: var(--gl-v2-muted); }
+.gl-v2-ip-card .mono { font: 500 11.5px ui-monospace, Consolas, monospace; color: var(--gl-v2-muted); }
+.gl-v2-ip-card-col { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.gl-v2-ip-card-col .k { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .09em; color: var(--gl-v2-muted); }
+.gl-v2-ip-card-col .gl-v2-badge { gap: 5px; }
+.gl-v2-ip-card-col .sub { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-ip-card-err { grid-column: span 2; color: var(--gl-v2-danger); font: 450 12px var(--gl-v2-font-sans); }
+.gl-v2-ip-card-proof { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; padding: 8px 14px; border-top: 1px solid var(--gl-v2-hairline-soft); background: var(--gl-v2-neutral-tint); border-radius: 0 0 10px 10px; font: 500 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-ip-card-proof > span { display: inline-flex; align-items: center; gap: 6px; }
+.gl-v2-ip-card-proof b { font-weight: 500; color: var(--gl-v2-ink); }
+.gl-v2-ip-trace { display: flex; align-items: center; gap: 6px; font: 500 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-ip-trace b { font: 500 11px ui-monospace, Consolas, monospace; font-weight: 500; color: var(--gl-v2-muted-soft); }
+.gl-v2-ip-copy { border: 0; background: transparent; cursor: pointer; color: var(--gl-v2-muted); padding: 3px; border-radius: 5px; display: inline-flex; }
+.gl-v2-ip-copy:hover { background: var(--gl-v2-surface); color: var(--gl-v2-primary); }
+.gl-v2-ip-more { position: relative; }
+.gl-v2-ip-menu { position: absolute; right: 0; bottom: calc(100% + 6px); width: 240px; background: var(--gl-v2-surface); border-radius: 10px; padding: 6px; display: flex; flex-direction: column; box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 18px 40px -16px rgba(31,42,30,.45); z-index: 2; }
+.gl-v2-ip-menu[hidden] { display: none; }
+.gl-v2-ip-menu a, .gl-v2-ip-menu button { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border: 0; background: transparent; border-radius: 7px; cursor: pointer; text-align: left; text-decoration: none; font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-ip-menu a:hover, .gl-v2-ip-menu button:hover { background: var(--gl-v2-neutral-tint); }
+.gl-v2-ip-menu small { display: block; font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-ip-evidence td { padding-top: 0; }
+.gl-v2-ip-evidence dl { display: flex; gap: 18px; flex-wrap: wrap; margin: 0; }
+.gl-v2-ip-evidence dl div { display: flex; flex-direction: column; gap: 1px; }
+.gl-v2-ip-evidence dt { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gl-v2-ip-evidence dd { margin: 0; font: 500 11.5px ui-monospace, Consolas, monospace; color: var(--gl-v2-ink); word-break: break-all; }
+
+@media (max-width: 1100px) {
+    .gl-v2-ip-grid { grid-template-columns: 1fr; }
+    .gl-v2-ip-sel { position: static; }
+}
+@media print {
+    .gl-v2-ip-drawer, .gl-v2-ip-backdrop { display: none !important; }
+}

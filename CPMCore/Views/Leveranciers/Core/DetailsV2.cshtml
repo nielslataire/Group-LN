@@ -34,6 +34,7 @@
 @section PageStyle
 {
     <link rel="stylesheet" href="~/css/gl-v2-leveranciers-details.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-inhoudingsplicht.css" asp-append-version="true" />
 }
 @section MobileTopbarAction
 {
@@ -78,6 +79,8 @@
 <div class="gl-v2-supplier-details-scroll">
 
     <div class="gl-v2-tab-panel" data-tab-panel="algemeen">
+        @await Html.PartialAsync("Partials/_InhoudingsplichtCardV2", Model)
+
         <div class="gl-v2-section-card">
             <div class="gl-v2-section-card-header">
                 <span class="gl-v2-section-card-icon"><i class="ph ph-buildings" aria-hidden="true"></i></span>

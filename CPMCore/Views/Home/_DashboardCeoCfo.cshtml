@@ -22,6 +22,7 @@
     var hasOverdueWerven   = overdueProjects.Any();
     var hasDeedWarnings    = Model.DeedofSaleWarnings.Any();
     var hasIncomingWarn    = Model.IncomingInvoiceWarningCount > 0;
+    var hasRetainment      = Model.RetainmentObligations.Any();
 }
 
 <!-- ── KPI STRIP ──────────────────────────────────────────── -->
@@ -206,6 +207,31 @@
                     </div>
                 }
 
+                @if (hasRetainment)
+                {
+                    <div class="gl-mc-group gl-mc-urgent">
+                        <div class="gl-mc-group-hdr" title="Leveranciers met sociale of fiscale schulden: bij betaling moet je inhouden">
+                            <i class="bx bx-shield-x"></i> INHOUDINGSPLICHT
+                            <span class="gl-mc-cnt">@Model.RetainmentObligations.Count</span>
+                        </div>
+                        <div class="gl-mc-group-body">
+                            @foreach (var o in Model.RetainmentObligations.Take(5))
+                            {
+                                <div class="gl-mc-item gl-mc-item-urgent">
+                                    <i class="bx bx-shield-x gl-mc-item-icon"></i>
+                                    <span class="gl-mc-item-text">
+                                        <strong>@(string.IsNullOrWhiteSpace(o.SupplierName) ? (o.EnterpriseNumber ?? o.EnterpriseIdentifier) : o.SupplierName)</strong>
+                                        <span class="text-muted"> · @(o.SocialObligation ? $"RSZ {o.SocialWithholdingPercentage}%" : "")@(o.SocialObligation && o.FiscalObligation ? " + " : "")@(o.FiscalObligation ? $"FOD {o.FiscalWithholdingPercentage}%" : "")@(o.Environment == "Simulation" ? " · test" : "")</span>
+                                    </span>
+                                    <div class="gl-mc-item-actions">
+                                        <a href="@Url.Action("Index", "Inhoudingsplicht")" class="gl-mc-btn-bekijk">Bekijk <i class="bx bx-link-alt"></i></a>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
                 @if (hasIncomingWarn)
                 {
                     <div class="gl-mc-group gl-mc-info">
@@ -217,7 +243,7 @@
                     </div>
                 }
 
-                @if (!hasOverdueInvoices && !hasOverdueWerven && !hasDeedWarnings && !hasIncomingWarn)
+                @if (!hasOverdueInvoices && !hasOverdueWerven && !hasDeedWarnings && !hasIncomingWarn && !hasRetainment)
                 {
                     <div class="gl-mc-empty">
                         <i class="bx bx-check-circle"></i>

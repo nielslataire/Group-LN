@@ -102,6 +102,7 @@
         var contractPrice = contract.Activities?.Sum(a => a.EffectivePrice) ?? 0m;
         var missingSiteManager = !contract.SiteManagerContactId.HasValue || contract.SiteManagerContactId == 0;
         var lotCount = contract.Activities?.Count ?? 0;
+        var siteManager = !missingSiteManager && Model.SiteManagers.TryGetValue(contract.SiteManagerContactId!.Value, out var smInfo) ? smInfo : null;
 
         var attentionItems = new List<(string Title, string Meta, string ActionText, string ActionHref)>();
         if (!contract.ContractSigned)
@@ -194,15 +195,19 @@
         }
 
         <div class="gl-v2-pcd-grid">
-            <div class="gl-v2-pcd-col-7 gl-v2-section-card">
+            <div class="gl-v2-section-card">
                 <div class="gl-v2-section-card-header">
                     <span class="gl-v2-section-card-icon"><i class="ph ph-scales" aria-hidden="true"></i></span>
                     <h2 class="gl-v2-section-card-title">Voorwaarden</h2>
                 </div>
-                <div class="gl-v2-detail-grid gl-v2-pcd-3col" style="padding:16px 18px">
+                <div class="gl-v2-detail-grid gl-v2-pcd-2col" style="padding:16px 18px">
                     <div class="gl-v2-detail-field">
                         <span class="gl-v2-detail-label">BTW</span>
                         <span class="gl-v2-detail-value">@(contract.VatPercentage?.ToString("N2", be) ?? "0,00") %</span>
+                        @if ((contract.VatPercentage ?? 0m) == 0m)
+                        {
+                            <span class="gl-v2-pcd-sm-hint">verlegd</span>
+                        }
                     </div>
                     <div class="gl-v2-detail-field">
                         <span class="gl-v2-detail-label">Betaaltermijn</span>
@@ -217,21 +222,100 @@
                         <span class="gl-v2-detail-value">@FmtGuarantee(contract)</span>
                     </div>
                     <div class="gl-v2-detail-field">
-                        <span class="gl-v2-detail-label">Werfleider</span>
-                        <span class="gl-v2-detail-value@(missingSiteManager ? " is-empty" : "")">@(missingSiteManager ? "— niet toegewezen" : "toegewezen")</span>
-                    </div>
-                    <div class="gl-v2-detail-field">
                         <span class="gl-v2-detail-label">Contract verstuurd</span>
                         <span class="gl-v2-detail-value@(contract.ContractSentDate.HasValue ? "" : " is-empty")">@(contract.ContractSentDate?.ToString("dd/MM/yyyy", be) ?? "—")</span>
                     </div>
-                    <div class="gl-v2-detail-field is-full">
+                    <div class="gl-v2-detail-field">
                         <span class="gl-v2-detail-label">Opmerking verzending</span>
                         <span class="gl-v2-detail-value@(string.IsNullOrWhiteSpace(contract.ContractSentNote) ? " is-empty" : "")">@(string.IsNullOrWhiteSpace(contract.ContractSentNote) ? "—" : contract.ContractSentNote)</span>
                     </div>
                 </div>
             </div>
 
-            <div class="gl-v2-pcd-col-5 gl-v2-section-card">
+            @* Werfleider aannemer (design-handoff 14i): naam, functie, gsm en e-mail om meteen te gebruiken. *@
+            <div class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-hard-hat" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Werfleider aannemer</h2>
+                    <span class="gl-v2-section-card-spacer"></span>
+                    @if (canWrite && siteManager is not null)
+                    {
+                        <a href="@Url.Action("EditContract", "Projecten", new { projectid = Model.ProjectId, contractid = contract.Id })" class="gl-v2-card-header-action">Wijzigen</a>
+                    }
+                </div>
+                @if (siteManager is not null)
+                {
+                    var smWords = siteManager.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    var smInitials = string.Concat(smWords.Take(2).Select(w => char.ToUpperInvariant(w[0])));
+                    var smPhoneDigits = new string((siteManager.Phone ?? "").Where(ch => char.IsDigit(ch) || ch == '+').ToArray());
+                    <div class="gl-v2-pcd-sm">
+                        <div class="gl-v2-pcd-sm-person">
+                            <span class="gl-v2-pcd-sm-avatar" aria-hidden="true">@smInitials</span>
+                            <div class="gl-v2-pcd-sm-who">
+                                <span class="gl-v2-pcd-sm-name">@siteManager.Name</span>
+                                <span class="gl-v2-pcd-sm-role">@(siteManager.Role is null ? "" : siteManager.Role + " · ")@companyName</span>
+                            </div>
+                        </div>
+                        <div class="gl-v2-pcd-sm-contact">
+                            @if (siteManager.Phone is not null)
+                            {
+                                <div class="gl-v2-pcd-sm-line">
+                                    <i class="ph ph-phone" aria-hidden="true"></i>
+                                    <a href="tel:@smPhoneDigits" class="gl-v2-pcd-sm-mono">@siteManager.Phone</a>
+                                    <button type="button" class="gl-v2-icon-btn js-gl-v2-pcd-copy" data-copy="@siteManager.Phone" title="Gsm-nummer kopiëren" aria-label="Gsm-nummer kopiëren"><i class="ph ph-copy" aria-hidden="true"></i></button>
+                                </div>
+                            }
+                            @if (siteManager.Email is not null)
+                            {
+                                <div class="gl-v2-pcd-sm-line">
+                                    <i class="ph ph-envelope-simple" aria-hidden="true"></i>
+                                    <a href="mailto:@siteManager.Email?subject=@Uri.EscapeDataString(Model.ProjectName + " — " + companyName)" class="gl-v2-pcd-sm-mail">@siteManager.Email</a>
+                                    <button type="button" class="gl-v2-icon-btn js-gl-v2-pcd-copy" data-copy="@siteManager.Email" title="E-mailadres kopiëren" aria-label="E-mailadres kopiëren"><i class="ph ph-copy" aria-hidden="true"></i></button>
+                                </div>
+                            }
+                            @if (siteManager.Phone is null && siteManager.Email is null)
+                            {
+                                <span class="gl-v2-pcd-sm-hint">Geen gsm of e-mail bij deze contactpersoon.</span>
+                            }
+                        </div>
+                        <div class="gl-v2-pcd-sm-actions">
+                            @if (siteManager.Phone is not null)
+                            {
+                                <a class="gl-v2-btn gl-v2-btn-secondary" href="tel:@smPhoneDigits"><i class="ph ph-phone" aria-hidden="true"></i>Bellen</a>
+                            }
+                            @if (siteManager.Email is not null)
+                            {
+                                <a class="gl-v2-btn gl-v2-btn-secondary" href="mailto:@siteManager.Email"><i class="ph ph-envelope-simple" aria-hidden="true"></i>E-mail</a>
+                            }
+                            @if (siteManager.Phone is not null)
+                            {
+                                <a class="gl-v2-btn gl-v2-btn-secondary" href="sms:@smPhoneDigits"><i class="ph ph-chat-text" aria-hidden="true"></i>Sms</a>
+                            }
+                        </div>
+                        <div class="gl-v2-pcd-sm-uses">
+                            <span class="gl-v2-detail-label">GEBRUIKT VOOR</span>
+                            <div class="gl-v2-pcd-sm-chips">
+                                <span class="gl-v2-pcd-sm-chip"><i class="ph ph-check" aria-hidden="true"></i>Werfpunten</span>
+                                <span class="gl-v2-pcd-sm-chip"><i class="ph ph-check" aria-hidden="true"></i>Werfverslagen</span>
+                                <span class="gl-v2-pcd-sm-chip"><i class="ph ph-check" aria-hidden="true"></i>Werfvergadering</span>
+                            </div>
+                            <span class="gl-v2-pcd-sm-hint">Komt uit de contactpersonen van de leverancier: pas je daar het nummer aan, dan staat het hier ook juist.</span>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="gl-v2-pcd-sm gl-v2-pcd-sm-empty">
+                        <span class="gl-v2-pcd-sm-hint">Nog geen werfleider. Kies iemand uit de contactpersonen van @companyName.</span>
+                        @if (canWrite)
+                        {
+                            <a href="@Url.Action("EditContract", "Projecten", new { projectid = Model.ProjectId, contractid = contract.Id })" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-plus" aria-hidden="true"></i>Werfleider kiezen</a>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="gl-v2-section-card">
                 <div class="gl-v2-section-card-header">
                     <span class="gl-v2-section-card-icon"><i class="ph ph-shield-check" aria-hidden="true"></i></span>
                     <h2 class="gl-v2-section-card-title">Veiligheid &amp; attesten</h2>

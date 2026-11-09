@@ -439,6 +439,8 @@
                     </div>
                 }
 
+                @await Html.PartialAsync("_RetainmentPanel", Model)
+
                 @* ── Verrijkingspanel ──────────────────────────────── *@
                 @if (hasEnrichment)
                 {

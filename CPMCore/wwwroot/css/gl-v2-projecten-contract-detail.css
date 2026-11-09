@@ -81,13 +81,44 @@
 .gl-v2-pcd-attention-action:hover { text-decoration: underline; }
 
 /* ── Voorwaarden + Veiligheid & attesten ──────────────────────────────────────────────────────── */
-.gl-v2-pcd-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 14px; align-items: stretch; }
-.gl-v2-pcd-col-5 { grid-column: span 5; }
-.gl-v2-pcd-col-7 { grid-column: span 7; }
-
-@media (min-width: 1024px) {
-    .gl-v2-detail-grid.gl-v2-pcd-3col { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* design-handoff 14i: Voorwaarden · Werfleider aannemer · Veiligheid & attesten = drie gelijke kolommen
+   vanaf xl (1200px); daaronder twee, en op gsm één. */
+.gl-v2-pcd-grid { display: grid; grid-template-columns: 1fr; gap: 14px; align-items: stretch; }
+@media (min-width: 768px) {
+    .gl-v2-pcd-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+@media (min-width: 1200px) {
+    .gl-v2-pcd-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+.gl-v2-detail-grid.gl-v2-pcd-2col { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* ── Werfleider aannemer (14i) ────────────────────────────────────────────────────────────────── */
+.gl-v2-pcd-sm { display: flex; flex-direction: column; gap: 14px; padding: 16px; }
+.gl-v2-pcd-sm-empty { align-items: flex-start; }
+.gl-v2-pcd-sm-person { display: flex; align-items: center; gap: 12px; }
+.gl-v2-pcd-sm-avatar {
+    width: 42px; height: 42px; flex: none; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); font: 600 14px var(--gl-v2-font-sans);
+}
+.gl-v2-pcd-sm-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gl-v2-pcd-sm-name { font: 600 15px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-pcd-sm-role { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-pcd-sm-contact { display: flex; flex-direction: column; border: 1px solid var(--gl-v2-hairline); border-radius: 10px; }
+.gl-v2-pcd-sm-line { display: flex; align-items: center; gap: 10px; padding: 6px 8px 6px 12px; border-bottom: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-pcd-sm-line:last-child { border-bottom: 0; }
+.gl-v2-pcd-sm-line > i { font-size: 15px; color: var(--gl-v2-muted); flex: none; }
+.gl-v2-pcd-sm-line a { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--gl-v2-ink); text-decoration: none; font: 500 13px var(--gl-v2-font-sans); }
+.gl-v2-pcd-sm-line a:hover { color: var(--gl-v2-primary); text-decoration: underline; }
+.gl-v2-pcd-sm-line a.gl-v2-pcd-sm-mono { font-family: var(--gl-v2-font-mono, ui-monospace, monospace); }
+.gl-v2-pcd-sm-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.gl-v2-pcd-sm-actions .gl-v2-btn { justify-content: center; }
+.gl-v2-pcd-sm-uses { display: flex; flex-direction: column; gap: 6px; }
+.gl-v2-pcd-sm-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.gl-v2-pcd-sm-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 7px; border-radius: 4px; background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); font: 600 10.5px var(--gl-v2-font-sans); }
+.gl-v2-pcd-sm-chip i { font-size: 11px; }
+.gl-v2-pcd-sm-hint { font: 450 11px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-pcd-sm-empty .gl-v2-pcd-sm-hint { font-size: 12.5px; }
 
 .gl-v2-pcd-checklist { display: flex; flex-direction: column; padding: 4px 18px 6px; }
 .gl-v2-pcd-check { display: flex; align-items: center; gap: 11px; min-height: 44px; padding: 8px 0; border-bottom: 1px solid var(--gl-v2-hairline-soft); }
@@ -156,11 +187,9 @@
 
 @media (max-width: 1199.98px) {
     .gl-v2-pcd-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .gl-v2-pcd-col-5, .gl-v2-pcd-col-7 { grid-column: span 12; }
 }
 @media (max-width: 767.98px) {
     .gl-v2-pcd-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .gl-v2-pcd-col-5, .gl-v2-pcd-col-7 { grid-column: span 12; }
     .gl-v2-pcd-lots-row { grid-template-columns: minmax(0, 1fr) 90px; grid-template-areas: "name total" "base extra"; row-gap: 2px; }
     .gl-v2-pcd-lots-head { display: none; }
     .gl-v2-pcd-lots-name { grid-area: name; }

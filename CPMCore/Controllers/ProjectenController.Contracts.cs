@@ -195,6 +195,7 @@ namespace CPMCore.Controllers
 
             model.HasContract = model.Contracts.Any();
             model.SupplierCount = GetProjectSupplierCount(projectid, allContracts);
+            FillSiteManagerInfo(model);
 
             var index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
@@ -226,6 +227,30 @@ namespace CPMCore.Controllers
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - {model.Company?.Bedrijfsnaam ?? "Leverancier detail"}");
             ViewData["HelpScreenId"] = "projecten-leverancier-detail";
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "DetailContractV2" : "DetailContract", model);
+        }
+
+        /// <summary>Naam, functie, gsm en e-mail van de werfleiders van de contracten op de detailpagina
+        /// (kaart "Werfleider aannemer", design-handoff 14i). Komt uit de contactpersonen van de leverancier.</summary>
+        private void FillSiteManagerInfo(ProjectContractDetailModel model)
+        {
+            var ids = model.Contracts
+                .Where(c => c.SiteManagerContactId.HasValue && c.SiteManagerContactId.Value > 0)
+                .Select(c => c.SiteManagerContactId!.Value)
+                .Distinct()
+                .ToList();
+            if (ids.Count == 0) return;
+
+            foreach (var c in _db.CompanyContacts.AsNoTracking().Where(c => ids.Contains(c.ContactId)).ToList())
+            {
+                model.SiteManagers[c.ContactId] = new SiteManagerInfo
+                {
+                    ContactId = c.ContactId,
+                    Name = ((c.ContactVoornaam ?? "") + " " + (c.ContactNaam ?? "")).Trim(),
+                    Role = string.IsNullOrWhiteSpace(c.Functie) ? null : c.Functie.Trim(),
+                    Phone = !string.IsNullOrWhiteSpace(c.Gsm) ? c.Gsm.Trim() : (string.IsNullOrWhiteSpace(c.Telefoon) ? null : c.Telefoon.Trim()),
+                    Email = string.IsNullOrWhiteSpace(c.Email) ? null : c.Email.Trim()
+                };
+            }
         }
 
         [HttpGet]
@@ -265,6 +290,7 @@ namespace CPMCore.Controllers
                 .ToList();
             model.HasContract = model.Contracts.Any();
             model.SupplierCount = GetProjectSupplierCount(projectid, allContracts);
+            FillSiteManagerInfo(model);
 
             var index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
@@ -1400,6 +1426,28 @@ namespace CPMCore.Controllers
                 ModelState.AddModelError("Contract.Company.ID", "Kies een leverancier.");
             if (!(activities?.Any() ?? false))
                 ModelState.AddModelError("Activities", "Voeg minstens één lot toe.");
+
+            // Inhoudingsplicht (30bis/30ter): een nieuw contract kan niet met een leverancier die vandaag een inhoudingsplicht heeft.
+            // Een nog geldige controle wordt hergebruikt; lukt de bevraging niet, dan houdt dat het contract niet tegen (de planning controleert later opnieuw).
+            if (ModelState.IsValid && model.Contract != null && model.Contract.Id == 0)
+            {
+                var retainment = HttpContext.RequestServices.GetRequiredService<IRetainmentCheckService>();
+                if (retainment.IsConfigured)
+                {
+                    var supplier = await _db.CompanyInfo.AsNoTracking().Where(c => c.CompanyId == model.Contract.Company.ID).Select(c => new { Name = c.BedrijfsNaam, c.VatNumber }).FirstOrDefaultAsync();
+                    if (supplier != null && !string.IsNullOrWhiteSpace(supplier.VatNumber))
+                    {
+                        var check = await retainment.EnsureCheckedAsync(new RetainmentCheckInput { SupplierName = supplier.Name, Identifier = supplier.VatNumber }, null, User.Identity?.Name);
+                        if (check.HasObligation)
+                        {
+                            var parts = new List<string>();
+                            if (check.SocialObligation) parts.Add($"sociale schulden bij de RSZ ({check.SocialWithholdingPercentage}%)");
+                            if (check.FiscalObligation) parts.Add($"fiscale schulden bij de FOD Financiën ({check.FiscalWithholdingPercentage}%)");
+                            ModelState.AddModelError("Contract.Company.ID", $"{supplier.Name} heeft een inhoudingsplicht: {string.Join(" en ", parts)}. Er kan geen contract mee afgesloten worden zolang dat zo is.");
+                        }
+                    }
+                }
+            }
 
             if (!ModelState.IsValid)
             {

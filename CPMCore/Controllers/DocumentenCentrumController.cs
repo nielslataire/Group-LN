@@ -25,6 +25,7 @@ namespace CPMCore.Controllers
         private readonly IIssuerCompanyService _issuerCompanyService;
         private readonly IPermissionService _permissionService;
         private readonly IInvoiceEnrichmentPipelineService _enrichmentPipeline;
+        private readonly IRetainmentCheckService _retainmentCheckService;
         private readonly cpmRunningContext _db;
 
         public DocumentenCentrumController(
@@ -32,12 +33,14 @@ namespace CPMCore.Controllers
             IIssuerCompanyService issuerCompanyService,
             IPermissionService permissionService,
             IInvoiceEnrichmentPipelineService enrichmentPipeline,
+            IRetainmentCheckService retainmentCheckService,
             cpmRunningContext db)
         {
             _incomingInvoiceService = incomingInvoiceService;
             _issuerCompanyService = issuerCompanyService;
             _permissionService = permissionService;
             _enrichmentPipeline = enrichmentPipeline;
+            _retainmentCheckService = retainmentCheckService;
             _db = db;
         }
 
@@ -201,8 +204,33 @@ namespace CPMCore.Controllers
             ViewBag.CostContextOptions = BuildCostContextSelectList(vm.CostContextType);
             await LoadAssignableUsersAsync(ct);
 
+            ViewBag.RetainmentCheck = await _retainmentCheckService.GetLatestForInvoiceAsync(id, ct);
+            ViewBag.RetainmentConfigured = _retainmentCheckService.IsConfigured;
+            ViewBag.CanWriteDocumentCenter = _permissionService.HasWrite(PermissionCodes.DocumentCenter);
+
             SetPageHeader("bx bx-inbox", $"Document — {vm.InvoiceNumber ?? vm.SupplierName}");
             return View(vm);
+        }
+
+        // ─── Controle inhoudingsplicht leverancier (RSZ BillRetainment) ───────────
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CheckRetainment(int incomingInvoiceId, CancellationToken ct = default)
+        {
+            await _permissionService.EnsureLoadedAsync();
+            if (!_permissionService.HasWrite(PermissionCodes.DocumentCenter))
+                return Forbid();
+
+            var check = await _retainmentCheckService.CheckInvoiceAsync(incomingInvoiceId, User.Identity?.Name, ct);
+            if (check.Failed)
+                AddMessage("warning", check.ErrorMessage, "Inhoudingsplicht");
+            else if (check.HasObligation)
+                AddMessage("warning", "Er geldt een inhoudingsplicht voor deze leverancier. Bekijk het percentage in het paneel.", "Inhoudingsplicht");
+            else
+                AddMessage("success", "Geen inhoudingsplicht voor deze leverancier.", "Inhoudingsplicht");
+
+            return RedirectToAction(nameof(Detail), new { id = incomingInvoiceId });
         }
 
         // ─── Koppelen aan project (AJAX POST) ─────────────────────────────────────

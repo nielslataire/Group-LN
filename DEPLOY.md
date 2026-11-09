@@ -257,3 +257,18 @@ beheerder in SSMS. Wie een event wil corrigeren, kan dat niet: dat is de bedoeli
   tonen de vier sub-jobs zonder exceptions; de QR op het ondertekende PDF scannen → `/verifieer/{id}`
   toont het dossier; een klant- of contactformulier bewerken met een gewijzigd e-mailadres/gsm-nummer →
   rij verschijnt in `ClientContactChangeLog`.
+
+
+## Inhoudingsplicht (RSZ BillRetainment)
+
+Migraties `137_LeverancierInhoudingscontrole.sql` en `138_InhoudingsplichtLijstnaam.sql` vóór de app-start. Pagina: Facturatie → Inhoudingsplicht.
+
+| Sleutel | Waar | Toelichting |
+|---|---|---|
+| `RszBillRetainment:ClientId` | appsettings per omgeving | Client ID van het REST-account in Chaman. |
+| `RszBillRetainment:PrivateKeyPem` | **omgevingsvariabele `RszBillRetainment__PrivateKeyPem` of user-secret, nooit in appsettings of git** | De private sleutel als PEM-tekst (`-----BEGIN PRIVATE KEY-----` … `-----END …-----`). Mag op één regel met een letterlijke `\n` als regeleinde. Heeft voorrang op het pad. |
+| `RszBillRetainment:PrivateKeyPath` | appsettings per omgeving | Alternatief: pad naar het PEM-bestand, **buiten** het project en buiten `wwwroot` (lokaal `C:\Users\<jij>\rsz-keys\…`). Het bestand mag nooit in de repo of in de publish-map staan. |
+| `RszBillRetainment:UseSimulation` | appsettings per omgeving | `true` (standaard) = testomgeving van de RSZ, vaste testgegevens zonder bewijswaarde. Pas op `false` als de RSZ de productie-integratie toelaat. |
+| `RszBillRetainment:ScheduleEnabled` | appsettings | `false` zet de geplande controle (elke 6 uur, enkel in productie) uit. |
+
+Lokaal instellen met user-secrets (vanuit `CPMCore/`): `dotnet user-secrets set "RszBillRetainment:PrivateKeyPem" "<pem-tekst>"`. Zonder Client ID en sleutel is de koppeling uit: de pagina toont dan "nog niet ingesteld" en facturen en contracten werken gewoon verder.

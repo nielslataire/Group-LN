@@ -44,6 +44,7 @@ namespace CPMCore.Services.Octopus
         private readonly InvoiceExtractionOptions _extractionOptions;
         private readonly IAzureInvoiceAnalysisService _azureService;
         private readonly IInvoiceEnrichmentPipelineService _enrichmentPipeline;
+        private readonly IRetainmentCheckService _retainment;
         private readonly ILogger<OctopusIncomingInvoiceSyncService> _logger;
 
         public OctopusIncomingInvoiceSyncService(
@@ -55,6 +56,7 @@ namespace CPMCore.Services.Octopus
             IOptions<InvoiceExtractionOptions> extractionOptions,
             IAzureInvoiceAnalysisService azureService,
             IInvoiceEnrichmentPipelineService enrichmentPipeline,
+            IRetainmentCheckService retainment,
             ILogger<OctopusIncomingInvoiceSyncService> logger)
         {
             _db = db;
@@ -65,6 +67,7 @@ namespace CPMCore.Services.Octopus
             _extractionOptions = extractionOptions.Value;
             _azureService = azureService;
             _enrichmentPipeline = enrichmentPipeline;
+            _retainment = retainment;
             _logger = logger;
         }
 
@@ -174,8 +177,12 @@ namespace CPMCore.Services.Octopus
                         ct.ThrowIfCancellationRequested();
                         try
                         {
-                            var (outcome, _) = await UpsertAsync(issuerCompanyId, dossierNumber, booking, ct);
-                            if (outcome == UpsertOutcome.Created) result.NewCount++;
+                            var (outcome, newInvoiceId) = await UpsertAsync(issuerCompanyId, dossierNumber, booking, ct);
+                            if (outcome == UpsertOutcome.Created)
+                            {
+                                result.NewCount++;
+                                await CheckRetainmentAsync(newInvoiceId, ct);
+                            }
                             else if (outcome == UpsertOutcome.Updated) result.UpdatedCount++;
                             else result.SkippedDuplicates++;
                         }
@@ -342,6 +349,25 @@ namespace CPMCore.Services.Octopus
             _db.IncommingInvoices.Add(entity);
             await _db.SaveChangesAsync(ct);
             return (UpsertOutcome.Created, entity.Id);
+        }
+
+        /// <summary>
+        /// Elke nieuwe ontvangen factuur: de inhoudingsplicht van de leverancier controleren (een nog geldige eerdere controle wordt hergebruikt).
+        /// Mislukt dit, dan blijft de factuur gewoon binnenkomen; de factuurpagina toont dan dat er nog geen controle is.
+        /// </summary>
+        private async Task CheckRetainmentAsync(int? invoiceId, CancellationToken ct)
+        {
+            if (invoiceId == null || !_retainment.IsConfigured) return;
+            try
+            {
+                var inv = await _db.IncommingInvoices.AsNoTracking().Where(i => i.Id == invoiceId).Select(i => new { i.SupplierName, i.SupplierVatNumber }).FirstOrDefaultAsync(ct);
+                if (inv == null || string.IsNullOrWhiteSpace(inv.SupplierVatNumber)) return;
+                await _retainment.EnsureCheckedAsync(new RetainmentCheckInput { SupplierName = inv.SupplierName, Identifier = inv.SupplierVatNumber }, invoiceId, "Systeem (nieuwe factuur)", ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Controle inhoudingsplicht voor nieuwe factuur {Id} mislukt.", invoiceId);
+            }
         }
 
         private async Task<(int Count, int ErrorCount)> SyncAttachmentsAsync(

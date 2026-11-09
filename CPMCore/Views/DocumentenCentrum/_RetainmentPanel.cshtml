@@ -1,0 +1,86 @@
+@model FacadeCore.IncomingInvoiceDetailVm
+@{
+    var check = ViewBag.RetainmentCheck as FacadeCore.RetainmentCheckVm;
+    var configured = ViewBag.RetainmentConfigured is bool b && b;
+    var canWrite = ViewBag.CanWriteDocumentCenter is bool w && w;
+
+    string Situation(string s) => s switch
+    {
+        "obligation" => "Inhoudingsplicht",
+        "noObligation" => "Geen inhoudingsplicht",
+        "notInDomain" => "Buiten toepassing",
+        _ => "Onbekend"
+    };
+    string Badge(string s) => s == "obligation" ? "bg-danger" : s == "noObligation" ? "bg-success" : "bg-secondary";
+    var local = check?.CheckedAt.ToLocalTime();
+}
+
+<div class="card mb-3 dc-intel-card" style="border-left-color:@(check == null || check.Failed ? "#6b7280" : check.HasObligation ? "#dc2626" : "#16a34a");">
+    <div class="card-body py-2 px-3">
+        <div class="dc-intel-title"><i class="bx bx-shield-quarter me-1"></i>Inhoudingsplicht leverancier</div>
+
+        @if (check == null)
+        {
+            <div class="small text-muted mb-2">Nog niet gecontroleerd bij de RSZ en de FOD Financiën (sociale en fiscale schulden).</div>
+        }
+        else if (check.Failed)
+        {
+            <div class="small text-danger mb-1"><i class="bx bx-error-circle me-1"></i>@check.ErrorMessage</div>
+            <div class="small text-muted mb-2">Laatste poging: @local.Value.ToString("dd/MM/yyyy HH:mm")</div>
+        }
+        else
+        {
+            <div class="dc-insight-row">
+                <span class="text-muted">Sociaal (RSZ)</span>
+                <span>
+                    <span class="badge @Badge(check.SocialSituation)">@Situation(check.SocialSituation)</span>
+                    @if (check.SocialObligation) { <strong class="ms-1">@check.SocialWithholdingPercentage%</strong> }
+                </span>
+            </div>
+            <div class="dc-insight-row">
+                <span class="text-muted">Fiscaal (FOD Financiën)</span>
+                <span>
+                    <span class="badge @Badge(check.FiscalSituation)">@Situation(check.FiscalSituation)</span>
+                    @if (check.FiscalObligation) { <strong class="ms-1">@check.FiscalWithholdingPercentage%</strong> }
+                </span>
+            </div>
+            @if (check.HasObligation)
+            {
+                <div class="small text-danger mt-1">
+                    <i class="bx bx-error me-1"></i>Houd het percentage in op deze factuur en stort het door vóór je betaalt.
+                </div>
+            }
+            else
+            {
+                var validUntil = new[] { check.SocialValidUntil, check.FiscalValidUntil }.Where(d => d.HasValue).Select(d => d.Value).DefaultIfEmpty().Min();
+                <div class="small text-muted mt-1">
+                    Geen inhouding nodig@(validUntil != default ? $" — geldig tot {validUntil.ToLocalTime():dd/MM/yyyy}" : "").
+                    Controleer opnieuw als je later betaalt.
+                </div>
+            }
+            <div class="small text-muted mt-1">
+                Gecontroleerd op @local.Value.ToString("dd/MM/yyyy HH:mm")@(string.IsNullOrEmpty(check.CheckedBy) ? "" : $" door {check.CheckedBy}")
+                @if (!string.IsNullOrEmpty(check.RetainmentCheckReference)) { <text>· ref. <span class="text-nowrap">@check.RetainmentCheckReference</span></text> }
+            </div>
+            @if (check.Environment == "Simulation")
+            {
+                <div class="small mt-1"><span class="badge bg-warning text-dark">Testomgeving RSZ</span> <span class="text-muted">Dit resultaat komt uit testdata en is geen echte controle.</span></div>
+            }
+        }
+
+        @if (!configured)
+        {
+            <div class="small text-muted">De koppeling met de RSZ is nog niet ingesteld.</div>
+        }
+        else if (canWrite)
+        {
+            <form method="post" asp-action="CheckRetainment" asp-controller="DocumentenCentrum" class="mt-2">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="incomingInvoiceId" value="@Model.Id" />
+                <button type="submit" class="btn btn-outline-primary btn-sm w-100">
+                    <i class="bx bx-refresh me-1"></i>@(check == null ? "Controleer bij RSZ" : "Opnieuw controleren")
+                </button>
+            </form>
+        }
+    </div>
+</div>

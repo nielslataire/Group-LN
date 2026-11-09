@@ -1,0 +1,126 @@
+@model FacadeCore.RetainmentBatchVm
+@*
+    gl-v2 — zijpaneel van een controlelijst (design-handoff 57b): titel met TEST-label en "Naam geven", kerncijfers, geldigheid, waarschuwing per aannemer,
+    per onderneming een kaart (RSZ en fiscus) met het bewijs (referentie RSZ, attest fiscus, kopieerknoppen), het trace-id van de controle en de acties.
+    Het volledige ruwe RSZ-antwoord zit in het JSON-bestand (menu "Meer").
+*@
+@{
+    var canWrite = ViewBag.CanWrite is bool w && w;
+    int Order(FacadeCore.RetainmentCheckVm c) => c.HasObligation ? 0 : c.Failed ? 1 : 2;
+    var items = Model.Items.OrderBy(Order).ThenBy(i => i.SupplierName).ToList();
+    var withObligation = items.Count(i => i.HasObligation);
+    var failed = items.Count(i => i.Failed);
+    var fine = items.Count - withObligation - failed;
+    var unnamed = string.IsNullOrWhiteSpace(Model.Name);
+    var local = Model.CheckedAt.ToLocalTime();
+    var title = unnamed ? "Controle van " + local.ToString("dd/MM/yyyy HH:mm") : Model.Name;
+    var test = Model.Environment == "Simulation";
+    var trace = items.Select(i => i.TraceId).FirstOrDefault(t => !string.IsNullOrEmpty(t));
+
+    // Geldig tot: de vroegste vervaldatum van de resultaten zonder inhoudingsplicht; zonder datum geldt de dag van de controle.
+    var dates = items.Where(i => !i.Failed && !i.HasObligation)
+        .SelectMany(i => new[] { i.SocialValidUntil, i.FiscalValidUntil }).Where(d => d.HasValue).Select(d => d.Value).ToList();
+    var validUntil = dates.Count > 0 ? dates.Min().ToString("dd/MM/yyyy") : local.ToString("dd/MM/yyyy");
+
+    (string Tone, string Icon, string Label, string Sub) Cell(FacadeCore.RetainmentCheckVm c, bool social)
+    {
+        if (c.Failed) return ("is-neutral", "ph-x", "Mislukt", "opnieuw proberen");
+        var situation = social ? c.SocialSituation : c.FiscalSituation;
+        var pct = social ? c.SocialWithholdingPercentage : c.FiscalWithholdingPercentage;
+        var who = social ? "de RSZ" : "de FOD Financiën";
+        return situation switch
+        {
+            "obligation" => ("is-blocked", "ph-warning", "Inhouden " + pct + " %", "storten aan " + who),
+            "noObligation" => ("is-positive", "ph-check", "Geen schulden", ""),
+            "notInDomain" => ("is-attention", "ph-question", "Buiten toepassing", "valt niet onder de regeling"),
+            _ => ("is-neutral", "ph-question", "Niet gekend", "")
+        };
+    }
+
+    string Who(FacadeCore.RetainmentCheckVm i)
+    {
+        var parts = new List<string>();
+        if (i.SocialObligation) parts.Add(i.SocialWithholdingPercentage + " % aan de RSZ");
+        if (i.FiscalObligation) parts.Add(i.FiscalWithholdingPercentage + " % aan de FOD Financiën");
+        return (string.IsNullOrWhiteSpace(i.SupplierName) ? i.EnterpriseIdentifier : i.SupplierName) + ": " + string.Join(" en ", parts);
+    }
+}
+<div class="gl-v2-ip-drawer-head">
+    <div class="gl-v2-stack is-tight">
+        <div class="gl-v2-ip-titlerow">
+            <h2 id="gl-v2-ip-drawer-title" data-batch="@Model.BatchId" data-unnamed="@(unnamed ? "1" : "0")">@title</h2>
+            @if (test) { <span class="gl-v2-badge is-attention">TEST</span> }
+            @if (unnamed && canWrite) { <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-btn-sm" data-ip-rename><i class="ph ph-pencil-simple" aria-hidden="true"></i>Naam geven</button> }
+        </div>
+        <span class="muted">@(unnamed ? "" : local.ToString("dd/MM/yyyy HH:mm") + " · ")@Model.CheckedBy · @items.Count @(items.Count == 1 ? "onderneming" : "ondernemingen")</span>
+    </div>
+    <button type="button" class="gl-v2-ip-closebtn" data-ip-close aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+</div>
+
+<div class="gl-v2-ip-kpistrip">
+    <div><span class="v">@fine</span><span class="l">zonder schulden</span></div>
+    <div><span class="v @(withObligation > 0 ? "is-bad" : "")">@withObligation</span><span class="l">met inhoudingsplicht</span></div>
+    <div><span class="v @(failed > 0 ? "is-neutral" : "")">@failed</span><span class="l">mislukt</span></div>
+</div>
+
+<div class="gl-v2-ip-valid"><i class="ph ph-calendar-check" aria-hidden="true"></i><span>Geldig t.e.m. <b>@validUntil</b> — betaal je later, controleer dan opnieuw.</span></div>
+
+@if (withObligation > 0)
+{
+    <div class="gl-v2-notice gl-v2-notice-compact is-danger" role="alert"><i class="ph ph-warning-circle" aria-hidden="true"></i><span><strong>Inhouden bij betaling.</strong> @string.Join(" · ", items.Where(i => i.HasObligation).Select(Who)) — op het factuurbedrag excl. btw. De rest betaal je aan de aannemer.</span></div>
+}
+
+<div class="gl-v2-ip-cards">
+    @foreach (var i in items)
+    {
+        var a = Cell(i, true); var b = Cell(i, false);
+        var named = !string.IsNullOrWhiteSpace(i.SupplierName);
+        <article class="gl-v2-ip-card @(i.HasObligation ? "is-plicht" : "")">
+            <div class="gl-v2-ip-card-main">
+                <div class="gl-v2-ip-card-who">
+                    <span class="n @(named ? "" : "is-unknown")">@(named ? i.SupplierName : "Naam onbekend")</span>
+                    <span class="mono">@i.EnterpriseIdentifier</span>
+                </div>
+                @if (i.Failed)
+                {
+                    <div class="gl-v2-ip-card-err">@i.ErrorMessage</div>
+                }
+                else
+                {
+                    <div class="gl-v2-ip-card-col"><span class="k">RSZ</span><span class="gl-v2-badge @a.Tone"><i class="ph @a.Icon" aria-hidden="true"></i>@a.Label</span><span class="sub">@a.Sub</span></div>
+                    <div class="gl-v2-ip-card-col"><span class="k">FISCUS</span><span class="gl-v2-badge @b.Tone"><i class="ph @b.Icon" aria-hidden="true"></i>@b.Label</span><span class="sub">@b.Sub</span></div>
+                }
+            </div>
+            @if (!i.Failed)
+            {
+                @* Officieel bewijs per onderneming: de consultatiereferentie van de RSZ en het attest van de fiscus. *@
+                <div class="gl-v2-ip-card-proof">
+                    <span>Referentie RSZ <b class="mono">@(i.RetainmentCheckReference ?? "—")</b>@if (!string.IsNullOrEmpty(i.RetainmentCheckReference)) { <button type="button" class="gl-v2-ip-copy" data-copy="@i.RetainmentCheckReference" data-copy-label="Referentie" aria-label="Referentie RSZ kopiëren"><i class="ph ph-copy" aria-hidden="true"></i></button> }</span>
+                    <span>Attest fiscus <b class="mono">@(i.FiscalAttestId?.ToString() ?? "—")</b>@if (i.FiscalAttestId.HasValue) { <button type="button" class="gl-v2-ip-copy" data-copy="@i.FiscalAttestId" data-copy-label="Attest" aria-label="Attest fiscus kopiëren"><i class="ph ph-copy" aria-hidden="true"></i></button> }</span>
+                </div>
+            }
+        </article>
+    }
+</div>
+
+@if (!string.IsNullOrEmpty(trace))
+{
+    <div class="gl-v2-ip-trace">Trace-ID van deze controle <b class="mono">@trace</b><button type="button" class="gl-v2-ip-copy" data-copy="@trace" data-copy-label="Trace-ID" aria-label="Trace-ID kopiëren"><i class="ph ph-copy" aria-hidden="true"></i></button></div>
+}
+
+<div class="gl-v2-ip-drawer-foot">
+    <span class="muted">Bewaard als bewijs@(test ? " · testgegevens" : "")</span>
+    <span class="gl-v2-section-card-spacer"></span>
+    <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("Index", "Inhoudingsplicht", new { herhaal = Model.BatchId })"><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i>Opnieuw selecteren</a>
+    <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("Details", "Inhoudingsplicht", new { id = Model.BatchId })"><i class="ph ph-printer" aria-hidden="true"></i>Bewijs (PDF)</a>
+    <div class="gl-v2-ip-more">
+        <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-ip-menu aria-haspopup="menu" aria-expanded="false" aria-label="Meer"><i class="ph ph-dots-three" aria-hidden="true"></i></button>
+        <div class="gl-v2-ip-menu" role="menu" hidden>
+            <a role="menuitem" href="@Url.Action("Bewijs", "Inhoudingsplicht", new { id = Model.BatchId })"><i class="ph ph-file-code" aria-hidden="true"></i><span>Bewijs (JSON)<small>ruw antwoord van de RSZ</small></span></a>
+            @if (!string.IsNullOrEmpty(trace))
+            {
+                <button type="button" role="menuitem" data-copy="@trace" data-copy-label="Trace-ID"><i class="ph ph-copy" aria-hidden="true"></i><span>Trace-ID kopiëren<small>voor een vraag aan de RSZ</small></span></button>
+            }
+        </div>
+    </div>
+</div>

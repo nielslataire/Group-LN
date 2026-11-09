@@ -26,7 +26,13 @@
         @Html.HiddenFor(m => m.Activity.Name)
         <div class="gl-v2-ec-lot-row-name"><i class="ph ph-stack" aria-hidden="true"></i><span>@Model.Activity.Name</span></div>
         <div class="gl-v2-ec-lot-row-price">
-            @Html.EditorFor(m => m.Price, "CurrencyWithActions", null, new { ShowDelete = ViewData["mode"]?.ToString() != "view", DeleteId = Model.Activity.ID })
+            @* Bedragveld = het gedeelde gl-v2-component (GlV2Currency, .gl-v2-field-box > .gl-v2-field-input);
+               Label "" = zonder label, de lotnaam links is het label. De verwijderknop staat ernaast. *@
+            @Html.EditorFor(m => m.Price, "GlV2Currency", new { Label = "" })
+            @if (ViewData["mode"]?.ToString() != "view")
+            {
+                <button type="button" class="gl-v2-icon-btn is-warning deleterow" data-id="@Model.Activity.ID" title="Lot verwijderen" aria-label="Lot verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+            }
         </div>
     }
 </div>

@@ -16,15 +16,18 @@ namespace ServiceCore.IncomingInvoices
         private readonly cpmRunningContext _db;
         private readonly ILogger<IncomingInvoiceService> _logger;
         private readonly IOctopusIncomingInvoiceSyncService _syncService;
+        private readonly IRetainmentCheckService _retainment;
 
         public IncomingInvoiceService(
             cpmRunningContext db,
             ILogger<IncomingInvoiceService> logger,
-            IOctopusIncomingInvoiceSyncService syncService)
+            IOctopusIncomingInvoiceSyncService syncService,
+            IRetainmentCheckService retainment)
         {
             _db = db;
             _logger = logger;
             _syncService = syncService;
+            _retainment = retainment;
         }
 
         public async Task<IncomingInvoicePagedResultVm> GetPagedAsync(IncomingInvoiceFilterVm filter, CancellationToken ct = default)
@@ -381,6 +384,19 @@ namespace ServiceCore.IncomingInvoices
             }
 
             _logger.LogInformation("Handmatige upload: IncomingInvoice {Id} aangemaakt door {User}.", entity.Id, request.UploadedBy);
+
+            // Elke ontvangen factuur: inhoudingsplicht van de leverancier controleren (een nog geldige controle wordt hergebruikt). Mislukt dit, dan blijft de factuur gewoon bewaard.
+            if (_retainment.IsConfigured && !string.IsNullOrWhiteSpace(entity.SupplierVatNumber))
+            {
+                try
+                {
+                    await _retainment.EnsureCheckedAsync(new RetainmentCheckInput { SupplierName = entity.SupplierName, Identifier = entity.SupplierVatNumber }, entity.Id, request.UploadedBy, ct);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Controle inhoudingsplicht voor handmatige factuur {Id} mislukt.", entity.Id);
+                }
+            }
 
             return await GetByIdAsync(entity.Id, ct);
         }

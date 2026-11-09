@@ -172,6 +172,10 @@
         </div>
 
         <aside class="gln-ai-side">
+            @* Inhoudingsplicht (30bis/30ter) van de gekozen aannemer: verschijnt zodra een leverancier of contract gekozen is. *@
+            <div class="gl-v2-notice gl-v2-notice-compact" id="gln-ai-retainment" role="status" hidden>
+                <i class="ph ph-shield-check" id="gln-ai-retainment-icon" aria-hidden="true"></i><span id="gln-ai-retainment-text"></span>
+            </div>
             <section class="gl-v2-section-card" id="gln-ai-contract-card" hidden>
                 <div class="gl-v2-section-card-header">
                     <span class="gl-v2-section-card-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
@@ -309,7 +313,8 @@
             getCompanyActivitiesUrl: '@Url.Action("GetCompanyActivities", "Projecten")',
             getCompanysUrl: '@Url.Action("GetCompanys", "Projecten")',
             addRowUrl: '@Url.Action("AddIncommingInvoiceDetailRowV2", "Projecten")',
-            contractInfoUrl: '@Url.Action("GetContractInfoForInvoiceFormV2", "Projecten")',
+            retainmentUrl: '@Url.Action("GetRetainmentForInvoiceFormV2", "Projecten")',
+            contractInfoUrl:'@Url.Action("GetContractInfoForInvoiceFormV2", "Projecten")',
             extractPdfUrl: '@Url.Action("AddIncommingInvoiceV2ExtractPdf", "Projecten")',
             contractOpenUrl: '@Url.Action("DetailContract", "Projecten", new { projectid = Model.ProjectId, contractid = 0 })',
         };

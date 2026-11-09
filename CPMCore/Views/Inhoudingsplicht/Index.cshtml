@@ -1,0 +1,83 @@
+@model IReadOnlyList<FacadeCore.RetainmentBatchSummaryVm>
+@{
+    var configured = ViewBag.Configured is bool c && c;
+    var canWrite = ViewBag.CanWrite is bool w && w;
+}
+
+<section class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2 align-items-center">
+            <div class="col-sm-8">
+                <h1 class="m-0 fw-bold">Controle inhoudingsplicht</h1>
+                <p class="text-muted mb-0 mt-1 small">Controleer ondernemingen bij de RSZ en de FOD Financiën vóór je betaalt, en bewaar de lijst als bewijs.</p>
+            </div>
+            <div class="col-sm-4 d-flex justify-content-end">
+                <a asp-controller="DocumentenCentrum" asp-action="Index" class="btn btn-outline-secondary btn-sm"><i class="bx bx-arrow-back me-1"></i>Documentencentrum</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="content">
+    <div class="container-fluid">
+        @if (!configured)
+        {
+            <div class="alert alert-warning">De koppeling met de RSZ is nog niet ingesteld (sectie <code>RszBillRetainment</code> in de configuratie).</div>
+        }
+
+        @if (canWrite)
+        {
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title mb-2">Nieuwe controlelijst</h5>
+                    <p class="small text-muted mb-2">
+                        Eén onderneming per lijn: <code>naam; btw-nummer</code> of enkel het nummer. Buitenlandse btw-nummers kunnen ook. Maximaal 200 per lijst.
+                    </p>
+                    <form method="post" asp-action="Create">
+                        @Html.AntiForgeryToken()
+                        <textarea name="lijst" rows="6" class="form-control mb-2" placeholder="Aannemer Janssens bv; BE0123.456.789&#10;Installatiebedrijf Peeters; 0987654321" @(configured ? "" : "disabled")></textarea>
+                        <button type="submit" class="btn btn-primary btn-sm" @(configured ? "" : "disabled")>
+                            <i class="bx bx-shield-quarter me-1"></i>Controleer en bewaar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        }
+
+        <div class="card">
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Datum</th>
+                            <th>Door</th>
+                            <th class="text-end">Ondernemingen</th>
+                            <th class="text-end">Met inhoudingsplicht</th>
+                            <th class="text-end">Mislukt</th>
+                            <th>Omgeving</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var b in Model)
+                        {
+                            <tr>
+                                <td>@b.CheckedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@b.CheckedBy</td>
+                                <td class="text-end">@b.Total</td>
+                                <td class="text-end">@(b.WithObligation > 0 ? Html.Raw($"<span class=\"badge bg-danger\">{b.WithObligation}</span>") : Html.Raw("0"))</td>
+                                <td class="text-end">@b.Failed</td>
+                                <td>@if (b.Environment == "Simulation") { <span class="badge bg-warning text-dark">Test</span> } else { <span>Productie</span> }</td>
+                                <td class="text-end"><a asp-action="Details" asp-route-id="@b.BatchId" class="btn btn-outline-primary btn-sm">Open</a></td>
+                            </tr>
+                        }
+                        @if (!Model.Any())
+                        {
+                            <tr><td colspan="7" class="text-center text-muted py-4">Nog geen controlelijsten.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>

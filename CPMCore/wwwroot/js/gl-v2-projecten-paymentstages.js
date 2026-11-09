@@ -222,16 +222,27 @@
 
     // Groep-pillen — wisselt welke kaart zichtbaar is, geen round-trip (zelfde client-side patroon als
     // Facturatie's filterpillen).
+    // De gekozen groep blijft onthouden (per project, per tabblad): een bol of schijf aanklikken herlaadt de pagina,
+    // en dan moet dezelfde betalingsgroep open blijven i.p.v. terug naar de eerste te springen.
     var pillBar = document.querySelector(".gl-v2-ps-pills");
     if (pillBar) {
+        var opslagSleutel = "gl-v2-ps-groep-" + (cfg.projectId || "");
+        var toonGroep = function (groupId) {
+            $$(".gl-v2-ps-pill", pillBar).forEach(function (p) { p.classList.toggle("is-active", p.getAttribute("data-ps-pill-group") === groupId); });
+            $$("[data-ps-group-card]").forEach(function (card) {
+                card.hidden = card.getAttribute("data-ps-group-card") !== groupId;
+            });
+        };
         pillBar.addEventListener("click", function (e) {
             var pill = e.target.closest(".gl-v2-ps-pill");
             if (!pill) return;
             var groupId = pill.getAttribute("data-ps-pill-group");
-            $$(".gl-v2-ps-pill", pillBar).forEach(function (p) { p.classList.toggle("is-active", p === pill); });
-            $$("[data-ps-group-card]").forEach(function (card) {
-                card.hidden = card.getAttribute("data-ps-group-card") !== groupId;
-            });
+            toonGroep(groupId);
+            try { sessionStorage.setItem(opslagSleutel, groupId); } catch (err) { /* opslag geblokkeerd: dan blijft het bij de eerste groep */ }
         });
+        try {
+            var bewaard = sessionStorage.getItem(opslagSleutel);
+            if (bewaard && $$(".gl-v2-ps-pill", pillBar).some(function (p) { return p.getAttribute("data-ps-pill-group") === bewaard; })) toonGroep(bewaard);
+        } catch (err) { /* zie hierboven */ }
     }
 })();

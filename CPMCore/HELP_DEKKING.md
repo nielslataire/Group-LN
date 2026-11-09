@@ -95,6 +95,7 @@ Voorstel: id = `screens`-waarde; zet hem daarna bovenaan de view of in de contro
 | Betalingsschijven | `Views/Projecten/Invoicing/PaymentStagesV2.cshtml` | `ProjectenController.PaymentStagesV2` | Matrix schijf x eenheid per betalingsgroep; schijf als bereikt aanduiden. | `betalingsschijven-volgen` / facturatie-wijzigingen / `projecten-betalingsschijven` |
 | Betalingsgroep bewerken | `Views/Projecten/Invoicing/PaymentGroupEditV2.cshtml` | `ProjectenController.PaymentGroupEditV2` (GET + `SavePaymentGroupV2`) | Een betalingsgroep en haar schijven aanmaken of aanpassen. | `betalingsgroep-instellen` / facturatie-wijzigingen / `projecten-betalingsgroep-bewerken` |
 | Offertes & wijzigingen (lijst) | `Views/Projecten/ChangeOrders/ChangeOrdersV2.cshtml` | `ProjectenController.ChangeOrdersV2` | Lijst van offertes en wijzigingsopdrachten met statusteller. Nu bedraad op `wijzigingen-opmaken`; eigen artikel nog wenselijk: `offertes-en-wijzigingen-volgen` / `wijzigingen-overzicht`. |
+| Inhoudingsplicht | `Views/Inhoudingsplicht/IndexV2.cshtml` | `InhoudingsplichtController.Index` | Aannemers kiezen, extra btw-nummers, controleren en bewaren; eerdere lijsten met bewijs. | `inhoudingsplicht-controleren` / facturatie-wijzigingen / `inhoudingsplicht` |
 
 ### instellingen
 

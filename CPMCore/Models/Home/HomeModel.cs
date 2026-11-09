@@ -122,6 +122,9 @@ namespace CPMCore.Models.Home
         /// <summary>Inkomende facturen met onopgeloste documentwaarschuwingen.</summary>
         public int IncomingInvoiceWarningCount { get; set; }
 
+        /// <summary>Leveranciers met een inhoudingsplicht (30bis/30ter) volgens hun laatste controle; voor de dashboards Boekhouding en CEO/CFO.</summary>
+        public List<FacadeCore.RetainmentCheckVm> RetainmentObligations { get; set; } = new();
+
         /// <summary>Gegevens voor het gl-v2 boekhoudingsdashboard (alleen gevuld voor <c>DashboardType.Boekhouding</c>).</summary>
         public BoekhoudingDashboardVm? Boekhouding { get; set; }
 

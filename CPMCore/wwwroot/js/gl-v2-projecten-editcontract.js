@@ -35,15 +35,31 @@
         if (backdrop) backdrop.classList.remove("is-open");
     }
     function positionPanel(trigger, panel) {
-        if (window.innerWidth < 768) { panel.style.top = ""; panel.style.left = ""; panel.style.width = ""; return; }
+        if (window.innerWidth < 768) { panel.style.top = ""; panel.style.bottom = ""; panel.style.left = ""; panel.style.width = ""; panel.style.maxHeight = ""; return; }
         var rect = trigger.getBoundingClientRect();
         var width = Math.max(rect.width, 260);
         panel.style.width = width + "px";
         var left = Math.min(rect.left, window.innerWidth - width - 12);
         panel.style.left = Math.max(12, left) + "px";
-        var top = rect.bottom + 8;
-        panel.style.top = top + "px";
-        panel.style.maxHeight = Math.max(160, window.innerHeight - top - 16) + "px";
+        // Past de lijst niet onder het veld? Dan naar boven openklappen en de hoogte beperken tot de
+        // beschikbare ruimte (zelfde regel als glV2SelectPosition in gl-v2-shell.js). De lijst is nog
+        // verborgen: even onzichtbaar tonen om de echte hoogte te meten.
+        var wasOpen = panel.classList.contains("is-open");
+        var oudeVis = panel.style.visibility, oudeDisp = panel.style.display;
+        panel.style.maxHeight = "";
+        if (!wasOpen) { panel.style.visibility = "hidden"; panel.style.display = "flex"; }
+        var natuurlijk = Math.min(panel.scrollHeight, 320);
+        if (!wasOpen) { panel.style.visibility = oudeVis; panel.style.display = oudeDisp; }
+        var onder = window.innerHeight - rect.bottom - 12, boven = rect.top - 12;
+        if (natuurlijk > onder && boven > onder) {
+            panel.style.top = "";
+            panel.style.bottom = (window.innerHeight - rect.top + 8) + "px";
+            panel.style.maxHeight = Math.min(320, boven) + "px";
+        } else {
+            panel.style.bottom = "";
+            panel.style.top = (rect.bottom + 8) + "px";
+            panel.style.maxHeight = Math.min(320, Math.max(onder, 120)) + "px";
+        }
     }
     function openPanel(trigger, panel) {
         closeAllPanels();
@@ -201,7 +217,8 @@
                     LoadSiteManagers(d.id, "#ddlSiteManager");
                     if (config.isAdd) loadCompanyLots(d.id, d.text);
                 } else {
-                    $("#ddlSiteManager").empty().append(new Option("Geen", "", false, false));
+                    var smHidden = document.getElementById("ddlSiteManager");
+                    if (smHidden && window.GlV2Select) window.GlV2Select.setItems(smHidden.closest(".gl-v2-select"), [], "", "Geen");
                     if (config.isAdd) clearLots();
                 }
                 markDirty();
@@ -264,12 +281,10 @@
         $.ajax({
             type: "POST", url: config.getCompanyContactsUrl, data: { companyid: companyId }, dataType: "json",
             success: function (data) {
-                var $select = $(selectSelector);
-                var selectedValue = $select.val();
-                $select.empty();
-                $select.append(new Option("Geen", "", false, false));
-                $.each(data, function (i, item) { $select.append(new Option(item.text, item.id, false, false)); });
-                if (selectedValue) { $select.val(selectedValue); }
+                var hidden = document.querySelector(selectSelector);
+                var wrap = hidden && hidden.closest(".gl-v2-select");
+                if (!wrap || !window.GlV2Select) return;
+                window.GlV2Select.setItems(wrap, (data || []).map(function (i) { return { value: i.id, text: i.text }; }), hidden.value, "Geen");
             },
             error: function (xhr, status, error) { console.error("Fout bij ophalen contactpersonen:", error); }
         });
@@ -277,6 +292,30 @@
     // _SiteManagerNewModalV2's succesvolle aanmaak-flow roept 'm ook aan — was al globaal toen dit
     // nog inline stond, ongewijzigd contract.
     window.LoadSiteManagers = LoadSiteManagers;
+
+    // ── Contractprijs-totaal: som van alle lotbedragen (live) + de bijbestellingen onder de loten. ──
+    var euro = new Intl.NumberFormat("nl-BE", { style: "currency", currency: "EUR" });
+    function recalcTotal() {
+        var target = document.getElementById("gl-v2-ec-lots-total-value");
+        if (!target) return;
+        var total = 0;
+        document.querySelectorAll("#ActivityRows .Currencymask").forEach(function (el) {
+            var an = window.AutoNumeric && AutoNumeric.getAutoNumericElement(el);
+            var raw = an ? an.getNumericString() : String(el.value || "").replace(",", ".");
+            var n = parseFloat(raw);
+            if (!isNaN(n)) total += n;
+        });
+        document.querySelectorAll("#ActivityRows .js-edit-bijbestelling").forEach(function (b) {
+            var n = parseFloat(b.getAttribute("data-price"));
+            if (!isNaN(n)) total += n;
+        });
+        target.textContent = euro.format(total);
+    }
+    ["input", "change", "autoNumeric:rawValueModified", "autoNumeric:formatted"].forEach(function (ev) {
+        document.addEventListener(ev, function (e) {
+            if (e.target && e.target.closest && e.target.closest("#ActivityRows")) recalcTotal();
+        }, true);
+    });
 
     $("#btnAddActivities").click(function () {
         if (!lotPicker) return false;
@@ -291,6 +330,7 @@
                     var $row = $(result);
                     $("#ActivityRows").append($row);
                     initCurrencyMasks($row.find(".Currencymask"));
+                    recalcTotal();
                 }
             });
             lotPicker.markAdded(item.id);
@@ -300,9 +340,10 @@
     });
 
     $(document).on("click", "button.deleterow", function () {
-        $(this).closest("div").parent("div").parent("div").remove();
+        $(this).closest(".gl-v2-ec-lot-row").remove();
         var activiteitId = $(this).data("id");
         if (lotPicker) lotPicker.restore(String(activiteitId));
+        recalcTotal();
         markDirty();
         return false;
     });
@@ -378,6 +419,7 @@
 
     $(document).ready(function () {
         initCurrencyMasks();
+        recalcTotal();
         LoadSiteManagers($("#txtCompanyID").val(), "#ddlSiteManager");
         initDirtyBadge();
         initDiscardChangesModal();

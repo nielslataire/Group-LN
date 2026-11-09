@@ -1081,6 +1081,18 @@ public partial class LeveranciersController
 
         SetPageHeader("bx bx-hard-hat", detailModel.Name);
         ViewData["HelpScreenId"] = "leveranciers-details";
+        // Inhoudingsplicht (30bis/30ter): laatste controle en historiek van deze leverancier.
+        try
+        {
+            var retainment = HttpContext.RequestServices.GetRequiredService<IRetainmentCheckService>();
+            var identifier = !string.IsNullOrWhiteSpace(supplier.VatNumber) ? supplier.VatNumber : supplier.Ondernemingsnummer;
+            ViewBag.RetainmentConfigured = retainment.IsConfigured;
+            ViewBag.RetainmentHasIdentifier = !string.IsNullOrWhiteSpace(identifier);
+            ViewBag.RetainmentHistory = await retainment.GetHistoryForEnterpriseAsync(identifier, 10, ct);
+            ViewBag.RetainmentCanCheck = canEdit;
+        }
+        catch { /* de leveranciersfiche mag nooit stuk gaan door de inhoudingsplicht */ }
+
         return View(ViewData["UseGlV2Layout"] as bool? == true ? "DetailsV2" : "Details", detailModel);
     }
 

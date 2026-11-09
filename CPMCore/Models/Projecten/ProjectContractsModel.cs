@@ -783,6 +783,16 @@ namespace CPMCore.Models.Projecten
         public List<ClientListRow> Rows { get; set; } = new();
     }
 
+    public class SiteManagerInfo
+    {
+        public int ContactId { get; set; }
+        public string Name { get; set; } = "";
+        public string? Role { get; set; }
+        /// <summary>Gsm, anders vast nummer.</summary>
+        public string? Phone { get; set; }
+        public string? Email { get; set; }
+    }
+
     public class ProjectContractDetailModel
     {
         public ProjectContractDetailModel()
@@ -795,6 +805,10 @@ namespace CPMCore.Models.Projecten
 
         public List<ContractBO> Contracts { get; set; }
         public bool HasContract { get; set; }
+
+        /// <summary>De werfleiders (contactpersonen van de leverancier) van de contracten op deze pagina,
+        /// per ContactId — voor de kaart "Werfleider aannemer" (design-handoff 14i).</summary>
+        public Dictionary<int, SiteManagerInfo> SiteManagers { get; set; } = new();
 
         /// <summary>Aantal leveranciers in dit project (contract of enkel factuur) — voor het
         /// inner-menu "Leveranciers"-teller, zelfde telling als DetailContracts' SupplierRows.</summary>

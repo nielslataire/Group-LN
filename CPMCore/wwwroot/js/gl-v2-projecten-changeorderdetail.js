@@ -495,20 +495,21 @@
     }
 
     // ── 3. Opslaan / verzenden ──────────────────────────────────────────────────────────────────────
-    // Klant (enkel bij een nieuwe rij een keuzelijst) en leverancier·contract zijn verplichte FK's —
-    // blokkeer de POST vóór de server ze afwijst en de ingevulde regels verloren gaan. Verzenden vraagt
+    // De klant (enkel bij een nieuwe rij een keuzelijst) is een verplichte FK — blokkeer de POST vóór de server
+    // ze afwijst en de ingevulde regels verloren gaan. Het contract is optioneel. Verzenden vraagt
     // daarbovenop minstens één regel, geen "controleer"-vlaggen meer en een plan van samen 100 %.
     var mainForm = document.getElementById("gl-v2-co-form");
     if (mainForm) {
         mainForm.addEventListener("submit", function (e) {
+            // Enkel de klant · eenheid is verplicht. Het contract is optioneel (offerte én wijzigingsopdracht): het veld staat zelf op
+            // "Geen contract (nog te koppelen)" en de server (ChangeOrderDetailV2Save) vraagt er ook geen. Dit blokkeerde het opslaan
+            // van een offerte zonder contract, zonder dat de server ooit werd aangeroepen.
             var client = document.getElementById("gl-v2-co-client");
-            var contract = document.getElementById("gl-v2-co-contractactivity");
-            if ((client && !client.value) || (contract && !contract.value)) {
+            if (client && !client.value) {
                 e.preventDefault();
-                var missing = client && !client.value ? client : contract;
-                var trigger = document.getElementById(missing.id + "_trigger");
+                var trigger = document.getElementById(client.id + "_trigger");
                 if (trigger) trigger.focus();
-                toast("warning", "Nog niet compleet", "Kies eerst een klant · eenheid en een leverancier · contract.");
+                toast("warning", "Nog niet compleet", "Kies eerst een klant · eenheid.");
                 return;
             }
 
