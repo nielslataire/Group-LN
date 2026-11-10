@@ -1,24 +1,33 @@
 /* ============================================================
-   Coachmarks — feature discovery popovers
+   Coachmarks — design-handoff punt 58 ("CRM Coachmarks"), 58a anatomie + 58f CSS
    Prefix: gl-cm
+   Groene bubbel (#00532D) met gouden kicker en één primaire witte knop; bewust anders dan de witte
+   popovers/keuzelijsten en de donkere toasts/tooltips. De bubbel hangt aan <body>, buiten .gl-v2: de
+   --gl-v2-* tokens bestaan daar niet (DESIGN.md, "tokens-scope"), dus elke waarde staat hier letterlijk.
    ============================================================ */
 
-/* ── Popover container ──────────────────────────────────────── */
+/* ── Bubbel ─────────────────────────────────────────────────── */
 
 .gl-cm {
+    --gl-cm-arrow: 28px;               /* afstand van de pijl tot de hoek; JS zet 'm naar het midden van het doel */
     position: absolute;
     z-index: 9050;
-    width: 300px;
-    max-width: calc(100vw - 24px);
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.14);
+    width: clamp(280px, 30vw, 320px);
+    max-width: calc(100vw - 16px);
+    box-sizing: border-box;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: #00532D;
+    color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0, 40, 20, .18), 0 24px 48px -16px rgba(0, 40, 20, .55);
+    font-family: var(--gl-v2-font-sans, 'IBM Plex Sans', -apple-system, 'Segoe UI', Helvetica, sans-serif);
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.18s ease, transform 0.18s ease;
+    transition: opacity .18s ease, transform .18s ease;
     transform: translateY(4px);
-    font-size: 0.875rem;
-    line-height: 1.5;
 }
 
 .gl-cm--visible {
@@ -27,176 +36,160 @@
     transform: translateY(0);
 }
 
-/* ── Arrow ──────────────────────────────────────────────────── */
+/* ── Pijl: 12 × 12, 45° gedraaid, wijst altijd naar het doel ──── */
 
 .gl-cm__arrow {
     position: absolute;
-    width: 0;
-    height: 0;
+    width: 12px;
+    height: 12px;
+    background: inherit;
+    border-radius: 2px;
+    transform: rotate(45deg);
     pointer-events: none;
 }
+.gl-cm[data-placement="bottom"] .gl-cm__arrow { top: -5px; left: calc(var(--gl-cm-arrow) - 6px); }
+.gl-cm[data-placement="top"]    .gl-cm__arrow { bottom: -5px; left: calc(var(--gl-cm-arrow) - 6px); }
+.gl-cm[data-placement="right"]  .gl-cm__arrow { left: -5px; top: calc(var(--gl-cm-arrow) - 6px); }
+.gl-cm[data-placement="left"]   .gl-cm__arrow { right: -5px; top: calc(var(--gl-cm-arrow) - 6px); }
 
-/* Bottom placement → arrow points up (top of popover) */
-.gl-cm[data-placement="bottom"] .gl-cm__arrow {
-    top: -8px;
-    left: 50%;
-    transform: translateX(-50%);
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-bottom: 8px solid #fff;
-}
+/* ── Kop: kicker + sluiten ──────────────────────────────────── */
 
-/* Top placement → arrow points down (bottom of popover) */
-.gl-cm[data-placement="top"] .gl-cm__arrow {
-    bottom: -8px;
-    left: 50%;
-    transform: translateX(-50%);
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-top: 8px solid #fff;
-}
-
-/* Right placement → arrow points left (left side of popover) */
-.gl-cm[data-placement="right"] .gl-cm__arrow {
-    left: -8px;
-    top: 50%;
-    transform: translateY(-50%);
-    border-top: 8px solid transparent;
-    border-bottom: 8px solid transparent;
-    border-right: 8px solid #fff;
-}
-
-/* Left placement → arrow points right (right side of popover) */
-.gl-cm[data-placement="left"] .gl-cm__arrow {
-    right: -8px;
-    top: 50%;
-    transform: translateY(-50%);
-    border-top: 8px solid transparent;
-    border-bottom: 8px solid transparent;
-    border-left: 8px solid #fff;
-}
-
-/* ── Header ─────────────────────────────────────────────────── */
-
-.gl-cm__header {
+.gl-cm__head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 14px 8px;
-    border-bottom: 1px solid #f0f2f5;
+    gap: 8px;
+    min-height: 22px;
 }
 
-.gl-cm__title {
+/* NIEUW: goud op inkt; in een rondleiding "2 VAN 3" in lichtgroen zonder vlak. */
+.gl-cm__kicker {
+    font: 700 9.5px/1 var(--gl-v2-font-sans, 'IBM Plex Sans', sans-serif);
+    letter-spacing: .12em;
+    color: #1F2A1E;
+    background: #E9D3A6;
+    padding: 3px 7px;
+    border-radius: 4px;
+}
+.gl-cm__kicker.is-step {
     font-weight: 600;
-    color: #212529;
-    font-size: 0.875rem;
+    font-size: 10.5px;
+    letter-spacing: .06em;
+    color: #D6E5CC;
+    background: transparent;
+    padding: 0;
 }
 
 .gl-cm__close {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: none;
-    border: none;
-    padding: 3px;
+    width: 24px;
+    height: 24px;
+    margin: 0 -6px 0 0;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #D6E5CC;
     cursor: pointer;
-    color: #9aa3af;
-    border-radius: 4px;
-    line-height: 1;
     flex-shrink: 0;
-    transition: color 0.15s, background 0.15s;
+    transition: background .15s, color .15s;
 }
+.gl-cm__close:hover { background: rgba(255, 255, 255, .12); color: #fff; }
 
-.gl-cm__close:hover {
-    color: #495057;
-    background: #f0f2f5;
+/* ── Titel en tekst ─────────────────────────────────────────── */
+
+.gl-cm__title {
+    font: 600 14px/1.35 var(--gl-v2-font-sans, 'IBM Plex Sans', sans-serif);
+    color: #fff;
 }
-
-/* ── Body ───────────────────────────────────────────────────── */
 
 .gl-cm__body {
-    padding: 10px 14px;
-    color: #495057;
+    margin: 0;
+    font: 450 12.5px/1.55 var(--gl-v2-font-sans, 'IBM Plex Sans', sans-serif);
+    color: #E4EEDD;
+    text-wrap: pretty;
 }
+.gl-cm__body b { color: #fff; font-weight: 600; }
 
-/* ── Footer ─────────────────────────────────────────────────── */
+/* ── Knoppen: primair wit met groene tekst (32 hoog), secundair als tekst ──── */
 
-.gl-cm__footer {
+.gl-cm__foot {
     display: flex;
     align-items: center;
-    padding: 8px 14px 12px;
-    gap: 8px;
-}
-
-.gl-cm__counter {
-    font-size: 0.75rem;
-    color: #9aa3af;
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-
-.gl-cm__actions {
-    display: flex;
     gap: 6px;
-    margin-left: auto;
+    margin-top: 6px;
 }
-
-/* ── Buttons ────────────────────────────────────────────────── */
+.gl-cm__spacer { flex: 1; }
 
 .gl-cm__btn {
     display: inline-flex;
     align-items: center;
-    border: none;
-    border-radius: 5px;
-    padding: 5px 13px;
-    font-size: 0.8rem;
-    font-weight: 500;
+    justify-content: center;
+    height: 32px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 8px;
+    font: 600 12.5px var(--gl-v2-font-sans, 'IBM Plex Sans', sans-serif);
     cursor: pointer;
     white-space: nowrap;
-    transition: filter 0.15s, background 0.15s;
+    transition: background .15s, color .15s;
+}
+.gl-cm__btn[hidden] { display: none; }
+
+.gl-cm__btn--primary { background: #fff; color: #00532D; }
+.gl-cm__btn--primary:hover { background: #EDF2E8; }
+
+.gl-cm__btn--text { padding: 0 10px; background: transparent; color: #D6E5CC; font-weight: 500; }
+.gl-cm__btn--text:hover { color: #fff; background: rgba(255, 255, 255, .10); }
+
+/* Een tip heeft enkel de primaire knop, rechts. */
+.gl-cm:not(.gl-cm--tour) .gl-cm__foot { justify-content: flex-end; }
+
+.gl-cm__btn:focus-visible,
+.gl-cm__close:focus-visible {
+    outline: 2px solid #E9D3A6;
+    outline-offset: 2px;
 }
 
-.gl-cm__btn--prev {
-    background: #f0f2f5;
-    color: #495057;
+/* ── Spotlight (enkel rondleiding): overlay met uitsparing, gouden rand + gloed ─────── */
+
+.gl-cm-spot {
+    position: fixed;
+    z-index: 9040;
+    border-radius: 10px;
+    pointer-events: none;     /* het doel blijft klikbaar */
+    box-shadow: 0 0 0 2px #C9A96E, 0 0 0 6px rgba(201, 169, 110, .35), 0 0 0 9999px rgba(31, 42, 30, .45);
+    top: 0;
+    left: 0;
+    transition: transform .25s ease;   /* schuift via transform (geen layout); de maat springt direct */
+}
+/* Telefoon, één tip: enkel de gouden rand, geen overlay. */
+.gl-cm-spot--ring {
+    box-shadow: 0 0 0 2px #C9A96E, 0 0 0 6px rgba(201, 169, 110, .35);
 }
 
-.gl-cm__btn--prev:hover {
-    background: #e2e6ea;
+/* ── Telefoon: bottom sheet i.p.v. bubbel met pijl; het doel staat omkaderd erboven ──── */
+
+.gl-cm--sheet {
+    position: fixed;
+    top: auto !important;
+    left: 0 !important;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: none;
+    padding: 18px 16px calc(16px + env(safe-area-inset-bottom));
+    border-radius: 16px 16px 0 0;
+    transform: translateY(12px);
 }
+.gl-cm--sheet.gl-cm--visible { transform: translateY(0); }
+.gl-cm--sheet .gl-cm__arrow { display: none; }
+.gl-cm--sheet .gl-cm__btn { height: 40px; }
+.gl-cm--sheet .gl-cm__close { width: 32px; height: 32px; }
 
-.gl-cm__btn--next,
-.gl-cm__btn--done {
-    background: var(--primary, #0d6efd);
-    color: #fff;
-}
-
-.gl-cm__btn--next:hover,
-.gl-cm__btn--done:hover {
-    filter: brightness(0.9);
-}
-
-/* ── Target highlight ───────────────────────────────────────── */
-
-.gl-cm-target {
-    outline: 2px solid var(--primary, #0d6efd) !important;
-    outline-offset: 3px;
-    border-radius: 4px;
-    position: relative;
-    z-index: 1;
-    transition: outline 0.2s;
-}
-
-/* ── Mobile ─────────────────────────────────────────────────── */
-
-@media (max-width: 575px) {
-    .gl-cm {
-        width: calc(100vw - 24px);
-    }
-
-    /* On mobile the arrow is hidden to avoid visual glitches
-       when the popover is clamped to the side */
-    .gl-cm__arrow {
-        display: none;
-    }
+@media (prefers-reduced-motion: reduce) {
+    .gl-cm { transition: none; transform: none; }
+    .gl-cm-spot { transition: none; }
 }

@@ -289,7 +289,7 @@
    juist GROTER (44px), niet kleiner — "compacter" slaat op het paneel als geheel, niet de
    raakvlakken zelf. ─────────────────────────────────────────────────────────────────────────── */
 @media (min-width: 768px) and (max-width: 1023.98px) {
-    .gl-v2-select-trigger { height: 44px; border-radius: 9px; font-size: 13.5px; }
+    .gl-v2-select-trigger { height: 44px; border-radius: 9px; }
     .gl-v2-select-panel { width: 300px; }
     .gl-v2-select-option { padding: 12px 10px; font-size: 13.5px; }
     .gl-v2-select-panel-search .gl-v2-select-search-field { height: 42px; }
@@ -544,7 +544,7 @@
 @media (max-width: 1023.98px) {
     .gl-v2-field-box { height: 44px; border-radius: 10px; }
     .gl-v2-field-box > i:first-child { font-size: 17px; }
-    .gl-v2-field-input { font-size: 13.5px; }
+    /* Lettergrootte van de invoer blijft overal 13px: enkel de hoogte (44px) groeit, de tekst niet. */
     .gl-v2-field-box.gl-v2-field-box-textarea { height: auto; min-height: 104px; }
 }
 

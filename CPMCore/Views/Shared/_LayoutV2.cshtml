@@ -68,6 +68,8 @@
     <link rel="stylesheet" href="~/css/gl-v2/skeleton.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2/list.css" asp-append-version="true" />
 
+    <link rel="stylesheet" href="~/css/coachmarks.css" asp-append-version="true" />
+
     @* Page specific css *@
     @RenderSection("PageStyle", required: false)
 
@@ -195,6 +197,16 @@
                     {
                         <div class="gl-v2-topbar-badges">
                             @RenderSection("PageTitleBadges", required: false)
+                        </div>
+                    }
+                    @* Optioneel — design-handoff 42a/42m: een zoekvak in de topbalk dat iets zoekt en opent
+                       (bv. Nacalculatie: "Factuur zoeken"), los van een filter in de pagina zelf. Op desktop
+                       rechts van de titel (flexibel, max 460px); onder 1440px een eigen strook onder de topbar,
+                       zoals PageTitleBadges. Zie DESIGN.md "Zoekvak in de topbalk". *@
+                    @if (IsSectionDefined("TopbarSearch"))
+                    {
+                        <div class="gl-v2-topbar-search">
+                            @RenderSection("TopbarSearch", required: false)
                         </div>
                     }
                     <span class="gl-v2-topbar-spacer"></span>
@@ -461,6 +473,12 @@
     <script src="~/js/gl-v2-leave-guard.js" asp-append-version="true"></script>
 
     @RenderSection("PageScripts", required: false)
+
+    @* Coachmarks (nieuwe functies op een bestaande pagina): een pagina zet ViewData["CoachmarkPageKey"], de
+       definities staan in Models/Coachmarks/CoachmarkRegistry.cs. Zonder sleutel of zonder actieve
+       coachmark rendert de partial niets. *@
+    @await Html.PartialAsync("_Coachmarks")
+    <script src="~/js/coachmarks.js" asp-append-version="true"></script>
 
     <script src="~/lib/bootstrap-multiselect/js/bootstrap-multiselect.min.js"></script>
     <script src="~/lib/pnotify/pnotify.custom.js"></script>

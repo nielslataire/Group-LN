@@ -72,6 +72,21 @@
     // Kaart "Offerte leverancier" (28a) bovenaan: bij een offerte aan de klant altijd zodra er een
     // leveranciersofferte aan hangt; bij een WO enkel in concept zonder eigen herkomst.
     var showQuoteCard = isQuote ? Model.HasQuoteSource : (editable && Model.HasQuoteSource && !Model.SourceChangeOrderId.HasValue);
+
+    // Actiebalk (28r): de waarschuwing hoort bij de knop Verzenden, dus in de balk i.p.v. enkel in de zijkolom.
+    var noMailCount = Model.Recipients.Count(r => r.Tone == "is-rood");
+    var barWarning = isQuote && (editable || quoteSent) && noMailCount > 0
+        ? (noMailCount == Model.Recipients.Count ? "Klant heeft geen e-mailadres" : $"{noMailCount} van {Model.Recipients.Count} eigenaars hebben geen e-mailadres")
+        : null;
+    var savedParts = (Model.SavedAtText ?? "").Split(' ', 2);
+    // Meer acties (⋯): Verwijderen staat altijd hier (destructief); "Omzetten" verhuist er op tablet naartoe.
+    var convertInMenu = isQuote && editable;
+    var hasMore = Model.CanDelete || convertInMenu;
+
+    // Compacte stappenbalk (28r): de huidige stap en de volgende.
+    var stepList = Model.Stappenplan?.Steps ?? new List<GlV2StepItemVm>();
+    var stepNow = stepList.Count > 0 ? stepList[Math.Clamp(Model.Stappenplan!.Current, 0, stepList.Count - 1)] : null;
+    var stepNext = stepNow != null && Model.Stappenplan!.Current + 1 < stepList.Count ? stepList[Model.Stappenplan.Current + 1] : null;
 }
 @section PageStyle
 {
@@ -84,7 +99,7 @@
     <span class="gl-v2-badge @Model.StatusPillTone">@Model.StatusPillLabel.ToUpperInvariant()</span>
     @if (Model.Rows.Count > 0)
     {
-        <span class="gl-v2-badge is-info">@(Model.IsMinwerk ? "MINWERK" : "MEERWERK")</span>
+        <span class="gl-v2-badge is-info gl-v2-co-hide-md">@(Model.IsMinwerk ? "MINWERK" : "MEERWERK")</span>
     }
 }
 @section PageActions
@@ -93,11 +108,11 @@
     {
         @if (isSigned && Model.CompletedSigningCase != null)
         {
-            <a href="@signedPdfUrl" target="_blank" rel="noopener" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-file-pdf" aria-hidden="true"></i><span>Getekende PDF</span></a>
+            <a href="@signedPdfUrl" target="_blank" rel="noopener" class="gl-v2-btn gl-v2-btn-secondary gl-v2-co-pdf-btn" title="Getekende PDF" aria-label="Getekende PDF"><i class="ph ph-file-pdf" aria-hidden="true"></i><span class="gl-v2-co-pdf-label">Getekende PDF</span></a>
         }
         else
         {
-            <a href="@pdfUrl" target="_blank" rel="noopener" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-file-pdf" aria-hidden="true"></i><span>@(editable ? "Voorbeeld-PDF" : "PDF")</span></a>
+            <a href="@pdfUrl" target="_blank" rel="noopener" class="gl-v2-btn gl-v2-btn-secondary gl-v2-co-pdf-btn" title="@(editable ? "Voorbeeld-PDF" : "PDF")" aria-label="@(editable ? "Voorbeeld-PDF" : "PDF")"><i class="ph ph-file-pdf" aria-hidden="true"></i><span class="gl-v2-co-pdf-label">@(editable ? "Voorbeeld-PDF" : "PDF")</span></a>
         }
         @if (quoteConverted && convertedUrl != null)
         {
@@ -160,7 +175,23 @@
     <div class="gl-v2-card gl-v2-co-card">
         <div class="gl-v2-card-body gl-v2-co-steps">
             <span class="gl-v2-co-steps-label">@Model.StepLabel.ToUpperInvariant()</span>
-            @await Html.PartialAsync("GlV2/_Steps", Model.Stappenplan)
+            @* 28r: 7 labels zolang de kolom breed genoeg is, daaronder het balkje "Offerte · concept · volgende: Opgemaakt". *@
+            <div class="gl-v2-co-steps-full">@await Html.PartialAsync("GlV2/_Steps", Model.Stappenplan)</div>
+            @if (stepNow != null)
+            {
+                <div class="gl-v2-co-steps-compact">
+                    <div class="gl-v2-co-steps-compact-line">
+                        <b>@stepNow.Label</b>
+                        <span>@(string.IsNullOrWhiteSpace(stepNow.Sub) ? "" : stepNow.Sub + " · ")@(stepNext != null ? "volgende: " + stepNext.Label : "laatste stap")</span>
+                    </div>
+                    <div class="gl-v2-co-steps-bar" aria-hidden="true">
+                        @foreach (var st in stepList)
+                        {
+                            <span class="@(st.State is GlV2StepState.Done or GlV2StepState.Current or GlV2StepState.Wacht or GlV2StepState.Warning or GlV2StepState.Error ? "is-on" : "")"></span>
+                        }
+                    </div>
+                </div>
+            }
         </div>
     </div>
 
@@ -426,23 +457,23 @@
                         <span class="gl-v2-co-lock"><i class="ph ph-lock-simple" aria-hidden="true"></i>@Model.LockText</span>
                     }
                 </div>
-                <div class="gl-v2-co-table-scroll">
+                <div class="gl-v2-co-table-scroll gl-v2-co-rows-scroll">
                     @if (editable)
                     {
-                        <table class="gl-v2-co-table" id="gl-v2-co-rows-table">
+                        <table class="gl-v2-co-table gl-v2-co-rows" id="gl-v2-co-rows-table">
                             <thead>
                                 <tr>
-                                    <th class="gl-v2-co-handle-cell"><span class="visually-hidden">Volgorde</span></th>
-                                    <th>Omschrijving</th>
-                                    <th class="is-center">Meetm.</th>
-                                    <th class="is-center">Eenh.</th>
-                                    <th class="is-right">Aantal</th>
-                                    <th class="is-right">Prijs lev.</th>
-                                    <th class="is-right">Comm. %</th>
-                                    <th class="is-right">Prijs klant</th>
-                                    <th class="is-right">Btw</th>
-                                    <th class="is-right">Totaal</th>
-                                    <th></th>
+                                    <th class="gl-v2-co-handle-cell co-c-g"><span class="visually-hidden">Volgorde</span></th>
+                                    <th class="co-c-om">Omschrijving</th>
+                                    <th class="is-center co-c-me">Meetm.</th>
+                                    <th class="is-center co-c-ee">Eenh.</th>
+                                    <th class="is-right co-c-aa">Aantal</th>
+                                    <th class="is-right co-c-pl">Prijs lev.</th>
+                                    <th class="is-right co-c-co">Comm. %</th>
+                                    <th class="is-right co-c-pk">Prijs klant</th>
+                                    <th class="is-right co-c-bt">Btw</th>
+                                    <th class="is-right co-c-to">Totaal</th>
+                                    <th class="co-c-d"></th>
                                 </tr>
                             </thead>
                             <tbody id="gl-v2-co-rows-body">
@@ -488,7 +519,7 @@
                     }
                     else
                     {
-                        <table class="gl-v2-co-table is-readonly">
+                        <table class="gl-v2-co-table gl-v2-co-rows is-readonly">
                             <thead>
                                 <tr>
                                     <th>Omschrijving</th>
@@ -506,14 +537,14 @@
                                 {
                                     var priceKlant = r.Price * (1 + r.Commission / 100m);
                                     <tr>
-                                        <td class="gl-v2-co-desc-cell">@r.Description</td>
-                                        <td class="is-center">@(((MeasurementUnit)r.MeasurementUnit).GetDisplayName())</td>
-                                        <td class="is-right gl-v2-co-tabular">@r.Number</td>
-                                        <td class="is-right gl-v2-co-tabular gl-v2-co-internal">@Eur(r.Price)</td>
-                                        <td class="is-right gl-v2-co-tabular gl-v2-co-internal">@Pct(r.Commission) %</td>
-                                        <td class="is-right gl-v2-co-tabular">@Eur(priceKlant)</td>
-                                        <td class="is-right gl-v2-co-tabular">@Pct(r.VatPercentage) %</td>
-                                        <td class="is-right gl-v2-co-tabular">@Eur(r.Number * priceKlant)</td>
+                                        <td class="gl-v2-co-desc-cell co-c-om" data-label="Omschrijving">@r.Description</td>
+                                        <td class="is-center co-c-ee" data-label="Eenheid">@(((MeasurementUnit)r.MeasurementUnit).GetDisplayName())</td>
+                                        <td class="is-right gl-v2-co-tabular co-c-aa" data-label="Aantal">@r.Number</td>
+                                        <td class="is-right gl-v2-co-tabular gl-v2-co-internal co-c-pl" data-label="Prijs leverancier">@Eur(r.Price)</td>
+                                        <td class="is-right gl-v2-co-tabular gl-v2-co-internal co-c-co" data-label="Commissie">@Pct(r.Commission) %</td>
+                                        <td class="is-right gl-v2-co-tabular co-c-pk" data-label="Prijs klant">@Eur(priceKlant)</td>
+                                        <td class="is-right gl-v2-co-tabular co-c-bt" data-label="Btw">@Pct(r.VatPercentage) %</td>
+                                        <td class="is-right gl-v2-co-tabular co-c-to" data-label="Totaal">@Eur(r.Number * priceKlant)</td>
                                     </tr>
                                 }
                                 @if (Model.Rows.Count == 0)
@@ -688,10 +719,10 @@
                                                 <a class="gl-v2-co-term-invoice" href="@Url.Action("Detail", "Invoices", new { id = t.InvoiceId })">@t.InvoiceNumber</a>
                                             }
                                         </td>
-                                        <td class="is-right gl-v2-co-tabular">@(t.Percentage.HasValue ? Pct(t.Percentage) + " %" : "—")</td>
-                                        <td class="is-right gl-v2-co-tabular">@Eur(t.AmountExVat)</td>
-                                        <td>@t.TriggerLabel</td>
-                                        <td>
+                                        <td class="is-right gl-v2-co-tabular" data-label="Percentage">@(t.Percentage.HasValue ? Pct(t.Percentage) + " %" : "—")</td>
+                                        <td class="is-right gl-v2-co-tabular" data-label="Excl. btw">@Eur(t.AmountExVat)</td>
+                                        <td class="is-wide" data-label="Wanneer factureerbaar">@t.TriggerLabel</td>
+                                        <td class="is-wide" data-label="Status">
                                             <span class="gl-v2-badge @t.StatusTone">@t.StatusLabel.ToUpperInvariant()</span>
                                             @if (isSigned && Model.CanWrite && t.TriggerType == 3 && !t.IsTriggered && !t.IsInvoiced)
                                             {
@@ -957,17 +988,21 @@
 </div>
 
 @* ── Voetbalk: context links, knoppen rechts — per stap andere (28a–28i) ──────────────────────────── *@
-<div class="gl-v2-form-actionbar">
-    @if (Model.CanDelete)
-    {
-        <button type="button" class="gl-v2-btn gl-v2-btn-danger" data-bs-toggle="modal" data-bs-target="#gl-v2-co-delete-modal"><i class="ph ph-trash" aria-hidden="true"></i><span>Verwijderen</span></button>
-    }
-    <span class="gl-v2-form-actionbar-status">
+@* 28r: de balk blijft op één lijn; de uitlegzin valt eerst weg (laptop), dan de datum en de waarschuwingstekst, dan de lange knoppen (zie CSS). *@
+<div class="gl-v2-form-actionbar gl-v2-co-actionbar">
+    <span class="gl-v2-form-actionbar-status gl-v2-co-status">
         @if (!string.IsNullOrEmpty(Model.SavedAtText))
         {
-            <span class="gl-v2-co-saved"><i class="ph ph-check-circle" aria-hidden="true"></i>Opgeslagen op @Model.SavedAtText</span>
+            <span class="gl-v2-co-saved"><i class="ph ph-check-circle" aria-hidden="true"></i><b>Opgeslagen</b><span class="gl-v2-co-saved-date"> op @savedParts[0]</span>@(savedParts.Length > 1 ? " " + savedParts[1] : "")</span>
         }
-        @Model.FooterText
+        @if (barWarning != null)
+        {
+            <span class="gl-v2-co-barwarn" title="@barWarning"><i class="ph ph-warning" aria-hidden="true"></i><span>@barWarning</span></span>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.FooterText))
+        {
+            <span class="gl-v2-co-hint">@Model.FooterText</span>
+        }
     </span>
     <span class="gl-v2-form-actionbar-spacer"></span>
     <div class="gl-v2-form-actionbar-actions">
@@ -975,11 +1010,11 @@
         {
             @if (editable)
             {
-                <a class="gl-v2-btn gl-v2-btn-text" href="@listUrl">Annuleren</a>
+                <a class="gl-v2-btn gl-v2-btn-text gl-v2-co-cancel" href="@listUrl">Annuleren</a>
+                <button type="submit" class="gl-v2-btn gl-v2-btn-secondary gl-v2-co-bar-convert" id="gl-v2-co-convert" name="afterSave" value="convert">Omzetten naar wijzigingsopdracht</button>
                 <button type="submit" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-co-save">Opslaan</button>
-                <button type="submit" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-co-convert" name="afterSave" value="convert">Omzetten naar wijzigingsopdracht</button>
                 <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-co-send" name="afterSave" value="send">
-                    <i class="ph ph-paper-plane-tilt" aria-hidden="true"></i><span>Verzenden per mail</span>
+                    <i class="ph ph-paper-plane-tilt" aria-hidden="true"></i><span class="gl-v2-co-lg">Verzenden per mail</span><span class="gl-v2-co-sm">Verzenden</span>
                 </button>
             }
             else if (quoteSent && Model.CanWrite)
@@ -1000,10 +1035,10 @@
         }
         else if (editable)
         {
-            <a class="gl-v2-btn gl-v2-btn-text" href="@listUrl">Annuleren</a>
+            <a class="gl-v2-btn gl-v2-btn-text gl-v2-co-cancel" href="@listUrl">Annuleren</a>
             <button type="submit" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-co-save">Opslaan</button>
             <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-co-send" name="afterSave" value="send">
-                <i class="ph ph-paper-plane-tilt" aria-hidden="true"></i><span>@(phase == "concept" ? "Verzenden naar klant" : "Opnieuw verzenden")</span>
+                <i class="ph ph-paper-plane-tilt" aria-hidden="true"></i><span class="gl-v2-co-lg">@(phase == "concept" ? "Verzenden naar klant" : "Opnieuw verzenden")</span><span class="gl-v2-co-sm">@(phase == "concept" ? "Verzenden" : "Opnieuw")</span>
             </button>
         }
         else
@@ -1033,6 +1068,20 @@
             {
                 <a class="gl-v2-btn gl-v2-btn-primary" href="@listUrl">Sluiten</a>
             }
+        }
+        @if (hasMore)
+        {
+            <button type="button" class="gl-v2-icon-btn gl-v2-co-more js-gl-v2-menu-trigger @(Model.CanDelete ? "" : "gl-v2-co-more-narrow")" aria-haspopup="true" aria-expanded="false" aria-controls="gl-v2-co-more-menu" aria-label="Meer acties" title="Meer acties"><i class="ph ph-dots-three" aria-hidden="true"></i></button>
+            <div class="gl-v2-menu" id="gl-v2-co-more-menu">
+                @if (convertInMenu)
+                {
+                    <button type="submit" class="gl-v2-menu-item gl-v2-co-menu-convert" name="afterSave" value="convert"><i class="ph ph-arrow-right" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Omzetten naar wijzigingsopdracht</span></span></button>
+                }
+                @if (Model.CanDelete)
+                {
+                    <button type="button" class="gl-v2-menu-item is-danger" data-bs-toggle="modal" data-bs-target="#gl-v2-co-delete-modal"><i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Verwijderen</span></span></button>
+                }
+            </div>
         }
     </div>
 </div>

@@ -14,6 +14,7 @@
     ViewData["Title"] = "Nacalculatie";
     ViewData["PageIcon"] = "bx bx-building-house";
     ViewData["GlV2FullHeightBody"] = true;
+    ViewData["CoachmarkPageKey"] = "Projects.Recalculation";
     ViewData["BackUrl"] = Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId });
     var menu = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName ?? "", ProjectSubtitle = "project · nacalculatie", Mode = GlV2ProjectMenuMode.Outer };
     var aantalSignaal = Model.AantalMetSignaal;
@@ -25,6 +26,22 @@
 {
     <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-projecten-recalculation.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-recalculation-search.css" asp-append-version="true" />
+}
+@* Factuur zoeken (42a/42m): zoekt en opent een factuur — los van "Zoek categorie of activiteit" in de tabel,
+   dat enkel de categorieën filtert. Suggesties komen van RecalculationInvoiceSearch. *@
+@section TopbarSearch
+{
+    <div class="gln-nc-fs" id="gln-nc-fs" data-url="@Url.Action("RecalculationInvoiceSearch", "Projecten", new { projectid = Model.ProjectId })" data-project-id="@Model.ProjectId">
+        <div class="gl-v2-field">
+            <label class="gl-v2-field-box gln-nc-fs-box">
+                <span class="visually-hidden">Factuur zoeken</span>
+                <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+                <input type="search" class="gl-v2-field-input gln-nc-fs-input" id="gln-nc-invsearch" role="combobox" aria-expanded="false" aria-controls="gln-nc-fs-panel" aria-autocomplete="list" autocomplete="off" placeholder="Zoek factuur — nummer, leverancier, datum of bedrag">
+            </label>
+        </div>
+        <div class="gln-nc-fs-panel" id="gln-nc-fs-panel" role="listbox" aria-label="Suggesties"></div>
+    </div>
 }
 @section ProjectMenu
 {
@@ -187,6 +204,7 @@
 
 @section PageScripts
 {
+    <script src="~/js/gl-v2-projecten-recalculation-search.js" asp-append-version="true"></script>
     <script>
     (function () {
         // Rij-expand: aria-expanded togglen + het activiteitenblok tonen/verbergen — zelfde idioom als

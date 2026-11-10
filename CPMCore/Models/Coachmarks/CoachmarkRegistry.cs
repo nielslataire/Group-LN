@@ -243,6 +243,19 @@ public static class CoachmarkRegistry
             ReleaseDate     = new DateTime(2026, 9, 7, 0, 0, 0, DateTimeKind.Utc),
             MaxShowDays     = 45
         },
+
+        // ── Projecten/Nacalculatie: factuur zoeken in de topbalk (design-handoff 42a/42m) ──
+        new CoachmarkDefinition
+        {
+            FeatureKey      = "Projects.Recalculation.InvoiceSearch",
+            PageKey         = "Projects.Recalculation",
+            TargetSelector  = "#gln-nc-invsearch",
+            Title           = "Facturen zoeken",
+            Message         = "Typ een nummer, leverancier, datum of bedrag, bv. **demeyer okt** of **€ 7.670**. Enter opent de bovenste factuur.",
+            Placement       = CoachmarkPlacement.Bottom,
+            ReleaseDate     = new DateTime(2026, 11, 10, 0, 0, 0, DateTimeKind.Utc),
+            MaxShowDays     = 45
+        },
     };
 
     /// <summary>Alle geregistreerde definities.</summary>

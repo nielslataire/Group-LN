@@ -481,14 +481,14 @@ namespace CPMCore.Controllers
             var noContract = await _db.ChangeOrder.AsNoTracking()
                 .Where(c => c.ProjectId == projectid && c.ContractActivityId == null && !c.QuoteConvertedAt.HasValue)
                 .OrderBy(c => c.Id)
-                .Select(c => new { c.Id, c.IsQuote, c.Description, c.NumberYear, c.NumberSeq, c.VersionNo })
+                .Select(c => new { c.Id, c.IsQuote, c.Description, c.NumberYear, c.NumberSeq, c.VersionNo, c.NumberProjectTag })
                 .ToListAsync();
             model.ChangeOrdersWithoutContract = noContract.Select(c => new ChangeOrderNoContractItem
             {
                 Id = c.Id,
                 IsQuote = c.IsQuote,
                 Description = c.Description ?? "",
-                Number = ChangeOrderNumbering.Format(c.IsQuote, c.NumberYear, c.NumberSeq, c.VersionNo, c.Id),
+                Number = ChangeOrderNumbering.Format(c.IsQuote, c.NumberYear, c.NumberSeq, c.VersionNo, c.Id, c.NumberProjectTag),
             }).ToList();
 
             // Verzekeringen: CheckInsurances() heeft geen project-specifieke overload,

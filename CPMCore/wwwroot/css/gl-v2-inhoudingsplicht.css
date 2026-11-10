@@ -69,6 +69,17 @@
 
 .gl-v2-ip-picktable th.chk, .gl-v2-ip-picktable td.chk { width: 44px; padding-right: 0; }
 .gl-v2-ip-picktable tr[hidden] { display: none; }
+
+/* Paginering — zelfde footer als de andere gl-v2-tabellen (.dt-info + 28px vierkante knoppen met ‹ ›). */
+.gl-v2-ip-pager { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 20px 14px; border-top: 1px solid var(--gl-v2-hairline); }
+.gl-v2-ip-pager[hidden] { display: none; }
+.gl-v2-ip-pager-info { color: var(--gl-v2-muted); font: 500 11.5px var(--gl-v2-font-sans); }
+.gl-v2-ip-pager-nav { display: flex; align-items: center; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.gl-v2-ip-page button { width: 28px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--gl-v2-radius-s, 7px); border: 1px solid var(--gl-v2-hairline); background: var(--gl-v2-surface); color: var(--gl-v2-muted-soft); font: 600 12px var(--gl-v2-font-sans); cursor: pointer; }
+.gl-v2-ip-page button:hover:not(:disabled) { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); }
+.gl-v2-ip-page.is-active button { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); }
+.gl-v2-ip-page.is-disabled button { color: var(--gl-v2-disabled-ink, #C0CABE); border-color: var(--gl-v2-hairline-soft); cursor: default; }
+.gl-v2-ip-page.is-gap span { display: inline-block; width: 18px; text-align: center; color: var(--gl-v2-muted-soft); font: 600 12px var(--gl-v2-font-sans); }
 .gl-v2-ip-picktable tbody tr.is-selected { background: var(--gl-v2-primary-tint); }
 .gl-v2-ip-name { display: flex; flex-direction: column; gap: 2px; cursor: pointer; margin: 0; }
 .gl-v2-ip-name strong { font-weight: 600; }

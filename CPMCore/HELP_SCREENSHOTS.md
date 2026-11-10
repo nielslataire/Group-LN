@@ -191,3 +191,11 @@ Eerst in de browser testen (zie VERKOOP_VOORTGANG.md), migratie 115 vóór gebru
 | verkoopinstellingen-aanpassen | Financieel / Kosten koper | CPMCore/wwwroot/img/help/projecten/verkoopinstellingen-aanpassen/1-financieel.png | Projecten/SalesSettings?projectid=X | kaarten Financieel en Kosten koper met voorbeeld | niets |
 | verkoopinstellingen-aanpassen | Website | CPMCore/wwwroot/img/help/projecten/verkoopinstellingen-aanpassen/2-website.png | idem | kaart Website (titel en tekst) | niets |
 | eenheid-berekenen | Een eenheid kiezen / Het resultaat lezen | CPMCore/wwwroot/img/help/projecten/eenheid-berekenen/1-resultaat.png | Projecten/SalesCalculate?projectid=X&unitid=Y | grond en bouw, kosten koper en vergelijking met budget | adres, kopernaam |
+# Offerte en wijzigingsopdracht op alle schermbreedtes (punt 28r)
+
+Opnemen op een venster van ongeveer 1024 px breed en een open offerte in concept met minstens twee regels (project 68, OF-VC-2026-002 bestaat al).
+
+| artikel-slug | stap | pad | route/pagina | uitsnede | anonimiseren |
+|---|---|---|---|---|---|
+| wijzigingsopdracht-opmaken | Werken op een kleiner scherm | CPMCore/wwwroot/img/help/facturatie-wijzigingen/wijzigingsopdracht-opmaken/regels-tablet.png | Projecten/ChangeOrderDetailV2, venster 1024 px breed | kaart Regels met twee regels in de vorm met twee lijnen | klant- en projectnaam staan niet in de uitsnede |
+| wijzigingsopdracht-opmaken | Werken op een kleiner scherm | CPMCore/wwwroot/img/help/facturatie-wijzigingen/wijzigingsopdracht-opmaken/actiebalk-meer-acties.png | idem, onderaan | actiebalk met het menu Meer acties open (Omzetten en Verwijderen) | geen |

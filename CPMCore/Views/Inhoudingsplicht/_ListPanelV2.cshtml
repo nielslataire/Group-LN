@@ -112,7 +112,7 @@
     <span class="muted">Bewaard als bewijs@(test ? " · testgegevens" : "")</span>
     <span class="gl-v2-section-card-spacer"></span>
     <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("Index", "Inhoudingsplicht", new { herhaal = Model.BatchId })"><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i>Opnieuw selecteren</a>
-    <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("Details", "Inhoudingsplicht", new { id = Model.BatchId })"><i class="ph ph-printer" aria-hidden="true"></i>Bewijs (PDF)</a>
+    <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("Pdf", "Inhoudingsplicht", new { id = Model.BatchId })" target="_blank" rel="noopener"><i class="ph ph-printer" aria-hidden="true"></i>Bewijs (PDF)</a>
     <div class="gl-v2-ip-more">
         <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-ip-menu aria-haspopup="menu" aria-expanded="false" aria-label="Meer"><i class="ph ph-dots-three" aria-hidden="true"></i></button>
         <div class="gl-v2-ip-menu" role="menu" hidden>

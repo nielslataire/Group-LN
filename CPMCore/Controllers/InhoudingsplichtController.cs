@@ -6,6 +6,8 @@ using FacadeCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using QuestPDF.Fluent;
 using ServiceCore.IncomingInvoices;
 using SmartBreadcrumbs.Attributes;
 using System;
@@ -274,6 +276,29 @@ namespace CPMCore.Controllers
             };
             var json = JsonSerializer.Serialize(doc, new JsonSerializerOptions { WriteIndented = true });
             return File(Encoding.UTF8.GetBytes(json), "application/json", $"inhoudingsplicht-{batch.CheckedAt:yyyyMMdd-HHmm}-{batch.BatchId.ToString()[..8]}.json");
+        }
+
+        /// <summary>De controlelijst als PDF in de gl-v2-documentlayout (design-handoff 35s): het afdrukbare bewijs met referentie per onderneming.</summary>
+        public async Task<IActionResult> Pdf(Guid id, [FromServices] CPMCore.Services.Signing.ChangeOrderPdfBuilder pdfBuilder,
+            [FromServices] Microsoft.AspNetCore.Hosting.IWebHostEnvironment env, [FromServices] ILogger<InhoudingsplichtController> logger, CancellationToken ct = default)
+        {
+            var batch = await _service.GetBatchAsync(id, ct);
+            if (batch == null) return NotFound();
+
+            var rijen = batch.Items.Select(i => new CPMCore.Documents.GlV2.InhoudingsplichtPdfRij(
+                i.SupplierName, i.EnterpriseNumber ?? i.EnterpriseIdentifier,
+                i.SocialSituation, i.SocialWithholdingPercentage,
+                i.FiscalSituation, i.FiscalWithholdingPercentage, i.FiscalAttestId,
+                new[] { i.SocialValidUntil, i.FiscalValidUntil }.Where(d => d.HasValue).Select(d => (DateTime?)d.Value.ToLocalTime()).OrderBy(d => d).FirstOrDefault(),
+                i.RetainmentCheckReference, i.TraceId, i.ErrorMessage)).ToList();
+
+            var model = new CPMCore.Documents.GlV2.InhoudingsplichtPdfModel(
+                batch.Name, batch.CheckedAt.ToLocalTime(), batch.CheckedBy, batch.BatchId, batch.Environment == "Simulation",
+                rijen, User.Identity?.Name, DateTime.Now);
+            var company = await pdfBuilder.BuildGlV2CompanyForDefaultAsync(ct);
+            var fonts = CPMCore.Documents.GlV2.GlV2PdfFonts.EnsureRegistered(env, logger);
+            var pdf = new CPMCore.Documents.GlV2.InhoudingsplichtDocumentV2(model, company, fonts).GeneratePdf();
+            return File(pdf, "application/pdf", $"inhoudingsplicht-{batch.CheckedAt.ToLocalTime():yyyyMMdd-HHmm}-{batch.BatchId.ToString()[..8]}.pdf");
         }
 
         /// <summary>

@@ -18,9 +18,9 @@ namespace CPMCore.Controllers
         {
             if (_coNumberCache.TryGetValue(id, out var cached)) return cached;
             var co = _db.ChangeOrder.AsNoTracking().Where(c => c.Id == id)
-                .Select(c => new { c.IsQuote, c.NumberYear, c.NumberSeq, c.VersionNo })
+                .Select(c => new { c.IsQuote, c.NumberYear, c.NumberSeq, c.VersionNo, c.NumberProjectTag })
                 .FirstOrDefault();
-            var text = co is null ? $"#{id}" : DALCore.ChangeOrderNumbering.Format(co.IsQuote, co.NumberYear, co.NumberSeq, co.VersionNo, id);
+            var text = co is null ? $"#{id}" : DALCore.ChangeOrderNumbering.Format(co.IsQuote, co.NumberYear, co.NumberSeq, co.VersionNo, id, co.NumberProjectTag);
             _coNumberCache[id] = text;
             return text;
         }

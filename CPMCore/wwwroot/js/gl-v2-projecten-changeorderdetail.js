@@ -619,4 +619,9 @@
         if (e.target.closest(".js-co-open-convert")) { e.preventDefault(); openConvert(); }
         else if (e.target.closest(".js-co-open-send")) { e.preventDefault(); openSend(); }
     });
+
+    // Meer acties (⋯ in de voetbalk, 28r): een keuze sluit het menu, ook als ze een modal opent (Verwijderen) of het formulier verzendt (Omzetten).
+    document.addEventListener("click", function (e) {
+        if (e.target.closest("#gl-v2-co-more-menu .gl-v2-menu-item") && window.GlV2Menu) window.GlV2Menu.closeAll();
+    });
 })();

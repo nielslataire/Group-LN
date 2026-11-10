@@ -93,8 +93,61 @@
 .gl-v2-co2-totals { display: flex; gap: 22px; flex-wrap: wrap; padding: 4px 0; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
 .gl-v2-co2-totals b { color: var(--gl-v2-ink); font-weight: 700; margin-left: 5px; }
 
+/* Offertes- en wijzigingsopdrachten-tabel delen één vaste kolomindeling (table-layout: fixed): de kolommen
+   staan in beide kaarten exact onder elkaar, ongeacht de inhoud van de rijen. */
+.gl-v2-co2-table { table-layout: fixed; min-width: 0; }
+.gl-v2-co2-table th:nth-child(1) { width: 14%; }   /* Nr. */
+.gl-v2-co2-table th:nth-child(2) { width: 26%; }   /* Omschrijving */
+.gl-v2-co2-table th:nth-child(3) { width: 15%; }   /* Eenheid · klant */
+.gl-v2-co2-table th:nth-child(4) { width: 11%; }   /* Klant excl. btw */
+.gl-v2-co2-table th:nth-child(5) { width: 12%; }   /* Status */
+.gl-v2-co2-table th:nth-child(6) { width: 15%; }   /* Verloop */
+.gl-v2-co2-table th:nth-child(7) { width: 7%; }    /* acties */
+.gl-v2-co2-desc { min-width: 0; overflow-wrap: anywhere; }
+.gl-v2-co2-nr { overflow-wrap: anywhere; }
+
+/* Smalle kaart: elke rij wordt een kaartje, geen horizontale scrollbalk meer. Container query op de kaart
+   zelf (niet op het scherm): naast de rail en met de filters open is ook een laptop of tablet-landscape
+   te smal voor 7 kolommen. Vanaf 960px kaartbreedte blijft de tabel zoals ze was.
+     [ nr ............ ··· ]
+     [ onderwerp + subregel ]
+     [ eenheid · klant .. bedrag ]
+     [ status ....... verloop ] */
+.gl-v2-co2-table-scroll { container-type: inline-size; container-name: co2-table; }
+@container co2-table (max-width: 959px) {
+    .gl-v2-co2-table-scroll { overflow-x: visible; }
+    .gl-v2-co2-table, .gl-v2-co2-table tbody, .gl-v2-co2-table tfoot { display: block; width: 100%; }
+    .gl-v2-co2-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .gl-v2-co2-table tbody tr {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas: "nr act" "desc desc" "unit amt" "status steps";
+        gap: 6px 12px;
+        align-items: center;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    }
+    .gl-v2-co2-table.gl-v2-co2-table.gl-v2-co2-table tbody td { display: block; padding: 0; border: 0; min-width: 0; }
+    .gl-v2-co2-table tbody td:nth-child(1) { grid-area: nr; }
+    .gl-v2-co2-table tbody td:nth-child(2) { grid-area: desc; }
+    .gl-v2-co2-table tbody td:nth-child(3) { grid-area: unit; }
+    .gl-v2-co2-table tbody td:nth-child(4) { grid-area: amt; text-align: right; font-weight: 600; }
+    .gl-v2-co2-table tbody td:nth-child(5) { grid-area: status; }
+    .gl-v2-co2-table tbody td:nth-child(6) { grid-area: steps; justify-self: end; text-align: right; }
+    .gl-v2-co2-table tbody td:nth-child(7) { grid-area: act; justify-self: end; }
+    .gl-v2-co2-row:hover td { background: transparent; }
+    .gl-v2-co2-row:hover { background: var(--gl-v2-bg); }
+    .gl-v2-co2-hint { white-space: normal; }
+    /* Totaalregel onder de wijzigingsopdrachten */
+    .gl-v2-co2-table.gl-v2-co2-table.gl-v2-co2-table tfoot tr, .gl-v2-co2-table.gl-v2-co2-table.gl-v2-co2-table tfoot td { display: block; padding-left: 16px; padding-right: 16px; }
+}
+@media (pointer: coarse) {
+    .gl-v2-co2-actions .gl-v2-icon-btn { min-width: 44px; min-height: 44px; }
+}
 @media (max-width: 767.98px) {
-    .gl-v2-co2-table { min-width: 680px; }
+    .gl-v2-co2-card .gl-v2-card-header { flex-wrap: wrap; row-gap: 4px; }
+    .gl-v2-co2-card .gl-v2-card-header .gl-v2-field-divider { display: none; }
+    .gl-v2-co2-card .gl-v2-card-header-count { flex-basis: 100%; white-space: normal; }
 }
 
 /* hersteld uit filters.css-consolidatie: paginavariant van een gedeeld component */

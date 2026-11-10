@@ -4,11 +4,11 @@ topic: projecten
 role: Projectleider
 device: Desktop · tablet
 minutes: 5
-updated: 2026-10-22
+updated: 2026-11-10
 screens: nacalculatie-overzicht, nacalculatie-detail
-synonyms: nacalculatie, begroot, gecontracteerd, gefactureerd, overschrijding, zonder contract, niet begroot, activiteit, categorie
+synonyms: nacalculatie, begroot, gecontracteerd, gefactureerd, overschrijding, zonder contract, niet begroot, activiteit, categorie, factuur zoeken, zoeken
 newsTag: Nieuw
-description: begroot, gecontracteerd en gefactureerd naast elkaar, per categorie en per activiteit
+description: begroot, gecontracteerd en gefactureerd naast elkaar, per categorie en per activiteit, en een factuur zoeken
 related: budget-instellen-nacalculatie, factuur-van-leverancier-toevoegen, borgen-vrijgeven
 intro: |
   De nacalculatie zet drie bedragen naast elkaar: wat je begroot hebt, wat je bij leveranciers hebt vastgelegd en wat ze al gefactureerd hebben.
@@ -24,6 +24,10 @@ faq:
     a: Er zijn facturen, maar er is geen budget voor die categorie ingevuld.
   - q: Wat betekent Overschrijding?
     a: Je hebt meer gefactureerd dan het bedrag van het contract.
+  - q: Waarom vind ik een factuur niet terug?
+    a: Het vak zoekt enkel in de facturen van dit project. Probeer een deel van het nummer of enkel de naam van de leverancier. Voor een bedrag zoek je op de hele euro, bijvoorbeeld 7670.
+  - q: Wat is het verschil tussen de twee zoekvakken?
+    a: Het vak in de balk bovenaan zoekt een factuur en opent ze. Het zoekveld in de tabel filtert de lijst met categorieën.
   - q: Waarom staat er een categorie in grijs?
     a: Daar is niets begroot, gecontracteerd of gefactureerd. Je kan ze niet openklappen.
 ---
@@ -43,6 +47,18 @@ Rechtsboven op de nacalculatie staan knoppen voor wat je hierna wilt doen.
 2. **Budget instellen** opent de pagina om bedragen per activiteit aan te passen. Je ziet de knop alleen als je schrijfrechten hebt.
 3. **Afdrukken** en **Exporteren** geven de nacalculatie op papier of als Excel.
 4. **Toevoegen** opent een keuze: **Contract**, **Inkomende factuur** of **Factuur inlezen (PDF)**. Bij een factuur kies je in het formulier zelf of ze met of zonder contract is.
+
+## Een factuur zoeken
+
+In de balk bovenaan staat het vak **Zoek factuur**. Daarmee zoek je een factuur van dit project en open je ze meteen. Het vak **Zoek categorie of activiteit** in de tabel doet iets anders: dat filtert enkel de categorieën.
+
+1. Klik in het vak en begin te typen. Na één teken verschijnen de beste zes facturen.
+2. Het vak raadt wat je typt en zegt dat bij **Zoekt op**. Je kan zoeken op een deel van het nummer, de naam van de leverancier of de categorie, een datum (**10/2026**, **okt** of **21/10**) of een bedrag (**7670** of **€ 7.670,00**).
+3. Typ je meerdere woorden, dan moet elk woord ergens passen. **demeyer okt** zoekt dus de facturen van Demeyer in oktober.
+4. Kies met de pijltjes of met de muis en druk op **Enter** om de factuur te openen. De bovenste is al geselecteerd. Met **Esc** sluit je de lijst.
+5. Zijn er meer dan zes resultaten, kies dan **Alle … resultaten** onderaan de lijst.
+
+Een leeg vak toont de facturen die je recent geopend hebt en voorbeelden om te proberen. Past je zoekopdracht op een leverancier, dan staat die ook onder **Leveranciers**. Een klik daarop toont alle facturen van die leverancier.
 
 ## Per categorie lezen
 

@@ -4,10 +4,10 @@ topic: facturatie-wijzigingen
 role: Projectleider
 device: Desktop · tablet
 minutes: 5
-updated: 2026-10-12
+updated: 2026-11-10
 screens: wijzigingen-opmaken
 synonyms: WO, meerwerk, minwerk, wijzigingsopdracht, itsme
-newsTag: Nieuw
+newsTag: Bijgewerkt
 description: offerte inlezen, regels, ondertekenen via het klantenportaal
 related: punten-lijst-overzicht
 intro: |
@@ -58,6 +58,31 @@ bedrag, dan verdwijnt het euroteken zodat het bedrag volledig leesbaar blijft.
 2. Klik op **Verzenden**.
 
 Elke eigenaar krijgt een e-mail met een link naar het klantenportaal en tekent met itsme.
+
+Onderaan staat de actiebalk. Die blijft in beeld terwijl je scrolt. Heeft de klant geen e-mailadres, dan zie je daar de waarschuwing **Klant heeft geen e-mailadres**, want daar klik je op **Verzenden**.
+
+## Werken op een kleiner scherm
+
+De pagina past zich aan de breedte van je venster aan, zonder dat je zijwaarts moet scrollen. Dat werkt ook als je het venster kleiner maakt of inzoomt.
+
+![De regels op tablet, met twee lijnen per regel](/img/help/facturatie-wijzigingen/wijzigingsopdracht-opmaken/regels-tablet.png)
+
+- **Regels**: op een breed scherm staan de regels in een tabel. Wordt het venster smaller, dan krijgt elke regel twee lijnen: bovenaan de omschrijving en het totaal, eronder de getallen met hun naam. Op een heel smal scherm wordt elke regel een kaartje.
+- **Zijkolom**: Ondertekening (bij een offerte Verzending), Bron en Historiek staan rechts naast het formulier. Op een kleiner scherm schuiven ze onder het formulier.
+- **Stappenplan**: bovenaan staan alle zeven stappen. Op een smal scherm zie je enkel de huidige stap, de volgende stap en een balkje met zeven streepjes.
+- **Velden**: op een kleiner scherm staan er twee velden per rij in plaats van vier. Op een heel smal scherm staan ze onder elkaar.
+
+![De actiebalk met het menu Meer acties](/img/help/facturatie-wijzigingen/wijzigingsopdracht-opmaken/actiebalk-meer-acties.png)
+
+De actiebalk blijft altijd op één lijn. Wat niet meer past, verdwijnt of verhuist:
+
+- Op een laptop verdwijnt de uitlegzin onder de knoppen.
+- Op een tablet staat **Omzetten naar wijzigingsopdracht** in het menu **Meer acties** (de drie puntjes).
+- Op een tablet in staande stand verdwijnt ook **Annuleren**. Je ziet dan **Opslaan**, **Verzenden** en de drie puntjes.
+
+**Verwijderen** staat altijd in het menu **Meer acties**. Je krijgt eerst een bevestigingsvenster.
+
+Op een tablet is **Voorbeeld-PDF** bovenaan een knop met enkel een icoon, en verdwijnt het label **Meerwerk** naast de status.
 
 ## Wachten op de handtekeningen
 

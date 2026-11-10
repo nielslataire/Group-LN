@@ -54,7 +54,51 @@
         return row.getAttribute('data-sites').split(',').some(function (id) { return id && !offSites[id]; });
     }
 
-    function applyFilters() {
+    // Paginering (zelfde footer als de andere gl-v2-tabellen: "1–10 van 42" + ‹ 1 2 3 ›). Alle rijen blijven in de DOM, ook de
+    // verborgen, zodat aangevinkte aannemers op andere pagina's gewoon mee verstuurd worden.
+    var PAGE_SIZE = 10;
+    var page = 1;
+    var filtered = []; // alle rijen die aan bron + filters voldoen, over alle pagina's heen
+    var pager = document.getElementById('gl-v2-ip-pager');
+    var pagerInfo = document.getElementById('gl-v2-ip-pager-info');
+    var pagerNav = document.getElementById('gl-v2-ip-pager-nav');
+
+    function renderPager(total) {
+        if (!pager) return;
+        var pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+        pager.hidden = total <= PAGE_SIZE;
+        if (total <= PAGE_SIZE) return;
+        var from = (page - 1) * PAGE_SIZE + 1, to = Math.min(total, page * PAGE_SIZE);
+        pagerInfo.textContent = from + '–' + to + ' van ' + total;
+        var items = [];
+        function add(label, target, opts) {
+            opts = opts || {};
+            items.push('<li class="gl-v2-ip-page' + (opts.active ? ' is-active' : '') + (opts.disabled ? ' is-disabled' : '') + '">'
+                + '<button type="button" data-page="' + target + '"' + (opts.disabled ? ' disabled' : '') + (opts.active ? ' aria-current="page"' : '')
+                + (opts.aria ? ' aria-label="' + opts.aria + '"' : '') + '>' + label + '</button></li>');
+        }
+        add('‹', page - 1, { disabled: page <= 1, aria: 'Vorige pagina' });
+        var nums = {};
+        [1, pages, page - 1, page, page + 1].forEach(function (n) { if (n >= 1 && n <= pages) nums[n] = true; });
+        var last = 0;
+        Object.keys(nums).map(Number).sort(function (a, b) { return a - b; }).forEach(function (n) {
+            if (last && n - last > 1) items.push('<li class="gl-v2-ip-page is-gap" aria-hidden="true"><span>…</span></li>');
+            add(n, n, { active: n === page, aria: 'Pagina ' + n });
+            last = n;
+        });
+        add('›', page + 1, { disabled: page >= pages, aria: 'Volgende pagina' });
+        pagerNav.innerHTML = items.join('');
+    }
+
+    if (pagerNav) pagerNav.addEventListener('click', function (e) {
+        var b = e.target.closest('button[data-page]');
+        if (!b || b.disabled) return;
+        page = Number(b.getAttribute('data-page'));
+        applyFilters(true);
+    });
+
+    function applyFilters(keepPage) {
+        if (keepPage !== true) page = 1;
         var term = (q ? q.value : '').trim().toLowerCase();
         var digits = term.replace(/\D/g, '');
         var visible = 0, allChecked = true;
@@ -63,14 +107,21 @@
         } else {
             rows.sort(function (a, b) { return a.getAttribute('data-name').localeCompare(b.getAttribute('data-name'), 'nl'); });
         }
+        var matching = [];
         rows.forEach(function (row) {
             tbody.appendChild(row);
             var hay = row.getAttribute('data-search');
             var match = !term || hay.indexOf(term) >= 0 || (digits.length >= 3 && (row.getAttribute('data-ident') || '').indexOf(digits) >= 0);
-            var show = inSource(row) && match;
-            row.hidden = !show;
-            if (show) { visible++; if (!cb(row).checked) allChecked = false; }
+            if (inSource(row) && match) matching.push(row); else row.hidden = true;
         });
+        filtered = matching;
+        visible = matching.length;
+        page = Math.min(page, Math.max(1, Math.ceil(visible / PAGE_SIZE)));
+        matching.forEach(function (row, i) {
+            row.hidden = i < (page - 1) * PAGE_SIZE || i >= page * PAGE_SIZE;
+            if (!cb(row).checked) allChecked = false;
+        });
+        renderPager(visible);
         document.getElementById('gl-v2-ip-norows').hidden = visible > 0;
         all.checked = visible > 0 && allChecked;
         if (sitesBox) sitesBox.hidden = source !== 'actief';
@@ -97,10 +148,10 @@
     });
     if (q) q.addEventListener('input', applyFilters);
     all.addEventListener('change', function () {
-        rows.forEach(function (r) { if (!r.hidden && !cb(r).disabled) cb(r).checked = all.checked; });
+        filtered.forEach(function (r) { if (!cb(r).disabled) cb(r).checked = all.checked; });
         summary();
     });
-    tbody.addEventListener('change', function () { summary(); applyFilters(); });
+    tbody.addEventListener('change', function () { summary(); applyFilters(true); });
 
     // ── Overzicht "Te controleren" ──────────────────────────────────────────────────────────
     var nameInput = document.getElementById('gl-v2-ip-name');
@@ -178,13 +229,13 @@
     document.getElementById('gl-v2-ip-sellist').addEventListener('click', function (e) {
         var x = e.target.closest('[data-remove]'); if (!x) return;
         var row = rows.filter(function (r) { return r.getAttribute('data-id') === x.getAttribute('data-remove'); })[0];
-        if (row) { cb(row).checked = false; summary(); applyFilters(); }
+        if (row) { cb(row).checked = false; summary(); applyFilters(true); }
     });
     document.getElementById('gl-v2-ip-clear').addEventListener('click', function () {
         rows.forEach(function (r) { if (!cb(r).disabled) cb(r).checked = false; });
-        summary(); applyFilters();
+        summary(); applyFilters(true);
     });
-    if (extra) extra.addEventListener('input', function () { summary(); applyFilters(); });
+    if (extra) extra.addEventListener('input', function () { summary(); applyFilters(true); });
 
     // ── Eerdere lijsten: zoeken + zijpaneel ─────────────────────────────────────────────────
     var hq = document.getElementById('gl-v2-ip-hq');

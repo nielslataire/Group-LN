@@ -472,3 +472,9 @@ voor de echte controle — de losse PNG's hebben een transparante achtergrond (z
 - Keuzes (Niels, 13/10/2026): geen codekolom bij de activiteiten (onze activiteiten hebben geen code); de "delen" zijn de lots uit stap 6; de oude PDF-knop is vervangen door de dropdown.
 - Afwijkingen van het ontwerp: pagina-verwijzingen ("p. 2", "p. 4") zijn vast (zoals in het ontwerp); kostprijs per eenheid volgt de verdeelsleutels van stap 8 (grond naar grondoppervlakte incl. 2e zone, bouw naar gereduceerde oppervlakte); bank = totale kostprijs min financiering, onvoorzien en publiciteit.
 - Visueel getest met voorbeelddata (scratchpad `PdfBudgetTest`, rendert uit de gebouwde CPMCore.dll zodat Visual Studio de bin-map mag vasthouden); niet getest met echte budgetdata uit de database.
+
+## Controlelijst inhoudingsplicht (35s) — gebouwd 10/11/2026
+- `CPMCore/Documents/GlV2/InhoudingsplichtDocumentV2.cs` (A4 staand) + `InhoudingsplichtPdfModel`/`InhoudingsplichtPdfRij`; route `InhoudingsplichtController.Pdf(id)`, gekoppeld aan "Bewijs (PDF)" (zijpaneel + DetailsV2).
+- Basis uitgebreid: `GlV2PdfDocumentBase.Watermark` (diagonaal, 54pt, 9% alpha); `GlV2PdfComponents.Fiche(..., waardePunten)`; `ChangeOrderPdfBuilder.BuildGlV2CompanyForDefaultAsync` (facturatiebedrijf "externe standaard", zonder project).
+- Eigen voet (35s): adres · "Controlelijst inhoudingsplicht · datum · lijst xxxxxxxx" · "Afgedrukt dd/MM/yyyy door … · x / y".
+- Visueel getest met voorbeelddata (scratchpad `PdfInhTest`, rendert uit de gebouwde CPMCore.dll): 1 pagina bij 4 ondernemingen, 3 pagina's bij 44 (kop herhaalt, rij splitst niet, wettelijke vermelding tegen de voet). Niet getest met echte RSZ-data of in de browser.

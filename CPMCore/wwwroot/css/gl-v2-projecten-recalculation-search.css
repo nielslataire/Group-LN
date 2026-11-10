@@ -1,0 +1,68 @@
+/* gl-v2 — Nacalculatie: "Factuur zoeken" in de topbalk (design-handoff 42a + 42m). Namespace gln-nc-fs-*.
+   Het vak zelf is het gedeelde .gl-v2-field > .gl-v2-field-box > .gl-v2-field-input; hier staat enkel de
+   suggestielijst eronder (zelfde schaduw/radius als de keuzelijst, breder: 620px). */
+
+.gln-nc-fs { position: relative; width: 100%; }
+.gln-nc-fs .gl-v2-field { margin: 0; }
+.gln-nc-fs-box:focus-within { border-color: var(--gl-v2-primary); box-shadow: 0 0 0 3px rgba(0, 83, 45, .14); }
+.gln-nc-fs-input::-webkit-search-cancel-button { display: none; }
+
+.gln-nc-fs-panel {
+    position: fixed;
+    z-index: 99997;
+    display: none;
+    flex-direction: column;
+    box-sizing: border-box;
+    max-height: min(520px, calc(100vh - 96px));
+    overflow-y: auto;
+    background: var(--gl-v2-surface);
+    border-radius: var(--gl-v2-radius-md);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .06), 0 24px 48px -18px rgba(31, 42, 30, .42), 0 0 0 1px rgba(44, 59, 42, .08);
+}
+.gln-nc-fs-panel.is-open { display: flex; }
+
+.gln-nc-fs-chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 10px 14px; border-bottom: 1px solid var(--gl-v2-hairline-soft); background: #FAFBF8; font: 500 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gln-nc-fs-chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: var(--gl-v2-radius-xs); background: #E3EAF3; color: #2F4F7A; font: 600 11px var(--gl-v2-font-sans); }
+.gln-nc-fs-chip svg { width: 11px; height: 11px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+.gln-nc-fs-head { padding: 10px 14px 4px; font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .09em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gln-nc-fs-head.is-sep { border-top: 1px solid var(--gl-v2-hairline-soft); margin-top: 4px; }
+
+.gln-nc-fs-opt { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 14px; border: 0; background: transparent; text-align: left; cursor: pointer; color: var(--gl-v2-ink); }
+.gln-nc-fs-opt.is-active, .gln-nc-fs-opt:hover { background: var(--gl-v2-hover-tint); }
+.gln-nc-fs-ico { width: 30px; height: 30px; flex: none; border-radius: var(--gl-v2-radius-sm); background: #EDF2E8; display: flex; align-items: center; justify-content: center; color: var(--gl-v2-primary); font-size: 15px; }
+.gln-nc-fs-ico.is-sup { background: var(--gl-v2-neutral-tint, #F2F5EF); color: var(--gl-v2-muted-soft); }
+.gln-nc-fs-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.gln-nc-fs-line1 { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.gln-nc-fs-name { font: 600 13px var(--gl-v2-font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.gln-nc-fs-nr { flex: none; font: 500 11.5px var(--gl-v2-font-mono, "IBM Plex Mono", monospace); color: var(--gl-v2-muted-soft); }
+.gln-nc-fs-sub { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gln-nc-fs-side { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.gln-nc-fs-amount { font: 600 12.5px var(--gl-v2-font-sans); font-variant-numeric: tabular-nums; }
+.gln-nc-fs-link { flex: none; font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+.gln-nc-fs mark, .gln-nc-fs-panel mark { background: var(--gl-v2-warning-tint); color: var(--gl-v2-ink); border-radius: 2px; }
+.gln-nc-fs-panel b.is-hit { font-weight: 800; }
+
+.gln-nc-fs-tips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 10px 14px 12px; border-top: 1px solid var(--gl-v2-hairline-soft); font: 500 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gln-nc-fs-tip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 1px solid var(--gl-v2-hairline); border-radius: 14px; background: var(--gl-v2-surface); color: var(--gl-v2-muted); font: 450 11.5px var(--gl-v2-font-sans); cursor: pointer; }
+.gln-nc-fs-tip:hover, .gln-nc-fs-tip:focus-visible { background: var(--gl-v2-hover-tint); outline: none; }
+.gln-nc-fs-tip code { font: 500 11.5px var(--gl-v2-font-mono, "IBM Plex Mono", monospace); color: var(--gl-v2-ink); }
+
+.gln-nc-fs-none { display: flex; flex-direction: column; gap: 6px; padding: 18px 14px; }
+.gln-nc-fs-none strong { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gln-nc-fs-none span { font: 450 12px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+.gln-nc-fs-foot { display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-top: 1px solid var(--gl-v2-hairline-soft); background: #F7F9F5; font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gln-nc-fs-all { border: 0; background: transparent; padding: 0; font: 600 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); cursor: pointer; }
+.gln-nc-fs-all:hover { text-decoration: underline; }
+.gln-nc-fs-spacer { flex: 1; }
+.gln-nc-fs-foot kbd { display: inline-block; min-width: 18px; padding: 0 4px; margin-right: 2px; border: 1px solid var(--gl-v2-hairline); border-bottom-width: 2px; border-radius: 4px; background: var(--gl-v2-surface); font: 500 10px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); text-align: center; }
+
+/* Telefoon: lijst over de volle breedte, de toetsenhints (geen toetsenbord) verdwijnen. */
+@media (max-width: 767.98px) {
+    .gln-nc-fs-foot .gln-nc-fs-keys { display: none; }
+    .gln-nc-fs-side .gl-v2-badge { display: none; }
+}
+@media (pointer: coarse) {
+    .gln-nc-fs-opt { padding-top: 10px; padding-bottom: 10px; }
+}

@@ -14,7 +14,9 @@
    niet meer terug (de linkerrand valt weg). Geldt voor élk invoerveld, niet enkel zoekvelden; checkbox/
    radio/bestand/knoppen zijn geen tekstinvoer en blijven buiten schot. !important: een hoger-specifieke
    paginaregel mag dit nooit meer onderbieden — dat is precies de bug die hier voorkomen wordt. */
-@media (pointer: coarse), (max-width: 767.98px) {
+/* Alleen op een telefoon (touch én smal): een desktopvenster, ook smal of in apparaat-emulatie van
+   DevTools (die pointer: coarse meldt), houdt gewoon 13px. */
+@media (pointer: coarse) and (max-width: 767.98px) {
     :is(.gl-v2, .modal) :is(
         input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="hidden"], [type="submit"], [type="button"], [type="reset"], [type="image"], [type="color"]),
         select,

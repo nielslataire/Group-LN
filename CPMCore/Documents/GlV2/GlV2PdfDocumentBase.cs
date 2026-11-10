@@ -57,6 +57,9 @@ namespace CPMCore.Documents.GlV2
         /// <summary>Ondertitel in de compacte kop (bv. projectnaam); optioneel.</summary>
         protected virtual string? CompactSubtitle => null;
 
+        /// <summary>Diagonaal watermerk over elke pagina (bv. "TESTGEGEVENS" bij een controle uit een testomgeving); null = geen.</summary>
+        protected virtual string? Watermark => null;
+
         /// <summary>De eigenlijke pagina-inhoud.</summary>
         protected abstract void Content(IContainer c);
 
@@ -87,6 +90,10 @@ namespace CPMCore.Documents.GlV2
                 page.Size(format.ToPageSize());
                 page.Margin(0);
                 page.DefaultTextStyle(x => x.FontFamily(BodyFont).FontSize(8f).FontColor(GlV2PdfTheme.Inkt).LineHeight(1.45f));
+
+                if (!string.IsNullOrWhiteSpace(Watermark))
+                    page.Background().AlignCenter().AlignMiddle().Rotate(-30)
+                        .Text(Watermark!).FontFamily(BodyFont).FontSize(54).Bold().LetterSpacing(0.12f).FontColor("#178A6A32");
 
                 page.Header().Column(col =>
                 {

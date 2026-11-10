@@ -41,6 +41,10 @@ public class ChangeOrderRowV2
     public string ClientName { get; set; } = "";
     public string? UnitName { get; set; }
     public string Description { get; set; } = "";
+    /// <summary>Onderwerp (zoals op het detailscherm); dit is de titel in de lijst, met de omschrijving als terugval.</summary>
+    public string? Subject { get; set; }
+    public string Title => !string.IsNullOrWhiteSpace(Subject) ? Subject! : Description;
+    public string ProjectName { get; set; } = "";
     public string? SubText { get; set; }
     public bool SubTextIsWarning { get; set; }
     public string? SupplierName { get; set; }
@@ -59,6 +63,7 @@ public class ChangeOrderRowV2
     public bool IsOpen { get; set; }
     /// <summary>Offerte: de WO die eruit gemaakt is (dan is ze "Omgezet").</summary>
     public int? ConvertedToId { get; set; }
+    public string? ConvertedToNumber { get; set; }
     /// <summary>De compacte "Verloop"-strip (Stappenplan, variant Balk) — gebouwd door
     /// ChangeOrderStepsBuilder.BuildRow.</summary>
     public CPMCore.Models.GlV2.GlV2StepsVm Steps { get; set; } = new();

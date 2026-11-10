@@ -370,7 +370,7 @@ namespace CPMCore.Documents.GlV2
         public record FicheVeld(string Label, string Waarde, string? Sub = null);
 
         /// <summary>Projectfiche: raster van 4 kolommen met een hairline-kader; per cel label (6pt 600 gedempt), waarde (8pt 700) en subregel (6,5pt gedempt).</summary>
-        public static void Fiche(IContainer c, string bodyFont, IReadOnlyList<FicheVeld> velden, int kolommen = 4)
+        public static void Fiche(IContainer c, string bodyFont, IReadOnlyList<FicheVeld> velden, int kolommen = 4, float waardePunten = 8)
         {
             var Kolommen = kolommen;
             var rijen = (velden.Count + Kolommen - 1) / Kolommen;
@@ -388,7 +388,7 @@ namespace CPMCore.Documents.GlV2
                     {
                         col.Spacing(0.8f, Unit.Millimetre);
                         col.Item().Text(v.Label.ToUpperInvariant()).FontFamily(bodyFont).FontSize(6).SemiBold().LetterSpacing(0.12f).FontColor(GlV2PdfTheme.Gedempt);
-                        col.Item().Text(v.Waarde).FontFamily(bodyFont).FontSize(8).Bold().FontColor(GlV2PdfTheme.Inkt).EnableFontFeature(FontFeatures.TabularFigures);
+                        col.Item().Text(v.Waarde).FontFamily(bodyFont).FontSize(waardePunten).Bold().FontColor(GlV2PdfTheme.Inkt).EnableFontFeature(FontFeatures.TabularFigures);
                         if (!string.IsNullOrWhiteSpace(v.Sub))
                             col.Item().Text(v.Sub).FontFamily(bodyFont).FontSize(6.5f).LineHeight(1.4f).FontColor(GlV2PdfTheme.Gedempt);
                     });

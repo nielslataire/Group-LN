@@ -25,7 +25,7 @@
 {
     <a asp-action="Index" class="gl-v2-btn gl-v2-btn-secondary gl-v2-ip-noprint"><i class="ph ph-arrow-left" aria-hidden="true"></i>Alle lijsten</a>
     <a asp-action="Bewijs" asp-route-id="@Model.BatchId" class="gl-v2-btn gl-v2-btn-secondary gl-v2-ip-noprint"><i class="ph ph-download-simple" aria-hidden="true"></i>Ruw bewijs (JSON)</a>
-    <button type="button" class="gl-v2-btn gl-v2-btn-primary gl-v2-ip-noprint" onclick="window.print()"><i class="ph ph-printer" aria-hidden="true"></i>Afdrukken / PDF</button>
+    <a asp-action="Pdf" asp-route-id="@Model.BatchId" target="_blank" rel="noopener" class="gl-v2-btn gl-v2-btn-primary gl-v2-ip-noprint"><i class="ph ph-file-pdf" aria-hidden="true"></i>Bewijs (PDF)</a>
 }
 
 <div class="gl-v2-ip">

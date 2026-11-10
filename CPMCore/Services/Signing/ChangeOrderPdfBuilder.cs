@@ -259,6 +259,23 @@ public sealed class ChangeOrderPdfBuilder
     {
         var project = await _db.Project.AsNoTracking().FirstOrDefaultAsync(p => p.ProjectId == projectId, ct);
         var issuer = await ResolveIssuerCompanyAsync(project, ct);
+        return BuildGlV2CompanyFromIssuer(issuer);
+    }
+
+    /// <summary>Bedrijfsgegevens voor documenten zonder project (bv. de controlelijst inhoudingsplicht): het als "externe standaard" gemarkeerde
+    /// facturatiebedrijf, met dezelfde terugval uit de configuratie als elk ander gl-v2-document.</summary>
+    public async Task<GlV2PdfCompanyInfo> BuildGlV2CompanyForDefaultAsync(CancellationToken ct = default)
+    {
+        var id = await _db.IssuerCompany.AsNoTracking()
+            .Where(i => i.IsExternalCoordinationDefault && i.IsActive)
+            .Select(i => (int?)i.Id)
+            .FirstOrDefaultAsync(ct);
+        var issuer = id is int i ? await _issuerCompanyService.GetAsync(i, ct) : null;
+        return BuildGlV2CompanyFromIssuer(issuer);
+    }
+
+    private GlV2PdfCompanyInfo BuildGlV2CompanyFromIssuer(IssuerCompanyBO? issuer)
+    {
         var model = new ChangeOrderPdfModel
         {
             IssuerCompanyId = issuer?.Id,

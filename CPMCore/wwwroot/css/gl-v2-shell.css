@@ -425,6 +425,25 @@
     .gl-v2-topbar-badges { margin-left: -14px; margin-right: -14px; padding-left: 14px; padding-right: 14px; }
 }
 
+/* Optioneel zoekvak in de topbalk (@section TopbarSearch, design-handoff 42a/42m): rechts van de titel,
+   flexibel tot 460px. Onder 1440px (de acties van de pagina nemen dan al de rest van de balk in) verhuist
+   het naar een eigen strook onder de topbar, zelfde techniek als .gl-v2-topbar-badges hierboven. */
+.gl-v2-topbar-search { position: relative; flex: 0 1 460px; min-width: 220px; margin-left: 16px; }
+@media (max-width: 1439.98px) {
+    .gl-v2-topbar:has(.gl-v2-topbar-search) { height: auto; min-height: 62px; flex-wrap: wrap; padding-top: 10px; padding-bottom: 0; }
+    .gl-v2-topbar-search {
+        order: 20;
+        flex: 1 0 100%;
+        margin: 0 -18px 0;
+        padding: 8px 18px 10px;
+        background: #F7F9F5;
+        border-top: 1px solid var(--gl-v2-hairline-soft);
+    }
+}
+@media (max-width: 767.98px) {
+    .gl-v2-topbar-search { margin-left: -14px; margin-right: -14px; padding-left: 14px; padding-right: 14px; }
+}
+
 .gl-v2-topbar-title {
     margin: 0;
     font: 500 19px var(--gl-v2-font-serif);

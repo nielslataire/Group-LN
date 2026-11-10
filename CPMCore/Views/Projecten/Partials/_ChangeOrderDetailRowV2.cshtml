@@ -19,12 +19,13 @@
     var cellLocked = isLocked || Model.PriceLocked;
 }
 <tr class="gl-v2-co-row js-co-row @(Model.NeedsReview ? "is-needs-review" : "") @(Model.PriceLocked ? "is-price-locked" : "")" data-index="@index">
-    <td class="gl-v2-co-handle-cell">
+    <td class="gl-v2-co-handle-cell co-c-g">
         @* Sleepgreep (28a): slepen met muis/vinger, of focus + pijl omhoog/omlaag. De volgorde van de rijen
            in het formulier is de volgorde die bewaard wordt (ChangeOrderDetail.SortOrder, migratie 067). *@
         <button type="button" class="gl-v2-co-handle js-co-handle" title="Sleep om te verplaatsen (of pijl omhoog/omlaag)" aria-label="Regel verplaatsen: sleep, of gebruik pijl omhoog en omlaag"><i class="ph ph-dots-six-vertical" aria-hidden="true"></i></button>
     </td>
-    <td>
+    @* data-label: op smalle schermen wordt de rij een kaartje (zie gl-v2-projecten-changeorderdetail.css: tabel, dan twee lijnen, dan een kaartje per regel, 28r) en toont elke cel haar kolomnaam; co-c-* zijn de gebiedsnamen van dat raster. *@
+    <td class="gl-v2-co-desc-td co-c-om" data-label="Omschrijving">
         <input type="hidden" name="@(prefix).id" class="js-co-id" value="@Model.Id" />
         <input type="hidden" name="@(prefix).sourceImagePath" class="js-co-sourceimage" value="@Model.SourceImagePath" />
         <div class="gl-v2-field-box gl-v2-field-box-textarea gl-v2-co-descbox"><textarea class="gl-v2-field-input js-co-description" name="@(prefix).description" rows="1" maxlength="1000" @(isLocked ? "disabled" : "")>@Model.Description</textarea></div>
@@ -43,28 +44,28 @@
             }
         </span>
     </td>
-    <td class="is-center">
+    <td class="is-center co-c-me" data-label="Meetmethode">
         @await Html.PartialAsync("GlV2/_SelectList", new CPMCore.Models.GlV2.GlV2SelectListVm
         {
             Name = prefix + ".measurementType", Id = "co-mt-" + uid, Bare = true, Disabled = cellLocked, Value = Model.MeasurementType.ToString(),
             Items = Enum.GetValues(typeof(MeasurementType)).Cast<MeasurementType>().Select(mt => new CPMCore.Models.GlV2.GlV2SelectItem { Value = ((int)mt).ToString(), Text = mt.GetDisplayName() }).ToList()
         })
     </td>
-    <td class="is-center">
+    <td class="is-center co-c-ee" data-label="Eenheid">
         @await Html.PartialAsync("GlV2/_SelectList", new CPMCore.Models.GlV2.GlV2SelectListVm
         {
             Name = prefix + ".measurementUnit", Id = "co-mu-" + uid, Bare = true, Disabled = cellLocked, Value = Model.MeasurementUnit.ToString(),
             Items = Enum.GetValues(typeof(MeasurementUnit)).Cast<MeasurementUnit>().Select(mu => new CPMCore.Models.GlV2.GlV2SelectItem { Value = ((int)mu).ToString(), Text = mu.GetDisplayName() }).ToList()
         })
     </td>
-    <td class="is-right"><div class="gl-v2-field-box gl-v2-co-numbox is-qty"><input type="number" step="1" class="gl-v2-field-input js-co-number" name="@(prefix).number" value="@Model.Number" @(isLocked ? "disabled" : "") /></div></td>
-    <td class="is-right"><div class="gl-v2-field-box gl-v2-co-numbox is-money"><input type="text" inputmode="decimal" autocomplete="off" class="gl-v2-field-input is-num Currencymask js-co-price" name="@(prefix).price" value="@Model.Price.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" @(isLocked ? "disabled" : Model.PriceLocked ? "readonly" : "") /><span class="gl-v2-field-suffix">€</span></div></td>
-    <td class="is-right"><div class="gl-v2-field-box gl-v2-co-numbox"><input type="number" step="0.01" min="0" class="gl-v2-field-input js-co-commission" name="@(prefix).commission" value="@Model.Commission.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" @(isLocked ? "disabled" : Model.PriceLocked ? "readonly" : "") /></div></td>
-    <td class="is-right gl-v2-co-tabular js-co-priceklant">—</td>
+    <td class="is-right co-c-aa" data-label="Aantal"><div class="gl-v2-field-box gl-v2-co-numbox is-qty"><input type="number" step="1" class="gl-v2-field-input js-co-number" name="@(prefix).number" value="@Model.Number" @(isLocked ? "disabled" : "") /></div></td>
+    <td class="is-right co-c-pl" data-label="Prijs leverancier"><div class="gl-v2-field-box gl-v2-co-numbox is-money"><input type="text" inputmode="decimal" autocomplete="off" class="gl-v2-field-input is-num Currencymask js-co-price" name="@(prefix).price" value="@Model.Price.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" @(isLocked ? "disabled" : Model.PriceLocked ? "readonly" : "") /><span class="gl-v2-field-suffix">€</span></div></td>
+    <td class="is-right co-c-co" data-label="Commissie %"><div class="gl-v2-field-box gl-v2-co-numbox"><input type="number" step="0.01" min="0" class="gl-v2-field-input js-co-commission" name="@(prefix).commission" value="@Model.Commission.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" @(isLocked ? "disabled" : Model.PriceLocked ? "readonly" : "") /></div></td>
+    <td class="is-right gl-v2-co-tabular co-c-pk js-co-priceklant" data-label="Prijs klant">—</td>
     @if (vatTypes.Count > 0)
     {
         @* Btw-code van het facturatiebedrijf; het percentage (verborgen js-co-vat) volgt de gekozen code, ook server-side. *@
-        <td class="is-right">
+        <td class="is-right co-c-bt" data-label="Btw">
             <div class="gl-v2-co-vatbox">
             @await Html.PartialAsync("GlV2/_SelectList", new CPMCore.Models.GlV2.GlV2SelectListVm
             {
@@ -82,10 +83,10 @@
     }
     else
     {
-        <td class="is-right"><div class="gl-v2-field-box gl-v2-co-numbox"><input type="number" step="0.01" class="gl-v2-field-input js-co-vat" name="@(prefix).vatPercentage" value="@vat.ToString(System.Globalization.CultureInfo.InvariantCulture)" @(isLocked ? "disabled" : Model.PriceLocked ? "readonly" : "") /></div></td>
+        <td class="is-right co-c-bt" data-label="Btw"><div class="gl-v2-field-box gl-v2-co-numbox"><input type="number" step="0.01" class="gl-v2-field-input js-co-vat" name="@(prefix).vatPercentage" value="@vat.ToString(System.Globalization.CultureInfo.InvariantCulture)" @(isLocked ? "disabled" : Model.PriceLocked ? "readonly" : "") /></div></td>
     }
-    <td class="is-right gl-v2-co-tabular js-co-total">—</td>
-    <td class="is-right">
+    <td class="is-right gl-v2-co-tabular co-c-to js-co-total" data-label="Totaal">—</td>
+    <td class="is-right co-c-d">
         <input type="hidden" name="@(prefix).needsReview" class="js-co-needsreview" value="@Model.NeedsReview.ToString().ToLowerInvariant()" />
         @if (!isLocked)
         {

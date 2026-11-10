@@ -55,7 +55,7 @@ CPM vraagt de RSZ en bewaart de lijst. Het zijpaneel met het resultaat opent met
 
 Het zijpaneel toont per onderneming twee kolommen: **RSZ** voor sociale schulden en **Fiscus** voor fiscale schulden. Staat er **Inhouden** met een percentage, dan houd je dat percentage van het factuurbedrag excl. btw in en stort je het aan de RSZ of de FOD Financiën. De rest betaal je aan de aannemer.
 
-Onder elke onderneming staat het bewijs: de referentie en het trace-id. Met **Bewijs (PDF)** open je de afdrukbare lijst. Met **Bewijs (JSON)** download je het volledige antwoord van de RSZ.
+Onder elke onderneming staat het bewijs: de referentie en het trace-id. Met **Bewijs (PDF)** download je de controlelijst als PDF in de vaste documentlayout, met per onderneming de referentie, een samenvatting en de wettelijke vermelding. Bewaar of bezorg die PDF bij je betaaldossier. Met **Bewijs (JSON)** download je het volledige antwoord van de RSZ.
 
 ## Een eerdere lijst opnieuw gebruiken
 

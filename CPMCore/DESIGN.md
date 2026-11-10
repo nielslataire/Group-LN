@@ -136,6 +136,22 @@ components:
 > **Lees vóór het schrijven altijd `HELP_SCHRIJFGIDS.md`** (toon, vaste opbouw, woordenlijst,
 > bedrijfslogica, `[VRAAG: ...]`-regel). Het stappenplan hieronder gaat over de techniek, die gids over de inhoud.
 
+> **Staande regel — elke nieuwe functie op een bestaande pagina krijgt ook een coachmark.** Een nieuw
+> onderdeel op een pagina die gebruikers al kennen (nieuw zoekvak, nieuwe knop of kaart, een veld dat een
+> andere taak overneemt) wordt aangekondigd met een coachmark, zodat niemand het toevallig moet ontdekken.
+> Een volledig nieuwe pagina krijgt er geen: daar volstaat het help-artikel. Hoe:
+> 1. De pagina zet `ViewData["CoachmarkPageKey"] = "<Module>.<Pagina>"` (bv. `Projects.Recalculation`). `_LayoutV2.cshtml`
+>    laadt `coachmarks.css`, `_Coachmarks.cshtml` en `coachmarks.js`; zonder sleutel of zonder actieve coachmark gebeurt er niets.
+> 2. Voeg een `CoachmarkDefinition` toe in `Models/Coachmarks/CoachmarkRegistry.cs`: `FeatureKey` (uniek,
+>    `Module.Pagina.Functie`), `PageKey`, `TargetSelector` (een stabiel `id`, geen gegenereerde klasse),
+>    `Title` (wat je kan doen, max. 5 woorden, niet "Nieuw"), `Message` (max. 2 zinnen met één concreet voorbeeld in `**vet**`,
+>    Nederlands, geen jargon, geen uitroeptekens; zie "Coachmarks — design-handoff punt 58"), `Placement`, `ReleaseDate` (de opleverdatum) en `MaxShowDays` (30 tot 60).
+>    Hoort een functie met meerdere onderdelen bij elkaar, gebruik dan een `SequenceKey` met oplopende `StepIndex`.
+> 3. Het doelelement moet ook op telefoon bestaan of bewust ontbreken: `coachmarks.js` slaat een ontbrekend
+>    doel stil over. Een coachmark blijft per gebruiker staan tot hij gesloten wordt of `MaxShowDays` verstreken is.
+> 4. Vermeld het in het help-artikel van de pagina (de coachmark verdwijnt, het artikel blijft).
+> Eerste toepassing: Nacalculatie, "Factuur zoeken" (`Projects.Recalculation.InvoiceSearch`).
+
 ## Overview
 
 **Creative North Star: "The Elevated Rail"**
@@ -6054,6 +6070,49 @@ Twee valkuilen die hier opnieuw opdoken (pagina-CSS laadt vóór `gl-v2-shell.cs
   ook in een tabelcel — een losse `.gl-v2-field-input` heeft geen kader. Compacter maken in een tabel gebeurt
   op de box (`.gl-v2-co-table .gl-v2-field-box { height: 34px }`), niet op de input.
 
+### Offerte/WO die meeschaalt — design-handoff punt 28r (10/11/2026)
+`Projecten/ChangeOrderDetailV2` kijkt naar de breedte van zijn EIGEN kolom (CSS container queries), niet naar het toestel:
+zo klopt het ook bij een half scherm of een ingezoomde browser. Geen horizontale scroll meer. Containers:
+`co` = `.gl-v2-co-scroll` (hele inhoud), `com` = `.gl-v2-co-main` (hoofdkolom), `co-rows` = de kaart Regels
+(`.gl-v2-co-rows-scroll`; het facturatieplan en QuoteIntakeV2 houden de oude container `co-table`, kaartje onder 760px).
+Een container query kan het element zelf niet stylen (alleen nakomelingen): wat de container zelf moet doen staat dus in de
+basisregel of in een media query.
+
+| Wat | Drempel | Vorm |
+|---|---|---|
+| Zijkolom (Verzending/Ondertekening, Bron, Historiek) | `co` ≥ 1360px | rechts, 320px, `position: sticky`; daaronder onder het formulier als rij kaarten (`repeat(auto-fit, minmax(260px, 1fr))`) |
+| Velden van Opdracht (`.is-4`) | `com` ≤ 900px / ≤ 560px | 2 per rij / 1 per rij (QuoteIntake: 2-koloms raster zonder `.is-4` blijft op schermbreedte) |
+| Offerte leverancier | `com` ≤ 900 / 640 / 460px | velden 3 → 2 kolommen; voorbeeld boven de velden; velden 1 kolom |
+| Stappenplan | `co` ≤ 759px | 7 labels (`.gl-v2-co-steps-full`) wordt het balkje "Offerte · concept · volgende: Opgemaakt" + 7 streepjes (`.gl-v2-co-steps-compact`, eigen markup, geen `_Steps`-variant Balk) |
+| Regels | `co-rows` > 1080px | tabel met kolomkop, `table-layout: fixed` met vaste kolombreedtes (som ± 884px + omschrijving) |
+| | 640–1080px | twee lijnen per regel: omschrijving + totaal + verwijderen boven, de getallen met een klein label eronder (`grid-template-areas` op de `<tr>`) |
+| | < 640px | een kaartje per regel (greep weg, totaal onderaan met rand) |
+
+**Regels = nog steeds een `<table>`.** Elke cel draagt een gebiedsnaam (`co-c-g/om/me/ee/aa/pl/co/pk/bt/to/d`, ook op de `<th>`) en een
+`data-label` (het kleine label in de 2-lijnen- en kaartvorm); `_ChangeOrderDetailRowV2.cshtml` zet ze, ook voor de AJAX-rij. De tabel krijgt
+`.gl-v2-co-rows`; enkel de bewerkbare tabel heeft vaste kolombreedtes. Slepen, rekenen en "+ Regel" werken zonder aanpassing omdat de DOM gelijk blijft.
+Keuzelijsten in de regels zijn 34px (`.gl-v2-select-trigger`), anders staan de labels scheef naast de 34px-invoervelden.
+Totalen (`tfoot`) staan onder 1080px rechts in een blok van max. 380px.
+
+**Voetbalk op één lijn** (`.gl-v2-co-actionbar`, per VENSTERbreedte want de balk staat buiten de kolom): ≥ 1440 alles · ≤ 1439 geen uitlegzin
+(`.gl-v2-co-hint`) · ≤ 1279 "Omzetten naar wijzigingsopdracht" verhuist naar het menu ⋯ en "op 09/11/2026" valt weg · ≤ 1023 ook Annuleren weg,
+"Verzenden" i.p.v. "Verzenden per mail" (`.gl-v2-co-lg`/`.gl-v2-co-sm`) en enkel het waarschuwingsicoon. **Verwijderen staat altijd in ⋯**
+(`#gl-v2-co-more-menu`, `.gl-v2-menu` + `js-gl-v2-menu-trigger`, gesloten via `window.GlV2Menu.closeAll()` bij een keuze; het bevestigingsvenster blijft verplicht, zie
+"Verwijderen toont altijd eerst de modal"). De waarschuwing "Klant heeft geen e-mailadres" staat in de balk (afgeleid uit `Model.Recipients`, toon `is-rood`).
+<768px blijft de balk position:fixed en twee lijnen (shell).
+
+**Vaste balk en zijkolom.** De shell geeft de kaart geen vaste hoogte (`.gl-v2-app` heeft `min-height`), dus de PAGINA scrolt en de balk stond onderaan het document.
+`.gl-v2-co-scroll` is daarom geen scroller meer (`overflow` weg), `.gl-v2-body.is-full-height:has(.gl-v2-co-form)` krijgt `overflow: clip` (sticky werkt niet binnen
+`overflow: hidden`) en de balk is `position: sticky; bottom: 0` vanaf 768px. Dezelfde sticky houdt de zijkolom in beeld.
+
+**Topbalk:** de chip MEERWERK/MINWERK (`.gl-v2-co-hide-md`) verdwijnt ≤ 1279; Voorbeeld-PDF wordt een icoonknop ≤ 1023 (`.gl-v2-co-pdf-btn`, label `.gl-v2-co-pdf-label`).
+Titel afkappen met … en de naam bij de avatar doet de shell al. **Niet aangepast (shell, geldt voor alle projectpagina's):** het dossiermenu schakelt op 1400px naar iconen (52px)
+en op 768px naar de telefoonvorm; het ontwerp zegt 1440px, 56px en weg onder 1024px met ☰. En de shell verplaatst badges ≤ 1023 naar een eigen strook onder de topbalk (28r houdt de statuspil in de titel).
+
+**Niet in de browser getest met de nieuwe Razor-view** (de draaiende app had de oude markup): de CSS-stappen, de regels in drie vormen, de sticky balk en de zijkolom zijn wel
+bekeken op 1920/1366/1024/768 door de nieuwe klassen met een script op de oude pagina te zetten; de ⋯-menu-werking, de compacte stappenbalk uit de echte view en de leesweergave
+(vergrendelde fasen, 8 kolommen) moeten nog nagekeken worden.
+
 ## PWA — CPM op het beginscherm (iPhone Safari/Chrome iOS, Android Chrome)
 
 Bestanden (alles in `CPMCore`): `wwwroot/manifest.json`, `wwwroot/icons/` (180, 192, 512, 512-maskable; gemaakt uit het
@@ -7595,5 +7654,39 @@ Gebouwd 09/11/2026, niet browser-getest, migratie `138_InhoudingsplichtLijstnaam
 
 **Opbouw.** Twee kolommen (`.gl-v2-ip-grid`, rechts 400px sticky): links kaart "Aannemers kiezen" (bron-segmented `.gl-v2-segmented.is-sm` Actieve werven · Laatste 12 maanden · Alle leveranciers, zoekveld, werf-chips `.gl-v2-ip-chip`, tabel met `.gl-v2-check`, textarea "Extra btw-nummers"), rechts "Te controleren" (naam van de lijst, gekozen aannemers, extra nummers met chip Nieuw/Ongeldig, waarschuwing "had bij de vorige controle inhoudingsplicht", knop "Controleer en bewaar (n)"). Eronder "Eerdere controlelijsten" met zoekveld en "Opnieuw selecteren" (`Index?herhaal=<batchId>`, server vinkt aan en zet de rest bij de extra nummers, naam + " (herhaling)"). De uitslag opent in een zijpaneel (`.gl-v2-ip-drawer`, gevuld door `Inhoudingsplicht/Paneel` → `_ListPanelV2.cshtml`; na het bewaren `Index?open=<batchId>`).
 **Gegevens.** `FillSuppliersAsync`: leveranciers = `CompanyInfo` met `!IsCustomer && IsActive`; werven uit contracten en facturen (factuur via `CompanyId` of het contract); "actief" = project in Uitvoering; laatste factuur = max `IncommingInvoices.Date`; laatste controle via `IRetainmentCheckService.GetLastChecksAsync` (huidige omgeving, ook mislukte). Filteren, aanvinken, het overzicht en het parsen van de extra nummers zijn client-side (`wwwroot/js/gl-v2-inhoudingsplicht.js`); de server parst opnieuw (`ParseExtra`, dezelfde regels: BE + 9/10 cijfers of buitenlands `XX…`) en slaat ongeldige over.
+**Paginering van de aannemerstabel.** 10 rijen per pagina, footer in dezelfde vorm als de DataTables-footer elders (`.gl-v2-ip-pager`: info "1–10 van 42" links, 28px vierkante knoppen ‹ 1 2 … ›, actieve knop primary). Bewust geen DataTable: de rijen staan in een formulier en DataTables haalt rijen buiten de huidige pagina uit de DOM, waardoor hun aangevinkte vakjes niet meegestuurd worden. Eigen paginering in `gl-v2-inhoudingsplicht.js` (`applyFilters(keepPage)`) verbergt enkel rijen (`hidden`); alle rijen blijven in de DOM. Filter/bron/zoekopdracht → terug naar pagina 1; aanvinken/weghalen houdt de pagina. "Alles selecteren" in de kop vinkt alle gefilterde rijen aan, ook op andere pagina's. Footer verborgen bij ≤ 10 rijen.
 **Bewijs blijft volledig.** Per onderneming bewaard (migratie 137): consultatiereferentie, BelGov-trace-id, ruw RSZ-antwoord (JSON), CheckedAt/By, omgeving; nieuw: lijstnaam. Het zijpaneel toont per onderneming referentie + trace-id (+ attest fiscus) en de geldigheid; "Bewijs (PDF)" = de afdrukbare `Details`-pagina, "Bewijs (JSON)" = `Bewijs` met het volledige antwoord. Percentages komen uit het RSZ-antwoord (niet vast 35/15 zoals in het ontwerp). Een geplakt nummer van een bestaande leverancier krijgt diens naam in de lijst.
-**Bewust anders dan het ontwerp.** "Bewijs (PDF)" is de afdrukpagina (browser → PDF), geen server-PDF; statuschips zijn `.gl-v2-badge` (is-positive/-blocked/-neutral/-attention/-info) i.p.v. eigen kleuren.
+**PDF (design-handoff punt 35s, "Controlelijst inhoudingsplicht").** `Documents/GlV2/InhoudingsplichtDocumentV2.cs` (A4 staand, standaard gl-v2-kop/-banden): kicker INHOUDINGSPLICHT, titel Controlelijst, datum; gegevens van de controle (naam indien gegeven, gecontroleerd op, door, bron, lijst-ID, trace-ID's) + OPDRACHTGEVER rechts (72mm); kader "Testomgeving" + diagonaal watermerk TESTGEGEVENS enkel bij een controle uit de simulatie; samenvatting via `GlV2PdfComponents.Fiche` (nieuwe parameter `waardePunten`, hier 12); tabel per onderneming met vaste kolommen in mm, kop herhaalt, rij splitst nooit, referentie RSZ per rij en attest fiscus onder Fiscaal; blok "Bij betaling" (`VlakGroen`) met per onderneming de te houden percentages en wie ze krijgt; wettelijke vermelding tegen de voet (`Extend().AlignBottom().ShowEntire()`); eigen voet (adres · lijst · "Afgedrukt dd/MM/yyyy door … · x / y"). De basisklasse kreeg een `Watermark`-eigenschap. Route `InhoudingsplichtController.Pdf(id)`; knop "Bewijs (PDF)" in het zijpaneel en op `DetailsV2`. Opdrachtgever = het als "externe standaard" gemarkeerde facturatiebedrijf (`ChangeOrderPdfBuilder.BuildGlV2CompanyForDefaultAsync`, de controle hangt niet aan één project), met de gewone terugval uit `GlV2PdfCompanyOptions`. Visueel getest met voorbeelddata (1 en 3 pagina's); niet met echte RSZ-data.
+**Bewust anders dan het ontwerp.** Het logo is groter dan de 16mm-plaatshouder (de standaardkop van alle gl-v2-documenten, 28mm); sorteren op inhoudingsplicht → mislukt → rest, daarbinnen op naam; "Door" toont `CheckedBy` zoals bewaard; statuschips in de app zijn `.gl-v2-badge` (is-positive/-blocked/-neutral/-attention/-info) i.p.v. eigen kleuren.
+
+
+## Zoekvak in de topbalk — `@section TopbarSearch` (design-handoff 42a + 42m, Nacalculatie "Factuur zoeken")
+Gebouwd 10/11/2026, niet browser-getest. Een optioneel zoekvak in de topbalk dat iets **zoekt en opent**, los van een filter in de pagina zelf (Nacalculatie heeft er twee: dit vak zoekt een factuur, "Zoek categorie of activiteit" in de tabel filtert de categorieën; twee taken, twee plaatsen).
+
+**Shell.** `_LayoutV2.cshtml` rendert `@section TopbarSearch` (optioneel, zelfde `IsSectionDefined`-patroon als `PageTitleBadges`) in `.gl-v2-topbar-search`, tussen titel/badges en de spacer. Boven 1440px flexibel tot 460px naast de titel; onder 1440px een eigen strook onder de topbalk (zelfde techniek als `.gl-v2-topbar-badges`: `flex: 1 0 100%`, `order: 20`, negatieve marge). Het vak zelf is het gewone `.gl-v2-field > .gl-v2-field-box > .gl-v2-field-input` (type `search`, `role="combobox"`).
+
+**Suggestielijst.** `position: fixed` (niet afgeknipt door de topbalk), 620px breed (op telefoon 8px marge links en rechts), `z-index: 99997`, radius `--gl-v2-radius-md`, dezelfde schaduw als de keuzelijsten. Opbouw van boven naar onder: kop **Zoekt op** met chips (Nummer · Leverancier of categorie · Datum · Bedrag) · koprij "Beste 6 van N facturen" · max. 6 rijen (icoon, leverancier met gemarkeerde treffer, nummer in mono, datum · intern nummer, rechts bedrag en type-badge) · groep **Leveranciers** (enkel als een woord op een leveranciersnaam past; "alle facturen →") · **Probeer**-chips (enkel bij een leeg vak, met echte voorbeelden uit het project) · **Niets gevonden** met uitleg i.p.v. een lege illustratie · voet met "Alle N resultaten" en de toetsenhints (↑↓ kiezen, ↵ openen, Esc sluiten; verborgen op telefoon). Leeg vak = recent geopende facturen (per project in `localStorage`) + voorbeelden.
+
+**Gedrag.** Geen knop "Zoeken": na 1 teken (140 ms debounce) verschijnen de beste 6. De bovenste is voorgeselecteerd, ↵ opent ze, ↑↓ kiest, Esc sluit (nogmaals Esc wist het vak), Tab sluit. Selecteren gebeurt op `mousedown`, anders verliest het vak zijn focus vóór de klik. Treffers in naam en nummer staan in `<mark>`; een datum of bedrag waarop gezocht werd staat vet.
+
+**Slim zoeken (server).** `ProjectenController.RecalculationInvoiceSearch(projectid, q, take)` (`ProjectenController.RecalculationSearchV2.cs`) parst elk woord: `202630` of `F26/0861` = nummer (intern of van de leverancier, leestekens genegeerd) · `demeyer` = leverancier of categorie/activiteit · `10/2026`, `okt`, `21/10` = datum · `€ 7.670` of `7670,00` = bedrag (afgerond op € 1) · een los getal zoekt nummer **én** bedrag · `2026` zoekt het jaar. Combineren mag, elk woord moet ergens passen. Bedragen zijn excl. btw (`NetAmount`, anders `Price`); een creditnota is negatief. Type per factuur uit de eerste factuurlijn: Contract · Meerwerk algemeen · Meerwerk klant · Geen contract (zelfde kleuren als 42b/`gl-v2-badge`).
+
+**Bewust anders dan het ontwerp.** "Intern nummer" is `OctopusDocumentSequenceNr`, anders het Id van de factuur (het ontwerp noemt geen bron). Een klik op een leverancier toont al haar facturen in dezelfde lijst (de tabel filteren op leverancier kan pas als de overzichtstabel een leverancierdimensie heeft). "Alle N resultaten" breidt de lijst uit tot 25; een aparte resultatenpagina is er niet. Facturen van een ander project staan er niet in (de uitleg bij "Niets gevonden" zegt dat).
+
+**Bestanden.** `Views/Projecten/Contracts/RecalculationV2.cshtml` (sectie + `ViewData["CoachmarkPageKey"]`), `wwwroot/css/gl-v2-projecten-recalculation-search.css` (`gln-nc-fs-*`), `wwwroot/js/gl-v2-projecten-recalculation-search.js`, topbar-regels in `gl-v2-shell.css` (`.gl-v2-topbar-search`), coachmark `Projects.Recalculation.InvoiceSearch`, help-artikel `HelpContent/projecten/nacalculatie-lezen.md` (sectie "Een factuur zoeken").
+
+
+## Coachmarks — design-handoff punt 58 (`design-handoff/Menu en toast design updates – CRM Coachmarks.html`)
+Herwerkt 10/11/2026 (`wwwroot/css/coachmarks.css`, `wwwroot/js/coachmarks.js`), niet browser-getest. Een coachmark toont een nieuwe of verborgen functie. Los te houden van een **tooltip** (donkere inkt `#1F2A1E`, enkel hover/focus), een **popover** (wit, met inhoud of acties) en een **toast** (donker, na een actie): een coachmark moet verschillen van wat al op het scherm staat en blijft toch in de huisstijl, daarom **groen**.
+
+**Anatomie (58a).** Bubbel `clamp(280px, 30vw, 320px)`, radius 12, padding 14/16, achtergrond `#00532D`, schaduw `0 2px 6px rgba(0,40,20,.18), 0 24px 48px -16px rgba(0,40,20,.55)`. Pijl 12 × 12, 45° gedraaid, wijst naar het midden van het doel (minstens 16px van de hoek, `--gl-cm-arrow`), afstand tot het doel 10px. **Kicker** `NIEUW` (goud `#E9D3A6` op inkt `#1F2A1E`, Plex 700 9,5px, letter-spacing .12em) of in een rondleiding "2 VAN 3" (lichtgroen `#D6E5CC`, zonder vlak). **Titel** Plex 600 14px wit, max. 5 woorden, zegt wat je kan doen ("Facturen zoeken", niet "Wist je dat…"). **Tekst** Plex 450 12,5/1,55 `#E4EEDD`, max. 2 zinnen met één concreet voorbeeld in **vet** (`**…**` in de definitie) of een sneltoets; geen uitroeptekens, geen emoji. **Knoppen**: primair wit met groene tekst (32px hoog), secundair als tekst (Overslaan, Vorige), sluiten (×) altijd rechtsboven.
+
+**Drie varianten (58b).** (1) *Hotspot*: pulserende gouden stip (`#C9A96E`, 12px, witte rand) op iets nieuws; een klik opent de coachmark; max. 2 per pagina; weg na één keer openen of 14 dagen. **Nog niet gebouwd.** (2) *Coachmark, één tip*: geen overlay; klik buiten of Esc sluit; primaire knop "Begrepen". (3) *Rondleiding, 3 tot 5 stappen*: overlay met spotlight op het doel, Overslaan · Vorige · Volgende, laatste stap "Klaar", enkel voor een nieuwe module of grote wijziging (een definitie met `SequenceKey` en oplopende `StepIndex`). *Met beeld* (268 × 120, voor een handeling) is nog niet gebouwd.
+
+**Plaatsing (58c).** Voorkeur onder → boven → rechts → links; `coachmarks.js` kantelt vanzelf als de bubbel buiten het venster zou vallen. Rechts voor iets in de rail of het dossiermenu, links voor de zijkolom of rechts in de topbalk. **Spotlight** (enkel rondleiding): overlay `rgba(31,42,30,.45)` met uitsparing, 6px marge, radius 10, gouden rand 2px `#C9A96E` + gloed 4px, `pointer-events: none` (het doel blijft klikbaar), schuift 250ms. **Telefoon** (<576px): geen bubbel met pijl maar een bottom sheet (radius 16 16 0 0), het doel omkaderd (gouden rand) erboven.
+
+**Regels (58e).** *Wanneer:* hotspot voor iets nieuws of verplaatst; coachmark voor één niet-voor-de-hand-liggende handeling; rondleiding enkel bij een nieuwe module of grote wijziging. *Wanneer niet:* niet voor uitleg die in het scherm hoort (label, hulptekst, lege toestand), niet voor fouten (meldingskaders, punt 25), niet tijdens het invullen van een formulier of in een zijpaneel. *Eén tegelijk:* nooit twee coachmarks of coachmark + toast tegelijk. *Wanneer tonen:* na het laden, als de pagina rustig is (`coachmarks.js` wacht tot een open modal gesloten is). *Onthouden:* per gebruiker gezien/gesloten/overgeslagen (`UserCoachmarkState`); sluiten = weg. *Toetsenbord:* `role="dialog"`, focus op de primaire knop, Esc sluit (rondleiding: overslaan), Tab blijft in de bubbel tijdens een rondleiding, het doel krijgt `aria-describedby` naar de tekst. *Beweging:* enkel de hotspot pulseert, de spotlight schuift 250ms; bij `prefers-reduced-motion` geen puls en geen schuiven.
+
+**Niet gebouwd uit punt 58.** Hotspot-stip; "Met beeld"-variant; opnieuw bekijken via Help › Rondleidingen en terugzetten in Mijn profiel › Meldingen › Tips en rondleidingen; beheer van de tips als lijst in Instellingen › Website & app › Tips (titel, tekst, pagina, doel, start/einddatum, rollen). Tot dan staan de definities in `Models/Coachmarks/CoachmarkRegistry.cs`. De oudere definities daar (Issues, Invoices.Create, Projectleider-dashboard, Projecten/Detail) hebben nog langere teksten dan de regel van 2 zinnen; herschrijf ze wanneer je ze aanraakt.
+
+**Techniek.** De bubbel hangt aan `<body>`, buiten `.gl-v2`: de `--gl-v2-*` tokens bestaan daar niet (zie "tokens-scope"), dus `coachmarks.css` gebruikt letterlijke waarden met de lettertype-tokens als terugval. Wijzigt het palet, dan moet dat bestand mee.

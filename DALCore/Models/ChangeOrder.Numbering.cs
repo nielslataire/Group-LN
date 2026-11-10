@@ -14,6 +14,8 @@ public partial class ChangeOrder
     public virtual ICollection<ChangeOrderAttachment> Attachments { get; set; } = new List<ChangeOrderAttachment>();
 
     public int? NumberProjectId { get; set; }
+    /// <summary>Afkorting van de projectnaam in het nummer (migratie 139), vastgelegd bij het nummeren.</summary>
+    public string NumberProjectTag { get; set; }
     public int? NumberYear { get; set; }
     public int? NumberSeq { get; set; }
     /// <summary>1 = eerste versie; elke "nieuwe versie" (SourceKind 2) telt er één bij.</summary>
@@ -28,5 +30,5 @@ public partial class ChangeOrder
     public string Subject { get; set; }
 
     /// <summary>"OF-2026-014" / "WO-2026-006-v2" (versiesuffix vanaf versie 2).</summary>
-    public string PublicNumber => ChangeOrderNumbering.Format(IsQuote, NumberYear, NumberSeq, VersionNo, Id);
+    public string PublicNumber => ChangeOrderNumbering.Format(IsQuote, NumberYear, NumberSeq, VersionNo, Id, NumberProjectTag);
 }

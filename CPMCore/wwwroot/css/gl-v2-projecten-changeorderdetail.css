@@ -7,8 +7,15 @@
 /* ── Paginaopbouw: scrollende inhoud + vaste actiebalk onderaan (zelfde recept als Leveranciers/EditV2:
    het formulier is de flex-kolom, .gl-v2-co-scroll neemt de resthoogte, .gl-v2-form-actionbar sluit af). */
 .gl-v2-co-form { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.gl-v2-co-scroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; min-width: 0; padding-bottom: 20px; }
+.gl-v2-co-scroll { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 16px; min-width: 0; padding-bottom: 20px; container-type: inline-size; container-name: co; }
 @media (max-width: 767.98px) { .gl-v2-co-scroll { padding-bottom: 140px; } }
+/* 28r: de pagina scrolt zelf (de shell geeft de kaart geen vaste hoogte), dus de actiebalk blijft met position:sticky onderaan het venster
+   en de zijkolom blijft in beeld. Sticky werkt niet binnen .gl-v2-body{overflow:hidden}: op deze pagina wordt dat clip (zelfde recept als
+   Documenten/Eenheid-formulier). <768px is de balk al position:fixed (shell), daar geen sticky. */
+.gl-v2 .gl-v2-body.is-full-height:has(.gl-v2-co-form) { overflow: clip; }
+@media (min-width: 768px) {
+    .gl-v2-co-actionbar { position: sticky; bottom: 0; z-index: 20; }
+}
 .gl-v2-co-card { flex: none; }
 
 /* LET OP — laadvolgorde: dit bestand laadt VÓÓR gl-v2-shell.css. Een regel hier die een shell-regel
@@ -19,13 +26,31 @@
 /* ── Stappenplan-kaart ─────────────────────────────────────────────────────────────────────────────── */
 .gl-v2-card-body.gl-v2-co-steps { gap: 10px; padding: 14px 20px 16px; }
 .gl-v2-co-steps-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; color: var(--gl-v2-muted); }
+/* 28r: 7 labels zolang de kolom ≥ 760px breed is, daaronder het compacte balkje (zelfde idee als variant Balk, punt 27). */
+.gl-v2-co-steps-full { min-width: 0; }
+.gl-v2-co-steps-compact { display: none; flex-direction: column; gap: 8px; }
+.gl-v2-co-steps-compact-line { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.gl-v2-co-steps-compact-line b { flex: none; font: 700 14px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+.gl-v2-co-steps-compact-line span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-co-steps-bar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.gl-v2-co-steps-bar span { height: 5px; border-radius: 3px; background: var(--gl-v2-hairline-soft); }
+.gl-v2-co-steps-bar span.is-on { background: var(--gl-v2-primary); }
+@container co (max-width: 759px) {
+    .gl-v2-co-steps-full { display: none; }
+    .gl-v2-co-steps-compact { display: flex; }
+}
 
-/* ── Layout: hoofdkolom + zijkolom ─────────────────────────────────────────────────────────────────── */
-.gl-v2-co-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
-.gl-v2-co-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-.gl-v2-co-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-@media (max-width: 1023.98px) {
+/* ── Layout: hoofdkolom + zijkolom (28r: het scherm kijkt naar de breedte van zijn EIGEN kolom, niet naar het
+   toestel — zo klopt het ook bij een half scherm of een ingezoomde browser) ──────────────────────────────
+   ≥ 1360px inhoud: zijkolom (Verzending/Ondertekening, Bron, Historiek) rechts, 320px, blijft in beeld.
+   Daaronder schuift ze onder het formulier als rij kaarten en krijgt het formulier de volle breedte.
+   De hoofdkolom is zelf ook een container (com): de velden, de offertekaart en het stappenplan kijken naar haar. */
+.gl-v2-co-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
+.gl-v2-co-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; container-type: inline-size; container-name: com; }
+.gl-v2-co-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; position: sticky; top: 0; }
+@container co (max-width: 1360px) {
     .gl-v2-co-layout { grid-template-columns: minmax(0, 1fr); }
+    .gl-v2-co-side { position: static; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); align-items: start; }
 }
 
 /* ── Kaartkop: slotje ("Vergrendeld"/"Afgesloten"/"Archief") ───────────────────────────────────────── */
@@ -37,12 +62,18 @@
 .gl-v2-card-body.gl-v2-co-form-grid.is-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .gl-v2-co-span2 { grid-column: span 2; }
 .gl-v2-field-full { grid-column: 1 / -1; }
-@media (max-width: 767.98px) {
+/* Offerte/WO (is-4, in de hoofdkolom): onder 900px van de kolom twee velden per rij, onder 560px alles onder elkaar.
+   Het 2-koloms raster zonder .is-4 (QuoteIntakeV2, geen container) blijft op de schermbreedte. */
+@container com (max-width: 900px) {
     .gl-v2-card-body.gl-v2-co-form-grid.is-4 { grid-template-columns: 1fr 1fr; }
 }
-@media (max-width: 575.98px) {
-    .gl-v2-card-body.gl-v2-co-form-grid, .gl-v2-card-body.gl-v2-co-form-grid.is-4 { grid-template-columns: 1fr; }
+@container com (max-width: 560px) {
+    .gl-v2-card-body.gl-v2-co-form-grid.is-4 { grid-template-columns: 1fr; }
     .gl-v2-co-span2 { grid-column: auto; }
+}
+@media (max-width: 575.98px) {
+    .gl-v2-card-body.gl-v2-co-form-grid:not(.is-4) { grid-template-columns: 1fr; }
+    .gl-v2-card-body.gl-v2-co-form-grid:not(.is-4) .gl-v2-co-span2 { grid-column: auto; }
 }
 /* Korte meerregelige velden (omschrijving voor de klant, voorwaarden): twee à drie regels volstaan —
    lager dan de standaard-textarea (104px) van de shell. */
@@ -81,10 +112,15 @@
 a.gl-v2-co-quote-preview:hover { border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); }
 .gl-v2-co-quote-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 16px; }
 .gl-v2-co-quote-note { grid-column: 1 / -1; margin: 0; font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
-@media (max-width: 767.98px) {
+@container com (max-width: 900px) {
+    .gl-v2-co-quote-fields { grid-template-columns: 1fr 1fr; }
+}
+@container com (max-width: 640px) {
     .gl-v2-card-body.gl-v2-co-quote { grid-template-columns: 1fr; }
     .gl-v2-co-quote-preview { width: 100%; height: 160px; }
-    .gl-v2-co-quote-fields { grid-template-columns: 1fr 1fr; }
+}
+@container com (max-width: 460px) {
+    .gl-v2-co-quote-fields { grid-template-columns: 1fr; }
 }
 
 /* ── Regels/termijnen-tabel ────────────────────────────────────────────────────────────────────────── */
@@ -300,12 +336,218 @@ a.gl-v2-co-quote-preview:hover { border-color: var(--gl-v2-primary); color: var(
 .gl-v2-co-send-frame.is-placeholder i { font-size: 40px; }
 @media (max-width: 767.98px) { .gl-v2-co-send-frame { display: none; } }
 
-@media (max-width: 767.98px) {
-    .gl-v2-co-table { min-width: 640px; }
+/* ── Smalle kaart: tabel wordt kaartjes per rij (geen horizontale scrollbalk) ───────────────────────────
+   Container query op de kaart zelf i.p.v. een schermbreedte: de kolom met de regels is ook op een brede
+   tablet nog te smal voor 11 kolommen (zijbalk 300px ernaast). Onder 760px staat elke regel als een
+   eigen blok: handvat + verwijderen bovenaan, omschrijving over de volle breedte, daaronder de velden met
+   hun kolomnaam (data-label). De ruwe tabel blijft staan vanaf 760px. */
+.gl-v2-co-table-scroll { container-type: inline-size; container-name: co-table; }
+@container co-table (max-width: 759px) {
+    .gl-v2-co-table-scroll { overflow-x: visible; }
+    .gl-v2-co-table { min-width: 0; }
+    .gl-v2-co-table, .gl-v2-co-table tbody, .gl-v2-co-table tfoot { display: block; width: 100%; }
+    .gl-v2-co-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+    .gl-v2-co-table tbody tr { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 12px; padding: 14px 16px; border-bottom: 1px solid var(--gl-v2-hairline-soft); }
+    .gl-v2-co-table-inset .gl-v2-co-table tbody tr:last-child { border-bottom: 0; }
+    .gl-v2-co-table.gl-v2-co-table.gl-v2-co-table tbody td { display: block; padding: 0; border: 0; text-align: left; order: 3; min-width: 0; }
+    .gl-v2-co-table tbody td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 4px; font: 600 9px var(--gl-v2-font-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--gl-v2-muted); }
+    /* Ongevulde samenvattingscellen (lege-toestand) */
+    .gl-v2-co-table tbody td.gl-v2-co-empty { grid-column: 1 / -1; padding: 18px 0; }
+
+    /* Regels (bewerkbaar + leesweergave) */
+    .gl-v2-co-table.gl-v2-co-table.gl-v2-co-table tbody td.gl-v2-co-handle-cell { order: 0; grid-column: span 2; width: auto; }
+    .gl-v2-co-row > td:last-child { order: 1 !important; grid-column: span 2; text-align: right !important; }
+    .gl-v2-co-table.gl-v2-co-table.gl-v2-co-table tbody td.gl-v2-co-desc-td,
+    .gl-v2-co-table.gl-v2-co-table.gl-v2-co-table tbody td.gl-v2-co-desc-cell { order: 2; grid-column: 1 / -1; min-width: 0; }
+    .gl-v2-co-table.gl-v2-co-table.gl-v2-co-table tbody td.is-wide { grid-column: 1 / -1; }
+
+    /* Velden vullen hun gridcel i.p.v. een vaste kolombreedte */
+    .gl-v2-co-table .gl-v2-field-box.gl-v2-co-numbox,
+    .gl-v2-co-table .gl-v2-field-box.gl-v2-co-numbox.is-qty,
+    .gl-v2-co-table .gl-v2-field-box.gl-v2-co-numbox.is-money,
+    .gl-v2-co-table .gl-v2-field-box.gl-v2-co-vatbox,
+    .gl-v2-co-table .gl-v2-co-vatbox { width: 100%; margin-left: 0; }
+    .gl-v2-co-table .gl-v2-field-box.gl-v2-co-descbox { min-width: 0; }
+    .gl-v2-co-table .gl-v2-field-box:has(> select) { min-width: 0; }
+    .gl-v2-co-table tbody td.gl-v2-co-tabular { font-weight: 600; }
+
+    /* Facturatieplan: termijn + verwijderen op één regel, daaronder % en bedrag naast elkaar */
+    .gl-v2-co-terms-table tbody tr { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gl-v2-co-terms-table .js-co-term-row > td:last-child { order: 1 !important; text-align: right !important; }
+    .gl-v2-co-terms-table tbody td:first-child { order: 0 !important; }
+    .gl-v2-co-terms-table.is-readonly tbody td:first-child { grid-column: 1 / -1; }
+
+    /* Totalen onderaan: label links, bedrag rechts, op één regel */
+    .gl-v2-co-table tfoot tr { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 7px 16px; }
+    .gl-v2-co-table.gl-v2-co-table.gl-v2-co-table tfoot td { display: block; padding: 0; border: 0; }
+    .gl-v2-co-table tfoot td:empty { display: none; }
+    .gl-v2-co-table tfoot td[colspan] { flex: 1 1 auto; text-align: left; }
+    .gl-v2-co-table tfoot td:not([colspan]) { flex: none; text-align: right; }
+    .gl-v2-co-table tfoot tr:has(.gl-v2-co-add-term) td { flex: 1 1 100%; }
+    .gl-v2-co-table tfoot .gl-v2-co-sum-total { border-top: 1px solid var(--gl-v2-hairline); }
+    .gl-v2-co-table.gl-v2-co-table tfoot .gl-v2-co-sum-total td { border-top: 0; padding-top: 0; padding-bottom: 0; }
+    .gl-v2-co-table tfoot tr:last-child { padding-bottom: 20px; }
+    .gl-v2-co-table tfoot tr:last-child td { padding-bottom: 0; }
+    .gl-v2-co-add-hint { display: block; margin: 2px 0 0; }
+}
+
+/* ── 28r — de REGELS hebben drie vormen, op de breedte van hun eigen kaart (container co-rows) ─────────────
+   > 1080px  tabel met kolomkop (vaste kolombreedtes, nooit horizontaal scrollen)
+   640–1080 twee lijnen per regel: omschrijving + totaal bovenaan, de getallen met een klein label eronder
+   < 640px   een kaartje per regel (greep weg, totaal onderaan)
+   Alleen de regels-tabel (.gl-v2-co-rows); het facturatieplan houdt zijn eigen kaartje onder 760px (container co-table).
+   De gebiedsnamen (co-c-*) staan op elke cel; de rij blijft een <tr> met <td>'s, enkel het weergavetype wisselt,
+   zodat slepen, rekenen en het toevoegen van een regel (AJAX) ongewijzigd werken. */
+.gl-v2-co-table-scroll.gl-v2-co-rows-scroll { container-name: co-rows; overflow-x: visible; }
+.gl-v2-co-table.gl-v2-co-rows { min-width: 0; }
+.gl-v2-co-table.gl-v2-co-rows:not(.is-readonly) { table-layout: fixed; }
+.gl-v2-co-rows th.co-c-g, .gl-v2-co-rows td.co-c-g { width: 30px; }
+.gl-v2-co-rows:not(.is-readonly) th.co-c-me, .gl-v2-co-rows:not(.is-readonly) td.co-c-me { width: 100px; }
+.gl-v2-co-rows:not(.is-readonly) th.co-c-ee, .gl-v2-co-rows:not(.is-readonly) td.co-c-ee { width: 96px; }
+.gl-v2-co-rows:not(.is-readonly) th.co-c-aa, .gl-v2-co-rows:not(.is-readonly) td.co-c-aa { width: 72px; }
+.gl-v2-co-rows:not(.is-readonly) th.co-c-pl, .gl-v2-co-rows:not(.is-readonly) td.co-c-pl { width: 132px; }
+.gl-v2-co-rows:not(.is-readonly) th.co-c-co, .gl-v2-co-rows:not(.is-readonly) td.co-c-co { width: 84px; }
+.gl-v2-co-rows:not(.is-readonly) th.co-c-pk, .gl-v2-co-rows:not(.is-readonly) td.co-c-pk { width: 104px; }
+.gl-v2-co-rows:not(.is-readonly) th.co-c-bt, .gl-v2-co-rows:not(.is-readonly) td.co-c-bt { width: 132px; }
+.gl-v2-co-rows:not(.is-readonly) th.co-c-to, .gl-v2-co-rows:not(.is-readonly) td.co-c-to { width: 104px; }
+.gl-v2-co-rows:not(.is-readonly) th.co-c-d, .gl-v2-co-rows:not(.is-readonly) td.co-c-d { width: 44px; }
+/* In de tabel vullen de velden hun kolom (de breedte komt van de kolom, niet van het veld). */
+.gl-v2-co-rows .gl-v2-field-box.gl-v2-co-numbox,
+.gl-v2-co-rows .gl-v2-field-box.gl-v2-co-numbox.is-qty,
+.gl-v2-co-rows .gl-v2-field-box.gl-v2-co-numbox.is-money,
+.gl-v2-co-rows .gl-v2-field-box.gl-v2-co-vatbox,
+.gl-v2-co-rows .gl-v2-co-vatbox { width: 100%; margin-left: 0; }
+.gl-v2-co-table.gl-v2-co-rows .gl-v2-field-box.gl-v2-co-descbox { min-width: 0; }
+.gl-v2-co-table.gl-v2-co-rows .gl-v2-field-box:has(> select) { min-width: 0; }
+/* Keuzelijsten (meetmethode, eenheid, btw-code) even hoog als de invoervelden ernaast (34px i.p.v. 40px), anders staan de labels in de twee-lijnen- en kaartvorm scheef. */
+.gl-v2-co-table.gl-v2-co-rows .gl-v2-select, .gl-v2-co-table.gl-v2-co-rows .gl-v2-select-trigger { height: 34px; min-height: 34px; }
+.gl-v2-co-table.gl-v2-co-rows th, .gl-v2-co-table.gl-v2-co-rows td { padding-left: 6px; padding-right: 6px; }
+.gl-v2-co-table.gl-v2-co-rows th:first-child, .gl-v2-co-table.gl-v2-co-rows td:first-child { padding-left: 20px; }
+.gl-v2-co-table.gl-v2-co-rows th.gl-v2-co-handle-cell, .gl-v2-co-table.gl-v2-co-rows td.gl-v2-co-handle-cell { padding-left: 10px; padding-right: 0; }
+.gl-v2-co-table.gl-v2-co-rows th:last-child, .gl-v2-co-table.gl-v2-co-rows td:last-child { padding-right: 20px; }
+.gl-v2-co-table.gl-v2-co-rows:not(.is-readonly) th.co-c-d, .gl-v2-co-table.gl-v2-co-rows:not(.is-readonly) td.co-c-d { padding-left: 0; padding-right: 12px; }
+
+@container co-rows (max-width: 1080px) {
+    .gl-v2-co-table.gl-v2-co-rows { table-layout: auto; }
+    .gl-v2-co-table.gl-v2-co-rows, .gl-v2-co-rows tbody, .gl-v2-co-rows tfoot { display: block; width: 100%; }
+    .gl-v2-co-rows thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .gl-v2-co-rows th, .gl-v2-co-rows td { width: auto !important; }
+
+    .gl-v2-co-rows tbody tr { display: grid; row-gap: 8px; column-gap: 8px; padding: 12px 14px; align-items: end; border-bottom: 1px solid var(--gl-v2-hairline-soft); }
+    .gl-v2-co-table.gl-v2-co-rows tbody td { display: block; padding: 0; border: 0; text-align: left; min-width: 0; }
+    .gl-v2-co-table.gl-v2-co-rows tbody td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 4px; font: 600 9px var(--gl-v2-font-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--gl-v2-muted); text-align: left; }
+    .gl-v2-co-rows tbody td.gl-v2-co-empty { grid-column: 1 / -1; padding: 18px 0; }
+
+    /* bewerkbaar: omschrijving + totaal + verwijderen op de eerste lijn, de getallen op de tweede */
+    .gl-v2-co-rows:not(.is-readonly) tbody tr {
+        grid-template-columns: 18px minmax(0, .9fr) minmax(0, .9fr) minmax(0, .7fr) minmax(0, 1.45fr) minmax(0, .8fr) minmax(0, 1fr) 96px 28px;
+        grid-template-areas: "g om om om om om om to d" "g me ee aa pl co pk bt bt";
+    }
+    .gl-v2-co-rows td.co-c-g { grid-area: g; align-self: start; padding-top: 22px !important; width: auto; }
+    .gl-v2-co-rows td.co-c-om { grid-area: om; }
+    .gl-v2-co-rows td.co-c-me { grid-area: me; }
+    .gl-v2-co-rows td.co-c-ee { grid-area: ee; }
+    .gl-v2-co-rows td.co-c-aa { grid-area: aa; }
+    .gl-v2-co-rows td.co-c-pl { grid-area: pl; }
+    .gl-v2-co-rows td.co-c-co { grid-area: co; }
+    .gl-v2-co-rows td.co-c-pk { grid-area: pk; }
+    .gl-v2-co-rows td.co-c-bt { grid-area: bt; }
+    .gl-v2-co-rows td.co-c-to { grid-area: to; }
+    .gl-v2-co-rows td.co-c-d { grid-area: d; text-align: right; }
+    /* bedragen die geen veld zijn staan op de hoogte van de velden ernaast, rechts uitgelijnd */
+    .gl-v2-co-rows td.co-c-pk, .gl-v2-co-rows td.co-c-to { display: grid !important; grid-template-rows: auto 34px; align-items: center; text-align: right; font-weight: 600; }
+    .gl-v2-co-rows td.co-c-to { font-size: 13.5px; }
+    .gl-v2-co-rows td.gl-v2-co-handle-cell { width: auto; }
+
+    /* leesweergave (8 kolommen): omschrijving + totaal, daaronder de zes getallen */
+    .gl-v2-co-rows.is-readonly tbody tr { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-areas: "om om om om om to" "ee aa pl co pk bt"; align-items: start; }
+    .gl-v2-co-rows.is-readonly td.co-c-to { grid-template-rows: auto auto; }
+    .gl-v2-co-rows.is-readonly td.co-c-pk { grid-template-rows: auto auto; }
+
+    /* totalen: rechts in een smal blok, label links en bedrag rechts */
+    .gl-v2-co-rows tfoot tr { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; width: min(100%, 380px); margin-left: auto; padding: 6px 18px; }
+    .gl-v2-co-table.gl-v2-co-rows tfoot td { display: block; padding: 0; border: 0; }
+    .gl-v2-co-rows tfoot td:empty { display: none; }
+    .gl-v2-co-rows tfoot td[colspan] { flex: 1 1 auto; text-align: left; }
+    .gl-v2-co-rows tfoot td:not([colspan]) { flex: none; text-align: right; }
+    .gl-v2-co-rows tfoot tr:has(.gl-v2-co-add-term) { width: 100%; flex-wrap: wrap; justify-content: flex-start; padding: 12px 18px; }
+    .gl-v2-co-rows tfoot tr:has(.gl-v2-co-add-term) td { flex: 1 1 100%; text-align: left; }
+    .gl-v2-co-rows tfoot tr:has(.gl-v2-co-add-term) + tr { padding-top: 12px; }
+    .gl-v2-co-rows tfoot .gl-v2-co-sum-total { border-top: 1px solid var(--gl-v2-hairline); margin-top: 6px; padding-top: 9px; }
+    .gl-v2-co-table.gl-v2-co-rows tfoot .gl-v2-co-sum-total td { border-top: 0; padding: 0; }
+    .gl-v2-co-rows tfoot tr:last-child { padding-bottom: 20px; }
+    .gl-v2-co-rows tfoot tr:last-child td { padding-bottom: 0; }
+    .gl-v2-co-rows .gl-v2-co-add-hint { display: block; margin: 2px 0 0; }
+}
+
+@container co-rows (max-width: 640px) {
+    .gl-v2-co-rows tbody { padding-top: 12px; }
+    .gl-v2-co-rows:not(.is-readonly) tbody tr, .gl-v2-co-rows.is-readonly tbody tr { margin: 0 12px 10px; padding: 14px; border: 1px solid var(--gl-v2-hairline); border-radius: 10px; align-items: end; }
+    .gl-v2-co-rows:not(.is-readonly) tbody tr {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-areas: "om om om d" "aa me ee ee" "pl pl co co" "pk pk bt bt" "to to to to";
+    }
+    .gl-v2-co-rows.is-readonly tbody tr { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-areas: "om om om" "ee aa pl" "co pk bt" "to to to"; }
+    .gl-v2-co-rows td.co-c-g { display: none !important; }
+    .gl-v2-co-rows td.co-c-d { align-self: end; }
+    .gl-v2-co-rows td.co-c-pk { text-align: left; }
+    .gl-v2-co-rows td.co-c-to { display: flex !important; flex-direction: row; justify-content: space-between; align-items: center; padding-top: 10px !important; border-top: 1px solid var(--gl-v2-hairline-soft) !important; }
+    .gl-v2-co-rows td.co-c-to::before { margin-bottom: 0 !important; }
+    .gl-v2-co-rows tfoot tr { width: 100%; padding: 6px 16px; }
 }
 
 /* "Opgeslagen op …" in de voetbalk + laadtoestand van de opslaan-/verzendknoppen. */
-.gl-v2-co-saved { display: inline-flex; align-items: center; gap: 5px; margin-right: 12px; font-weight: 600; color: var(--gl-v2-primary); }
+.gl-v2-co-saved { display: inline-flex; align-items: center; gap: 5px; margin-right: 12px; font-weight: 600; color: var(--gl-v2-primary); white-space: nowrap; }
+.gl-v2-co-saved b { font-weight: 700; }
+/* 28r: de balk blijft op één lijn. Links: status + waarschuwing + uitleg (krimpt, met …); rechts: de knoppen (vast). */
+.gl-v2-co-actionbar { flex-wrap: nowrap; min-width: 0; }
+.gl-v2-co-actionbar .gl-v2-co-status { flex: 1 1 auto; min-width: 0; overflow: hidden; gap: 14px; white-space: nowrap; }
+.gl-v2-co-actionbar .gl-v2-co-status > * { flex: none; }
+.gl-v2-co-actionbar .gl-v2-co-hint { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-co-actionbar .gl-v2-form-actionbar-spacer { display: none; }
+.gl-v2-co-actionbar .gl-v2-form-actionbar-actions { flex: none; gap: 10px; }
+.gl-v2-co-barwarn { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--gl-v2-warning); }
+.gl-v2-co-barwarn i { font-size: 14px; }
+.gl-v2-co-sm { display: none; }
+.gl-v2-co-menu-convert { display: none; }
+.gl-v2-co-actionbar .gl-v2-co-more { flex: none; }
+.gl-v2-co-actionbar .gl-v2-co-more-narrow { display: none; }
+
+/* Per venster (de balk staat buiten de kolom, dus schermbreedte i.p.v. een container):
+   ≥ 1440 alles · 1280–1439 zonder uitlegzin · ≤ 1279 (tablet liggend) “Omzetten” en “Verwijderen” in ⋯ en geen datum bij Opgeslagen ·
+   ≤ 1023 (tablet staand) ook Annuleren weg, korte Verzenden en enkel het waarschuwingsicoon. */
+@media (max-width: 1439.98px) {
+    .gl-v2-co-actionbar .gl-v2-co-hint { display: none; }
+}
+@media (max-width: 1279.98px) {
+    .gl-v2-co-actionbar .gl-v2-co-bar-convert { display: none; }
+    .gl-v2-co-actionbar .gl-v2-co-menu-convert { display: flex; }
+    .gl-v2-co-actionbar .gl-v2-co-more-narrow { display: inline-flex; }
+    .gl-v2-co-saved-date { display: none; }
+}
+@media (max-width: 1023.98px) {
+    .gl-v2-co-actionbar .gl-v2-co-cancel { display: none; }
+    .gl-v2-co-actionbar .gl-v2-co-lg { display: none; }
+    .gl-v2-co-actionbar .gl-v2-co-sm { display: inline; }
+    .gl-v2-co-barwarn > span { display: none; }
+}
+/* Telefoon: de gedeelde balk wordt vast onderaan en mag daar wel over twee lijnen (status boven, knoppen eronder). */
+@media (max-width: 767.98px) {
+    .gl-v2-co-actionbar { flex-wrap: wrap; }
+    .gl-v2-co-actionbar .gl-v2-co-status { flex: 1 1 100%; }
+    .gl-v2-co-actionbar .gl-v2-co-hint { display: inline; overflow: hidden; text-overflow: ellipsis; }
+    .gl-v2-co-barwarn > span { display: inline; }
+}
+
+/* Topbalk (28r): op tablet valt de chip MEERWERK weg (de statuspil blijft) en wordt Voorbeeld-PDF een icoonknop. */
+@media (max-width: 1279.98px) {
+    .gl-v2-badge.gl-v2-co-hide-md { display: none; }
+}
+@media (max-width: 1023.98px) {
+    .gl-v2-btn.gl-v2-co-pdf-btn { width: 36px; padding: 0; justify-content: center; gap: 0; }
+    .gl-v2-btn.gl-v2-co-pdf-btn .gl-v2-co-pdf-label { display: none; }
+}
 .gl-v2 .gl-v2-form-actionbar .gl-v2-btn.is-saving { opacity: .75; pointer-events: none; }
 .gl-v2 .gl-v2-form-actionbar .gl-v2-btn.is-saving::after { content: ""; width: 12px; height: 12px; margin-left: 8px; box-sizing: border-box; border-radius: 50%; border: 2px solid currentColor; border-top-color: transparent; animation: gl-v2-co-spin .7s linear infinite; }
 @keyframes gl-v2-co-spin { to { transform: rotate(360deg); } }

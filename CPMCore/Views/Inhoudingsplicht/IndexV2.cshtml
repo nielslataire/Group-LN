@@ -73,7 +73,7 @@
                 </div>
                 <label class="gl-v2-field-box gl-v2-ip-search">
                     <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
-                    <input type="search" class="gl-v2-field-input" id="gl-v2-ip-q" placeholder="Zoek naam, activiteit of btw-nummer" aria-label="Aannemer zoeken" autocomplete="off" />
+                    <input type="search" class="gl-v2-field-input" id="gl-v2-ip-q" placeholder="Zoek naam of btw-nummer" aria-label="Aannemer zoeken" autocomplete="off" />
                 </label>
             </div>
 
@@ -90,7 +90,7 @@
                 <table class="gl-v2-ip-table gl-v2-ip-picktable">
                     <thead>
                         <tr>
-                            <th class="chk"><span class="gl-v2-check"><input type="checkbox" id="gl-v2-ip-all" aria-label="Alle zichtbare aannemers selecteren" /><label for="gl-v2-ip-all"></label></span></th>
+                            <th class="chk"><span class="gl-v2-check"><input type="checkbox" id="gl-v2-ip-all" aria-label="Alle gefilterde aannemers selecteren, ook op andere pagina's" /><label for="gl-v2-ip-all"></label></span></th>
                             <th>Aannemer</th>
                             <th>Werven</th>
                             <th class="nowrap">Laatste factuur</th>
@@ -107,13 +107,13 @@
                                 data-year="@(s.LastInvoice.HasValue && s.LastInvoice.Value >= yearAgo ? "1" : "0")"
                                 data-lastinvoice="@(s.LastInvoice?.ToString("yyyyMMdd") ?? "0")"
                                 data-warn="@(s.Last != null && (s.Last.HasObligation || s.Last.Failed) ? (s.Last.HasObligation ? "plicht" : "fout") : "")"
-                                data-search="@((s.Name + " " + s.Activity + " " + s.Identifier).ToLowerInvariant())"
+                                data-search="@((s.Name + " " + s.Identifier).ToLowerInvariant())"
                                 hidden>
                                 <td class="chk"><span class="gl-v2-check"><input type="checkbox" name="companyIds" value="@s.CompanyId" id="gl-v2-ip-cb-@s.CompanyId" @(Model.SelectedCompanyIds.Contains(s.CompanyId) ? "checked" : null) @(s.Identifier == null ? "disabled" : null) /><label for="gl-v2-ip-cb-@s.CompanyId"></label></span></td>
                                 <td>
                                     <label for="gl-v2-ip-cb-@s.CompanyId" class="gl-v2-ip-name">
                                         <strong>@s.Name</strong>
-                                        <span class="muted">@(string.IsNullOrEmpty(s.Activity) ? "" : s.Activity + " · ")@if (s.Identifier != null) { <span class="mono">@s.IdentifierDisplay</span> } else { <span class="err">geen btw- of ondernemingsnummer</span> }</span>
+                                        <span class="muted">@if (s.Identifier != null) { <span class="mono">@s.IdentifierDisplay</span> } else { <span class="err">geen btw- of ondernemingsnummer</span> }</span>
                                     </label>
                                 </td>
                                 <td>
@@ -137,6 +137,10 @@
                     </tbody>
                 </table>
             </div>
+            <nav class="gl-v2-ip-pager" id="gl-v2-ip-pager" aria-label="Paginering aannemers" hidden>
+                <span class="gl-v2-ip-pager-info" id="gl-v2-ip-pager-info" aria-live="polite"></span>
+                <ul class="gl-v2-ip-pager-nav" id="gl-v2-ip-pager-nav"></ul>
+            </nav>
             <div class="gl-v2-ip-empty" id="gl-v2-ip-norows" hidden>Geen aannemer gevonden. Staat hij niet bij je leveranciers? Plak zijn btw-nummer hieronder.</div>
 
             <div class="gl-v2-ip-extra">
