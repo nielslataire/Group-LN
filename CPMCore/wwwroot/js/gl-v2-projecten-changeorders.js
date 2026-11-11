@@ -15,7 +15,35 @@
 
     var tabs = document.getElementById("gl-v2-co2-tabs");
     var search = document.getElementById("search-term");
-    var selectedStatus = "open"; // "open" (nog werk aan) of "all"
+    var selectedStatus = "open"; // wijzigingsopdrachten: "open" (nog werk aan) of "all"
+
+    // Offertes: elke status van een offerte kan los aan- of uitgezet worden (concept, verzonden, verlopen, omgezet). Standaard alles behalve
+    // de omgezette offertes: die staan al als wijzigingsopdracht in de lijst. De standaard komt van de server (de knoppen die aan staan).
+    var quoteFilter = document.getElementById("quote-status-filter");
+    function quoteButtons() { return quoteFilter ? $$("button[data-qstatus]", quoteFilter) : []; }
+    function activeQuoteStatuses() { return quoteButtons().filter(function (b) { return b.classList.contains("is-active"); }).map(function (b) { return b.getAttribute("data-qstatus"); }); }
+    var defaultQuoteStatuses = activeQuoteStatuses();
+    function quoteFilterIsDefault() {
+        var now = activeQuoteStatuses();
+        return now.length === defaultQuoteStatuses.length && now.every(function (s) { return defaultQuoteStatuses.indexOf(s) !== -1; });
+    }
+    function resetQuoteFilter() {
+        quoteButtons().forEach(function (b) {
+            var on = defaultQuoteStatuses.indexOf(b.getAttribute("data-qstatus")) !== -1;
+            b.classList.toggle("is-active", on);
+            b.setAttribute("aria-pressed", on ? "true" : "false");
+        });
+    }
+    if (quoteFilter) {
+        quoteFilter.addEventListener("click", function (e) {
+            var btn = e.target.closest("button[data-qstatus]");
+            if (!btn) return;
+            var on = !btn.classList.contains("is-active");
+            btn.classList.toggle("is-active", on);
+            btn.setAttribute("aria-pressed", on ? "true" : "false");
+            applyFilters();
+        });
+    }
 
     // Welke rijen "open" zijn (nog werk aan) bepaalt de server (data-co2-open): een ingetrokken WO is weer
     // een concept, een gefactureerde wacht op betaling, een omgezette of verlopen offerte is afgesloten.
@@ -53,11 +81,15 @@
         var type = tabs ? ($(".gl-v2-tabbar-tab.is-active", tabs) || {}).getAttribute && $(".gl-v2-tabbar-tab.is-active", tabs).getAttribute("data-type") : "";
         var term = (search && search.value || "").trim().toLowerCase();
         var onlyOpen = selectedStatus === "open";
+        var quoteStatuses = activeQuoteStatuses();
 
         $$(".gl-v2-co2-row").forEach(function (row) {
             var matchesType = !type || row.getAttribute("data-co2-type") === type;
             var matchesSearch = !term || (row.getAttribute("data-co2-search") || "").indexOf(term) !== -1;
-            var matchesStatus = !onlyOpen || row.getAttribute("data-co2-open") === "true";
+            // Een offerte volgt de filter "Status offertes"; een wijzigingsopdracht de filter "Status wijzigingsopdrachten".
+            var matchesStatus = row.getAttribute("data-co2-type") === "offerte"
+                ? quoteStatuses.indexOf(row.getAttribute("data-co2-qstatus")) !== -1
+                : !onlyOpen || row.getAttribute("data-co2-open") === "true";
             row.hidden = !(matchesType && matchesSearch && matchesStatus);
         });
 
@@ -136,7 +168,11 @@
 
     function updateFilterChips() {
         var chips = [];
-        if (selectedStatus !== "open") chips.push({ type: "status", label: "Alles, ook afgerond" });
+        if (selectedStatus !== "open") chips.push({ type: "status", label: "Wijzigingsopdrachten: alles, ook afgerond" });
+        if (quoteFilter && !quoteFilterIsDefault()) {
+            var names = quoteButtons().filter(function (b) { return b.classList.contains("is-active"); }).map(function (b) { return b.getAttribute("data-label"); });
+            chips.push({ type: "qstatus", label: "Offertes: " + (names.length ? names.join(", ") : "geen status") });
+        }
         var chipList = document.getElementById("filters-chip-list");
         if (chipList) {
             chipList.innerHTML = "";
@@ -166,10 +202,12 @@
     document.addEventListener("click", function (e) {
         var chip = e.target.closest(".gl-v2-filters-chip");
         if (chip && chip.getAttribute("data-filter-type") === "status") { statusSelect.select("open"); return; }
+        if (chip && chip.getAttribute("data-filter-type") === "qstatus") { resetQuoteFilter(); applyFilters(); return; }
         if (e.target.closest(".gl-v2-filters-clear")) {
             if (search) search.value = "";
             statusSelect.select("open", false);
             selectedStatus = "open";
+            resetQuoteFilter();
             applyFilters();
         }
     });

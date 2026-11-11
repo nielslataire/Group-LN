@@ -17,8 +17,9 @@
     var prefix = $"rows[{index}]";
     var uid = Guid.NewGuid().ToString("N")[..8];
     var cellLocked = isLocked || Model.PriceLocked;
+    var minwerk = Model.IsMinwerk;
 }
-<tr class="gl-v2-co-row js-co-row @(Model.NeedsReview ? "is-needs-review" : "") @(Model.PriceLocked ? "is-price-locked" : "")" data-index="@index">
+<tr class="gl-v2-co-row js-co-row @(Model.NeedsReview ? "is-needs-review" : "") @(Model.PriceLocked ? "is-price-locked" : "") @(minwerk ? "is-minwerk" : "")" data-index="@index">
     <td class="gl-v2-co-handle-cell co-c-g">
         @* Sleepgreep (28a): slepen met muis/vinger, of focus + pijl omhoog/omlaag. De volgorde van de rijen
            in het formulier is de volgorde die bewaard wordt (ChangeOrderDetail.SortOrder, migratie 067). *@
@@ -27,8 +28,16 @@
     @* data-label: op smalle schermen wordt de rij een kaartje (zie gl-v2-projecten-changeorderdetail.css: tabel, dan twee lijnen, dan een kaartje per regel, 28r) en toont elke cel haar kolomnaam; co-c-* zijn de gebiedsnamen van dat raster. *@
     <td class="gl-v2-co-desc-td co-c-om" data-label="Omschrijving">
         <input type="hidden" name="@(prefix).id" class="js-co-id" value="@Model.Id" />
+        <input type="hidden" name="@(prefix).groupKey" class="js-co-groupkey" value="@Model.GroupKey" />
         <input type="hidden" name="@(prefix).sourceImagePath" class="js-co-sourceimage" value="@Model.SourceImagePath" />
-        <div class="gl-v2-field-box gl-v2-field-box-textarea gl-v2-co-descbox"><textarea class="gl-v2-field-input js-co-description" name="@(prefix).description" rows="1" maxlength="1000" @(isLocked ? "disabled" : "")>@Model.Description</textarea></div>
+        @* Meerwerk of minwerk (28v): de knop vóór de omschrijving wisselt tussen + en −. Minwerk wordt aan kostprijs verrekend (commissie vast op 0 %). *@
+        <input type="hidden" name="@(prefix).isMinwerk" class="js-co-isminwerk" value="@(minwerk ? "true" : "false")" />
+        <div class="gl-v2-co-descwrap">
+            <button type="button" class="gl-v2-co-pm js-co-sign @(minwerk ? "is-minus" : "")" aria-pressed="@(minwerk ? "true" : "false")" @(cellLocked ? "disabled" : "")
+                    title="@(minwerk ? "Minwerk: waarde die wegvalt, aan kostprijs verrekend. Klik voor meerwerk." : "Meerwerk: waarde die erbij komt. Klik voor minwerk.")"
+                    aria-label="Meerwerk of minwerk: nu @(minwerk ? "minwerk" : "meerwerk")"><span aria-hidden="true">@(minwerk ? "−" : "+")</span></button>
+            <div class="gl-v2-field-box gl-v2-field-box-textarea gl-v2-co-descbox"><textarea class="gl-v2-field-input js-co-description" name="@(prefix).description" rows="1" maxlength="1000" @(isLocked ? "disabled" : "")>@Model.Description</textarea></div>
+        </div>
         <span class="gl-v2-co-row-flags">
             @if (!string.IsNullOrWhiteSpace(Model.SourceImagePath))
             {
@@ -60,7 +69,7 @@
     </td>
     <td class="is-right co-c-aa" data-label="Aantal"><div class="gl-v2-field-box gl-v2-co-numbox is-qty"><input type="number" step="1" class="gl-v2-field-input js-co-number" name="@(prefix).number" value="@Model.Number" @(isLocked ? "disabled" : "") /></div></td>
     <td class="is-right co-c-pl" data-label="Prijs leverancier"><div class="gl-v2-field-box gl-v2-co-numbox is-money"><input type="text" inputmode="decimal" autocomplete="off" class="gl-v2-field-input is-num Currencymask js-co-price" name="@(prefix).price" value="@Model.Price.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" @(isLocked ? "disabled" : Model.PriceLocked ? "readonly" : "") /><span class="gl-v2-field-suffix">€</span></div></td>
-    <td class="is-right co-c-co" data-label="Commissie %"><div class="gl-v2-field-box gl-v2-co-numbox"><input type="number" step="0.01" min="0" class="gl-v2-field-input js-co-commission" name="@(prefix).commission" value="@Model.Commission.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" @(isLocked ? "disabled" : Model.PriceLocked ? "readonly" : "") /></div></td>
+    <td class="is-right co-c-co" data-label="Commissie %"><div class="gl-v2-field-box gl-v2-co-numbox"><input type="number" step="0.01" min="0" class="gl-v2-field-input js-co-commission" name="@(prefix).commission" value="@((minwerk && !Model.PriceLocked ? 0m : Model.Commission).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture))" @(isLocked ? "disabled" : (Model.PriceLocked || minwerk) ? "readonly" : "") /></div></td>
     <td class="is-right gl-v2-co-tabular co-c-pk js-co-priceklant" data-label="Prijs klant">—</td>
     @if (vatTypes.Count > 0)
     {
@@ -92,5 +101,54 @@
         {
             <button type="button" class="gl-v2-co-row-delete js-co-delete-row" title="Regel verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
         }
+    </td>
+</tr>
+@* Schadevergoeding op dit minwerk (28v): een interne rij ONDER het minwerk, zoals in het ontwerp (gouden vlak, "INTERN", percentage + snelkeuzes,
+   "Gaat naar", bedrag rechts). De klant ziet enkel het minwerk aan het eindbedrag, nooit de vergoeding of het percentage. Eigen <tr> direct na
+   de regel: slepen, verwijderen en hernummeren in de JS nemen ze mee. *@
+<tr class="gl-v2-co-sv-tr js-co-damage-row" data-index="@index" @(minwerk ? "" : "hidden")>
+    <td colspan="11" class="gl-v2-co-sv-cell">
+        <input type="hidden" class="js-co-dmg-to" name="@(prefix).damageGoesTo" value="@(Model.DamageGoesTo == 2 ? 2 : 1)" />
+        <div class="gl-v2-co-sv-addrow js-co-dmg-add-row" @(Model.HasDamage ? "hidden" : "")>
+            <button type="button" class="gl-v2-co-sv-link js-co-dmg-add" @(cellLocked ? "disabled" : "")><i class="ph ph-plus" aria-hidden="true"></i>Schadevergoeding op dit minwerk</button>
+            <span>klant krijgt dan maar een deel van de waarde terug</span>
+        </div>
+        <div class="gl-v2-co-sv-row js-co-dmg-box" role="group" aria-label="Schadevergoeding op dit minwerk" @(Model.HasDamage ? "" : "hidden")>
+            <span class="gl-v2-co-sv-hook" aria-hidden="true"><i class="ph ph-arrow-elbow-down-right"></i></span>
+            <div class="gl-v2-co-sv-main">
+                <div class="gl-v2-co-sv-t">
+                    <b>Schadevergoeding niet-uitgevoerde werken</b>
+                    <span class="gl-v2-co-sv-tag">INTERN</span>
+                    <span class="gl-v2-co-sv-kz">klant ziet enkel het minwerk aan <span class="js-co-dmg-back">—</span></span>
+                </div>
+                <div class="gl-v2-co-sv-ctl">
+                    <label class="gl-v2-co-sv-pct">
+                        <span class="visually-hidden">Percentage</span>
+                        <input type="text" inputmode="decimal" class="js-co-dmg-input" name="@(prefix).damagePercentage" value="@((Model.HasDamage ? Model.DamagePercentage : 0m).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))" @(cellLocked ? "readonly" : "") />
+                        <em>%</em>
+                    </label>
+                    <span class="gl-v2-co-sv-on">van <span class="js-co-dmg-base">—</span></span>
+                    <div class="gl-v2-co-sv-pre" role="group" aria-label="Snel kiezen">
+                        @foreach (var q in new[] { 10, 20, 25 })
+                        {
+                            <button type="button" class="js-co-dmg-quick" data-pct="@q" @(cellLocked ? "disabled" : "")>@q %</button>
+                        }
+                    </div>
+                    <span class="gl-v2-co-sv-sep" aria-hidden="true"></span>
+                    <span class="gl-v2-co-sv-lbl">Gaat naar</span>
+                    <div class="gl-v2-co-sv-seg" role="group" aria-label="Wie houdt de vergoeding">
+                        <button type="button" class="js-co-dmg-toggle @(Model.DamageGoesTo != 2 ? "is-active" : "")" data-to="1" aria-pressed="@(Model.DamageGoesTo != 2 ? "true" : "false")" @(cellLocked ? "disabled" : "")>Bouwheer</button>
+                        <button type="button" class="js-co-dmg-toggle @(Model.DamageGoesTo == 2 ? "is-active" : "")" data-to="2" aria-pressed="@(Model.DamageGoesTo == 2 ? "true" : "false")" @(cellLocked ? "disabled" : "")>Leverancier</button>
+                    </div>
+                </div>
+                <span class="gl-v2-co-sv-sub js-co-dmg-sub"></span>
+            </div>
+            <span class="gl-v2-co-sv-amt gl-v2-co-tabular js-co-dmg-amt">—</span>
+            @if (!cellLocked)
+            {
+                <button type="button" class="gl-v2-co-row-delete js-co-dmg-remove" title="Schadevergoeding weghalen" aria-label="Schadevergoeding weghalen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+            }
+            else { <span></span> }
+        </div>
     </td>
 </tr>

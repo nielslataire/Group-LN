@@ -58,6 +58,8 @@ public class ChangeOrderDetailV2Vm
     // Regels
     public List<ChangeOrderDetailRowV2> Rows { get; set; } = new();
     public bool HasRowsNeedingReview => Rows.Any(r => r.NeedsReview);
+    /// <summary>Regels per leverancier (28t); Rows blijft de platte lijst van alle regels in dezelfde volgorde.</summary>
+    public List<ChangeOrderGroupV2> Groups { get; set; } = new();
 
     // Facturatieplan
     public string FacturatieplanPreset { get; set; } = "laatste-schijf"; // laatste-schijf | voorschot-saldo | na-ondertekening | eigen
@@ -71,6 +73,8 @@ public class ChangeOrderDetailV2Vm
     public bool CanStartSigning { get; set; }
     public FacadeCore.Signing.CaseStatusView? ActiveSigningCase { get; set; }
     public FacadeCore.Signing.CaseStatusView? CompletedSigningCase { get; set; }
+    /// <summary>ProjectDocs.Id van het aan deze wijzigingsopdracht gekoppelde (handmatig geregistreerde) getekende exemplaar.</summary>
+    public int? SignedDocId { get; set; }
 
     public List<ChangeOrderHistoryItemV2> History { get; set; } = new();
 
@@ -106,6 +110,8 @@ public class ChangeOrderDetailV2Vm
     public string PlanSub { get; set; } = "";
     public string FooterText { get; set; } = "";
     public decimal DefaultCommission { get; set; }
+    /// <summary>Standaardpercentage voor een nieuwe schadevergoeding op minwerk (Instellingen › Facturatie › Minwerk).</summary>
+    public decimal DefaultDamagePercentage { get; set; } = 25m;
 
     // Offerte van de leverancier (28a) / Bron
     public bool HasQuoteSource { get; set; }
@@ -184,6 +190,40 @@ public class ChangeOrderInvoiceV2
     public DateOnly? DueDate { get; set; }
 }
 
+/// <summary>Een leveranciersgroep van de offerte/wijzigingsopdracht (design-handoff 28t/28u; ChangeOrderGroup, migratie 140).
+/// De klant ziet enkel <see cref="Title"/> (tussenkop) en de prijzen klant — nooit de leveranciersnaam, kost of commissie.</summary>
+public class ChangeOrderGroupV2
+{
+    /// <summary>Sleutel binnen het formulier ("g0", "g1", …): de regels verwijzen ernaar via rows[i].groupKey.</summary>
+    public string Key { get; set; } = "g0";
+    public int Id { get; set; }
+    public int SupplierCompanyId { get; set; }
+    public string SupplierName { get; set; } = "";
+    public string Initials { get; set; } = "";
+    /// <summary>Titel op de offerte (tussenkop voor de klant); standaard de activiteit van het contract.</summary>
+    public string Title { get; set; } = "";
+    public int ContractActivityId { get; set; }
+    /// <summary>"Contract C-2026-011 · Pleisterwerk" — leeg als er geen contract aan hangt.</summary>
+    public string ContractLabel { get; set; } = "";
+    /// <summary>Contracten (activiteiten) van deze leverancier in dit project, voor het koppelen.</summary>
+    public List<IdNameBO> ContractOptions { get; set; } = new();
+    public string? QuoteSupplierReference { get; set; }
+    public string? QuoteSourceFileName { get; set; }
+    public string? QuoteSourceUrl { get; set; }
+    public string? QuoteSourcePath { get; set; }
+    public bool QuoteSourceIsImage { get; set; }
+    public bool HasQuoteSource => !string.IsNullOrWhiteSpace(QuoteSourcePath) || !string.IsNullOrWhiteSpace(QuoteSupplierReference);
+    public bool InvoicedByUs { get; set; } = true;
+    public List<ChangeOrderDetailRowV2> Rows { get; set; } = new();
+    /// <summary>Wat de leverancier crediteert/rekent (kostprijs, intern): bij minwerk met schadevergoeding naar de bouwheer de volle waarde.</summary>
+    public decimal Cost => Rows.Sum(r => r.SupplierCost);
+    public decimal CommissionAmount => Rows.Sum(r => r.Sign * r.Number * r.Price * r.Commission / 100m);
+    /// <summary>Schadevergoeding die bij de bouwheer blijft (intern resultaat).</summary>
+    public decimal BouwheerDamage => Rows.Sum(r => r.BouwheerResult);
+    /// <summary>Wat de klant betaalt/terugkrijgt voor deze groep (excl. btw), na schadevergoeding.</summary>
+    public decimal SubtotalExcl => Rows.Sum(r => r.ClientExcl);
+}
+
 public class ChangeOrderDetailRowV2
 {
     public int Id { get; set; }
@@ -201,6 +241,32 @@ public class ChangeOrderDetailRowV2
     /// <summary>Enkel weergave (nooit vertrouwd bij het posten): een uit de offerte overgenomen WO-regel —
     /// prijs, commissie en btw liggen vast, aantal en omschrijving niet (ChangeOrderDetail.SourceDetailId).</summary>
     public bool PriceLocked { get; set; }
+    /// <summary>Minwerk (design-handoff 28v): de regel haalt waarde weg i.p.v. erbij te zetten. Aantal en prijs staan als positief getal in het
+    /// scherm (de knop vóór de omschrijving wisselt tussen meerwerk + en minwerk −); opgeslagen is Price negatief en Commission 0 (aan kostprijs
+    /// verrekend). Bij het laden volgt het uit het teken van aantal × prijs, ook voor oude regels met een min.</summary>
+    public bool IsMinwerk { get; set; }
+    public decimal Sign => IsMinwerk ? -1m : 1m;
+    /// <summary>Prijs klant per eenheid met teken (minwerk = negatief), vóór schadevergoeding (dat is de brutowaarde).</summary>
+    public decimal PriceKlant => Sign * Price * (1 + Commission / 100m);
+
+    // ── Schadevergoeding op minwerk (28v) ─────────────────────────────────────────────────────────────────
+    // In het scherm staat de WAARDE van het minwerk (Price = ValuePrice); de vergoeding is een interne subregel. Opgeslagen is ChangeOrderDetail.Price
+    // het eindbedrag voor de klant (-waarde x (1 - %)). Intern: DamageGoesTo 1 = bouwheer (leverancier crediteert de volle waarde), 2 = leverancier.
+    /// <summary>Percentage schadevergoeding (0 = geen); enkel bij minwerk.</summary>
+    public decimal DamagePercentage { get; set; }
+    /// <summary>1 = bouwheer, 2 = leverancier.</summary>
+    public byte DamageGoesTo { get; set; } = 1;
+    public bool HasDamage => IsMinwerk && DamagePercentage > 0;
+    /// <summary>De vergoeding als positief bedrag (verkleint het minwerk).</summary>
+    public decimal DamageAmount => HasDamage ? Math.Round(Number * Price * DamagePercentage / 100m, 2, MidpointRounding.AwayFromZero) : 0m;
+    /// <summary>Wat de klant hiervoor betaalt of terugkrijgt (excl. btw), na schadevergoeding: een minwerk is negatief.</summary>
+    public decimal ClientExcl => Sign * Number * Price * (1 + Commission / 100m) + DamageAmount;
+    /// <summary>Wat de leverancier rekent of crediteert (intern): bij "bouwheer" de volle waarde, bij "leverancier" enkel wat de klant terugkrijgt.</summary>
+    public decimal SupplierCost => Sign * Number * Price + (HasDamage && DamageGoesTo == 2 ? DamageAmount : 0m);
+    /// <summary>Resultaat van de bouwheer op deze regel: de vergoeding die niet naar de leverancier gaat.</summary>
+    public decimal BouwheerResult => HasDamage && DamageGoesTo != 2 ? DamageAmount : 0m;
+    /// <summary>Sleutel van de leveranciersgroep (ChangeOrderGroupV2.Key) waartoe de regel behoort; leeg = de eerste groep.</summary>
+    public string? GroupKey { get; set; }
 }
 
 public class ChangeOrderStageOptionV2
@@ -252,6 +318,8 @@ public class ChangeOrderDetailV2SaveModel
     public int ChangeOrderId { get; set; }
     public int ClientAccountId { get; set; }
     public int ContractActivityId { get; set; }
+    /// <summary>Vanuit 20c (QuoteIntakeV2): de groep waarvoor de leveranciersofferte ingelezen werd; 0 = de eerste groep.</summary>
+    public int GroupId { get; set; }
     public string Description { get; set; } = "";
     public string? Subject { get; set; }
     public bool InvoiceableByBouwheer { get; set; }
@@ -259,6 +327,8 @@ public class ChangeOrderDetailV2SaveModel
     public decimal? QuoteVatPercentage { get; set; }
     public string? ConditionsText { get; set; }
     public List<ChangeOrderDetailRowV2> Rows { get; set; } = new();
+    /// <summary>Leveranciersgroepen (groups[i].*, 28t). Leeg = oude vorm (20c, legacy): dan gelden ContractActivityId/QuoteSupplierReference/InvoiceableByBouwheer voor één groep.</summary>
+    public List<ChangeOrderGroupPostV2> Groups { get; set; } = new();
     public List<ChangeOrderTermV2> Terms { get; set; } = new();
     /// <summary>Enkel voor een NIEUWE rij: offerte aan de klant (true) of rechtstreeks een
     /// wijzigingsopdracht (false). Een bestaande rij verandert nooit van soort via Opslaan.</summary>
@@ -430,4 +500,19 @@ public class ChangeOrderSendV2Model
     public List<CPMCore.Models.Signing.SigningStartPartyVm> Parties { get; set; } = new();
     /// <summary>Vrij bericht voor de uitnodigingsmail (enkel bij "sign"; SigningCase.InvitationMessage, migratie 068).</summary>
     public string? InvitationMessage { get; set; }
+}
+
+/// <summary>Post-body van één leveranciersgroep (name="groups[i].…" in _ChangeOrderGroupV2.cshtml).</summary>
+public class ChangeOrderGroupPostV2
+{
+    /// <summary>Sleutel waarnaar rows[i].groupKey verwijst.</summary>
+    public string Key { get; set; } = "";
+    public int Id { get; set; }
+    public int SupplierCompanyId { get; set; }
+    public string? Title { get; set; }
+    public int ContractActivityId { get; set; }
+    public string? QuoteSupplierReference { get; set; }
+    public string? QuoteSourcePath { get; set; }
+    public string? QuoteSourceFileName { get; set; }
+    public bool InvoicedByUs { get; set; }   // checkbox: niet aangevinkt = niets gepost = false
 }

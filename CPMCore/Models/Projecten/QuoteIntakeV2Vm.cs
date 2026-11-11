@@ -24,6 +24,8 @@ public class QuoteIntakeV2Vm
     public string ClientName { get; set; } = "";
     public string? UnitName { get; set; }
     public int ContractActivityId { get; set; }
+    /// <summary>Meerdere leveranciers (28t): de groep (leverancier) waarvoor deze offerte ingelezen wordt; 0 = nog geen groep.</summary>
+    public int GroupId { get; set; }
     public List<IdNameBO> ContractActivities { get; set; } = new();
     public List<IdNameBO> ClientAccounts { get; set; } = new();
     public string? QuoteSupplierReference { get; set; }

@@ -314,6 +314,10 @@ namespace CPMCore.Controllers
 
         /// <summary>Voorstel voor de commissie op een nieuwe WO: wat laatst gebruikt werd in dit project
         /// (er bestaat geen projectinstelling voor) — 0 als er nog geen WO met commissie is.</summary>
+        /// <summary>Standaardpercentage voor een nieuwe schadevergoeding op minwerk (Instellingen › Facturatie › Minwerk), anders 25 %.</summary>
+        private async Task<decimal> DefaultDamagePercentageAsync() =>
+            await _db.ChangeOrderSettings.AsNoTracking().Where(s => s.Id == 1).Select(s => (decimal?)s.MinworkDamagePercentage).FirstOrDefaultAsync(HttpContext.RequestAborted) ?? 25m;
+
         private async Task<decimal> DefaultCommissionAsync(int projectId)
         {
             return await _db.ChangeOrderDetail.AsNoTracking()
@@ -392,6 +396,7 @@ namespace CPMCore.Controllers
         {
             var quote = await _db.ChangeOrder
                 .Include(c => c.ChangeOrderDetail)
+                .Include(c => c.Groups)
                 .FirstOrDefaultAsync(c => c.Id == model.ChangeOrderId);
             if (quote is null || !quote.IsQuote) return NotFound();
 
@@ -426,6 +431,7 @@ namespace CPMCore.Controllers
                 SourceChangeOrderId = quote.Id,
                 SourceKind = 3,
             };
+            var groupMap = CopyGroups(quote, order);
             var sortOrder = 0;
             foreach (var d in quote.ChangeOrderDetail.OrderBy(d => d.SortOrder ?? int.MaxValue).ThenBy(d => d.Id))
             {
@@ -441,6 +447,11 @@ namespace CPMCore.Controllers
                     VatTypeId = d.VatTypeId,
                     SourceImagePath = d.SourceImagePath,
                     SourceDetailId = d.Id,
+                    Invoicable = d.Invoicable,
+                    DamagePercentage = d.DamagePercentage,
+                    DamageGoesTo = d.DamageGoesTo,
+                    ValuePrice = d.ValuePrice,
+                    Group = d.GroupId.HasValue && groupMap.TryGetValue(d.GroupId.Value, out var convertedGroup) ? convertedGroup : null,
                     SortOrder = sortOrder++,
                 });
             }
@@ -933,6 +944,7 @@ namespace CPMCore.Controllers
         {
             var src = await _db.ChangeOrder.AsNoTracking()
                 .Include(c => c.ChangeOrderDetail)
+                .Include(c => c.Groups)
                 .Include(c => c.ChangeOrderPaymentTerm)
                 .FirstOrDefaultAsync(c => c.Id == changeOrderId);
             if (src is null)
@@ -1008,6 +1020,7 @@ namespace CPMCore.Controllers
                 SourceChangeOrderId = src.Id,
                 SourceKind = asVersion ? (byte)2 : (byte)1,
             };
+            var copiedGroups = CopyGroups(src, copy);
             var copyOrder = 0;
             foreach (var d in src.ChangeOrderDetail.OrderBy(d => d.SortOrder ?? int.MaxValue).ThenBy(d => d.Id))
             {
@@ -1023,6 +1036,12 @@ namespace CPMCore.Controllers
                     VatPercentage = vat ?? d.VatPercentage,
                     VatTypeId = sameClient ? d.VatTypeId : vatTypeId,
                     SourceImagePath = d.SourceImagePath,
+                    Invoicable = d.Invoicable,
+                    // De schadevergoeding (28v) is gekoppeld aan het eindbedrag in Price: bij een andere eenheid verandert enkel de btw, niet het bedrag.
+                    DamagePercentage = d.DamagePercentage,
+                    DamageGoesTo = d.DamageGoesTo,
+                    ValuePrice = d.ValuePrice,
+                    Group = d.GroupId.HasValue && copiedGroups.TryGetValue(d.GroupId.Value, out var copiedGroup) ? copiedGroup : null,
                 });
             }
             // Een offerte heeft geen facturatieplan.
@@ -1182,33 +1201,12 @@ namespace CPMCore.Controllers
             string? docMessage = null;
             if (file is { Length: > 0 })
             {
-                var stored = await UploadAssetToStorageAsync(file, "docs");
-                if (string.IsNullOrWhiteSpace(stored))
+                var storeError = await StoreSignedCopyAsync(co, file, signedOn.Value);
+                if (storeError != null)
                 {
-                    AddMessage("error", "Upload naar de opslag is mislukt; er is niets geregistreerd.", "Niet geregistreerd");
+                    AddMessage("error", storeError, "Niet geregistreerd");
                     return BackToChangeOrder(projectId, changeOrderId);
                 }
-                try { await GenerateDocThumbnailViaStorageAsync(stored); }
-                catch (Exception ex) { _logger.LogWarning(ex, "Thumbnail voor {File} kon niet gemaakt worden.", stored); }
-
-                // Een wijzigingsopdracht hoort bij "Offertes & bestellingen" (zoals bij de digitale ondertekening).
-                var folderId = await _db.DocumentFolders.AsNoTracking().Where(f => f.Code == "offertes").Select(f => f.Id).FirstOrDefaultAsync();
-                var name = ("Wijzigingsopdracht " + CoNo(co.Id) + " — " + (co.Description ?? "").Trim()).TrimEnd(' ', '—');
-                if (name.Length > 200) name = name[..200];
-                var up = await DocsSvc.Upload(new DocUploadDto
-                {
-                    ProjectId = projectId, Mode = "new", Name = name, FolderId = folderId == 0 ? null : folderId, DocDate = signedOn,
-                    StoredFilename = stored, OriginalFilename = file.FileName, SizeBytes = file.Length,
-                    Links = new List<DocLinkRef> { new() { Type = "client", Id = co.ClientAccountId } },
-                    Status = DocumentStatus.Getekend, UploaderKind = DocumentUploaderKind.Intern, UserId = DocUserId, UserName = DocUserName,
-                    Note = "Getekend exemplaar, handmatig geregistreerd (ondertekend op " + signedOn.Value.ToString("dd/MM/yyyy") + ")"
-                });
-                if (!up.Ok || !up.Id.HasValue)
-                {
-                    AddMessage("error", up.Message ?? "Het document kon niet bewaard worden; er is niets geregistreerd.", "Niet geregistreerd");
-                    return BackToChangeOrder(projectId, changeOrderId);
-                }
-                await _db.Database.ExecuteSqlInterpolatedAsync($"UPDATE dbo.ProjectDocs SET ChangeOrderId = {changeOrderId} WHERE Id = {up.Id.Value}");
                 docMessage = " Het getekende exemplaar staat bij de documenten.";
             }
 
@@ -1216,6 +1214,64 @@ namespace CPMCore.Controllers
             co.DateAgreement = signedOn;
             await _db.SaveChangesAsync();
             AddMessage("success", "De wijzigingsopdracht is geregistreerd als ondertekend op " + signedOn.Value.ToString("dd/MM/yyyy") + "." + (docMessage ?? " Voeg het getekende exemplaar toe bij de documenten van het project."), "Ondertekend");
+            return BackToChangeOrder(projectId, changeOrderId);
+        }
+
+        /// <summary>Bewaart het getekende exemplaar bij de documenten van het project (map "Offertes &amp; bestellingen")
+        /// en koppelt het via ProjectDocs.ChangeOrderId aan de wijzigingsopdracht. Geeft een foutmelding of null.</summary>
+        private async Task<string?> StoreSignedCopyAsync(ChangeOrder co, IFormFile file, DateOnly signedOn)
+        {
+            var stored = await UploadAssetToStorageAsync(file, "docs");
+            if (string.IsNullOrWhiteSpace(stored))
+                return "Upload naar de opslag is mislukt; er is niets geregistreerd.";
+            try { await GenerateDocThumbnailViaStorageAsync(stored); }
+            catch (Exception ex) { _logger.LogWarning(ex, "Thumbnail voor {File} kon niet gemaakt worden.", stored); }
+
+            // Een wijzigingsopdracht hoort bij "Offertes & bestellingen" (zoals bij de digitale ondertekening).
+            var folderId = await _db.DocumentFolders.AsNoTracking().Where(f => f.Code == "offertes").Select(f => f.Id).FirstOrDefaultAsync();
+            var name = ("Wijzigingsopdracht " + CoNo(co.Id) + " — " + (co.Description ?? "").Trim()).TrimEnd(' ', '—');
+            if (name.Length > 200) name = name[..200];
+            var up = await DocsSvc.Upload(new DocUploadDto
+            {
+                ProjectId = co.ProjectId, Mode = "new", Name = name, FolderId = folderId == 0 ? null : folderId, DocDate = signedOn,
+                StoredFilename = stored, OriginalFilename = file.FileName, SizeBytes = file.Length,
+                Links = new List<DocLinkRef> { new() { Type = "client", Id = co.ClientAccountId } },
+                Status = DocumentStatus.Getekend, UploaderKind = DocumentUploaderKind.Intern, UserId = DocUserId, UserName = DocUserName,
+                Note = "Getekend exemplaar, handmatig geregistreerd (ondertekend op " + signedOn.ToString("dd/MM/yyyy") + ")"
+            });
+            if (!up.Ok || !up.Id.HasValue)
+                return up.Message ?? "Het document kon niet bewaard worden; er is niets geregistreerd.";
+            await _db.Database.ExecuteSqlInterpolatedAsync($"UPDATE dbo.ProjectDocs SET ChangeOrderId = {co.Id} WHERE Id = {up.Id.Value}");
+            return null;
+        }
+
+        /// <summary>Een wijzigingsopdracht die al op ondertekend staat (bv. via "Akkoord ontvangen" zonder bestand)
+        /// achteraf voorzien van het getekende exemplaar.</summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [RequestSizeLimit(200_000_000)]
+        public async Task<IActionResult> ChangeOrderDetailV2AttachSigned(int projectId, int changeOrderId, IFormFile? file)
+        {
+            var co = await _db.ChangeOrder.FirstOrDefaultAsync(c => c.Id == changeOrderId);
+            if (co is null || co.ProjectId != projectId) return NotFound();
+            if (co.IsQuote || !co.DateAgreement.HasValue)
+            {
+                AddMessage("error", "Enkel een ondertekende wijzigingsopdracht kan een getekend exemplaar krijgen.", "Niet toegevoegd");
+                return BackToChangeOrder(projectId, changeOrderId);
+            }
+            if (file is not { Length: > 0 })
+            {
+                AddMessage("error", "Kies een bestand om toe te voegen.", "Niet toegevoegd");
+                return BackToChangeOrder(projectId, changeOrderId);
+            }
+            if (await _db.ProjectDocs.AsNoTracking().AnyAsync(d => d.ChangeOrderId == changeOrderId))
+            {
+                AddMessage("error", "Er hangt al een getekend exemplaar aan deze wijzigingsopdracht.", "Niet toegevoegd");
+                return BackToChangeOrder(projectId, changeOrderId);
+            }
+            var error = await StoreSignedCopyAsync(co, file, co.DateAgreement.Value);
+            if (error != null) AddMessage("error", error, "Niet toegevoegd");
+            else AddMessage("success", "Het getekende exemplaar staat nu bij de wijzigingsopdracht en bij de documenten van het project.", "Toegevoegd");
             return BackToChangeOrder(projectId, changeOrderId);
         }
 

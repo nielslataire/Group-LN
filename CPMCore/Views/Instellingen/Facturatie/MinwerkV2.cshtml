@@ -1,0 +1,39 @@
+@model decimal
+@using System.Globalization
+@using BOCore
+@using FacadeCore
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen › Facturatie › Minwerk · standaard schadevergoeding (design-handoff 28v). Eén veld: het percentage dat een nieuwe
+    schadevergoeding op een minwerk als voorstel krijgt. Per regel nog aan te passen in Offertes & wijzigingen.
+*@
+@{
+    ViewData["Title"] ??= "Minwerk";
+    ViewData["PageIcon"] = "ph ph-minus-circle";
+    var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsBillingCompanies);
+    var value = Model.ToString("0.##", CultureInfo.GetCultureInfo("nl-BE"));
+}
+<div class="gl-v2-card" style="max-width: 640px;">
+    <div class="gl-v2-card-header">
+        <span class="gl-v2-card-header-icon"><i class="ph ph-minus-circle" aria-hidden="true"></i></span>
+        <h2 class="gl-v2-card-header-title">Standaard schadevergoeding</h2>
+    </div>
+    <form method="post" action="@Url.Action("MinwerkOpslaan", "Instellingen")" class="gl-v2-card-body">
+        @Html.AntiForgeryToken()
+        <p class="gl-v2-field-help">Bij een minwerk krijgt de klant soms maar een deel van de waarde terug. Dit percentage is het voorstel voor een nieuwe schadevergoeding in Offertes &amp; wijzigingen. Per regel kan je het aanpassen.</p>
+        <div class="gl-v2-field">
+            <label class="gl-v2-field-label" for="minwerk-pct">Percentage</label>
+            <div class="gl-v2-field-box">
+                <input type="text" inputmode="decimal" class="gl-v2-field-input" id="minwerk-pct" name="percentage" value="@value" autocomplete="off" @(canWrite ? "" : "readonly") />
+                <span class="gl-v2-field-suffix">%</span>
+            </div>
+            <span class="gl-v2-field-help">van de waarde van het minwerk · de klant ziet enkel het eindbedrag</span>
+        </div>
+        @if (canWrite)
+        {
+            <div>
+                <button type="submit" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-check" aria-hidden="true"></i>Opslaan</button>
+            </div>
+        }
+    </form>
+</div>

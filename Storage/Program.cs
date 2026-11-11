@@ -63,6 +63,8 @@ var plansPath     = Path.Combine(rootPath, AssetFolders.Plans);
 var docsPath      = Path.Combine(rootPath, AssetFolders.Docs);
 var guaranteesPath = Path.Combine(rootPath, AssetFolders.Guarantees);
 var signingPath   = Path.Combine(rootPath, AssetFolders.Signing);
+var quotesPath    = Path.Combine(rootPath, AssetFolders.Quotes);
+var invoicesPath  = Path.Combine(rootPath, AssetFolders.Invoices);
 
 Directory.CreateDirectory(rootPath);
 Directory.CreateDirectory(picturesPath);
@@ -71,6 +73,8 @@ Directory.CreateDirectory(plansPath);
 Directory.CreateDirectory(docsPath);
 Directory.CreateDirectory(guaranteesPath);
 Directory.CreateDirectory(signingPath);
+Directory.CreateDirectory(quotesPath);
+Directory.CreateDirectory(invoicesPath);
 
 app.UseExceptionHandler(handler =>
 {
@@ -141,7 +145,7 @@ app.MapPost("/api/assets/upload", async (HttpRequest request, IOptions<AssetStor
 
     if (!AssetFolders.IsValid(folder))
     {
-        return Results.BadRequest(new { error = "Invalid folder. Allowed values: pictures, pictures/447, pictures/800, videos, plans, docs, guarantees." });
+        return Results.BadRequest(new { error = "Invalid folder. Allowed values: pictures, pictures/447, pictures/800, videos, plans, docs, guarantees, signing, quotes, invoices." });
     }
 
     var file = form.Files["file"];
@@ -316,7 +320,7 @@ app.MapPost("/api/assets/{folder}/{fileName}/sign", (HttpRequest request, string
     folder = folder.Trim().ToLowerInvariant();
     if (!AssetFolders.IsPrivate(folder))
     {
-        return Results.BadRequest(new { error = "Signed URL is only available for plans, docs and guarantees." });
+        return Results.BadRequest(new { error = "Signed URL is only available for plans, docs, guarantees, signing, quotes and invoices." });
     }
 
     if (!IsSafeFileName(fileName))
@@ -861,15 +865,17 @@ static class AssetFolders
     public const string Docs = "docs";
     public const string Guarantees = "guarantees";
     public const string Signing = "signing";
+    public const string Quotes = "quotes";
+    public const string Invoices = "invoices";
 
     public static bool IsValid(string folder) =>
         PhotoProcessor.IsWidthFolder(folder)
         || folder is PhotoProcessor.OriginalFolder or PhotoProcessor.MailFolder or Pictures or Pictures447 or Pictures800
             or PicturesNews or PicturesNewsOriginal or PicturesNews800
             or PicturesBlog
-            or Videos or Plans or Docs or Guarantees or Signing;
+            or Videos or Plans or Docs or Guarantees or Signing or Quotes or Invoices;
 
-    public static bool IsPrivate(string folder) => folder is Plans or Docs or Guarantees or Signing;
+    public static bool IsPrivate(string folder) => folder is Plans or Docs or Guarantees or Signing or Quotes or Invoices;
     public static bool IsPictures(string folder) => folder.StartsWith("pictures", StringComparison.Ordinal);
     public static bool IsVideos(string folder) => folder == Videos;
     public static bool IsPublicMedia(string folder) => IsPictures(folder) || IsVideos(folder);

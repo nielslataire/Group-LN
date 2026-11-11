@@ -6113,6 +6113,60 @@ en op 768px naar de telefoonvorm; het ontwerp zegt 1440px, 56px en weg onder 102
 bekeken op 1920/1366/1024/768 door de nieuwe klassen met een script op de oude pagina te zetten; de ⋯-menu-werking, de compacte stappenbalk uit de echte view en de leesweergave
 (vergrendelde fasen, 8 kolommen) moeten nog nagekeken worden.
 
+### Meerdere leveranciers in één offerte/WO — design-handoff punt 28t en 28u (11/11/2026)
+De leverancier hoort niet meer bij het document maar bij een **groep regels**. Eén document, één totaal voor de klant, één handtekening; de klant ziet enkel de
+groepstitel (tussenkop) en de prijs klant — **nooit** leveranciersnaam, kost of commissie (harde regel, ook op de PDF). Eén leverancier = één groep, zoals vroeger.
+
+**Data (migratie 140_ChangeOrderLeveranciersgroepen.sql, moet gedraaid zijn):** tabel `ChangeOrderGroup` (leverancier `SupplierCompanyId`, `Title`, `ContractActivityId`,
+bron `QuoteSupplierReference/QuoteSourcePath/QuoteSourceFileName`, `InvoicedByUs`, `SortOrder`) en `ChangeOrderDetail.GroupId`. Bestaande documenten kregen één groep met hun
+leverancier, bron en facturatie van vandaag. De oude kolommen op `ChangeOrder` (`ContractActivityId`, `QuoteSource*`, `Invoiceable`) **spiegelen de eerste groep**
+(`MirrorFirstGroup`, `Invoiceable` = minstens één groep via ons) zodat lijst, nummering, ondertekening, facturatie en de legacy-schermen ongewijzigd blijven werken.
+"Via ons gefactureerd" per groep zet `ChangeOrderDetail.Invoicable = false` op de regels van een groep die zelf factureert.
+
+**Scherm:** kaart Opdracht toont "Leveranciers" enkel als samenvatting (chips `.gl-v2-co-supplier-chip` met aantal regels, door `renderSupplierChips()` bijgehouden); kiezen doe
+je per groep. De kaart Regels (`Regels per leverancier`) bevat `#gl-v2-co-groups` met per leverancier `Partials/_ChangeOrderGroupV2.cshtml` (`.gl-v2-co-group`): kop met avatar
+(initialen), naam, "Op de offerte" (titel), Contract (keuzelijst van de contracten van díe leverancier in dit project; goud `.is-no-contract` + waarschuwingsregel zonder contract),
+bron (link of "Offerte koppelen of inlezen" → `QuoteIntakeV2?groupid=`) en de schakelaar "Via ons gefactureerd / Factureert zelf"; daaronder de gewone `.gl-v2-co-rows`-tabel en
+subtotaal. Onderaan één totaal voor de klant en intern de **kostprijs per leverancier** + de commissie samen (`.js-co-cost-line`).
+"Leverancier toevoegen" (28u) opent onder de laatste groep meteen het zoekvak (geen modal): `GlV2/_GlV2Combo` met `ChangeOrderDetailV2SupplierLookup` (eerst leveranciers met een
+contract in het project, dan de andere; groepskopjes); kiezen haalt via `ChangeOrderDetailV2AddGroup` een nieuwe groep op (titel = activiteit, contract automatisch gekoppeld bij
+precies één contract, via ons, één lege regel). Een leverancier die al een groep heeft wordt geweigerd met een melding. Een lege groep verdwijnt met de prullenbak (met bevestiging
+als er al regels in staan). Regels verplaats je door de greep naar een andere groep te slepen, of met pijl omhoog/omlaag (loopt over de groepsgrens).
+
+**Formulier:** `groups[i].*` (key, id, supplierCompanyId, title, contractActivityId, quoteSupplierReference, quoteSourcePath, quoteSourceFileName, invoicedByUs) naast `rows[i].*`; elke regel
+draagt `rows[i].groupKey`. JS nummert beide reeksen aaneensluitend (`renumberGroups`/`renumberRows`). Zonder `groups` (QuoteIntakeV2/20c) werkt `ChangeOrderDetailV2Save` op één groep
+(`ApplyLegacyGroupAsync`); bij meerdere groepen vervangt 20c enkel de regels van de groep uit `groupId`.
+
+**Facturatieplan:** factureert geen enkele groep via ons (`InvoicedByUs` overal uit), dan is de kaart `#gl-v2-co-plan-card` verborgen (server: `hidden`; JS `syncPlanVisibility()` bij de schakelaar) en bewaart
+`ChangeOrderDetailV2Save` geen termijnen (`SyncTerms` met een lege lijst); de 100 %-controle bij verzenden vervalt dan. Staat minstens één groep via ons, dan geldt het plan.
+
+**Verzenden waarschuwt, blokkeert niet** bij een groep zonder contract (toast); een groep zonder regels blokkeert wel. Het project toont "… zonder contract" zodra minstens één groep geen
+contract heeft. Omzetten (offerte → WO), kopie en nieuwe versie nemen de groepen mee (`CopyGroups`). De PDF (`ChangeOrderDocumentV2`) toont bij meer dan één groep de groepstitel als
+tussenkop (`TabelRegel.Groep`) met een subtotaal eronder; zonder titel "Deel n".
+
+**Responsive (container `cog` = `.gl-v2-co-groups`, zoals 28r):** > 900px kop op twee lijnen (leverancier, titel, contract, bron en verwijderen boven; de schakelaar eronder); ≤ 900px breekt de
+kop: leverancier en verwijderen boven, de velden onder elkaar; ≤ 560px minder zijmarge. De tabel in elke groep volgt de drie vormen van 28r (container `co-rows` per groep).
+
+**Minwerk (design-handoff 28v, migratie 141):** een regel is meerwerk (+) of minwerk (−); de knop `.gl-v2-co-sign` vóór de omschrijving wisselt. Het scherm toont aantal en prijs positief
+(`ChangeOrderDetailRowV2.IsMinwerk`, `Sign`, `PriceKlant`), prijs klant en totaal met min (`.is-minwerk`, danger-kleur). Opgeslagen blijft een minwerk een regel met **negatieve prijs**, positief aantal en
+**commissie 0 %** (aan kostprijs, veld vergrendeld), zodat alle bestaande sommen kloppen. Bestaande bedragen met een min: negatief aantal wisselt samen met de prijs van teken (migratie 141, product
+blijft gelijk); negatieve prijs = al een minwerk. De commissie van bestaande regels blijft staan tot het concept opnieuw wordt opgeslagen. Staat het netto totaal onder nul, dan staat er "Terug te
+betalen aan de klant" (bedrag zonder min). Regels uit de offerte (`PriceLocked`) houden hun teken en de knop is er uitgeschakeld. **Schadevergoeding op minwerk (rest van 28v: %, snelknoppen, "Gaat naar",
+afrekening, creditpost in Facturatie, standaard-% in Instellingen):** onder een minwerk opent "+ Schadevergoeding op dit minwerk" een eigen tabelrij (`.gl-v2-co-sv-tr`, gouden `.gl-v2-co-sv-row` zoals in het ontwerp, direct na de regel; JS (`dmgRow()`) verhuist, verwijdert en hernummert ze mee): %, snelknoppen 10/20/25, "Gaat naar"
+Bouwheer/Leverancier, bedrag). Opslag (migratie 142): `ChangeOrderDetail.Price` blijft het **eindbedrag voor de klant** (-waarde x (1 - %)), zodat PDF, portaal, facturatie en btw (op het eindbedrag) niets hoeven te weten;
+`ValuePrice` (waarde), `DamagePercentage` en `DamageGoesTo` (1 bouwheer, 2 leverancier) staan ernaast. Het scherm toont de waarde, de vergoeding als "+ bedrag", de groep telt de klantsubtotalen na vergoeding en intern
+de kostprijs = wat de leverancier crediteert (`SupplierCost`: bouwheer = volle waarde, leverancier = enkel wat de klant terugkrijgt). `#gl-v2-co-settle` = "Afrekening van het minwerk" (waarde, vergoeding, klant krijgt terug, leverancier
+crediteert, resultaat bouwheer). Het standaard-% staat in `ChangeOrderSettings` (één rij) en wordt ingesteld op Instellingen › Facturatie › Minwerk (`InstellingenController.Minwerk`, tegel "Minwerk"); het is globaal, niet per project.
+Open: creditpost in Facturatie bij een netto negatief document (het label "Terug te betalen aan de klant" staat er wel) en de nacalculatie (de vergoeding die bij de bouwheer blijft als opbrengst).
+**Valkuil:** de knopklasse van +/− is `.gl-v2-co-pm`; `.gl-v2-co-sign` hoort bij de kaart Ondertekening (een naamsbotsing brak die kaart).
+
+### Offertes & wijzigingen (lijst) — filter Status offertes (11/11/2026)
+Offertes volgen een eigen filter, "Status offertes" (`#quote-status-filter`, knoppen `data-qstatus` concept/verzonden/verlopen/omgezet met aantal, meerdere tegelijk): standaard alles behalve omgezet. De filter
+"Status wijzigingsopdrachten" (Open/Alles) geldt enkel nog voor wijzigingsopdrachten. De rij draagt `data-co2-qstatus` (`ChangeOrderRowV2.QuoteStatusKey`); een afwijking van de standaard toont een chip "Offertes: …".
+
+**Niet gedaan / nog open:** nacalculatie per groep (elke groep als Meerwerk klant op het contract van zijn eigen leverancier, 42c) en het "⋯ › Verplaatsen naar …"-menu op de regel
+(slepen en pijltjes werken wel); "nieuwe leverancier aanmaken in een zijpaneel" is een link naar Leveranciers › Nieuw (nieuw tabblad). **Niet in de browser getest**; de migratie moet eerst draaien.
+
 ## PWA — CPM op het beginscherm (iPhone Safari/Chrome iOS, Android Chrome)
 
 Bestanden (alles in `CPMCore`): `wwwroot/manifest.json`, `wwwroot/icons/` (180, 192, 512, 512-maskable; gemaakt uit het

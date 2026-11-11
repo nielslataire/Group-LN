@@ -54,6 +54,8 @@ public partial class cpmRunningContext : DbContext
     public virtual DbSet<ChangeOrder> ChangeOrder { get; set; }
 
     public virtual DbSet<ChangeOrderAttachment> ChangeOrderAttachment { get; set; }
+    public virtual DbSet<ChangeOrderGroup> ChangeOrderGroup { get; set; }
+    public virtual DbSet<ChangeOrderSettings> ChangeOrderSettings { get; set; }
 
     public virtual DbSet<ChangeOrderDetail> ChangeOrderDetail { get; set; }
 
@@ -750,6 +752,35 @@ public partial class cpmRunningContext : DbContext
                 .HasConstraintName("FK_ChangeOrderAttachment_ChangeOrder");
         });
 
+        modelBuilder.Entity<ChangeOrderGroup>(entity =>
+        {
+            entity.ToTable("ChangeOrderGroup");
+            entity.Property(e => e.Title).HasMaxLength(150);
+            entity.Property(e => e.QuoteSupplierReference).HasMaxLength(100);
+            entity.Property(e => e.QuoteSourcePath).HasMaxLength(300);
+            entity.Property(e => e.QuoteSourceFileName).HasMaxLength(260);
+            entity.HasOne(d => d.ChangeOrder).WithMany(p => p.Groups)
+                .HasForeignKey(d => d.ChangeOrderId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_ChangeOrderGroup_ChangeOrder");
+            entity.HasOne(d => d.SupplierCompany).WithMany()
+                .HasForeignKey(d => d.SupplierCompanyId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ChangeOrderGroup_Company");
+            entity.HasOne(d => d.ContractActivity).WithMany()
+                .HasForeignKey(d => d.ContractActivityId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ChangeOrderGroup_ContractActivity");
+        });
+
+        modelBuilder.Entity<ChangeOrderSettings>(entity =>
+        {
+            entity.ToTable("ChangeOrderSettings");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.MinworkDamagePercentage).HasColumnType("decimal(5, 2)");
+        });
+
         modelBuilder.Entity<ChangeOrderDetail>(entity =>
         {
             entity.Property(e => e.Id).HasColumnName("ID");
@@ -765,10 +796,17 @@ public partial class cpmRunningContext : DbContext
                 .HasDefaultValue(21.0000m)
                 .HasColumnType("decimal(19, 4)");
             entity.Property(e => e.SourceImagePath).HasMaxLength(300);
+            entity.Property(e => e.DamagePercentage).HasColumnType("decimal(5, 2)");
+            entity.Property(e => e.ValuePrice).HasColumnType("decimal(19, 4)");
 
             entity.HasOne(d => d.ChangeOrder).WithMany(p => p.ChangeOrderDetail)
                 .HasForeignKey(d => d.ChangeOrderId)
                 .HasConstraintName("FK_ChangeOrderDetail_ChangeOrder");
+
+            entity.HasOne(d => d.Group).WithMany(p => p.Details)
+                .HasForeignKey(d => d.GroupId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ChangeOrderDetail_ChangeOrderGroup");
         });
 
         modelBuilder.Entity<ChangeOrderPaymentTerm>(entity =>

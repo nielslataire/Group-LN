@@ -12,6 +12,8 @@ public partial class ChangeOrder
     public int ProjectId { get; set; }
     public virtual Project Project { get; set; }
     public virtual ICollection<ChangeOrderAttachment> Attachments { get; set; } = new List<ChangeOrderAttachment>();
+    /// <summary>Migratie 140 — de leveranciersgroepen (28t); de regels hangen via ChangeOrderDetail.GroupId aan een groep.</summary>
+    public virtual ICollection<ChangeOrderGroup> Groups { get; set; } = new List<ChangeOrderGroup>();
 
     public int? NumberProjectId { get; set; }
     /// <summary>Afkorting van de projectnaam in het nummer (migratie 139), vastgelegd bij het nummeren.</summary>

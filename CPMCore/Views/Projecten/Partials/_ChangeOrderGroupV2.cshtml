@@ -1,0 +1,267 @@
+@model CPMCore.Models.Projecten.ChangeOrderGroupV2
+@*
+    Offerte / wijzigingsopdracht met meerdere leveranciers (design-handoff 28t/28u) — één leveranciersgroep: kop met
+    leverancier, titel op de offerte, contract, bron en "via ons gefactureerd", daaronder de regels van die leverancier
+    (zelfde _ChangeOrderDetailRowV2 als altijd) en het subtotaal. Gebruikt door ChangeOrderDetailV2.cshtml (alle groepen) en
+    door ChangeOrderDetailV2AddGroup (AJAX "Leverancier toevoegen"). De klant ziet nooit leveranciersnaam, kost of commissie:
+    die staan enkel in dit interne scherm; op het document komt enkel de titel (tussenkop) en de prijs klant.
+    ViewData: Editable, GroupIndex, RowStart (index van de eerste regel in het formulier), VatKlant, VatTypes, IsLocked,
+    CanRemove (de groep mag weg zodra ze leeg is), IsQuote.
+*@
+@using System.Globalization
+@using BOCore
+@using CPMCore.Models.GlV2
+@using CPMCore.Models.Projecten
+@{
+    var editable = ViewData["Editable"] as bool? ?? false;
+    var isLocked = ViewData["IsLocked"] as bool? ?? false;
+    var isQuote = ViewData["IsQuote"] as bool? ?? false;
+    var canRemove = ViewData["CanRemove"] as bool? ?? false;
+    var groupIndex = ViewData["GroupIndex"] as int? ?? 0;
+    var rowStart = ViewData["RowStart"] as int? ?? 0;
+    var vatKlant = ViewData["VatKlant"] as decimal? ?? 21m;
+    var vatTypes = ViewData["VatTypes"] as List<VatTypeOptionV2> ?? new List<VatTypeOptionV2>();
+    var changeOrderId = ViewData["ChangeOrderId"] as int? ?? 0;
+    var projectId = ViewData["ProjectId"] as int? ?? 0;
+
+    var be = CultureInfo.GetCultureInfo("nl-BE");
+    string Eur(decimal v) => (v < 0 ? "− € " : "€ ") + Math.Abs(v).ToString("N2", be);
+    string Pct(decimal v) => v.ToString("0.##", be);
+
+    var prefix = $"groups[{groupIndex}]";
+    var uid = Guid.NewGuid().ToString("N")[..8];
+    var supplierLabel = string.IsNullOrWhiteSpace(Model.SupplierName) ? "Leverancier nog niet gekozen" : Model.SupplierName;
+    var titleOrName = string.IsNullOrWhiteSpace(Model.Title) ? supplierLabel : Model.Title;
+    var hasContract = Model.ContractActivityId > 0;
+    var rowCount = Model.Rows.Count;
+    var intakeUrl = Model.Id > 0 && changeOrderId > 0
+        ? Url.Action("QuoteIntakeV2", "Projecten", new { projectid = projectId, coid = changeOrderId, groupid = Model.Id })
+        : null;
+}
+<section class="gl-v2-co-group js-co-group@(hasContract ? "" : " is-no-contract")" data-key="@Model.Key" data-supplier="@Model.SupplierCompanyId" data-group-id="@Model.Id">
+    @if (editable)
+    {
+        <input type="hidden" class="js-co-g-key" name="@(prefix).key" value="@Model.Key" />
+        <input type="hidden" class="js-co-g-id" name="@(prefix).id" value="@Model.Id" />
+        <input type="hidden" class="js-co-g-supplier" name="@(prefix).supplierCompanyId" value="@Model.SupplierCompanyId" />
+        <input type="hidden" class="js-co-g-ref" name="@(prefix).quoteSupplierReference" value="@Model.QuoteSupplierReference" />
+        <input type="hidden" class="js-co-g-srcpath" name="@(prefix).quoteSourcePath" value="@Model.QuoteSourcePath" />
+        <input type="hidden" class="js-co-g-srcname" name="@(prefix).quoteSourceFileName" value="@Model.QuoteSourceFileName" />
+    }
+    <div class="gl-v2-co-group-head@(editable && Model.SupplierCompanyId == 0 ? " has-pick" : "")">
+        <span class="gl-v2-co-group-avatar" aria-hidden="true">@Model.Initials</span>
+        <div class="gl-v2-co-group-who@(editable && Model.SupplierCompanyId == 0 ? " is-pick" : "")">
+            @if (editable && Model.SupplierCompanyId == 0)
+            {
+                @* Groep zonder leverancier: kies hem nu of later; de regels blijven intussen gewoon in deze groep. Met label erboven en zonder
+                   regelteller eronder, zodat het zoekveld op dezelfde lijn staat als de andere velden van de kop. *@
+                <span class="gl-v2-field-label js-co-g-pick-label">Leverancier</span>
+                <span class="gl-v2-co-group-name js-co-g-name" hidden></span>
+                <div class="gl-v2-co-group-pick js-co-g-pick">
+                    <div class="gl-v2-field">
+                        @await Html.PartialAsync("GlV2/_GlV2Combo", new GlV2ComboVm
+                        {
+                            Name = "co_group_pick_" + uid, Id = "co-gp-" + uid, Placeholder = "Leverancier kiezen …", Icon = "ph-buildings",
+                            LookupUrl = Url.Action("ChangeOrderDetailV2SupplierLookup", "Projecten", new { projectId }),
+                            MinChars = 0, Avatar = true, ClearOnSelect = true
+                        })
+                    </div>
+                </div>
+            }
+            else
+            {
+                <span class="gl-v2-co-group-name js-co-g-name">@supplierLabel</span>
+            }
+            <span class="gl-v2-co-group-count js-co-group-count">@rowCount @(rowCount == 1 ? "regel" : "regels")</span>
+        </div>
+        <div class="gl-v2-co-group-field gl-v2-co-group-titlefield">
+            @if (editable)
+            {
+                <label class="gl-v2-field-label" for="co-gt-@uid">Op de offerte</label>
+                <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input js-co-g-title" id="co-gt-@uid" name="@(prefix).title" maxlength="150" value="@Model.Title" placeholder="Titel voor de klant, bv. Schilderwerken" /></div>
+            }
+            else
+            {
+                <span class="gl-v2-field-label">Op de offerte</span>
+                <div class="gl-v2-co-readout">@(string.IsNullOrWhiteSpace(Model.Title) ? "—" : Model.Title)</div>
+            }
+        </div>
+        <div class="gl-v2-co-group-field gl-v2-co-group-contractfield">
+            @if (editable)
+            {
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                {
+                    Name = prefix + ".contractActivityId", Id = "co-gc-" + uid, Label = "Contract", Bare = false,
+                    Placeholder = "Geen contract · koppelen", EmptyText = "Geen contract · koppelen",
+                    Value = hasContract ? Model.ContractActivityId.ToString() : "",
+                    Data = new Dictionary<string, string> { ["data-role"] = "group-contract" },
+                    Items = Model.ContractOptions.Select(a => new GlV2SelectItem { Value = a.ID.ToString(), Text = "Contract · " + a.Display }).ToList()
+                })
+            }
+            else
+            {
+                <span class="gl-v2-field-label">Contract</span>
+                <div class="gl-v2-co-readout">@(hasContract ? Model.ContractLabel : "Geen contract")</div>
+            }
+        </div>
+        <div class="gl-v2-co-group-field gl-v2-co-group-sourcefield">
+            <span class="gl-v2-field-label">Offerte leverancier</span>
+            @if (Model.HasQuoteSource)
+            {
+                <div class="gl-v2-co-readout gl-v2-co-group-source">
+                    @if (!string.IsNullOrWhiteSpace(Model.QuoteSourceUrl))
+                    {
+                        <a class="gl-v2-co-link" href="@Model.QuoteSourceUrl" target="_blank" rel="noopener">@(string.IsNullOrWhiteSpace(Model.QuoteSupplierReference) ? (Model.QuoteSourceFileName ?? "Bekijken") : Model.QuoteSupplierReference)</a>
+                    }
+                    else
+                    {
+                        @(string.IsNullOrWhiteSpace(Model.QuoteSupplierReference) ? "Ingelezen" : Model.QuoteSupplierReference)
+                    }
+                    <span class="gl-v2-co-group-source-tag">ingelezen</span>
+                </div>
+            }
+            else if (editable && intakeUrl != null)
+            {
+                <a class="gl-v2-co-link gl-v2-co-group-source" href="@intakeUrl">Offerte koppelen of inlezen</a>
+            }
+            else if (editable)
+            {
+                <span class="gl-v2-field-help">bewaar eerst, daarna kan je de offerte inlezen</span>
+            }
+            else
+            {
+                <div class="gl-v2-co-readout">—</div>
+            }
+        </div>
+        <label class="gl-v2-toggle-row gl-v2-co-group-invoiced" for="co-gi-@uid">
+            <input type="checkbox" class="gl-v2-toggle-switch js-co-g-invoiced" id="co-gi-@uid" name="@(prefix).invoicedByUs" value="true" @(Model.InvoicedByUs ? "checked" : "") @(editable ? "" : "disabled") />
+            <span class="gl-v2-toggle-text">
+                <span class="gl-v2-toggle-label">@(Model.InvoicedByUs ? "Via ons gefactureerd" : "Factureert zelf")</span>
+                <span class="gl-v2-toggle-hint">aan = wij factureren deze leverancier · uit = hij factureert zelf aan de klant</span>
+            </span>
+        </label>
+        @if (editable && canRemove)
+        {
+            <button type="button" class="gl-v2-co-row-delete gl-v2-co-group-remove js-co-remove-group" title="Leverancier verwijderen" aria-label="Leverancier @supplierLabel verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+        }
+    </div>
+    <p class="gl-v2-co-group-warn js-co-group-nocontract" @(hasContract ? "hidden" : "")><i class="ph ph-warning" aria-hidden="true"></i>Geen contract met @supplierLabel — het project toont een waarschuwing tot er een contract aan hangt.</p>
+
+    <div class="gl-v2-co-table-scroll gl-v2-co-rows-scroll">
+        @if (editable)
+        {
+            <table class="gl-v2-co-table gl-v2-co-rows">
+                <thead>
+                    <tr>
+                        <th class="gl-v2-co-handle-cell co-c-g"><span class="visually-hidden">Volgorde</span></th>
+                        <th class="co-c-om">Omschrijving</th>
+                        <th class="is-center co-c-me">Meetm.</th>
+                        <th class="is-center co-c-ee">Eenh.</th>
+                        <th class="is-right co-c-aa">Aantal</th>
+                        <th class="is-right co-c-pl">Prijs lev.</th>
+                        <th class="is-right co-c-co">Comm. %</th>
+                        <th class="is-right co-c-pk">Prijs klant</th>
+                        <th class="is-right co-c-bt">Btw</th>
+                        <th class="is-right co-c-to">Totaal</th>
+                        <th class="co-c-d"></th>
+                    </tr>
+                </thead>
+                <tbody class="js-co-group-body">
+                    @for (var i = 0; i < Model.Rows.Count; i++)
+                    {
+                        @* Indexer i.p.v. een collection-initializer: de doorgegeven ViewData bevat VatKlant/VatTypes/IsLocked al (Add zou een dubbele sleutel geven). *@
+                        var rowViewData = new ViewDataDictionary(ViewData);
+                        rowViewData["Index"] = rowStart + i;
+                        rowViewData["VatKlant"] = vatKlant;
+                        rowViewData["VatTypes"] = vatTypes;
+                        rowViewData["IsLocked"] = isLocked;
+                        @await Html.PartialAsync("Partials/_ChangeOrderDetailRowV2", Model.Rows[i], rowViewData)
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="11">
+                            <button type="button" class="gl-v2-co-add-term js-co-add-row"><i class="ph ph-plus" aria-hidden="true"></i>Regel toevoegen</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="7" class="is-right">Regel kost · intern</td>
+                        <td colspan="3" class="is-right gl-v2-co-tabular gl-v2-co-internal js-co-group-cost">@Eur(Model.Cost)</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td colspan="7" class="is-right">Commissie · intern</td>
+                        <td colspan="3" class="is-right gl-v2-co-tabular gl-v2-co-internal js-co-group-commission">@Eur(Model.CommissionAmount)</td>
+                        <td></td>
+                    </tr>
+                    <tr class="js-co-group-damage-line" @(Model.BouwheerDamage > 0 ? "" : "hidden")>
+                        <td colspan="7" class="is-right">Schadevergoeding bij de bouwheer · intern</td>
+                        <td colspan="3" class="is-right gl-v2-co-tabular gl-v2-co-internal js-co-group-damage">+ @Eur(Model.BouwheerDamage)</td>
+                        <td></td>
+                    </tr>
+                    <tr class="gl-v2-co-group-subtotal">
+                        <td colspan="7" class="is-right">Subtotaal <span class="js-co-group-subtitle">@titleOrName</span></td>
+                        <td colspan="3" class="is-right gl-v2-co-tabular js-co-group-subtotal">@Eur(Model.SubtotalExcl)</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        }
+        else
+        {
+            <table class="gl-v2-co-table gl-v2-co-rows is-readonly">
+                <thead>
+                    <tr>
+                        <th>Omschrijving</th>
+                        <th class="is-center">Eenh.</th>
+                        <th class="is-right">Aantal</th>
+                        <th class="is-right">Prijs lev.</th>
+                        <th class="is-right">Comm.</th>
+                        <th class="is-right">Prijs klant</th>
+                        <th class="is-right">Btw</th>
+                        <th class="is-right">Totaal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model.Rows)
+                    {
+                        var priceKlant = r.PriceKlant;   // met teken: een minwerk is negatief
+                        <tr class="@(r.IsMinwerk ? "is-minwerk" : "")">
+                            <td class="gl-v2-co-desc-cell co-c-om" data-label="Omschrijving">@(r.IsMinwerk ? "− " : "")@r.Description
+                                @if (r.HasDamage)
+                                {
+                                    <span class="gl-v2-co-damage-ro">Schadevergoeding @Pct(r.DamagePercentage) % · + @Eur(r.DamageAmount) · gaat naar @(r.DamageGoesTo == 2 ? "de leverancier" : "de bouwheer") · intern</span>
+                                }
+                            </td>
+                            <td class="is-center co-c-ee" data-label="Eenheid">@(((MeasurementUnit)r.MeasurementUnit).GetDisplayName())</td>
+                            <td class="is-right gl-v2-co-tabular co-c-aa" data-label="Aantal">@r.Number</td>
+                            <td class="is-right gl-v2-co-tabular gl-v2-co-internal co-c-pl" data-label="Prijs leverancier">@Eur(r.Sign * r.Price)</td>
+                            <td class="is-right gl-v2-co-tabular gl-v2-co-internal co-c-co" data-label="Commissie">@Pct(r.Commission) %</td>
+                            <td class="is-right gl-v2-co-tabular co-c-pk" data-label="Prijs klant">@Eur(priceKlant)</td>
+                            <td class="is-right gl-v2-co-tabular co-c-bt" data-label="Btw">@Pct(r.VatPercentage) %</td>
+                            <td class="is-right gl-v2-co-tabular co-c-to" data-label="Totaal">@Eur(r.Number * priceKlant)</td>
+                        </tr>
+                    }
+                    @if (Model.Rows.Count == 0)
+                    {
+                        <tr><td colspan="8" class="gl-v2-co-empty">Geen regels.</td></tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="6" class="is-right">Regel kost · intern</td>
+                        <td colspan="2" class="is-right gl-v2-co-tabular gl-v2-co-internal">@Eur(Model.Cost)</td>
+                    </tr>
+                    <tr>
+                        <td colspan="6" class="is-right">Commissie · intern</td>
+                        <td colspan="2" class="is-right gl-v2-co-tabular gl-v2-co-internal">@Eur(Model.CommissionAmount)</td>
+                    </tr>
+                    <tr class="gl-v2-co-group-subtotal">
+                        <td colspan="6" class="is-right">Subtotaal @titleOrName</td>
+                        <td colspan="2" class="is-right gl-v2-co-tabular">@Eur(Model.SubtotalExcl)</td>
+                    </tr>
+                </tfoot>
+            </table>
+        }
+    </div>
+</section>

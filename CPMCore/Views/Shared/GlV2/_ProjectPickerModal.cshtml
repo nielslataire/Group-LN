@@ -15,7 +15,8 @@
     var pinnedIds = Model?.PinnedProjectIds ?? new HashSet<int>();
 }
 <div class="modal fade gl-v2-modal-search gl-v2-modal-picker" id="glV2ProjectPickerModal" tabindex="-1" aria-hidden="true" aria-labelledby="glV2ProjectPickerModal-label"
-     data-quicksearch-url="@Url.Action("QuickSearch", "Projecten")" data-pin-url="@Url.Action("PinProject", "Home")">
+     data-quicksearch-url="@Url.Action("QuickSearch", "Projecten")" data-pin-url="@Url.Action("PinProject", "Home")" data-unpin-url="@Url.Action("UnpinProject", "Home")"
+     data-pinned-ids="@string.Join(",", pinnedIds)">
     <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
         <div class="modal-content">
             <div class="gl-v2-modal-search-header">
@@ -40,27 +41,25 @@
                         {
                             @foreach (var p in projects)
                             {
-                                <button type="button" class="gl-v2-modal-search-row js-gl-v2-picker-recent"
-                                        data-pid="@p.Id" data-pname="@p.Name" data-ploc="@(p.Postalcode?.Gemeente ?? "")" data-name="@p.Name.ToLowerInvariant()">
-                                    <span class="gl-v2-modal-search-row-avatar"><i class="ph ph-map-pin" aria-hidden="true"></i></span>
-                                    <span class="gl-v2-modal-search-row-name">@p.Name</span>
-                                    @if (pinnedIds.Contains(p.Id))
-                                    {
-                                        <i class="ph ph-push-pin gl-v2-modal-search-row-pin" aria-hidden="true" title="Vastgezet"></i>
-                                    }
-                                    <i class="ph ph-caret-right gl-v2-modal-search-row-chevron" aria-hidden="true"></i>
-                                </button>
+                                <div class="gl-v2-modal-search-row-wrap js-gl-v2-picker-recent" data-pid="@p.Id" data-name="@p.Name.ToLowerInvariant()">
+                                    <button type="button" class="gl-v2-modal-search-row js-gl-v2-picker-select"
+                                            data-pid="@p.Id" data-pname="@p.Name" data-ploc="@(p.Postalcode?.Gemeente ?? "")">
+                                        <span class="gl-v2-modal-search-row-avatar"><i class="ph ph-map-pin" aria-hidden="true"></i></span>
+                                        <span class="gl-v2-modal-search-row-name">@p.Name</span>
+                                    </button>
+                                    @{ var isPinned = pinnedIds.Contains(p.Id); }
+                                    <button type="button" class="gl-v2-modal-search-row-pinbtn js-gl-v2-picker-pin@(isPinned ? " is-pinned" : "")"
+                                            data-pid="@p.Id" data-pname="@p.Name" data-pinned="@(isPinned ? "true" : "false")"
+                                            title="@(isPinned ? "Klik om los te maken" : "Op dashboard vastzetten")">
+                                        <i class="ph ph-push-pin" aria-hidden="true"></i><span class="js-gl-v2-picker-pin-label">@(isPinned ? "Vastgezet" : "Vastzetten")</span>
+                                    </button>
+                                </div>
                             }
                         }
                     </div>
                     <span class="gl-v2-modal-search-results-label d-none" id="gl-v2-picker-extra-label">Andere projecten</span>
                     <div class="gl-v2-modal-search-list" id="gl-v2-picker-extra-list"></div>
                 </div>
-            </div>
-            <div class="gl-v2-modal-search-footer">
-                <button type="button" class="gl-v2-modal-search-pin-btn" id="gl-v2-picker-pin-btn">
-                    <i class="ph ph-push-pin" aria-hidden="true"></i>Dit project vastzetten
-                </button>
             </div>
         </div>
     </div>

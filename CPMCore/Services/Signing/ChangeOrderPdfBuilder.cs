@@ -53,6 +53,7 @@ public sealed class ChangeOrderPdfBuilder
     {
         var co = await _db.ChangeOrder.AsNoTracking()
             .Include(c => c.ChangeOrderDetail)
+            .Include(c => c.Groups).ThenInclude(g => g.ContractActivity).ThenInclude(a => a.Activity)
             .Include(c => c.ChangeOrderPaymentTerm)
             .Include(c => c.ClientAccount).ThenInclude(ca => ca.PostalCode)
             .Include(c => c.Project).ThenInclude(p => p.PostalCode)
@@ -193,7 +194,9 @@ public sealed class ChangeOrderPdfBuilder
             Terms = terms,
             Signers = signers,
             AllSignersRequired = allSignersRequired,
-            Lines = co.ChangeOrderDetail.OrderBy(d => d.SortOrder ?? int.MaxValue).ThenBy(d => d.Id).Select(d => new ChangeOrderPdfLine
+            // Eerst per leveranciersgroep (in de volgorde van de groepen), daarbinnen de volgorde van het scherm: zo staat elke groep als één blok
+            // op het document, ook als de regels ooit in een andere volgorde bewaard werden.
+            Lines = co.ChangeOrderDetail.OrderBy(d => GroupOrderOf(co, d)).ThenBy(d => d.SortOrder ?? int.MaxValue).ThenBy(d => d.Id).Select(d => new ChangeOrderPdfLine
             {
                 Description = d.Description,
                 UnitLabel = d.MeasurementUnit.HasValue && Enum.IsDefined(typeof(MeasurementUnit), d.MeasurementUnit.Value) ? ((MeasurementUnit)d.MeasurementUnit.Value).GetDisplayName() : null,
@@ -203,6 +206,8 @@ public sealed class ChangeOrderPdfBuilder
                 CommissionPercentage = d.Commission,
                 VatPercentage = d.VatPercentage ?? co.QuoteVatPercentage,
                 VatTypeId = d.VatTypeId,
+                // Meerdere leveranciers (28t): de klant ziet de groepstitel als tussenkop, nooit de leverancier. Enkel bij meer dan één groep.
+                GroupTitle = co.Groups.Count > 1 ? GroupTitleFor(co, d) : null,
             }).ToList(),
             IssuerCompanyId = issuer?.Id,
             IssuerCompanyName = issuer?.Name,
@@ -341,6 +346,26 @@ public sealed class ChangeOrderPdfBuilder
 
         var fontFamily = GroupLnFonts.EnsureAvenirRegistered(_env, _logger);
         return new ChangeOrderDocument(model, logo, fontFamily).GeneratePdf();
+    }
+
+    /// <summary>De tussenkop voor een regel: de titel van haar leveranciersgroep (28t), anders "Deel n". Nooit de leveranciersnaam.</summary>
+    private static string GroupTitleFor(ChangeOrder co, ChangeOrderDetail d)
+    {
+        var ordered = co.Groups.OrderBy(g => g.SortOrder).ThenBy(g => g.Id).ToList();
+        var group = ordered.FirstOrDefault(g => g.Id == d.GroupId) ?? ordered[0];
+        if (!string.IsNullOrWhiteSpace(group.Title)) return group.Title.Trim();
+        // Geen eigen titel: de activiteit van het contract (zoals het scherm voorstelt), anders "Deel n".
+        var activity = group.ContractActivity?.Activity?.Omschrijving;
+        return !string.IsNullOrWhiteSpace(activity) ? activity.Trim() : "Deel " + (ordered.IndexOf(group) + 1);
+    }
+
+    /// <summary>Plaats van de groep van een regel in de volgorde van de groepen (regels zonder bekende groep horen bij de eerste).</summary>
+    private static int GroupOrderOf(ChangeOrder co, ChangeOrderDetail d)
+    {
+        if (co.Groups.Count <= 1) return 0;
+        var ordered = co.Groups.OrderBy(g => g.SortOrder).ThenBy(g => g.Id).ToList();
+        var index = ordered.FindIndex(g => g.Id == d.GroupId);
+        return index < 0 ? 0 : index;
     }
 
     public static string FileName(ChangeOrderPdfModel model)

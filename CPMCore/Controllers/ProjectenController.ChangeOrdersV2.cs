@@ -120,6 +120,7 @@ namespace CPMCore.Controllers
                     row.SubTextIsWarning = !isConverted && status == ChangeOrderStatus.Verlopen;
                     row.Hint = isConverted ? null : co.DateSendToClient.HasValue ? "wacht op akkoord klant" : "nog te verzenden";
                     row.IsOpen = !isConverted && status != ChangeOrderStatus.Verlopen;
+                    row.QuoteStatusKey = isConverted ? "omgezet" : status == ChangeOrderStatus.Verlopen ? "verlopen" : co.DateSendToClient.HasValue ? "verzonden" : "concept";
                     vm.Quotes.Add(row);
                 }
                 else

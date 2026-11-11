@@ -479,7 +479,8 @@ namespace CPMCore.Controllers
             // Offertes en wijzigingsopdrachten zonder contract (het contract is optioneel, migratie 131): waarschuwing
             // tot ze gekoppeld zijn. Een omgezette offerte telt niet mee — de wijzigingsopdracht ervan staat er al.
             var noContract = await _db.ChangeOrder.AsNoTracking()
-                .Where(c => c.ProjectId == projectid && c.ContractActivityId == null && !c.QuoteConvertedAt.HasValue)
+                // Meerdere leveranciers (migratie 140): ook een groep zonder contract telt; de eerste groep spiegelt ContractActivityId.
+                .Where(c => c.ProjectId == projectid && (c.ContractActivityId == null || c.Groups.Any(g => g.ContractActivityId == null)) && !c.QuoteConvertedAt.HasValue)
                 .OrderBy(c => c.Id)
                 .Select(c => new { c.Id, c.IsQuote, c.Description, c.NumberYear, c.NumberSeq, c.VersionNo, c.NumberProjectTag })
                 .ToListAsync();

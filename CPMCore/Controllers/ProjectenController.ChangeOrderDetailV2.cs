@@ -48,6 +48,10 @@ namespace CPMCore.Controllers
                     .Include(c => c.ChangeOrderDetail)
                     .Include(c => c.ChangeOrderPaymentTerm)
                     .Include(c => c.ContractActivity).ThenInclude(a => a.Contract).ThenInclude(k => k.Company)
+                    .Include(c => c.ContractActivity).ThenInclude(a => a.Activity)
+                    .Include(c => c.Groups).ThenInclude(g => g.SupplierCompany)
+                    .Include(c => c.Groups).ThenInclude(g => g.ContractActivity).ThenInclude(a => a.Activity)
+                    .Include(c => c.Groups).ThenInclude(g => g.ContractActivity).ThenInclude(a => a.Contract).ThenInclude(k => k.Company)
                     .FirstOrDefaultAsync(c => c.Id == coid);
                 if (co is null) return NotFound();
             }
@@ -130,6 +134,11 @@ namespace CPMCore.Controllers
                 if (latestCase != null) facts.LatestCase[co.Id] = latestCase;
             }
 
+            if (co != null && !isQuote)
+                vm.SignedDocId = await _db.ProjectDocs.AsNoTracking()
+                    .Where(d => d.ChangeOrderId == co.Id)
+                    .OrderByDescending(d => d.Id).Select(d => (int?)d.Id).FirstOrDefaultAsync();
+
             if (co != null)
             {
                 vm.Rows = co.ChangeOrderDetail.OrderBy(d => d.SortOrder ?? int.MaxValue).ThenBy(d => d.Id).Select(d => new ChangeOrderDetailRowV2
@@ -138,8 +147,14 @@ namespace CPMCore.Controllers
                     Description = d.Description,
                     MeasurementType = d.MeasurementType ?? (int)MeasurementType.Vermoedelijk,
                     MeasurementUnit = d.MeasurementUnit ?? (int)MeasurementUnit.stuk,
-                    Number = d.Number,
-                    Price = d.Price,
+                    // Minwerk (28v): het teken staat in de knop, aantal en prijs tonen we als positief getal. Ook oude regels met een min
+                    // (negatief aantal of negatieve prijs) zijn zo een minwerk.
+                    IsMinwerk = d.Number * d.Price < 0 || d.DamagePercentage > 0,
+                    Number = Math.Abs(d.Number),
+                    // Met schadevergoeding (28v) staat in het scherm de WAARDE van het minwerk; opgeslagen is Price het eindbedrag voor de klant.
+                    Price = d.DamagePercentage > 0 && d.ValuePrice.HasValue ? Math.Abs(d.ValuePrice.Value) : Math.Abs(d.Price),
+                    DamagePercentage = d.DamagePercentage ?? 0m,
+                    DamageGoesTo = d.DamageGoesTo ?? (byte)1,
                     Commission = d.Commission,
                     VatPercentage = d.VatPercentage ?? vm.VatKlantPercentage,
                     VatTypeId = d.VatTypeId,
@@ -148,6 +163,9 @@ namespace CPMCore.Controllers
                     // Uit de offerte overgenomen WO-regel: prijs, commissie en btw liggen vast (migratie 069).
                     PriceLocked = !co.IsQuote && d.SourceDetailId.HasValue,
                 }).ToList();
+                // Leveranciersgroepen (28t): de regels per groep; Rows blijft de platte lijst in groepsvolgorde.
+                vm.Groups = await BuildGroupsAsync(co, vm.Rows, projectid);
+                if (vm.Groups.Count > 0) vm.Rows = vm.Groups.SelectMany(g => g.Rows).ToList();
 
                 var totalExcl = co.ChangeOrderDetail.Sum(d => d.Number * d.Price * (1 + d.Commission / 100m));
                 vm.CostTotal = co.ChangeOrderDetail.Sum(d => d.Number * d.Price);
@@ -217,6 +235,7 @@ namespace CPMCore.Controllers
                 vm.Attachments = await LoadAttachmentsAsync(co.Id, HttpContext.RequestServices.GetRequiredService<DocStorageService>());
 
             vm.DefaultCommission = vm.Rows.Count > 0 ? vm.Rows[0].Commission : await DefaultCommissionAsync(projectid);
+            vm.DefaultDamagePercentage = await DefaultDamagePercentageAsync();
 
             if (isQuote)
             {
@@ -826,6 +845,7 @@ namespace CPMCore.Controllers
             {
                 co = await _db.ChangeOrder
                     .Include(c => c.ChangeOrderDetail)
+                    .Include(c => c.Groups)
                     .Include(c => c.ChangeOrderPaymentTerm)
                     .FirstOrDefaultAsync(c => c.Id == model.ChangeOrderId);
                 if (co is null) return NotFound();
@@ -858,14 +878,14 @@ namespace CPMCore.Controllers
             // ze was; nieuwe regels krijgen de commissie van de rij en de btw van de eenheid.
             var intakeOnExisting = fromIntake && isExisting;
 
-            co.ContractActivityId = model.ContractActivityId > 0 ? model.ContractActivityId : null;
-            co.QuoteSupplierReference = string.IsNullOrWhiteSpace(model.QuoteSupplierReference) ? null : model.QuoteSupplierReference.Trim();
+            // Leveranciers (28t): per GROEP regels. De oude kolommen op het document spiegelen de eerste groep (MirrorFirstGroup).
+            // Een formulier zonder groepen (20c, oude vorm) werkt op één groep: de eerste, of die waarvoor 20c inlas.
+            var legacyGroups = model.Groups == null || model.Groups.Count == 0;
+            Dictionary<string, ChangeOrderGroup> groupByKey = null;
+            ChangeOrderGroup scopeGroup = null;
+            if (legacyGroups) scopeGroup = await ApplyLegacyGroupAsync(co, model, fromIntake);
+            else groupByKey = await SyncGroupsAsync(co, model.Groups);
             co.QuoteVatPercentage = model.QuoteVatPercentage;
-            if (!string.IsNullOrWhiteSpace(model.QuoteSourcePath))
-            {
-                co.QuoteSourcePath = model.QuoteSourcePath.Trim();
-                co.QuoteSourceFileName = string.IsNullOrWhiteSpace(model.QuoteSourceFileName) ? null : model.QuoteSourceFileName.Trim();
-            }
 
             if (!intakeOnExisting)
             {
@@ -876,7 +896,6 @@ namespace CPMCore.Controllers
             {
                 var subject = (model.Subject ?? "").Trim();
                 co.Subject = subject.Length == 0 ? null : (subject.Length > 150 ? subject[..150] : subject);
-                co.Invoiceable = model.InvoiceableByBouwheer;
                 co.ChangeOrderConditions = model.ConditionsText;
                 if (co.IsQuote && ChangeOrderStandardTexts.IsQuoteStandardOrEmpty(model.ConditionsText))
                     co.ChangeOrderConditions = ChangeOrderStandardTexts.QuoteConditions(model.ExpirationDate ?? co.ExpirationDate);
@@ -897,8 +916,11 @@ namespace CPMCore.Controllers
             var postedVatTypeIds = (model.Rows ?? new List<ChangeOrderDetailRowV2>()).Where(r => r.VatTypeId.HasValue).Select(r => r.VatTypeId.Value).Distinct().ToList();
             var vatTypePercentages = postedVatTypeIds.Count == 0 ? new Dictionary<int, decimal>()
                 : await _db.Vattype.AsNoTracking().Where(v => postedVatTypeIds.Contains(v.Id)).ToDictionaryAsync(v => v.Id, v => v.BasePercentage);
-            SyncRows(co, model.Rows ?? new List<ChangeOrderDetailRowV2>(), fromIntake, intakeCommission, intakeVat, vatTypePercentages, intakeVatTypeId);
-            if (!fromIntake && !co.IsQuote) SyncTerms(co, model.Terms ?? new List<ChangeOrderTermV2>());
+            SyncRows(co, model.Rows ?? new List<ChangeOrderDetailRowV2>(), fromIntake, intakeCommission, intakeVat, vatTypePercentages, intakeVatTypeId,
+                groupByKey, scopeGroup, scopeToGroup: legacyGroups && fromIntake && co.Groups.Count > 1);
+            // Factureren alle leveranciers zelf (geen enkele groep via ons), dan is er niets door ons te factureren: geen facturatieplan.
+            if (!fromIntake && !co.IsQuote)
+                SyncTerms(co, co.Groups.Count > 0 && co.Groups.All(g => !g.InvoicedByUs) ? new List<ChangeOrderTermV2>() : model.Terms ?? new List<ChangeOrderTermV2>());
 
             co.SavedAt = DateTime.Now;
             await _db.SaveChangesAsync();
@@ -912,14 +934,24 @@ namespace CPMCore.Controllers
         /// <param name="preserveInternal">Vanuit 20c: de intake-rijen kennen geen commissie/btw — bestaande
         /// regels houden hun waarden, nieuwe krijgen de meegegeven standaard.</param>
         private void SyncRows(ChangeOrder co, List<ChangeOrderDetailRowV2> posted, bool preserveInternal = false, decimal defaultCommission = 0m, decimal defaultVat = 21m,
-            IReadOnlyDictionary<int, decimal> vatTypePercentages = null, int? defaultVatTypeId = null)
+            IReadOnlyDictionary<int, decimal> vatTypePercentages = null, int? defaultVatTypeId = null,
+            IReadOnlyDictionary<string, ChangeOrderGroup> groupByKey = null, ChangeOrderGroup defaultGroup = null, bool scopeToGroup = false)
         {
+            // Opgelet bij 20c op een document met meerdere groepen (scopeToGroup): enkel de regels van die ene groep worden vervangen.
+            bool InScope(ChangeOrderDetail d) => !scopeToGroup || defaultGroup is null || d.Group == defaultGroup || (defaultGroup.Id > 0 && d.GroupId == defaultGroup.Id);
             var postedIds = posted.Where(r => r.Id > 0).Select(r => r.Id).ToHashSet();
-            foreach (var stale in co.ChangeOrderDetail.Where(d => d.Id > 0 && !postedIds.Contains(d.Id)).ToList())
+            foreach (var stale in co.ChangeOrderDetail.Where(d => d.Id > 0 && !postedIds.Contains(d.Id) && InScope(d)).ToList())
                 _db.ChangeOrderDetail.Remove(stale);
 
             // De volgorde van het formulier ís de volgorde (sleepgreep, 28a) — ook het document volgt ze.
-            var sortOrder = 0;
+            var sortOrder = scopeToGroup ? co.ChangeOrderDetail.Where(d => !InScope(d)).Select(d => d.SortOrder ?? -1).DefaultIfEmpty(-1).Max() + 1 : 0;
+            var firstGroup = defaultGroup ?? co.Groups.OrderBy(g => g.SortOrder).FirstOrDefault();
+            // Regels van dezelfde leverancier horen aaneen: het volgnummer volgt eerst de groep, dan de volgorde in het formulier (stabiel sorteren).
+            // Anders kan een regel die later in een bestaande groep werd toegevoegd achteraan belanden en het document in stukken breken.
+            if (groupByKey != null)
+                posted = posted.Select((r, i) => (r, i))
+                    .OrderBy(x => x.r.GroupKey != null && groupByKey.TryGetValue(x.r.GroupKey, out var g0) ? g0.SortOrder : int.MaxValue)
+                    .ThenBy(x => x.i).Select(x => x.r).ToList();
             foreach (var r in posted)
             {
                 if (string.IsNullOrWhiteSpace(r.Description)) continue;
@@ -935,7 +967,8 @@ namespace CPMCore.Controllers
                 // \r\n (textarea-submit) → \n: één vorm in de databank, QuestPDF/weergave rekenen op \n.
                 var desc = r.Description.Replace("\r\n", "\n").Trim();
                 entity.Description = desc.Length > 1000 ? desc[..1000] : desc;
-                entity.Number = r.Number;
+                // Minwerk (28v): positief aantal, negatieve prijs, commissie 0 (aan kostprijs). Een uit de offerte overgenomen regel houdt haar teken.
+                entity.Number = preserveInternal ? r.Number : entity.SourceDetailId.HasValue && !co.IsQuote ? (entity.Number < 0 ? -1 : 1) * Math.Abs(r.Number) : Math.Abs(r.Number);
                 // Een uit de offerte overgenomen WO-regel (SourceDetailId, migratie 069): de prijs ligt vast —
                 // wat het formulier ook postte, enkel aantal en omschrijving worden overgenomen.
                 var priceLocked = !co.IsQuote && entity.SourceDetailId.HasValue;
@@ -943,10 +976,26 @@ namespace CPMCore.Controllers
                 {
                     entity.MeasurementType = r.MeasurementType;
                     entity.MeasurementUnit = r.MeasurementUnit;
-                    entity.Price = r.Price;
+                    entity.Price = preserveInternal ? r.Price : (r.IsMinwerk ? -Math.Abs(r.Price) : Math.Abs(r.Price));
                     if (!preserveInternal)
                     {
-                        entity.Commission = r.Commission;
+                        entity.Commission = r.IsMinwerk ? 0m : r.Commission;
+                        // Schadevergoeding op minwerk (28v): intern. Price wordt het eindbedrag voor de klant (-waarde x (1 - %)); de waarde en het
+                        // percentage bewaren we apart, zodat PDF, portaal, facturatie en btw het eindbedrag zien en niets anders.
+                        var damagePct = r.IsMinwerk ? Math.Clamp(r.DamagePercentage, 0m, 100m) : 0m;
+                        if (damagePct > 0)
+                        {
+                            entity.ValuePrice = Math.Abs(r.Price);
+                            entity.DamagePercentage = damagePct;
+                            entity.DamageGoesTo = r.DamageGoesTo == 2 ? (byte)2 : (byte)1;
+                            entity.Price = -Math.Round(Math.Abs(r.Price) * (1m - damagePct / 100m), 4, MidpointRounding.AwayFromZero);
+                        }
+                        else
+                        {
+                            entity.ValuePrice = null;
+                            entity.DamagePercentage = null;
+                            entity.DamageGoesTo = null;
+                        }
                         // Gekozen btw-code: het percentage volgt de code (migratie 073), niet wat het formulier postte.
                         if (r.VatTypeId is int vtid && vatTypePercentages != null && vatTypePercentages.TryGetValue(vtid, out var vtPct))
                         {
@@ -965,6 +1014,14 @@ namespace CPMCore.Controllers
                         entity.VatPercentage = defaultVat;
                         entity.VatTypeId = defaultVatTypeId;
                     }
+                }
+                // Groep (28t): de regel hoort bij de leverancier waaronder ze stond; ook "via ons gefactureerd" volgt de groep.
+                var group = r.GroupKey != null && groupByKey != null && groupByKey.TryGetValue(r.GroupKey, out var postedGroup) ? postedGroup : firstGroup;
+                if (group != null)
+                {
+                    entity.Group = group;
+                    if (!group.InvoicedByUs) entity.Invoicable = false;
+                    else if (entity.Invoicable == false) entity.Invoicable = null;
                 }
                 entity.NeedsReview = r.NeedsReview;
                 entity.SourceImagePath = string.IsNullOrWhiteSpace(r.SourceImagePath) ? null : r.SourceImagePath;

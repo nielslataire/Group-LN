@@ -23,6 +23,7 @@
     ViewData["Title"] = Model.IsNew ? newTitle : $"{Model.Number} · {title}";
     ViewData["TitleMobile"] = Model.IsNew ? newTitle : Model.Number;
     ViewData["PageIcon"] = "ph ph-file-text";
+    ViewData["CoachmarkPageKey"] = "Projects.ChangeOrderDetail";
     ViewData["GlV2FullHeightBody"] = true;
 
     var listUrl = Url.Action("ChangeOrdersV2", "Projecten", new { projectid = Model.ProjectId });
@@ -64,14 +65,19 @@
     var noticeIcon = Model.NoticeType switch { "success" => "ph-check-circle", "warning" => "ph-warning", "danger" => "ph-x-circle", _ => "ph-info" };
 
     // Leesweergave: totalen server-side (bewerkbaar rekent de JS ze live na).
-    var cost = Model.Rows.Sum(r => r.Number * r.Price);
-    var commissionTotal = Model.Rows.Sum(r => r.Number * r.Price * r.Commission / 100m);
-    var excl = cost + commissionTotal;
-    var vatTotal = Model.Rows.Sum(r => r.Number * r.Price * (1 + r.Commission / 100m) * r.VatPercentage / 100m);
-    var contractLabel = Model.ContractActivities.FirstOrDefault(a => a.ID == Model.ContractActivityId)?.Display ?? "Geen contract gekoppeld";
+    var cost = Model.Rows.Sum(r => r.SupplierCost);
+    var commissionTotal = Model.Rows.Sum(r => r.Sign * r.Number * r.Price * r.Commission / 100m);
+    // Na schadevergoeding (28v): de klant betaalt of krijgt terug wat er ná de vergoeding overblijft; de btw rekent op dat eindbedrag.
+    var excl = Model.Rows.Sum(r => r.ClientExcl);
+    var vatTotal = Model.Rows.Sum(r => r.ClientExcl * r.VatPercentage / 100m);
+    var damageRows = Model.Rows.Where(r => r.HasDamage).ToList();
+    var damageValue = damageRows.Sum(r => r.Number * r.Price);
+    var damageSum = damageRows.Sum(r => r.DamageAmount);
+    var damageCredit = damageRows.Sum(r => r.SupplierCost);
+    var bouwheerDamage = Model.Rows.Sum(r => r.BouwheerResult);
     // Kaart "Offerte leverancier" (28a) bovenaan: bij een offerte aan de klant altijd zodra er een
     // leveranciersofferte aan hangt; bij een WO enkel in concept zonder eigen herkomst.
-    var showQuoteCard = isQuote ? Model.HasQuoteSource : (editable && Model.HasQuoteSource && !Model.SourceChangeOrderId.HasValue);
+    var showQuoteCard = Model.Groups.Count <= 1 && (isQuote ? Model.HasQuoteSource : (editable && Model.HasQuoteSource && !Model.SourceChangeOrderId.HasValue));
 
     // Actiebalk (28r): de waarschuwing hoort bij de knop Verzenden, dus in de balk i.p.v. enkel in de zijkolom.
     var noMailCount = Model.Recipients.Count(r => r.Tone == "is-rood");
@@ -109,6 +115,10 @@
         @if (isSigned && Model.CompletedSigningCase != null)
         {
             <a href="@signedPdfUrl" target="_blank" rel="noopener" class="gl-v2-btn gl-v2-btn-secondary gl-v2-co-pdf-btn" title="Getekende PDF" aria-label="Getekende PDF"><i class="ph ph-file-pdf" aria-hidden="true"></i><span class="gl-v2-co-pdf-label">Getekende PDF</span></a>
+        }
+        else if (isSigned && Model.SignedDocId.HasValue)
+        {
+            <a href="@Url.Action("ViewDoc", "Projecten", new { id = Model.SignedDocId })" target="_blank" rel="noopener" class="gl-v2-btn gl-v2-btn-secondary gl-v2-co-pdf-btn" title="Getekend exemplaar" aria-label="Getekend exemplaar"><i class="ph ph-file-pdf" aria-hidden="true"></i><span class="gl-v2-co-pdf-label">Getekend exemplaar</span></a>
         }
         else
         {
@@ -299,7 +309,7 @@
                     <span class="gl-v2-card-header-icon"><i class="ph ph-briefcase" aria-hidden="true"></i></span>
                     <h2 class="gl-v2-card-header-title">Opdracht</h2>
                     <span class="gl-v2-field-divider"></span>
-                    <span class="gl-v2-card-header-count">Voor wie, van welke leverancier en waarom</span>
+                    <span class="gl-v2-card-header-count">Voor wie en waarom — de leveranciers volgen uit de regels</span>
                     <span class="gl-v2-card-header-spacer"></span>
                     @if (Model.LockText != null)
                     {
@@ -334,22 +344,16 @@
                         }
                     </div>
                     <div class="gl-v2-field gl-v2-co-span2">
-                        @if (editable)
-                        {
-                            @await Html.PartialAsync("GlV2/_SelectList", new CPMCore.Models.GlV2.GlV2SelectListVm
+                        <span class="gl-v2-field-label">Leveranciers</span>
+                        @* Samenvatting van de groepen bij de regels (28t): kiezen doe je per groep, hier staan ze enkel als chips. *@
+                        <div class="gl-v2-co-supplier-chips" id="gl-v2-co-supplier-chips" aria-live="polite">
+                            @foreach (var g in Model.Groups)
                             {
-                                Name = "contractActivityId", Id = "gl-v2-co-contractactivity", Label = "Leverancier · contract",
-                                Placeholder = "— nog te koppelen —", EmptyText = "Geen contract (nog te koppelen)",
-                                Help = "optioneel — het project toont een waarschuwing zolang er geen contract aan hangt",
-                                Value = Model.ContractActivityId > 0 ? Model.ContractActivityId.ToString() : "",
-                                Items = Model.ContractActivities.Select(a => new CPMCore.Models.GlV2.GlV2SelectItem { Value = a.ID.ToString(), Text = a.Display }).ToList()
-                            })
-                        }
-                        else
-                        {
-                            <span class="gl-v2-field-label">Leverancier · contract</span>
-                            <div class="gl-v2-co-readout">@contractLabel</div>
-                        }
+                                <span class="gl-v2-co-supplier-chip" data-key="@g.Key"><span class="gl-v2-co-chip-ini" aria-hidden="true">@g.Initials</span><span class="gl-v2-co-chip-name">@g.SupplierName</span><span class="gl-v2-co-chip-n">@g.Rows.Count @(g.Rows.Count == 1 ? "regel" : "regels")</span></span>
+                            }
+                            <span class="gl-v2-field-help gl-v2-co-supplier-none" @(Model.Groups.Count > 0 ? "hidden" : "")>nog geen leverancier</span>
+                        </div>
+                        <span class="gl-v2-field-help">volgt uit de regels — leverancier, contract en bron kies je per groep hieronder</span>
                     </div>
                     <div class="gl-v2-field">
                         @if (editable)
@@ -432,15 +436,6 @@
                             }
                         </div>
                     }
-                    <div class="gl-v2-field gl-v2-field-full">
-                        <label class="gl-v2-toggle-row" for="gl-v2-co-bouwheer">
-                            <input type="checkbox" class="gl-v2-toggle-switch" id="gl-v2-co-bouwheer" name="invoiceableByBouwheer" value="true" @(Model.InvoiceableByBouwheer ? "checked" : "") @(editable ? "" : "disabled") />
-                            <span class="gl-v2-toggle-text">
-                                <span class="gl-v2-toggle-label">Te factureren door bouwheer</span>
-                                <span class="gl-v2-toggle-hint">aan = wij factureren het (facturatiebedrijf aannemer) · uit = de onderaannemer factureert zelf, rechtstreeks aan de klant</span>
-                            </span>
-                        </label>
-                    </div>
                 </div>
             </div>
 
@@ -448,7 +443,7 @@
             <div class="gl-v2-card gl-v2-co-card">
                 <div class="gl-v2-card-header">
                     <span class="gl-v2-card-header-icon"><i class="ph ph-list-bullets" aria-hidden="true"></i></span>
-                    <h2 class="gl-v2-card-header-title">Regels</h2>
+                    <h2 class="gl-v2-card-header-title">Regels per leverancier</h2>
                     <span class="gl-v2-field-divider"></span>
                     <span class="gl-v2-card-header-count">@Model.RegelsSub</span>
                     <span class="gl-v2-card-header-spacer"></span>
@@ -457,125 +452,109 @@
                         <span class="gl-v2-co-lock"><i class="ph ph-lock-simple" aria-hidden="true"></i>@Model.LockText</span>
                     }
                 </div>
-                <div class="gl-v2-co-table-scroll gl-v2-co-rows-scroll">
-                    @if (editable)
+                @* Leveranciersgroepen (28t/28u): de leverancier hoort bij een groep regels — elke groep heeft haar eigen contract, bron en
+                   "via ons gefactureerd". Eén leverancier = één groep (zoals vroeger). De klant ziet enkel de groepstitels en de prijzen klant. *@
+                <div class="gl-v2-card-body gl-v2-co-groups-intro">
+                    <span class="gl-v2-field-help">Elke groep heeft zijn eigen leverancier, contract en bron · meer- en minwerk kunnen in één groep staan (minwerk wordt aan kostprijs verrekend, commissie 0 %) · de klant ziet enkel de titel en de prijs klant.</span>
+                </div>
+                <div class="gl-v2-co-groups" id="gl-v2-co-groups">
+                    @for (var gi = 0; gi < Model.Groups.Count; gi++)
                     {
-                        <table class="gl-v2-co-table gl-v2-co-rows" id="gl-v2-co-rows-table">
-                            <thead>
-                                <tr>
-                                    <th class="gl-v2-co-handle-cell co-c-g"><span class="visually-hidden">Volgorde</span></th>
-                                    <th class="co-c-om">Omschrijving</th>
-                                    <th class="is-center co-c-me">Meetm.</th>
-                                    <th class="is-center co-c-ee">Eenh.</th>
-                                    <th class="is-right co-c-aa">Aantal</th>
-                                    <th class="is-right co-c-pl">Prijs lev.</th>
-                                    <th class="is-right co-c-co">Comm. %</th>
-                                    <th class="is-right co-c-pk">Prijs klant</th>
-                                    <th class="is-right co-c-bt">Btw</th>
-                                    <th class="is-right co-c-to">Totaal</th>
-                                    <th class="co-c-d"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="gl-v2-co-rows-body">
-                                @for (var i = 0; i < Model.Rows.Count; i++)
-                                {
-                                    @await Html.PartialAsync("Partials/_ChangeOrderDetailRowV2", Model.Rows[i], new ViewDataDictionary(ViewData) { { "Index", i }, { "VatKlant", Model.VatKlantPercentage }, { "VatTypes", Model.VatTypes }, { "IsLocked", false } })
-                                }
-                            </tbody>
-                            <tfoot>
-                                <tr>
-                                    <td colspan="11">
-                                        <button type="button" class="gl-v2-co-add-term" id="gl-v2-co-add-row"><i class="ph ph-plus" aria-hidden="true"></i>Regel toevoegen</button>
-                                        <span class="gl-v2-field-help gl-v2-co-add-hint">prijs leverancier × (1 + commissie) = prijs klant · sleep de greep om regels te herschikken</span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td colspan="9" class="is-right">Totaal excl. btw</td>
-                                    <td class="is-right gl-v2-co-tabular" id="gl-v2-co-sum-excl">@Eur(excl)</td>
-                                    <td></td>
-                                </tr>
-                                <tr>
-                                    <td colspan="9" class="is-right">Btw</td>
-                                    <td class="is-right gl-v2-co-tabular" id="gl-v2-co-sum-vat">@Eur(vatTotal)</td>
-                                    <td></td>
-                                </tr>
-                                <tr class="gl-v2-co-sum-total">
-                                    <td colspan="9" class="is-right">Te betalen door klant</td>
-                                    <td class="is-right gl-v2-co-tabular" id="gl-v2-co-sum-total">@Eur(excl + vatTotal)</td>
-                                    <td></td>
-                                </tr>
-                                <tr>
-                                    <td colspan="9" class="is-right">Kostprijs leverancier · intern</td>
-                                    <td class="is-right gl-v2-co-tabular" id="gl-v2-co-sum-cost">@Eur(cost)</td>
-                                    <td></td>
-                                </tr>
-                                <tr>
-                                    <td colspan="9" class="is-right">Commissie · intern</td>
-                                    <td class="is-right gl-v2-co-tabular" id="gl-v2-co-sum-commission">@Eur(commissionTotal)</td>
-                                    <td></td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                        var g = Model.Groups[gi];
+                        var groupViewData = new ViewDataDictionary(ViewData);
+                        groupViewData["Editable"] = editable;
+                        groupViewData["IsQuote"] = isQuote;
+                        groupViewData["GroupIndex"] = gi;
+                        groupViewData["RowStart"] = Model.Groups.Take(gi).Sum(x => x.Rows.Count);
+                        groupViewData["VatKlant"] = Model.VatKlantPercentage;
+                        groupViewData["VatTypes"] = Model.VatTypes;
+                        groupViewData["IsLocked"] = false;
+                        groupViewData["CanRemove"] = editable && Model.Groups.Count > 0;
+                        groupViewData["ChangeOrderId"] = Model.ChangeOrderId;
+                        groupViewData["ProjectId"] = Model.ProjectId;
+                        @await Html.PartialAsync("Partials/_ChangeOrderGroupV2", g, groupViewData)
                     }
-                    else
+                    @if (!editable && Model.Groups.Count == 0)
                     {
-                        <table class="gl-v2-co-table gl-v2-co-rows is-readonly">
-                            <thead>
-                                <tr>
-                                    <th>Omschrijving</th>
-                                    <th class="is-center">Eenh.</th>
-                                    <th class="is-right">Aantal</th>
-                                    <th class="is-right">Prijs lev.</th>
-                                    <th class="is-right">Comm.</th>
-                                    <th class="is-right">Prijs klant</th>
-                                    <th class="is-right">Btw</th>
-                                    <th class="is-right">Totaal</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var r in Model.Rows)
-                                {
-                                    var priceKlant = r.Price * (1 + r.Commission / 100m);
-                                    <tr>
-                                        <td class="gl-v2-co-desc-cell co-c-om" data-label="Omschrijving">@r.Description</td>
-                                        <td class="is-center co-c-ee" data-label="Eenheid">@(((MeasurementUnit)r.MeasurementUnit).GetDisplayName())</td>
-                                        <td class="is-right gl-v2-co-tabular co-c-aa" data-label="Aantal">@r.Number</td>
-                                        <td class="is-right gl-v2-co-tabular gl-v2-co-internal co-c-pl" data-label="Prijs leverancier">@Eur(r.Price)</td>
-                                        <td class="is-right gl-v2-co-tabular gl-v2-co-internal co-c-co" data-label="Commissie">@Pct(r.Commission) %</td>
-                                        <td class="is-right gl-v2-co-tabular co-c-pk" data-label="Prijs klant">@Eur(priceKlant)</td>
-                                        <td class="is-right gl-v2-co-tabular co-c-bt" data-label="Btw">@Pct(r.VatPercentage) %</td>
-                                        <td class="is-right gl-v2-co-tabular co-c-to" data-label="Totaal">@Eur(r.Number * priceKlant)</td>
-                                    </tr>
-                                }
-                                @if (Model.Rows.Count == 0)
-                                {
-                                    <tr><td colspan="8" class="gl-v2-co-empty">Geen regels.</td></tr>
-                                }
-                            </tbody>
-                            <tfoot>
-                                <tr>
-                                    <td colspan="7" class="is-right">Totaal excl. btw</td>
-                                    <td class="is-right gl-v2-co-tabular">@Eur(excl)</td>
-                                </tr>
-                                <tr>
-                                    <td colspan="7" class="is-right">Btw</td>
-                                    <td class="is-right gl-v2-co-tabular">@Eur(vatTotal)</td>
-                                </tr>
-                                <tr class="gl-v2-co-sum-total">
-                                    <td colspan="7" class="is-right">Te betalen door klant</td>
-                                    <td class="is-right gl-v2-co-tabular">@Eur(excl + vatTotal)</td>
-                                </tr>
-                                <tr>
-                                    <td colspan="7" class="is-right">Kostprijs leverancier · intern</td>
-                                    <td class="is-right gl-v2-co-tabular">@Eur(cost)</td>
-                                </tr>
-                                <tr>
-                                    <td colspan="7" class="is-right">Commissie · intern</td>
-                                    <td class="is-right gl-v2-co-tabular">@Eur(commissionTotal)</td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                        <p class="gl-v2-co-empty gl-v2-co-groups-empty">Geen regels.</p>
                     }
+                </div>
+                @if (editable)
+                {
+                    <div class="gl-v2-card-body gl-v2-co-addsupplier" id="gl-v2-co-addsupplier">
+                        @* 28u: "Leverancier toevoegen" opent onder de laatste groep meteen het zoekvak (geen modal); kiezen maakt er een groep van. *@
+                        <section class="gl-v2-co-group is-picking" id="gl-v2-co-picker" @(Model.Groups.Count > 0 ? "hidden" : "")>
+                            <div class="gl-v2-co-group-pickhead">
+                                <span class="gl-v2-co-group-avatar is-empty" aria-hidden="true"><i class="ph ph-buildings"></i></span>
+                                <div class="gl-v2-co-group-pickfield">
+                                    <div class="gl-v2-field">
+                                        @await Html.PartialAsync("GlV2/_GlV2Combo", new GlV2ComboVm
+                                    {
+                                        Name = "co_supplier_pick", Id = "gl-v2-co-supplier-pick", Placeholder = "Leverancier zoeken …", Icon = "ph-buildings",
+                                        LookupUrl = Url.Action("ChangeOrderDetailV2SupplierLookup", "Projecten", new { projectId = Model.ProjectId }),
+                                        MinChars = 0, Avatar = true, ClearOnSelect = true,
+                                        Help = "Eerst leveranciers met een contract in dit project, dan de andere."
+                                    })
+                                    </div>
+                                </div>
+                                <button type="button" class="gl-v2-btn gl-v2-btn-text js-co-pick-none" title="Een groep zonder leverancier; je kiest hem later in de kop van de groep">Zonder leverancier</button>
+                                <button type="button" class="gl-v2-btn gl-v2-btn-text js-co-cancel-pick">Annuleren</button>
+                            </div>
+                            <p class="gl-v2-field-help gl-v2-co-group-pickhelp">Nog geen leverancier bekend? Kies <b>Zonder leverancier</b> en vul hem later in. Staat de leverancier er niet bij? <a class="gl-v2-co-link" href="@Url.Action("Create", "Leveranciers")" target="_blank" rel="noopener">Maak hem eerst aan</a> en zoek hem daarna hier.</p>
+                        </section>
+                        <button type="button" class="gl-v2-co-add-supplier" id="gl-v2-co-add-group" @(Model.Groups.Count == 0 ? "hidden" : "")>
+                            <i class="ph ph-plus" aria-hidden="true"></i><span>Leverancier toevoegen</span><small>nieuwe groep met eigen regels</small>
+                        </button>
+                    </div>
+                }
+                @* Afrekening van het minwerk (28v): enkel intern, enkel als er een schadevergoeding op staat. De klant ziet één minwerkregel aan het eindbedrag. *@
+                <div class="gl-v2-card-body gl-v2-co-settle" id="gl-v2-co-settle" @(damageRows.Count == 0 ? "hidden" : "")>
+                    <div class="gl-v2-co-settle-head"><span class="gl-v2-co-settle-title">AFREKENING VAN HET MINWERK</span><span class="gl-v2-badge is-neutral">INTERN</span></div>
+                    <dl class="gl-v2-co-settle-list">
+                        <div><dt>Waarde minwerk</dt><dd class="gl-v2-co-tabular" id="gl-v2-co-settle-value">@Eur(-damageValue)</dd></div>
+                        <div><dt>Schadevergoeding · intern</dt><dd class="gl-v2-co-tabular" id="gl-v2-co-settle-damage">+ @Eur(damageSum)</dd></div>
+                        <div class="is-strong"><dt>Klant ziet en krijgt terug</dt><dd class="gl-v2-co-tabular" id="gl-v2-co-settle-back">@Eur(-(damageValue - damageSum))</dd></div>
+                        <div><dt>Leverancier crediteert · intern</dt><dd class="gl-v2-co-tabular" id="gl-v2-co-settle-credit">@Eur(damageCredit)</dd></div>
+                        <div class="is-strong"><dt>Resultaat bouwheer op dit minwerk</dt><dd class="gl-v2-co-tabular" id="gl-v2-co-settle-result">@(bouwheerDamage > 0 ? "+ " : "")@Eur(bouwheerDamage)</dd></div>
+                    </dl>
+                </div>
+                @* Totalen: één totaal voor de klant; intern de kostprijs per leverancier en de commissie samen. *@
+                <div class="gl-v2-co-table-scroll gl-v2-co-rows-scroll gl-v2-co-totals-scroll">
+                    <table class="gl-v2-co-table gl-v2-co-rows is-readonly gl-v2-co-totals">
+                        <tfoot>
+                            <tr>
+                                <td colspan="7" class="is-right">Totaal excl. btw</td>
+                                <td class="is-right gl-v2-co-tabular" id="gl-v2-co-sum-excl">@Eur(excl)</td>
+                            </tr>
+                            <tr>
+                                <td colspan="7" class="is-right">Btw</td>
+                                <td class="is-right gl-v2-co-tabular" id="gl-v2-co-sum-vat">@Eur(vatTotal)</td>
+                            </tr>
+                            <tr class="gl-v2-co-sum-total">
+                                @* Netto negatief (28v)? Dan staat er "Terug te betalen aan de klant" en wordt het een creditpost in Facturatie. *@
+                                <td colspan="7" class="is-right" id="gl-v2-co-sum-total-label">@(excl + vatTotal < 0 ? "Terug te betalen aan de klant" : "Te betalen door klant")</td>
+                                <td class="is-right gl-v2-co-tabular" id="gl-v2-co-sum-total">@Eur(Math.Abs(excl + vatTotal))</td>
+                            </tr>
+                            @foreach (var g in Model.Groups)
+                            {
+                                <tr class="js-co-cost-line" data-key="@g.Key">
+                                    <td colspan="7" class="is-right">Kostprijs <span class="js-co-cost-name">@g.SupplierName@(string.IsNullOrWhiteSpace(g.Title) ? "" : " · " + g.Title)</span> · intern</td>
+                                    <td class="is-right gl-v2-co-tabular gl-v2-co-internal js-co-cost-val">@Eur(g.Cost)</td>
+                                </tr>
+                            }
+                            @if (Model.Groups.Count == 0)
+                            {
+                                <tr class="js-co-cost-line">
+                                    <td colspan="7" class="is-right">Kostprijs leveranciers · intern</td>
+                                    <td class="is-right gl-v2-co-tabular gl-v2-co-internal" id="gl-v2-co-sum-cost">@Eur(cost)</td>
+                                </tr>
+                            }
+                            <tr id="gl-v2-co-commission-line">
+                                <td colspan="7" class="is-right">Commissie · intern</td>
+                                <td class="is-right gl-v2-co-tabular gl-v2-co-internal" id="gl-v2-co-sum-commission">@Eur(commissionTotal)</td>
+                            </tr>
+                        </tfoot>
+                    </table>
                 </div>
                 @if (editable && Model.HasRowsNeedingReview)
                 {
@@ -637,9 +616,10 @@
             }
 
             @* ── Facturatieplan ────────────────────────────────────────────────────────────────────── *@
+            @* Factureren alle leveranciers zelf, dan is er niets door ons te factureren en dus geen facturatieplan: de kaart is verborgen. *@
             @if (!isQuote)
             {
-            <div class="gl-v2-card gl-v2-co-card">
+            <div class="gl-v2-card gl-v2-co-card" id="gl-v2-co-plan-card" @(Model.Groups.Count > 0 && Model.Groups.All(g => !g.InvoicedByUs) ? "hidden" : "")>
                 <div class="gl-v2-card-header">
                     <span class="gl-v2-card-header-icon"><i class="ph ph-calendar-check" aria-hidden="true"></i></span>
                     <h2 class="gl-v2-card-header-title">Facturatieplan</h2>
@@ -813,6 +793,21 @@
                     {
                         <a class="gl-v2-btn gl-v2-btn-secondary gl-v2-co-side-btn" href="@signedPdfUrl" target="_blank" rel="noopener"><i class="ph ph-download-simple" aria-hidden="true"></i><span>Getekende PDF downloaden</span></a>
                     }
+                    @if (isSigned && Model.CompletedSigningCase == null && Model.SignedDocId.HasValue)
+                    {
+                        <a class="gl-v2-btn gl-v2-btn-secondary gl-v2-co-side-btn" href="@Url.Action("ViewDoc", "Projecten", new { id = Model.SignedDocId })" target="_blank" rel="noopener"><i class="ph ph-file-pdf" aria-hidden="true"></i><span>Getekend exemplaar bekijken</span></a>
+                    }
+                    @if (isSigned && Model.CompletedSigningCase == null && !Model.SignedDocId.HasValue && Model.CanWrite)
+                    {
+                        @* Akkoord geregistreerd zonder bestand: het getekende exemplaar kan achteraf nog toegevoegd worden. *@
+                        <form method="post" enctype="multipart/form-data" action="@Url.Action("ChangeOrderDetailV2AttachSigned")" class="gl-v2-co-side-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="projectId" value="@Model.ProjectId" />
+                            <input type="hidden" name="changeOrderId" value="@Model.ChangeOrderId" />
+                            <input type="file" name="file" id="gl-v2-co-attach-signed-file" accept="application/pdf,image/*" hidden onchange="this.form.submit()" />
+                            <label class="gl-v2-btn gl-v2-btn-secondary gl-v2-co-side-btn" for="gl-v2-co-attach-signed-file"><i class="ph ph-upload-simple" aria-hidden="true"></i><span>Getekend exemplaar toevoegen</span></label>
+                        </form>
+                    }
                     @if (Model.SigningCaseId.HasValue && !editable && Model.SigningEnabled)
                     {
                         <a class="gl-v2-co-link gl-v2-co-side-link" href="@Url.Action("Dossier", "SigningAdmin", new { id = Model.SigningCaseId })">Ondertekendossier en audit trail →</a>
@@ -922,7 +917,29 @@
                                 <a class="gl-v2-co-link" href="@Url.Action("ChangeOrderDetailV2", "Projecten", new { projectid = Model.ProjectId, coid = Model.SourceChangeOrderId })">Open @(Model.SourceKind == 2 ? "vorige versie" : Model.SourceKind == 3 ? "de offerte" : "oorspronkelijke WO") →</a>
                             </div>
                         }
-                        @if (Model.HasQuoteSource)
+                        @if (Model.Groups.Count > 1)
+                        {
+                            @* Bronnen per leverancier (28t): elke groep heeft haar eigen leveranciersofferte. *@
+                            foreach (var g in Model.Groups)
+                            {
+                                <div class="gl-v2-co-source-item">
+                                    <span class="gl-v2-co-source-kind">OFFERTE @g.SupplierName.ToUpperInvariant()</span>
+                                    @if (g.HasQuoteSource)
+                                    {
+                                        <span>@string.Join(" · ", new[] { g.QuoteSupplierReference, Eur(g.Cost) }.Where(x => !string.IsNullOrWhiteSpace(x)))</span>
+                                        @if (!string.IsNullOrWhiteSpace(g.QuoteSourceUrl))
+                                        {
+                                            <a class="gl-v2-co-link" href="@g.QuoteSourceUrl" target="_blank" rel="noopener">Open offerte →</a>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span>nog geen offerte gekoppeld</span>
+                                    }
+                                </div>
+                            }
+                        }
+                        else if (Model.HasQuoteSource)
                         {
                             <div class="gl-v2-co-source-item">
                                 <span class="gl-v2-co-source-kind">OFFERTE LEVERANCIER</span>
@@ -1234,6 +1251,9 @@
         "vatKlant": @Model.VatKlantPercentage.ToString(CultureInfo.InvariantCulture),
         "vatKlantTypeId": @(Model.VatKlantTypeId?.ToString() ?? "null"),
         "addRowUrl": "@Url.Action("ChangeOrderDetailV2AddRow")",
+        "addGroupUrl": "@Url.Action("ChangeOrderDetailV2AddGroup")",
+        "supplierContractsUrl": "@Url.Action("ChangeOrderDetailV2SupplierContracts")",
+        "defaultDamage": @Model.DefaultDamagePercentage.ToString(CultureInfo.InvariantCulture),
         "attachAddUrl": "@Url.Action("ChangeOrderAttachmentAddV2")",
         "attachDeleteUrl": "@Url.Action("ChangeOrderAttachmentDeleteV2")",
         "addTermUrl": "@Url.Action("ChangeOrderDetailV2AddTerm")",

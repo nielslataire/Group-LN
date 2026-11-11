@@ -50,7 +50,8 @@ namespace CPMCore.Documents.GlV2
         protected override string? CompactSubtitle => _m.ProjectName;
 
         private static readonly System.Globalization.CultureInfo Culture = System.Globalization.CultureInfo.GetCultureInfo("nl-BE");
-        private static string Euro(decimal value) => GlV2PdfComponents.Euro(value);
+        // Negatieve bedragen (minwerk) zoals in het ontwerp: "− € 350,00" i.p.v. "€ -350,00".
+        private static string Euro(decimal value) => value < 0 ? "− " + GlV2PdfComponents.Euro(-value) : GlV2PdfComponents.Euro(value);
 
         protected override void Content(IContainer c)
         {
@@ -256,16 +257,41 @@ namespace CPMCore.Documents.GlV2
                     new GlV2PdfComponents.TabelKolom("Btw", 12, Rechts: true),
                     new GlV2PdfComponents.TabelKolom("Totaal", 24, Rechts: true),
                 },
-                _m.Lines.Select(l => (IReadOnlyList<GlV2PdfComponents.TabelCel>)new[]
-                {
-                    // l.VatPercentage ?? ... : zelfde terugval als ChangeOrderPdfModel.VatBreakdown
-                    new GlV2PdfComponents.TabelCel(l.Description ?? ""),
-                    new GlV2PdfComponents.TabelCel(l.UnitLabel ?? ""),
-                    new GlV2PdfComponents.TabelCel(l.Number.ToString("#,##0.##", Culture)),
-                    new GlV2PdfComponents.TabelCel(Euro(l.UnitPrice)),
-                    new GlV2PdfComponents.TabelCel(GlV2PdfComponents.Btw(l.VatPercentage ?? _m.VatPercentage), VatKleur(l.VatPercentage ?? _m.VatPercentage)),
-                    new GlV2PdfComponents.TabelCel(Euro(l.RowTotal)),
-                }));
+                BuildRows(VatKleur));
+        }
+
+        /// <summary>EÃ©n leverancier = gewone tabel. Bij meerdere leveranciers (28t) staat de groepstitel als tussenkop boven haar
+        /// regels met een subtotaal eronder; leveranciersnamen, kost en commissie staan nooit op dit document (harde regel).</summary>
+        private IEnumerable<GlV2PdfComponents.TabelRegel> BuildRows(Func<decimal, string> vatKleur)
+        {
+            GlV2PdfComponents.TabelRegel Row(ChangeOrderPdfLine l) => GlV2PdfComponents.TabelRegel.Rij(new[]
+            {
+                // l.VatPercentage ?? ... : zelfde terugval als ChangeOrderPdfModel.VatBreakdown
+                new GlV2PdfComponents.TabelCel(l.Description ?? ""),
+                new GlV2PdfComponents.TabelCel(l.UnitLabel ?? ""),
+                new GlV2PdfComponents.TabelCel(l.Number.ToString("#,##0.##", Culture)),
+                new GlV2PdfComponents.TabelCel(Euro(l.UnitPrice)),
+                new GlV2PdfComponents.TabelCel(GlV2PdfComponents.Btw(l.VatPercentage ?? _m.VatPercentage), vatKleur(l.VatPercentage ?? _m.VatPercentage)),
+                new GlV2PdfComponents.TabelCel(Euro(l.RowTotal)),
+            });
+
+            if (!_m.Lines.Any(l => !string.IsNullOrWhiteSpace(l.GroupTitle)))
+            {
+                foreach (var l in _m.Lines) yield return Row(l);
+                yield break;
+            }
+
+            // Aaneengesloten reeksen met dezelfde titel = Ã©Ã©n groep (de regels staan in groepsvolgorde).
+            var i = 0;
+            while (i < _m.Lines.Count)
+            {
+                var title = _m.Lines[i].GroupTitle ?? "";
+                var block = new List<ChangeOrderPdfLine>();
+                while (i < _m.Lines.Count && (_m.Lines[i].GroupTitle ?? "") == title) block.Add(_m.Lines[i++]);
+                yield return GlV2PdfComponents.TabelRegel.Groep(title);
+                foreach (var l in block) yield return Row(l);
+                yield return GlV2PdfComponents.TabelRegel.Subtotaal("Subtotaal " + title, Euro(block.Sum(l => l.RowTotal)));
+            }
         }
 
         private void Totals(IContainer c) =>

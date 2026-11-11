@@ -591,12 +591,12 @@
 
         var quickSearchUrl = modal.getAttribute("data-quicksearch-url");
         var pinUrl = modal.getAttribute("data-pin-url");
+        var unpinUrl = modal.getAttribute("data-unpin-url");
         var input = document.getElementById("gl-v2-picker-input");
         var recentLabel = document.getElementById("gl-v2-picker-recent-label");
         var recentItems = Array.prototype.slice.call(modal.querySelectorAll(".js-gl-v2-picker-recent"));
         var extraLabel = document.getElementById("gl-v2-picker-extra-label");
         var extraList = document.getElementById("gl-v2-picker-extra-list");
-        var pinBtn = document.getElementById("gl-v2-picker-pin-btn");
         var searchTimer = null;
 
         function selectProject(id, name, loc) {
@@ -604,9 +604,45 @@
             bootstrap.Modal.getOrCreateInstance(modal).hide();
         }
 
-        recentItems.forEach(function (item) {
+        var pinnedIds = (modal.getAttribute("data-pinned-ids") || "").split(",").filter(Boolean);
+
+        // Vastzetten/losmaken per rij (PinProject/UnpinProject, ongewijzigde endpoints): Mijn Werven
+        // wordt server-side gerenderd, dus na succes herladen we zodat de wijziging meteen zichtbaar is.
+        function pinRow(btn, id, name) {
+            var unpin = btn.getAttribute("data-pinned") === "true";
+            btn.disabled = true;
+            var body = new URLSearchParams();
+            body.set("projectId", id);
+            var token = getAntiForgeryToken();
+            if (token) body.set("__RequestVerificationToken", token);
+            fetch(unpin ? unpinUrl : pinUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded", "X-Requested-With": "XMLHttpRequest" },
+                body: body.toString(),
+                credentials: "same-origin"
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (result) {
+                    if (result && result.success) {
+                        if (window.GlV2Toast) {
+                            window.GlV2Toast.show({ tone: "info", icon: "ph-push-pin", title: unpin ? "Project losgemaakt" : "Project vastgezet", body: name + (unpin ? " staat niet meer vast op je dashboard." : " staat nu vast op je dashboard.") });
+                        }
+                        setTimeout(function () { window.location.reload(); }, 700);
+                    } else {
+                        btn.disabled = false;
+                    }
+                })
+                .catch(function () { btn.disabled = false; });
+        }
+
+        modal.querySelectorAll(".js-gl-v2-picker-select").forEach(function (item) {
             item.addEventListener("click", function () {
                 selectProject(item.getAttribute("data-pid"), item.getAttribute("data-pname"), item.getAttribute("data-ploc"));
+            });
+        });
+        modal.querySelectorAll(".js-gl-v2-picker-pin").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                pinRow(btn, btn.getAttribute("data-pid"), btn.getAttribute("data-pname"));
             });
         });
 
@@ -636,45 +672,24 @@
                             if (!items.length) return;
                             if (extraLabel) extraLabel.classList.remove("d-none");
                             items.forEach(function (p) {
-                                var row = document.createElement("button");
-                                row.type = "button";
-                                row.className = "gl-v2-modal-search-row";
-                                row.innerHTML =
+                                var isPinned = pinnedIds.indexOf(String(p.id)) !== -1;
+                                var wrap = document.createElement("div");
+                                wrap.className = "gl-v2-modal-search-row-wrap";
+                                wrap.innerHTML =
+                                    '<button type="button" class="gl-v2-modal-search-row">' +
                                     '<span class="gl-v2-modal-search-row-avatar"><i class="ph ph-map-pin" aria-hidden="true"></i></span>' +
-                                    '<span class="gl-v2-modal-search-row-name"></span>' +
-                                    '<i class="ph ph-caret-right gl-v2-modal-search-row-chevron" aria-hidden="true"></i>';
-                                row.querySelector(".gl-v2-modal-search-row-name").textContent = p.name;
-                                row.addEventListener("click", function () { selectProject(p.id, p.name, ""); });
-                                extraList.appendChild(row);
+                                    '<span class="gl-v2-modal-search-row-name"></span></button>' +
+                                    '<button type="button" class="gl-v2-modal-search-row-pinbtn' + (isPinned ? " is-pinned" : "") + '" data-pinned="' + isPinned + '" title="' +
+                                    (isPinned ? "Klik om los te maken" : "Op dashboard vastzetten") + '"><i class="ph ph-push-pin" aria-hidden="true"></i>' +
+                                    (isPinned ? "Vastgezet" : "Vastzetten") + "</button>";
+                                wrap.querySelector(".gl-v2-modal-search-row-name").textContent = p.name;
+                                wrap.querySelector(".gl-v2-modal-search-row").addEventListener("click", function () { selectProject(p.id, p.name, ""); });
+                                var extraPin = wrap.querySelector(".gl-v2-modal-search-row-pinbtn");
+                                extraPin.addEventListener("click", function () { pinRow(extraPin, p.id, p.name); });
+                                extraList.appendChild(wrap);
                             });
                         });
                 }, 300);
-            });
-        }
-
-        if (pinBtn) {
-            pinBtn.addEventListener("click", function () {
-                var project = GlV2ActiveProject.get();
-                if (!project) return;
-                pinBtn.disabled = true;
-                var body = new URLSearchParams();
-                body.set("projectId", project.id);
-                var token = getAntiForgeryToken();
-                if (token) body.set("__RequestVerificationToken", token);
-                fetch(pinUrl, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/x-www-form-urlencoded", "X-Requested-With": "XMLHttpRequest" },
-                    body: body.toString(),
-                    credentials: "same-origin"
-                })
-                    .then(function (r) { return r.json(); })
-                    .then(function (result) {
-                        pinBtn.disabled = false;
-                        if (result && result.success && window.GlV2Toast) {
-                            window.GlV2Toast.show({ tone: "info", icon: "ph-push-pin", title: "Project vastgezet", body: project.name + " staat nu vast op je dashboard." });
-                        }
-                    })
-                    .catch(function () { pinBtn.disabled = false; });
             });
         }
 

@@ -167,7 +167,7 @@ public static class CoachmarkRegistry
             PageKey         = "Home.Dashboard.Projectleider",
             TargetSelector  = "#mw-add-project",
             Title           = "Project vastzetten",
-            Message         = "Sta je een project bij dat niet aan jou is toegewezen? Zet het hier vast — het verschijnt dan naast je eigen projecten in Mijn Werven. Losmaken kan via het pin-icoontje op de kaart.",
+            Message         = "Sta je een project bij dat niet aan jou is toegewezen? Klik hier op +, zoek de werf en klik naast de naam op Vastzetten — het verschijnt dan naast je eigen projecten in Mijn Werven. Losmaken kan via het pin-icoontje op de kaart.",
             Placement       = CoachmarkPlacement.Bottom,
             SequenceKey     = "Home.Dashboard.Projectleider.Tour",
             StepIndex       = 3,
@@ -254,6 +254,33 @@ public static class CoachmarkRegistry
             Message         = "Typ een nummer, leverancier, datum of bedrag, bv. **demeyer okt** of **€ 7.670**. Enter opent de bovenste factuur.",
             Placement       = CoachmarkPlacement.Bottom,
             ReleaseDate     = new DateTime(2026, 11, 10, 0, 0, 0, DateTimeKind.Utc),
+            MaxShowDays     = 45
+        },
+
+        // ── Home/Dashboard: project vastzetten rechtstreeks vanuit de projectkiezer ──
+        // Losstaand (geen tour-sequence) zodat ook wie de kennismakingstour al zag dit nieuws krijgt.
+        new CoachmarkDefinition
+        {
+            FeatureKey      = "Home.Dashboard.Projectleider.PinFromPicker",
+            PageKey         = "Home.Dashboard.Projectleider",
+            TargetSelector  = "#mw-add-project",
+            Title           = "Project vastzetten, nu in één stap",
+            Message         = "Klik op + , zoek een werf en klik naast de naam op Vastzetten. Je hoeft het scherm niet meer opnieuw te openen. Al vastgezette werven zijn gemarkeerd en maak je hier ook weer los.",
+            Placement       = CoachmarkPlacement.Bottom,
+            ReleaseDate     = new DateTime(2026, 11, 11, 0, 0, 0, DateTimeKind.Utc),
+            MaxShowDays     = 45
+        },
+
+        // ── Projecten/ChangeOrderDetailV2: meerdere leveranciers in één offerte of wijzigingsopdracht (design-handoff 28t/28u) ──
+        new CoachmarkDefinition
+        {
+            FeatureKey      = "Projects.ChangeOrderDetail.MultiSupplier",
+            PageKey         = "Projects.ChangeOrderDetail",
+            TargetSelector  = "#gl-v2-co-supplier-chips",
+            Title           = "Meerdere leveranciers in één offerte",
+            Message         = "Elke leverancier heeft nu een eigen groep regels, met eigen contract, bron en facturatie. Voeg er een toe met Leverancier toevoegen onder de regels. De klant ziet enkel de titel van elke groep en de prijs, en tekent één keer.",
+            Placement       = CoachmarkPlacement.Bottom,
+            ReleaseDate     = new DateTime(2026, 11, 11, 0, 0, 0, DateTimeKind.Utc),
             MaxShowDays     = 45
         },
     };

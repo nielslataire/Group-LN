@@ -64,6 +64,7 @@
 @Html.AntiForgeryToken()
 <input type="hidden" name="projectId" value="@Model.ProjectId" />
 <input type="hidden" name="changeOrderId" value="@Model.ChangeOrderId" />
+<input type="hidden" name="groupId" value="@Model.GroupId" />
 @if (Model.ClientAccountId > 0)
 {
     <input type="hidden" name="clientAccountId" value="@Model.ClientAccountId" />

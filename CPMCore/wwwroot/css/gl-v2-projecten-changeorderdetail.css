@@ -551,3 +551,178 @@ a.gl-v2-co-quote-preview:hover { border-color: var(--gl-v2-primary); color: var(
 .gl-v2 .gl-v2-form-actionbar .gl-v2-btn.is-saving { opacity: .75; pointer-events: none; }
 .gl-v2 .gl-v2-form-actionbar .gl-v2-btn.is-saving::after { content: ""; width: 12px; height: 12px; margin-left: 8px; box-sizing: border-box; border-radius: 50%; border: 2px solid currentColor; border-top-color: transparent; animation: gl-v2-co-spin .7s linear infinite; }
 @keyframes gl-v2-co-spin { to { transform: rotate(360deg); } }
+
+/* ── 28t/28u — Offerte / WO met meerdere leveranciers: een groep regels per leverancier ────────────────────
+   Per groep een kop (leverancier, titel op de offerte, contract, bron, "via ons gefactureerd") boven haar eigen regels-tabel
+   (zelfde .gl-v2-co-rows als altijd, dus de drie vormen van 28r gelden per groep). De groepen staan in .gl-v2-co-groups, een
+   eigen container (cog): de kop breekt op de breedte van de kaart, niet van het toestel. "Leveranciers" bij Opdracht is enkel
+   een samenvatting (chips). De klant ziet nooit leveranciersnaam, kost of commissie: dit is een intern scherm. */
+.gl-v2-co-groups { display: flex; flex-direction: column; gap: 14px; padding: 4px 16px 6px; container-type: inline-size; container-name: cog; }
+.gl-v2-card-body.gl-v2-co-groups-intro { padding-top: 0; padding-bottom: 4px; }
+.gl-v2-card-body.gl-v2-co-addsupplier { padding: 0 16px 12px; gap: 10px; }
+.gl-v2-co-groups-empty { margin: 0; padding: 12px 4px; }
+
+.gl-v2-co-group { border: 1px solid var(--gl-v2-hairline); border-radius: 12px; background: #fff; min-width: 0; overflow: hidden; }
+.gl-v2-co-group[hidden] { display: none; }
+.gl-v2-co-group.is-picking { border-style: dashed; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; overflow: visible; }
+.gl-v2-co-group.is-no-contract .gl-v2-co-group-head { box-shadow: inset 3px 0 0 var(--gl-v2-warning); }
+
+.gl-v2-co-group-head {
+    display: grid; grid-template-columns: 34px minmax(130px, 170px) minmax(0, 1.3fr) minmax(0, 1.1fr) minmax(0, 1fr) auto;
+    gap: 10px 14px; align-items: end; padding: 14px 16px; background: #F7F9F5; border-bottom: 1px solid var(--gl-v2-hairline-soft);
+}
+.gl-v2-co-group-head .gl-v2-co-group-avatar { align-self: center; }
+.gl-v2-co-group-avatar {
+    width: 34px; height: 34px; border-radius: 17px; flex: none; display: flex; align-items: center; justify-content: center;
+    background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); font: 600 11.5px var(--gl-v2-font-sans);
+}
+.gl-v2-co-group-avatar.is-empty i { font-size: 16px; }
+.gl-v2-co-group-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; align-self: center; }
+.gl-v2-co-group-name { font: 600 13.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-co-group-count { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-co-group-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.gl-v2-co-group-field .gl-v2-field-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gl-v2-co-group-source { font: 500 12.5px var(--gl-v2-font-sans); }
+.gl-v2-co-group-source-tag { margin-left: 8px; font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .06em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gl-v2-co-group-invoiced { grid-column: 2 / 6; grid-row: 2; margin: 0; }
+.gl-v2-co-group-remove { grid-column: 6; grid-row: 1; align-self: center; }
+
+.gl-v2-co-group-warn {
+    display: flex; align-items: center; gap: 6px; margin: 0; padding: 7px 16px; background: var(--gl-v2-warning-tint);
+    color: var(--gl-v2-warning); font: 600 11.5px var(--gl-v2-font-sans);
+}
+.gl-v2-co-group-warn[hidden] { display: none; }
+
+.gl-v2-co-group .gl-v2-co-table-scroll.gl-v2-co-rows-scroll { margin: 0; }
+.gl-v2-co-group-subtotal td { font: 700 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); border-top: 1px solid var(--gl-v2-hairline); padding-top: 9px; }
+.gl-v2-co-group .gl-v2-co-table tfoot tr:last-child td { padding-bottom: 12px; }
+.gl-v2-co-totals-scroll { padding: 0 16px 4px; }
+
+/* "Leveranciers" bij Opdracht: samenvatting, geen keuze */
+.gl-v2-co-supplier-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-height: 40px; }
+.gl-v2-co-supplier-chip {
+    display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 5px 12px 5px 5px; border: 1px solid var(--gl-v2-hairline);
+    border-radius: 999px; background: #fff; min-width: 0;
+}
+.gl-v2-co-chip-ini {
+    width: 24px; height: 24px; border-radius: 12px; flex: none; display: flex; align-items: center; justify-content: center;
+    background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); font: 600 10px var(--gl-v2-font-sans);
+}
+.gl-v2-co-chip-name { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.gl-v2-co-chip-n { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); flex: none; }
+.gl-v2-co-supplier-none[hidden] { display: none; }
+
+/* "Leverancier toevoegen" (28u): onder de laatste groep, meteen het zoekvak — geen modal */
+.gl-v2-co-add-supplier {
+    display: flex; align-items: baseline; gap: 8px; width: 100%; padding: 13px 16px; border: 1px dashed var(--gl-v2-hairline);
+    border-radius: 12px; background: transparent; color: var(--gl-v2-primary); font: 600 12.5px var(--gl-v2-font-sans); cursor: pointer; text-align: left;
+}
+.gl-v2-co-add-supplier[hidden] { display: none; }
+.gl-v2-co-add-supplier small { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-co-add-supplier:hover, .gl-v2-co-add-supplier:focus-visible { background: var(--gl-v2-hover-tint, #F2F6EF); outline: none; }
+.gl-v2-co-group-pickhead { display: flex; align-items: flex-start; gap: 12px; }
+.gl-v2-co-group-pickfield { flex: 1; min-width: 0; }
+.gl-v2-co-group-pickhelp { margin: 0; }
+
+/* Op de breedte van de kaart (container cog): kop over twee lijnen — leverancier en verwijderen boven, de velden eronder (28t punt 7). */
+@container cog (max-width: 900px) {
+    .gl-v2-co-group-head { grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; }
+    .gl-v2-co-group-field, .gl-v2-co-group-invoiced { grid-column: 1 / -1; grid-row: auto; }
+    .gl-v2-co-group-remove { grid-column: 3; grid-row: 1; }
+}
+@container cog (max-width: 560px) {
+    .gl-v2-co-groups { padding-left: 10px; padding-right: 10px; }
+    .gl-v2-co-add-supplier { flex-wrap: wrap; }
+}
+
+/* ── 28v — Minwerk: de knop vóór de omschrijving wisselt tussen meerwerk (+) en minwerk (−) ───────────────────
+   Een minwerk rekent aan kostprijs (commissie vast op 0 %, veld vergrendeld) en toont zijn prijs klant en totaal met min. */
+.gl-v2-co-descwrap { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.gl-v2-co-descwrap > .gl-v2-field-box { flex: 1; min-width: 0; }
+.gl-v2-co-pm {
+    flex: none; width: 26px; height: 26px; border-radius: 6px; border: 0; background: #EDF2E8; color: #2F6038;
+    font: 700 15px/1 var(--gl-v2-font-sans); cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+}
+.gl-v2-co-pm:hover, .gl-v2-co-pm:focus-visible { filter: brightness(.96); outline: none; }
+.gl-v2-co-pm.is-minus { background: #F6E3E3; color: #8B2A2A; }
+.gl-v2-co-pm:disabled { opacity: .5; cursor: default; }
+.gl-v2-co-row.is-minwerk .js-co-priceklant, .gl-v2-co-row.is-minwerk .js-co-total,
+.gl-v2-co-table tr.is-minwerk .co-c-pk, .gl-v2-co-table tr.is-minwerk .co-c-to { color: var(--gl-v2-danger); }
+.gl-v2-co-row.is-minwerk .js-co-commission { color: var(--gl-v2-muted); }
+
+/* ── 28v — Schadevergoeding op minwerk: interne subregel onder het minwerk + afrekening ─────────────────────
+   De klant ziet er niets van: op offerte, wijzigingsopdracht en portaal staat één minwerkregel aan het eindbedrag. */
+.gl-v2-co-damage-ro { display: block; margin-top: 4px; font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+.gl-v2-card-body.gl-v2-co-settle { margin: 4px 16px 10px; padding: 12px 14px; gap: 8px; border: 1px dashed var(--gl-v2-hairline); border-radius: 12px; background: #F7F9F5; }
+.gl-v2-co-settle[hidden] { display: none; }
+.gl-v2-co-settle-head { display: flex; align-items: center; gap: 8px; }
+.gl-v2-co-settle-title { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; color: var(--gl-v2-muted); }
+.gl-v2-co-settle-list { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.gl-v2-co-settle-list > div { display: flex; justify-content: space-between; gap: 12px; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft, var(--gl-v2-muted)); }
+.gl-v2-co-settle-list dt, .gl-v2-co-settle-list dd { margin: 0; font: inherit; }
+.gl-v2-co-settle-list > div.is-strong { color: var(--gl-v2-ink); font-weight: 700; border-top: 1px solid var(--gl-v2-hairline-soft); padding-top: 6px; margin-top: 2px; }
+/* ── 28v — de schadevergoeding als eigen rij ONDER het minwerk, zoals in het ontwerp ───────────────────────────
+   Minwerkregel: lichtrood vlak; daaronder (zonder vergoeding) de link "+ Schadevergoeding op dit minwerk", met vergoeding de gouden rij
+   (hook · titel + INTERN + "klant ziet enkel …" · % + snelkeuzes + Gaat naar · bedrag · weghalen). Kleuren zijn die van het ontwerp. */
+.gl-v2-co-row.is-minwerk > td { background: #FDF8F7; }
+.gl-v2-co-sv-tr[hidden] { display: none; }
+/* Dubbele klasse + td: de regels-tabel zet zelf padding op de eerste en laatste cel; de gouden rij moet tot aan de rand lopen. */
+.gl-v2-co-table.gl-v2-co-rows td.gl-v2-co-sv-cell { padding: 0; border-bottom: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-co-sv-addrow { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; padding: 6px 14px 10px 48px; background: #FDF8F7; font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-co-sv-addrow[hidden] { display: none; }
+.gl-v2-co-sv-link { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; padding: 0; color: var(--gl-v2-primary); font: 600 12px var(--gl-v2-font-sans); cursor: pointer; }
+.gl-v2-co-sv-link:hover { text-decoration: underline; }
+.gl-v2-co-sv-link:disabled { color: var(--gl-v2-muted); cursor: default; text-decoration: none; }
+
+.gl-v2-co-sv-row { display: grid; grid-template-columns: 18px minmax(0, 1fr) 96px 28px; gap: 8px; align-items: center; padding: 8px 14px 12px; background: #FBF6EC; border-top: 1px dashed #E6D3A8; }
+.gl-v2-co-sv-row[hidden] { display: none; }
+.gl-v2-co-sv-hook { display: flex; justify-content: center; align-self: start; padding-top: 4px; color: #9AA898; font-size: 14px; }
+.gl-v2-co-sv-main { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.gl-v2-co-sv-t { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; }
+.gl-v2-co-sv-t b { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-co-sv-tag { font: 700 9.5px var(--gl-v2-font-sans); letter-spacing: .1em; color: #6B5226; background: #F6EEDC; box-shadow: inset 0 0 0 1px #E6D3A8; padding: 2px 6px; border-radius: 4px; }
+.gl-v2-co-sv-kz { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-co-sv-ctl { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.gl-v2-co-sv-pct { display: flex; align-items: center; height: 34px; margin: 0; border-radius: 8px; border: 1px solid rgba(44, 59, 42, .16); background: #fff; overflow: hidden; }
+.gl-v2-co-sv-pct input { width: 52px; border: 0; outline: none; text-align: right; font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); padding: 0 6px; background: none; box-shadow: none; }
+.gl-v2-co-sv-pct em { font-style: normal; font: 600 11px var(--gl-v2-font-sans); color: #4A5B48; background: #EDEFEB; align-self: stretch; display: flex; align-items: center; padding: 0 9px; border-left: 1px solid rgba(44, 59, 42, .12); }
+.gl-v2-co-sv-pct:focus-within { border-color: var(--gl-v2-primary); box-shadow: 0 0 0 3px rgba(0, 83, 45, .14); }
+.gl-v2-co-sv-on { font: 450 12px var(--gl-v2-font-sans); color: #4A5B48; }
+.gl-v2-co-sv-pre { display: flex; gap: 4px; }
+.gl-v2-co-sv-pre button { height: 28px; padding: 0 9px; border-radius: 14px; border: 1px solid rgba(44, 59, 42, .16); background: #fff; font: 600 11.5px var(--gl-v2-font-sans); color: #4A5B48; cursor: pointer; }
+.gl-v2-co-sv-pre button.is-active { border-color: var(--gl-v2-primary); background: #EDF2E8; color: var(--gl-v2-primary); }
+.gl-v2-co-sv-sep { width: 1px; height: 20px; background: rgba(44, 59, 42, .14); margin: 0 4px; }
+.gl-v2-co-sv-lbl { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .09em; color: var(--gl-v2-muted); text-transform: uppercase; }
+.gl-v2-co-sv-seg { display: flex; background: #EDEFEB; border-radius: 8px; padding: 3px; gap: 2px; }
+.gl-v2-co-sv-seg button { height: 26px; padding: 0 10px; border-radius: 6px; border: 0; background: transparent; font: 500 12px var(--gl-v2-font-sans); color: #4A5B48; cursor: pointer; white-space: nowrap; }
+.gl-v2-co-sv-seg button.is-active { background: #fff; color: var(--gl-v2-primary); font-weight: 600; box-shadow: 0 1px 2px rgba(44, 59, 42, .12); }
+.gl-v2-co-sv-pre button:disabled, .gl-v2-co-sv-seg button:disabled { cursor: default; opacity: .6; }
+.gl-v2-co-sv-sub { font: 450 11.5px var(--gl-v2-font-sans); color: #6B5226; }
+.gl-v2-co-sv-amt { font: 700 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); text-align: right; white-space: nowrap; }
+
+/* Lijnen- en kaartvorm (≤ 1080px): de rij is dan geen tabelrij meer. */
+@container co-rows (max-width: 1080px) {
+    .gl-v2-co-sv-tr { display: block; }
+    .gl-v2-co-sv-tr[hidden] { display: none; }
+    .gl-v2-co-table.gl-v2-co-rows td.gl-v2-co-sv-cell { display: block; width: 100%; }
+}
+@container co-rows (max-width: 640px) {
+    .gl-v2-co-sv-row { grid-template-columns: 18px minmax(0, 1fr) 28px; }
+    .gl-v2-co-sv-amt { grid-column: 2; grid-row: 2; text-align: left; }
+    .gl-v2-co-sv-row > .gl-v2-co-row-delete { grid-column: 3; grid-row: 1; }
+}
+
+/* Groep zonder leverancier (later kiezen): zoekveld in de plaats van de naam; "Zonder leverancier" in het zoekvak van een nieuwe groep. */
+.gl-v2-co-group-pick { min-width: 0; }
+.gl-v2-co-group-pick .gl-v2-field { margin: 0; }
+.gl-v2-co-group-nosupplier { align-self: flex-start; }
+
+.gl-v2-co-group-head.has-pick { grid-template-columns: 34px minmax(200px, 260px) minmax(0, 1.3fr) minmax(0, 1.1fr) minmax(0, 1fr) auto; }
+
+.gl-v2-co-group-who.is-pick { align-self: end; gap: 5px; }
+.gl-v2-co-group-who.is-pick .gl-v2-field-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gl-v2-co-group-who.is-pick .gl-v2-co-group-count { display: none; }
+
+/* Facturatieplan verborgen als alle leveranciers zelf factureren (.gl-v2-card zet display, dus [hidden] expliciet). */
+#gl-v2-co-plan-card[hidden] { display: none; }

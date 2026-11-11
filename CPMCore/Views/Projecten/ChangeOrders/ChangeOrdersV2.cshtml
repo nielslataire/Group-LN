@@ -12,6 +12,7 @@
 *@
 @using System.Globalization
 @using CPMCore.Models.GlV2
+@using CPMCore.Models.Projecten
 @{
     ViewData["Title"] = "Offertes & wijzigingen";
     ViewData["PageIcon"] = "ph ph-file-text";
@@ -142,8 +143,19 @@
                 </div>
             </div>
             <div class="gl-v2-filters-grid">
+                @* Offertes: alle statussen staan standaard aan, behalve de omgezette. Meerdere statussen tegelijk aan te klikken. *@
+                <div class="gl-v2-filters-field gl-v2-co2-qfilter">
+                    <span class="gl-v2-filters-field-label">Status offertes</span>
+                    <div class="gl-v2-segmented is-sm" id="quote-status-filter" role="group" aria-label="Status van de offertes">
+                        @foreach (var (key, label) in ChangeOrdersV2Vm.QuoteStatuses)
+                        {
+                            var on = ChangeOrdersV2Vm.DefaultQuoteStatuses.Contains(key);
+                            <button type="button" class="@(on ? "is-active" : "")" aria-pressed="@(on ? "true" : "false")" data-qstatus="@key" data-label="@label">@label <span class="gl-v2-co2-qcount">@Model.QuoteStatusCount(key)</span></button>
+                        }
+                    </div>
+                </div>
                 <div class="gl-v2-filters-field">
-                    <span class="gl-v2-filters-field-label">Status</span>
+                    <span class="gl-v2-filters-field-label">Status wijzigingsopdrachten</span>
                     <div class="gl-v2-select gl-v2-filters-select" id="status-select">
                         <input type="hidden" id="status-select-value" value="open" />
                         <button type="button" class="gl-v2-select-trigger" id="status-select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="status-select-panel">
@@ -153,7 +165,7 @@
                         <div class="gl-v2-select-backdrop" id="status-select-backdrop"></div>
                         <div class="gl-v2-select-panel" id="status-select-panel" role="listbox" aria-labelledby="status-select-trigger">
                             <div class="gl-v2-select-sheet-header">
-                                <span class="gl-v2-select-sheet-title">Status</span>
+                                <span class="gl-v2-select-sheet-title">Status wijzigingsopdrachten</span>
                                 <button type="button" class="gl-v2-select-sheet-close" id="status-select-close">Sluiten</button>
                             </div>
                             <div class="gl-v2-select-options">

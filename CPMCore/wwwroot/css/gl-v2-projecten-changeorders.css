@@ -155,3 +155,8 @@
 .gl-v2-toolbar-card { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 14px; border-radius: var(--gl-v2-radius-md); background: var(--gl-v2-surface); box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 14px 30px -24px rgba(44, 59, 42, .35); flex: none; }
 .gl-v2-toolbar-search { flex: 1; min-width: 180px; }
 @media (max-width: 767.98px) { .gl-v2-filters-grid { grid-template-columns: 1fr; max-width: none; } }
+
+/* Filter "Status offertes": elke status los aan te klikken (meerdere tegelijk), met het aantal erbij. */
+.gl-v2-co2-qfilter .gl-v2-segmented { flex-wrap: wrap; height: auto; }
+.gl-v2-co2-qcount { margin-left: 4px; font-weight: 500; opacity: .7; }
+.gl-v2-co2-qfilter .gl-v2-segmented .is-active .gl-v2-co2-qcount { opacity: .85; }

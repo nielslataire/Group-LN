@@ -45,7 +45,8 @@
     if (!cfg.editable) return;
 
     // ── 1. Regels: herberekening ────────────────────────────────────────────────────────────────────
-    var rowsBody = document.getElementById("gl-v2-co-rows-body");
+    // De container van ALLE leveranciersgroepen (28t): elke groep heeft een eigen <tbody>, de regel-logica werkt over alle groepen heen.
+    var rowsBody = document.getElementById("gl-v2-co-groups");
     function initCurrency(scope) { if (window.CurrencyMask && scope) CurrencyMask.init(scope.querySelectorAll(".Currencymask")); }
     initCurrency(rowsBody);
     var defaultCommission = document.getElementById("gl-v2-co-default-commission");
@@ -53,63 +54,243 @@
     // Omschrijving: begint op één regel en groeit mee met wat je typt (field-sizing in de CSS; dit is de terugval voor browsers zonder).
     function autoGrow(ta) { ta.style.height = "auto"; ta.style.height = ta.scrollHeight + "px"; }
 
+    // Minwerk (28v): aantal en prijs staan als positief getal in het scherm; de knop vóór de omschrijving geeft het teken. Een minwerk wordt
+    // aan kostprijs verrekend: commissie vast op 0 %.
+    function rowSign(tr) { return tr.classList.contains("is-minwerk") ? -1 : 1; }
+
+    // De schadevergoeding (28v) staat als eigen rij direct onder het minwerk (zoals in het ontwerp). Deze helpers vinden haar terug.
+    function dmgRow(tr) { var n = tr.nextElementSibling; return n && n.classList.contains("js-co-damage-row") ? n : null; }
+    function dq(tr, sel) { var d = dmgRow(tr); return d ? $(sel, d) : null; }
+    function dqa(tr, sel) { var d = dmgRow(tr); return d ? $$(sel, d) : []; }
+
+    function setMinwerk(tr, minus) {
+        tr.classList.toggle("is-minwerk", minus);
+        var hidden = $(".js-co-isminwerk", tr);
+        if (hidden) hidden.value = minus ? "true" : "false";
+        var btn = $(".js-co-sign", tr);
+        if (btn) {
+            btn.classList.toggle("is-minus", minus);
+            btn.setAttribute("aria-pressed", minus ? "true" : "false");
+            btn.setAttribute("aria-label", "Meerwerk of minwerk: nu " + (minus ? "minwerk" : "meerwerk"));
+            btn.title = minus ? "Minwerk: waarde die wegvalt, aan kostprijs verrekend. Klik voor meerwerk." : "Meerwerk: waarde die erbij komt. Klik voor minwerk.";
+            var glyph = $("span", btn); if (glyph) glyph.textContent = minus ? "−" : "+";
+        }
+        var dmgPanel = dmgRow(tr);
+        if (dmgPanel) {
+            dmgPanel.hidden = !minus;
+            if (!minus) { var dmgInput = dq(tr, ".js-co-dmg-input"); if (dmgInput) dmgInput.value = "0"; var dmgBox = dq(tr, ".js-co-dmg-box"); if (dmgBox) dmgBox.hidden = true; var dmgAdd = dq(tr, ".js-co-dmg-add-row"); if (dmgAdd) dmgAdd.hidden = false; }
+        }
+        var comm = $(".js-co-commission", tr);
+        if (comm && !tr.classList.contains("is-price-locked")) {
+            if (minus) { comm.dataset.prevCommission = comm.value; comm.value = "0.00"; comm.readOnly = true; }
+            else { comm.readOnly = false; if (comm.dataset.prevCommission !== undefined) comm.value = comm.dataset.prevCommission; else if (defaultCommission) comm.value = defaultCommission.value; }
+        }
+    }
+
+    // Eén regel in euro's (28v): base = brutowaarde met teken; dmg = schadevergoeding (positief, enkel bij minwerk met een geopende subregel);
+    // clientExcl = wat de klant betaalt/terugkrijgt na vergoeding; supplierCost = wat de leverancier rekent/crediteert; bouwheer = vergoeding die bij de bouwheer blijft.
+    function rowMoney(tr) {
+        var sign = rowSign(tr);
+        var qty = getNum($(".js-co-number", tr));
+        var price = getNum($(".js-co-price", tr));
+        var commission = getNum($(".js-co-commission", tr));
+        var vat = getNum($(".js-co-vat", tr));
+        var base = sign * qty * price;
+        var commissionAmt = base * (commission / 100);
+        var box = dq(tr, ".js-co-dmg-box");
+        var pct = sign < 0 && box && !box.hidden ? Math.min(100, Math.max(0, getNum(dq(tr, ".js-co-dmg-input")))) : 0;
+        var dmg = Math.round(qty * price * pct) / 100;
+        var toEl = dq(tr, ".js-co-dmg-to");
+        var toSupplier = toEl && toEl.value === "2";
+        var clientExcl = base + commissionAmt + dmg;
+        return {
+            qty: qty, price: price, base: base, commissionAmt: commissionAmt, pct: pct, dmg: dmg, toSupplier: toSupplier,
+            clientExcl: clientExcl, vatAmt: clientExcl * (vat / 100),
+            supplierCost: base + (pct > 0 && toSupplier ? dmg : 0), bouwheer: pct > 0 && !toSupplier ? dmg : 0
+        };
+    }
+
     function recalcRow(tr) {
+        var sign = rowSign(tr);
         var number = getNum($(".js-co-number", tr));
         var price = getNum($(".js-co-price", tr));
         var commission = getNum($(".js-co-commission", tr));
-        var priceKlant = price * (1 + commission / 100);
+        var priceKlant = sign * price * (1 + commission / 100);
         var total = number * priceKlant;
         var $priceKlant = $(".js-co-priceklant", tr);
         var $total = $(".js-co-total", tr);
         if ($priceKlant) $priceKlant.textContent = formatEUR(priceKlant);
         if ($total) $total.textContent = formatEUR(total);
+
+        // Subregel schadevergoeding: bedrag, wat de klant terugkrijgt, wat de leverancier crediteert.
+        var box = dq(tr, ".js-co-dmg-box");
+        if (box && !box.hidden) {
+            var m = rowMoney(tr);
+            var baseAbs = number * price;
+            var back = baseAbs - m.dmg;
+            var set = function (cls, text) { var el = dq(tr, "." + cls); if (el) el.textContent = text; };
+            set("js-co-dmg-base", formatEUR(baseAbs));
+            set("js-co-dmg-amt", "+ " + formatEUR(m.dmg));
+            set("js-co-dmg-back", formatEUR(-back));
+            var dmgDesc = $(".js-co-description", tr);
+            var dmgBoxEl = dq(tr, ".js-co-dmg-box");
+            if (dmgBoxEl) dmgBoxEl.setAttribute("aria-label", "Schadevergoeding op " + ((dmgDesc && dmgDesc.value.trim()) || "dit minwerk"));
+            var group = tr.closest(".js-co-group");
+            var supplier = group ? (($(".gl-v2-co-group-name", group) || {}).textContent || "De leverancier") : "De leverancier";
+            set("js-co-dmg-sub", m.toSupplier
+                ? supplier + " crediteert enkel " + formatEUR(back) + "; de vergoeding gaat naar de leverancier."
+                : supplier + " crediteert de volle " + formatEUR(baseAbs) + "; de vergoeding blijft bij de bouwheer.");
+            dqa(tr, ".js-co-dmg-quick").forEach(function (b) { b.classList.toggle("is-active", Math.abs(parseFloat(b.getAttribute("data-pct")) - m.pct) < 0.001); });
+            dqa(tr, ".js-co-dmg-toggle").forEach(function (b) {
+                var on = (b.getAttribute("data-to") === "2") === m.toSupplier;
+                b.classList.toggle("is-active", on); b.setAttribute("aria-pressed", on ? "true" : "false");
+            });
+        }
     }
 
     function recomputeTotals() {
         if (!rowsBody) return;
-        var cost = 0, commissionTotal = 0, vatTotal = 0;
-        $$(".js-co-row", rowsBody).forEach(function (tr) {
-            var qty = getNum($(".js-co-number", tr));
-            var price = getNum($(".js-co-price", tr));
-            var commission = getNum($(".js-co-commission", tr));
-            var vat = getNum($(".js-co-vat", tr));
-            var base = qty * price;
-            var commissionAmt = base * (commission / 100);
-            var vatAmt = (base + commissionAmt) * (vat / 100);
-            cost += base;
-            commissionTotal += commissionAmt;
-            vatTotal += vatAmt;
+        var cost = 0, commissionTotal = 0, vatTotal = 0, clientTotal = 0;
+        var settle = { value: 0, dmg: 0, credit: 0, bouwheer: 0, any: false };
+        var costLines = [];
+        $$(".js-co-group", rowsBody).forEach(function (group) {
+            var gCost = 0, gComm = 0, gClient = 0, gBouwheer = 0, n = 0;
+            $$(".js-co-row", group).forEach(function (tr) {
+                var m = rowMoney(tr);
+                gCost += m.supplierCost;
+                gComm += m.commissionAmt;
+                gClient += m.clientExcl;
+                gBouwheer += m.bouwheer;
+                vatTotal += m.vatAmt;
+                if (m.pct > 0) { settle.any = true; settle.value += m.qty * m.price; settle.dmg += m.dmg; settle.credit += m.supplierCost; settle.bouwheer += m.bouwheer; }
+                n++;
+            });
+            cost += gCost;
+            commissionTotal += gComm;
+            clientTotal += gClient;
+            var setIn = function (cls, v) { var el = $("." + cls, group); if (el) el.textContent = formatEUR(v); };
+            setIn("js-co-group-cost", gCost);
+            setIn("js-co-group-commission", gComm);
+            setIn("js-co-group-subtotal", gClient);
+            var dmgLine = $(".js-co-group-damage-line", group);
+            if (dmgLine) { dmgLine.hidden = !(gBouwheer > 0); setIn("js-co-group-damage", gBouwheer); var dv = $(".js-co-group-damage", group); if (dv) dv.textContent = "+ " + formatEUR(gBouwheer); }
+            var count = $(".js-co-group-count", group);
+            if (count) count.textContent = n + (n === 1 ? " regel" : " regels");
+            var title = $(".js-co-g-title", group);
+            var sub = $(".js-co-group-subtitle", group);
+            var name = $(".gl-v2-co-group-name", group);
+            if (sub) sub.textContent = (title && title.value.trim()) || (name ? name.textContent : "");
+            costLines.push({ key: group.getAttribute("data-key"), name: (name ? name.textContent : "") + (title && title.value.trim() ? " · " + title.value.trim() : ""), cost: gCost });
         });
-        var excl = cost + commissionTotal;
+        // Afrekening van het minwerk (28v): enkel intern, enkel zichtbaar zolang er een schadevergoeding staat.
+        var settleBox = document.getElementById("gl-v2-co-settle");
+        if (settleBox) {
+            settleBox.hidden = !settle.any;
+            var setS = function (id, text) { var el = document.getElementById(id); if (el) el.textContent = text; };
+            setS("gl-v2-co-settle-value", formatEUR(-settle.value));
+            setS("gl-v2-co-settle-damage", "+ " + formatEUR(settle.dmg));
+            setS("gl-v2-co-settle-back", formatEUR(-(settle.value - settle.dmg)));
+            setS("gl-v2-co-settle-credit", formatEUR(settle.credit));
+            setS("gl-v2-co-settle-result", (settle.bouwheer > 0 ? "+ " : "") + formatEUR(settle.bouwheer));
+        }
+        var excl = clientTotal;
+
         var grand = excl + vatTotal;
         var set = function (id, v) { var el = document.getElementById(id); if (el) el.textContent = formatEUR(v); };
         set("gl-v2-co-sum-cost", cost);
         set("gl-v2-co-sum-commission", commissionTotal);
         set("gl-v2-co-sum-excl", excl);
         set("gl-v2-co-sum-vat", vatTotal);
-        set("gl-v2-co-sum-total", grand);
+        // Netto negatief (28v): "Terug te betalen aan de klant" (een creditpost in Facturatie), het bedrag zonder min.
+        set("gl-v2-co-sum-total", Math.abs(grand));
+        var totalLabel = document.getElementById("gl-v2-co-sum-total-label");
+        if (totalLabel) totalLabel.textContent = grand < 0 ? "Terug te betalen aan de klant" : "Te betalen door klant";
         set("gl-v2-co-quote-cost", cost); // kaart "Offerte leverancier" (28a): bedrag excl. btw
+        renderCostLines(costLines);
+        renderSupplierChips();
         var typeEl = document.getElementById("gl-v2-co-type");
         if (typeEl) typeEl.textContent = excl < 0 ? "Minwerk — aan kostprijs verrekend, zonder commissie" : "Meerwerk";
         recomputeTermAmounts(excl);
+    }
+
+    // Totalen (28t): intern de kostprijs per leverancier; de commissie staat samen op één regel.
+    function renderCostLines(lines) {
+        var commissionLine = document.getElementById("gl-v2-co-commission-line");
+        if (!commissionLine || lines.length === 0) return;
+        $$(".js-co-cost-line", commissionLine.parentNode).forEach(function (tr) { tr.parentNode.removeChild(tr); });
+        lines.forEach(function (l) {
+            var tr = document.createElement("tr");
+            tr.className = "js-co-cost-line";
+            tr.setAttribute("data-key", l.key);
+            var label = document.createElement("td");
+            label.colSpan = 7; label.className = "is-right";
+            label.textContent = "Kostprijs " + l.name + " · intern";
+            var val = document.createElement("td");
+            val.className = "is-right gl-v2-co-tabular gl-v2-co-internal";
+            val.textContent = formatEUR(l.cost);
+            tr.appendChild(label); tr.appendChild(val);
+            commissionLine.parentNode.insertBefore(tr, commissionLine);
+        });
+    }
+
+    // "Leveranciers" bij Opdracht (28t): enkel een samenvatting, chips met het aantal regels per groep.
+    function renderSupplierChips() {
+        var box = document.getElementById("gl-v2-co-supplier-chips");
+        if (!box) return;
+        $$(".gl-v2-co-supplier-chip", box).forEach(function (c) { c.parentNode.removeChild(c); });
+        var none = $(".gl-v2-co-supplier-none", box);
+        var groups = $$(".js-co-group", rowsBody);
+        if (none) none.hidden = groups.length > 0;
+        groups.forEach(function (g) {
+            var name = ($(".gl-v2-co-group-name", g) || {}).textContent || "";
+            var ini = ($(".gl-v2-co-group-avatar", g) || {}).textContent || "";
+            var n = $$(".js-co-row", g).length;
+            var chip = document.createElement("span");
+            chip.className = "gl-v2-co-supplier-chip";
+            chip.setAttribute("data-key", g.getAttribute("data-key"));
+            var i = document.createElement("span"); i.className = "gl-v2-co-chip-ini"; i.setAttribute("aria-hidden", "true"); i.textContent = ini;
+            var nm = document.createElement("span"); nm.className = "gl-v2-co-chip-name"; nm.textContent = name;
+            var ct = document.createElement("span"); ct.className = "gl-v2-co-chip-n"; ct.textContent = n + (n === 1 ? " regel" : " regels");
+            chip.appendChild(i); chip.appendChild(nm); chip.appendChild(ct);
+            box.insertBefore(chip, none);
+        });
     }
 
     // De modelbinder leest rows[0], rows[1], … en stopt bij het eerste gat: na het verwijderen van een
     // rij moeten de overige dus opnieuw aaneensluitend genummerd worden, anders gaan alle rijen ná het
     // gat bij Opslaan verloren.
     function renumberRows() {
+        // Elke regel draagt de sleutel van de groep waarin ze nu staat (slepen kan ze naar een andere leverancier verplaatsen).
+        $$(".js-co-group", rowsBody).forEach(function (group) {
+            var key = group.getAttribute("data-key");
+            $$(".js-co-row", group).forEach(function (tr) { var k = $(".js-co-groupkey", tr); if (k) k.value = key; });
+        });
         $$(".js-co-row", rowsBody).forEach(function (tr, i) {
             tr.setAttribute("data-index", i);
-            $$("[name]", tr).forEach(function (el) {
-                el.name = el.name.replace(/^rows\[\d+\]/, "rows[" + i + "]");
+            var scopes = [tr]; var companion = dmgRow(tr); if (companion) { scopes.push(companion); companion.setAttribute("data-index", i); }
+            scopes.forEach(function (scope) {
+                $$("[name]", scope).forEach(function (el) {
+                    el.name = el.name.replace(/^rows\[\d+\]/, "rows[" + i + "]");
+                });
+            });
+        });
+    }
+
+    // Zelfde verhaal voor de groepen (groups[0], groups[1], …): na het verwijderen/toevoegen opnieuw aaneensluitend nummeren.
+    function renumberGroups() {
+        $$(".js-co-group", rowsBody).forEach(function (group, i) {
+            $$("[name]", group).forEach(function (el) {
+                el.name = el.name.replace(/^groups\[\d+\]/, "groups[" + i + "]");
             });
         });
     }
 
     if (rowsBody) {
         rowsBody.addEventListener("input", function (e) {
+            if (e.target.classList.contains("js-co-g-title")) { recomputeTotals(); return; }
             var tr = e.target.closest(".js-co-row");
-            if (!tr) return;
+            if (!tr) { var companionRow = e.target.closest(".js-co-damage-row"); tr = companionRow && companionRow.previousElementSibling; }   // het percentage staat in de rij eronder
+            if (!tr || !tr.classList.contains("js-co-row")) return;
             if (e.target.classList.contains("js-co-description")) autoGrow(e.target);
             recalcRow(tr);
             recomputeTotals();
@@ -117,7 +298,10 @@
         rowsBody.addEventListener("click", function (e) {
             var del = e.target.closest(".js-co-delete-row");
             if (del) {
-                del.closest(".js-co-row").remove();
+                var delRow = del.closest(".js-co-row");
+                var delCompanion = dmgRow(delRow);
+                if (delCompanion) delCompanion.remove();
+                delRow.remove();
                 renumberRows();
                 recomputeTotals();
                 return;
@@ -154,16 +338,26 @@
 
         rowsBody.addEventListener("pointermove", function (e) {
             if (!dragRow) return;
-            var rows = $$(".js-co-row", rowsBody);
+            // De groep onder de aanwijzer bepaalt het doel; binnen die groep gaat de regel vóór de eerste regel waarvan het midden lager ligt.
+            var target = null;
+            $$(".js-co-group", rowsBody).forEach(function (group) {
+                var rect = group.getBoundingClientRect();
+                if (e.clientY >= rect.top && e.clientY <= rect.bottom) target = $(".js-co-group-body", group);
+            });
+            if (!target) return;
+            var before = null;
+            var rows = $$(".js-co-row", target);
             for (var i = 0; i < rows.length; i++) {
-                var other = rows[i];
-                if (other === dragRow) continue;
-                var rect = other.getBoundingClientRect();
-                var middle = rect.top + rect.height / 2;
-                var isAbove = rows.indexOf(dragRow) > i;
-                if (isAbove && e.clientY < middle) { rowsBody.insertBefore(dragRow, other); break; }
-                if (!isAbove && e.clientY > middle) { rowsBody.insertBefore(dragRow, other.nextSibling); break; }
+                if (rows[i] === dragRow) continue;
+                var rect = rows[i].getBoundingClientRect();
+                if (e.clientY < rect.top + rect.height / 2) { before = rows[i]; break; }
             }
+            // De regel en haar schadevergoeding (rij eronder) verhuizen samen.
+            var dragCompanion = dmgRow(dragRow);
+            var dragEnd = dragCompanion || dragRow;
+            if (before) { if (dragEnd.nextElementSibling !== before) target.insertBefore(dragRow, before); }
+            else if (target.lastElementChild !== dragEnd) target.appendChild(dragRow);
+            if (dragCompanion) dragRow.parentNode.insertBefore(dragCompanion, dragRow.nextSibling);
         });
 
         var endDrag = function () {
@@ -172,6 +366,7 @@
             rowsBody.classList.remove("gl-v2-co-rows-dragging");
             dragRow = null;
             renumberRows();
+            recomputeTotals();
         };
         rowsBody.addEventListener("pointerup", endDrag);
         rowsBody.addEventListener("pointercancel", endDrag);
@@ -183,10 +378,17 @@
             var row = handle.closest(".js-co-row");
             var rows = $$(".js-co-row", rowsBody);
             var index = rows.indexOf(row);
-            if (e.key === "ArrowUp" && index > 0) rowsBody.insertBefore(row, rows[index - 1]);
-            else if (e.key === "ArrowDown" && index < rows.length - 1) rowsBody.insertBefore(row, rows[index + 1].nextSibling);
+            // Pijl omhoog/omlaag loopt ook over de groepsgrens: de regel schuift naar de vorige/volgende leverancier.
+            var rowCompanion = dmgRow(row);
+            if (e.key === "ArrowUp" && index > 0) rows[index - 1].parentNode.insertBefore(row, rows[index - 1]);
+            else if (e.key === "ArrowDown" && index < rows.length - 1) {
+                var nextRow = rows[index + 1], nextCompanion = dmgRow(nextRow);
+                nextRow.parentNode.insertBefore(row, (nextCompanion || nextRow).nextSibling);
+            }
             else return;
+            if (rowCompanion) row.parentNode.insertBefore(rowCompanion, row.nextSibling);
             renumberRows();
+            recomputeTotals();
             handle.focus();
         });
     }
@@ -275,7 +477,7 @@
             var value = defaultCommission.value;
             $$(".js-co-row", rowsBody).forEach(function (tr) {
                 var input = $(".js-co-commission", tr);
-                if (input) input.value = value;
+                if (input && !tr.classList.contains("is-minwerk")) input.value = value;   // minwerk blijft op 0 % (aan kostprijs)
                 recalcRow(tr);
             });
             recomputeTotals();
@@ -348,26 +550,204 @@
         });
     }
 
-    var addRowBtn = document.getElementById("gl-v2-co-add-row");
-    if (addRowBtn) {
-        addRowBtn.addEventListener("click", function () {
-            var index = $$(".js-co-row", rowsBody).length; // klopt altijd: renumberRows() houdt de reeks dicht
-            var commission = defaultCommission ? getNum(defaultCommission) : 0;
-            fetch(cfg.addRowUrl + "?index=" + index + "&projectId=" + encodeURIComponent(cfg.projectId) + "&vatKlantTypeId=" + encodeURIComponent(cfg.vatKlantTypeId || "") + "&vatKlant=" + encodeURIComponent(cfg.vatKlant) + "&commission=" + encodeURIComponent(commission))
-                .then(function (r) { return r.text(); })
-                .then(function (html) {
-                    rowsBody.insertAdjacentHTML("beforeend", html);
-                    var tr = rowsBody.lastElementChild;
-                    initSelects(tr);
-                    initCurrency(tr);
-                    var d0 = $(".js-co-description", tr); if (d0) autoGrow(d0);
-                    recalcRow(tr);
-                    recomputeTotals();
-                    var desc = $(".js-co-description", tr);
-                    if (desc) desc.focus();
-                });
+    // Factureren alle leveranciers zelf, dan is er geen facturatieplan: de kaart verdwijnt (en telt niet mee bij het verzenden).
+    var planCard = document.getElementById("gl-v2-co-plan-card");
+    function planIsHidden() { return !!planCard && planCard.hidden; }
+    function syncPlanVisibility() {
+        if (!planCard || !rowsBody) return;
+        var groups = $$(".js-co-group", rowsBody);
+        var anyByUs = groups.some(function (g) { var t = $(".js-co-g-invoiced", g); return t && t.checked; });
+        planCard.hidden = groups.length > 0 && !anyByUs;
+    }
+
+    // "+ Regel": komt in de groep (leverancier) waarvan je op de knop klikt.
+    function addRowTo(group) {
+        var body = $(".js-co-group-body", group);
+        var index = $$(".js-co-row", rowsBody).length; // klopt altijd: renumberRows() houdt de reeks dicht
+        var commission = defaultCommission ? getNum(defaultCommission) : 0;
+        return fetch(cfg.addRowUrl + "?index=" + index + "&projectId=" + encodeURIComponent(cfg.projectId) + "&vatKlantTypeId=" + encodeURIComponent(cfg.vatKlantTypeId || "") + "&vatKlant=" + encodeURIComponent(cfg.vatKlant) + "&commission=" + encodeURIComponent(commission))
+            .then(function (r) { return r.text(); })
+            .then(function (html) {
+                body.insertAdjacentHTML("beforeend", html);
+                var tr = $$(".js-co-row", body).pop();   // de nieuwe regel (daarna volgt nog de rij voor haar schadevergoeding)
+                var k = $(".js-co-groupkey", tr); if (k) k.value = group.getAttribute("data-key");
+                renumberRows();   // de nieuwe regel staat midden in het formulier: volgnummers opnieuw in DOM-volgorde
+                initSelects(tr);
+                initCurrency(tr);
+                var d0 = $(".js-co-description", tr); if (d0) autoGrow(d0);
+                recalcRow(tr);
+                recomputeTotals();
+                var desc = $(".js-co-description", tr);
+                if (desc) desc.focus();
+            });
+    }
+
+    if (rowsBody) {
+        rowsBody.addEventListener("click", function (e) {
+            var add = e.target.closest(".js-co-add-row");
+            if (add) { addRowTo(add.closest(".js-co-group")); return; }
+
+            // Schadevergoeding op een minwerk (28v): openen met het standaardpercentage, weghalen, snelkeuze, gaat naar bouwheer/leverancier.
+            var dmgAdd = e.target.closest(".js-co-dmg-add");
+            var dmgRemove = e.target.closest(".js-co-dmg-remove");
+            var dmgQuick = e.target.closest(".js-co-dmg-quick");
+            var dmgTo = e.target.closest(".js-co-dmg-toggle");
+            if (dmgAdd || dmgRemove || dmgQuick || dmgTo) {
+                var dmgHost = e.target.closest(".js-co-damage-row");
+                var dmgMain = dmgHost && dmgHost.previousElementSibling;
+                var box = $(".js-co-dmg-box", dmgHost), input = $(".js-co-dmg-input", dmgHost), add = $(".js-co-dmg-add-row", dmgHost);
+                if (dmgAdd && !dmgAdd.disabled) { input.value = String(cfg.defaultDamage != null ? cfg.defaultDamage : 25); box.hidden = false; add.hidden = true; input.focus(); }
+                else if (dmgRemove) { input.value = "0"; box.hidden = true; add.hidden = false; }
+                else if (dmgQuick && !dmgQuick.disabled) input.value = dmgQuick.getAttribute("data-pct");
+                else if (dmgTo && !dmgTo.disabled) $(".js-co-dmg-to", dmgHost).value = dmgTo.getAttribute("data-to");
+                recalcRow(dmgMain);
+                recomputeTotals();
+                return;
+            }
+
+            var sign = e.target.closest(".js-co-sign");
+            if (sign && !sign.disabled) {
+                var signRow = sign.closest(".js-co-row");
+                setMinwerk(signRow, !signRow.classList.contains("is-minwerk"));
+                recalcRow(signRow);
+                recomputeTotals();
+                return;
+            }
+
+            var remove = e.target.closest(".js-co-remove-group");
+            if (remove) {
+                var group = remove.closest(".js-co-group");
+                var filled = $$(".js-co-description", group).filter(function (t) { return t.value.trim() !== ""; }).length;
+                var name = ($(".gl-v2-co-group-name", group) || {}).textContent || "deze leverancier";
+                var doRemove = function () {
+                    group.parentNode.removeChild(group);
+                    renumberGroups(); renumberRows(); recomputeTotals();
+                    if ($$(".js-co-group", rowsBody).length === 0) openPicker();
+                };
+                if (filled === 0) { doRemove(); return; }
+                var ask = window.GlV2Dialog
+                    ? window.GlV2Dialog.confirm({ tone: "danger", icon: "ph-trash", title: name + " verwijderen?", description: "De " + filled + (filled === 1 ? " regel" : " regels") + " van deze leverancier verdwijnen mee uit de offerte.", confirmLabel: "Verwijderen", cancelLabel: "Behouden" })
+                    : Promise.resolve(window.confirm(name + " verwijderen?"));
+                ask.then(function (ok) { if (ok) doRemove(); });
+            }
+        });
+
+        // Contract per groep: zonder contract toont de groep een goud waarschuwinkje; de titel volgt de activiteit zolang je er niets eigens zette.
+        rowsBody.addEventListener("change", function (e) {
+            var wrap = selectWrap(e.target);
+            if (!wrap || wrap.getAttribute("data-role") !== "group-contract") {
+                if (e.target.classList && e.target.classList.contains("js-co-g-invoiced")) {
+                    var label = $(".gl-v2-toggle-label", e.target.closest(".gl-v2-co-group-invoiced"));
+                    if (label) label.textContent = e.target.checked ? "Via ons gefactureerd" : "Factureert zelf";
+                    syncPlanVisibility();
+                }
+                return;
+            }
+            var group = wrap.closest(".js-co-group");
+            var opt = chosenOption(wrap);
+            var has = !!(opt && opt.getAttribute("data-value"));
+            group.classList.toggle("is-no-contract", !has);
+            var warn = $(".js-co-group-nocontract", group);
+            if (warn) warn.hidden = has;
+            var title = $(".js-co-g-title", group);
+            if (has && title && !title.value.trim()) { title.value = opt.textContent.replace(/^Contract · /, "").trim(); recomputeTotals(); }
         });
     }
+
+    // "Leverancier toevoegen" (28u): het zoekvak opent onder de laatste groep, geen modal.
+    var addGroupBtn = document.getElementById("gl-v2-co-add-group");
+    var picker = document.getElementById("gl-v2-co-picker");
+    function openPicker() {
+        if (!picker) return;
+        picker.hidden = false;
+        if (addGroupBtn) addGroupBtn.hidden = true;
+        var input = $(".gl-v2-combo-input", picker);
+        if (input) input.focus();
+    }
+    function closePicker() {
+        if (!picker || $$(".js-co-group", rowsBody).length === 0) return; // zonder groep blijft het zoekvak open
+        picker.hidden = true;
+        if (addGroupBtn) addGroupBtn.hidden = false;
+    }
+    if (addGroupBtn) addGroupBtn.addEventListener("click", openPicker);
+    if (picker) {
+        picker.addEventListener("click", function (e) { if (e.target.closest(".js-co-cancel-pick")) closePicker(); });
+        picker.addEventListener("keydown", function (e) { if (e.key === "Escape") closePicker(); });
+        // companyId 0 = een groep zonder leverancier (later te kiezen in de kop van de groep).
+        function addGroupFor(companyId, name) {
+            var exists = companyId && $$(".js-co-group", rowsBody).some(function (g) { return g.getAttribute("data-supplier") === String(companyId); });
+            if (exists) { toast("warning", "Staat al in deze offerte", (name || "Deze leverancier") + " heeft hier al een groep."); return; }
+            var groupIndex = $$(".js-co-group", rowsBody).length;
+            var rowIndex = $$(".js-co-row", rowsBody).length;
+            var commission = defaultCommission ? getNum(defaultCommission) : 0;
+            fetch(cfg.addGroupUrl + "?projectId=" + encodeURIComponent(cfg.projectId) + "&companyId=" + encodeURIComponent(companyId) +
+                "&groupIndex=" + groupIndex + "&rowIndex=" + rowIndex + "&vatKlant=" + encodeURIComponent(cfg.vatKlant) +
+                "&vatKlantTypeId=" + encodeURIComponent(cfg.vatKlantTypeId || "") + "&commission=" + encodeURIComponent(commission))
+                .then(function (r) { if (!r.ok) throw new Error("status " + r.status); return r.text(); })
+                .then(function (html) {
+                    rowsBody.insertAdjacentHTML("beforeend", html);
+                    var group = rowsBody.lastElementChild;
+                    initSelects(group);
+                    initCurrency(group);
+                    $$(".js-co-description", group).forEach(autoGrow);
+                    $$(".js-co-row", group).forEach(recalcRow);
+                    renumberGroups(); renumberRows(); recomputeTotals();
+                    picker.hidden = true;
+                    if (addGroupBtn) addGroupBtn.hidden = false;
+                    var desc = $(".js-co-description", group);
+                    if (desc) desc.focus();
+                })
+                .catch(function () { toast("danger", "Leverancier niet toegevoegd", "Probeer het opnieuw."); });
+        }
+        document.addEventListener("gl-v2:combo-select", function (e) {
+            if (!picker.contains(e.target)) return;
+            var companyId = e.detail && e.detail.id;
+            if (companyId) addGroupFor(companyId, e.detail.text);
+        });
+        picker.addEventListener("click", function (e) { if (e.target.closest(".js-co-pick-none")) addGroupFor(0, ""); });
+    }
+
+    // Leverancier later kiezen: een groep zonder leverancier toont een zoekveld in haar kop. Na de keuze wordt het de naam van de groep,
+    // en het contract kiest uit de contracten van díe leverancier (precies één = meteen gekoppeld).
+    function initialsOf(text) {
+        return String(text || "").replace(/[^A-Za-z ]/g, "").split(" ").filter(Boolean).slice(0, 2).map(function (w) { return w[0]; }).join("").toUpperCase() || "·";
+    }
+    document.addEventListener("gl-v2:combo-select", function (e) {
+        var pickBox = e.target.closest ? e.target.closest(".js-co-g-pick") : null;
+        if (!pickBox) return;
+        var group = pickBox.closest(".js-co-group");
+        var id = e.detail && e.detail.id;
+        if (!group || !id) return;
+        var taken = $$(".js-co-group", rowsBody).some(function (g) { return g !== group && g.getAttribute("data-supplier") === String(id); });
+        if (taken) { toast("warning", "Staat al in deze offerte", (e.detail.text || "Deze leverancier") + " heeft hier al een groep."); return; }
+
+        group.setAttribute("data-supplier", id);
+        var hiddenSupplier = $(".js-co-g-supplier", group); if (hiddenSupplier) hiddenSupplier.value = id;
+        var nameEl = $(".js-co-g-name", group);
+        if (nameEl) { nameEl.textContent = e.detail.text; nameEl.hidden = false; }
+        var avatar = $(".gl-v2-co-group-avatar", group); if (avatar) avatar.textContent = initialsOf(e.detail.text);
+        var head = $(".gl-v2-co-group-head", group); if (head) head.classList.remove("has-pick");
+        var who = $(".gl-v2-co-group-who", group); if (who) who.classList.remove("is-pick");   // de regelteller verschijnt weer, het label verdwijnt
+        var pickLabel = $(".js-co-g-pick-label", group); if (pickLabel) pickLabel.parentNode.removeChild(pickLabel);
+        pickBox.parentNode.removeChild(pickBox);
+        var warn = $(".js-co-group-nocontract", group);
+        if (warn) warn.innerHTML = '<i class="ph ph-warning" aria-hidden="true"></i>';
+        if (warn) warn.appendChild(document.createTextNode("Geen contract met " + e.detail.text + " — het project toont een waarschuwing tot er een contract aan hangt."));
+
+        var wrap = $('.gl-v2-select[data-role="group-contract"]', group);
+        if (wrap && cfg.supplierContractsUrl) {
+            fetch(cfg.supplierContractsUrl + "?projectId=" + encodeURIComponent(cfg.projectId) + "&companyId=" + encodeURIComponent(id))
+                .then(function (r) { return r.json(); })
+                .then(function (items) {
+                    var list = [{ value: "", text: "Geen contract · koppelen" }].concat(items);
+                    var chosen = items.length === 1 ? items[0].value : "";
+                    window.GlV2Select.setItems(wrap, list, chosen);
+                    var hidden = wrap.querySelector("input[type=hidden]");
+                    if (hidden) hidden.dispatchEvent(new Event("change", { bubbles: true }));   // zelfde afhandeling als een gewone keuze (waarschuwing, titel)
+                });
+        }
+        recomputeTotals();
+    });
 
     // ── 2. Facturatieplan ───────────────────────────────────────────────────────────────────────────
     var termsBody = document.getElementById("gl-v2-co-terms-body");
@@ -518,13 +898,23 @@
 
             var rows = rowsBody ? $$(".js-co-row", rowsBody) : [];
             var problem = null;
+            var emptyGroup = rowsBody ? $$(".js-co-group", rowsBody).filter(function (g) {
+                return $$(".js-co-description", g).every(function (t) { return t.value.trim() === ""; });
+            })[0] : null;
             if (rows.length === 0) problem = "Voeg minstens één regel toe.";
+            else if (emptyGroup) problem = (($(".gl-v2-co-group-name", emptyGroup) || {}).textContent || "Een leverancier") + " heeft nog geen regels. Voeg regels toe of verwijder de leverancier.";
             else if (rows.some(function (tr) { return tr.classList.contains("is-needs-review"); })) problem = "Bevestig eerst de regels die op \"controleer\" staan.";
-            else if (termsBody && $$(".js-co-term-row", termsBody).length > 0 && Math.abs(termsTotal() - 100) >= 0.01) problem = "Het facturatieplan moet samen 100 % zijn.";
+            else if (!planIsHidden() && termsBody && $$(".js-co-term-row", termsBody).length > 0 && Math.abs(termsTotal() - 100) >= 0.01) problem = "Het facturatieplan moet samen 100 % zijn.";
             if (problem) {
                 e.preventDefault();
                 toast("warning", "Nog niet te verzenden", problem);
+                return;
             }
+            // Per leverancier: geen contract is geen reden om te blokkeren, wel om te waarschuwen (zoals het project dat ook doet).
+            var noContract = rowsBody ? $$(".js-co-group.is-no-contract", rowsBody).map(function (g) { return ($(".gl-v2-co-group-name", g) || {}).textContent; }) : [];
+            var noSupplier = rowsBody ? $$(".js-co-group", rowsBody).filter(function (g) { return g.getAttribute("data-supplier") === "0"; }).length : 0;
+            if (noSupplier > 0) toast("warning", "Nog geen leverancier", noSupplier === 1 ? "Een groep heeft nog geen leverancier. Je kan de offerte verzenden, maar vul hem later in." : noSupplier + " groepen hebben nog geen leverancier. Je kan de offerte verzenden, maar vul ze later in.");
+            if (noContract.length > 0) toast("warning", "Geen contract", noContract.join(", ") + (noContract.length === 1 ? " heeft" : " hebben") + " nog geen contract in dit project.");
         });
         // Zichtbaar dat er opgeslagen wordt: de knop toont een draaiertje en is niet nog eens aan te klikken. Geregistreerd
         // ná de validatie hierboven, dus enkel bij een submit die echt vertrekt.

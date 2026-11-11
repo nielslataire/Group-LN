@@ -351,6 +351,8 @@ namespace CPMCore.Documents
         public decimal? VatPercentage { get; set; }
         /// <summary>Gekozen btw-code (Vattype.Id) van het facturatiebedrijf; null = onbekend (oude regels).</summary>
         public int? VatTypeId { get; set; }
+        /// <summary>Titel van de leveranciersgroep (tussenkop op het document, 28t); null = één groep, geen tussenkoppen.</summary>
+        public string GroupTitle { get; set; }
         public decimal UnitPrice => Price + Price * CommissionPercentage / 100m;
         public decimal RowTotal => UnitPrice * Number;
     }

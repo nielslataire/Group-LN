@@ -23,7 +23,7 @@ namespace CPMCore.Controllers
     public partial class ProjectenController
     {
         [HttpGet]
-        public async Task<IActionResult> QuoteIntakeV2(int projectid, int? clientid, int coid = 0, string intent = null)
+        public async Task<IActionResult> QuoteIntakeV2(int projectid, int? clientid, int coid = 0, string intent = null, int groupid = 0)
         {
             var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
             var canWrite = _ps.HasWrite(PermissionCodes.ProjectsChangeOrders);
@@ -43,7 +43,7 @@ namespace CPMCore.Controllers
             ChangeOrder co = null;
             if (coid > 0)
             {
-                co = await _db.ChangeOrder.AsNoTracking().Include(c => c.ChangeOrderDetail).FirstOrDefaultAsync(c => c.Id == coid);
+                co = await _db.ChangeOrder.AsNoTracking().Include(c => c.ChangeOrderDetail).Include(c => c.Groups).FirstOrDefaultAsync(c => c.Id == coid);
                 if (co is null) return NotFound();
                 vm.ChangeOrderId = co.Id;
             }
@@ -56,9 +56,15 @@ namespace CPMCore.Controllers
             vm.Number = co is null ? "" : CoNo(co);
             vm.SourceFileName = co?.QuoteSourceFileName;
 
+            // Meerdere leveranciers (28t): 20c leest de offerte van één leverancier in = één groep. De groep komt uit de link (groupid);
+            // zonder groep is het de eerste. Het scherm toont en bewaart dan enkel de regels van die groep.
+            var intakeGroup = co == null ? null : (groupid > 0 ? co.Groups.FirstOrDefault(g => g.Id == groupid) : null) ?? co.Groups.OrderBy(g => g.SortOrder).ThenBy(g => g.Id).FirstOrDefault();
+            vm.GroupId = intakeGroup?.Id ?? 0;
+            if (intakeGroup != null) vm.SourceFileName = intakeGroup.QuoteSourceFileName;
+
             vm.ClientAccountId = co?.ClientAccountId ?? clientid ?? 0;
-            vm.ContractActivityId = co?.ContractActivityId ?? 0;
-            vm.QuoteSupplierReference = co?.QuoteSupplierReference;
+            vm.ContractActivityId = intakeGroup != null ? intakeGroup.ContractActivityId ?? 0 : co?.ContractActivityId ?? 0;
+            vm.QuoteSupplierReference = intakeGroup != null ? intakeGroup.QuoteSupplierReference : co?.QuoteSupplierReference;
             vm.QuoteVatPercentage = co?.QuoteVatPercentage;
             vm.QuoteDate = co?.Date ?? DateOnly.FromDateTime(DateTime.Today);
             vm.ExpirationDate = co?.ExpirationDate ?? DateOnly.FromDateTime(DateTime.Today.AddDays(30));
@@ -78,7 +84,7 @@ namespace CPMCore.Controllers
 
             if (co != null)
             {
-                vm.Rows = co.ChangeOrderDetail.OrderBy(d => d.SortOrder ?? int.MaxValue).ThenBy(d => d.Id).Select(d => new ChangeOrderDetailRowV2
+                vm.Rows = co.ChangeOrderDetail.Where(d => intakeGroup == null || co.Groups.Count <= 1 || d.GroupId == intakeGroup.Id).OrderBy(d => d.SortOrder ?? int.MaxValue).ThenBy(d => d.Id).Select(d => new ChangeOrderDetailRowV2
                 {
                     Id = d.Id,
                     Description = d.Description,

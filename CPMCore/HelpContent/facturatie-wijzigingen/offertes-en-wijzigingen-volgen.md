@@ -19,7 +19,7 @@ faq:
   - q: Wat is het verschil tussen een offerte en een wijzigingsopdracht?
     a: Een offerte is een voorstel aan de klant waarover nog geen afspraak is. Pas na akkoord zet je ze om naar een wijzigingsopdracht, die de klant ondertekent.
   - q: Waarom mis ik oudere of afgesloten regels?
-    a: De lijst toont standaard enkel wat nog werk vraagt. Kies bij **Filters** voor Status de optie Alles, ook afgerond.
+    a: Bij wijzigingsopdrachten toont de lijst standaard enkel wat nog werk vraagt. Kies bij **Filters** bij Status wijzigingsopdrachten de optie Alles, ook afgerond. Omgezette offertes staan standaard niet in de lijst. Zet bij Status offertes **Omgezet** aan om ze te zien.
   - q: Wat betekent Wacht op handtekening?
     a: De wijzigingsopdracht is verzonden en minstens één eigenaar heeft getekend. Er ontbreken er nog. Bij een wijzigingsopdracht die al langer dan zeven dagen wacht, toont CPM hoeveel dagen.
   - q: Wat doet Omzetten naar wijzigingsopdracht?
@@ -43,10 +43,19 @@ Het cijfer bij Offerte telt enkel offertes die nog open zijn. Omgezette en verlo
 
 Typ in het zoekveld een nummer, klant, leverancier of eenheid. De tabbladen **Alles**, **Offertes** en **Wijzigingsopdrachten** beperken de lijst tot één soort.
 
-Klik op **Filters** en kies bij Status:
+Klik op **Filters**. Daar staan twee filters, een voor de offertes en een voor de wijzigingsopdrachten.
 
-- **Open (nog werk aan)**: de standaard. Betaalde en geweigerde wijzigingsopdrachten en omgezette of verlopen offertes verdwijnen.
+**Status offertes**: klik de statussen aan die je wilt zien. Je kan er meerdere tegelijk aanzetten. Bij elke status staat het aantal offertes.
+
+- **Concept**, **Verzonden** en **Verlopen** staan standaard aan.
+- **Omgezet** staat standaard uit, want die offertes staan al als wijzigingsopdracht in de lijst. Zet de status aan om ze toch te zien.
+
+**Status wijzigingsopdrachten**:
+
+- **Open (nog werk aan)**: de standaard. Betaalde en geweigerde wijzigingsopdrachten verdwijnen.
 - **Alles, ook afgerond**: toont ook die rijen.
+
+Wijkt een filter af van de standaard, dan staat er een label boven de lijst. Klik erop om terug te gaan naar de standaard.
 
 ## Een rij lezen
 

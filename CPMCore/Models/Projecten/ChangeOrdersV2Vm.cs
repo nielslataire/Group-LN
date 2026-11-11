@@ -18,6 +18,14 @@ public class ChangeOrdersV2Vm
     public List<ChangeOrderRowV2> Orders { get; set; } = new();
 
     public int QuoteCount => Quotes.Count;
+    /// <summary>Alle mogelijke statussen van een offerte (sleutel, label) voor de filter "Status offertes", in de volgorde van het verloop.</summary>
+    public static readonly (string Key, string Label)[] QuoteStatuses =
+    {
+        ("concept", "Concept"), ("verzonden", "Verzonden"), ("verlopen", "Verlopen"), ("omgezet", "Omgezet"),
+    };
+    /// <summary>Standaard zichtbaar: alle statussen behalve de omgezette offertes (die staan al als wijzigingsopdracht in de lijst).</summary>
+    public static readonly string[] DefaultQuoteStatuses = { "concept", "verzonden", "verlopen" };
+    public int QuoteStatusCount(string key) => Quotes.Count(q => q.QuoteStatusKey == key);
     public int OrderCount => Orders.Count;
     public int AllCount => QuoteCount + OrderCount;
 
@@ -61,6 +69,8 @@ public class ChangeOrderRowV2
     /// <summary>Telt mee onder het filter "Status: open" (nog werk aan): niet voor afgesloten WO's en niet
     /// voor een offerte die al omgezet is.</summary>
     public bool IsOpen { get; set; }
+    /// <summary>Enkel voor een offerte: concept | verzonden | verlopen | omgezet (filter "Status offertes").</summary>
+    public string? QuoteStatusKey { get; set; }
     /// <summary>Offerte: de WO die eruit gemaakt is (dan is ze "Omgezet").</summary>
     public int? ConvertedToId { get; set; }
     public string? ConvertedToNumber { get; set; }

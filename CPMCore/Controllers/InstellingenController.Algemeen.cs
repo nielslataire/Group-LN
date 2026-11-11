@@ -85,7 +85,18 @@ public partial class InstellingenController
                     Href = Url.Action("Bouwindexen", "Instellingen") ?? "#"
                 });
             }
+            if (permissionService.HasRead(PermissionCodes.SettingsBillingCompanies))
+            {
+                facturatie.Items.Add(new SettingsItemVm
+                {
+                    Icon = "ph-minus-circle",
+                    Title = "Minwerk",
+                    Description = "Stel de standaard schadevergoeding in voor een minwerk waarbij de klant maar een deel van de waarde terugkrijgt.",
+                    Href = Url.Action("Minwerk", "Instellingen") ?? "#"
+                });
+            }
             if (facturatie.Items.Count > 0) vm.Groups.Add(facturatie);
+
 
             var team = new SettingsGroupVm { Key = "team", Name = "Team & toegang" };
             if (permissionService.HasRead(PermissionCodes.SettingsUsers))

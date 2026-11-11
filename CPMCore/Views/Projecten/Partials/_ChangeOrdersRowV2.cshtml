@@ -17,7 +17,7 @@
     var subParts = new[] { Model.SupplierName, Model.SourceReference, Model.SubText }.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
     var menuId = $"gl-v2-co2-rowmenu-{Model.Id}";
 }
-<tr class="gl-v2-co2-row" data-co2-type="@(Model.IsQuote ? "offerte" : "wo")" data-co2-status="@Model.Status" data-co2-open="@(Model.IsOpen ? "true" : "false")" data-co2-search="@searchText" data-href="@detailUrl">
+<tr class="gl-v2-co2-row" data-co2-type="@(Model.IsQuote ? "offerte" : "wo")" data-co2-status="@Model.Status" data-co2-open="@(Model.IsOpen ? "true" : "false")" data-co2-qstatus="@Model.QuoteStatusKey" data-co2-search="@searchText" data-href="@detailUrl">
     <td class="gl-v2-co2-tabular gl-v2-co2-nr"><a href="@detailUrl">@Model.Number</a></td>
     <td class="gl-v2-co2-desc">
         <span class="gl-v2-co2-desc-title">@Model.Title</span>
