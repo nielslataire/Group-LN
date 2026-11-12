@@ -212,6 +212,23 @@
         });
     }
 
+    // ── Bebouwing (open/halfopen/gesloten): enkel zichtbaar bij het subtype Woning ───────────────
+    function initBuildingType() {
+        var wrap = document.getElementById("gl-v2-unit-buildingtype");
+        var sub = $('[data-role="subtype"] input[type="hidden"]');
+        var group = $('[data-role="group"] input[type="hidden"]');
+        if (!wrap || !sub) return;
+        var woningId = wrap.getAttribute("data-woning-type-id");
+        function sync() {
+            var show = sub.value === woningId;
+            wrap.hidden = !show;
+        }
+        sub.addEventListener("change", sync);
+        // Een ander type leegt het subtype (zie initTypeCascade), dus ook de bebouwing.
+        if (group) group.addEventListener("change", function () { wrap.hidden = true; });
+        sync();
+    }
+
     // ── Live prijsberekening (16b §4) ───────────────────────────────────────────────────────────
     function optionBlocks() { return $$("[data-option]", document.getElementById("gl-v2-unit-options")); }
     function recalc() {
@@ -667,6 +684,7 @@
     initFields(document);
     initSectionNav();
     initTypeCascade();
+    initBuildingType();
     initOptions();
     initRooms();
     initPlan();

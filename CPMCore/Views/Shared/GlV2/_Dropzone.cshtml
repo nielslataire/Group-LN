@@ -25,7 +25,7 @@
     @Html.Raw("<div class=\"gl-v2-field\"" + (string.IsNullOrWhiteSpace(Model.RequiredMessage) ? "" : " data-gl-v2-required=\"" + System.Net.WebUtility.HtmlEncode(Model.RequiredMessage) + "\"") + ">")
     if (!string.IsNullOrWhiteSpace(Model.Label))
     {
-        <span class="gl-v2-field-label">@Model.Label@if (!string.IsNullOrWhiteSpace(Model.RequiredMessage)) { <span style="color:#8B2A2A"> *</span> }</span>
+        <span class="gl-v2-field-label">@Model.Label@if (!string.IsNullOrWhiteSpace(Model.RequiredMessage)) {  <span class="gl-v2-field-req" aria-hidden="true">*</span> }</span>
     }
 }
 <div class="gl-v2-dropzone is-@layout is-mode-@mode@(custom ? " is-custom" : "")@(Model.DropOnly ? " is-droponly" : "")@(hasCurrent ? " has-current" : "")@(string.IsNullOrWhiteSpace(Model.CssClass) ? "" : " " + Model.CssClass)" data-gl-v2-dropzone data-mode="@mode"

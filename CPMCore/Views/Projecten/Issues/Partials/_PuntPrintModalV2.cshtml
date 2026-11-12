@@ -1,0 +1,116 @@
+@model CPMCore.Models.Issues.PuntenIndexV2Vm
+@using CPMCore.Models.GlV2
+@*
+    gl-v2 — Punten afdrukken (design-handoff 40u): modal vanuit "Afdrukken" in de topbalk van 40a (TYPE 2 formulier-modal, 720 breed;
+    op tablet en gsm een bottom sheet, zie gl-v2-punten-print.css). Welke punten · soort afdruk · groeperen · sorteren · opnemen,
+    met rechts een voorbeeld dat meeverandert. Eén primaire knop (Afdrukken = afdrukvenster van de browser), Download PDF is secundair.
+    De keuzes onthoudt gl-v2-punten-print.js per gebruiker (localStorage). De pdf komt van ProjectsIssues/PrintPdf.
+*@
+@{
+    var sortItems = new List<GlV2SelectItem>
+    {
+        new() { Value = "deadline", Text = "Deadline, oudste eerst" },
+        new() { Value = "nr", Text = "Puntnummer, nieuwste eerst" },
+        new() { Value = "eenheid", Text = "Eenheid" },
+        new() { Value = "status", Text = "Status" },
+    };
+    var groupItems = new[] { ("geen", "Geen"), ("aannemer", "Aannemer"), ("eenheid", "Eenheid"), ("fase", "Fase") };
+    var includeItems = new[]
+    {
+        ("photos", "Foto's", "eerste foto per punt als miniatuur", false),
+        ("plans", "Plannen met aanduidingen", "als bijlage, één pagina per plan", false),
+        ("history", "Historiek en opmerkingen", "wie wat deed en wanneer", false),
+        ("closed", "Afgesloten punten", "ook wat al in orde is", false),
+        ("internal", "Interne notities", "enkel voor eigen gebruik", true),
+    };
+}
+<div class="modal fade gl-v2-modal-form gl-v2-pp-modal" id="pt-print-modal" tabindex="-1" aria-hidden="true" aria-labelledby="pt-print-title"
+     data-url="@Url.Action("PrintPdf", "ProjectsIssues", new { projectId = Model.ProjectId })" data-project="@Model.ProjectId" data-project-name="@Model.ProjectName">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="gl-v2-pp-icon"><i class="ph ph-printer" aria-hidden="true"></i></span>
+                <div class="gl-v2-pp-head">
+                    <h2 class="modal-title" id="pt-print-title">Punten afdrukken</h2>
+                    <span class="gl-v2-pp-sub" id="pt-print-sub"></span>
+                </div>
+                <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+            </div>
+            <div class="modal-body gl-v2-pp-body">
+                <div class="gl-v2-pp-left">
+                    <div class="gl-v2-pp-sec">
+                        <span class="gl-v2-pp-label">Welke punten</span>
+                        <div class="gl-v2-pp-scope" role="radiogroup" aria-label="Welke punten" id="pt-print-scope">
+                            <button type="button" role="radio" aria-checked="true" data-scope="sel"><b>Huidige selectie</b><small data-scope-hint="sel"></small></button>
+                            <button type="button" role="radio" aria-checked="false" data-scope="open"><b>Alle open punten</b><small data-scope-hint="open"></small></button>
+                            <button type="button" role="radio" aria-checked="false" data-scope="check"><b>Aangevinkt</b><small data-scope-hint="check"></small></button>
+                        </div>
+                    </div>
+                    <div class="gl-v2-pp-sec">
+                        <span class="gl-v2-pp-label">Soort afdruk</span>
+                        <div class="gl-v2-pp-types" role="radiogroup" aria-label="Soort afdruk" id="pt-print-types">
+                            <button type="button" role="radio" aria-checked="true" data-type="lijst">
+                                <span class="gl-v2-pp-ring"><i></i></span>
+                                <span class="gl-v2-pp-ct"><b>Puntenlijst</b><small>Tabel zoals de lijst: nummer, titel, eenheid, zone, aannemer, status, deadline.</small><em>A4 liggend</em></span>
+                            </button>
+                            <button type="button" role="radio" aria-checked="false" data-type="aannemer">
+                                <span class="gl-v2-pp-ring"><i></i></span>
+                                <span class="gl-v2-pp-ct"><b>Per aannemer</b><small>Eén aannemer per pagina met zijn werfleider, om mee te geven of te mailen.</small><em>A4 staand · 1 pagina per aannemer</em></span>
+                            </button>
+                            <button type="button" role="radio" aria-checked="false" data-type="rondgang">
+                                <span class="gl-v2-pp-ring"><i></i></span>
+                                <span class="gl-v2-pp-ct"><b>Rondgang op de werf</b><small>Met afvinkvakje en schrijfruimte per punt, om met pen af te lopen.</small><em>A4 staand</em></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="gl-v2-pp-sec gl-v2-pp-row">
+                        <div class="gl-v2-pp-col">
+                            <span class="gl-v2-pp-label">Groeperen op</span>
+                            <div class="gl-v2-segmented is-compact" role="group" aria-label="Groeperen op" id="pt-print-group">
+                                @foreach (var (key, text) in groupItems)
+                                {
+                                    <button type="button" data-group="@key" aria-pressed="@(key == "geen" ? "true" : "false")" class="@(key == "geen" ? "is-active" : "")">@text</button>
+                                }
+                            </div>
+                        </div>
+                        <div class="gl-v2-pp-col gl-v2-pp-sortcol">
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                            {
+                                Name = "pt-print-sort", Id = "pt-print-sort", Label = "Sorteren", Value = "deadline", Items = sortItems
+                            })
+                        </div>
+                    </div>
+                    <div class="gl-v2-pp-sec">
+                        <span class="gl-v2-pp-label">Opnemen</span>
+                        <div class="gl-v2-pp-checks">
+                            @foreach (var (key, label, hint, intern) in includeItems)
+                            {
+                                <div class="gl-v2-pp-ck">
+                                    <span class="gl-v2-check"><input type="checkbox" id="pt-print-inc-@key" data-inc="@key" /><label for="pt-print-inc-@key"></label></span>
+                                    <label class="gl-v2-pp-ck-text" for="pt-print-inc-@key"><b>@label</b><small>@hint</small></label>
+                                    @if (intern) { <em class="gl-v2-pp-intern">INTERN</em> }
+                                </div>
+                            }
+                        </div>
+                        <div class="gl-v2-pp-warn" id="pt-print-warn" hidden>
+                            <i class="ph ph-warning" aria-hidden="true"></i>
+                            <span>Interne notities komen op papier. Geef deze afdruk niet mee aan aannemers.</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="gl-v2-pp-right">
+                    <span class="gl-v2-pp-label">Voorbeeld</span>
+                    <div class="gl-v2-pp-stage" id="pt-print-stage" aria-hidden="true"></div>
+                    <div class="gl-v2-pp-meta"><b id="pt-print-pages"></b><span id="pt-print-format"></span></div>
+                    <span class="gl-v2-pp-hint" id="pt-print-hint"></span>
+                </div>
+            </div>
+            <div class="modal-footer gl-v2-pp-footer">
+                <span class="gl-v2-pp-sum" id="pt-print-sum" role="status" aria-live="polite"></span>
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="pt-print-download"><i class="ph ph-download-simple" aria-hidden="true"></i>Download PDF</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="pt-print-go"><i class="ph ph-printer" aria-hidden="true"></i>Afdrukken</button>
+            </div>
+        </div>
+    </div>
+</div>

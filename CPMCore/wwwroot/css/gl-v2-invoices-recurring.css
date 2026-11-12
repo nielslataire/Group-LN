@@ -132,7 +132,8 @@ body.gl-v2-ri-panel-open { overflow: hidden; }
 .gl-v2-ri-created tr[data-href] { cursor: pointer; }
 .gl-v2-ri-created tr[data-href]:hover td { background: var(--gl-v2-hover-tint, #F2F5EF); }
 .gl-v2-ri-idxrow { display: flex; gap: 10px; align-items: center; margin-top: 8px; }
-.gl-v2-ri-idxrow .gl-v2-field-box { width: 120px; height: 34px; }
+.gl-v2-ri-idxrow { --gl-v2-field-h: 34px; }
+.gl-v2-ri-idxrow .gl-v2-field-box { width: 120px; }
 .gl-v2-ri-upcoming, .gl-v2-ri-history { list-style: none; margin: 0; padding: 4px 18px 8px; display: flex; flex-direction: column; }
 .gl-v2-ri-upcoming li { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid rgba(44, 59, 42, .05); }
 .gl-v2-ri-upcoming li:last-child, .gl-v2-ri-history li:last-child { border-bottom: 0; }

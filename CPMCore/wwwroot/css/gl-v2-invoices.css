@@ -3,7 +3,6 @@
    — the table structure, DataTables init and all JS are shared byte-for-byte with the current
    page (Views/Invoices/IndexV2.cshtml); only presentation changes here. Scoped under .gl-v2. */
 
-
 /* Het zoekveld (optie 4i, .gl-v2-field) moet net als de oude .input-group de resterende breedte
    naast de boekjaar-dropdown opeten, en mag onder een 210px-brede buur even goed krimpen op een
    telefoonscherm — .gl-v2-field-input's flex-item-default min-width:auto zou anders weer de HELE
@@ -80,7 +79,6 @@
 @media (min-width: 1200px) {
     .gl-v2-skeleton-header, .gl-v2-skeleton-row { grid-template-columns: 44px 70px 112px 96px minmax(0, 1fr) 90px 90px 66px 116px 92px 200px; }
 }
-
 
 /* Lege staat (optie 4f) — .gl-v2-empty-state* is nu de project-brede default in gl-v2-shell.css.
    Twee plekken gebruiken dit hier: de server-side variant (IndexV2.cshtml, Model bevat écht nul
@@ -193,7 +191,6 @@
 
 .gl-v2 #datatable-invoice-list .gl-v2-row-action i { font-size: 15px; }
 
-
 .gl-v2 #datatable-invoice-list .gl-v2-row-action:hover {
     border-color: var(--gl-v2-primary);
     background: var(--gl-v2-hover-tint);
@@ -280,9 +277,6 @@
 
 /* Padding op dt-info/dt-paging zelf i.p.v. op de rij eromheen — dezelfde 14px-inspring als de
    eerste/laatste tabelkolom, maar rechtstreeks op de twee elementen die 'm nodig hebben. */
-
-
-
 
 /* Eigen basisstijl i.p.v. Bootstrap's d-flex/align-items-center/justify-content-end/gap-1/
    flex-nowrap (die eerst op dit element stonden): .d-flex{display:flex!important} zou de tablet-
@@ -687,5 +681,3 @@
     }
 }
 
-/* hersteld uit filters.css-consolidatie: paginavariant van een gedeeld component */
-.gl-v2-toolbar-card { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 14px; border-radius: var(--gl-v2-radius-md); background: var(--gl-v2-surface); box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 14px 30px -24px rgba(44, 59, 42, .35); flex: none; }

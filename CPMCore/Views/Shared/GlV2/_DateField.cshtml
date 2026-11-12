@@ -10,7 +10,7 @@
         @Model.Label
         @if (Model.Required)
         {
-            <span style="color:#8B2A2A">*</span>
+            <span class="gl-v2-field-req" aria-hidden="true">*</span>
         }
     </label>
     <div class="gl-v2-select gl-v2-datepicker" data-gl-v2-datepicker id="@(Model.Id)_picker" data-dim-past="@(Model.DimPast ? "true" : null)">

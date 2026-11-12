@@ -41,6 +41,15 @@ namespace CPMCore.Controllers
             if (!projectResponse.Success || projectResponse.Value is null) return NotFound();
             var project = projectResponse.Value;
 
+            // Fouten van een geweigerde opslag (ChangeOrderDetailV2Save redirect) komen hier terug in ModelState,
+            // zodat _ErrorSummaryV2 ze toont zoals bij elk ander gl-v2-formulier.
+            if (TempData["GlV2FormErrors"] is string formErrors)
+                foreach (var line in formErrors.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    var parts = line.Split('\t', 2);
+                    ModelState.AddModelError(parts.Length == 2 ? parts[0] : "CustomError", parts.Length == 2 ? parts[1] : parts[0]);
+                }
+
             ChangeOrder co = null;
             if (coid > 0)
             {
@@ -823,7 +832,8 @@ namespace CPMCore.Controllers
                 : RedirectToAction(nameof(ChangeOrderDetailV2), new { projectid = model.ProjectId, coid = model.ChangeOrderId, quote = model.IsQuote });
             IActionResult Refuse(string message)
             {
-                AddMessage("error", message, "Niet bewaard");
+                // Foutoverzicht bovenaan het scherm (DESIGN.md punt 24); de GET-actie zet dit terug in ModelState.
+                AddFormError(message);
                 return RedirectToAction(nameof(ChangeOrderDetailV2), new { projectid = model.ProjectId, coid = model.ChangeOrderId });
             }
 
@@ -833,10 +843,21 @@ namespace CPMCore.Controllers
             // Het contract is optioneel (offerte én wijzigingsopdracht): het project toont een waarschuwing zolang het ontbreekt.
             if (model.ClientAccountId <= 0)
             {
-                AddMessage("error", "Kies een klant/eenheid.", "Kon niet opslaan");
+                if (fromIntake) AddMessage("error", "Kies een klant/eenheid.", "Kon niet opslaan"); // 20c heeft geen foutoverzicht
+                else AddFormError("Kies een klant · eenheid.", "clientAccountId");
                 // Terug naar het scherm van herkomst — bij een nog niet opgeslagen offerte uit 20c zou een
                 // omleiding naar een leeg opmaakscherm de net ingelezen regels kwijtspelen.
                 return BackToOrigin();
+            }
+
+            // Verplicht (foutoverzicht, DESIGN.md punt 24): een onderwerp en minstens één regel met een bedrag. 20c levert enkel regels en is uitgezonderd.
+            if (!fromIntake)
+            {
+                var missing = false;
+                if (string.IsNullOrWhiteSpace(model.Subject)) { AddFormError("Vul een onderwerp in.", "subject"); missing = true; }
+                if (!(model.Rows ?? new List<ChangeOrderDetailRowV2>()).Any(r => !string.IsNullOrWhiteSpace(r.Description) && r.Price > 0))
+                { AddFormError("Voeg minstens één regel met een bedrag toe.", "rows"); missing = true; }
+                if (missing) return BackToOrigin();
             }
 
             ChangeOrder co;
@@ -929,6 +950,14 @@ namespace CPMCore.Controllers
                 : fromIntake ? "De regels zijn ingelezen. Zet de commissie en de omschrijving voor de klant en verzend de offerte."
                 : "Offerte opgeslagen.";
             return await AfterSaveRedirectAsync(co, model.ProjectId, model.AfterSave, message, "Opgeslagen");
+        }
+
+        /// <summary>Server-vangnet voor een geweigerde opslag die naar het scherm terug redirect: ModelState overleeft een redirect niet,
+        /// dus bewaren we de fout in TempData en zet de GET-actie ze terug (sleutel + tab, één fout per regel).</summary>
+        private void AddFormError(string message, string key = "CustomError")
+        {
+            var existing = TempData["GlV2FormErrors"] as string;
+            TempData["GlV2FormErrors"] = (string.IsNullOrEmpty(existing) ? "" : existing + "\n") + key + "\t" + message.Replace("\n", " ").Replace("\t", " ");
         }
 
         /// <param name="preserveInternal">Vanuit 20c: de intake-rijen kennen geen commissie/btw — bestaande

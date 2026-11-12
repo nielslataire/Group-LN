@@ -34,6 +34,7 @@ Public Class UnitTranslator
             bo.Type = UnitType
 
         End If
+        bo.BuildingType = _entity.BuildingType
 
         For Each x In _entity.LinkedUnit_Unit
             Dim bou As New UnitBO
@@ -82,6 +83,7 @@ Public Class UnitTranslator
                 _entity.TypeId = bo.Type.Id
             End If
         End If
+        _entity.BuildingType = bo.BuildingType
 
         'handle attached unit
         If (bo.AttachedUnitsId = 0 Or bo.AttachedUnitsId Is Nothing) Then

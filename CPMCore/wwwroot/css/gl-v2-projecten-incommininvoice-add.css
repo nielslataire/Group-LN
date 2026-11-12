@@ -37,7 +37,8 @@
    rechtstreeks zonder .gl-v2-field-box, en die klasse is bewust rand-/achtergrondloos (bedoeld om IN
    een .gl-v2-field-box te zitten), dus de velden waren onzichtbaar. */
 .gln-ai-row-type .gl-v2-field-input, .gln-ai-row-wo .gl-v2-field-input { font-size: 12.5px; }
-.gln-ai-row .gl-v2-field-box { --gl-v2-field-pad: 10px; height: 34px; padding: 0 10px; }
+.gln-ai-row { --gl-v2-field-h: 34px; }
+.gln-ai-row .gl-v2-field-box { --gl-v2-field-pad: 10px; padding: 0 10px; }
 .gln-ai-row-price .gl-v2-field-input { text-align: right; }
 .gln-ai-row-wo[disabled], .gln-ai-row-wo .gl-v2-field-input:disabled { background: var(--gl-v2-disabled-bg); color: var(--gl-v2-disabled-fg); }
 .gln-ai-row-del { width: 32px; height: 32px; }

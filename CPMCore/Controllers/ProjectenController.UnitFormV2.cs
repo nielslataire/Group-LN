@@ -118,6 +118,7 @@ namespace CPMCore.Controllers
                     vm.Unit.Type = new UnitTypeBO { Id = s.Type.Id, GroupId = s.Type.GroupId, Name = s.Type.Name };
                     vm.SelectedType = s.Type.Id;
                     vm.SelectedGroupType = s.Type.GroupId;
+                    vm.Unit.BuildingType = s.BuildingType;
                     vm.Unit.LandValue = s.LandValue;
                     vm.Unit.Surface = s.Surface;
                     vm.Unit.GroundSurface = s.GroundSurface;
@@ -368,6 +369,8 @@ namespace CPMCore.Controllers
             unit.AttachedUnitsId = model.Unit.AttachedUnitsId is null or 0 ? null : model.Unit.AttachedUnitsId;
             unit.Type ??= new UnitTypeBO();
             unit.Type.Id = model.SelectedType;
+            // Bebouwing hoort enkel bij een woning; bij een ander subtype wordt hij gewist.
+            unit.BuildingType = model.SelectedType == 2 && model.Unit.BuildingType is >= 1 and <= 3 ? model.Unit.BuildingType : null;
 
             if (file != null && file.Length > 0)
             {

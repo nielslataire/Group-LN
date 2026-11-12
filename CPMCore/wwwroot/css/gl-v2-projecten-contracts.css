@@ -188,6 +188,3 @@ tr.is-expanded > td { background: var(--gl-v2-bg); }
     .gl-v2-pc-mobile-list { display: none; }
 }
 
-/* hersteld uit filters.css-consolidatie: paginavariant van een gedeeld component */
-.gl-v2-toolbar-card { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 14px; border-radius: var(--gl-v2-radius-md); background: var(--gl-v2-surface); box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 14px 30px -24px rgba(44, 59, 42, .35); flex: none; }
-.gl-v2-toolbar-search { flex: 1; min-width: 180px; }

@@ -13,6 +13,9 @@ public partial class Units
 
     public int? TypeId { get; set; }
 
+    /// <summary>Bebouwingstype van een woning (1 open, 2 halfopen, 3 gesloten); zie BOCore.UnitBuildingType.</summary>
+    public int? BuildingType { get; set; }
+
     public int ProjectId { get; set; }
 
     public decimal? Landshare { get; set; }

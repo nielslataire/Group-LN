@@ -483,7 +483,7 @@ Volledig plan en voortgang: `E:\TFS\CSS_CONSOLIDATIE_PLAN.md`. Regel: een pagina
 
 | Component | Bestand | Wat |
 |---|---|---|
-| Filterbalk + toolbar-kaart | `css/gl-v2/filters.css`, `js/gl-v2-filters.js` | `.gl-v2-filters-*`, `.gl-v2-toolbar-*`. JS: `#filters-toggle`/`#mobile-filters-toggle` openen `#filters-panel` (bottom sheet <768px met `#filters-panel-backdrop`, `#filters-show-btn` sluit, Esc sluit), per delegatie op `document`; `window.GlV2Filters.setOpen(bool)`. Per pagina blijft: de filters zelf, chips, tellers (`#filters-toggle-count`, `#filters-sheet-badge`), `#filters-show-count`. Varianten blijven in de pagina: `.gl-v2-filters-grid` (kolommen + mobiel), `.gl-v2-toolbar-card`, `.gl-v2-toolbar-search` (min-width). |
+| Filterbalk + toolbar-kaart | `css/gl-v2/filters.css`, `js/gl-v2-filters.js` | `.gl-v2-filters-*`, `.gl-v2-toolbar-*`. JS: `#filters-toggle`/`#mobile-filters-toggle` openen `#filters-panel` (bottom sheet <768px met `#filters-panel-backdrop`, `#filters-show-btn` sluit, Esc sluit), per delegatie op `document`; `window.GlV2Filters.setOpen(bool)`. Per pagina blijft: de filters zelf, chips, tellers (`#filters-toggle-count`, `#filters-sheet-badge`), `#filters-show-count`. `.gl-v2-filters-grid` (2 kolommen, 1 op mobiel), `.gl-v2-toolbar-card` en `.gl-v2-toolbar-search` (min-width 180px) staan nu ook als basis in `filters.css` (12/11/2026: de "hersteld"-kopieën in 11 pagina-CSS-bestanden zijn weg). Wil een pagina andere kolommen, schrijf dan in je eigen CSS een eigen klasse (bv. `.gl-v2-pt-filters-grid { grid-template-columns: repeat(4, …) }`) en zet die naast `.gl-v2-filters-grid` in de markup: pagina-CSS laadt na `filters.css` en wint bij gelijke specificiteit. Kopieer die basisregels nooit meer naar een pagina-CSS. |
 | Laadstaat | `css/gl-v2/skeleton.css` | `.gl-v2-loading-skeleton`, `-skeleton-box/-text/-footer/-cards/-card`, pulse-keyframes. De kolomindeling van `-skeleton-header/-row` is per entiteit (blijft in de pagina). |
 | DataTables-voettekst | `css/gl-v2/datatable.css` | `.gl-v2 .dt-info`, `.dt-paging` (knoppen 28×28, radius 7). Issues en Leveranciers-details hebben een eigen scope. |
 | Selectievakje | `css/gl-v2/check.css` | `.gl-v2-check` (`<span class="gl-v2-check"><input type="checkbox" id=x><label for=x></label></span>`): vinkje, indeterminate (streepje), gouden focusring, disabled = neutraal, disabled+aangevinkt = goud ("verplicht meegetrokken"); `.is-solid` = disabled+aangevinkt blijft primair (bv. "al geboekt" in Facturen). Vervangt `.gl-v2-co-check`, `-inv-check`, `-ps-check` (Betalingsschijven) en `.checkbox-custom` in de Facturen-tabel. NIET dit component: `.gl-v2-ps-check` in Issues/SendV2 (native vakje in een tabelcel). |
@@ -1079,6 +1079,9 @@ system, apply the part that's real" approach used elsewhere in this pilot.
   A `.Currencymask` field with a `.gl-v2-field-suffix` (`€`) hides the suffix when the value no longer fits:
   `currency.js` toggles `.is-suffix-hidden` on the `.gl-v2-field-box` (CSS in `gl-v2/forms.css`).
   Give such a box at least ~110px so `10.000,00` stays visible next to the `€`.
+
+**Veldhoogte = één variabele.** `.gl-v2-field-box` én `.gl-v2-select-trigger` (en dus ook de datumkiezer) nemen hun hoogte uit `--gl-v2-field-h` (standaard 40px, `gl-v2/forms.css`). Wil een pagina compactere velden (tabelcellen, toolbars), zet dan `--gl-v2-field-h: 34px` op de *container* — NIET `height` op `.gl-v2-field-box` — zodat een dropdown naast een tekstveld nooit een andere hoogte krijgt.
+
 - **Field group** (`.gl-v2-field-group`) — two `.gl-v2-field`s in a row (e.g. street + number),
   sharing the same 40/44px height as the dropdown so a row mixing a field and a dropdown still
   lines up. `.gl-v2-field-narrow` fixes one member to 92px instead of splitting the row evenly.
@@ -3563,6 +3566,24 @@ onderdelen, samen één contract:
    `"ClientAccount.Name"` — anders een vrije sleutel als `"Units"`/`"CustomError"` voor iets dat niet
    op één veld valt) vóór een `return View(viewName, model)`. Dit is het enige pad dat écht telt: JS
    kan uitstaan of falen, de server valideert onafhankelijk en de partial toont exact dezelfde kaart.
+
+> **VERPLICHT PER FORMULIER (regel, geen suggestie).** Elk gl-v2-scherm dat invoer verzamelt en opslaat
+> (aanmaken, bewerken, modal met formulier, detailscherm met een Opslaan-knop) toont fouten ENKEL via dit
+> foutoverzicht: `_ErrorSummaryV2` bovenaan de scroll-wrapper van de `<form>`, `GlV2ErrorSummary.init(...)` in
+> het paginascript, `data-gl-v2-required` (+ de veldfout onder het veld) op elk verplicht veld, en het
+> server-vangnet met `ModelState.AddModelError`. Geen eigen foutkaart, geen toast of `notice` als vervanging
+> voor een formulierfout, geen `alert()`. Een toast is enkel nog voor bevestigingen en voor waarschuwingen
+> die niets blokkeren. Een server-redirect na een geweigerde opslag verliest ModelState: bewaar de fout dan in
+> `TempData` en zet ze in de GET-actie terug in `ModelState` (voorbeeld: `AddFormError` + het begin van
+> `ProjectenController.ChangeOrderDetailV2`).
+> **Bestaande (oude) formulieren** die nog een eigen foutweergave hebben, worden bij elke wijziging aan dat
+> formulier meteen omgezet naar dit contract. Wie een formulier aanraakt en dit overslaat, laat het werk niet af.
+> **Verplicht-sterretje**: altijd `<span class="gl-v2-field-req" aria-hidden="true">*</span>` in het label (gedeelde
+> klasse in `gl-v2/forms.css`, kleur = `--gl-v2-danger`), nooit een inline `style` met een kleur. `_SelectList`,
+> `_DateField` en `_Dropzone` doen dit al; oudere pagina's met een inline kleur of een eigen klasse (`gl-v2-inh-req`,
+> `gl-v2-cq-req`) zet je om zodra je ze aanraakt.
+> Welke velden wél en niet verplicht zijn, staat per scherm in de serverregels; "optioneel" zet je zichtbaar in
+> de hulptekst onder het veld.
 
 **Rollout — alle gl-v2-formulieren gebruiken dit nu.** `Klanten/AddClientAccountV2` (eerste, met de
 eenheden-validator), `Klanten/CreateV2`, `EditV2`, `EditProjectV2` (met een verdeelsleutel-validator),
@@ -7744,3 +7765,21 @@ Herwerkt 10/11/2026 (`wwwroot/css/coachmarks.css`, `wwwroot/js/coachmarks.js`), 
 **Niet gebouwd uit punt 58.** Hotspot-stip; "Met beeld"-variant; opnieuw bekijken via Help › Rondleidingen en terugzetten in Mijn profiel › Meldingen › Tips en rondleidingen; beheer van de tips als lijst in Instellingen › Website & app › Tips (titel, tekst, pagina, doel, start/einddatum, rollen). Tot dan staan de definities in `Models/Coachmarks/CoachmarkRegistry.cs`. De oudere definities daar (Issues, Invoices.Create, Projectleider-dashboard, Projecten/Detail) hebben nog langere teksten dan de regel van 2 zinnen; herschrijf ze wanneer je ze aanraakt.
 
 **Techniek.** De bubbel hangt aan `<body>`, buiten `.gl-v2`: de `--gl-v2-*` tokens bestaan daar niet (zie "tokens-scope"), dus `coachmarks.css` gebruikt letterlijke waarden met de lettertype-tokens als terugval. Wijzigt het palet, dan moet dat bestand mee.
+
+## Update 12/11/2026 — Punten afdrukken (design-handoff punt 40u)
+
+Knop **Afdrukken** (`#pt-print`, op gsm via de snelactie `#pt-print-m`) opent een TYPE 2 formulier-modal (`.gl-v2-modal-form.gl-v2-pp-modal`, 720px; <1024px een bottom sheet) in plaats van de oude directe pdf.
+
+- **Bestanden**: `Views/Projecten/Issues/Partials/_PuntPrintModalV2.cshtml`, `css/gl-v2-punten-print.css` (namespace `gl-v2-pp-*`), `js/gl-v2-punten-print.js`. De lijst-JS (`gl-v2-projecten-punten.js`) exposeert enkel `window.GlV2PuntenList` (applied/all/checked/statusFilter/filtersText).
+- **Keuzes**: welke punten (huidige selectie met filters · alle open · aangevinkt), soort (puntenlijst A4 liggend · per aannemer A4 staand, groeperen vast · rondgang met afvinkvakje), groeperen (geen/aannemer/eenheid/fase), sorteren, opnemen (foto's, plannen met aanduidingen, historiek, afgesloten, interne notities in goud + waarschuwing). Voorbeeld rechts met geschat aantal pagina's.
+- **Standaarden**: zijn er punten aangevinkt, dan staat "Aangevinkt" klaar; filter je op status Afgesloten of Alle, dan staat "Afgesloten punten" aan. Soort/groeperen/sorteren/opnemen worden per browser onthouden (localStorage `gl-v2-punten-print`, NIET de scope en NIET "afgesloten").
+- **Server**: `ProjectsIssues/PrintPdf` (POST, antiforgery) → `IConstructionIssueReportService.GeneratePrintPdf(projectId, ConstructionIssuePrintOptions)` (`ServiceCore/ConstructionIssueReportService.Print.cs`, QuestPDF). De pagina haalt de pdf op via fetch: **Afdrukken** zet hem in een verborgen iframe en roept `print()` aan, **Download PDF** bewaart hem. De ids worden server-side beperkt tot het project; zonder "Afgesloten punten" valt alles met status Afgesloten/Opgelost weg. Interne notities = `ConstructionIssueHistory.IsInternal` met een commentaar; berichten enkel met "Historiek en opmerkingen".
+- **Oude `DownloadPdf`** (vaste kaartlayout, `GenerateReportPdf`) wordt door de lijst niet meer aangeroepen; `GenerateReportPdf` zelf blijft in gebruik voor het versturen naar aannemers en het portaal.
+- **Help**: `HelpContent/punten-verslagen/punten-afdrukken.md` (screen `issues-index`).
+
+### Update 12/11/2026 — ChangeOrderDetailV2: foutoverzicht + omschrijving optioneel
+- **Foutoverzicht**: `Projecten/ChangeOrderDetailV2` draait op het gedeelde foutoverzicht (punt 24, zie de verplichte regel daar). `_ErrorSummaryV2` is het eerste kind van `#gl-v2-co-root`; `gl-v2-projecten-changeorderdetail.js` roept `GlV2ErrorSummary.init` aan. De klant · eenheid draagt `data-gl-v2-required` (enkel zolang het een keuzelijst is). Bij verzenden of omzetten komen de regels-controles als validators in de lijst: minstens één regel, een leverancier zonder regels, regels op "controleer", facturatieplan niet 100 %. De oude toasts "Nog niet compleet" en "Nog niet te verzenden" zijn weg; de waarschuwingstoasts "Nog geen leverancier" en "Geen contract" blijven, want die blokkeren niets.
+- **Server-vangnet**: `ChangeOrderDetailV2Save` bewaart een geweigerde opslag (geen klant, ondertekend, verzonden, omgezet) met `AddFormError` in `TempData["GlV2FormErrors"]`; de GET-actie zet die terug in `ModelState`. Het ingelezen-offerte-scherm (20c) heeft geen foutoverzicht en houdt zijn toast.
+- **Omschrijving voor de klant is optioneel**: `SendProblem` vraagt ze niet meer, de omzetmodal (`_ModalConvertQuoteV2`) heeft geen verplicht-sterretje meer, beide velden zeggen "optioneel". Leeg blijft leeg op de offerte-pdf en de factuur.
+- **Regels en totalen op elke breedte (12/11/2026)**: in de lijnen- en kaartvorm (container `co-rows` ≤ 1080px) zijn label en bedrag van de totaalrijen de eerste en de laatste cel (`td:first-child` / `td:not(:first-child)`), niet `[colspan]`: de bedragcel heeft zelf een colspan en werd als label links uitgelijnd. De 20px opvulling van de eerste/laatste cel in de tabelvorm wordt in de lijnen- en kaartvorm op 0 gezet (de rij heeft zelf opvulling), anders sprongen omschrijving en totaal 20px in. Het totalenblok onder de groepen (`.gl-v2-co-totals-scroll`, 17px) staat op dezelfde rechterrand als dat in de groepskaart (16px + 1px rand), op elke breedte; de 10px-versmalling van `.gl-v2-co-groups` onder 560px is weg omdat ze die rand liet verspringen.
+- **Verplicht op een offerte of wijzigingsopdracht (12/11/2026)**: klant · eenheid, onderwerp en minstens één regel met een omschrijving en een prijs > 0 (client: `data-gl-v2-required` + validator, ook bij gewoon opslaan; server: vangnet in `ChangeOrderDetailV2Save`, niet voor 20c). Het verplicht-sterretje is de gedeelde `.gl-v2-field-req`.

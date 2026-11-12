@@ -33,8 +33,11 @@
     function val(k) { var f = filters[k]; return f.el ? f.el.value : f.def; }
     function labelOf(k) {
         var wrap = filters[k].el && filters[k].el.closest("[data-gl-v2-select]");
+        // De tekst van de gekozen OPTIE, niet van de trigger: die wordt pas na het change-event bijgewerkt, waardoor het chip-label
+        // de vorige keuze ("Alle aannemers") toonde.
+        var o = wrap && wrap.querySelector('.gl-v2-select-option[data-value="' + val(k) + '"]');
         var l = wrap && wrap.querySelector(".gl-v2-select-trigger-label");
-        return l ? l.textContent.trim() : val(k);
+        return o ? o.textContent.trim() : (l ? l.textContent.trim() : val(k));
     }
     function isoToday() { var d = new Date(); return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
     function isoPlus(days) { var d = new Date(); d.setDate(d.getDate() + days); return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
@@ -232,16 +235,18 @@
     });
     if (delModal) { var df = delModal.querySelector("form"); df.dataset.singleAction = df.action; }
 
-    // ── Afdrukken: selectie, anders wat zichtbaar en open is ──
-    var printBtn = $("#pt-print");
-    if (printBtn) printBtn.addEventListener("click", function () {
-        var sel = selected();
-        var list = sel.length ? sel : appliedRows().filter(function (tr) { return tr.dataset.closed !== "1"; });
-        if (!list.length) return;
-        var holder = $("#pt-print-ids"); holder.innerHTML = "";
-        list.forEach(function (tr) { var i = document.createElement("input"); i.type = "hidden"; i.name = "issueIds"; i.value = tr.dataset.id; holder.appendChild(i); });
-        $("#pt-print-form").submit();
-    });
+    // ── Afdrukken: de modal (gl-v2-punten-print.js, design 40u) leest de lijst via dit kleine publieke vlak ──
+    window.GlV2PuntenList = {
+        applied: function () { return table ? appliedRows() : []; },
+        all: function () { return table ? allRows() : []; },
+        checked: function () { return table ? selected() : []; },
+        statusFilter: function () { return val("status"); },
+        // "Status open · Verslag werfbezoek nr. 14": de filters die nu aanstaan, voor de ondertitel van de modal
+        filtersText: function () {
+            return Object.keys(filters).filter(function (k) { return val(k) !== filters[k].def; })
+                .map(function (k) { return filters[k].name + " " + labelOf(k).toLowerCase(); }).join(" · ");
+        }
+    };
 
     // ── DataTable + paginagrootte uit de beschikbare hoogte (zelfde rekenwerk als Leveranciers/Facturen) ──
     var card = $(".gl-v2-pt-card");

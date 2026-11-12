@@ -159,7 +159,8 @@ a.gl-v2-co-quote-preview:hover { border-color: var(--gl-v2-primary); color: var(
 .gl-v2-co-attach-size { flex: none; color: var(--gl-v2-muted); font-variant-numeric: tabular-nums; }
 /* Invoervelden in een tabelcel: het gedeelde veldkader (.gl-v2-field-box), compacter dan in een
    formulier (34px i.p.v. 40px) zodat een rij niet hoger wordt dan nodig. */
-.gl-v2-co-table .gl-v2-field-box { --gl-v2-field-pad: 9px; height: 34px; padding: 0 9px; gap: 6px; border-radius: var(--gl-v2-radius-s, 7px); }
+.gl-v2-co-table { --gl-v2-field-h: 34px; }
+.gl-v2-co-table .gl-v2-field-box { --gl-v2-field-pad: 9px; padding: 0 9px; gap: 6px; border-radius: var(--gl-v2-radius-s, 7px); }
 .gl-v2-co-table .gl-v2-field-box .gl-v2-field-input { font-size: 12.5px; width: 100%; }
 .gl-v2-co-table .gl-v2-field-box.gl-v2-co-numbox { width: 84px; margin-left: auto; }
 /* Aantal is smal (enkele cijfers); het bedrag is breed genoeg voor minstens 10.000,00 naast het €-teken
@@ -469,10 +470,13 @@ a.gl-v2-co-quote-preview:hover { border-color: var(--gl-v2-primary); color: var(
     .gl-v2-co-rows tfoot tr { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; width: min(100%, 380px); margin-left: auto; padding: 6px 18px; }
     .gl-v2-co-table.gl-v2-co-rows tfoot td { display: block; padding: 0; border: 0; }
     .gl-v2-co-rows tfoot td:empty { display: none; }
-    .gl-v2-co-rows tfoot td[colspan] { flex: 1 1 auto; text-align: left; }
-    .gl-v2-co-rows tfoot td:not([colspan]) { flex: none; text-align: right; }
+    /* Label = eerste cel, bedrag = de laatste: NIET op [colspan] (de bedragcel heeft er ook een), anders staan de bedragen links en lopen ze uit de pas. */
+    .gl-v2-co-rows tfoot td:first-child { flex: 1 1 auto; text-align: left; }
+    .gl-v2-co-rows tfoot td:not(:first-child) { flex: none; text-align: right; white-space: nowrap; }
     .gl-v2-co-rows tfoot tr:has(.gl-v2-co-add-term) { width: 100%; flex-wrap: wrap; justify-content: flex-start; padding: 12px 18px; }
     .gl-v2-co-rows tfoot tr:has(.gl-v2-co-add-term) td { flex: 1 1 100%; text-align: left; }
+    /* Eerste en laatste cel van een regel krijgen in de tabelvorm 20px opvulling; in de lijnen- en kaartvorm zit de opvulling in de rij zelf. */
+    .gl-v2-co-table.gl-v2-co-rows tbody td:is(:first-child, :last-child, .gl-v2-co-handle-cell, .co-c-d) { padding-left: 0 !important; padding-right: 0 !important; }
     .gl-v2-co-rows tfoot tr:has(.gl-v2-co-add-term) + tr { padding-top: 12px; }
     .gl-v2-co-rows tfoot .gl-v2-co-sum-total { border-top: 1px solid var(--gl-v2-hairline); margin-top: 6px; padding-top: 9px; }
     .gl-v2-co-table.gl-v2-co-rows tfoot .gl-v2-co-sum-total td { border-top: 0; padding: 0; }
@@ -596,7 +600,8 @@ a.gl-v2-co-quote-preview:hover { border-color: var(--gl-v2-primary); color: var(
 .gl-v2-co-group .gl-v2-co-table-scroll.gl-v2-co-rows-scroll { margin: 0; }
 .gl-v2-co-group-subtotal td { font: 700 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); border-top: 1px solid var(--gl-v2-hairline); padding-top: 9px; }
 .gl-v2-co-group .gl-v2-co-table tfoot tr:last-child td { padding-bottom: 12px; }
-.gl-v2-co-totals-scroll { padding: 0 16px 4px; }
+/* Zelfde rechterrand als de totalen in de groepskaart: groepen 16px + 1px rand van de kaart. */
+.gl-v2-co-totals-scroll { padding: 0 17px 4px; }
 
 /* "Leveranciers" bij Opdracht: samenvatting, geen keuze */
 .gl-v2-co-supplier-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-height: 40px; }
@@ -631,7 +636,6 @@ a.gl-v2-co-quote-preview:hover { border-color: var(--gl-v2-primary); color: var(
     .gl-v2-co-group-remove { grid-column: 3; grid-row: 1; }
 }
 @container cog (max-width: 560px) {
-    .gl-v2-co-groups { padding-left: 10px; padding-right: 10px; }
     .gl-v2-co-add-supplier { flex-wrap: wrap; }
 }
 

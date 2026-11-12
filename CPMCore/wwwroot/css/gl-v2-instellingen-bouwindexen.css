@@ -61,7 +61,8 @@
 /* Inline bewerk-/nieuwe rij: velden vullen exact hun kolom (een <input> heeft anders een eigen intrinsieke breedte) */
 .gl-v2-bwi-row.is-edit { background: #FBF6EA; }
 .gl-v2-bwi .gl-v2-field { min-width: 0; }
-.gl-v2-bwi .gl-v2-field-box { width: 100%; min-width: 0; box-sizing: border-box; height: 38px; }
+.gl-v2-bwi { --gl-v2-field-h: 38px; }
+.gl-v2-bwi .gl-v2-field-box { width: 100%; min-width: 0; box-sizing: border-box; }
 .gl-v2-bwi .gl-v2-field-box > input.gl-v2-field-input { flex: 1 1 0; width: 100%; min-width: 0; }
 .gl-v2-bwi .gl-v2-field-input.is-right { text-align: right; }
 

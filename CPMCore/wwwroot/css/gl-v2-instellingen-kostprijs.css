@@ -54,7 +54,8 @@
 
 /* Velden vullen exact hun kolom; selects en datumvelden in een rij hebben geen eigen label */
 .gl-v2-kp .gl-v2-field { min-width: 0; }
-.gl-v2-kp .gl-v2-field-box { width: 100%; min-width: 0; box-sizing: border-box; height: 38px; }
+.gl-v2-kp { --gl-v2-field-h: 38px; }
+.gl-v2-kp .gl-v2-field-box { width: 100%; min-width: 0; box-sizing: border-box; }
 .gl-v2-kp .gl-v2-field-box > input.gl-v2-field-input { flex: 1 1 0; width: 100%; min-width: 0; }
 .gl-v2-kp .gl-v2-field-input.is-right { text-align: right; }
 .gl-v2-kp .gl-v2-select { width: 100%; }

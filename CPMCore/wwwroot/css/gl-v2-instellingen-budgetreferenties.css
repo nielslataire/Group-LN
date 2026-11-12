@@ -45,7 +45,7 @@
 
 /* ── Lijsttoolbar in de kaart: zoekveld · projectfilter · schakelaar · sortering ── */
 .gl-v2-bref-toolbar .gl-v2-bref-search { width: 300px; max-width: 100%; }
-.gl-v2-bref-toolbar .gl-v2-bref-search .gl-v2-field-box { height: 40px; }
+.gl-v2-bref-toolbar .gl-v2-bref-search { --gl-v2-field-h: 40px; }
 .gl-v2-bref-toolbar .gl-v2-bref-filter { width: 220px; }
 .gl-v2-bref-toolbar .gl-v2-bref-filter .gl-v2-field { margin: 0; }
 .gl-v2-bref-switch { display: inline-flex; align-items: center; gap: 8px; margin: 0; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); cursor: pointer; user-select: none; }
@@ -92,7 +92,7 @@
 .gl-v2-bref-row.is-edit { background: #FAFBF8; align-items: end; }
 .gl-v2-bref-row.is-edit .gl-v2-field { margin: 0; }
 .gl-v2-bref-row.is-edit .gl-v2-field-label { display: none; }
-.gl-v2-bref-row.is-edit .gl-v2-field-box { height: 40px; }
+.gl-v2-bref-row.is-edit { --gl-v2-field-h: 40px; }
 .gl-v2-bref-row.is-unmatched { background: #FBF6EA; }
 .gl-v2-bref-row.is-manual { background: transparent; }
 .gl-v2-bref-empty { padding: 26px 20px; text-align: center; border-top: 1px solid rgba(44, 59, 42, .06); }
@@ -148,7 +148,7 @@
 .gl-v2-bref-row.is-add { background: #FAFBF8; align-items: end; padding-top: 10px; padding-bottom: 10px; border-top: 0; }
 .gl-v2-bref-row.is-add .gl-v2-field { margin: 0; }
 .gl-v2-bref-row.is-add .gl-v2-field-label { display: none; }
-.gl-v2-bref-row.is-add .gl-v2-field-box { height: 40px; }
+.gl-v2-bref-row.is-add { --gl-v2-field-h: 40px; }
 .gl-v2-bref-group { display: flex; align-items: center; gap: 10px; padding: 10px 20px; background: var(--gl-v2-hover-tint); border-top: 1px solid var(--gl-v2-hairline-soft); font: 600 10.5px var(--gl-v2-font-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--gl-v2-muted); }
 .gl-v2-bref-group .n { font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--gl-v2-ink); font-size: 12px; }
 .gl-v2-bref-group .c { margin-left: auto; letter-spacing: 0; text-transform: none; font-weight: 500; font-variant-numeric: tabular-nums; }

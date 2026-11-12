@@ -56,14 +56,11 @@
     .gl-v2-topbar-filter-count[hidden] { display: none; }
 }
 
-
-
 /* ── Filters (design-handoff optie 4f "FILTERS OPEN") — zoekveld + Filters-knop op één rij, de
    knop klapt de filtervelden-grid + badges-rij eronder open/dicht. Slechts één filterveld hier
    (Facturatiebedrijf) i.p.v. Leveranciers' drie — de grid hieronder gebruikt daarom auto-fit i.p.v.
    een vast kolomaantal, zodat één veld gewoon één (volle-breedte) kolom wordt i.p.v. twee lege
    ernaast te reserveren. ─────────────────────────────────────────────────────────────────────── */
-
 
 .gl-v2-filters-toggle.is-open,
 .gl-v2-filters-toggle.has-active {
@@ -71,7 +68,6 @@
     background: var(--gl-v2-hover-tint);
     color: var(--gl-v2-primary);
 }
-
 
 /* Sheet-header (design-handoff 4f "MOBIEL — FILTERSHEET") — enkel <768px, zie de mobiele
    media query verderop voor de eigenlijke display:flex/block-omschakeling. */
@@ -84,18 +80,9 @@
 @media (max-width: 767.98px) {
     .gl-v2-filters-grid { grid-template-columns: 1fr; }
 
-
-
-
-
     .gl-v2-filters-show-btn:hover,
     .gl-v2-filters-show-btn:focus-visible { background: var(--gl-v2-primary-deep); outline: none; }
 }
-
-
-
-
-
 
 .gl-v2-table-card {
     flex: none;
@@ -133,7 +120,6 @@
     flex: none;
     border-bottom: 1px solid var(--gl-v2-hairline-soft);
 }
-
 
 @keyframes gl-v2-skeleton-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
 
@@ -473,6 +459,3 @@
     }
 }
 
-/* hersteld uit filters.css-consolidatie: paginavariant van een gedeeld component */
-.gl-v2-toolbar-card { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 14px; border-radius: var(--gl-v2-radius-md); background: var(--gl-v2-surface); box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 14px 30px -24px rgba(44, 59, 42, .35); flex: none; }
-.gl-v2-toolbar-search { flex: 1; min-width: 180px; }

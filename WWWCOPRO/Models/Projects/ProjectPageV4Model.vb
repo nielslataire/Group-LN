@@ -286,6 +286,8 @@ Public Class V4Lot
     Public Property Id As Integer
     Public Property Name As String
     Public Property Type As String
+    ' Bebouwing uit CPMCore (Projecten/EditUnit): "Open bebouwing" / "Halfopen bebouwing" / "Gesloten bebouwing"; leeg = niet ingevuld
+    Public Property BuildingLabel As String
     Public Property LivingArea As Integer
     Public Property LandArea As Integer
     Public Property Bedrooms As Integer
@@ -327,7 +329,10 @@ Public Class V4Lot
 
     Public ReadOnly Property TypeLabel As String
         Get
-            Return Type & " bebouwing"
+            If Not String.IsNullOrWhiteSpace(BuildingLabel) Then Return BuildingLabel
+            ' Voorbeelddata gebruikt Type = "Halfopen"/"Gesloten"/"Open"; echte eenheden zonder bebouwing tonen enkel hun type ("Woning").
+            If {"Open", "Halfopen", "Gesloten"}.Contains(Type) Then Return Type & " bebouwing"
+            Return Type
         End Get
     End Property
 

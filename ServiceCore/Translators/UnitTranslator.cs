@@ -64,6 +64,7 @@ namespace ServiceCore.Translators
                     return err;
                 bo.Type = UnitType;
             }
+            bo.BuildingType = _entity.BuildingType;
 
             foreach (var x in _entity.InverseLinkedUnit)
             {
@@ -115,6 +116,7 @@ namespace ServiceCore.Translators
                 if (bo.Type.Id != 0)
                     _entity.TypeId = bo.Type.Id;
             }
+            _entity.BuildingType = bo.BuildingType;
 
             // handle attached unit
             if ((bo.AttachedUnitsId == 0 | bo.AttachedUnitsId == null))

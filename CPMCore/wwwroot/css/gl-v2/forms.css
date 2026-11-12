@@ -24,7 +24,7 @@
     align-items: center;
     gap: 10px;
     width: 100%;
-    height: 40px;
+    height: var(--gl-v2-field-h, 40px);
     padding: 0 14px;
     border-radius: var(--gl-v2-radius-sm);
     border: 1px solid var(--gl-v2-hairline);
@@ -403,7 +403,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    height: 40px;
+    height: var(--gl-v2-field-h, 40px);
     padding: 0 14px;
     border-radius: var(--gl-v2-radius-sm);
     border: 1px solid var(--gl-v2-hairline);
@@ -509,6 +509,8 @@
 .gl-v2-field-box:has(.gl-v2-field-input:not(:placeholder-shown)) .gl-v2-field-clear { display: inline-flex; }
 
 .gl-v2-field-help { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+/* Verplicht-sterretje in een veldlabel: <label class="gl-v2-field-label">Naam <span class="gl-v2-field-req" aria-hidden="true">*</span></label>. Nooit een inline kleur. */
+.gl-v2-field-req { color: var(--gl-v2-danger); }
 .gl-v2-field.is-error .gl-v2-field-help { color: var(--gl-v2-danger, #8B2A2A); }
 
 /* Meerregelig — zelfde label/helptekst-opbouw, enkel de box wordt hoger en top-uitgelijnd i.p.v.

@@ -11,8 +11,6 @@
    gl-v2-projecten-detailclients.css (zelfde als elke gl-v2-lijstpagina: er is geen gedeelde definitie in
    de shell), met één filter: Status. ───────────────────────────────── */
 
-
-
 .gl-v2-filters-toggle.is-open,
 .gl-v2-filters-toggle.has-active {
     border-color: var(--gl-v2-primary);
@@ -20,15 +18,9 @@
     color: var(--gl-v2-primary);
 }
 
-
-
-
-
-
 @media (max-width: 767.98px) {
     .gl-v2-filters-show-btn:hover, .gl-v2-filters-show-btn:focus-visible { background: var(--gl-v2-primary-deep); outline: none; }
 }
-
 
 /* ── Tabel ─────────────────────────────────────────────────────────────────────────────────────────── */
 .gl-v2-co2-table-scroll { overflow-x: auto; }
@@ -149,12 +141,6 @@
     .gl-v2-co2-card .gl-v2-card-header .gl-v2-field-divider { display: none; }
     .gl-v2-co2-card .gl-v2-card-header-count { flex-basis: 100%; white-space: normal; }
 }
-
-/* hersteld uit filters.css-consolidatie: paginavariant van een gedeeld component */
-.gl-v2-filters-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: 480px; }
-.gl-v2-toolbar-card { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 14px; border-radius: var(--gl-v2-radius-md); background: var(--gl-v2-surface); box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 14px 30px -24px rgba(44, 59, 42, .35); flex: none; }
-.gl-v2-toolbar-search { flex: 1; min-width: 180px; }
-@media (max-width: 767.98px) { .gl-v2-filters-grid { grid-template-columns: 1fr; max-width: none; } }
 
 /* Filter "Status offertes": elke status los aan te klikken (meerdere tegelijk), met het aantal erbij. */
 .gl-v2-co2-qfilter .gl-v2-segmented { flex-wrap: wrap; height: auto; }

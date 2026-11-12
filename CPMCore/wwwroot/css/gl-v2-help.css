@@ -38,7 +38,8 @@
 .gl-v2-help-topbar-search-input { flex: 1; min-width: 0; border: 0; background: none; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); outline: none; }
 .gl-v2-help-topbar-search-input::placeholder { color: var(--gl-v2-muted-light); }
 @media (max-width: 1023.98px) { .gl-v2-help-topbar-search { display: none; } }
-.gl-v2-help-search-field .gl-v2-field-box { height: 48px; border: 1.5px solid var(--gl-v2-primary); box-shadow: 0 0 0 3px rgba(0, 83, 45, .10); border-radius: var(--gl-v2-radius-sm); }
+.gl-v2-help-search-field { --gl-v2-field-h: 48px; }
+.gl-v2-help-search-field .gl-v2-field-box { border: 1.5px solid var(--gl-v2-primary); box-shadow: 0 0 0 3px rgba(0, 83, 45, .10); border-radius: var(--gl-v2-radius-sm); }
 .gl-v2-help-search-field .gl-v2-field-input { font-size: 14px; }
 
 .gl-v2-help-search-results {

@@ -22,8 +22,6 @@
     flex: none;
 }
 
-
-
 .gl-v2-filters-toggle.is-open,
 .gl-v2-filters-toggle.has-active {
     border-color: var(--gl-v2-primary);
@@ -31,15 +29,9 @@
     color: var(--gl-v2-primary);
 }
 
-
-
-
-
-
 @media (max-width: 767.98px) {
     .gl-v2-filters-show-btn:hover, .gl-v2-filters-show-btn:focus-visible { background: var(--gl-v2-primary-deep); outline: none; }
 }
-
 
 /* ── Klantentabel — zelfde DataTables-polish als Leveranciers/DetailsV2's .gl-v2-detail-table-card ── */
 .gl-v2-detail-table-card { flex: none; padding-bottom: 8px; }
@@ -172,7 +164,3 @@
     .gl-v2-detail-table tbody td:nth-child(7) { width: 56px !important; }
 }
 
-/* hersteld uit filters.css-consolidatie: paginavariant van een gedeeld component */
-.gl-v2-filters-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: 480px; }
-.gl-v2-toolbar-search { flex: 1; min-width: 180px; }
-@media (max-width: 767.98px) { .gl-v2-filters-grid { grid-template-columns: 1fr; max-width: none; } }

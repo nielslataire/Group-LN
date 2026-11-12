@@ -107,7 +107,7 @@ Een offerte hoeft niet aan een contract te hangen. Zonder contract toont de proj
 1. Klik op de drie puntjes achter de offerte.
 2. Kies **Omzetten naar wijzigingsopdracht**.
 3. Controleer de eenheid, het btw-tarief van de klant en kies het facturatieplan: **Laatste schijf**, **Voorschot + saldo** of **Eigen**.
-4. Vul de omschrijving voor de klant in en bevestig.
+4. Vul eventueel een omschrijving voor de klant in en bevestig. Die omschrijving is optioneel.
 
 Regels, beelden en prijzen gaan mee. In de wijzigingsopdracht liggen de prijzen vast. Aantallen, omschrijvingen en het facturatieplan kun je nog aanpassen en regels kun je schrappen.
 

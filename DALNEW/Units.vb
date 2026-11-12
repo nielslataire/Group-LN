@@ -14,6 +14,7 @@ Partial Public Class Units
     Public Property Id As Integer
     Public Property Name As String
     Public Property TypeId As Nullable(Of Integer)
+    Public Property BuildingType As Nullable(Of Integer)
     Public Property ProjectId As Integer
     Public Property Landshare As Nullable(Of Decimal)
     Public Property LevelId As Nullable(Of Integer)

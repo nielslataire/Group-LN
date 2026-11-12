@@ -57,13 +57,10 @@
     .gl-v2-topbar-filter-count[hidden] { display: none; }
 }
 
-
-
 /* ── Filters (design-handoff optie 4f "FILTERS OPEN") — zoekveld + Filters-knop op één rij, de
    knop klapt de filtervelden-grid + badges-rij eronder open/dicht i.p.v. alle filters los in de
    toolbar-rij te laten staan. .gl-v2-filters-card herschikt de generieke .gl-v2-toolbar-card
    (hierboven, nog steeds gebruikt als kaart-schil) van een enkele rij naar kolom-gestapeld. ────── */
-
 
 /* Zelfde groen-op-lichtgroen als de badges eronder zodra er minstens 1 filter actief staat, of
    zolang het paneel openstaat — matcht 4f's eigen "Filters [3]"-knopstaat. */
@@ -73,7 +70,6 @@
     background: var(--gl-v2-hover-tint);
     color: var(--gl-v2-primary);
 }
-
 
 /* Sheet-header (design-handoff 4f "MOBIEL — FILTERSHEET") — enkel <768px, zie de mobiele
    media query verderop voor de eigenlijke display:flex/block-omschakeling. Hier de vorm die
@@ -98,7 +94,6 @@
        te moeten scrollen. `:not([hidden])`: de basis `[hidden]{display:none}`-regel hierboven blijft
        zo de enige "verborgen"-waarheid, geen aparte show/hide-klasse nodig. */
 
-
     /* Sheet-header aan (handvat/titel/badge/Wissen) — dat "N actief"-badge + "Wissen" dekken de
        badges-rij eronder qua functie al (wissen-alles, aantal-actief), dus die hele rij (chips MET
        hun eigen ×'jes, niet enkel de bottom-"Wissen"-knop) verdwijnt hier — op deze breedte is
@@ -114,9 +109,6 @@
     .gl-v2-filters-show-btn:hover,
     .gl-v2-filters-show-btn:focus-visible { background: var(--gl-v2-primary-deep); outline: none; }
 }
-
-
-
 
 /* Losse wrapper voor enkel de badges (JS leegt/hervult puur deze, nooit .gl-v2-filters-chips zelf)
    — zodat een volledige .empty()+rebuild bij elke filterwijziging nooit per ongeluk de "Wissen"-
@@ -159,7 +151,6 @@
     flex: none;
     border-bottom: 1px solid var(--gl-v2-hairline-soft);
 }
-
 
 @keyframes gl-v2-skeleton-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
 
@@ -532,6 +523,3 @@
     }
 }
 
-/* hersteld uit filters.css-consolidatie: paginavariant van een gedeeld component */
-.gl-v2-toolbar-card { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 14px; border-radius: var(--gl-v2-radius-md); background: var(--gl-v2-surface); box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 14px 30px -24px rgba(44, 59, 42, .35); flex: none; }
-.gl-v2-toolbar-search { flex: 1; min-width: 180px; }

@@ -14,7 +14,7 @@
 /* ── Kaart, toolbar ── */
 .gl-v2-act-card { min-width: 0; }
 .gl-v2-act-search { width: 340px; max-width: 100%; }
-.gl-v2-act-toolbar .gl-v2-field-box { height: 40px; }
+.gl-v2-act-toolbar { --gl-v2-field-h: 40px; }
 .gl-v2-act-lot-select { display: none; width: 260px; max-width: 100%; }
 
 /* ── Rijen ── */
@@ -49,7 +49,8 @@
 
 /* Velden vullen exact hun kolom (een <input> heeft anders een eigen intrinsieke breedte) */
 .gl-v2-act .gl-v2-field { min-width: 0; }
-.gl-v2-act .gl-v2-field-box { width: 100%; min-width: 0; box-sizing: border-box; height: 38px; }
+.gl-v2-act { --gl-v2-field-h: 38px; }
+.gl-v2-act .gl-v2-field-box { width: 100%; min-width: 0; box-sizing: border-box; }
 .gl-v2-act .gl-v2-field-box > input.gl-v2-field-input, .gl-v2-act .gl-v2-field-box > select.gl-v2-field-input { flex: 1 1 0; width: 100%; min-width: 0; }
 
 /* Rij-acties: 26×26 bare, primair = bewerken, danger = verwijderen (recept uit DESIGN.md "Table (Facturen)") */

@@ -61,7 +61,7 @@
 .gl-v2-ic-line { min-height: 52px; padding-top: 6px; padding-bottom: 6px; border-top: 1px solid rgba(44, 59, 42, .06); background: #fff; }
 .gl-v2-ic-line.is-dragging { opacity: .5; }
 .gl-v2-ic-line.is-over { box-shadow: inset 0 2px 0 var(--gl-v2-primary); }
-.gl-v2-ic-line .gl-v2-field-box { height: 36px; }
+.gl-v2-ic-line { --gl-v2-field-h: 36px; }
 .gl-v2-ic-line .gl-v2-field-input.is-num { text-align: right; font-variant-numeric: tabular-nums; }
 .gl-v2-ic-lines .is-num { text-align: right; font-variant-numeric: tabular-nums; }
 .gl-v2-ic-line .is-total { text-align: right; font: 600 13px var(--gl-v2-font-sans); font-variant-numeric: tabular-nums; color: var(--gl-v2-ink); }

@@ -630,6 +630,7 @@
           <Property Name="Id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
           <Property Name="Name" Type="nvarchar" MaxLength="100" Nullable="false" />
           <Property Name="TypeId" Type="int" />
+          <Property Name="BuildingType" Type="int" />
           <Property Name="ProjectId" Type="int" Nullable="false" />
           <Property Name="Landshare" Type="numeric" Precision="18" Scale="0" />
           <Property Name="LevelId" Type="int" />
@@ -3281,6 +3282,7 @@ warning 6002: The table/view 'cpmDevelop.dbo.UtilityPercentage' does not have a 
           <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
           <Property Name="Name" Type="String" Nullable="false" MaxLength="100" FixedLength="false" Unicode="true" />
           <Property Name="TypeId" Type="Int32" />
+          <Property Name="BuildingType" Type="Int32" />
           <Property Name="ProjectId" Type="Int32" Nullable="false" />
           <NavigationProperty Name="Project" Relationship="copropmModel.FK_Units_Project" FromRole="Units" ToRole="Project" />
           <Property Name="Landshare" Type="Decimal" Precision="18" Scale="0" />
@@ -4875,6 +4877,7 @@ warning 6002: The table/view 'cpmDevelop.dbo.UtilityPercentage' does not have a 
                 <ScalarProperty Name="LevelId" ColumnName="LevelId" />
                 <ScalarProperty Name="Landshare" ColumnName="Landshare" />
                 <ScalarProperty Name="ProjectId" ColumnName="ProjectId" />
+                <ScalarProperty Name="BuildingType" ColumnName="BuildingType" />
                 <ScalarProperty Name="TypeId" ColumnName="TypeId" />
                 <ScalarProperty Name="Name" ColumnName="Name" />
                 <ScalarProperty Name="Id" ColumnName="Id" />

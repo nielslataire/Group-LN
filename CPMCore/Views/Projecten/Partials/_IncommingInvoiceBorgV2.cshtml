@@ -13,8 +13,9 @@
     string Dut(decimal? v) => v.HasValue ? v.Value.ToString("0.00", nl) : "";
     var inhoudingAan = inv.InhoudingBedrag.GetValueOrDefault() > 0m;
     var vergrendeld = inv.InhoudingVergrendeld;
-    // -1 = nog niet beslist (nieuwe factuur of factuur van voor deze module): de JS kiest dan de standaard uit het contract.
-    var borgStart = inv.BorgInhouden.HasValue ? (inv.BorgInhouden.Value ? "1" : "0") : "-1";
+    // -1 = nog niet beslist (enkel een NIEUWE factuur): de JS kiest dan de standaard uit het contract.
+    // Een opgeslagen factuur zonder borg (false of leeg, ook van voor deze module) blijft uit: de borg gaat nooit vanzelf aan, enkel als de gebruiker het zelf aanzet.
+    var borgStart = inv.BorgInhouden.HasValue ? (inv.BorgInhouden.Value ? "1" : "0") : (inv.Id > 0 ? "0" : "-1");
 }
 <input type="hidden" name="IncommingInvoice.FormV2" value="true" />
 <input type="hidden" name="IncommingInvoice.BorgInhouden" id="gln-ai-borg-aan" value="@(inv.BorgInhouden == true ? "true" : "false")" data-start="@borgStart" />

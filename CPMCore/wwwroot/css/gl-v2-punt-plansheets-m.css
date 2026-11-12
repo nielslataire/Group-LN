@@ -26,7 +26,8 @@
     #pt-plan-pick-modal .modal-footer { display: none; }
     #pt-plan-pick-modal .gl-v2-pt-pick-body { flex: 1; min-height: 0; padding: 0; gap: 0; overflow: hidden; }
     #pt-plan-pick-modal .gl-v2-pt-pick-body > .gl-v2-field { flex: none; padding: 12px 16px 0; margin: 0; }
-    #pt-plan-pick-modal .gl-v2-field-box { height: 46px; border-radius: 9px; }
+    #pt-plan-pick-modal { --gl-v2-field-h: 46px; }
+    #pt-plan-pick-modal .gl-v2-field-box { border-radius: 9px; }
     #pt-plan-pick-modal .gl-v2-field-input { font-size: 15px; }
     .gl-v2-pt-pick-seg { flex: none; gap: 8px; padding: 10px 16px 4px; }
     .gl-v2-pt-pick-seg button { height: 34px; padding: 0 14px; border-radius: 17px; font-size: 13px; border-color: var(--gl-v2-hairline); color: var(--gl-v2-muted); }

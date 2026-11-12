@@ -9,7 +9,8 @@
 
 /* Velden vullen exact hun kolom */
 .gl-v2-ua .gl-v2-field { min-width: 0; }
-.gl-v2-ua .gl-v2-field-box { width: 100%; min-width: 0; box-sizing: border-box; height: 40px; }
+.gl-v2-ua { --gl-v2-field-h: 40px; }
+.gl-v2-ua .gl-v2-field-box { width: 100%; min-width: 0; box-sizing: border-box; }
 .gl-v2-ua .gl-v2-field-box > input.gl-v2-field-input, .gl-v2-ua .gl-v2-field-box > select.gl-v2-field-input { flex: 1 1 0; width: 100%; min-width: 0; }
 
 /* ── Avatar, naam, type ── */

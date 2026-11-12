@@ -5,7 +5,6 @@
 /* ── Filters (zelfde component als ChangeOrdersV2, DESIGN.md "Filters") ── */
 .gl-v2-filters-toggle.is-open, .gl-v2-filters-toggle.has-active { border-color: var(--gl-v2-primary); background: var(--gl-v2-hover-tint); color: var(--gl-v2-primary); }
 
-
 .gl-v2-ct-filters-grid { max-width: none; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 @media (max-width: 1023.98px) { .gl-v2-ct-filters-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 767.98px) { .gl-v2-ct-filters-grid { grid-template-columns: 1fr; } }
@@ -199,8 +198,3 @@
 .gl-v2-modal-form#ct-reason-modal .modal-body, .gl-v2-modal-form#ct-savelist-modal .modal-body, .gl-v2-modal-form#ct-list-del-modal .modal-body { display: block; }
 .gl-v2-ct-pop-scroll { max-height: 260px; overflow-y: auto; }
 
-/* hersteld uit filters.css-consolidatie: paginavariant van een gedeeld component */
-.gl-v2-filters-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: 480px; }
-.gl-v2-toolbar-card { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 14px; border-radius: var(--gl-v2-radius-md); background: var(--gl-v2-surface); box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 14px 30px -24px rgba(44, 59, 42, .35); flex: none; }
-.gl-v2-toolbar-search { flex: 1; min-width: 180px; }
-@media (max-width: 767.98px) { .gl-v2-filters-grid { grid-template-columns: 1fr; max-width: none; } }

@@ -49,3 +49,10 @@
 @media (min-width: 768px) {
     .gl-v2-filters-show-btn { display: none; }
 }
+
+/* Basis van de filterbalk (was als "hersteld"-kopie in 5 pagina-CSS-bestanden). Een pagina die andere kolommen wil zet enkel
+   .gl-v2-<pagina>-filters-grid { grid-template-columns: … } in haar eigen CSS: die laadt NA dit bestand en wint bij gelijke specificiteit. */
+.gl-v2-filters-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: 480px; }
+@media (max-width: 767.98px) { .gl-v2-filters-grid { grid-template-columns: 1fr; max-width: none; } }
+.gl-v2-toolbar-card { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 14px; border-radius: var(--gl-v2-radius-md); background: var(--gl-v2-surface); box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 14px 30px -24px rgba(44, 59, 42, .35); flex: none; }
+.gl-v2-toolbar-search { flex: 1; min-width: 180px; }

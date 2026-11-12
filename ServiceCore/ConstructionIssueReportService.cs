@@ -20,7 +20,7 @@ using System.Text.Json;
 
 namespace ServiceCore.Issues;
 
-public class ConstructionIssueReportService : IConstructionIssueReportService
+public partial class ConstructionIssueReportService : IConstructionIssueReportService
 {
     private readonly cpmRunningContext _db;
     private readonly IConstructionIssueService _issueService;
@@ -84,7 +84,7 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
         return report;
     }
 
-    public async Task<byte[]> GenerateReportPdf(int projectId, int reportId)
+    public async Task<byte[]> GenerateReportPdf(int projectId, int reportId, bool allStatuses = false)
     {
         var printableStatuses = new HashSet<int>
         {
@@ -109,9 +109,10 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
             .OrderBy(x => x.Status)
             .ThenBy(x => x.DueDate)
             .ToListAsync();
-        issues = issues
-            .Where(x => printableStatuses.Contains(x.Status))
-            .ToList();
+        // Afdrukken vanuit de puntenlijst: de gebruiker koos zelf (selectie of filter) wat er in staat, dus geen statusbeperking —
+        // anders gaf een gefilterde lijst (bv. één aannemer met enkel gemelde punten, of de filter "Afgesloten") een lege pdf.
+        if (!allStatuses)
+            issues = issues.Where(x => printableStatuses.Contains(x.Status)).ToList();
         var project = await _db.Project
             .Include(x => x.PostalCode)
             .Include(x => x.Status)
@@ -456,7 +457,7 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
         return string.IsNullOrWhiteSpace(responsibleOtherName) ? "Aannemer" : responsibleOtherName;
     }
 
-    private static void RenderIssueCard(IContainer container, ConstructionIssue issue, int badgeNumber, string primaryColor, IReadOnlyDictionary<int, string> responsibleNames, ConstructionIssueReportService service)
+    private static void RenderIssueCard(IContainer container, ConstructionIssue issue, int badgeNumber, string primaryColor, IReadOnlyDictionary<int, string> responsibleNames, ConstructionIssueReportService service, bool includePhotos = true)
     {
         var priority = GetPriorityPresentation(issue.Priority);
         var status = GetStatusPresentation(issue.Status);
@@ -508,7 +509,7 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
                 .Take(4)
                 .ToList();
 
-            if (photoIds.Any())
+            if (includePhotos && photoIds.Any())
             {
                 card.Item().PaddingTop(4).Column(photos =>
                 {

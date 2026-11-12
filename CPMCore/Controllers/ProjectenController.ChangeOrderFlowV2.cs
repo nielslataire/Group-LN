@@ -526,7 +526,7 @@ namespace CPMCore.Controllers
             if (details.Count == 0) return "Voeg minstens één regel toe.";
             if (details.Any(d => d.NeedsReview)) return "Minstens één regel staat nog op \"controleer\".";
             if (!co.IsQuote && terms.Count > 0 && Math.Abs(terms.Sum(t => t.Percentage ?? 0m) - 100m) > 0.01m) return "Het facturatieplan moet samen 100 % zijn.";
-            if (string.IsNullOrWhiteSpace(co.Description) || IsIntakePlaceholder(co.Description)) return "Vul een omschrijving voor de klant in.";
+            // De omschrijving voor de klant is optioneel: ze komt enkel als beschrijving op het document en de factuur.
             return null;
         }
 

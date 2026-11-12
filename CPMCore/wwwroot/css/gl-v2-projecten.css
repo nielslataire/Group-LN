@@ -61,11 +61,9 @@
     margin-bottom: 18px;
 }
 
-
 /* ── Filters (design-handoff optie 4f "FILTERS OPEN") — zoekveld + Filters-knop op één rij, de knop
    klapt het filterveld (Status) + badges-rij eronder open/dicht. Eén filterveld, dus de grid
    hieronder gebruikt auto-fit i.p.v. een vast kolomaantal. ─────────────────────────────────────── */
-
 
 .gl-v2-filters-toggle.is-open,
 .gl-v2-filters-toggle.has-active {
@@ -73,7 +71,6 @@
     background: var(--gl-v2-hover-tint);
     color: var(--gl-v2-primary);
 }
-
 
 /* Sheet-header (design-handoff 4f "MOBIEL — FILTERSHEET") — enkel <768px. */
 
@@ -85,18 +82,9 @@
 @media (max-width: 767.98px) {
     .gl-v2-filters-grid { grid-template-columns: 1fr; }
 
-
-
-
-
     .gl-v2-filters-show-btn:hover,
     .gl-v2-filters-show-btn:focus-visible { background: var(--gl-v2-primary-deep); outline: none; }
 }
-
-
-
-
-
 
 /* ── Kaartenraster-wrapper — geeft .gl-v2-project-grid (gl-v2-shell.css) een eigen container-query-
    context om op te reageren, zelfde mechanisme als .gl-werven-section op het Projectleider-
@@ -137,5 +125,3 @@
     color: var(--gl-v2-muted);
 }
 
-/* hersteld uit filters.css-consolidatie: paginavariant van een gedeeld component */
-.gl-v2-toolbar-search { flex: 1; min-width: 180px; }

@@ -234,6 +234,3 @@
 /* ── Bank: filter (zelfde component als ChangeOrdersV2, DESIGN.md "Filters") ── */
 .gl-v2-filters-toggle.is-open, .gl-v2-filters-toggle.has-active { border-color: var(--gl-v2-primary); background: var(--gl-v2-hover-tint); color: var(--gl-v2-primary); }
 
-/* hersteld uit filters.css-consolidatie: paginavariant van een gedeeld component */
-.gl-v2-filters-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: 480px; }
-@media (max-width: 767.98px) { .gl-v2-filters-grid { grid-template-columns: 1fr; max-width: none; } }

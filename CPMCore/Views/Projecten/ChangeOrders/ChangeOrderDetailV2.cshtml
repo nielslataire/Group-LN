@@ -181,6 +181,10 @@
 }
 <div class="gl-v2-co-scroll" id="gl-v2-co-root" data-project-id="@Model.ProjectId" data-co-id="@Model.ChangeOrderId" data-phase="@phase">
 
+    @* Foutoverzicht (design-handoff punt 24, DESIGN.md): gedeeld, zelfde kaart als elk gl-v2-formulier. Vult zich client-side
+       (gl-v2-error-summary.js) en server-side via ModelState (het vangnet in ChangeOrderDetailV2Save, zie de GET-actie). *@
+    @await Html.PartialAsync("GlV2/_ErrorSummaryV2")
+
     @* ── Stappenplan (punt 27, variant lijn · sm) ─────────────────────────────────────────────────── *@
     <div class="gl-v2-card gl-v2-co-card">
         <div class="gl-v2-card-body gl-v2-co-steps">
@@ -296,7 +300,10 @@
                             </div>
                             <p class="gl-v2-co-quote-note">
                                 Ingelezen uit @(Model.QuoteSourceIsImage ? "foto" : "de offerte") · bron van de regels hieronder ·
-                                <a href="@intakeUrl" class="gl-v2-co-link">Andere offerte koppelen</a>
+                                @if (editable)
+                                {
+                                    <a href="@intakeUrl" class="gl-v2-co-link">Extra regels inlezen of andere offerte koppelen</a>
+                                }
                             </p>
                         </div>
                     </div>
@@ -317,7 +324,7 @@
                     }
                 </div>
                 <div class="gl-v2-card-body gl-v2-co-form-grid is-4">
-                    <div class="gl-v2-field gl-v2-co-span2">
+                    <div class="gl-v2-field gl-v2-co-span2" data-gl-v2-required="@(Model.ClientAccountId > 0 || !editable ? null : "Kies een klant · eenheid.")">
                         @if (Model.ClientAccountId > 0 || !editable)
                         {
                             <span class="gl-v2-field-label">Klant · eenheid</span>
@@ -395,10 +402,10 @@
                             <div class="gl-v2-co-readout">@Model.ExpirationDate.ToString("dd/MM/yyyy")</div>
                         </div>
                     }
-                    <div class="gl-v2-field gl-v2-field-full">
+                    <div class="gl-v2-field gl-v2-field-full" data-gl-v2-required="@(editable ? "Vul een onderwerp in." : null)">
                         @if (editable)
                         {
-                            <label class="gl-v2-field-label" for="gl-v2-co-subject">Onderwerp</label>
+                            <label class="gl-v2-field-label" for="gl-v2-co-subject">Onderwerp <span class="gl-v2-field-req" aria-hidden="true">*</span></label>
                             <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gl-v2-co-subject" name="subject" maxlength="150" value="@Model.Subject" /></div>
                         }
                         else
@@ -412,6 +419,7 @@
                         {
                             <label class="gl-v2-field-label" for="gl-v2-co-description">Omschrijving voor de klant</label>
                             <div class="gl-v2-field-box gl-v2-field-box-textarea gl-v2-co-textbox-sm"><textarea class="gl-v2-field-input" id="gl-v2-co-description" name="description" rows="2" maxlength="250">@Model.Description</textarea></div>
+                            <span class="gl-v2-field-help">optioneel, komt als beschrijving op het document en de factuur</span>
                         }
                         else
                         {

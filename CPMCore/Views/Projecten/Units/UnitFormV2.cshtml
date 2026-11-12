@@ -50,6 +50,9 @@
 
     var groupItems = Model.GroupTypes.Select(g => new GlV2SelectItem { Value = g.Id.ToString(), Text = g.Name ?? "" }).ToList();
     var typeItems = Model.Types.Select(t => new GlV2SelectItem { Value = t.Id.ToString(), Text = t.Name ?? "" }).ToList();
+    // Bebouwing (open / halfopen / gesloten): enkel bij het subtype Woning (UnitTypes.Id 2, zoals de publieke site het ook neemt).
+    const int woningTypeId = 2;
+    var buildingItems = new[] { 1, 2, 3 }.Select(v => new GlV2SelectItem { Value = v.ToString(), Text = UnitBuildingTypes.Label(v) ?? "" }).ToList();
     var attachItems = Model.AttachableUnits
         .Select(u => new GlV2SelectItem { Value = u.ID.ToString(), Text = u.Display ?? "", Group = string.IsNullOrWhiteSpace(u.Group) ? null : u.Group })
         .ToList();
@@ -259,6 +262,18 @@
                                 Placeholder = Model.SelectedGroupType > 0 ? "Kies een subtype" : "Kies eerst een type",
                                 Error = ErrorFor("SelectedType"),
                                 Data = new Dictionary<string, string> { ["data-role"] = "subtype" }
+                            })
+                        </div>
+                        <div class="gl-v2-col-4" id="gl-v2-unit-buildingtype" data-woning-type-id="@woningTypeId" @(Model.SelectedType == woningTypeId ? "" : "hidden")>
+                            @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                            {
+                                Name = "Unit.BuildingType",
+                                Label = "Bebouwing",
+                                Value = Model.Unit.BuildingType?.ToString() ?? "",
+                                Items = buildingItems,
+                                EmptyText = "Niet ingevuld",
+                                Placeholder = "Kies de bebouwing",
+                                Data = new Dictionary<string, string> { ["data-role"] = "buildingtype" }
                             })
                         </div>
                         <div class="gl-v2-col-4">

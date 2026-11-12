@@ -8,7 +8,7 @@ updated: 2026-10-12
 screens: issues-index
 synonyms: filters, status, deadline, kritiek, bulkacties
 description: statussen, filters en bulkacties
-related: punt-met-spraakbericht
+related: punt-met-spraakbericht, punten-afdrukken
 intro: |
   De puntenlijst toont alle punten van een project. Elk punt zit in een fase: **Concept**,
   **Ter goedkeuring**, **Doorgestuurd**, **Gemeld uitgevoerd** of **Afgesloten**. Je zoekt er
@@ -34,6 +34,10 @@ De lijst toont standaard enkel open punten. Wil je ook afgesloten punten zien, z
 
 Een verwijderd punt kun je niet terugzetten. Het verdwijnt definitief, samen met de foto's, de historiek en de meldingen.
 [VRAAG: krijgt de aannemer een melding als je in de lijst Goedkeuren kiest? Bij Goedkeuren en doorsturen op de detailpagina mailt CPM de aannemer wel.]
+
+## Punten afdrukken
+
+Klik rechtsboven op **Afdrukken** om de punten op papier of als pdf te krijgen. Je kiest welke punten, welke indeling en wat er mee komt. Zie het artikel "Punten afdrukken of als pdf bewaren".
 
 ## Een punt openen
 

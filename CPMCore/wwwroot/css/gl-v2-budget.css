@@ -158,7 +158,8 @@ body.bw-show-calc span.gl-v2-bw-calc, body.bw-show-calc .gl-v2-bw-calc.is-inline
 .gl-v2-bw-table tbody tr:first-child td { border-top: 0; }
 .gl-v2-bw-table tbody tr:is(:hover, :focus-within) td { background: var(--gl-v2-hover-tint); }
 .gl-v2-bw-table tfoot td { height: 44px; padding: 0 10px; border-top: 1px solid var(--gl-v2-hairline); font-weight: 700; background: #FAFBF8; font-variant-numeric: tabular-nums; }
-.gl-v2-bw-table .gl-v2-field-box { --gl-v2-field-pad: 10px; height: 34px; padding: 0 10px; }
+.gl-v2-bw-table { --gl-v2-field-h: 34px; }
+.gl-v2-bw-table .gl-v2-field-box { --gl-v2-field-pad: 10px; padding: 0 10px; }
 .gl-v2-bw-table .gl-v2-field-input.is-num { text-align: right; font-variant-numeric: tabular-nums; }
 .gl-v2-bw-table .gl-v2-select-trigger { height: 34px; }
 .gl-v2-bw-table td.is-center, .gl-v2-bw-table thead th.is-center, .gl-v2-bw-table tfoot td.is-center { text-align: center; }
@@ -645,7 +646,8 @@ tbody.is-dicht .bw-act-reden-rij { display: none; }
 .bw-vp-mk small.is-lager { color: var(--gl-v2-danger, #8B2A2A); }
 .bw-vp-vp-rij { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
 .bw-vp-vp .gl-v2-field { margin: 0; }
-.bw-vp-vp .gl-v2-field-box { width: 130px; height: 36px; }
+.bw-vp-vp { --gl-v2-field-h: 36px; }
+.bw-vp-vp .gl-v2-field-box { width: 130px; }
 .bw-vp-vp .vraagprijs { font-weight: 700; }
 .bw-vp-status { width: 16px; font-size: 16px; text-align: center; }
 .bw-vp-status.is-ok { color: var(--gl-v2-primary); }
@@ -685,7 +687,7 @@ tbody.is-dicht .bw-act-reden-rij { display: none; }
 .bw-vp-paar { display: grid; grid-template-columns: minmax(0, 1.25fr) auto minmax(0, 1fr); align-items: center; gap: 6px; }
 .bw-vp-paar--zone2 { grid-template-columns: minmax(0, 1fr) auto; justify-content: space-between; }
 .bw-vp-paar .gl-v2-field { margin: 0; }
-.bw-vp-paar .gl-v2-field-box { height: 34px; }
+.bw-vp-paar { --gl-v2-field-h: 34px; }
 .bw-vp-wissel { color: var(--gl-v2-muted); font-size: 13px; }
 .bw-vp-paar-lbl { display: grid; grid-template-columns: minmax(0, 1.25fr) auto minmax(0, 1fr); gap: 6px; font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 .bw-vp-paar-lbl span:last-child { grid-column: 3; }

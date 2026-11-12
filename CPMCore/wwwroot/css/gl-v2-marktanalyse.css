@@ -76,7 +76,7 @@
 .gl-v2-ma .gl-v2-ma-count { font: 600 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
 .gl-v2-ma .gl-v2-ma-table-spacer { flex: 1; }
 .gl-v2-ma .gl-v2-ma-table-search { width: 280px; max-width: 100%; }
-.gl-v2-ma .gl-v2-ma-table-search .gl-v2-field-box { height: 40px; }
+.gl-v2-ma .gl-v2-ma-table-search { --gl-v2-field-h: 40px; }
 .gl-v2-ma .gl-v2-ma-table-hint { font: 450 11px var(--gl-v2-font-sans); color: #7a8a78; }
 /* Zelfde tabelstijl als Facturen (DESIGN.md "Table"): kop 11px groen op wit met haarlijn, rijen van 54px, hover-tint.
    Horizontaal scrollen enkel de tabel zelf (.dt-layout-table), nooit de voet met teller en paginering. */

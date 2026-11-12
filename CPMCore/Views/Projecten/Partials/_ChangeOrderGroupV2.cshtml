@@ -119,6 +119,10 @@
                     }
                     <span class="gl-v2-co-group-source-tag">ingelezen</span>
                 </div>
+                @if (editable && intakeUrl != null)
+                {
+                    <a class="gl-v2-co-link" href="@intakeUrl">Extra regels inlezen</a>
+                }
             }
             else if (editable && intakeUrl != null)
             {

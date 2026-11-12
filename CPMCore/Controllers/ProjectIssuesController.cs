@@ -167,8 +167,21 @@ public partial class ProjectsIssuesController : BaseController
             return RedirectToAction(nameof(Index), new { projectId });
 
         var report = await _reportService.CreateReportEntity(projectId, reportType, first.ResponsiblePartyType, first.ResponsiblePartyId, first.ResponsibleOtherName, first.ResponsibleOtherEmail, issueIds, User.FindFirst(CpmClaims.UserId)?.Value);
-        var bytes = await _reportService.GenerateReportPdf(projectId, report.Id);
+        var bytes = await _reportService.GenerateReportPdf(projectId, report.Id, allStatuses: true);
         return File(bytes, "application/pdf", $"puntenlijst_{projectId}_{DateTime.Now:yyyyMMddHHmm}.pdf");
+    }
+
+    /// <summary>Afdrukmodal van de puntenlijst (design-handoff 40u). De pagina haalt de pdf op via fetch en toont hem in het afdrukvenster
+    /// van de browser, of bewaart hem (Download PDF). De ids komen uit de lijst (selectie, filter of aangevinkt); de server beperkt ze tot dit project.</summary>
+    [HttpPost("PrintPdf")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> PrintPdf(int projectId, FacadeCore.ConstructionIssuePrintOptions options)
+    {
+        if (options == null || options.IssueIds == null || options.IssueIds.Count == 0)
+            return BadRequest("Geen punten gekozen.");
+        var bytes = await _reportService.GeneratePrintPdf(projectId, options);
+        var kind = options.Type switch { "aannemer" => "peraannemer", "rondgang" => "rondgang", _ => "puntenlijst" };
+        return File(bytes, "application/pdf", $"{kind}_{projectId}_{DateTime.Now:yyyyMMddHHmm}.pdf");
     }
 
     [HttpGet("Create")]

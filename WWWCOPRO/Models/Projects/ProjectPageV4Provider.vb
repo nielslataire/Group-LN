@@ -81,7 +81,7 @@ Public Class ProjectPageV4Provider
         For Each u In units.Where(Function(x) x.Type IsNot Nothing AndAlso x.Type.Id = 2).OrderBy(Function(x) x.Name)
             Dim slpkRoom = u.Rooms.Where(Function(r) r.Type = BO.RoomType.Slaapkamer).FirstOrDefault()
             Dim lot As New V4Lot With {
-                .Id = u.Id, .Name = u.Name, .Type = If(u.Type.Name, "Woning"),
+                .Id = u.Id, .Name = u.Name, .Type = If(u.Type.Name, "Woning"), .BuildingLabel = BO.UnitBuildingTypes.Label(u.BuildingType),
                 .LivingArea = CInt(u.Surface), .LandArea = CInt(u.GroundSurface),
                 .Bedrooms = If(slpkRoom IsNot Nothing, slpkRoom.Number, 0),
                 .HasPlan = (u.Plan IsNot Nothing),

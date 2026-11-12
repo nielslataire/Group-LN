@@ -1,0 +1,123 @@
+/* gl-v2 — Punten afdrukken (design-handoff 40u). TYPE 2 formulier-modal (.gl-v2-modal-form, zie gl-v2/modals.css) op 720px met twee kolommen:
+   keuzes links, voorbeeld rechts. Op tablet en gsm een bottom sheet (de standaard fullscreen-variant van .gl-v2-modal-form wordt hier overruled).
+   Eigen klassen-namespace gl-v2-pp-*; geladen door Projecten/Issues/IndexV2. Dubbele klasse (.gl-v2-modal-form.gl-v2-pp-modal) om de
+   modal-form-basis te overschrijven zonder volgorde-afhankelijkheid. */
+
+.gl-v2-modal-form.gl-v2-pp-modal .modal-dialog { width: 720px; max-width: calc(100vw - 32px); }
+.gl-v2-modal-form.gl-v2-pp-modal .modal-content { max-height: calc(100dvh - 48px); display: flex; flex-direction: column; }
+.gl-v2-modal-form.gl-v2-pp-modal .modal-header { padding: 18px 20px 14px; gap: 12px; flex: none; }
+.gl-v2-pp-icon { width: 36px; height: 36px; border-radius: var(--gl-v2-radius-sm); background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); display: flex; align-items: center; justify-content: center; flex: none; font-size: 17px; }
+.gl-v2-pp-head { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.gl-v2-modal-form.gl-v2-pp-modal .modal-title { font-size: 20px; }
+.gl-v2-pp-sub { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.gl-v2-modal-form.gl-v2-pp-modal .modal-body.gl-v2-pp-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 230px;
+    gap: 22px;
+    padding: 16px 20px 18px;
+    overflow-y: auto;
+    min-height: 0;
+}
+.gl-v2-pp-left { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.gl-v2-pp-sec { display: flex; flex-direction: column; gap: 7px; }
+.gl-v2-pp-row { flex-direction: row; gap: 18px; flex-wrap: wrap; align-items: flex-end; }
+.gl-v2-pp-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.gl-v2-pp-sortcol { flex: 1; min-width: 190px; }
+.gl-v2-pp-sortcol .gl-v2-select { width: 100%; }
+.gl-v2-pp-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .09em; text-transform: uppercase; color: var(--gl-v2-muted); }
+
+/* Welke punten — drie keuzetegels */
+.gl-v2-pp-scope { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.gl-v2-pp-scope button { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 8px 11px; border-radius: var(--gl-v2-radius-sm); border: 0; background: var(--gl-v2-surface); box-shadow: inset 0 0 0 1px var(--gl-v2-hairline); cursor: pointer; text-align: left; font-family: inherit; }
+.gl-v2-pp-scope b { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-pp-scope small { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-pp-scope button:hover:not([aria-disabled="true"]) { background: var(--gl-v2-hover-tint); }
+.gl-v2-pp-scope button[aria-checked="true"] { background: var(--gl-v2-primary-tint); box-shadow: inset 0 0 0 1.5px var(--gl-v2-primary); }
+.gl-v2-pp-scope button[aria-checked="true"] b { color: var(--gl-v2-primary); }
+.gl-v2-pp-scope button[aria-disabled="true"] { cursor: default; opacity: .5; }
+.gl-v2-pp-scope button:focus-visible, .gl-v2-pp-types button:focus-visible { outline: 2px solid var(--gl-v2-gold); outline-offset: 2px; }
+
+/* Soort afdruk — keuzerondjes in kaarten */
+.gl-v2-pp-types { display: flex; flex-direction: column; gap: 6px; }
+.gl-v2-pp-types button { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: var(--gl-v2-radius-sm); border: 0; background: var(--gl-v2-surface); box-shadow: inset 0 0 0 1px var(--gl-v2-hairline); cursor: pointer; text-align: left; font-family: inherit; }
+.gl-v2-pp-types button:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-pp-types button[aria-checked="true"] { background: var(--gl-v2-primary-tint); box-shadow: inset 0 0 0 1.5px var(--gl-v2-primary); }
+.gl-v2-pp-ring { width: 18px; height: 18px; flex: none; margin-top: 1px; border-radius: 50%; border: 1.5px solid var(--gl-v2-muted-light); box-sizing: border-box; display: flex; align-items: center; justify-content: center; background: var(--gl-v2-surface); }
+.gl-v2-pp-ring i { width: 8px; height: 8px; border-radius: 50%; background: var(--gl-v2-primary); transform: scale(0); transition: transform .12s ease; }
+.gl-v2-pp-types button[aria-checked="true"] .gl-v2-pp-ring { border-color: var(--gl-v2-primary); }
+.gl-v2-pp-types button[aria-checked="true"] .gl-v2-pp-ring i { transform: scale(1); }
+.gl-v2-pp-ct { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.gl-v2-pp-ct b { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-pp-ct small { font: 450 11.5px/1.45 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-pp-ct em { font-style: normal; font: 500 10.5px ui-monospace, "IBM Plex Mono", monospace; color: var(--gl-v2-muted-soft); }
+
+/* Opnemen — vinkjes + interne notities (goud) */
+.gl-v2-pp-checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 14px; }
+.gl-v2-pp-ck { display: flex; align-items: flex-start; gap: 9px; padding: 5px 0; min-width: 0; }
+.gl-v2-pp-ck .gl-v2-check { margin-top: 1px; }
+.gl-v2-pp-ck-text { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; cursor: pointer; margin: 0; }
+.gl-v2-pp-ck-text b { font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-pp-ck-text small { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-pp-intern { font-style: normal; font: 700 9px var(--gl-v2-font-sans); letter-spacing: .08em; padding: 2px 5px; border-radius: 4px; background: var(--gl-v2-gold-tint); color: var(--gl-v2-warning); align-self: flex-start; margin-top: 2px; }
+.gl-v2-pp-warn { display: flex; gap: 8px; align-items: center; padding: 8px 11px; border-radius: var(--gl-v2-radius-s); background: var(--gl-v2-gold-tint); font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-warning); }
+.gl-v2-pp-warn[hidden] { display: none; }
+.gl-v2-pp-warn i { font-size: 14px; flex: none; }
+
+/* Voorbeeld — miniatuur van het blad, verandert mee met de keuzes */
+.gl-v2-pp-right { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.gl-v2-pp-stage { height: 250px; border-radius: var(--gl-v2-radius-sm); background: var(--gl-v2-neutral-tint); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+.gl-v2-pp-page { background: var(--gl-v2-surface); box-shadow: 0 2px 4px rgba(31, 42, 30, .12), 0 14px 24px -14px rgba(31, 42, 30, .4); display: flex; flex-direction: column; gap: 4px; padding: 0 9px 9px; box-sizing: border-box; overflow: hidden; }
+.gl-v2-pp-page.is-portrait { width: 132px; height: 186px; }
+.gl-v2-pp-page.is-landscape { width: 186px; height: 132px; }
+.gl-v2-pp-band { display: block; height: 4px; background: var(--gl-v2-primary); margin: 0 -9px 5px; flex: none; }
+.gl-v2-pp-tt { display: block; width: 50%; height: 6px; border-radius: 2px; background: var(--gl-v2-ink); opacity: .8; flex: none; }
+.gl-v2-pp-st { display: block; width: 70%; height: 3px; border-radius: 2px; background: var(--gl-v2-hairline); margin-bottom: 3px; flex: none; }
+.gl-v2-pv-r { display: flex; align-items: center; gap: 4px; min-height: 9px; flex: none; }
+.gl-v2-pv-r.is-group { margin-top: 3px; }
+.gl-v2-pv-r.is-group .gl-v2-pv-l { background: var(--gl-v2-accent-sage); height: 4px; }
+.gl-v2-pv-l { display: block; height: 3px; border-radius: 2px; background: var(--gl-v2-hairline); }
+.gl-v2-pv-ck { width: 6px; height: 6px; border: 1px solid var(--gl-v2-muted); flex: none; }
+.gl-v2-pv-ph { width: 12px; height: 9px; border-radius: 1px; background: var(--gl-v2-primary-tint); flex: none; }
+.gl-v2-pv-nt { display: block; width: 30%; height: 3px; border-bottom: 1px dashed var(--gl-v2-muted-light); margin-left: auto; }
+.gl-v2-pp-page2 { position: absolute; right: 10px; bottom: 10px; width: 84px; height: 60px; background: var(--gl-v2-surface); box-shadow: 0 2px 4px rgba(31, 42, 30, .12); padding: 0 6px 6px; box-sizing: border-box; transform: rotate(3deg); }
+.gl-v2-pp-page2 .gl-v2-pp-band { margin: 0 -6px 4px; height: 3px; }
+.gl-v2-pv-plan { display: block; position: relative; height: 42px; background: repeating-linear-gradient(0deg, var(--gl-v2-neutral-tint) 0 6px, var(--gl-v2-hairline-soft) 6px 7px); }
+.gl-v2-pv-plan i { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--gl-v2-primary); }
+.gl-v2-pv-plan i.is-key { background: var(--gl-v2-danger); }
+.gl-v2-pp-meta { display: flex; justify-content: space-between; align-items: baseline; font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
+.gl-v2-pp-meta b { font: 700 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-pp-hint { font: 450 11px/1.45 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* Voet: samenvatting links, Annuleren (tekst) · Download PDF (secundair) · Afdrukken (primair) */
+.gl-v2-modal-form.gl-v2-pp-modal .modal-footer.gl-v2-pp-footer { align-items: center; padding: 14px 20px; flex: none; }
+.gl-v2-pp-sum { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); flex: 1; min-width: 0; margin-right: auto; }
+.gl-v2-pp-footer .gl-v2-btn i { font-size: 14px; }
+.gl-v2-pp-footer .gl-v2-btn.is-busy { opacity: .6; pointer-events: none; }
+
+/* Tablet en gsm: bottom sheet (design 40u: "op tablet en gsm wordt het een bottom sheet") */
+@media (max-width: 1023.98px) {
+    .gl-v2-modal-form.gl-v2-pp-modal .modal-dialog { width: 100%; max-width: none; margin: 0; min-height: 100%; display: flex; align-items: flex-end; }
+    .gl-v2-modal-form.gl-v2-pp-modal .modal-content { width: 100%; height: auto; max-height: 92dvh; border-radius: 16px 16px 0 0; box-shadow: var(--gl-v2-shadow-flyout); }
+    .gl-v2-modal-form.gl-v2-pp-modal .modal-header { background: transparent; border-bottom: 1px solid var(--gl-v2-hairline-soft); padding: 14px 16px 12px; }
+    .gl-v2-modal-form.gl-v2-pp-modal .modal-title { color: var(--gl-v2-ink); font-size: 18px; }
+    .gl-v2-modal-form.gl-v2-pp-modal .gl-v2-modal-close { order: 0; margin: 0 0 0 auto; border-color: var(--gl-v2-hairline); color: var(--gl-v2-ink); }
+    .gl-v2-modal-form.gl-v2-pp-modal .modal-body.gl-v2-pp-body { grid-template-columns: 1fr; gap: 16px; padding: 14px 16px; flex: 1; }
+    .gl-v2-pp-right { order: -1; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; }
+    .gl-v2-pp-right > .gl-v2-pp-label { flex-basis: 100%; }
+    .gl-v2-pp-stage { height: 170px; width: 190px; flex: none; }
+    .gl-v2-pp-page.is-portrait { width: 100px; height: 140px; }
+    .gl-v2-pp-page.is-landscape { width: 150px; height: 106px; }
+    .gl-v2-pp-meta { flex-direction: column; gap: 2px; align-items: flex-start; }
+    .gl-v2-pp-hint { flex-basis: 100%; }
+    .gl-v2-modal-form.gl-v2-pp-modal .modal-footer.gl-v2-pp-footer { flex-wrap: wrap; flex-direction: row; padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px)); }
+    .gl-v2-pp-sum { flex-basis: 100%; }
+    .gl-v2-modal-form.gl-v2-pp-modal .modal-footer.gl-v2-pp-footer .gl-v2-btn { height: 44px; flex: 1; width: auto; }
+    .gl-v2-modal-form.gl-v2-pp-modal .modal-footer.gl-v2-pp-footer .gl-v2-btn-text { flex: 0 0 auto; }
+}
+@media (max-width: 575.98px) {
+    .gl-v2-pp-scope { grid-template-columns: 1fr; }
+    .gl-v2-pp-checks { grid-template-columns: 1fr; }
+    .gl-v2-modal-form.gl-v2-pp-modal .modal-footer.gl-v2-pp-footer { flex-direction: column-reverse; align-items: stretch; }
+    .gl-v2-modal-form.gl-v2-pp-modal .modal-footer.gl-v2-pp-footer .gl-v2-btn { width: 100%; flex: none; height: 48px; }
+}

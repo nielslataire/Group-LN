@@ -12,7 +12,7 @@
     var uid = Guid.NewGuid().ToString("N")[..8];
 }
 <tr class="gl-v2-co-row js-qi-row @(Model.NeedsReview ? "is-needs-review" : "")" data-index="@index">
-    <td class="is-center">
+    <td class="is-center gl-v2-co-handle-cell">
         <input type="hidden" name="@(prefix).id" value="@Model.Id" />
         <input type="hidden" name="@(prefix).measurementType" value="1" />
         <input type="hidden" name="@(prefix).commission" value="0" />
@@ -27,7 +27,7 @@
             <span class="gl-v2-qi-row-thumb"><i class="ph ph-text-align-left" aria-hidden="true"></i></span>
         }
     </td>
-    <td>
+    <td class="gl-v2-co-desc-cell">
         <div class="gl-v2-field-box gl-v2-field-box-textarea gl-v2-co-descbox"><textarea class="gl-v2-field-input js-qi-description" name="@(prefix).description" rows="2" maxlength="1000">@Model.Description</textarea></div>
         <input type="hidden" name="@(prefix).needsReview" class="js-qi-needsreview" value="@Model.NeedsReview.ToString().ToLowerInvariant()" />
         @if (Model.NeedsReview)
@@ -35,7 +35,7 @@
             <button type="button" class="gl-v2-co-review-flag js-qi-confirm-row" title="Klikken om te bevestigen"><i class="ph ph-warning" aria-hidden="true"></i>controleer</button>
         }
     </td>
-    <td class="is-center">
+    <td class="is-center" data-label="Eenh.">
         @await Html.PartialAsync("GlV2/_SelectList", new CPMCore.Models.GlV2.GlV2SelectListVm
         {
             Name = prefix + ".measurementUnit", Id = "qi-mu-" + uid, Bare = true, Value = Model.MeasurementUnit.ToString(),
@@ -43,7 +43,7 @@
             Items = Enum.GetValues(typeof(BOCore.MeasurementUnit)).Cast<BOCore.MeasurementUnit>().Select(mu => new CPMCore.Models.GlV2.GlV2SelectItem { Value = ((int)mu).ToString(), Text = mu.GetDisplayName() }).ToList()
         })
     </td>
-    <td class="is-right"><div class="gl-v2-field-box gl-v2-co-numbox"><input type="number" step="1" class="gl-v2-field-input js-qi-number" name="@(prefix).number" value="@Model.Number" /></div></td>
-    <td class="is-right"><div class="gl-v2-field-box gl-v2-co-numbox"><input type="text" inputmode="decimal" autocomplete="off" class="gl-v2-field-input is-num Currencymask js-qi-price" name="@(prefix).price" value="@Model.Price.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" /><span class="gl-v2-field-suffix">€</span></div></td>
+    <td class="is-right" data-label="Aantal"><div class="gl-v2-field-box gl-v2-co-numbox"><input type="number" step="1" class="gl-v2-field-input js-qi-number" name="@(prefix).number" value="@Model.Number" /></div></td>
+    <td class="is-right" data-label="Prijs lev."><div class="gl-v2-field-box gl-v2-co-numbox"><input type="text" inputmode="decimal" autocomplete="off" class="gl-v2-field-input is-num Currencymask js-qi-price" name="@(prefix).price" value="@Model.Price.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" /><span class="gl-v2-field-suffix">€</span></div></td>
     <td class="is-right"><button type="button" class="gl-v2-co-row-delete js-qi-delete-row" title="Regel verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button></td>
 </tr>

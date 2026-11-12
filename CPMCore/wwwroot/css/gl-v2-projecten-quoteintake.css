@@ -80,3 +80,33 @@
 .gl-v2-qi-photo-picker-label { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .06em; color: var(--gl-v2-muted); padding: 4px 8px; }
 .gl-v2-qi-photo-picker-item { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 8px; border-radius: var(--gl-v2-radius-xs, 6px); font: 500 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); cursor: pointer; }
 .gl-v2-qi-photo-picker-item:hover { background: var(--gl-v2-hover-tint); }
+
+/* ── Regels in kaartweergave (kaart < 760px, zie container co-table in changeorderdetail.css) ─────────
+   Bron-icoon + verwijderen bovenaan, omschrijving over de volle breedte, daaronder eenheid (2 kolommen),
+   aantal en prijs. Aantal/prijs/eenheid vullen hun gridcel en schalen dus mee met het scherm. */
+@container co-table (max-width: 759px) {
+    #gl-v2-qi-rows-table tbody td[data-label="Eenh."] { grid-column: span 2; }
+    #gl-v2-qi-rows-table tbody td[data-label="Aantal"],
+    #gl-v2-qi-rows-table tbody td[data-label="Prijs lev."] { grid-column: span 1; }
+    #gl-v2-qi-rows-table tbody td.is-right[data-label] { text-align: left; }
+    #gl-v2-qi-rows-table tbody td .gl-v2-field-box.gl-v2-co-numbox { width: 100%; }
+    #gl-v2-qi-rows-table .gl-v2-co-descbox .gl-v2-field-input { width: 100%; }
+    #gl-v2-qi-rows-table tfoot tr { display: flex; justify-content: flex-end; gap: 12px; padding: 12px 16px; }
+    #gl-v2-qi-rows-table tfoot td { display: block; padding: 0; border: 0; }
+    #gl-v2-qi-rows-table tfoot td[colspan] { padding-right: 0; }
+    #gl-v2-qi-rows-table tfoot td:empty { display: none; }
+}
+
+/* De omschrijvingscel hergebruikt .gl-v2-co-desc-cell (volle breedte in kaartweergave), maar die klasse zet
+   white-space: pre-line: de regeleinden/inspringing uit de view tussen textarea en knoppen werden dan lege regels. */
+#gl-v2-qi-rows-table td.gl-v2-co-desc-cell { white-space: normal; min-width: 0; line-height: normal; }
+
+/* Alles bovenaan in de rij: de omschrijving kan meerdere regels tellen, de rest hoort dan bij de eerste regel. */
+#gl-v2-qi-rows-table tbody td { vertical-align: top; }
+#gl-v2-qi-rows-table tbody tr { align-items: start; }
+
+/* Hoogte volgt --gl-v2-field-h (34px, gezet op .gl-v2-co-table); enkel de vulling/afronding van de trigger sluit aan op de tabelvelden. */
+#gl-v2-qi-rows-table .gl-v2-select-trigger { padding: 0 9px; border-radius: var(--gl-v2-radius-s, 7px); font-size: 12.5px; }
+
+/* Geen scroll-anchoring: het canvas groeit van 0 naar de volledige PDF-hoogte en de browser schoof de scrollbalk daarbij mee naar beneden. */
+.gl-v2-qi-canvas-wrap { overflow-anchor: none; }

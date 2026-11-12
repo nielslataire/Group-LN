@@ -48,6 +48,7 @@
     <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-punt-planviewer.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-projecten-punten.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-punten-print.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-punt-plansheets-m.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-projecten-punten-mobile.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-punt-spraak-m.css" asp-append-version="true" />
@@ -293,10 +294,9 @@
     @await Html.PartialAsync("Partials/_PuntPanelV2", Model)
 }
 
-<form method="post" id="pt-print-form" action="@Url.Action("DownloadPdf", "ProjectsIssues", new { projectId = Model.ProjectId })" hidden>
-    @Html.AntiForgeryToken()
-    <div id="pt-print-ids"></div>
-</form>
+@* Antiforgery-token voor de afdrukmodal (die haalt de pdf op via fetch). *@
+<form id="pt-print-form" hidden>@Html.AntiForgeryToken()</form>
+@await Html.PartialAsync("Partials/_PuntPrintModalV2", Model)
 
 @section PageScripts
 {
@@ -307,6 +307,7 @@
     <script src="~/js/gl-v2-punt-panel.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-punt-plansheets-m.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-projecten-punten.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-punten-print.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-punt-mobile.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-punt-spraak-m.js" asp-append-version="true"></script>
 }

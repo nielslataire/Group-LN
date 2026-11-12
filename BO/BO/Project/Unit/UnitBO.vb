@@ -36,6 +36,16 @@ Public Class UnitBO
             _type = value
         End Set
     End Property
+    Private _buildingType As Integer?
+    <Display(Name:="Bebouwing")>
+    Public Property BuildingType() As Integer?
+        Get
+            Return _buildingType
+        End Get
+        Set(ByVal value As Integer?)
+            _buildingType = value
+        End Set
+    End Property
     Private _level As Integer
     <Display(Name:="Verdieping")>
     Public Property Level() As Integer
@@ -320,4 +330,21 @@ Public Class UnitBO
         End Set
     End Property
 
+End Class
+
+Public Enum UnitBuildingType
+    Open = 1
+    Halfopen = 2
+    Gesloten = 3
+End Enum
+
+Public Class UnitBuildingTypes
+    Public Shared Function Label(value As Integer?) As String
+        Select Case value
+            Case 1 : Return "Open bebouwing"
+            Case 2 : Return "Halfopen bebouwing"
+            Case 3 : Return "Gesloten bebouwing"
+            Case Else : Return Nothing
+        End Select
+    End Function
 End Class

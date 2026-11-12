@@ -65,7 +65,7 @@ beschrijven die pagina niet apart. Een eigen artikel blijft beter (zie C).
 | Projecten/IncomingInvoices/Add-, EditIncommingInvoiceV2 | Add/EditIncommingInvoice | nacalculatie-factuur | factuur-van-leverancier-toevoegen, borg-op-een-factuur, extra-inhouding-op-een-factuur |
 | Projecten/Insurances/DetailInsurancesV2, AddInsuranceV2 | DetailInsurances (tab-afhankelijk), AddInsurance/SaveInsurance | verzekeringen-overzicht / -attesten / verzekering-toevoegen | verzekeringen-overzicht / attesten-aannemers-opvragen / verzekering-toevoegen |
 | Projecten/Sales/DetailSalesV2, SalesSettingsV2, SalesCalculateV2 | VerkoopListV2, VerkoopSettingsV2, SalesCalculateV2 | projecten-te-koop / -verkoopinstellingen / -eenheid-berekenen | te-koop-overzicht / verkoopinstellingen-aanpassen / eenheid-berekenen |
-| Projecten/Issues/IndexV2 | ProjectsIssues.Index | issues-index | 7 artikels in punten-verslagen |
+| Projecten/Issues/IndexV2 | ProjectsIssues.Index | issues-index | 8 artikels in punten-verslagen (o.a. `punten-afdrukken`, afdrukmodal 40u) |
 | Projecten/Verslagen/EditV2 | ProjectVerslagen.Edit | verslagen-edit | werfverslag-opmaken, werfverslag-afronden-en-versturen |
 | Instellingen: Activities, VacationDays, BlogBeheer (2), Bouwindexen, BudgetFormules, BudgetPrijsReferenties, BudgetReferentieProjecten, KostprijsMaterialen, CookieConsentStats, EmailTemplateBeheer, HomeHeroProject, IssueNotificationAdmin (3), Marktdata, TrajectSjabloonAdmin (2), UserAdmin (3), VacatureBeheer (3) | zie views | `instellingen-*` (in de view gezet) | artikels in topic instellingen |
 

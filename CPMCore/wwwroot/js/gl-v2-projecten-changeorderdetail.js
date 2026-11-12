@@ -880,36 +880,46 @@
     // daarbovenop minstens één regel, geen "controleer"-vlaggen meer en een plan van samen 100 %.
     var mainForm = document.getElementById("gl-v2-co-form");
     if (mainForm) {
+        // Foutoverzicht (DESIGN.md "Foutoverzicht (punt 24)"): de gedeelde engine blokkeert de submit en toont de rode kaart bovenaan.
+        // De klant · eenheid draagt data-gl-v2-required (de view). Het contract en de omschrijving voor de klant zijn optioneel.
+        // De regels-controles gelden enkel bij verzenden/omzetten; de submitter onthouden we in een listener die vóór die van de engine staat.
+        var sendingNow = false;
         mainForm.addEventListener("submit", function (e) {
-            // Enkel de klant · eenheid is verplicht. Het contract is optioneel (offerte én wijzigingsopdracht): het veld staat zelf op
-            // "Geen contract (nog te koppelen)" en de server (ChangeOrderDetailV2Save) vraagt er ook geen. Dit blokkeerde het opslaan
-            // van een offerte zonder contract, zonder dat de server ooit werd aangeroepen.
-            var client = document.getElementById("gl-v2-co-client");
-            if (client && !client.value) {
-                e.preventDefault();
-                var trigger = document.getElementById(client.id + "_trigger");
-                if (trigger) trigger.focus();
-                toast("warning", "Nog niet compleet", "Kies eerst een klant · eenheid.");
-                return;
-            }
+            sendingNow = !!(e.submitter && e.submitter.name === "afterSave" && (e.submitter.value === "send" || e.submitter.value === "convert"));
+        });
+        var errorSummary = window.GlV2ErrorSummary ? window.GlV2ErrorSummary.init({
+            form: mainForm,
+            container: document.getElementById("gl-v2-error-summary"),
+            stickyLabel: "fouten",
+            validators: [function (errors) {
+                if (!rowsBody) return;
+                var rows = $$(".js-co-row", rowsBody);
+                var loc = "Regels per leverancier";
+                // Altijd (ook bij gewoon opslaan): minstens één regel met een omschrijving en een bedrag.
+                var hasAmountRow = rows.some(function (tr) {
+                    var d = $(".js-co-description", tr), p = $(".js-co-price", tr);
+                    return d && d.value.trim() !== "" && getNum(p) > 0;
+                });
+                if (!hasAmountRow) {
+                    errors.push({ message: "Voeg minstens één regel met een bedrag toe.", field: "Regels", location: loc, tab: "", target: rowsBody });
+                    return;
+                }
+                if (!sendingNow) return;
+                $$(".js-co-group", rowsBody).forEach(function (g) {
+                    var empty = $$(".js-co-description", g).every(function (t) { return t.value.trim() === ""; });
+                    if (!empty) return;
+                    var name = ($(".gl-v2-co-group-name", g) || {}).textContent || "Een leverancier";
+                    errors.push({ message: "heeft nog geen regels. Voeg regels toe of verwijder de leverancier.", field: name.trim(), location: loc, tab: "", target: g });
+                });
+                var review = rows.filter(function (tr) { return tr.classList.contains("is-needs-review"); });
+                if (review.length > 0) errors.push({ message: "Bevestig eerst de regels die op \"controleer\" staan.", field: review.length === 1 ? "1 regel" : review.length + " regels", location: loc, tab: "", target: review[0] });
+                if (!planIsHidden() && termsBody && $$(".js-co-term-row", termsBody).length > 0 && Math.abs(termsTotal() - 100) >= 0.01)
+                    errors.push({ message: "moet samen 100 % zijn.", field: "Facturatieplan", location: "Facturatieplan", tab: "", target: termsBody });
+            }]
+        }) : null;
 
-            var sending = e.submitter && e.submitter.name === "afterSave" && (e.submitter.value === "send" || e.submitter.value === "convert");
-            if (!sending) return;
-
-            var rows = rowsBody ? $$(".js-co-row", rowsBody) : [];
-            var problem = null;
-            var emptyGroup = rowsBody ? $$(".js-co-group", rowsBody).filter(function (g) {
-                return $$(".js-co-description", g).every(function (t) { return t.value.trim() === ""; });
-            })[0] : null;
-            if (rows.length === 0) problem = "Voeg minstens één regel toe.";
-            else if (emptyGroup) problem = (($(".gl-v2-co-group-name", emptyGroup) || {}).textContent || "Een leverancier") + " heeft nog geen regels. Voeg regels toe of verwijder de leverancier.";
-            else if (rows.some(function (tr) { return tr.classList.contains("is-needs-review"); })) problem = "Bevestig eerst de regels die op \"controleer\" staan.";
-            else if (!planIsHidden() && termsBody && $$(".js-co-term-row", termsBody).length > 0 && Math.abs(termsTotal() - 100) >= 0.01) problem = "Het facturatieplan moet samen 100 % zijn.";
-            if (problem) {
-                e.preventDefault();
-                toast("warning", "Nog niet te verzenden", problem);
-                return;
-            }
+        mainForm.addEventListener("submit", function (e) {
+            if (e.defaultPrevented || !sendingNow) return;
             // Per leverancier: geen contract is geen reden om te blokkeren, wel om te waarschuwen (zoals het project dat ook doet).
             var noContract = rowsBody ? $$(".js-co-group.is-no-contract", rowsBody).map(function (g) { return ($(".gl-v2-co-group-name", g) || {}).textContent; }) : [];
             var noSupplier = rowsBody ? $$(".js-co-group", rowsBody).filter(function (g) { return g.getAttribute("data-supplier") === "0"; }).length : 0;

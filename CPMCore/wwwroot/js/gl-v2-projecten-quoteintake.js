@@ -131,6 +131,8 @@
             pdfPage = 1;
             syncOverlaySize();
             showStage();
+            // Een nieuw bestand begint altijd bovenaan: de scrollpositie van een vorig (of net opgebouwd) document mag niet blijven staan.
+            if (scrollWrap) { scrollWrap.scrollTop = 0; requestAnimationFrame(function () { scrollWrap.scrollTop = 0; updatePageNav(); }); }
             updatePageNav();
             setStatus("PDF geladen (" + pdfDoc.numPages + (pdfDoc.numPages === 1 ? " pagina" : " paginas") + ") — teken een kader.");
         });

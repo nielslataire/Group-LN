@@ -162,7 +162,8 @@
                 var openBtn = document.getElementById('gln-ai-contract-open');
                 if (openBtn) openBtn.href = cfg.contractOpenUrl.replace('contractid=0', 'contractid=' + contractId);
 
-                if (vanGebruiker) { borgBeslist = false; borgZelfGezet = false; }
+                // Enkel een nieuwe factuur volgt het contract; een opgeslagen factuur houdt haar borgkeuze (aanzetten doet de gebruiker zelf).
+                if (vanGebruiker && !(cfg.invoiceId > 0)) { borgBeslist = false; borgZelfGezet = false; }
                 recomputeVervaldatum(vanGebruiker);
                 updateContractLiveCijfers();
                 refreshBorg();
@@ -333,7 +334,7 @@
     var inhBody = document.getElementById('gln-ai-inhouding-body');
     var inhBedragEl = document.getElementById('gln-ai-inhouding-bedrag');
     var betalenEl = document.getElementById('gln-ai-betalen');
-    // true = de server-waarde (bewerken van een factuur die al een borgkeuze heeft) blijft staan tot de gebruiker het contract wijzigt.
+    // true = de server-waarde (een opgeslagen factuur) blijft staan; bij een nieuwe factuur tot de gebruiker het contract wijzigt.
     var borgBeslist = borgAanHidden ? borgAanHidden.getAttribute('data-start') !== '-1' : false;
     var borgZelfGezet = false;
     function dutch(n) { return (Math.round(n * 100) / 100).toFixed(2).replace('.', ','); }

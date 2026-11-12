@@ -394,7 +394,7 @@
 /* Het aandeelveld zit in een tabelcel, dus geen eigen label en een vaste, smalle breedte — een
    volle-breedte veld zou de kolom laten meegroeien met de tabel. */
 .gl-v2-ls-field { width: 118px; margin-left: auto; }
-.gl-v2-ls-field .gl-v2-field-box { height: 34px; }
+.gl-v2-ls-field { --gl-v2-field-h: 34px; }
 .gl-v2-ls-input { text-align: right; }
 
 /* De aandeelkolom staat rechts uitgelijnd; een tabelrij hoeft hier niet op te lichten bij hover (er is

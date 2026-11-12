@@ -57,7 +57,7 @@
         return '<button type="button" tabindex="-1" role="option" id="gln-nc-fs-o' + k + '" class="gln-nc-fs-opt' + (k === hi ? " is-active" : "") + '" aria-selected="' + (k === hi) + '" data-k="' + k + '">' +
             '<span class="gln-nc-fs-ico" aria-hidden="true"><i class="ph ph-receipt"></i></span>' +
             '<span class="gln-nc-fs-main"><span class="gln-nc-fs-line1"><span class="gln-nc-fs-name">' + nameHtml + '</span><span class="gln-nc-fs-nr">' + nrHtml + '</span></span>' +
-            '<span class="gln-nc-fs-sub">' + dat + " · intern " + esc(it.intern) + "</span></span>" +
+            '<span class="gln-nc-fs-sub">' + dat + "</span></span>" +
             '<span class="gln-nc-fs-side"><span class="gln-nc-fs-amount">' + amt + '</span><span class="gl-v2-badge ' + esc(it.tone) + '">' + esc(it.type) + "</span></span></button>";
     }
 
