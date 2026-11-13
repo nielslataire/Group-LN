@@ -3745,6 +3745,17 @@ sibling already consuming all the free space, `margin-top: auto` has nothing lef
 to `0`, no visual change there. Doesn't interact with the `<768px` `position: fixed` override either —
 that block already resets `margin: 0` explicitly for its own reasons, unrelated to this.
 
+
+#### Update 13/11/2026 — IncommingInvoiceDetailV2 herbouwd naar design-handoff 42n ("Inkomende factuur bekijken")
+De hierboven beschreven hero + twee infokaarten zijn vervangen door het Detail-type van 42n. De blauwe AANKOOP-tint (chip, hero, paginaicoon) is weg: het ontwerp is groen. De "dunne datamodel"-lijst hierboven blijft gelden voor wat niet bestaat.
+- **Opbouw**: kopregel (leverancier · contract · lot · factuurdatum · referentie · project), `_KpiStrip` (Factuurbedrag, Te betalen, Korting contant, Nog vastgehouden), twee kolommen (`.gl-v2-iid-layout`, zijkolom 320px, onder 1100px gestapeld), kaart "Van factuur tot betaling", "Wat nog openstaat", Factuurlijnen; zijkolom Contract, Leverancier, Historiek. Titelbadges: Betaald / Vervallen en "€ x nog vast".
+- **Rekenvolgorde (zoals 42c/BorgService)**: factuurbedrag, btw (contractpercentage, 0 = verlegd), extra inhouding, borg, te betalen = bedrag + btw - inhouding - borg, korting contant (op het factuurbedrag, uit het contract of de eigen velden zonder contract). Borg: `BorgInhouden == true` = bewaard bedrag; NULL = oude factuur, rekent met het contractpercentage; false = geen. Eén afrekening in de view, geen tweede rekenmotor: de bedragen volgen de Add/Edit-kaart "Te betalen", maar het detail telt de btw wel mee.
+- **Balk**: breedte per aandeel van het factuurbedrag (te betalen, borg, inhouding afgehandeld, inhouding open gearceerd), bedragen in de legende.
+- **Statusschips** met icoon per aftrek (nog open / vastgehouden / nog X dagen / vervallen). Per `.gl-v2-iid-chip` is-warn/is-ok/is-muted.
+- **Wat nog openstaat**: Extra inhouding (knop Afhandelen via `GlnInhouding`, enkel met schrijfrecht `ProjectsPostCalculation`, partial `_InhoudingAfhandelenV2`), Borg (knop Naar borgen, VO-datum uit `BorgService.GetOverzichtAsync`), Korting contant (enkel zolang niet betaald).
+- **Data die ontbreekt en dus NIET getoond wordt**: betaaldatum, betaald bedrag en bank (geen betalingsmodule, enkel `StatusId = Betaald`; een betaalde factuur toont "Betaald" zonder bedrag en zegt niets over de korting), "ontvangen via Peppol", "goedgekeurd op", de EENHEID-kolom van de factuurlijnen, historiek van invoeren/goedkeuren. Historiek = enkel afhandelingen van de extra inhouding. De tabs Betalingen, Goedkeuring en Documenten blijven uitgeschakeld.
+- **Controller**: `LaadAfrekeningV2` in `ProjectenController.IncomingInvoices.cs` vult `InhoudingDetail`, `KanInhoudingAfhandelen`, `VoDatum`, `DoDatum`, `ContractBedrag` en `ContractGefactureerd` op `ProjectIncommingInvoiceModel`, enkel bij gl-v2. Geen migratie.
+- **Help**: `HelpContent/projecten/een-inkomende-factuur-lezen.md` (scherm `nacalculatie-factuur`). Beelden nog te maken.
 ### Klanten/DetailV2 — client detail inside a project (design-handoff punt 12c "Klantdetail binnen een project")
 `KlantenController.Detail(int clientId, int projectId = 0)` is the page you land on from `Projecten/
 DetailClients` → a client row. 12c is explicit that it's "zelfde shell, zelfde kaartstandaard als

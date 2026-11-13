@@ -585,7 +585,7 @@ public partial class ProjectsIssuesController
     /// <summary>Selectiebalk (40n): meerdere punten in één keer naar een status, deadline of aannemer.</summary>
     [HttpPost("BulkV2")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> BulkV2(int projectId, List<int> issueIds, string op, int? status, DateOnly? dueDate, int? contractorId, int? verslagId)
+    public async Task<IActionResult> BulkV2(int projectId, List<int> issueIds, string op, int? status, DateOnly? dueDate, int? contractorId, int? verslagId, string? reason, DateOnly? followUp)
     {
         var userId = User.FindFirst(CpmClaims.UserId)?.Value;
         var dto = new ConstructionIssueBulkUpdateBO { IssueIds = issueIds ?? new List<int>() };
@@ -604,6 +604,12 @@ public partial class ProjectsIssuesController
                 foreach (var iid in geldig) _db.WerfverslagPunt.Add(new WerfverslagPunt { VerslagId = verslag.Id, IssueId = iid, IsNieuw = false });
                 await _db.SaveChangesAsync();
                 AddMessage("success", $"{geldig.Count} punt(en) toegevoegd aan {verslag.Naam}.", "Geslaagd");
+                return RedirectToAction(nameof(Index), new { projectId });
+            case "hold":
+                if (string.IsNullOrWhiteSpace(reason)) { AddMessage("error", "Geef een reden op om punten in de wacht te zetten.", "Fout"); return RedirectToAction(nameof(Index), new { projectId }); }
+                var nHold = 0;
+                foreach (var hid in dto.IssueIds.Distinct()) if (await _service.PutOnHold(projectId, hid, reason, followUp, userId)) nHold++;
+                AddMessage("success", $"{nHold} punt(en) in de wacht gezet.", "Geslaagd");
                 return RedirectToAction(nameof(Index), new { projectId });
             case "delete":
                 var n = 0;

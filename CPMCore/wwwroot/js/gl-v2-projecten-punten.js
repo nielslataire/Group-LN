@@ -185,7 +185,7 @@
         var ids = selected().map(function (tr) { return tr.dataset.id; });
         if (!ids.length) return;
         $("#pt-bulk-op").value = op;
-        $("#pt-bulk-status").value = extra.status || ""; $("#pt-bulk-due").value = extra.due || ""; $("#pt-bulk-contractor").value = extra.contractor || ""; $("#pt-bulk-verslag").value = extra.verslag || "";
+        $("#pt-bulk-status").value = extra.status || ""; $("#pt-bulk-due").value = extra.due || ""; $("#pt-bulk-contractor").value = extra.contractor || ""; $("#pt-bulk-verslag").value = extra.verslag || ""; $("#pt-bulk-reason").value = extra.reason || ""; $("#pt-bulk-follow").value = extra.follow || "";
         var holder = $("#pt-bulk-ids"); holder.innerHTML = "";
         ids.forEach(function (id) { var i = document.createElement("input"); i.type = "hidden"; i.name = "issueIds"; i.value = id; holder.appendChild(i); });
         $("#pt-bulk-form").submit();
@@ -202,6 +202,12 @@
             else if (op === "status") submitBulk("status", { status: b.dataset.status });
             else if (op === "contractor") submitBulk("contractor", { contractor: b.dataset.contractor });
             else if (op === "verslag") submitBulk("verslag", { verslag: b.dataset.verslag });
+            else if (op === "hold") {
+                var why = $("#pt-hold-reason"), err = $("#pt-hold-error");
+                if (!why.value.trim()) { if (err) err.hidden = false; why.focus(); return; }
+                if (err) err.hidden = true;
+                submitBulk("hold", { reason: why.value.trim(), follow: $("#pt-hold-follow").value });
+            }
             else if (op === "deadline") { var d = $("#pt-due-input").value; if (d) submitBulk("deadline", { due: d }); }
         });
         var del = $("#pt-sel-delete");

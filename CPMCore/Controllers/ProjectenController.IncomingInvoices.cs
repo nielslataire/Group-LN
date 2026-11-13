@@ -712,9 +712,34 @@ namespace CPMCore.Controllers
             ViewBag.CanWriteProjectSuppliers = _psInv.HasWrite(PermissionCodes.ProjectsSuppliers);
             ViewBag.CanDeleteProjectSuppliers = _psInv.HasDelete(PermissionCodes.ProjectsSuppliers);
 
+            if (ViewData["UseGlV2Layout"] as bool? == true)
+                LaadAfrekeningV2(model, projectid, invoiceid);
+
             SetPageHeader("bx bx-building-house", BuildIncommingInvoiceDisplayTitle(model.IncommingInvoice.InvoiceExternalId, invoiceid));
             ViewData["HelpScreenId"] = "nacalculatie-factuur";
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "IncommingInvoiceDetailV2" : "IncommingInvoiceDetail", model);
+        }
+
+        /// <summary>Gegevens voor de afrekening op het gl-v2-detailscherm (design-handoff 42n): extra inhouding met
+        /// afhandelingen, opleveringsdata voor de borgvrijgave en het gefactureerde deel van het contract.</summary>
+        private void LaadAfrekeningV2(ProjectIncommingInvoiceModel model, int projectid, int invoiceid)
+        {
+            model.InhoudingDetail = BorgSvc.GetInhoudingenAsync(projectid, invoiceid).GetAwaiter().GetResult().FirstOrDefault();
+            model.KanInhoudingAfhandelen = HttpContext.RequestServices.GetRequiredService<IPermissionService>().HasWrite(PermissionCodes.ProjectsPostCalculation);
+            var overzicht = BorgSvc.GetOverzichtAsync(projectid).GetAwaiter().GetResult();
+            model.VoDatum = overzicht.VoDatum;
+            model.DoDatum = overzicht.DoDatum;
+
+            if (model.Contract != null && model.Contract.Id != 0)
+            {
+                model.ContractBedrag = model.Contract.Activities?.Sum(a => a.EffectivePrice) ?? 0m;
+                var facturen = _projectService.GetProjectIncommingInvoicesForRecalculation(projectid);
+                model.ContractGefactureerd = facturen.Success
+                    ? facturen.Values.Where(f => f.ContractId == model.Contract.Id
+                            && (f.IncommingInvoiceType == IncommingInvoiceType.Contract || f.IncommingInvoiceType == IncommingInvoiceType.Meerwerk))
+                        .Sum(f => f.SignedPrice)
+                    : 0m;
+            }
         }
 
         // Titel = wát het is (design-handoff punt 13): type + de leveranciersreferentie, nooit de

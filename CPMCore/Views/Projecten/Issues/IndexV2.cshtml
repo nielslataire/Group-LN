@@ -248,7 +248,14 @@
             {
                 <button type="button" class="gl-v2-pt-pop-item js-pt-do" data-op="status" data-status="@s.Item1">@s.Item2</button>
             }
-            <div class="gl-v2-pt-pop-note">"In de wacht" zet je per punt, met reden en opvolgdatum.</div>
+            <button type="button" class="gl-v2-pt-pop-item js-pt-pop" data-pop="pt-pop-hold">In de wacht…</button>
+            <div class="gl-v2-pt-pop-note">"In de wacht" vraagt een reden. De deadline telt dan niet door.</div>
+        </div>
+        <div class="gl-v2-pt-pop gl-v2-pt-pop-form" id="pt-pop-hold" hidden>
+            <div class="gl-v2-pt-pop-title">IN DE WACHT: <span class="js-pt-sel-n"></span> PUNTEN</div>
+            <div class="gl-v2-field gl-v2-field-full"><label class="gl-v2-field-label" for="pt-hold-reason">Reden</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="pt-hold-reason" maxlength="300" placeholder="bv. wacht op levering" autocomplete="off" /></div><span class="gl-v2-field-help" id="pt-hold-error" role="alert" hidden>Geef een reden op.</span></div>
+            @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "pt-hold-follow", Id = "pt-hold-follow", Label = "Opvolgen op (herinnering)" })
+            <div class="gl-v2-pt-pop-actions"><button type="button" class="gl-v2-btn gl-v2-btn-text js-pt-pop-close">Annuleren</button><button type="button" class="gl-v2-btn gl-v2-btn-warning js-pt-do" data-op="hold">In de wacht zetten</button></div>
         </div>
         <div class="gl-v2-pt-pop gl-v2-pt-pop-form" id="pt-pop-deadline" hidden>
             <div class="gl-v2-pt-pop-title">DEADLINE VOOR <span class="js-pt-sel-n"></span> PUNTEN</div>
@@ -277,7 +284,7 @@
     <form method="post" id="pt-bulk-form" action="@Url.Action("BulkV2", "ProjectsIssues", new { projectId = Model.ProjectId })" hidden>
         @Html.AntiForgeryToken()
         <input type="hidden" name="op" id="pt-bulk-op" /><input type="hidden" name="status" id="pt-bulk-status" />
-        <input type="hidden" name="dueDate" id="pt-bulk-due" /><input type="hidden" name="contractorId" id="pt-bulk-contractor" /><input type="hidden" name="verslagId" id="pt-bulk-verslag" />
+        <input type="hidden" name="dueDate" id="pt-bulk-due" /><input type="hidden" name="contractorId" id="pt-bulk-contractor" /><input type="hidden" name="verslagId" id="pt-bulk-verslag" /><input type="hidden" name="reason" id="pt-bulk-reason" /><input type="hidden" name="followUp" id="pt-bulk-follow" />
         <div id="pt-bulk-ids"></div>
     </form>
 }

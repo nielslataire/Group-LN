@@ -85,7 +85,7 @@ Is een punt dat als uitgevoerd gemeld werd nog niet in orde, kies dan **Afwijzen
 2. Vul de **Reden** in en eventueel de datum bij **Opvolgen op**. Op die datum krijg je een herinnering.
 3. Klik op **In de wacht zetten**.
 
-Met **Hervatten** zet je het punt weer in gang. Een punt in de wacht kun je niet in een groep wijzigen, dat doe je per punt.
+Met **Hervatten** zet je het punt weer in gang. Je kan ook meerdere punten tegelijk in de wacht zetten: selecteer ze in de lijst, kies **Status** en dan **In de wacht**. De reden is verplicht en geldt voor alle gekozen punten. De opvolgdatum is optioneel.
 
 ## Een afgesloten punt heropenen
 

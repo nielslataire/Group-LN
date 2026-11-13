@@ -1,105 +1,128 @@
 @model CPMCore.Models.Projecten.ProjectIncommingInvoiceModel
 @using System.Globalization
 @using BOCore
-@* gl-v2 layout-pilot (design-handoff/CRM Menu Wireframes.dc.html, punt 11 "Factuurdetail" — de
-   AANKOOP-kant van 11b/11d/11e). Zelfde model/data als Views/Projecten/IncommingInvoiceDetail.cshtml
-   (ProjectenController.IncommingInvoiceDetail levert exact dezelfde ProjectIncommingInvoiceModel aan
-   beide views) — geen nieuwe queries, enkel de presentatielaag. Neemt bewust dezelfde componenten/
-   layoutbeslissingen over als Views/Invoices/DetailV2.cshtml (de verkoopfactuur-kant): zelfde
-   sectiekaart-/detailgrid-/tabbar-/actiebalk-opbouw, zelfde 1024px/768px-drempels, zelfde "toon de
-   tabbar-structuur maar zet niet-gebouwde tabs op .is-disabled i.p.v. ze te verbergen"-discipline —
-   enkel hertint naar het blauwe AANKOOP-palet (#2E5F7E/#D7E6EF i.p.v. groen) en de inhoud aangepast
-   aan wat hier écht bestaat.
+@using CPMCore.Models.GlV2
+@* gl-v2 — Inkomende factuur bekijken (design-handoff "CRM Nacalculatie" punt 42n, Detail-type).
+   Zelfde model als Views/Projecten/IncommingInvoiceDetail.cshtml (ProjectenController.IncommingInvoiceDetail),
+   aangevuld met de afrekening (LaadAfrekeningV2: extra inhouding met afhandelingen, opleveringsdata, gefactureerd deel).
 
-   Het datamodel hier is aanzienlijk dunner dan bij verkoopfacturen — bewust NIET gebouwd/nagemaakt
-   deze pas (zie DESIGN.md voor de volledige toelichting):
-   - Geen "AAN ONS"-tegenpartij in de bedrag-/richtingkaart: dit model draagt geen "onze onderneming"
-     -gegeven, in tegenstelling tot Invoices/DetailVM se echte Issuer-partij. Enkel de leverancier
-     wordt getoond.
-   - Vervaldatum en statusbadge (okt. 2026, design-handoff 42e punt 09): `IncommingInvoiceBO.DueDate`/
-     `.StatusId` bestonden al als DB-kolom maar werden niet doorgegeven ("dode infrastructuur") — nu
-     wel, via `IncommingInvoiceTranslator` (alleen-lezen, zie het commentaar daar: het Add/Edit-
-     formulier heeft hier geen veld voor, een schrijfpad zou de verrijkings-/Octopus-pijplijn se eigen
-     waarden overschrijven). Enkel gezet voor facturen die via die pijplijn liepen — handmatig
-     ingevoerde facturen (dit scherm se eigen Add/Edit) blijven StatusId=0/"Nieuw" en DueDate=Nothing,
-     dus tonen geen badge/vervaldatum, net als vroeger.
-   - Geen "Goedkeuring"-tab/-werkstroom (stap N van M, wachten op iemand): geen enkele
-     controller-actie of databron hiervoor bestaat vandaag.
-   - Geen Pdf/UBL-export, geen "bekijk origineel document": geen van beide acties bestaat voor
-     inkomende facturen (in tegenstelling tot Invoices' echte Pdf/Ubl-acties). Er bestaat wel een
-     IncomingInvoiceAttachments-tabel in de database, maar niets in de C#-laag leest of toont ze —
-     geen BO/translator/actie, dus geen "document bekijken"-knop hier.
-   Gevolg: "Bewerken" is hier de enige echte primaire actie (geen "Verzenden"/"Goedkeuren"-
-   equivalent), dus die krijgt de primaire knop-plek zowel in de topbar als de vaste onderbalk.
-*@
+   Opbouw volgens het ontwerp: 4 KPI-tegels, kaart "Van factuur tot betaling" (rekenvolgorde van 42c: factuurbedrag,
+   btw, extra inhouding, borg, te betalen, korting contant), "Wat nog openstaat" als kaarten met de volgende stap,
+   factuurlijnen, en een zijkolom met contract, leverancier en historiek.
+
+   Bewust NIET getoond, want de data bestaat niet (zie DESIGN.md, sectie 42n):
+   - betaaldatum, betaald bedrag en bank: er is geen betalingsmodule, enkel StatusId = Betaald. Een betaalde factuur toont
+     daarom geen bedrag of datum en we beweren niet of de korting benut werd.
+   - "ontvangen via Peppol" en "goedgekeurd op ...": geen databron.
+   - historiek van het invoeren en goedkeuren: enkel wat echt vastligt (afhandelingen van de extra inhouding).
+   - EENHEID in de factuurlijnen: een factuurlijn kent enkel lot, type, omschrijving en wijzigingsopdracht. *@
 @{
     ViewData["BackUrl"] = Url.Action("Recalculation", "Projecten", new { projectid = Model.ProjectId });
-    // Tabbar bovenaan + vaste actiebalk onderaan (tablet/gsm) — zelfde reden/mechanisme als
-    // Invoices/DetailV2.cshtml.
     ViewData["GlV2FullHeightBody"] = true;
     var culture = CultureInfo.GetCultureInfo("nl-BE");
+    string Eur(decimal v) => v.ToString("C", culture);
+    string Pct(decimal v) => v.ToString("0.##", culture) + " %";
+    string Dat(DateOnly d) => d.ToString("dd/MM/yyyy", culture);
     var canWrite = ViewBag.CanWriteProjectSuppliers as bool? ?? false;
     var canDelete = ViewBag.CanDeleteProjectSuppliers as bool? ?? false;
 
     var invoice = Model.IncommingInvoice;
     var company = Model.Company;
-    var hasContract = Model.Contract != null && Model.Contract.Id != 0;
+    var contract = Model.Contract;
+    var hasContract = contract != null && contract.Id != 0;
+    var vandaag = DateOnly.FromDateTime(DateTime.Today);
+    var isPaid = invoice.StatusId == IncomingInvoiceStatus.Paid;
 
-    var subtotal = invoice.Details?.Sum(d => d.Price) ?? 0m;
-    var vatPct = hasContract && Model.Contract.VatPercentage.HasValue ? Model.Contract.VatPercentage.Value : 0m;
-    var vatAmount = subtotal / 100m * vatPct;
-    var total = subtotal + vatAmount;
-    var vatLabel = hasContract && Model.Contract.VatPercentage.HasValue
-        ? "Btw " + vatPct.ToString("0.#", CultureInfo.InvariantCulture) + " %"
-        : "Btw";
+    // ── Afrekening, in de rekenvolgorde van 42c ───────────────────────────────────────────────────
+    var price = invoice.InvoicePrice;
+    var btwPct = hasContract && contract.VatPercentage.HasValue ? contract.VatPercentage.Value : 0m;
+    var btwBedrag = Math.Round(price * btwPct / 100m, 2);
+    var inhouding = invoice.InhoudingBedrag.GetValueOrDefault();
+    var ih = Model.InhoudingDetail;
+    var ihAfgehandeld = ih?.Afgehandeld ?? 0m;
+    var ihOpen = ih?.Open ?? 0m;
+    var ihVerrekend = ih?.Afhandelingen.Where(a => a.Soort == 2).Sum(a => a.Bedrag) ?? 0m;
+
+    // Borg: enkel wat bij de factuur bewaard is (BorgInhouden = true). Staat er niets in de database, dan tonen we geen borg.
+    var contractBorgPct = hasContract && contract.GuaranteeType == ContractGuaranteeType.FinancialGuarantee ? contract.GuaranteePercentage : (decimal?)null;
+    decimal? borgPct = invoice.BorgInhouden == true ? invoice.BorgPercentage : null;
+    var borgBasis = price - inhouding;
+    var borg = invoice.BorgInhouden == true
+        ? invoice.BorgBedrag.GetValueOrDefault()
+        : 0m;
+    var voPct = invoice.BorgVoPercentage ?? (hasContract ? contract.GuaranteeReleaseVOPercentageEffective : 50m);
+    var voBedrag = Math.Round(borg * voPct / 100m, 2);
+    var doBedrag = borg - voBedrag;
+
+    var teBetalen = price + btwBedrag - inhouding - borg;
+
+    // Korting contant: uit het contract, of zonder contract uit de eigen velden van de factuur.
+    decimal? kPct = null; int? kDagen = null;
+    if (hasContract) { if (contract.CashDiscount == true && contract.CashDiscountPercentage > 0 && contract.CashDiscountPaymentTerm > 0) { kPct = contract.CashDiscountPercentage; kDagen = (int?)contract.CashDiscountPaymentTerm; } }
+    else if (invoice.KortingPercentage.GetValueOrDefault() > 0 && invoice.KortingDagen.GetValueOrDefault() > 0) { kPct = invoice.KortingPercentage; kDagen = invoice.KortingDagen; }
+    var heeftKorting = kPct.HasValue && kDagen.HasValue;
+    var kDatum = heeftKorting ? invoice.IncommingInvoiceDate.AddDays(kDagen.Value) : (DateOnly?)null;
+    var kBedrag = heeftKorting ? Math.Round(price * kPct.Value) / 100m : 0m;
+    var kDagenRest = kDatum.HasValue ? kDatum.Value.DayNumber - vandaag.DayNumber : 0;
+    var kVerlopen = kDagenRest < 0;
+
+    var vastgehouden = ihOpen + borg;
+    var isOverdue = !isPaid && invoice.DueDate.HasValue && invoice.DueDate.Value < vandaag;
     var lineCount = invoice.Details?.Count ?? 0;
+    var lotten = invoice.Details?.Select(d => d.ContractActivityText).Where(t => !string.IsNullOrWhiteSpace(t)).Distinct().ToList() ?? new List<string>();
+    var contractNaam = hasContract && !string.IsNullOrWhiteSpace(contract.ContractName) ? contract.ContractName : null;
 
     var companyStreet = string.Join(" ", new[] { company.Straat, company.Huisnummer }.Where(s => !string.IsNullOrWhiteSpace(s)))
         + (string.IsNullOrWhiteSpace(company.Busnummer) ? "" : "/" + company.Busnummer);
     var companyCity = string.Join(" ", new[] { company.Postcode?.Postcode, company.Postcode?.Gemeente }.Where(s => !string.IsNullOrWhiteSpace(s)));
-    var companyCountry = company.Postcode?.Country?.Name;
-    var companyAddressFull = string.Join("\n", new[] { companyStreet, companyCity, companyCountry }.Where(s => !string.IsNullOrWhiteSpace(s)));
+    var companyAddress = string.Join(", ", new[] { companyStreet, companyCity }.Where(s => !string.IsNullOrWhiteSpace(s)));
+    var companyContact = string.Join(" · ", new[] { company.Email, company.Telefoon1, company.GSM }.Where(s => !string.IsNullOrWhiteSpace(s)));
 
-    string paymentTermDisplay = null;
-    if (hasContract)
+    string KortingStand() => kVerlopen ? "vervallen" : kDagenRest == 0 ? "laatste dag" : "nog " + kDagenRest + (kDagenRest == 1 ? " dag" : " dagen");
+
+    // Balk: verdeling van het factuurbedrag (breedte = aandeel, bedragen staan in de legende).
+    decimal Aandeel(decimal v) => price > 0m ? Math.Max(0m, Math.Min(100m, v / price * 100m)) : 0m;
+    var balkOpen = Math.Max(0m, ihOpen);
+    var balkAfgehandeld = Math.Max(0m, ihAfgehandeld);
+
+    var kpis = new List<GlV2KpiItemVm>
     {
-        paymentTermDisplay = Model.Contract.PaymentTerm + " dagen na ontvangst";
-        if (Model.Contract.CashDiscount == true)
-        {
-            paymentTermDisplay += " · " + Model.Contract.CashDiscountPercentage + "% korting contant binnen de " + Model.Contract.CashDiscountPaymentTerm + " dagen";
-        }
-    }
-    string guaranteeDisplay = null;
-    if (hasContract)
+        new() { Label = "Factuurbedrag", Value = Eur(price), Hint = "excl. btw" + (btwPct == 0m ? " · btw verlegd" : ""), IconClass = "ph-receipt" },
+        new() { Label = isPaid ? "Betaald" : "Te betalen", Value = isPaid ? "Ja" : Eur(teBetalen), Hint = isPaid ? "bedrag en datum niet geregistreerd" : "zonder korting" + (invoice.DueDate.HasValue ? " · vervalt " + Dat(invoice.DueDate.Value) : ""), IconClass = "ph-coins", Tone = isOverdue ? GlV2KpiTone.Danger : GlV2KpiTone.Primary },
+    };
+    if (heeftKorting && !isPaid)
+        kpis.Add(new() { Label = "Korting contant", Value = Eur(kBedrag), Hint = Pct(kPct.Value) + " · " + (kVerlopen ? "vervallen" : KortingStand()), IconClass = "ph-seal-percent", Tone = kVerlopen ? GlV2KpiTone.Warning : GlV2KpiTone.Primary });
+    kpis.Add(new() { Label = "Nog vastgehouden", Value = Eur(vastgehouden), Hint = vastgehouden > 0m ? (borg > 0m ? "borg " + Eur(borg) : "") + (borg > 0m && ihOpen > 0m ? " · " : "") + (ihOpen > 0m ? "inhouding " + Eur(ihOpen) : "") : "niets ingehouden", IconClass = "ph-lock-simple", Tone = vastgehouden > 0m ? GlV2KpiTone.Warning : GlV2KpiTone.Primary });
+
+    // Historiek: enkel wat vastligt (afhandelingen van de extra inhouding).
+    var historiek = (ih?.Afhandelingen ?? new List<CPMCore.Services.Borg.InhoudingAfhandelingRij>()).OrderByDescending(a => a.Datum).ThenByDescending(a => a.Id).ToList();
+    string AfhandelingTekst(CPMCore.Services.Borg.InhoudingAfhandelingRij a) => a.Soort switch
     {
-        guaranteeDisplay = Model.Contract.GuaranteeType == ContractGuaranteeType.FinancialGuarantee
-            ? Model.Contract.GuaranteePercentage + "% waarborg inhouding op factuur"
-            : Model.Contract.GuaranteeType.GetDisplayName();
-    }
-    var isPaid = invoice.StatusId == IncomingInvoiceStatus.Paid;
-    var isOverdue = !isPaid && invoice.DueDate.HasValue && invoice.DueDate.Value < DateOnly.FromDateTime(DateTime.Today);
-    var betaalBadgeLabel = isPaid ? "Betaald" : isOverdue ? "Vervallen" : null;
-    var betaalBadgeTone = isPaid ? "is-positive" : "is-blocked";
-    var dueDateStr = invoice.DueDate?.ToString("dd/MM/yyyy", culture);
+        2 => "Extra inhouding: " + Eur(a.Bedrag) + " verrekend" + (string.IsNullOrWhiteSpace(a.CreditnotaNummer) ? "" : " met " + a.CreditnotaNummer),
+        3 => "Extra inhouding: " + Eur(a.Bedrag) + " afgeboekt",
+        _ => "Extra inhouding: " + Eur(a.Bedrag) + " vrijgegeven",
+    };
 }
 @section PageStyle
 {
     <link rel="stylesheet" href="~/css/gl-v2-incomming-invoice-detail.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-inhouding.css" asp-append-version="true" />
 }
-@* AANKOOP-chip — blauw i.p.v. het groene VERKOOP-chip op Invoices/DetailV2, met omgekeerde pijl
-   (wij ontvangen, i.p.v. wij versturen). Geen statusbadges ernaast (zie de toelichting bovenaan). *@
 @section PageTitleBadges
 {
-    <span class="gl-v2-incominginvoice-direction-badge">
-        <i class="ph ph-arrow-left" aria-hidden="true"></i>Aankoop
-    </span>
-    @if (betaalBadgeLabel != null)
+    @if (isPaid)
     {
-        <span class="gl-v2-badge @betaalBadgeTone">@betaalBadgeLabel</span>
+        <span class="gl-v2-badge is-positive">Betaald</span>
+    }
+    else if (isOverdue)
+    {
+        <span class="gl-v2-badge is-blocked">Vervallen</span>
+    }
+    @if (vastgehouden > 0m)
+    {
+        <span class="gl-v2-badge is-attention">@Eur(vastgehouden) nog vast</span>
     }
 }
-@* Zelfde tablet-gedrag als Invoices/DetailV2: op 768–1023.98px verdwijnt Bewerken uit de topbar,
-   enkel de ⋯-trigger blijft — Bewerken verhuist dan naar de vaste onderbalk. *@
 @section PageActions
 {
     @if (canWrite)
@@ -121,7 +144,7 @@
             <span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Verwijderen</span></span>
         </a>
     }
-    @if (!canDelete)
+    else
     {
         <span class="gl-v2-menu-item" style="cursor:default;color:var(--gl-v2-muted-light)">
             <i class="ph ph-info" aria-hidden="true"></i>
@@ -137,157 +160,304 @@
     <button type="button" class="gl-v2-tabbar-tab is-disabled" role="tab" aria-selected="false" aria-disabled="true" tabindex="-1" disabled title="Nog niet beschikbaar">Documenten</button>
 </div>
 
-<div class="gl-v2-incominginvoice-detail-body">
+<div class="gl-v2-incominginvoice-detail-body" id="gl-v2-iid-root">
 
-@* ── Richting-/bedragkaart — desktop/tablet horizontale balk, aparte mobiele vorm (zelfde
-   "twee echt aparte vormen"-discipline als Invoices/DetailV2). Geen "AAN ONS"-tegenpartij en geen
-   vervaldatum — geen van beide bestaat in dit model (zie intro-comment). *@
-<div class="gl-v2-incominginvoice-hero">
-    <div class="gl-v2-incominginvoice-hero-accent"></div>
-    <div class="gl-v2-incominginvoice-hero-body">
-        <div class="gl-v2-incominginvoice-hero-row">
-            <div class="gl-v2-incominginvoice-hero-party">
-                <span class="gl-v2-incominginvoice-hero-label">Wij ontvangen van</span>
-                <span class="gl-v2-incominginvoice-hero-name">@company.Bedrijfsnaam</span>
-            </div>
-            <span class="gl-v2-incominginvoice-hero-spacer"></span>
-            <div class="gl-v2-incominginvoice-hero-amount">
-                <span class="gl-v2-incominginvoice-hero-label">Factuurbedrag</span>
-                <span class="gl-v2-incominginvoice-hero-amount-value">@total.ToString("C", culture)</span>
-            </div>
-        </div>
-    </div>
-</div>
+    @* Kopregel: leverancier, contract, lot, factuurdatum, referentie en project. *@
+    <p class="gl-v2-iid-intro">
+        <b>@company.Bedrijfsnaam</b>
+        @if (contractNaam != null) { <text> · contract @contractNaam</text> }
+        @if (lotten.Count > 0) { <text> · @string.Join(", ", lotten)</text> }
+        · factuurdatum @Dat(invoice.IncommingInvoiceDate)
+        @if (!string.IsNullOrWhiteSpace(invoice.InvoiceExternalId)) { <text> · referentie @invoice.InvoiceExternalId</text> }
+        · <a href="@Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId })">@Model.ProjectName</a>
+    </p>
 
-<div class="gl-v2-incominginvoice-hero-mobile">
-    <div class="gl-v2-incominginvoice-hero-mobile-accent"></div>
-    <div class="gl-v2-incominginvoice-hero-mobile-body">
-        <span class="gl-v2-incominginvoice-hero-label">Factuurbedrag</span>
-        <span class="gl-v2-incominginvoice-hero-mobile-amount">@total.ToString("C", culture)</span>
-        <div class="gl-v2-incominginvoice-hero-mobile-divider"></div>
-        <span class="gl-v2-incominginvoice-hero-name">@company.Bedrijfsnaam</span>
-    </div>
-</div>
+    @await Html.PartialAsync("GlV2/_KpiStrip", (IReadOnlyList<GlV2KpiItemVm>)kpis)
 
-<div class="gl-v2-incominginvoice-cards">
-    <div class="gl-v2-section-card is-collapsible gl-v2-incominginvoice-card-supplier">
-        <div class="gl-v2-section-card-header" role="button" tabindex="0" aria-expanded="true" aria-controls="incominginvoice-card-supplier-body">
-            <span class="gl-v2-section-card-icon"><i class="ph ph-truck" aria-hidden="true"></i></span>
-            <h2 class="gl-v2-section-card-title">Leverancier</h2>
-            <span class="gl-v2-section-card-spacer"></span>
-            <i class="ph ph-caret-down gl-v2-section-card-chevron" aria-hidden="true"></i>
-        </div>
-        <div class="gl-v2-invoice-collapsible-body" id="incominginvoice-card-supplier-body">
-            <span class="gl-v2-incominginvoice-party-name">@company.Bedrijfsnaam</span>
-            <div class="gl-v2-detail-grid">
-                @Html.DisplayFor(m => companyAddressFull, "GlV2DetailField", new { Label = "Adres", Wide = true })
-                @Html.DisplayFor(m => company.Email, "GlV2DetailField", new { Label = "E-mail" })
-                @Html.DisplayFor(m => company.GSM, "GlV2DetailField", new { Label = "Mobiel" })
-                @Html.DisplayFor(m => company.Telefoon1, "GlV2DetailField", new { Label = "Telefoon" })
-            </div>
-        </div>
-    </div>
+    <div class="gl-v2-iid-layout">
+        <div class="gl-v2-iid-main">
 
-    <div class="gl-v2-section-card is-collapsible gl-v2-incominginvoice-card-doc">
-        <div class="gl-v2-section-card-header" role="button" tabindex="0" aria-expanded="false" aria-controls="incominginvoice-card-doc-body">
-            <span class="gl-v2-section-card-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
-            <h2 class="gl-v2-section-card-title">Documentgegevens</h2>
-            <span class="gl-v2-section-card-spacer"></span>
-            <i class="ph ph-caret-down gl-v2-section-card-chevron" aria-hidden="true"></i>
-        </div>
-        <div class="gl-v2-invoice-collapsible-body" id="incominginvoice-card-doc-body">
-            <div class="gl-v2-detail-grid">
-                <div class="gl-v2-detail-field">
-                    <span class="gl-v2-detail-label">Project</span>
-                    <span class="gl-v2-detail-value"><a href="@Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId })">@Model.ProjectName</a></span>
+            @* ── Van factuur tot betaling ── *@
+            <section class="gl-v2-card gl-v2-iid-flow">
+                <div class="gl-v2-card-header">
+                    <span class="gl-v2-card-header-icon"><i class="ph ph-list-checks" aria-hidden="true"></i></span>
+                    <span class="gl-v2-card-header-title">Van factuur tot betaling</span>
+                    <span class="gl-v2-card-header-desc">Volgens het contract en de inhoudingen, in de volgorde waarin ze rekenen.</span>
                 </div>
-                @Html.DisplayFor(m => invoice.InvoiceExternalId, "GlV2DetailField", new { Label = "Referentie" })
-                @{ var invoiceDateStr = invoice.IncommingInvoiceDate.ToString("dd/MM/yyyy", culture); }
-                @Html.DisplayFor(m => invoiceDateStr, "GlV2DetailField", new { Label = "Factuurdatum" })
-                @{ var invoicePriceStr = invoice.InvoicePrice.ToString("C", culture); }
-                @Html.DisplayFor(m => invoicePriceStr, "GlV2DetailField", new { Label = "Factuurbedrag" })
-                @if (dueDateStr != null)
-                {
-                    @Html.DisplayFor(m => dueDateStr, "GlV2DetailField", new { Label = "Vervaldatum" })
-                }
-                @if (hasContract)
-                {
-                    @Html.DisplayFor(m => paymentTermDisplay, "GlV2DetailField", new { Label = "Betaaltermijn", Wide = true })
-                    @Html.DisplayFor(m => guaranteeDisplay, "GlV2DetailField", new { Label = "Waarborg", Wide = true })
-                    <div class="gl-v2-detail-field is-full">
-                        <span class="gl-v2-detail-label">Contract</span>
-                        <span class="gl-v2-badge @(Model.Contract.ContractSigned == true ? "is-positive" : "is-attention")">
-                            @(Model.Contract.ContractSigned == true ? "ONDERTEKEND" : "NOG NIET ONDERTEKEND")
-                        </span>
-                    </div>
-                }
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="gl-v2-card gl-v2-incominginvoice-lines-card">
-    <div class="gl-v2-card-header">
-        <span class="gl-v2-card-header-icon"><i class="ph ph-list-bullets" aria-hidden="true"></i></span>
-        <span class="gl-v2-card-header-title">Factuurlijnen</span>
-        <span class="gl-v2-card-header-spacer"></span>
-        <span class="gl-v2-card-header-count">@lineCount @(lineCount == 1 ? "lot" : "loten")</span>
-    </div>
-    <div class="gl-v2-card-body">
-        <div class="gl-v2-incominginvoice-lines-table-wrap">
-            <table class="gl-v2-incominginvoice-lines-table">
-                <thead>
-                    <tr>
-                        <th>Lot</th>
-                        <th>Type</th>
-                        <th>Omschrijving</th>
-                        <th>Wijzigingsopdracht</th>
-                        <th class="text-end">Prijs</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var detail in invoice.Details)
+                <div class="gl-v2-card-body">
+                    @if (price > 0m)
                     {
-                        <tr>
-                            <td>@(string.IsNullOrWhiteSpace(detail.ContractActivityText) ? "—" : detail.ContractActivityText)</td>
-                            <td>@detail.IncommingInvoiceType.GetDisplayName()</td>
-                            <td>@detail.Description</td>
-                            <td>@(detail.ChangeOrderId != 0 ? detail.ChangeOrderId.ToString() : "—")</td>
-                            <td class="text-end gl-v2-incominginvoice-lines-total">@detail.Price.ToString("N2", culture)</td>
-                        </tr>
+                        <div class="gl-v2-iid-bar" role="img" aria-label="Verdeling van het factuurbedrag">
+                            <span class="is-pay" style="width:@Aandeel(Math.Max(0m, teBetalen)).ToString("0.##", CultureInfo.InvariantCulture)%"></span>
+                            <span class="is-borg" style="width:@Aandeel(borg).ToString("0.##", CultureInfo.InvariantCulture)%"></span>
+                            <span class="is-done" style="width:@Aandeel(balkAfgehandeld).ToString("0.##", CultureInfo.InvariantCulture)%"></span>
+                            <span class="is-open" style="width:@Aandeel(balkOpen).ToString("0.##", CultureInfo.InvariantCulture)%"></span>
+                        </div>
+                        <div class="gl-v2-iid-legend">
+                            <span><i class="is-pay"></i>Te betalen <b>@Eur(Math.Max(0m, teBetalen))</b></span>
+                            @if (borg > 0m) { <span><i class="is-borg"></i>Borg <b>@Eur(borg)</b></span> }
+                            @if (balkAfgehandeld > 0m) { <span><i class="is-done"></i>Inhouding · afgehandeld <b>@Eur(balkAfgehandeld)</b></span> }
+                            @if (balkOpen > 0m) { <span><i class="is-open"></i>Inhouding · open <b>@Eur(balkOpen)</b></span> }
+                        </div>
                     }
-                </tbody>
-            </table>
-        </div>
-        <div class="gl-v2-incominginvoice-lines-mobile">
-            @foreach (var detail in invoice.Details)
-            {
-                <div class="gl-v2-incominginvoice-line-card">
-                    <div class="gl-v2-incominginvoice-line-card-row">
-                        <span class="gl-v2-incominginvoice-line-card-text">@(string.IsNullOrWhiteSpace(detail.ContractActivityText) ? "Lijn" : detail.ContractActivityText)</span>
-                        <span class="gl-v2-incominginvoice-line-card-total">@detail.Price.ToString("N2", culture)</span>
+
+                    <div class="gl-v2-iid-rows">
+                        <div class="gl-v2-iid-row">
+                            <span class="gl-v2-iid-sign"></span>
+                            <span class="gl-v2-iid-label"><b>Factuurbedrag excl. btw</b><small>@lineCount @(lineCount == 1 ? "factuurlijn" : "factuurlijnen")@(lotten.Count > 0 ? " · " + string.Join(", ", lotten) : "")</small></span>
+                            <span class="gl-v2-iid-amount">@Eur(price)</span>
+                        </div>
+                        @if (btwPct != 0m)
+                        {
+                            <div class="gl-v2-iid-row">
+                                <span class="gl-v2-iid-sign">+</span>
+                                <span class="gl-v2-iid-label"><b>Btw @Pct(btwPct)</b><small>op @Eur(price)</small></span>
+                                <span class="gl-v2-iid-amount">@Eur(btwBedrag)</span>
+                            </div>
+                        }
+                        @if (inhouding > 0m)
+                        {
+                            <div class="gl-v2-iid-row">
+                                <span class="gl-v2-iid-sign">&minus;</span>
+                                <span class="gl-v2-iid-label"><b>Extra inhouding</b><small>@(ih != null ? ih.RedenTekst : CPMCore.Services.Borg.BorgService.RedenTekst(invoice.InhoudingReden ?? 0))@(string.IsNullOrWhiteSpace(invoice.InhoudingToelichting) ? "" : " · " + invoice.InhoudingToelichting)</small></span>
+                                <span class="gl-v2-iid-chip @(ihOpen > 0.005m ? "is-warn" : "is-ok")"><i class="ph @(ihOpen > 0.005m ? "ph-hourglass-medium" : "ph-check")" aria-hidden="true"></i>@(ihOpen > 0.005m ? Eur(ihOpen) + " nog open" : "afgehandeld")</span>
+                                <span class="gl-v2-iid-amount is-neg">&minus; @Eur(inhouding)</span>
+                            </div>
+                        }
+                        @if (borg > 0m)
+                        {
+                            <div class="gl-v2-iid-row">
+                                <span class="gl-v2-iid-sign">&minus;</span>
+                                <span class="gl-v2-iid-label">
+                                    <b>Borg @(borgPct.HasValue ? Pct(borgPct.Value) : "")@(contractNaam != null ? " uit contract " + contractNaam : "")</b>
+                                    <small>op @Eur(borgBasis)@(inhouding > 0m ? " = factuur min extra inhouding" : "") · vrij @Pct(voPct) bij VO, @Pct(100m - voPct) bij DO</small>
+                                </span>
+                                <span class="gl-v2-iid-chip is-warn"><i class="ph ph-lock-simple" aria-hidden="true"></i>vastgehouden</span>
+                                <span class="gl-v2-iid-amount is-neg">&minus; @Eur(borg)</span>
+                            </div>
+                        }
+                        <div class="gl-v2-iid-row is-total">
+                            <span class="gl-v2-iid-sign">=</span>
+                            <span class="gl-v2-iid-label"><b>Te betalen</b><small>zonder korting@(invoice.DueDate.HasValue ? " · vervalt " + Dat(invoice.DueDate.Value) : "")</small></span>
+                            <span class="gl-v2-iid-amount">@Eur(teBetalen)</span>
+                        </div>
+                        @if (heeftKorting)
+                        {
+                            <div class="gl-v2-iid-row">
+                                <span class="gl-v2-iid-sign">&minus;</span>
+                                <span class="gl-v2-iid-label"><b>Korting contant @Pct(kPct.Value)</b><small>op @Eur(price) (factuurbedrag) · bij betaling vóór @Dat(kDatum.Value)</small></span>
+                                @if (!isPaid)
+                                {
+                                    <span class="gl-v2-iid-chip @(kVerlopen ? "is-muted" : "is-ok")"><i class="ph @(kVerlopen ? "ph-x" : "ph-timer")" aria-hidden="true"></i>@KortingStand()</span>
+                                }
+                                <span class="gl-v2-iid-amount @(kVerlopen && !isPaid ? "is-muted" : "is-neg")">&minus; @Eur(kBedrag)</span>
+                            </div>
+                        }
+                        @if (isPaid)
+                        {
+                            <div class="gl-v2-iid-row is-paid">
+                                <span class="gl-v2-iid-sign">=</span>
+                                <span class="gl-v2-iid-label"><b>Betaald</b><small>betaaldatum en betaald bedrag komen hier later te staan</small></span>
+                                <span class="gl-v2-iid-chip is-solid"><i class="ph ph-check" aria-hidden="true"></i>Betaald</span>
+                            </div>
+                        }
                     </div>
-                    <span class="gl-v2-incominginvoice-line-card-meta">@detail.IncommingInvoiceType.GetDisplayName()@(detail.ChangeOrderId != 0 ? " · WO " + detail.ChangeOrderId : "")</span>
+                    <p class="gl-v2-iid-note"><i class="ph ph-info" aria-hidden="true"></i><span>Betalingen worden nog niet verwerkt. Zodra dat gebeurt, vullen we hier de betaaldatum, het betaalde bedrag en of de korting contant benut werd automatisch aan.</span></p>
+                </div>
+            </section>
+
+            @* ── Wat nog openstaat ── *@
+            @if (ihOpen > 0.005m || borg > 0m || (heeftKorting && !isPaid))
+            {
+                <h2 class="gl-v2-iid-kop">Wat nog openstaat</h2>
+                <div class="gl-v2-iid-open">
+                    @if (ih != null && ihOpen > 0.005m)
+                    {
+                        <article class="gl-v2-iid-ocard">
+                            <header><span class="gl-v2-iid-oicon"><i class="ph ph-hourglass-medium" aria-hidden="true"></i></span>Extra inhouding · nog open</header>
+                            <strong>@Eur(ihOpen)</strong>
+                            <p>van @Eur(ih.Bedrag) ingehouden op @Dat(invoice.IncommingInvoiceDate)</p>
+                            @foreach (var a in ih.Afhandelingen.OrderBy(x => x.Datum))
+                            {
+                                <p>@(a.Soort == 2 ? Eur(a.Bedrag) + " verrekend" + (string.IsNullOrWhiteSpace(a.CreditnotaNummer) ? "" : " met " + a.CreditnotaNummer) : a.Soort == 3 ? Eur(a.Bedrag) + " afgeboekt" : Eur(a.Bedrag) + " vrijgegeven") op @Dat(a.Datum)</p>
+                            }
+                            @if (ih.BorgPercentage.HasValue && borgPct.HasValue)
+                            {
+                                <p>bij vrijgave gaat @Pct(borgPct.Value) naar de borg (&minus; @Eur(Math.Round(ihOpen * borgPct.Value / 100m, 2)))</p>
+                            }
+                            @if (Model.KanInhoudingAfhandelen)
+                            {
+                                <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-terug="@Context.Request.Path@Context.Request.QueryString" data-afhandelen='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { id = ih.Id, projectId = Model.ProjectId, companyId = ih.CompanyId ?? 0, bedrijf = ih.CompanyNaam, factuur = ih.FactuurNummer, bedrag = ih.Bedrag, open = ih.Open, borgPct = ih.BorgPercentage }))'>Afhandelen</button>
+                            }
+                        </article>
+                    }
+                    @if (borg > 0m)
+                    {
+                        <article class="gl-v2-iid-ocard">
+                            <header><span class="gl-v2-iid-oicon"><i class="ph ph-lock-simple" aria-hidden="true"></i></span>Borg · vastgehouden</header>
+                            <strong>@Eur(borg)</strong>
+                            <p>@Pct(voPct) (@Eur(voBedrag)) vrij bij voorlopige oplevering</p>
+                            <p>@Pct(100m - voPct) (@Eur(doBedrag)) vrij bij definitieve oplevering</p>
+                            <p>@(Model.VoDatum.HasValue ? "VO gepland op " + Dat(Model.VoDatum.Value) : "VO nog niet gepland")@(Model.DoDatum.HasValue ? " · DO gepland op " + Dat(Model.DoDatum.Value) : "")</p>
+                            <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("Borgen", "Projecten", new { projectid = Model.ProjectId })">Naar borgen</a>
+                        </article>
+                    }
+                    @if (heeftKorting && !isPaid)
+                    {
+                        <article class="gl-v2-iid-ocard">
+                            <header><span class="gl-v2-iid-oicon"><i class="ph ph-seal-percent" aria-hidden="true"></i></span>Korting contant · @(kVerlopen ? "vervallen" : "nog te benutten")</header>
+                            <strong>@Eur(kBedrag)</strong>
+                            <p>@Pct(kPct.Value) op @Eur(price)</p>
+                            <p>@(kVerlopen ? "de grens van " + Dat(kDatum.Value) + " is voorbij" : "als betaald vóór " + Dat(kDatum.Value) + " · " + KortingStand())</p>
+                        </article>
+                    }
                 </div>
             }
+
+            @* ── Factuurlijnen ── *@
+            <section class="gl-v2-card gl-v2-incominginvoice-lines-card">
+                <div class="gl-v2-card-header">
+                    <span class="gl-v2-card-header-icon"><i class="ph ph-list-bullets" aria-hidden="true"></i></span>
+                    <span class="gl-v2-card-header-title">Factuurlijnen</span>
+                    <span class="gl-v2-card-header-spacer"></span>
+                    <span class="gl-v2-card-header-count">@lineCount @(lineCount == 1 ? "lijn" : "lijnen")@(lotten.Count > 0 ? " · " + lotten.Count + (lotten.Count == 1 ? " lot" : " loten") : "")</span>
+                </div>
+                <div class="gl-v2-card-body">
+                    <div class="gl-v2-incominginvoice-lines-table-wrap">
+                        <table class="gl-v2-incominginvoice-lines-table">
+                            <thead>
+                                <tr>
+                                    <th>Lot</th>
+                                    <th>Type</th>
+                                    <th>Omschrijving</th>
+                                    <th>Wijzigingsopdracht</th>
+                                    <th class="text-end">Bedrag excl. btw</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var detail in invoice.Details)
+                                {
+                                    <tr>
+                                        <td>@(string.IsNullOrWhiteSpace(detail.ContractActivityText) ? "—" : detail.ContractActivityText)</td>
+                                        <td><span class="gl-v2-iid-type is-@(detail.IncommingInvoiceType.ToString().ToLowerInvariant())">@detail.IncommingInvoiceType.GetDisplayName()</span></td>
+                                        <td>@detail.Description</td>
+                                        <td>@(detail.ChangeOrderId.GetValueOrDefault() != 0 ? "WO-" + detail.ChangeOrderId : "—")</td>
+                                        <td class="text-end gl-v2-incominginvoice-lines-total">@Eur(detail.Price)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="4">Factuur totaal · btw @(btwPct == 0m ? "0 % verlegd" : Pct(btwPct))</td>
+                                    <td class="text-end">@Eur(invoice.Details?.Sum(d => d.Price) ?? 0m)</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <div class="gl-v2-incominginvoice-lines-mobile">
+                        @foreach (var detail in invoice.Details)
+                        {
+                            <div class="gl-v2-incominginvoice-line-card">
+                                <div class="gl-v2-incominginvoice-line-card-row">
+                                    <span class="gl-v2-incominginvoice-line-card-text">@(string.IsNullOrWhiteSpace(detail.Description) ? (string.IsNullOrWhiteSpace(detail.ContractActivityText) ? "Lijn" : detail.ContractActivityText) : detail.Description)</span>
+                                    <span class="gl-v2-incominginvoice-line-card-total">@Eur(detail.Price)</span>
+                                </div>
+                                <span class="gl-v2-incominginvoice-line-card-meta">@(string.IsNullOrWhiteSpace(detail.ContractActivityText) ? "" : detail.ContractActivityText + " · ")@detail.IncommingInvoiceType.GetDisplayName()@(detail.ChangeOrderId.GetValueOrDefault() != 0 ? " · WO-" + detail.ChangeOrderId : "")</span>
+                            </div>
+                        }
+                        <div class="gl-v2-incominginvoice-line-card is-total">
+                            <div class="gl-v2-incominginvoice-line-card-row">
+                                <span class="gl-v2-incominginvoice-line-card-text">Factuur totaal</span>
+                                <span class="gl-v2-incominginvoice-line-card-total">@Eur(invoice.Details?.Sum(d => d.Price) ?? 0m)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </div>
 
-        <div class="gl-v2-incominginvoice-totals-wrap">
-            <div class="gl-v2-incominginvoice-totals">
-                <div class="gl-v2-incominginvoice-totals-row"><span>Subtotaal</span><span>@subtotal.ToString("C", culture)</span></div>
-                <div class="gl-v2-incominginvoice-totals-row"><span>@vatLabel</span><span>@vatAmount.ToString("C", culture)</span></div>
-                <div class="gl-v2-incominginvoice-totals-divider"></div>
-                <div class="gl-v2-incominginvoice-totals-row is-strong"><span>Factuur totaal</span><span>@total.ToString("C", culture)</span></div>
-            </div>
-        </div>
+        <aside class="gl-v2-iid-side">
+            @if (hasContract)
+            {
+                <section class="gl-v2-section-card">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Contract@(contractNaam != null ? " " + contractNaam : "")</h2>
+                        <span class="gl-v2-section-card-spacer"></span>
+                        <span class="gl-v2-badge @(contract.ContractSigned == true ? "is-positive" : "is-attention")">@(contract.ContractSigned == true ? "ONDERTEKEND" : "NOG NIET ONDERTEKEND")</span>
+                    </div>
+                    <div class="gl-v2-detail-grid">
+                        <div class="gl-v2-detail-field">
+                            <span class="gl-v2-detail-label">Betaaltermijn</span>
+                            <span class="gl-v2-detail-value">@contract.PaymentTerm dagen@if (invoice.DueDate.HasValue) { <small>vervalt @Dat(invoice.DueDate.Value)</small> }</span>
+                        </div>
+                        <div class="gl-v2-detail-field">
+                            <span class="gl-v2-detail-label">Korting contant</span>
+                            <span class="gl-v2-detail-value">@(heeftKorting ? Pct(kPct.Value) + " binnen " + kDagen + " dagen" : "geen")@if (heeftKorting) { <small>grens @Dat(kDatum.Value)</small> }</span>
+                        </div>
+                        <div class="gl-v2-detail-field">
+                            <span class="gl-v2-detail-label">Borg</span>
+                            <span class="gl-v2-detail-value">@(contractBorgPct.HasValue ? Pct(contractBorgPct.Value) + " · inhouding" : contract.GuaranteeType.GetDisplayName())@if (contractBorgPct.HasValue) { <small>@Pct(voPct) VO · @Pct(100m - voPct) DO</small> }</span>
+                        </div>
+                        <div class="gl-v2-detail-field">
+                            <span class="gl-v2-detail-label">Btw</span>
+                            <span class="gl-v2-detail-value">@(btwPct == 0m ? "verlegd (0 %)" : Pct(btwPct))</span>
+                        </div>
+                        @if (Model.ContractBedrag.GetValueOrDefault() > 0m)
+                        {
+                            <div class="gl-v2-detail-field is-full gl-v2-iid-gefact">
+                                <span class="gl-v2-detail-label">Gefactureerd incl. deze factuur</span>
+                                <span class="gl-v2-detail-value">@Pct(Model.ContractGefactureerd.GetValueOrDefault() / Model.ContractBedrag.Value * 100m)</span>
+                            </div>
+                        }
+                    </div>
+                </section>
+            }
+            else
+            {
+                <div class="gl-v2-notice gl-v2-notice-compact is-info">
+                    <i class="ph ph-info" aria-hidden="true"></i><span><strong>Factuur zonder contract.</strong> Geen betaaltermijn of borg uit een contract. De factuur telt niet mee in gecontracteerd tegenover gefactureerd.</span>
+                </div>
+            }
+
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-truck" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Leverancier</h2>
+                </div>
+                <div class="gl-v2-detail-grid">
+                    <div class="gl-v2-detail-field is-full"><span class="gl-v2-detail-label">Naam</span><span class="gl-v2-detail-value">@company.Bedrijfsnaam</span></div>
+                    @if (!string.IsNullOrWhiteSpace(companyAddress))
+                    {
+                        <div class="gl-v2-detail-field is-full"><span class="gl-v2-detail-label">Adres</span><span class="gl-v2-detail-value">@companyAddress</span></div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(companyContact))
+                    {
+                        <div class="gl-v2-detail-field is-full"><span class="gl-v2-detail-label">E-mail · telefoon</span><span class="gl-v2-detail-value">@companyContact</span></div>
+                    }
+                </div>
+            </section>
+
+            @if (historiek.Count > 0)
+            {
+                <section class="gl-v2-section-card">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Historiek</h2>
+                    </div>
+                    <ol class="gl-v2-iid-hist">
+                        @foreach (var a in historiek)
+                        {
+                            <li><time>@Dat(a.Datum)</time><span>@AfhandelingTekst(a)@(string.IsNullOrWhiteSpace(a.Opmerking) ? "" : " · " + a.Opmerking)</span></li>
+                        }
+                    </ol>
+                </section>
+            }
+        </aside>
     </div>
-</div>
 
 </div>
 
-@* Vaste actiebalk onderaan (tablet/gsm) — hergebruikt .gl-v2-form-actionbar, zelfde discipline als
-   Invoices/DetailV2 (geen position:fixed hier, dat bleek op tablet kapot te lopen tegen de rail —
-   zie DESIGN.md). Enkel Bewerken: geen Pdf/Verzenden-equivalent bestaat voor deze factuursoort. *@
 <div class="gl-v2-form-actionbar gl-v2-incominginvoice-actionbar">
     <span class="gl-v2-form-actionbar-spacer"></span>
     @if (canWrite)
@@ -304,6 +474,11 @@
     </div>
 </div>
 
+@if (Model.KanInhoudingAfhandelen)
+{
+    @await Html.PartialAsync("Partials/_InhoudingAfhandelenV2", Model.ProjectId)
+}
+
 @section PageScripts
 {
     <script>
@@ -312,4 +487,8 @@
         };
     </script>
     <script src="~/js/gl-v2-incomming-invoice-detail.js" asp-append-version="true"></script>
+    @if (Model.KanInhoudingAfhandelen)
+    {
+        <script src="~/js/gl-v2-projecten-inhouding.js" asp-append-version="true"></script>
+    }
 }

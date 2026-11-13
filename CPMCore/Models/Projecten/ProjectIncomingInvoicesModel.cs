@@ -226,5 +226,16 @@ namespace CPMCore.Models.Projecten
             }
         }
 
+        // ── Afrekening (design-handoff 42n) — enkel gevuld voor het gl-v2-detailscherm ──────────────
+        /// <summary>De extra inhouding van deze factuur met haar afhandelingen (null = geen).</summary>
+        public CPMCore.Services.Borg.InhoudingRij? InhoudingDetail { get; set; }
+        public bool KanInhoudingAfhandelen { get; set; }
+        /// <summary>Voorlopige en definitieve oplevering van het project (borgvrijgave).</summary>
+        public DateOnly? VoDatum { get; set; }
+        public DateOnly? DoDatum { get; set; }
+        /// <summary>Contractbedrag en wat er gefactureerd is incl. deze factuur (voor "Gefactureerd incl. deze factuur"); null zonder contract.</summary>
+        public decimal? ContractBedrag { get; set; }
+        public decimal? ContractGefactureerd { get; set; }
+
     }
 }
