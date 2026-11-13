@@ -313,31 +313,34 @@ namespace ServiceCore
         {
             if (finalconstructiondate == DateOnly.MinValue) return -9999;
 
-            var vds = _uow.VacationDays.GetNoTracking()
-                .Where(m => m.ProjectId == null || m.ProjectId == projectid)
-                .Select(m => m.VacationDay)
-                .ToArray();
-
-            return BusinessDaysUntil(DateOnly.FromDateTime(DateTime.Now), finalconstructiondate, vds);
+            // Verlet telt hier niet mee (zoals voorheen): enkel weekends, feestdagen en bouwverlof.
+            return LaadWerkKalender(projectid).Tel(DateOnly.FromDateTime(DateTime.Now), finalconstructiondate, metVerlet: false);
         }
 
         public DateOnly GetFinalConstructionDay(int projectid, DateOnly startdate, int executiondays)
         {
-            var vds = _uow.VacationDays.GetNoTracking()
+            // Zonder weerstation rekenen we zonder verlet (de pagina's tonen daar een waarschuwing bij).
+            return LaadWerkKalender(projectid).Voeg(startdate, executiondays);
+        }
+
+        /// <summary>Gedeelde werkkalender (zie <see cref="Planning.WerkKalender"/>): feestdagen/bouwverlof van bedrijf + project en het verlet van het weerstation.</summary>
+        public Planning.WerkKalender LaadWerkKalender(int projectid)
+        {
+            var verlof = _uow.VacationDays.GetNoTracking()
                 .Where(m => m.ProjectId == null || m.ProjectId == projectid)
                 .Select(m => m.VacationDay)
                 .ToArray();
 
             var weatherstationid = GetProjectWeatherstation(projectid);
-            if (weatherstationid == 0) return DateOnly.MinValue;
+            var verlet = weatherstationid == 0
+                ? Array.Empty<DateOnly>()
+                : _uow.BadWeatherDays.GetNoTracking()
+                    .Where(m => m.WeatherstationId == weatherstationid)
+                    .Select(m => m.Date)
+                    .Distinct()
+                    .ToArray();
 
-            var bwds = _uow.BadWeatherDays.GetNoTracking()
-                .Where(m => m.WeatherstationId == weatherstationid)
-                .GroupBy(m => m.Date)
-                .Select(g => g.Key)
-                .ToArray();
-
-            return AddWorkDays(startdate, executiondays, bwds, vds);
+            return new Planning.WerkKalender(verlof, verlet);
         }
 
         public string GetProjectFolderById(int id)
@@ -2915,41 +2918,10 @@ namespace ServiceCore
         }
 
         public DateOnly AddWorkDays(DateOnly date, int workingDays, Array BWDS, Array VDS)
-        {
-            if (workingDays == 0) return date;
-
-            var newDate = date;
-            var remaining = Math.Abs(workingDays);
-            var step = workingDays < 0 ? -1 : 1;
-
-            while (remaining > 0)
-            {
-                newDate = newDate.AddDays(step);
-                var isWeekend = newDate.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-                var isBadWeather = Array.IndexOf(BWDS, newDate) >= 0;
-                var isVacation = Array.IndexOf(VDS, newDate) >= 0;
-
-                if (!isWeekend && !isBadWeather && !isVacation)
-                    remaining--;
-            }
-            return newDate;
-        }
+            => new Planning.WerkKalender(VDS.Cast<DateOnly>(), BWDS.Cast<DateOnly>()).Voeg(date, workingDays);
 
         public int BusinessDaysUntil(DateOnly start, DateOnly end, Array VDS)
-        {
-            if (end <= start) return 0;
-
-            var d = start.AddDays(1);
-            var workdays = 0;
-            while (d <= end)
-            {
-                var isWeekend = d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-                var isVacation = Array.IndexOf(VDS, d) >= 0;
-                if (!isWeekend && !isVacation) workdays++;
-                d = d.AddDays(1);
-            }
-            return workdays;
-        }
+            => new Planning.WerkKalender(VDS.Cast<DateOnly>()).Tel(start, end);
 
         public Response Copyids()
         {

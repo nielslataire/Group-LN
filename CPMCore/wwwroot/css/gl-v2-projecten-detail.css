@@ -48,72 +48,164 @@
 .gl-v2-pd-stat-fill { display: block; height: 4px; background: var(--gl-v2-primary); }
 .gl-v2-pd-stat-fill.is-finance { background: #2E5F7E; }
 
-/* ── "Vraagt actie" — volle breedte, filterbaar op categorie ─────────────────────────────────── */
-/* Geeft deze kaart een eigen randbehandeling zodra ze effectief iets bevat — zonder dit deelt ze
-   hetzelfde neutrale kaartregister (schaduw + 30px icoon-chip) als elke andere sectie op de pagina,
-   terwijl dit net de kaart is die het eerst moet opvallen. Warning-kleur wanneer er enkel
-   "OP TE LOSSEN"-items zijn, danger zodra er minstens één "ACTIE VEREIST"-item bij zit. */
-.gl-v2-pd-attention-card.has-items { border-top: 3px solid var(--gl-v2-warning); }
-.gl-v2-pd-attention-card.has-urgent { border-top: 3px solid var(--gl-v2-danger); }
-
-.gl-v2-pd-attention-head {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-    padding: 13px 18px;
-    border-bottom: 1px solid var(--gl-v2-hairline-soft);
-    flex-wrap: wrap;
-    row-gap: 8px;
+/* ── "Vraagt actie" (design-handoff punt 60) ─────────────────────────────────────────────────── */
+/* Springt eruit: rode kopband, lichtrood getinte kaart, regels als witte kaartjes. Drie toestanden:
+   standaard = er is iets dringend (rood), .is-calm = enkel aandacht (goud), .is-ok = niets open
+   (neutrale kaart met groene rand en één smalle regel). De tinten #FBF1F1 en #D9A5A5 komen uit het
+   handoff-ontwerp en bestaan (nog) niet als token; de rest zijn gl-v2-tokens. */
+.gl-v2-pd-attention-card {
+    --att-accent: var(--gl-v2-danger);
+    --att-tint: #FBF1F1;
+    --att-ring: #D9A5A5;
+    --att-chip: #F6E3E3;
+    --att-line: rgba(139, 42, 42, .14);
+    position: relative;
+    margin-bottom: 14px;
+    border-radius: var(--gl-v2-radius, 12px);
+    background: var(--att-tint);
+    box-shadow: 0 0 0 1px var(--att-ring), 0 1px 2px rgba(0, 83, 45, .05), 0 16px 34px -28px rgba(139, 42, 42, .42);
+    overflow: hidden;
+}
+.gl-v2-pd-attention-card.is-calm {
+    --att-accent: var(--gl-v2-warning);
+    --att-tint: #FBF6EC;
+    --att-ring: #E2CB9A;
+    --att-chip: var(--gl-v2-warning-tint);
+    --att-line: rgba(138, 106, 50, .16);
+    box-shadow: 0 0 0 1px var(--att-ring), 0 1px 2px rgba(0, 83, 45, .05), 0 16px 34px -28px rgba(138, 106, 50, .38);
+}
+.gl-v2-pd-attention-card.is-ok {
+    --att-accent: #7A9E6E;
+    background: var(--gl-v2-surface);
+    box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 16px 34px -28px rgba(44, 59, 42, .42);
+}
+.gl-v2-pd-attention-card.is-ok::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: var(--att-accent);
 }
 
-.gl-v2-pd-attention-icon {
-    width: 28px;
-    height: 28px;
+.gl-v2-pd-att-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    flex-wrap: wrap;
+    row-gap: 10px;
+    background: var(--att-accent);
+    color: #fff;
+}
+.gl-v2-pd-attention-card.is-ok .gl-v2-pd-att-head { background: transparent; color: var(--gl-v2-ink); padding: 11px 18px 11px 22px; }
+
+.gl-v2-pd-att-icon {
+    width: 32px;
+    height: 32px;
     flex: none;
-    border-radius: var(--gl-v2-radius-sm, 8px);
-    background: var(--gl-v2-warning-tint);
-    color: var(--gl-v2-warning);
+    border-radius: 9px;
+    background: #fff;
+    color: var(--att-accent);
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, .14);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 15px;
+    font-size: 17px;
+}
+.gl-v2-pd-attention-card.is-ok .gl-v2-pd-att-icon { background: var(--gl-v2-primary-tint); color: #2F6038; box-shadow: none; }
+
+.gl-v2-pd-att-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gl-v2-pd-att-title b { display: flex; align-items: center; gap: 8px; font: 600 16px var(--gl-v2-font-sans); color: #fff; }
+.gl-v2-pd-att-title b.is-quiet { font-size: 14px; color: var(--gl-v2-ink); }
+.gl-v2-pd-att-title > span { font: 450 12px var(--gl-v2-font-sans); color: #F4D9D9; }
+.gl-v2-pd-attention-card.is-calm .gl-v2-pd-att-title > span { color: #F3E6C8; }
+.gl-v2-pd-attention-card.is-ok .gl-v2-pd-att-title > span { color: var(--gl-v2-muted); }
+.gl-v2-pd-att-title > span[hidden] { display: none; }
+
+.gl-v2-pd-att-n {
+    min-width: 22px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 10px;
+    background: #fff;
+    color: var(--att-accent);
+    font: 700 11px var(--gl-v2-font-sans);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.gl-v2-pd-attention-title { font: 700 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-warning); flex: none; }
-.gl-v2-pd-attention-desc { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); min-width: 0; }
+.gl-v2-pd-att-sum { display: flex; gap: 6px; flex-wrap: wrap; }
+.gl-v2-pd-att-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 11px;
+    font: 600 11px var(--gl-v2-font-sans);
+}
+.gl-v2-pd-att-pill i { width: 6px; height: 6px; border-radius: 3px; background: currentColor; }
+.gl-v2-pd-att-pill.is-urgent { background: #fff; color: var(--gl-v2-danger); }
+.gl-v2-pd-att-pill.is-attention { background: rgba(255, 255, 255, .18); color: #fff; }
+.gl-v2-pd-attention-card.is-calm .gl-v2-pd-att-pill.is-attention { background: #fff; color: #6B5226; }
+
 .gl-v2-pd-attention-spacer { flex: 1; }
 
-.gl-v2-pd-chips { display: flex; gap: 6px; flex-wrap: wrap; flex: none; }
-
+/* Filter als segmentbediening op de kopband. */
+.gl-v2-pd-chips { display: flex; gap: 2px; flex-wrap: wrap; flex: none; padding: 3px; border-radius: 9px; background: rgba(0, 0, 0, .22); }
 .gl-v2-pd-chip {
-    padding: 6px 12px;
-    border-radius: 14px;
-    border: 1px solid var(--gl-v2-hairline);
+    height: 28px;
+    padding: 0 11px;
+    border-radius: 7px;
+    border: 0;
     background: transparent;
-    font: 500 11px var(--gl-v2-font-sans);
-    color: var(--gl-v2-muted-soft);
+    font: 500 12px var(--gl-v2-font-sans);
+    color: #F6E3E3;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    cursor: pointer;
 }
+.gl-v2-pd-chip em { font: 600 10.5px var(--gl-v2-font-sans); font-style: normal; color: #E3B9B9; }
+.gl-v2-pd-chip.is-active { background: #fff; color: var(--att-accent); font-weight: 600; }
+.gl-v2-pd-chip.is-active em { color: var(--att-accent); }
+.gl-v2-pd-attention-card.is-calm .gl-v2-pd-chip { color: #F3E6C8; }
+.gl-v2-pd-attention-card.is-calm .gl-v2-pd-chip em { color: #EBDDB8; }
+.gl-v2-pd-chip:focus-visible, .gl-v2-pd-att-toggle:focus-visible { outline: 2px solid var(--gl-v2-gold); outline-offset: 2px; }
 
-.gl-v2-pd-chip.is-active { background: var(--gl-v2-primary); border-color: var(--gl-v2-primary); color: var(--gl-v2-surface); font-weight: 600; }
+.gl-v2-pd-att-toggle {
+    width: 32px;
+    height: 32px;
+    flex: none;
+    border: 1px solid rgba(255, 255, 255, .45);
+    border-radius: 8px;
+    background: transparent;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.gl-v2-pd-att-toggle:hover { background: rgba(255, 255, 255, .14); }
 
-/* Begrensde hoogte + scroll i.p.v. de kaart onbeperkt laten meegroeien met het aantal punten — een
-   project met veel openstaande contracten/bankwaarborgen (ACTIE VEREIST alleen al kan tientallen
-   rijen hebben) nam anders makkelijk het grootste deel van de pagina in, ongeacht welke van de twee
-   groepen lang was. Zelfde patroon als .gl-v2-pd-units-scroll verderop op deze pagina.
-   Schaduwveeg (critique fix, zelfde CSS-only truc als .gl-v2-pm-list in gl-v2-project-inner-menu.css):
-   twee ondoorzichtige "witte" lagen scrollen MEE met de inhoud (background-attachment:local) en
-   bedekken een gekleurde fade-laag die WEL vast blijft t.o.v. de container (background-attachment:
-   scroll) — bovenaan/onderaan, zolang er niets te scrollen valt daar, dekt de witte laag de fade
-   volledig af; zodra er verder gescrold kan worden schuift de witte laag mee weg en wordt de fade
-   zichtbaar. Zo ziet een gebruiker zonder JS al dat de lijst meer bevat dan wat past, i.p.v. enkel op
-   de (makkelijk te missen) browser-scrollbar te moeten vertrouwen. */
+/* Ingeklapt: enkel de kopband, met de samenvatting als ondertitel. */
+.gl-v2-pd-attention-card.is-collapsed .gl-v2-pd-attention-body { display: none; }
+.gl-v2-pd-attention-card.is-collapsed .gl-v2-pd-att-head { padding-top: 10px; padding-bottom: 10px; }
+.gl-v2-pd-attention-card.is-collapsed .js-gl-v2-pd-att-filters { display: none; }
+
+/* Begrensde hoogte + scroll i.p.v. de kaart onbeperkt te laten meegroeien met het aantal punten.
+   Schaduwveeg met background-attachment:local (zelfde CSS-only truc als .gl-v2-pm-list): twee
+   dekkende lagen in de kaarttint scrollen mee en bedekken een vaste fade-laag. */
 .gl-v2-pd-attention-body {
     display: flex;
     flex-direction: column;
-    max-height: 400px;
+    max-height: 440px;
     overflow-y: auto;
+    padding: 4px 14px 14px;
     background:
-        linear-gradient(#fff, #fff), linear-gradient(#fff, #fff),
+        linear-gradient(var(--att-tint), var(--att-tint)), linear-gradient(var(--att-tint), var(--att-tint)),
         linear-gradient(rgba(44, 59, 42, .1), rgba(44, 59, 42, 0)),
         linear-gradient(rgba(44, 59, 42, 0), rgba(44, 59, 42, .1));
     background-repeat: no-repeat;
@@ -122,57 +214,114 @@
     background-size: 100% 16px, 100% 16px, 100% 16px, 100% 16px;
 }
 
-.gl-v2-pd-attention-group-hdr {
+.gl-v2-pd-att-sec {
     display: flex;
     align-items: center;
-    gap: 7px;
-    padding: 10px 18px 6px;
-    font: 600 10px var(--gl-v2-font-sans);
-    letter-spacing: .08em;
-    color: var(--gl-v2-muted);
+    gap: 8px;
+    padding: 12px 4px 4px;
+    font: 700 10px var(--gl-v2-font-sans);
+    letter-spacing: .1em;
+    color: var(--gl-v2-danger);
 }
+.gl-v2-pd-att-sec.is-attention { color: var(--gl-v2-warning); }
+.gl-v2-pd-att-sec i { width: 7px; height: 7px; border-radius: 4px; background: currentColor; }
+.gl-v2-pd-att-sec-line { flex: 1; height: 1px; background: var(--att-line); }
 
-.gl-v2-pd-attention-group-hdr.is-urgent { color: var(--gl-v2-danger); }
-.gl-v2-pd-attention-group-hdr i { font-size: 13px; }
-.gl-v2-pd-attention-group-cnt { font-variant-numeric: tabular-nums; }
+/* Regel: icoonchip | tekst | leeftijd | pijl. Een witte kaart op de getinte achtergrond. */
+.gl-v2-pd-att-row {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr) auto 28px;
+    align-items: center;
+    gap: 12px;
+    margin-top: 6px;
+    padding: 11px 10px;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 0 0 1px rgba(139, 42, 42, .10), 0 1px 2px rgba(139, 42, 42, .06);
+    text-decoration: none;
+    color: inherit;
+    transition: box-shadow .12s;
+}
+.gl-v2-pd-attention-card.is-calm .gl-v2-pd-att-row { box-shadow: 0 0 0 1px rgba(138, 106, 50, .14), 0 1px 2px rgba(138, 106, 50, .06); }
+/* [href]-gated: een regel zonder echte bestemming (BekijkUrl null) blijft er inert uitzien. */
+a.gl-v2-pd-att-row[href]:hover,
+a.gl-v2-pd-att-row[href]:focus-visible,
+a.gl-v2-pd-att-subrow[href]:hover { box-shadow: 0 0 0 1px rgba(139, 42, 42, .24), 0 6px 14px -8px rgba(139, 42, 42, .35); }
+a.gl-v2-pd-att-row[href]:focus-visible, a.gl-v2-pd-att-subrow[href]:focus-visible { outline: 2px solid var(--gl-v2-gold); outline-offset: 2px; }
 
-.gl-v2-pd-attention-item {
+.gl-v2-pd-att-ic {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
-    gap: 11px;
-    height: 46px;
-    padding: 0 18px;
-    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    justify-content: center;
+    font-size: 15px;
+    background: var(--att-chip);
+    color: var(--gl-v2-danger);
+}
+.gl-v2-pd-att-row.a .gl-v2-pd-att-ic { background: var(--gl-v2-warning-tint); color: var(--gl-v2-warning); }
+
+.gl-v2-pd-att-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.gl-v2-pd-att-main b { display: flex; align-items: center; gap: 8px; min-width: 0; font: 600 13.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-pd-att-main b span { font-weight: 450; color: var(--gl-v2-muted-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-pd-att-main small { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.gl-v2-pd-att-age {
+    grid-column: 3;
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font: 600 11.5px var(--gl-v2-font-sans);
+    white-space: nowrap;
+}
+.gl-v2-pd-att-age:empty { display: none; }
+.gl-v2-pd-att-age.u { background: var(--att-chip); color: var(--gl-v2-danger); }
+.gl-v2-pd-att-age.a { background: var(--gl-v2-warning-tint); color: #6B5226; }
+
+.gl-v2-pd-att-go { grid-column: 4; width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; color: var(--gl-v2-muted-soft); }
+a.gl-v2-pd-att-row[href]:hover .gl-v2-pd-att-go { background: #E4EBDF; color: var(--gl-v2-primary); }
+
+/* Bundel: kop met uitklapknop + ingesprongen regels. */
+.gl-v2-pd-att-bundle { margin-top: 6px; border-radius: 10px; background: #fff; box-shadow: 0 0 0 1px rgba(139, 42, 42, .10), 0 1px 2px rgba(139, 42, 42, .06); }
+.gl-v2-pd-attention-card.is-calm .gl-v2-pd-att-bundle { box-shadow: 0 0 0 1px rgba(138, 106, 50, .14), 0 1px 2px rgba(138, 106, 50, .06); }
+.gl-v2-pd-att-bundle .gl-v2-pd-att-row { margin-top: 0; box-shadow: none; background: transparent; grid-template-columns: 32px minmax(0, 1fr) 28px; }
+.gl-v2-pd-att-tw {
+    grid-column: 3;
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: 7px;
+    background: none;
+    color: var(--gl-v2-muted-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.gl-v2-pd-att-tw:hover { background: #E4EBDF; }
+.gl-v2-pd-att-tw[aria-expanded="false"] i { transform: rotate(-90deg); }
+.gl-v2-pd-att-sub { margin: 0 8px 8px 48px; border-left: 2px solid #EAD7AE; display: flex; flex-direction: column; }
+.gl-v2-pd-att-sub[hidden] { display: none; }
+.gl-v2-pd-att-subrow {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto 28px;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 6px 7px 12px;
+    border-radius: 0 8px 8px 0;
     text-decoration: none;
     color: inherit;
 }
+.gl-v2-pd-att-ref { font: 500 11.5px var(--gl-v2-font-mono, "IBM Plex Mono", monospace); color: var(--gl-v2-ink); background: var(--gl-v2-bg); border-radius: 5px; padding: 2px 7px; white-space: nowrap; }
+.gl-v2-pd-att-desc { font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-pd-att-meta { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; }
+.gl-v2-pd-att-subrow .gl-v2-pd-att-go { grid-column: auto; }
 
-.gl-v2-pd-attention-body > a:last-child,
-.gl-v2-pd-attention-group:last-child .gl-v2-pd-attention-item:last-child { border-bottom: 0; }
-
-/* [href]-gated: an item with no real destination (BekijkUrl null, see DetailV2.cshtml — Razor omits
-   the attribute entirely) is deliberately not an <a>-with-href and must stay looking inert. Without
-   this guard every item, actionable or not, would light up on hover — reopening exactly the "looks
-   clickable, does nothing" problem the href-omission fix solved. Same gold-ring/tint recipe as
-   .gl-v2-flyout-link elsewhere in gl-v2. */
-.gl-v2-pd-attention-item[href]:hover,
-.gl-v2-pd-attention-item[href]:focus-visible { background: var(--gl-v2-hover-tint); }
-.gl-v2-pd-attention-item[href]:focus-visible {
-    outline: 2px solid var(--gl-v2-gold);
-    outline-offset: -2px;
-}
-
-.gl-v2-pd-attention-item i.gl-v2-pd-attention-item-icon { font-size: 15px; flex: none; color: var(--gl-v2-danger); }
-.gl-v2-pd-attention-item.is-normal i.gl-v2-pd-attention-item-icon { color: var(--gl-v2-warning); }
-
-.gl-v2-pd-attention-item-text { flex: 1; min-width: 0; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gl-v2-pd-attention-item-text b { font-weight: 600; color: var(--gl-v2-ink); }
-
-.gl-v2-pd-attention-meta { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); flex: none; white-space: nowrap; }
-.gl-v2-pd-attention-view { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); flex: none; display: flex; align-items: center; gap: 2px; }
-
-/* Klikwissel op de chips — korte fade i.p.v. een harde herschikking. */
+/* Klikwissel op de filter — korte fade i.p.v. een harde herschikking. */
 .gl-v2-pd-attention-body.is-refiltering { opacity: .5; transition: opacity .12s ease; }
+
 
 /* ── 12-koloms secundaire grid (Traject/Eenheden, Algemeen/Voortgang/rechterkolom) ──────────── */
 /* align-items:stretch (grid default, kept explicit) — alle kaarten op één rij worden even hoog,
@@ -425,7 +574,16 @@
     .gl-v2-pd-traject-stats { grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 10px; }
     .gl-v2-pd-vb-stats { grid-template-columns: repeat(1, minmax(0, 1fr)); }
     .gl-v2-pd-media-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .gl-v2-pd-attention-desc { display: none; }
+    .gl-v2-pd-att-sum { display: none; }
+    .gl-v2-pd-chips { width: 100%; order: 5; }
+    .gl-v2-pd-chip { flex: 1; justify-content: center; }
+    .gl-v2-pd-att-row { grid-template-columns: 32px minmax(0, 1fr) 28px; row-gap: 8px; }
+    .gl-v2-pd-att-row .gl-v2-pd-att-age { grid-column: 2; grid-row: 2; justify-self: start; }
+    .gl-v2-pd-att-row .gl-v2-pd-att-go { grid-column: 3; grid-row: 1; }
+    .gl-v2-pd-att-sub { margin-left: 20px; }
+    .gl-v2-pd-att-subrow { grid-template-columns: minmax(0, 1fr) 28px; }
+    .gl-v2-pd-att-subrow .gl-v2-pd-att-ref, .gl-v2-pd-att-subrow .gl-v2-pd-att-desc, .gl-v2-pd-att-subrow .gl-v2-pd-att-meta { grid-column: 1; justify-self: start; white-space: normal; }
+    .gl-v2-pd-att-subrow .gl-v2-pd-att-go { grid-column: 2; grid-row: 1; }
 
     /* Eenheden-tabel: Type/Opp./Klant vervallen als losse kolommen (net als Invoices op dit
        breakpoint een eigen kaartweergave kreeg i.p.v. 11 kolommen te persen) — hun info leeft verder

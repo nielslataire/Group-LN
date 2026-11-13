@@ -270,7 +270,14 @@
         if (table.page.len() !== len) table.page.len(len).draw(false);
     }
     var rt = null; window.addEventListener("resize", function () { clearTimeout(rt); rt = setTimeout(syncPageLength, 150); });
+    // Tab, filters, zoekterm, sortering en pagina onthouden (projectbrede module gl-v2-table-state.js); setState bestaat al voor de opgeslagen lijsten.
+    var tableState = window.GlV2TableState ? window.GlV2TableState.attach({
+        table: table,
+        collect: function () { var f = {}; Object.keys(filters).forEach(function (k) { f[k] = val(k); }); return { tab: tab, q: search.value, f: f }; },
+        restore: function (s) { if (s.tab !== "all" || s.q || Object.keys(s.f || {}).some(function (k) { return s.f[k]; })) setState(s); }
+    }) : null;
     refreshChrome(); table.draw(); syncPageLength(); renderLists();
+    if (tableState) tableState.finish();
     if (card) card.classList.add("is-ready");
     if (/[?&]lijsten=1/.test(location.search)) showLists(true);
 })();

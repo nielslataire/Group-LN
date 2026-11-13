@@ -19,6 +19,16 @@ public partial class PlanningSectie
 
     public bool IsActief { get; set; }
 
+    /// <summary>Deelfase: de fase waarbinnen deze zit (migratie 144). Null = fase op het hoogste niveau.</summary>
+    public int? ParentSectieId { get; set; }
+
+    /// <summary>Opt-in: de taakvoortgang van deze fase vervangt de schatting op basis van facturen voor <see cref="ActivityGroup"/> (migratie 144).</summary>
+    public bool TeltMeeVoorVoortgang { get; set; }
+
+    public virtual PlanningSectie ParentSectie { get; set; }
+
+    public virtual ICollection<PlanningSectie> DeelSecties { get; set; } = new List<PlanningSectie>();
+
     public virtual ActivityGroup ActivityGroup { get; set; }
 
     public virtual ICollection<PlanningTaak> PlanningTaak { get; set; } = new List<PlanningTaak>();

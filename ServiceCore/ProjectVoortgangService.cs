@@ -177,19 +177,36 @@ namespace ServiceCore
             decimal totalGecontracteerd = gecontracterrdPerGroep.Values.Sum();
             decimal totalGefactureerd = factuurPerGroep.Values.Sum();
 
-            // 3b. Taak-gebaseerde voortgang per activiteitengroep (overschrijft capping voor die groep)
-            var planningSecties = _uow.PlanningSections.GetNoTracking()
-                .Where(s => s.ProjectId == projectId && s.IsActief && s.ActivityGroupId != null)
+            // 3b. Taak-gebaseerde voortgang per activiteitengroep (overschrijft capping voor die groep).
+            //     Enkel fases die expliciet meetellen (TeltMeeVoorVoortgang) en aan een lot gekoppeld zijn; de taken van hun
+            //     deelfases tellen mee. Gewogen op duur: mijlpalen (duur 0) tellen niet mee, een lange taak weegt zwaarder.
+            var alleSecties = _uow.PlanningSections.GetNoTracking()
+                .Where(s => s.ProjectId == projectId && s.IsActief)
                 .Include(s => s.PlanningTaak)
                 .ToList();
 
-            // Gemiddelde taakvoortgang per gekoppelde activiteitengroep
-            var taakVoortgangPerGroep = planningSecties
-                .Where(s => s.PlanningTaak.Count > 0)
-                .GroupBy(s => s.ActivityGroupId!.Value)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.SelectMany(s => s.PlanningTaak).Average(t => (decimal)t.VoortgangPct) / 100m);
+            List<PlanningTaak> TakenMetDeelfases(PlanningSectie root)
+            {
+                var ids = new HashSet<int> { root.Id };
+                var gewijzigd = true;
+                while (gewijzigd)
+                {
+                    gewijzigd = false;
+                    foreach (var sec in alleSecties)
+                        if (sec.ParentSectieId is int pid && ids.Contains(pid) && ids.Add(sec.Id)) gewijzigd = true;
+                }
+                return alleSecties.Where(sec => ids.Contains(sec.Id)).SelectMany(sec => sec.PlanningTaak).ToList();
+            }
+
+            var taakVoortgangPerGroep = new Dictionary<int, decimal>();
+            foreach (var groep in alleSecties.Where(s => s.TeltMeeVoorVoortgang && s.ActivityGroupId != null)
+                                             .GroupBy(s => s.ActivityGroupId!.Value))
+            {
+                var taken = groep.SelectMany(TakenMetDeelfases).DistinctBy(t => t.Id).Where(t => t.Duur > 0).ToList();
+                var totaalDuur = taken.Sum(t => (decimal)t.Duur);
+                if (totaalDuur <= 0m) continue;
+                taakVoortgangPerGroep[groep.Key] = taken.Sum(t => t.Duur * (decimal)t.VoortgangPct) / totaalDuur / 100m;
+            }
 
             // 4. Fysieke voortgang: gewogen, afgetopt per groep op CAPPING
             //    Als taken bestaan voor een groep: gebruik taakvoortgang i.p.v. capping

@@ -87,7 +87,7 @@
     }
     foreach (var co in Model.ChangeOrdersWithoutContract)
     {
-        urgentItems.Add((co.IsQuote ? "Offerte zonder contract" : "Wijzigingsopdracht zonder contract", co.Number,
+        normalItems.Add((co.IsQuote ? "Offerte zonder contract" : "Wijzigingsopdracht zonder contract", co.Number,
             string.IsNullOrWhiteSpace(co.Description) ? "Koppel ze aan een contract" : co.Description + " — koppel ze aan een contract",
             Url.Action("ChangeOrderDetailV2", "Projecten", new { projectid = projectId, coid = co.Id }), "ph-file-text", "Contracten", null));
     }
@@ -159,7 +159,9 @@
         urgentItems.Add(("Verzekering", null, insExtra, Url.Action("DetailInsurances", "Projecten", new { projectid = projectId }), "ph-shield-warning", "Financieel", null));
     }
     var mijlpaalTrajectUrl = Url.Action("Index", "ProjectTraject", new { projectId = projectId });
-    foreach (var m in Model.AttentionMijlpalen)
+    // Traject-punten (mijlpalen) zijn voorlopig verborgen in "Vraagt actie" (13/11/2026). Zet toonTrajectPunten op true om ze terug te tonen.
+    const bool toonTrajectPunten = false;
+    foreach (var m in toonTrajectPunten ? Model.AttentionMijlpalen : Model.AttentionMijlpalen.Take(0))
     {
         var datum = (m.Doeldatum ?? m.DoeldatumBerekend)!.Value;
         var entiteit = m.Unit?.Name;
@@ -297,6 +299,13 @@
     }
 </span>
 
+@if (Model.WeatherStationMissing && Model.ExecutionDays > 0)
+{
+    <div class="gl-v2-notice gl-v2-notice-compact is-warning" role="status">
+        <i class="ph ph-warning" aria-hidden="true"></i>
+        <span>Dit project heeft geen weerstation. De werkdagen en de voorziene oplevering rekenen zonder weerverlet. <a href="@Url.Action("Edit", "Projecten", new { projectid = Model.Project.Id })">Kies een weerstation</a></span>
+    </div>
+}
 @* ── Statistiekenrij (12a §1) ──────────────────────────────────────────────────────────────── *@
 <div class="gl-v2-pd-stats">
     <div class="gl-v2-pd-stat">
@@ -322,7 +331,7 @@
     <div class="gl-v2-pd-stat">
         <span class="gl-v2-pd-stat-label">WERKDAGEN</span>
         <span class="gl-v2-pd-stat-value @(werkdagenLaat ? "is-danger" : "")">@(Model.WorkingDaysLeft == -9999 ? "—" : (werkdagenLaat ? $"{-Model.WorkingDaysLeft} te laat" : Model.WorkingDaysLeft.ToString()))</span>
-        <span class="gl-v2-pd-stat-sub">@(Model.FinalConstructionDate != DateOnly.MinValue ? "tot " + Model.FinalConstructionDate.ToString("dd/MM/yy") : "geen einddatum")</span>
+        <span class="gl-v2-pd-stat-sub">@(Model.FinalConstructionDate != DateOnly.MinValue ? "tot " + Model.FinalConstructionDate.ToString("dd/MM/yy") + (Model.WeatherStationMissing ? " · zonder verlet" : "") : "geen einddatum")</span>
     </div>
     <div class="gl-v2-pd-stat">
         <span class="gl-v2-pd-stat-label">OPEN PUNTEN</span>
@@ -331,80 +340,122 @@
     </div>
 </div>
 
-@* ── "Vraagt actie" (12a §3) ──────────────────────────────────────────────────────────────── *@
-@* De hele kaart rendert enkel wanneer er iets aan te tonen is — geen "Niets dat aandacht vraagt"-
-   staat meer: een project zonder openstaande actiepunten hoeft geen kaart te tonen die alleen maar
-   bevestigt dat er niets is, dat is gewoon ruimte die de rest van de pagina niet krijgt.
-   gl-v2-pd-attention-card krijgt daarnaast een warning/danger-getinte bovenrand — de rest van de
-   pagina gebruikt hetzelfde neutrale .gl-v2-section-card-register, dus zonder dit las de ene kaart
-   die juist moet opvallen als nog maar een kaart in de stapel. *@
-@if (allAttentionItems.Any())
+@* ── "Vraagt actie" (12a §3, herwerkt naar design-handoff punt 60) ──────────────────────────── *@
+@* Rode kopband + getinte kaart, DRINGEND boven AANDACHT, filter per categorie, in- en uitklappen en
+   bundels (3 of meer meldingen van hetzelfde type klappen open tot hun regels). Drie toestanden:
+   rood (er is iets dringend), goud/"calm" (enkel aandacht) en groen/"ok" (niets openstaand: één
+   smalle regel). De directe acties per regel uit 60a (Herinnering sturen, Nieuwe datum, Alle 3
+   koppelen) zijn nog niet gebouwd: elke regel opent het bijhorende scherm via "Bekijk". *@
+@{
+    var attGroups = allAttentionItems.GroupBy(i => (i.Type, i.Categorie)).ToList();
+    var attSummary = string.Join(" · ", attGroups.Take(3).Select(g => g.Count() >= 3 ? $"{g.Count()}× {g.Key.Type}" : g.First().Type));
+    if (attGroups.Count > 3) { attSummary += " · …"; }
+    var attState = urgentItems.Any() ? "" : (normalItems.Any() ? "is-calm" : "is-ok");
+    var attSections = new[]
+    {
+        (Sev: "u", Label: "DRINGEND", Items: urgentItems),
+        (Sev: "a", Label: "AANDACHT", Items: normalItems)
+    };
+}
+@if (!allAttentionItems.Any())
 {
-    <div class="gl-v2-section-card gl-v2-pd-attention-card has-items @(urgentItems.Any() ? "has-urgent" : "")">
-        <div class="gl-v2-pd-attention-head">
-            <span class="gl-v2-pd-attention-icon"><i class="ph ph-warning" aria-hidden="true"></i></span>
-            <span class="gl-v2-pd-attention-title">Vraagt actie</span>
-            <span class="gl-v2-field-divider"></span>
-            <span class="gl-v2-pd-attention-desc">Alles wat dit project tegenhoudt, op één plek — urgent bovenaan.</span>
-            <span class="gl-v2-pd-attention-spacer"></span>
-            <div class="gl-v2-pd-chips" role="group" aria-label="Filter op categorie">
-                <button type="button" class="gl-v2-pd-chip is-active js-gl-v2-pd-chip" data-cat="alle" aria-pressed="true">Alles @allAttentionItems.Count</button>
-                @foreach (var cat in attentionCategories)
+    <section class="gl-v2-pd-attention-card is-ok" aria-label="Vraagt actie">
+        <div class="gl-v2-pd-att-head">
+            <span class="gl-v2-pd-att-icon"><i class="ph ph-check" aria-hidden="true"></i></span>
+            <div class="gl-v2-pd-att-title">
+                <b class="is-quiet">Niets dat dit project tegenhoudt</b>
+                <span>Geen openstaande contracten, werfpunten, verzekeringen of waarschuwingen.</span>
+            </div>
+        </div>
+    </section>
+}
+else
+{
+    <section class="gl-v2-pd-attention-card @attState" aria-label="Vraagt actie">
+        <div class="gl-v2-pd-att-head">
+            <span class="gl-v2-pd-att-icon"><i class="ph ph-warning" aria-hidden="true"></i></span>
+            <div class="gl-v2-pd-att-title">
+                <b>Vraagt actie<span class="gl-v2-pd-att-n" aria-label="@allAttentionItems.Count meldingen">@allAttentionItems.Count</span></b>
+                <span class="js-gl-v2-pd-att-sub-open">Wat dit project tegenhoudt, dringend eerst.</span>
+                <span class="js-gl-v2-pd-att-sub-closed" hidden>@attSummary</span>
+            </div>
+            <div class="gl-v2-pd-att-sum">
+                @if (urgentItems.Any())
                 {
-                    <button type="button" class="gl-v2-pd-chip js-gl-v2-pd-chip" data-cat="@cat.Naam" aria-pressed="false">@cat.Naam @cat.Aantal</button>
+                    <span class="gl-v2-pd-att-pill is-urgent"><i></i>@urgentItems.Count dringend</span>
+                }
+                @if (normalItems.Any())
+                {
+                    <span class="gl-v2-pd-att-pill is-attention"><i></i>@normalItems.Count aandacht</span>
                 }
             </div>
+            <span class="gl-v2-pd-attention-spacer"></span>
+            <div class="gl-v2-pd-chips js-gl-v2-pd-att-filters" role="tablist" aria-label="Filter op categorie">
+                <button type="button" role="tab" class="gl-v2-pd-chip is-active js-gl-v2-pd-chip" data-cat="alle" aria-selected="true">Alles <em>@allAttentionItems.Count</em></button>
+                @foreach (var cat in attentionCategories)
+                {
+                    <button type="button" role="tab" class="gl-v2-pd-chip js-gl-v2-pd-chip" data-cat="@cat.Naam" aria-selected="false">@cat.Naam <em>@cat.Aantal</em></button>
+                }
+            </div>
+            <button type="button" class="gl-v2-pd-att-toggle js-gl-v2-pd-att-toggle" aria-expanded="true" aria-label="Inklappen" title="Inklappen"><i class="ph ph-caret-up" aria-hidden="true"></i></button>
             <div id="gl-v2-pd-filter-status" class="visually-hidden" aria-live="polite"></div>
         </div>
         <div class="gl-v2-pd-attention-body js-gl-v2-pd-attention-body">
-            @if (urgentItems.Any())
+            @foreach (var sec in attSections)
             {
+                if (!sec.Items.Any()) { continue; }
                 <div class="js-gl-v2-pd-attention-group">
-                    <div class="gl-v2-pd-attention-group-hdr is-urgent"><i class="ph ph-warning-circle" aria-hidden="true"></i>ACTIE VEREIST<span class="gl-v2-pd-attention-group-cnt">(@urgentItems.Count)</span></div>
-                    @foreach (var item in urgentItems)
+                    <div class="gl-v2-pd-att-sec @(sec.Sev == "a" ? "is-attention" : "")"><i></i>@sec.Label · <span class="js-gl-v2-pd-sec-n">@sec.Items.Count</span><span class="gl-v2-pd-att-sec-line"></span></div>
+                    @foreach (var grp in sec.Items.GroupBy(i => (i.Type, i.Categorie)))
                     {
-                        @* Razor omits the href attribute entirely when BekijkUrl is null — no "#" fallback,
-                           so an item with no real destination renders as plain, non-clickable text
-                           instead of a link that looks live but goes nowhere (there's already no hover
-                           style on this class either way, see gl-v2-projecten-detail.css). *@
-                        <a class="gl-v2-pd-attention-item js-gl-v2-pd-attention-item" data-cat="@item.Categorie" href="@item.BekijkUrl">
-                            <i class="ph @item.Icon gl-v2-pd-attention-item-icon" aria-hidden="true"></i>
-                            <span class="gl-v2-pd-attention-item-text"><b>@item.Type</b>@(item.Entiteit is not null ? " — " + item.Entiteit : "")@(item.Extra is not null ? " · " + item.Extra : "")</span>
-                            @if (item.Meta is not null)
+                        var grpList = grp.ToList();
+                        if (grpList.Count >= 3)
+                        {
+                            var first = grpList[0];
+                            <div class="gl-v2-pd-att-bundle @sec.Sev js-gl-v2-pd-attention-item" data-cat="@first.Categorie" data-count="@grpList.Count">
+                                <div class="gl-v2-pd-att-row is-bundle @sec.Sev">
+                                    <span class="gl-v2-pd-att-ic"><i class="ph @first.Icon" aria-hidden="true"></i></span>
+                                    <span class="gl-v2-pd-att-main"><b>@(grpList.Count)× @first.Type</b></span>
+                                    <button type="button" class="gl-v2-pd-att-tw js-gl-v2-pd-att-bundle" aria-expanded="true" aria-label="Lijst inklappen" title="Lijst inklappen"><i class="ph ph-caret-down" aria-hidden="true"></i></button>
+                                </div>
+                                <div class="gl-v2-pd-att-sub @sec.Sev">
+                                    @foreach (var item in grpList)
+                                    {
+                                        <a class="gl-v2-pd-att-subrow" href="@item.BekijkUrl">
+                                            @if (item.Entiteit is not null) { <span class="gl-v2-pd-att-ref">@item.Entiteit</span> } else { <span></span> }
+                                            <span class="gl-v2-pd-att-desc">@item.Extra</span>
+                                            <span class="gl-v2-pd-att-meta">@item.Meta</span>
+                                            <span class="gl-v2-pd-att-go">@if (item.BekijkUrl is not null) { <i class="ph ph-caret-right" aria-hidden="true"></i> }</span>
+                                        </a>
+                                    }
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            foreach (var item in grpList)
                             {
-                                <span class="gl-v2-pd-attention-meta">@item.Meta</span>
+                                @* Razor laat het href-attribuut weg bij een null-URL: de regel blijft dan gewone,
+                                   niet-klikbare tekst i.p.v. een link die levend lijkt maar nergens heen gaat. *@
+                                <a class="gl-v2-pd-att-row @sec.Sev js-gl-v2-pd-attention-item" data-cat="@item.Categorie" data-count="1" href="@item.BekijkUrl">
+                                    <span class="gl-v2-pd-att-ic"><i class="ph @item.Icon" aria-hidden="true"></i></span>
+                                    <span class="gl-v2-pd-att-main">
+                                        <b>
+                                            @item.Type
+                                            @if (item.Entiteit is not null) { <span>@item.Entiteit</span> }
+                                        </b>
+                                        @if (!string.IsNullOrWhiteSpace(item.Extra)) { <small title="@item.Extra">@item.Extra</small> }
+                                    </span>
+                                    <span class="gl-v2-pd-att-age @sec.Sev">@item.Meta</span>
+                                    <span class="gl-v2-pd-att-go">@if (item.BekijkUrl is not null) { <i class="ph ph-caret-right" aria-hidden="true"></i> }</span>
+                                </a>
                             }
-                            @if (item.BekijkUrl is not null)
-                            {
-                                <span class="gl-v2-pd-attention-view">Bekijk <i class="ph ph-caret-right" aria-hidden="true"></i></span>
-                            }
-                        </a>
-                    }
-                </div>
-            }
-            @if (normalItems.Any())
-            {
-                <div class="js-gl-v2-pd-attention-group">
-                    <div class="gl-v2-pd-attention-group-hdr"><i class="ph ph-clock" aria-hidden="true"></i>OP TE LOSSEN<span class="gl-v2-pd-attention-group-cnt">(@normalItems.Count)</span></div>
-                    @foreach (var item in normalItems)
-                    {
-                        <a class="gl-v2-pd-attention-item is-normal js-gl-v2-pd-attention-item" data-cat="@item.Categorie" href="@item.BekijkUrl">
-                            <i class="ph @item.Icon gl-v2-pd-attention-item-icon" aria-hidden="true"></i>
-                            <span class="gl-v2-pd-attention-item-text"><b>@item.Type</b>@(item.Entiteit is not null ? " — " + item.Entiteit : "")@(item.Extra is not null ? " · " + item.Extra : "")</span>
-                            @if (item.Meta is not null)
-                            {
-                                <span class="gl-v2-pd-attention-meta">@item.Meta</span>
-                            }
-                            @if (item.BekijkUrl is not null)
-                            {
-                                <span class="gl-v2-pd-attention-view">Bekijk <i class="ph ph-caret-right" aria-hidden="true"></i></span>
-                            }
-                        </a>
+                        }
                     }
                 </div>
             }
         </div>
-    </div>
+    </section>
 }
 
 @* ── Traject + Eenheden (12a §4/§7) ───────────────────────────────────────────────────────── *@

@@ -199,6 +199,10 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<PermissionPerUser> PermissionPerUser { get; set; }
 
+    public virtual DbSet<PlanningAfhankelijkheid> PlanningAfhankelijkheid { get; set; }
+
+    public virtual DbSet<ProjectPlanning> ProjectPlanning { get; set; }
+
     public virtual DbSet<PlanningSectie> PlanningSectie { get; set; }
 
     public virtual DbSet<PlanningTaak> PlanningTaak { get; set; }
@@ -2442,6 +2446,43 @@ public partial class cpmRunningContext : DbContext
                 .HasForeignKey(d => d.ProjectId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_PlanningSectie_Project");
+
+            entity.HasOne(d => d.ParentSectie).WithMany(p => p.DeelSecties)
+                .HasForeignKey(d => d.ParentSectieId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_PlanningSectie_Parent");
+        });
+
+        modelBuilder.Entity<PlanningAfhankelijkheid>(entity =>
+        {
+            entity.ToTable("PlanningAfhankelijkheid");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.OpvolgerTaakId, "IX_PlanningAfh_Opvolger");
+
+            entity.HasOne(d => d.Voorganger).WithMany(p => p.Opvolgers)
+                .HasForeignKey(d => d.VoorgangerTaakId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_PlanningAfh_Voorganger");
+
+            entity.HasOne(d => d.Opvolger).WithMany(p => p.Voorgangers)
+                .HasForeignKey(d => d.OpvolgerTaakId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_PlanningAfh_Opvolger");
+        });
+
+        modelBuilder.Entity<ProjectPlanning>(entity =>
+        {
+            entity.ToTable("ProjectPlanning");
+            entity.HasKey(e => e.ProjectId);
+            entity.Property(e => e.ProjectId).ValueGeneratedNever();
+            entity.Property(e => e.Versie).HasDefaultValue(1);
+            entity.Property(e => e.VerletMeetellen).HasDefaultValue(true);
+            entity.Property(e => e.ModifiedByUserId).HasMaxLength(450);
+
+            entity.HasOne(d => d.Project).WithMany()
+                .HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_ProjectPlanning_Project");
         });
 
         modelBuilder.Entity<PlanningTaak>(entity =>
@@ -2454,6 +2495,8 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Naam)
                 .IsRequired()
                 .HasMaxLength(300);
+            entity.Property(e => e.Duur).HasDefaultValue(1);
+            entity.Property(e => e.VerantwoordelijkeUserId).HasMaxLength(450);
 
             entity.HasOne(d => d.PlanningSectie).WithMany(p => p.PlanningTaak)
                 .HasForeignKey(d => d.PlanningSectieId)

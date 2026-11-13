@@ -890,6 +890,7 @@ namespace CPMCore.Controllers
                 : projectService.GetProjectStartDateConstruction(model.ProjectId);
 
             // 11. Final Construction Date & Working Days Left
+            model.WeatherStationMissing = projectService.GetProjectWeatherstation(model.ProjectId) == 0;
             model.WorkingDaysLeft = -9999;
             if (model.ExecutionDays > 0 && model.StartDate != DateOnly.FromDateTime(DateTime.MinValue))
             {

@@ -314,6 +314,7 @@ builder.Services.AddScoped<FacadeCore.ITrajectSjabloonService, ServiceCore.Traje
 builder.Services.AddScoped<FacadeCore.ITrajectInstantiationService, ServiceCore.Traject.TrajectInstantiationService>();
 builder.Services.AddScoped<FacadeCore.IMijlpaalBindingResolver, ServiceCore.Traject.MijlpaalBindingResolver>();
 builder.Services.AddScoped<FacadeCore.ITrajectRecalculationService, ServiceCore.Traject.TrajectRecalculationService>();
+builder.Services.AddScoped<FacadeCore.IPlanningService, ServiceCore.Planning.PlanningService>();
 builder.Services.AddScoped<FacadeCore.ITrajectTriggerDispatcher, ServiceCore.Traject.TrajectTriggerDispatcher>();
 builder.Services.AddScoped<FacadeCore.ITrajectTriggerAction, ServiceCore.Traject.TriggerActions.VerwittigRolAction>();
 builder.Services.AddScoped<FacadeCore.ITrajectTriggerAction, ServiceCore.Traject.TriggerActions.VerwittigGebruikerAction>();

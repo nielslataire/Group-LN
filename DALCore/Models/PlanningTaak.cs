@@ -27,5 +27,30 @@ public partial class PlanningTaak
 
     public int Volgorde { get; set; }
 
+    /// <summary>Duur in werkdagen (migratie 144). 0 = mijlpaal.</summary>
+    public int Duur { get; set; } = 1;
+
+    /// <summary>0 zo vroeg mogelijk · 1 moet beginnen op · 2 niet eerder beginnen dan · 3 niet later beginnen dan · 4 niet eerder eindigen dan · 5 niet later eindigen dan · 6 moet eindigen op.</summary>
+    public byte BeperkingType { get; set; }
+
+    public DateOnly? BeperkingDatum { get; set; }
+
+    /// <summary>Optionele deadline: duwt niets, geeft enkel een waarschuwing.</summary>
+    public DateOnly? Deadline { get; set; }
+
+    /// <summary>Werkelijke start; overschrijft de planning. Het werkelijke einde is <see cref="AfgerondOp"/>.</summary>
+    public DateOnly? WerkelijkStart { get; set; }
+
+    public string VerantwoordelijkeUserId { get; set; }
+
+    /// <summary>Vastgelegde basisplanning (momentopname van Startdatum/Einddatum).</summary>
+    public DateOnly? BasisStart { get; set; }
+
+    public DateOnly? BasisEinde { get; set; }
+
+    public virtual ICollection<PlanningAfhankelijkheid> Voorgangers { get; set; } = new List<PlanningAfhankelijkheid>();
+
+    public virtual ICollection<PlanningAfhankelijkheid> Opvolgers { get; set; } = new List<PlanningAfhankelijkheid>();
+
     public virtual PlanningSectie PlanningSectie { get; set; }
 }

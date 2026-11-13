@@ -4,7 +4,7 @@ topic: punten-verslagen
 role: Werfleider
 device: Desktop · tablet
 minutes: 5
-updated: 2026-10-14
+updated: 2026-11-13
 screens: issues-index
 synonyms: goedkeuren, doorsturen, status, concept, afgewezen, in de wacht, afsluiten, gemeld uitgevoerd
 description: van concept tot afgesloten, en wie wat doet
@@ -25,18 +25,22 @@ faq:
   - q: Waarom kan ik bij een punt maar een paar statussen kiezen?
     a: Je ziet enkel de logische volgende stappen voor die fase. Een concept kun je bijvoorbeeld niet rechtstreeks afsluiten.
 ---
-## De fases van een punt
+## De statussen van een punt
 
-| Fase | Wat het betekent |
-|---|---|
-| **Concept** | Je hebt het punt ingegeven. De aannemer ziet het niet. |
-| **Ter goedkeuring** | Het punt wacht op goedkeuring. |
-| **Goedgekeurd** | Het punt is klaar om naar de aannemer te gaan. |
-| **Doorgestuurd** | De aannemer heeft het punt gekregen en moet het oplossen. |
-| **Gemeld uitgevoerd** | Het punt is klaar voor controle. De aannemer meldt het uitgevoerd, of jij zet het zo na een mail of telefoon. Jij controleert het. |
-| **Afgesloten** | Het punt is afgehandeld. |
-| **Afgewezen** | Je keurt de uitvoering af. Het punt gaat terug naar de aannemer met een reden. |
-| **In de wacht** | Het punt ligt tijdelijk stil, met een reden. |
+Een punt heeft altijd één status. Die zie je in de lijst en op het punt zelf. In deze tabel staat wat elke status betekent, wie het punt dan kan zien en welke status je daarna kan kiezen.
+
+| Status | Wat het betekent | Ziet de aannemer het? | Wat kan je daarna kiezen |
+|---|---|---|---|
+| **Concept** | Je hebt het punt ingegeven. Het is nog niet nagekeken. | Nee | Ter goedkeuring, Goedgekeurd |
+| **Ter goedkeuring** | Het punt wacht op goedkeuring door de werfleider. | Nee | Goedgekeurd, Concept |
+| **Goedgekeurd** | Het punt is nagekeken en klaar om te versturen. Het is nog niet bij de aannemer. | Nee, tot het wordt doorgestuurd | Concept. Of doorsturen, dan wordt het Doorgestuurd. |
+| **Doorgestuurd** | De aannemer heeft het punt gekregen en moet het oplossen. | Ja | Gemeld uitgevoerd, Afgesloten, In de wacht |
+| **Gemeld uitgevoerd** | De aannemer meldt dat het opgelost is. Jij controleert het nog. | Ja | Afgesloten als het in orde is, Afgewezen als het niet in orde is |
+| **Afgewezen** | Je keurt de uitvoering af. Het punt gaat met een reden terug naar de aannemer. | Ja | Gemeld uitgevoerd, Afgesloten, In de wacht |
+| **In de wacht** | Het punt ligt tijdelijk stil, met een reden. De deadline telt niet door. | Ja, als In de wacht | Doorgestuurd (met **Hervatten**) |
+| **Afgesloten** | Het punt is afgehandeld. | Nee, het telt niet meer als open | Doorgestuurd, als je het opnieuw wilt openen |
+
+Een punt dat In de wacht staat, gaat niet mee bij het doorsturen en niet in de avondmelding. De aannemer krijgt er dus geen mail over, maar ziet het wel in het portaal.
 
 De aannemer meldt een punt als uitgevoerd via het aannemersportaal. Een aannemer die per mail of telefoon laat weten dat het opgelost is, meldt het
 niet zelf in CPM. In dat geval zet de werfleider de status zelf om.

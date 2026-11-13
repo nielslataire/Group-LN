@@ -303,7 +303,7 @@
                             TextName = "Project.WheaterStation.Name", TextValue = project.WheaterStation?.Name,
                             DisplayText = project.WheaterStation?.Id > 0 ? project.WheaterStation.Name : null,
                             LookupUrl = Url.Action("GetWheaterstations", "Projecten") ?? "", Placeholder = "Zoek een KMI-weerstation …", MinChars = 1,
-                            Help = "weerverlet wordt per dag van dit station geteld"
+                            Help = (project.WheaterStation?.Id > 0 ? "weerverlet wordt per dag van dit station geteld" : "zonder weerstation rekenen de werkdagen zonder weerverlet")
                         })
                     </div>
                     <div class="gl-v2-col-4">

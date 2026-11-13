@@ -22,6 +22,7 @@ Public NotInheritable Class PermissionCatalog
             New PermissionDefinition(PermissionCodes.ProjectsOpvolging, "Opvolging", PermissionCodes.Projects, 50),
             New PermissionDefinition(PermissionCodes.ProjectsTraject, "Traject", PermissionCodes.ProjectsOpvolging, 50),
             New PermissionDefinition(PermissionCodes.ProjectsDossiers, "Dossiers", PermissionCodes.ProjectsOpvolging, 51),
+            New PermissionDefinition(PermissionCodes.ProjectsPlanning, "Planning", PermissionCodes.ProjectsOpvolging, 51),
             New PermissionDefinition(PermissionCodes.ProjectsIssues, "Punten", PermissionCodes.ProjectsOpvolging, 52),
             New PermissionDefinition(PermissionCodes.ProjectsDocuments, "Documenten", PermissionCodes.ProjectsOpvolging, 52),
             New PermissionDefinition(PermissionCodes.ProjectsInsurances, "Verzekeringen", PermissionCodes.ProjectsOpvolging, 53),

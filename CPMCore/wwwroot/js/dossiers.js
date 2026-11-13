@@ -62,6 +62,23 @@
                 table.draw();
             });
         }
+
+        // Soort-filter, zoekterm, sortering en pagina onthouden (projectbrede module gl-v2-table-state.js, enkel op gl-v2-pagina's geladen).
+        if (window.GlV2TableState) {
+            var dossState = window.GlV2TableState.attach({
+                table: table,
+                collect: function () { return { q: dossSearchInput ? dossSearchInput.value : "", kind: kindFilterSelect ? kindFilterSelect.value : "" }; },
+                restore: function (s) {
+                    if (s.q && dossSearchInput) { dossSearchInput.value = s.q; table.search(s.q); }
+                    if (s.kind && kindFilterSelect) {
+                        kindFilterSelect.value = s.kind;
+                        kindFilterSelect.dispatchEvent(new Event("change"));
+                    }
+                }
+            });
+            table.draw();
+            dossState.finish();
+        }
     }
 
     // ===== Nuts-matrix (Nutsaanvragen-tab): mobiele eenheid-select toggelt de juiste kaart =====

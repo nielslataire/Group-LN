@@ -62,6 +62,8 @@
 .gl-v2-pt-pop-item small { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 .gl-v2-pt-pop-item:hover { background: var(--gl-v2-hover-tint); }
 .gl-v2-pt-pop-note { padding: 8px 10px 2px; font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-pt-pop-form { display: flex; flex-direction: column; gap: 12px; }
+.gl-v2-pt-pop-form .gl-v2-pt-pop-title { padding-bottom: 0; }
 .gl-v2-pt-pop-actions { display: flex; justify-content: flex-end; gap: 8px; padding-top: 10px; }
 @media (max-width: 767.98px) {
     .gl-v2-pt-selectionbar { bottom: calc(var(--gl-v2-qa-bar-h, 64px) + 12px); left: 12px; right: 12px; transform: none; padding: 8px 8px 8px 12px; }

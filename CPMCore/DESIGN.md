@@ -4488,6 +4488,9 @@ system's own Icons section documents for its Boxicons→Phosphor migration.
 ## Do's and Don'ts
 
 ### Do:
+- **Do** laat elke lijst met filters, zoekveld of DataTable zijn toestand onthouden (filters, zoekterm, sortering, pagina) via
+  `GlV2TableState` (zie "Tabelstatus onthouden — VERPLICHT voor elke lijst met filters"). Een pagina die dit nog niet doet, krijgt het
+  zodra ze aangeraakt wordt.
 - **Do** keep every new gl-v2 CSS selector scoped under `.gl-v2` — no bare-element rules, so this
   pilot can never leak onto a page that hasn't opted in.
 - **Do** use Phosphor Regular icon classes, confirmed rendering, not hand-drawn SVGs.
@@ -7794,3 +7797,72 @@ Knop **Afdrukken** (`#pt-print`, op gsm via de snelactie `#pt-print-m`) opent ee
 - **Omschrijving voor de klant is optioneel**: `SendProblem` vraagt ze niet meer, de omzetmodal (`_ModalConvertQuoteV2`) heeft geen verplicht-sterretje meer, beide velden zeggen "optioneel". Leeg blijft leeg op de offerte-pdf en de factuur.
 - **Regels en totalen op elke breedte (12/11/2026)**: in de lijnen- en kaartvorm (container `co-rows` ≤ 1080px) zijn label en bedrag van de totaalrijen de eerste en de laatste cel (`td:first-child` / `td:not(:first-child)`), niet `[colspan]`: de bedragcel heeft zelf een colspan en werd als label links uitgelijnd. De 20px opvulling van de eerste/laatste cel in de tabelvorm wordt in de lijnen- en kaartvorm op 0 gezet (de rij heeft zelf opvulling), anders sprongen omschrijving en totaal 20px in. Het totalenblok onder de groepen (`.gl-v2-co-totals-scroll`, 17px) staat op dezelfde rechterrand als dat in de groepskaart (16px + 1px rand), op elke breedte; de 10px-versmalling van `.gl-v2-co-groups` onder 560px is weg omdat ze die rand liet verspringen.
 - **Verplicht op een offerte of wijzigingsopdracht (12/11/2026)**: klant · eenheid, onderwerp en minstens één regel met een omschrijving en een prijs > 0 (client: `data-gl-v2-required` + validator, ook bij gewoon opslaan; server: vangnet in `ChangeOrderDetailV2Save`, niet voor 20c). Het verplicht-sterretje is de gedeelde `.gl-v2-field-req`.
+
+
+## Tabelstatus onthouden — VERPLICHT voor elke lijst met filters (13/11/2026)
+
+**Regel.** Elke gl-v2-lijst of -tabel met filters, zoekveld of sortering onthoudt zijn toestand: filters, zoekterm, sortering en pagina. Gebruiker doet een wijziging (bulkactie, formulier) of opent een detail en gaat terug: de lijst staat er weer zoals hij hem achterliet. Zonder dit moet hij telkens opnieuw filteren, en dat is de meest gehoorde ergernis bij lijsten (Punten, 13/11/2026).
+
+**Wanneer toepassen.** Bij elke nieuwe lijst met filters of zoekveld, **en** bij elke bestaande lijst die je aanraakt (wijzigen, fixen, restylen). Omgezet op 13/11/2026: Punten, Klanten, Leveranciers, Contacten (project), Contracten (project), Klanten in een project en Dossiers (`dossiers.js`, enkel waar de module geladen is, dus gl-v2). Elke nieuwe of aangeraakte lijst met filters volgt hetzelfde. Nooit een tweede, pagina-eigen bewaarmechanisme schrijven.
+
+**Hoe: projectbrede module.** `wwwroot/js/gl-v2-table-state.js` (`window.GlV2TableState`, geladen in `_LayoutV2` na `gl-v2-shell.js`). De pagina houdt haar eigen filterlogica en geeft de module enkel twee dingen: hoe haar toestand eruitziet en hoe ze terug te zetten is.
+
+```js
+var state = GlV2TableState.attach({
+    table: dataTable,                                   // DataTables API-object, al aangemaakt
+    collect: function () { return { q: search.value, f: { /* enkel filters die niet op standaard staan */ } }; },
+    restore: function (s) { /* zoekterm en filters terugzetten, bv. via je bestaande setFilter(k, v) */ }
+});
+// ... eerste draw + paginagrootte instellen ...
+state.finish();                                          // springt naar de bewaarde pagina en schakelt het bewaren in
+```
+
+- **Opslag**: `sessionStorage`, sleutel `gl-v2-table-state:` + pad (dus per project en per pagina), enkel in de huidige browsertab. Onbeschikbare of kapotte opslag wordt stil genegeerd: de lijst werkt dan gewoon met de standaardwaarden.
+- **Volgorde**: `attach` zet de sortering terug en roept `restore` aan vóór de eerste draw; tijdens het terugzetten wordt niets opnieuw bewaard. `finish()` komt pas ná de paginagrootte (`syncPageLength`), want de pagina springen kan pas als het aantal pagina's vaststaat. Bestaat de bewaarde pagina niet meer (minder rijen), dan blijft de lijst op pagina 1.
+- **"Filters wissen"** en het verwijderen van een chip gaan via dezelfde `setFilter`, dus ook dat wordt bewaard.
+- **Niet bewaard**: selectie van rijen, geopende filterpanelen. Gebruik de module niet voor toestand die de gebruiker niet verwacht terug te zien, zoals een open bevestigingsvenster.
+- **Controle bij oplevering van een lijst**: filter, open een detail, ga terug (terugknop én kruimelpad), doe een bulkactie: filters, sortering en pagina staan er nog. Kies "Filters wissen": de lijst start weer op standaard.
+
+Eerste gebruiker: `gl-v2-projecten-punten.js` (Projecten/Issues). Help-artikels over een lijst hoeven hier niets over te zeggen, tenzij er een uitleg over "Filters wissen" staat.
+
+
+## Kaart die actie vraagt: `.is-alert` (13/11/2026)
+De kaart "Vraagt actie" (Projecten/Detail en Contract/Detail) heeft een lichtrode achtergrond zodat ze opvalt tussen de neutrale kaarten. Het is een projectbrede modifier in `css/gl-v2/page.css`: `.gl-v2-section-card.is-alert` (ook op `.gl-v2-card`), kleur = het bestaande token `--gl-v2-danger-tint` (#F8EBEB), scheidingslijnen binnen de kaart `rgba(139, 42, 42, .12–.14)`. De gekleurde bovenrand (`has-items` warning, `has-urgent` danger) blijft. Elke nieuwe kaart die iets vraagt van de gebruiker gebruikt `.is-alert`; geen eigen rode tint per pagina. Binnen zo'n kaart: iconchip op `--gl-v2-surface` (wit), hover op een rij `rgba(139, 42, 42, .06)` (niet het groene `--gl-v2-hover-tint`), en de scrollschaduw van een scrollende lijst gebruikt de kaartkleur i.p.v. wit.
+
+
+### Update 13/11/2026 (punt 60): Projecten/Detail "Vraagt actie" in drie toestanden
+De kaart op Projecten/Detail volgt nu design-handoff punt 60 en gebruikt niet meer `.is-alert` (die modifier blijft voor Contract/Detail). Eigen klassen `gl-v2-pd-attention-card` en `gl-v2-pd-att-*` in `css/gl-v2-projecten-detail.css`.
+- **Rood** (er is iets dringend): rode kopband (`--gl-v2-danger`), kaart in de tint #FBF1F1 met ring #D9A5A5, regels als witte kaartjes. **Goud** (`.is-calm`, enkel aandacht): kopband `--gl-v2-warning`. **Groen** (`.is-ok`, niets open): één smalle regel met groene rand, geen kopband.
+- De groepen heten **DRINGEND** en **AANDACHT** (voorheen "Actie vereist" en "Op te lossen"). De kop toont het totaal en twee pillen met de aantallen.
+- Het filter per categorie is een segmentbediening op de kopband (`.gl-v2-pd-chips`, knoppen `.js-gl-v2-pd-chip`, `aria-selected`). Een knop met pijl klapt de kaart in tot één regel met een samenvatting.
+- Drie of meer meldingen van hetzelfde type en dezelfde categorie worden een bundel (`.gl-v2-pd-att-bundle`) die openklapt tot hun regels.
+- De tinten #FBF1F1 en #D9A5A5 zijn nog geen tokens. Zet ze in `gl-v2-tokens.css` zodra een tweede pagina ze nodig heeft.
+- Niet gebouwd: de directe acties per regel uit 60a (Herinnering sturen, Nieuwe datum, Alle 3 koppelen). Elke regel opent het bijhorende scherm via de pijl.
+
+
+## Projecten/Planning — bouwplanning (design-handoff `CRM Planning` 59a–59c, nov. 2026)
+
+Takenlijst en Gantt naast elkaar, taken en fases met een duur in werkdagen en voorgangers (FS/SS/FF/SF met wachttijd, ook negatief); een wijziging schuift alles mee.
+Status, beslissingen en wat nog volgt: `E:\TFS\PLANNING_VOORTGANG.md`. **Migratie `_migrations/144_BouwplanningUitbreiding.sql` vóór app-start.**
+
+**Bestanden.** `Views/Projecten/Planning/IndexV2.cshtml` · `Controllers/ProjectPlanningController.cs` (route `Projects/{projectId}/Planning`, permissiecode `Projects.Planning`, menu-item "Planning" in `Opvolging`) ·
+`wwwroot/css/gl-v2-projecten-planning.css` + `wwwroot/js/gl-v2-projecten-planning.js` (namespace `gl-v2-pl-*`) · `ServiceCore/Planning/` (`WerkKalender`, `PlanningCalculator`, `PlanningService`) ·
+`FacadeCore/Planning/PlanningDtos.cs` · help: `HelpContent/projecten/planning-*.md` (`screens: planning-index`). Tests: `ServiceCore.Tests/PlanningCalculatorTests.cs`, `PlanningServiceTests.cs`.
+
+**Eén eigenaar per feit.** Fase = `PlanningSectie` (deelfases via `ParentSectieId`), taak = `PlanningTaak` (duur 0 = mijlpaal, werkelijk einde = `AfgerondOp`). `Startdatum`/`Einddatum` zijn BEREKENDE waarden (cache voor traject en dashboards), nooit invoer.
+Start = `Project.StartDateConstruction`; de deadline oplevering wordt BEREKEND (`StartDateConstruction` + `ExecutionDays` in werkdagen, via `WerkKalender`), per klant enkel als `ClientAccount.ExecutionDays`/`StartDateConstruction` afwijkt.
+`Project.DeliveryDate` is de effectieve oplevering, geen deadline. Een trajectmijlpaal volgt de planning via `Mijlpaal.BronBinding = PlanningTaak|PlanningSectie` (+ `BronRefId`): `TrajectRecalculationService.GeplandUitPlanning` zet de geplande einddatum in `DoeldatumBerekend`
+(een handmatige `Doeldatum` blijft voorrang houden). De koppeling zelf wordt nog nergens vanuit de UI gelegd (zie PLANNING_VOORTGANG.md).
+
+**Werkkalender.** `ServiceCore.Planning.WerkKalender`: werkdag = ma–vr, geen feestdag/bouwverlof (`VacationDays`, bedrijf + project samen), geen verletdag (`BadWeatherDays` van het weerstation van het project; zonder weerstation geen verlet, met waarschuwing op Projectdetail en in het projectformulier).
+Eén bron voor `ProjectService.GetFinalConstructionDay/GetWorkingDaysLeft/AddWorkDays/BusinessDaysUntil` én de planning, zodat deadline en planning nooit uit elkaar lopen.
+
+**Commando-contract.** De pagina tekent alles uit één JSON-staat (`PlanningStaat`, in `#gl-v2-pl-config`). Elke wijziging = `POST …/Planning/Commando` met een `PlanningCommando` (`taakToevoegen`, `faseToevoegen`, `wijzig`, `verwijder`, `verplaats`, `basisVastleggen`, `verletMeetellen`, `herstel`),
+antwoord = volledig herberekende staat + `verschoven` (rij-sleutels `t12`/`f3`) + `samenvatting` + `undo` (momentopname van de planning vóór de wijziging; "Ongedaan maken" stuurt ze als `herstel` terug). `ProjectPlanning.Versie` telt op; een verouderde versie geeft `conflict` en de pagina herlaadt.
+Een cyclus wordt geweigerd (databasetransactie rolt terug). Voorgangers typ je als `5.1FS+3d; 4.2SS`; een verwijzing naar een fase telt voor al haar taken.
+
+**Gantt-component (projectwijd).** `wwwroot/css/gl-v2/gantt.css` + `wwwroot/js/gl-v2-gantt.js`, `GlV2Gantt.render(el, model, {onOpen, onSelect})`: tijdschaal dag/week/maand, balken (taak, fase met haakjes, mijlpaal als ruit), voortgang, afhankelijkheidspijlen (FS/SS/FF/SF), weekends/verlof/verlet gearceerd,
+vandaag- en deadlinelijn, basisplanning (grijze lijn), kritiek pad (rood gearceerd, niet enkel kleur), vastgepind (punaise), verschoven (gouden rand). Elke balk is een `<button>` met een volledige `aria-label`. De component tekent enkel de grafiek; rijen links zijn van de pagina en zijn precies `rowHeight` (34px) hoog.
+Wordt via `@section PageStyle` geladen (niet in `_LayoutV2`).
+
+**Nog niet gebouwd (ontwerp 59a/b/d).** Balken slepen (verschuiven, duur, afhankelijkheid trekken), rechtsklikmenu op de balk, werkkalender-paneel, sjablonen en "Fases uit het budget", importeren (MS Project-XML/Excel), exporteren (Excel/PDF A3), samenvoegen bij een conflict, trajectkoppeling vanuit de UI, tablet-/gsm-verfijning. Niet browser-getest in de echte app (enkel een statische render met headless Edge en 38 tests).

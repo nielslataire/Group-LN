@@ -272,4 +272,20 @@
 
 
     updateFilterChips();
+
+    // Filters (status, eenheidstype), zoekterm, sortering en pagina onthouden (projectbrede module gl-v2-table-state.js).
+    if (window.GlV2TableState) {
+        var tableState = window.GlV2TableState.attach({
+            table: table,
+            collect: function () { return { q: searchInput ? searchInput.value : "", status: selectedStatus, type: selectedType }; },
+            restore: function (s) {
+                if (s.q && searchInput) { searchInput.value = s.q; table.search(s.q); }
+                if (s.status) statusSelectApi.select(s.status);
+                if (s.type) typeSelectApi.select(s.type);
+            }
+        });
+        table.draw();
+        updateFilterChips();
+        tableState.finish();
+    }
 })();

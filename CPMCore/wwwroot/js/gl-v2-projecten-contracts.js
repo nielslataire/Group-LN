@@ -264,4 +264,22 @@
         var clearBtn = document.getElementById("search-term-clear");
         if (clearBtn) clearBtn.addEventListener("click", function () { searchInput.value = ""; table.search("").draw(); });
     }
+
+    // Status-tab, zoekterm, sortering en pagina onthouden (projectbrede module gl-v2-table-state.js).
+    if (window.GlV2TableState) {
+        var tableState = window.GlV2TableState.attach({
+            table: table,
+            collect: function () { return { q: searchInput ? searchInput.value : "", status: selectedStatus }; },
+            restore: function (s) {
+                if (s.q && searchInput) { searchInput.value = s.q; table.search(s.q); }
+                if (s.status) {
+                    var tab = Array.prototype.filter.call(statusTabs, function (t) { return (t.getAttribute("data-status") || "") === s.status; })[0];
+                    if (tab) tab.click();
+                }
+            }
+        });
+        table.draw();
+        if (typeof adjustPageLength === "function") adjustPageLength();
+        tableState.finish();
+    }
 })();

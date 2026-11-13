@@ -47,6 +47,7 @@ namespace CPMCore.Helpers
             // Projecten-satellieten
             ["ProjectDossiers"]        = "Projecten/Dossiers",
             ["ProjectTraject"]         = "Projecten/Traject",
+            ["ProjectPlanning"]        = "Projecten/Planning",
             ["ProjectsIssues"]         = "Projecten/Issues",
             ["ProjectVerslagen"]       = "Projecten/Verslagen",
             ["Pdf"]                    = "Projecten/Contracts",

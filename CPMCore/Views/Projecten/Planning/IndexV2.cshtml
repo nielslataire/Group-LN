@@ -1,0 +1,272 @@
+@model CPMCore.Models.Planning.PlanningIndexVm
+@*
+    gl-v2 — Planning van een project (design-handoff "CRM Planning", 59a–59c): takenlijst en Gantt naast elkaar, duur in werkdagen,
+    voorgangers (FS/SS/FF/SF met wachttijd), alles schuift automatisch mee. Eerste ronde (nov. 2026): lijst + Gantt, taken en fases
+    toevoegen/bewerken/verwijderen/verplaatsen, ongedaan maken, kritiek pad, basisplanning, waarschuwingen. Nog niet: slepen van
+    balken, rechtsklikmenu, importeren, exporteren, werkkalender-paneel, sjablonen.
+
+    Alles wordt client-side getekend uit één JSON-staat (#gl-v2-pl-config); elke wijziging gaat als commando naar
+    ProjectPlanningController.Commando en komt volledig herberekend terug (ServiceCore/Planning). Eigen klassen-namespace gl-v2-pl-*
+    (gl-v2-projecten-planning.css/.js); de Gantt is het projectwijde component gl-v2/gantt.css + gl-v2-gantt.js.
+*@
+@using CPMCore.Models.GlV2
+@{
+    ViewData["Title"] = "Planning";
+    ViewData["PageIcon"] = "ph ph-chart-bar-horizontal";
+    ViewData["GlV2FullHeightBody"] = true;
+    ViewData["BackUrl"] = Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId });
+
+    var menuVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · planning" };
+    var menuPhoneVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · planning", Mode = GlV2ProjectMenuMode.Phone };
+
+    GlV2SelectListVm Select(string id, string name, string label, string? help = null) => new()
+    {
+        Id = id, Name = name, Label = label, Value = "", Items = new List<GlV2SelectItem>(), Placeholder = "Kies …", Help = help
+    };
+    GlV2DateFieldVm Date(string id, string name, string label) => new() { Id = id, Name = name, Label = label };
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2/gantt.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-projecten-planning.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @if (Model.CanWrite)
+    {
+        <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-pl-add-fase">
+            <i class="ph ph-stack-plus" aria-hidden="true"></i><span>Fase</span>
+        </button>
+        <button type="button" class="gl-v2-btn gl-v2-btn-primary js-pl-add-taak">
+            <i class="ph ph-plus" aria-hidden="true"></i><span>Taak toevoegen</span>
+        </button>
+    }
+}
+@section MobileQuickActions
+{
+    @if (Model.CanWrite)
+    {
+        <button type="button" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary js-pl-add-taak">
+            <i class="ph ph-plus" aria-hidden="true"></i>Taak
+        </button>
+        <button type="button" class="gl-v2-mobile-quickaction js-pl-add-fase">
+            <i class="ph ph-stack-plus" aria-hidden="true"></i>Fase
+        </button>
+    }
+}
+@section ProjectMenu
+{
+    @{ menuVm.Mode = GlV2ProjectMenuMode.Outer; }
+    @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+}
+
+@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhoneVm)
+
+<div id="gl-v2-pl-root" class="gl-v2-pl" data-project-id="@Model.ProjectId" data-can-write="@(Model.CanWrite ? "1" : "0")" data-can-delete="@(Model.CanDelete ? "1" : "0")">
+
+    @* Kop: kerngegevens van de planning *@
+    <div class="gl-v2-card gl-v2-pl-kop" id="gl-v2-pl-kop" aria-live="polite"></div>
+
+    @* Meldingen (cyclus, deadline, geen voorganger …) *@
+    <div id="gl-v2-pl-notices" class="gl-v2-pl-notices"></div>
+
+    @* Wat er na een wijziging is verschoven, met Ongedaan maken *@
+    <div class="gl-v2-pl-changebar" id="gl-v2-pl-changebar" role="status" hidden>
+        <i class="ph ph-arrows-left-right" aria-hidden="true"></i>
+        <span class="gl-v2-pl-changebar-text" id="gl-v2-pl-changebar-text"></span>
+        <button type="button" class="gl-v2-pl-changebar-undo" id="gl-v2-pl-undo">Ongedaan maken</button>
+        <button type="button" class="gl-v2-icon-btn gl-v2-pl-changebar-close" id="gl-v2-pl-changebar-close" aria-label="Melding sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+    </div>
+
+    @* Lege staat *@
+    <div class="gl-v2-card gl-v2-pl-empty" id="gl-v2-pl-empty" hidden>
+        <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+            <span class="gl-v2-empty-state-icon"><i class="ph ph-chart-bar-horizontal" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-empty-state-title">Nog geen planning voor @Model.ProjectName</h2>
+            <p class="gl-v2-empty-state-desc">Bouw de planning op met fases en taken, met een duur in werkdagen en voorgangers. Alles schuift vanzelf mee.</p>
+            @if (Model.CanWrite)
+            {
+                <div class="gl-v2-pl-empty-actions">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-primary js-pl-add-taak"><i class="ph ph-plus" aria-hidden="true"></i>Eerste taak toevoegen</button>
+                    <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-pl-add-fase"><i class="ph ph-stack-plus" aria-hidden="true"></i>Eerst een fase maken</button>
+                </div>
+            }
+        </div>
+    </div>
+
+    @* Lijst en Gantt *@
+    <div class="gl-v2-card gl-v2-pl-card" id="gl-v2-pl-card" hidden>
+        <div class="gl-v2-pl-toolbar">
+            <div class="gl-v2-segmented is-sm gl-v2-pl-zoom" id="gl-v2-pl-zoom" role="group" aria-label="Tijdschaal">
+                <button type="button" data-scale="dag" aria-pressed="false">Dag</button>
+                <button type="button" data-scale="week" class="is-active" aria-pressed="true">Week</button>
+                <button type="button" data-scale="maand" aria-pressed="false">Maand</button>
+            </div>
+            <button type="button" class="gl-v2-pl-toggle" id="gl-v2-pl-toggle-kritiek" aria-pressed="false"><i class="ph ph-lightning" aria-hidden="true"></i>Kritiek pad</button>
+            <button type="button" class="gl-v2-pl-toggle" id="gl-v2-pl-toggle-basis" aria-pressed="false" hidden><i class="ph ph-line-segment" aria-hidden="true"></i>Basisplanning</button>
+            <button type="button" class="gl-v2-pl-toggle" id="gl-v2-pl-toggle-verlet" aria-pressed="true" title="Verletdagen tellen als niet-werkdag. Uitzetten = simulatie zonder verlet."><i class="ph ph-cloud-rain" aria-hidden="true"></i>Verlet</button>
+            <span class="gl-v2-pl-toolbar-spacer"></span>
+            <button type="button" class="gl-v2-btn gl-v2-btn-text gl-v2-pl-small" id="gl-v2-pl-today"><i class="ph ph-crosshair" aria-hidden="true"></i>Vandaag</button>
+            <button type="button" class="gl-v2-btn gl-v2-btn-text gl-v2-pl-small" id="gl-v2-pl-collapse"><i class="ph ph-arrows-in-line-vertical" aria-hidden="true"></i><span>Fases inklappen</span></button>
+            @if (Model.CanWrite)
+            {
+                <button type="button" class="gl-v2-btn gl-v2-btn-text gl-v2-pl-small" id="gl-v2-pl-basis-set" title="Legt de huidige planning vast als basisplanning"><i class="ph ph-bookmark-simple" aria-hidden="true"></i><span>Basis vastleggen</span></button>
+            }
+        </div>
+        <div class="gl-v2-pl-scroll" id="gl-v2-pl-scroll">
+            <div class="gl-v2-pl-list" id="gl-v2-pl-list" role="table" aria-label="Taken en fases"></div>
+            <div class="gl-v2-pl-chart" id="gl-v2-pl-gantt"></div>
+        </div>
+        <div class="gl-v2-pl-legend" aria-hidden="true">
+            <span><i class="lg lg-task"></i>taak</span>
+            <span><i class="lg lg-phase"></i>fase</span>
+            <span><i class="lg lg-ms"></i>mijlpaal</span>
+            <span><i class="lg lg-crit"></i>kritiek</span>
+            <span><i class="lg lg-shift"></i>verschoven</span>
+            <span><i class="lg lg-base"></i>basis</span>
+            <span><i class="lg lg-nw"></i>weekend</span>
+            <span><i class="lg lg-verlof"></i>feestdag of verlof</span>
+            <span><i class="lg lg-verlet"></i>verlet</span>
+        </div>
+    </div>
+
+    @* Zijpaneel: taak of fase toevoegen/bewerken *@
+    <div class="gl-v2-pl-backdrop" id="gl-v2-pl-backdrop" hidden></div>
+    <aside class="gl-v2-pl-panel" id="gl-v2-pl-panel" aria-labelledby="gl-v2-pl-panel-title" aria-hidden="true" hidden>
+        <header class="gl-v2-pl-panel-head">
+            <div class="gl-v2-stack">
+                <span class="gl-v2-pl-panel-kicker" id="gl-v2-pl-panel-kicker"></span>
+                <h2 class="gl-v2-pl-panel-title" id="gl-v2-pl-panel-title"></h2>
+                <span class="gl-v2-pl-panel-sub" id="gl-v2-pl-panel-sub"></span>
+            </div>
+            <button type="button" class="gl-v2-icon-btn" id="gl-v2-pl-panel-close" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+        </header>
+        <form class="gl-v2-pl-panel-body" id="gl-v2-pl-form" novalidate autocomplete="off">
+            <div class="gl-v2-notice gl-v2-notice-compact is-danger" id="gl-v2-pl-form-error" role="alert" hidden>
+                <i class="ph ph-x-circle" aria-hidden="true"></i><span></span>
+            </div>
+
+            <div class="gl-v2-pl-info" id="gl-v2-pl-info" hidden></div>
+
+            <div class="gl-v2-field">
+                <label class="gl-v2-field-label" for="gl-v2-pl-f-naam">Naam <span class="gl-v2-field-req" aria-hidden="true">*</span></label>
+                <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gl-v2-pl-f-naam" maxlength="300" /></div>
+            </div>
+
+            @* Taak *@
+            <div class="gl-v2-pl-only-taak">
+                <div class="gl-v2-pl-row2">
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="gl-v2-pl-f-duur">Duur</label>
+                        <div class="gl-v2-field-box">
+                            <input type="number" class="gl-v2-field-input is-tabular" id="gl-v2-pl-f-duur" min="0" max="2000" step="1" inputmode="numeric" />
+                            <span class="gl-v2-field-suffix">werkdagen</span>
+                        </div>
+                        <span class="gl-v2-field-help">0 = mijlpaal</span>
+                    </div>
+                    @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-f-fase", "fase", "Fase"))
+                </div>
+                <div class="gl-v2-field" id="gl-v2-pl-wrap-voor">
+                    <label class="gl-v2-field-label" for="gl-v2-pl-f-voor">Voorgangers</label>
+                    <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gl-v2-pl-f-voor" placeholder="bv. 5.1  of  5.1SS  of  5.1FS+3d" /></div>
+                    <span class="gl-v2-field-help">Het nummer van de taak, daarna het soort (FS, SS, FF, SF) en een wachttijd in werkdagen, ook negatief. Meerdere voorgangers scheid je met ;</span>
+                </div>
+                <div id="gl-v2-pl-wrap-plaats">
+                    @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-f-plaats", "plaats", "Plaats in de fase"))
+                </div>
+                <div class="gl-v2-pl-row2">
+                    @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-f-bep", "beperking", "Beperking"))
+                    @await Html.PartialAsync("GlV2/_DateField", Date("gl-v2-pl-f-bepdatum", "beperkingDatum", "Datum van de beperking"))
+                </div>
+                @await Html.PartialAsync("GlV2/_DateField", Date("gl-v2-pl-f-deadline", "deadline", "Deadline (optioneel)"))
+                <div class="gl-v2-pl-row2" id="gl-v2-pl-wrap-werkelijk">
+                    @await Html.PartialAsync("GlV2/_DateField", Date("gl-v2-pl-f-wstart", "werkelijkStart", "Werkelijke start"))
+                    @await Html.PartialAsync("GlV2/_DateField", Date("gl-v2-pl-f-weinde", "werkelijkEinde", "Werkelijk einde"))
+                </div>
+                <div class="gl-v2-pl-row2" id="gl-v2-pl-wrap-voortgang">
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="gl-v2-pl-f-pct">Voortgang</label>
+                        <div class="gl-v2-field-box">
+                            <input type="number" class="gl-v2-field-input is-tabular" id="gl-v2-pl-f-pct" min="0" max="100" step="5" inputmode="numeric" />
+                            <span class="gl-v2-field-suffix">%</span>
+                        </div>
+                    </div>
+                    @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-f-wie", "verantwoordelijke", "Verantwoordelijke"))
+                </div>
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="gl-v2-pl-f-notitie">Notitie</label>
+                    <div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea class="gl-v2-field-input" id="gl-v2-pl-f-notitie" rows="3" maxlength="1000"></textarea></div>
+                </div>
+            </div>
+
+            @* Fase *@
+            <div class="gl-v2-pl-only-fase" hidden>
+                <div id="gl-v2-pl-wrap-faseplaats">
+                    @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-f-faseplaats", "faseplaats", "Plaats in de planning", "Een deelfase komt binnen een andere fase, bv. Buitenschrijnwerk binnen Technieken."))
+                </div>
+                <div id="gl-v2-pl-wrap-eerste">
+                    <div class="gl-v2-pl-row2">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="gl-v2-pl-f-eerste">Eerste taak in deze fase</label>
+                            <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gl-v2-pl-f-eerste" maxlength="300" /></div>
+                        </div>
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="gl-v2-pl-f-eerste-duur">Duur</label>
+                            <div class="gl-v2-field-box">
+                                <input type="number" class="gl-v2-field-input is-tabular" id="gl-v2-pl-f-eerste-duur" min="0" max="2000" value="1" />
+                                <span class="gl-v2-field-suffix">werkdagen</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="gl-v2-field">
+                        <label class="gl-v2-field-label" for="gl-v2-pl-f-startna">De fase start na</label>
+                        <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gl-v2-pl-f-startna" placeholder="bv. 4.2  of  5.1FS+2d" /></div>
+                        <span class="gl-v2-field-help">Zonder voorganger start de fase op de eerste projectdag. Een fase is een groep: ze bestaat uit taken en neemt hun begin en einde over.</span>
+                    </div>
+                </div>
+                <div class="gl-v2-pl-lot" id="gl-v2-pl-wrap-lot">
+                    @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-f-lot", "lot", "Budgetlot (optioneel)", "Koppelt de fase aan een lot uit het budget."))
+                    <label class="gl-v2-toggle-row" for="gl-v2-pl-f-teltmee">
+                        <input type="checkbox" id="gl-v2-pl-f-teltmee" class="gl-v2-toggle-switch" />
+                        <span class="gl-v2-toggle-track" aria-hidden="true"></span>
+                        <span class="gl-v2-toggle-text">
+                            <span class="gl-v2-toggle-label">Telt mee voor de fysieke voortgang</span>
+                            <span class="gl-v2-toggle-hint">De voortgang van de taken in deze fase vervangt dan de schatting op basis van facturen voor dit lot.</span>
+                        </span>
+                    </label>
+                </div>
+            </div>
+        </form>
+        <footer class="gl-v2-pl-panel-foot">
+            @if (Model.CanDelete)
+            {
+                <button type="button" class="gl-v2-btn gl-v2-btn-text gl-v2-pl-delete" id="gl-v2-pl-panel-delete" hidden><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</button>
+            }
+            <span class="gl-v2-pl-panel-foot-spacer"></span>
+            <button type="button" class="gl-v2-btn gl-v2-btn-text" id="gl-v2-pl-panel-cancel">Annuleren</button>
+            <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-pl-panel-again" hidden>Toevoegen en nog één</button>
+            <button type="submit" form="gl-v2-pl-form" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-pl-panel-save"><i class="ph ph-check" aria-hidden="true"></i><span>Opslaan</span></button>
+        </footer>
+    </aside>
+</div>
+
+<div class="gl-v2-menu" id="gl-v2-pl-menu" role="menu" aria-label="Acties voor deze rij"></div>
+
+@await Html.PartialAsync("GlV2/_BevestigModal")
+
+@section PageScripts
+{
+    <script id="gl-v2-pl-config" type="application/json">
+    {
+        "projectId": @Model.ProjectId,
+        "commandoUrl": "@Url.Action("Commando", "ProjectPlanning", new { projectId = Model.ProjectId })",
+        "staatUrl": "@Url.Action("Staat", "ProjectPlanning", new { projectId = Model.ProjectId })",
+        "staat": @Html.Raw(Model.StaatJson)
+    }
+    </script>
+    @Html.AntiForgeryToken()
+    <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-gantt.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-projecten-planning.js" asp-append-version="true"></script>
+}

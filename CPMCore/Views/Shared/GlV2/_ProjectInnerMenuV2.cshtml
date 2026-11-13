@@ -50,6 +50,7 @@
     var canSeeUnits        = PermissionService.HasRead(PermissionCodes.ProjectsUnits);
     var canSeeTraject      = PermissionService.HasRead(PermissionCodes.ProjectsTraject);
     var canSeeDossiers     = PermissionService.HasRead(PermissionCodes.ProjectsDossiers);
+    var canSeePlanning     = PermissionService.HasRead(PermissionCodes.ProjectsPlanning);
     var canSeeIssues       = PermissionService.HasRead(PermissionCodes.ProjectsIssues);
     var canSeeDocs         = PermissionService.HasRead(PermissionCodes.ProjectsDocuments);
     var canSeeInsurances   = PermissionService.HasRead(PermissionCodes.ProjectsInsurances);
@@ -88,6 +89,7 @@
 
     var opvolgingItems = new List<(string Text, string Icon, string Href, bool Active, int? Count)>();
     if (canSeeTraject) opvolgingItems.Add(("Traject", "ph-flow-arrow", Url.Action("Index", "ProjectTraject", new { projectId = projectId }) ?? "#", IsHere("ProjectTraject"), CountFor("Traject")));
+    if (canSeePlanning) opvolgingItems.Add(("Planning", "ph-chart-bar-horizontal", Url.Action("Index", "ProjectPlanning", new { projectId = projectId }) ?? "#", IsHere("ProjectPlanning"), CountFor("Planning")));
     if (canSeeDossiers) opvolgingItems.Add(("Dossiers", "ph-folder-open", Url.Action("Index", "ProjectDossiers", new { projectId = projectId }) ?? "#", IsHere("ProjectDossiers"), CountFor("Dossiers")));
     if (canSeeIssues) opvolgingItems.Add(("Punten", "ph-list-checks", Url.Action("Index", "ProjectsIssues", new { projectId = projectId }) ?? "#", IsHere("ProjectsIssues"), CountFor("Punten")));
     if (canSeeIssues) opvolgingItems.Add(("Verslagen", "ph-notebook", Url.Action("Index", "ProjectVerslagen", new { projectId = projectId }) ?? "#", IsHere("ProjectVerslagen"), CountFor("Verslagen")));

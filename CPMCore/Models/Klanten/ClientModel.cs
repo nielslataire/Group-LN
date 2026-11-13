@@ -121,6 +121,8 @@ namespace CPMCore.Models.Klanten
                 _finalconstructiondate = value;
             }
         }
+        /// <summary>Het project heeft geen weerstation: de werkdagen/deadline rekenen dan zonder verlet.</summary>
+        public bool WeatherStationMissing { get; set; }
         private int _workingdaysleft;
         public int WorkingDaysLeft
         {

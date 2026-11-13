@@ -70,7 +70,7 @@
     gap: 11px;
     min-height: 46px;
     padding: 8px 0;
-    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    border-bottom: 1px solid rgba(139, 42, 42, .12);
 }
 .gl-v2-pcd-attention-item:last-child { border-bottom: 0; }
 .gl-v2-pcd-attention-icon { color: var(--gl-v2-danger); font-size: 16px; flex: none; }

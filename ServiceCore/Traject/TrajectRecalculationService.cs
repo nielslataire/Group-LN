@@ -93,7 +93,7 @@ public class TrajectRecalculationService : ITrajectRecalculationService
 
         // 2. streefdata herberekenen uit ankers (enkel waar geen handmatige Doeldatum staat)
         changed += HerberekenDoeldatums(traject.Mijlpalen.ToList(), ankerBySjabloonId,
-            traject.GestartOp ?? vandaag);
+            traject.GestartOp ?? vandaag, ctx.PlanningTaken, ctx.PlanningSecties);
 
         // 2b. relatieve streefdata (migratie 074): anker + N dagen, na de sjabloonankers zodat ketens kloppen
         changed += MijlpaalRelatief.Herbereken(traject.Mijlpalen.ToList());
@@ -175,11 +175,42 @@ public class TrajectRecalculationService : ITrajectRecalculationService
         };
     }
 
+    /// <summary>
+    /// Geplande einddatum uit de bouwplanning voor een mijlpaal met binding <c>PlanningTaak</c> of <c>PlanningSectie</c>
+    /// (de berekende <see cref="PlanningTaak.Einddatum"/>; voor een fase het laatste einde van haar taken en deelfases).
+    /// Null als de mijlpaal niet aan de planning hangt of de planning nog geen datums heeft.
+    /// </summary>
+    public static DateOnly? GeplandUitPlanning(Mijlpaal m, List<PlanningTaak> taken, List<PlanningSectie> secties)
+    {
+        if (m.BronBinding is not int b) return null;
+        var id = m.BronRefId ?? (int.TryParse((m.BronParam ?? "").Trim(), out var x) ? x : (int?)null);
+        if (id is null) return null;
+
+        if (b == (int)ComputedBinding.PlanningTaak)
+            return taken.FirstOrDefault(t => t.Id == id.Value)?.Einddatum;
+
+        if (b == (int)ComputedBinding.PlanningSectie)
+        {
+            var ids = new HashSet<int> { id.Value };
+            for (var gewijzigd = true; gewijzigd;)
+            {
+                gewijzigd = false;
+                foreach (var sec in secties)
+                    if (sec.ParentSectieId is int pid && ids.Contains(pid) && ids.Add(sec.Id)) gewijzigd = true;
+            }
+            return taken.Where(t => ids.Contains(t.PlanningSectieId) && t.Einddatum != null)
+                        .Select(t => t.Einddatum).DefaultIfEmpty(null).Max();
+        }
+        return null;
+    }
+
     /// <summary>Herberekent <see cref="Mijlpaal.DoeldatumBerekend"/>. Retourneert het aantal gewijzigde waarden.</summary>
     private static int HerberekenDoeldatums(
         List<Mijlpaal> mijlpalen,
         Dictionary<int, (string? Anker, int? Offset)> ankerBySjabloonId,
-        DateOnly anchorBase)
+        DateOnly anchorBase,
+        List<PlanningTaak> planningTaken,
+        List<PlanningSectie> planningSecties)
     {
         var byCode = mijlpalen.Where(m => !string.IsNullOrWhiteSpace(m.Code))
                               .ToLookup(m => m.Code!, StringComparer.OrdinalIgnoreCase);
@@ -204,6 +235,14 @@ public class TrajectRecalculationService : ITrajectRecalculationService
             {
                 if (m.Doeldatum != null) continue; // handmatig gezet — niet aanraken
                 if (nieuw.ContainsKey(m.Id)) continue;
+
+                // Gekoppeld aan de bouwplanning: de geplande einddatum van de taak (of fase) is de streefdatum.
+                if (GeplandUitPlanning(m, planningTaken, planningSecties) is DateOnly gepland)
+                {
+                    nieuw[m.Id] = gepland;
+                    changed = true;
+                    continue;
+                }
                 if (m.SjabloonMijlpaalId is not int smid || !ankerBySjabloonId.TryGetValue(smid, out var a)) continue;
 
                 var (ankerCode, offset) = a;

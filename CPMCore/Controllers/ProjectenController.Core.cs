@@ -414,6 +414,7 @@ namespace CPMCore.Controllers
                 model.StartDate = (DateOnly)model.Project.StartDateConstruction;
             else
                 model.StartDate = Service.GetProjectStartDateConstruction(model.Project.Id);
+            model.WeatherStationMissing = Service.GetProjectWeatherstation(model.Project.Id) == 0;
             model.WorkingDaysLeft = -9999;
             if (model.ExecutionDays != 0 && model.StartDate != DateOnly.MinValue)
             {

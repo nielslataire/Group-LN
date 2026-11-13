@@ -38,6 +38,15 @@
         ],
         "createdAt": "2026-10-27T11:16:30.505Z",
         "reason": "false positive: 3px left border on the hatched Outlook appointment block is specified in design-handoff CRM Mijn taken en Deadlines (meet blocks: border-left 3px solid project colour); assistant triage"
+      },
+      {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          "CPMCore/wwwroot/css/gl-v2/gantt.css"
+        ],
+        "createdAt": "2026-11-13T15:34:21.155Z",
+        "reason": "assistent: CSS-driehoekje (border-truc) voor de haakjes van een fasebalk in de Gantt, geen accentrand op een kaart; niet door gebruiker bevestigd"
       }
     ]
   }

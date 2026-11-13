@@ -1,0 +1,90 @@
+/* gl-v2 component — Gantt-tijdlijn (nov. 2026). Markup en gedrag: js/gl-v2-gantt.js; ontwerp: design-handoff "CRM Planning" 59a.
+   Wordt door de pagina geladen via @section PageStyle (niet door _LayoutV2), dus alles staat onder .gl-v2 voor specificiteit boven de shell.
+   Kleur is nooit de enige drager: kritiek = rood + diagonale arcering, vastgepind = punaise, verschoven = gouden rand, klaar = vinkje-donker. */
+
+.gl-v2 .gl-v2-gantt { position: relative; flex: 1 1 auto; min-width: 0; }
+.gl-v2 .gl-v2-gantt-inner { position: relative; }
+
+/* Kop: twee rijen van 24px (samen de 48px van de lijstkop) */
+.gl-v2 .gl-v2-gantt-head { position: relative; height: 48px; background: var(--gl-v2-bg, #F2F5EF); border-bottom: 1px solid var(--gl-v2-hairline, rgba(44, 59, 42, .12)); }
+.gl-v2 .gl-v2-gantt-head-top, .gl-v2 .gl-v2-gantt-head-bottom { position: relative; height: 24px; }
+.gl-v2 .gl-v2-gantt-h1, .gl-v2 .gl-v2-gantt-h2 {
+    position: absolute; top: 0; height: 24px; display: flex; align-items: center; justify-content: center;
+    font: 600 10.5px var(--gl-v2-font-sans, 'IBM Plex Sans', sans-serif); color: var(--gl-v2-muted, #5a6b58);
+    border-left: 1px solid var(--gl-v2-hairline-soft, rgba(44, 59, 42, .08)); overflow: hidden; white-space: nowrap; text-transform: lowercase;
+}
+.gl-v2 .gl-v2-gantt-h1 { justify-content: flex-start; padding-left: 8px; text-transform: none; color: var(--gl-v2-ink, #2C3B2A); letter-spacing: .02em; }
+.gl-v2 .gl-v2-gantt-h2 { font-weight: 500; font-variant-numeric: tabular-nums; }
+.gl-v2 .gl-v2-gantt-h2.is-weekend { color: var(--gl-v2-muted-light, #9aa898); }
+
+/* Lichaam: rij-strepen, niet-werkdagen, lijnen */
+.gl-v2 .gl-v2-gantt-body {
+    position: relative;
+    background-image: repeating-linear-gradient(180deg, transparent 0 calc(var(--gl-v2-gantt-rh, 34px) - 1px), var(--gl-v2-hairline-soft, rgba(44, 59, 42, .08)) calc(var(--gl-v2-gantt-rh, 34px) - 1px) var(--gl-v2-gantt-rh, 34px));
+}
+.gl-v2 .gl-v2-gantt-nw { position: absolute; top: 0; bottom: 0; pointer-events: none; }
+.gl-v2 .gl-v2-gantt-nw.is-weekend { background: rgba(44, 59, 42, .045); }
+.gl-v2 .gl-v2-gantt-nw.is-verlof { background: repeating-linear-gradient(135deg, rgba(201, 169, 110, .30) 0 4px, rgba(201, 169, 110, .12) 4px 8px); }
+.gl-v2 .gl-v2-gantt-nw.is-verlet { background: repeating-linear-gradient(135deg, rgba(74, 112, 160, .30) 0 4px, rgba(74, 112, 160, .10) 4px 8px); }
+.gl-v2 .gl-v2-gantt-svg { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 2; overflow: visible; }
+
+.gl-v2 .gl-v2-gantt-link { fill: none; stroke: var(--gl-v2-muted-light, #9aa898); stroke-width: 1.2; }
+.gl-v2 .gl-v2-gantt-link.is-critical { stroke: var(--gl-v2-danger, #8B2A2A); }
+.gl-v2 .gl-v2-gantt-arrow { fill: var(--gl-v2-muted-light, #9aa898); }
+.gl-v2 .gl-v2-gantt-arrow.is-critical { fill: var(--gl-v2-danger, #8B2A2A); }
+
+/* Balken (elke balk is een knop met een volledige aria-omschrijving) */
+.gl-v2 .gl-v2-gantt-bar {
+    position: absolute; z-index: 4; padding: 0; margin: 0; border: 0; cursor: pointer; overflow: hidden;
+    background: var(--gl-v2-accent-sage, #7A9E6E); border-radius: 4px;
+}
+.gl-v2 .gl-v2-gantt-bar:hover { filter: brightness(.95); }
+.gl-v2 .gl-v2-gantt-bar:focus-visible { outline: 2px solid var(--gl-v2-gold, #C9A96E); outline-offset: 2px; }
+.gl-v2 .gl-v2-gantt-progress { position: absolute; left: 0; top: 0; bottom: 0; background: var(--gl-v2-primary, #00532D); border-radius: 4px 0 0 4px; }
+.gl-v2 .gl-v2-gantt-bar.is-done { background: var(--gl-v2-primary, #00532D); }
+.gl-v2 .gl-v2-gantt-bar.is-critical {
+    background: repeating-linear-gradient(135deg, #B05252 0 5px, #C57272 5px 10px);
+}
+.gl-v2 .gl-v2-gantt-bar.is-critical .gl-v2-gantt-progress { background: var(--gl-v2-danger, #8B2A2A); }
+.gl-v2 .gl-v2-gantt-bar.is-shifted { box-shadow: 0 0 0 2px var(--gl-v2-gold, #C9A96E); overflow: visible; }
+.gl-v2 .gl-v2-gantt-pin { position: absolute; left: 3px; top: 3px; font-size: 12px; color: #fff; }
+
+/* Fase = smalle donkere balk met haakjes */
+.gl-v2 .gl-v2-gantt-bar.is-phase { background: var(--gl-v2-muted-soft, #4A5B48); border-radius: 1px; overflow: visible; }
+.gl-v2 .gl-v2-gantt-bar.is-phase::before, .gl-v2 .gl-v2-gantt-bar.is-phase::after {
+    content: ""; position: absolute; top: 100%; width: 0; height: 0; border-top: 6px solid var(--gl-v2-muted-soft, #4A5B48);
+}
+.gl-v2 .gl-v2-gantt-bar.is-phase::before { left: 0; border-right: 6px solid transparent; }
+.gl-v2 .gl-v2-gantt-bar.is-phase::after { right: 0; border-left: 6px solid transparent; }
+.gl-v2 .gl-v2-gantt-bar.is-phase .gl-v2-gantt-progress { background: var(--gl-v2-ink, #2C3B2A); border-radius: 1px; }
+.gl-v2 .gl-v2-gantt-bar.is-phase.is-critical { background: var(--gl-v2-danger, #8B2A2A); }
+
+/* Mijlpaal = ruit */
+.gl-v2 .gl-v2-gantt-bar.is-milestone {
+    width: 16px; height: 16px; border-radius: 2px; transform: rotate(45deg) scale(.78); background: var(--gl-v2-ink, #2C3B2A); overflow: visible;
+}
+.gl-v2 .gl-v2-gantt-bar.is-milestone.is-critical { background: var(--gl-v2-danger, #8B2A2A); }
+.gl-v2 .gl-v2-gantt-bar.is-milestone.is-done { background: var(--gl-v2-primary, #00532D); }
+
+.gl-v2 .gl-v2-gantt-label {
+    position: absolute; z-index: 3; font: 450 11px/16px var(--gl-v2-font-sans, 'IBM Plex Sans', sans-serif); color: var(--gl-v2-muted-soft, #4A5B48);
+    white-space: nowrap; pointer-events: none;
+}
+
+/* Basisplanning: grijze lijn onder de balk, hol ruitje voor een mijlpaal */
+.gl-v2 .gl-v2-gantt-base { position: absolute; z-index: 3; height: 4px; border-radius: 2px; background: var(--gl-v2-muted-light, #9aa898); pointer-events: none; }
+.gl-v2 .gl-v2-gantt-base-ms { position: absolute; z-index: 3; width: 9px; height: 9px; transform: rotate(45deg); border: 1.5px solid #8a978a; background: #fff; pointer-events: none; }
+
+/* Vandaag en deadline */
+.gl-v2 .gl-v2-gantt-today, .gl-v2 .gl-v2-gantt-deadline { position: absolute; top: 0; bottom: 0; width: 0; z-index: 5; pointer-events: none; }
+.gl-v2 .gl-v2-gantt-today { border-left: 2px solid var(--gl-v2-gold, #C9A96E); }
+.gl-v2 .gl-v2-gantt-deadline { border-left: 2px dashed var(--gl-v2-danger, #8B2A2A); }
+.gl-v2 .gl-v2-gantt-today b, .gl-v2 .gl-v2-gantt-deadline b {
+    position: absolute; top: 0; left: 3px; font: 600 9.5px/1 var(--gl-v2-font-sans, 'IBM Plex Sans', sans-serif); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap;
+}
+.gl-v2 .gl-v2-gantt-today b { color: #8A6A32; }
+.gl-v2 .gl-v2-gantt-deadline b { color: var(--gl-v2-danger, #8B2A2A); top: 14px; }
+
+@media (prefers-reduced-motion: no-preference) {
+    .gl-v2 .gl-v2-gantt-bar { transition: box-shadow .15s ease, filter .12s ease; }
+}

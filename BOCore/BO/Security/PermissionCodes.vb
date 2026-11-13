@@ -38,6 +38,7 @@ Public NotInheritable Class PermissionCodes
     Public Const ProjectsContactsExport As String = "Projects.ContactsExport"
     Public Const ProjectsTraject As String = "Projects.Traject"
     Public Const ProjectsDossiers As String = "Projects.Dossiers"
+    Public Const ProjectsPlanning As String = "Projects.Planning"
     Public Const MijnTaken As String = "MijnTaken"
     Public Const PortfolioDeadlines As String = "PortfolioDeadlines"
 

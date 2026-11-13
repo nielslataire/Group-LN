@@ -291,8 +291,21 @@
     var resizeTimer = null;
     window.addEventListener("resize", function () { clearTimeout(resizeTimer); resizeTimer = setTimeout(syncPageLength, 150); });
 
+    // Filters, zoekterm, sortering en pagina onthouden (projectbrede module gl-v2-table-state.js).
+    var tableState = window.GlV2TableState ? window.GlV2TableState.attach({
+        table: table,
+        collect: function () {
+            var f = {}; Object.keys(filters).forEach(function (k) { if (val(k) !== filters[k].def) f[k] = val(k); });
+            return { q: search.value, f: f };
+        },
+        restore: function (s) {
+            if (s.q) search.value = s.q;
+            Object.keys(s.f || {}).forEach(function (k) { if (filters[k] && filters[k].el) setFilter(k, s.f[k]); });
+        }
+    }) : null;
     refreshChrome();
     table.draw();
     syncPageLength();
+    if (tableState) tableState.finish();
     if (card) card.classList.add("is-ready");
 })();

@@ -500,4 +500,25 @@
     document.addEventListener("keydown", function (e) {
         if (e.key === "Escape") closeAllRowMenus();
     });
+
+    // Filters (facturatiebedrijf, status, activiteiten), zoekterm, sortering en pagina onthouden (projectbrede module gl-v2-table-state.js).
+    if (window.GlV2TableState) {
+        var tableState = window.GlV2TableState.attach({
+            table: table,
+            collect: function () {
+                return { q: $("#search-term").val() || "", issuer: selectedIssuerId, status: selectedStatus, acts: selectedActivityIds.slice() };
+            },
+            restore: function (s) {
+                if (s.q) { $("#search-term").val(s.q); table.search(s.q); }
+                if (s.issuer) issuerSelectApi.select(s.issuer);
+                if (s.status && s.status !== "active") statusSelectApi.select(s.status);
+                if (s.acts && s.acts.length) selectedActivityIds = s.acts.map(String);
+            }
+        });
+        table.draw();
+        syncTablePageLength();
+        renderMobileCards();
+        updateFilterChips();
+        tableState.finish();
+    }
 })();

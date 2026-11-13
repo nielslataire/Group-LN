@@ -128,7 +128,10 @@ public class HelpContentService : IHelpContentService
 
     private List<HelpArticle> EnsureLoaded()
     {
-        if (_articles != null && (!_env.IsDevelopment() || DateTime.UtcNow - _loadedAtUtc < TimeSpan.FromSeconds(2)))
+        // Een lege lijst wordt nooit onthouden en een gevulde lijst vernieuwt zichzelf: zo blijft het Helpcentrum niet leeg
+        // als de app herstartte terwijl de map HelpContent nog onvolledig geüpload was (online werd de lege lijst anders tot de volgende herstart bewaard).
+        var maxAge = _env.IsDevelopment() ? TimeSpan.FromSeconds(2) : TimeSpan.FromMinutes(10);
+        if (_articles != null && _articles.Count > 0 && DateTime.UtcNow - _loadedAtUtc < maxAge)
             return _articles;
 
         lock (_lock)
