@@ -25,6 +25,11 @@ public partial class PlanningSectie
     /// <summary>Opt-in: de taakvoortgang van deze fase vervangt de schatting op basis van facturen voor <see cref="ActivityGroup"/> (migratie 144).</summary>
     public bool TeltMeeVoorVoortgang { get; set; }
 
+    /// <summary>De planning (hoofdplanning of bouwdeel) waarin deze fase zit (migratie 145). Null = hoofdplanning van het project.</summary>
+    public int? BouwPlanningId { get; set; }
+
+    public virtual BouwPlanning BouwPlanning { get; set; }
+
     public virtual PlanningSectie ParentSectie { get; set; }
 
     public virtual ICollection<PlanningSectie> DeelSecties { get; set; } = new List<PlanningSectie>();

@@ -65,6 +65,9 @@
 
 <div id="gl-v2-pl-root" class="gl-v2-pl" data-project-id="@Model.ProjectId" data-can-write="@(Model.CanWrite ? "1" : "0")" data-can-delete="@(Model.CanDelete ? "1" : "0")" data-can-link="@(Model.CanLinkTraject ? "1" : "0")">
 
+    @* Tabs: de plannings van het project (hoofdplanning en één per bouwdeel) *@
+    <div class="gl-v2-pl-tabs" id="gl-v2-pl-tabs" role="tablist" aria-label="Plannings van dit project" hidden></div>
+
     @* Kop: kerngegevens van de planning *@
     <div class="gl-v2-card gl-v2-pl-kop" id="gl-v2-pl-kop" aria-live="polite"></div>
 
@@ -83,7 +86,7 @@
     <div class="gl-v2-card gl-v2-pl-empty" id="gl-v2-pl-empty" hidden>
         <div class="gl-v2-empty-state gl-v2-empty-state-inline">
             <span class="gl-v2-empty-state-icon"><i class="ph ph-chart-bar-horizontal" aria-hidden="true"></i></span>
-            <h2 class="gl-v2-empty-state-title">Nog geen planning voor @Model.ProjectName</h2>
+            <h2 class="gl-v2-empty-state-title" id="gl-v2-pl-empty-title" data-project="@Model.ProjectName">Nog geen planning voor @Model.ProjectName</h2>
             <p class="gl-v2-empty-state-desc">Bouw de planning op met fases en taken, met een duur in werkdagen en voorgangers. Alles schuift vanzelf mee.</p>
             @if (Model.CanWrite)
             {
@@ -173,7 +176,7 @@
                 <div class="gl-v2-field" id="gl-v2-pl-wrap-voor">
                     <label class="gl-v2-field-label" for="gl-v2-pl-f-voor">Voorgangers</label>
                     <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gl-v2-pl-f-voor" placeholder="bv. 5.1  of  5.1SS  of  5.1FS+3d" /></div>
-                    <span class="gl-v2-field-help">Het nummer van de taak, daarna het soort (FS, SS, FF, SF) en een wachttijd in werkdagen, ook negatief. Meerdere voorgangers scheid je met ;</span>
+                    <span class="gl-v2-field-help">Het nummer van de taak, daarna het soort (FS, SS, FF, SF) en een wachttijd in werkdagen, ook negatief. Meerdere voorgangers scheid je met ;<span id="gl-v2-pl-voor-help-hoofd" hidden> Een taak uit de hoofdplanning schrijf je met H: ervoor, bv. H:3.1</span></span>
                 </div>
                 <div id="gl-v2-pl-wrap-plaats">
                     @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-f-plaats", "plaats", "Plaats in de fase"))
@@ -204,6 +207,15 @@
                     <label class="gl-v2-field-label" for="gl-v2-pl-f-notitie">Notitie</label>
                     <div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea class="gl-v2-field-input" id="gl-v2-pl-f-notitie" rows="3" maxlength="1000"></textarea></div>
                 </div>
+            </div>
+
+            @* Planning (hoofdplanning of bouwdeel) *@
+            <div class="gl-v2-pl-only-planning" hidden>
+                <div id="gl-v2-pl-wrap-bouwdeel">
+                    @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-f-bouwdeel", "bouwdeel", "Bouwdeel", "Optioneel. De woning of het gebouw (betalingsgroep) waar deze planning bij hoort. Elk bouwdeel heeft hoogstens één planning."))
+                </div>
+                @await Html.PartialAsync("GlV2/_DateField", Date("gl-v2-pl-f-pstart", "startDatum", "Startdatum van de planning (optioneel)"))
+                <span class="gl-v2-field-help">Eerste dag waarop deze planning mag beginnen. Leeg = de aanvangsdatum van het project. Een voorganger kan haar nog later laten starten.</span>
             </div>
 
             @* Fase *@

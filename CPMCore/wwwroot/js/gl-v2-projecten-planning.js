@@ -48,6 +48,55 @@
         return out;
     }
 
+    // ── Tabs: de plannings van het project ──
+    function actief() {
+        var lijst = state.planningen || [];
+        for (var i = 0; i < lijst.length; i++) if (lijst[i].id === state.actiefPlanningId) return lijst[i];
+        return lijst[0] || null;
+    }
+    function renderTabs() {
+        var host = $("gl-v2-pl-tabs"), lijst = state.planningen || [];
+        if (lijst.length <= 1 && !canWrite) { host.hidden = true; return; }
+        host.hidden = false;
+        var html = lijst.map(function (p) {
+            var on = p.id === state.actiefPlanningId;
+            return "<button type=\"button\" class=\"gl-v2-pl-tab\" role=\"tab\" aria-selected=\"" + (on ? "true" : "false") + "\" data-planning=\"" + p.id + "\" title=\"" + esc(p.bouwdeelNaam ? "Bouwdeel: " + p.bouwdeelNaam : (p.isHoofd ? "Geldt voor het hele project" : "Geen bouwdeel gekoppeld")) + "\">" +
+                "<i class=\"ph " + (p.isHoofd ? "ph-house-line" : "ph-buildings") + "\" aria-hidden=\"true\"></i><span>" + esc(p.naam) + "</span>" +
+                (p.aantalTaken ? "<small>" + p.aantalTaken + "</small>" : "") + "</button>";
+        }).join("");
+        if (canWrite) {
+            html += "<button type=\"button\" class=\"gl-v2-pl-tab-add js-pl-add-planning\"><i class=\"ph ph-plus\" aria-hidden=\"true\"></i>Planning</button>";
+            html += "<button type=\"button\" class=\"gl-v2-pl-tab-edit js-pl-edit-planning\" title=\"Deze planning instellen\" aria-label=\"Deze planning instellen\"><i class=\"ph ph-gear-six\" aria-hidden=\"true\"></i></button>";
+        }
+        host.innerHTML = html;
+    }
+    function zetUrl() {
+        try {
+            var a = actief(), u = new URL(window.location.href);
+            if (a && !a.isHoofd && a.id) u.searchParams.set("planningId", a.id); else u.searchParams.delete("planningId");
+            window.history.replaceState(null, "", u);
+        } catch (e) { /* geen URL-geschiedenis: de pagina werkt ook zonder */ }
+    }
+    // Een andere planning: selectie, wijzigingsbalk en ongedaan maken horen bij de vorige
+    function resetView() {
+        selected = null; shifted = {}; lastUndo = null; undoIsRedo = false; firstRender = true;
+        $("gl-v2-pl-changebar").hidden = true;
+        zetUrl();
+    }
+    function switchPlanning(id) {
+        if (id === state.actiefPlanningId) return;
+        fetch(cfg.staatUrl + (cfg.staatUrl.indexOf("?") < 0 ? "?" : "&") + "planningId=" + id, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
+            .then(function (r) { if (!r.ok) throw new Error("De planning kon niet geladen worden."); return r.json(); })
+            .then(function (s) { state = s; resetView(); render(); })
+            .catch(function (e) { toast("danger", "Laden mislukt", e.message || "Controleer je verbinding en probeer opnieuw."); });
+    }
+    $("gl-v2-pl-tabs").addEventListener("click", function (e) {
+        var t = e.target.closest("[data-planning]");
+        if (t) { switchPlanning(parseInt(t.getAttribute("data-planning"), 10)); return; }
+        if (e.target.closest(".js-pl-add-planning")) openPlanning(false);
+        else if (e.target.closest(".js-pl-edit-planning")) openPlanning(true);
+    });
+
     // ── Kop ──
     function renderKop() {
         var k = state.kop || {};
@@ -61,11 +110,13 @@
         var basis = k.basisOp
             ? "<div><dt>Basisplanning</dt><dd>" + esc(k.basisOp) + (k.basisAfwijking ? "<small class=\"" + (k.basisAfwijking > 0 ? "is-late" : "") + "\">" + (k.basisAfwijking > 0 ? "+" : "−") + Math.abs(k.basisAfwijking) + " d</small>" : "") + "</dd></div>"
             : "";
+        var pl = actief(), meerdere = (state.planningen || []).length > 1;
+        var plStart = pl && pl.startDatum ? "<div><dt>Startdatum planning</dt><dd>" + fmtFull(pl.startDatum) + "</dd></div>" : "";
         el.innerHTML =
-            "<div class=\"gl-v2-pl-kop-title\"><h2>Bouwplanning</h2><span class=\"gl-v2-pl-chip\"><i class=\"ph " + (canWrite ? "ph-floppy-disk" : "ph-lock-simple") + "\" aria-hidden=\"true\"></i>" +
+            "<div class=\"gl-v2-pl-kop-title\"><h2>" + (meerdere && pl ? "Bouwplanning · " + esc(pl.naam) : "Bouwplanning") + "</h2><span class=\"gl-v2-pl-chip\"><i class=\"ph " + (canWrite ? "ph-floppy-disk" : "ph-lock-simple") + "\" aria-hidden=\"true\"></i>" +
             (canWrite ? "Wijzigingen worden meteen bewaard" : "Alleen lezen") + "</span></div>" +
             "<dl class=\"gl-v2-pl-meta\">" +
-            "<div><dt>Start</dt><dd>" + fmtFull(k.start) + "</dd></div>" +
+            plStart + "<div><dt>Start</dt><dd>" + fmtFull(k.start) + "</dd></div>" +
             "<div><dt>Einde</dt><dd class=\"" + (k.marge != null && k.marge < 0 ? "is-late" : "") + "\">" + fmtFull(k.einde) + "</dd></div>" +
             "<div><dt>Duur</dt><dd>" + dagen(k.duurWerkdagen || 0) + "</dd></div>" +
             "<div><dt>Deadline oplevering</dt>" + deadline + "</div>" +
@@ -154,6 +205,7 @@
         vis.forEach(function (r) {
             (r.voorgangerLinks || []).forEach(function (l) {
                 var van = rowByKey("t" + l.taakId);
+                if (!van) return; // voorganger uit de hoofdplanning: staat niet in deze grafiek
                 links.push({ from: "t" + l.taakId, to: r.sleutel, type: l.type, critical: !!(r.kritiek && van && van.kritiek) });
             });
         });
@@ -184,6 +236,10 @@
     // ── Alles tekenen ──
     function render() {
         var heeft = !!state.heeftPlanning && state.rijen.length > 0;
+        renderTabs();
+        var pl0 = actief(), emptyTitle = $("gl-v2-pl-empty-title");
+        emptyTitle.textContent = pl0 && !pl0.isHoofd ? "Nog geen taken in " + pl0.naam : "Nog geen planning voor " + emptyTitle.getAttribute("data-project");
+        $("gl-v2-pl-voor-help-hoofd").hidden = !pl0 || pl0.isHoofd;
         $("gl-v2-pl-empty").hidden = heeft;
         $("gl-v2-pl-card").hidden = !heeft;
         renderKop();
@@ -236,6 +292,7 @@
     function send(cmd, opts) {
         opts = opts || {};
         cmd.versie = state.versie || 0;
+        if (cmd.planningId === undefined) cmd.planningId = state.actiefPlanningId || 0;
         return fetch(cfg.commandoUrl, {
             method: "POST", credentials: "same-origin",
             headers: { "Content-Type": "application/json", "RequestVerificationToken": token(), "X-Requested-With": "XMLHttpRequest" },
@@ -255,6 +312,7 @@
             state.rijen.forEach(function (r) { vorige[r.sleutel] = true; });
             res._nieuw = res.staat.rijen.filter(function (r) { return !vorige[r.sleutel]; });
             state = res.staat;
+            if (cmd.type.indexOf("planning") === 0) resetView();
             shifted = {};
             (res.verschoven || []).forEach(function (k) { shifted[k] = true; });
             if (cmd.type !== "herstel") { lastUndo = res.undo; undoIsRedo = false; }
@@ -555,9 +613,38 @@
     }
     function formError(msg) { var el = $("gl-v2-pl-form-error"); el.querySelector("span").textContent = msg; el.hidden = false; el.scrollIntoView({ block: "nearest" }); }
 
-    function taakVorm(on) {
-        document.querySelector(".gl-v2-pl-only-taak").hidden = !on;
-        document.querySelector(".gl-v2-pl-only-fase").hidden = on;
+    function zetVorm(soort) {
+        document.querySelector(".gl-v2-pl-only-taak").hidden = soort !== "taak";
+        document.querySelector(".gl-v2-pl-only-fase").hidden = soort !== "fase";
+        document.querySelector(".gl-v2-pl-only-planning").hidden = soort !== "planning";
+    }
+    function taakVorm(on) { zetVorm(on ? "taak" : "fase"); }
+
+    // ── Planning (hoofdplanning of bouwdeel) toevoegen of instellen ──
+    function openPlanning(bestaand) {
+        if (!canWrite) return;
+        var p = bestaand ? actief() : null;
+        if (bestaand && !p) return;
+        panel = { mode: bestaand ? "planning-bewerken" : "planning-nieuw", id: p ? p.id : null, isHoofd: !!(p && p.isHoofd) };
+        zetVorm("planning");
+        $("gl-v2-pl-info").hidden = true;
+        $("gl-v2-pl-f-naam").value = p ? p.naam : "";
+        var vrij = (state.bouwdelen || []).filter(function (b) { return b.planningId == null || (p && b.planningId === p.id); })
+            .map(function (b) { return { value: String(b.id), text: b.naam + (b.aantalEenheden ? " · " + b.aantalEenheden + (b.aantalEenheden === 1 ? " eenheid" : " eenheden") : "") }; });
+        setSelect("gl-v2-pl-f-bouwdeel", vrij, p && p.bouwdeelId != null ? String(p.bouwdeelId) : "", "Geen bouwdeel");
+        $("gl-v2-pl-wrap-bouwdeel").hidden = panel.isHoofd;
+        setDate("gl-v2-pl-f-pstart", p ? p.startDatum : "");
+        var del = $("gl-v2-pl-panel-delete"); if (del) del.hidden = !(canDelete && p && !p.isHoofd && p.id);
+        $("gl-v2-pl-panel-again").hidden = true;
+        $("gl-v2-pl-panel-save").querySelector("span").textContent = bestaand ? "Opslaan" : "Planning toevoegen";
+        showPanel("PLANNING", bestaand ? p.naam : "Nieuwe planning", bestaand ? (p.isHoofd ? "Hoofdplanning: geldt voor het hele project" : (p.bouwdeelNaam ? "Bouwdeel " + p.bouwdeelNaam : "")) : "Een planning per woning of gebouw, naast de hoofdplanning");
+    }
+    function vraagVerwijderPlanning(p) {
+        var n = p.aantalTaken || 0;
+        var desc = "De planning " + p.naam + (n ? " en haar " + n + (n === 1 ? " taak" : " taken") : "") + " worden verwijderd. Taken in andere plannings die erop wachten verliezen deze voorganger. Dit kan je niet ongedaan maken.";
+        var run = function () { send({ type: "planningVerwijder", planningId: p.id }); closePanel(); };
+        if (window.GlV2Bevestig) window.GlV2Bevestig({ title: "Planning verwijderen?", desc: desc, ok: "Verwijderen", tone: "danger", icon: "ph-trash" }).then(function (ok) { if (ok) run(); });
+        else if (window.confirm(desc)) run();
     }
 
     function updateBeperkingVeld() { showField("gl-v2-pl-f-bepdatum", getSelect("gl-v2-pl-f-bep") !== "0" && getSelect("gl-v2-pl-f-bep") !== ""); }
@@ -604,7 +691,7 @@
         fetch(cfg.koppelUrl, {
             method: "POST", credentials: "same-origin",
             headers: { "Content-Type": "application/json", "RequestVerificationToken": token(), "X-Requested-With": "XMLHttpRequest" },
-            body: JSON.stringify(kz)
+            body: JSON.stringify(Object.assign({ planningId: state.actiefPlanningId || 0 }, kz))
         }).then(function (r) {
             if (r.status === 403) throw new Error("Je hebt geen schrijfrecht op het Traject.");
             if (!r.ok) throw new Error("Koppelen mislukt. Probeer het zo opnieuw.");
@@ -782,6 +869,11 @@
                     } else closePanel();
                 }
             });
+        } else if (panel.mode === "planning-nieuw" || panel.mode === "planning-bewerken") {
+            var pv = { naam: naam, startDatum: getDate("gl-v2-pl-f-pstart") };
+            if (!panel.isHoofd) { var bd = getSelect("gl-v2-pl-f-bouwdeel"); pv.bouwdeelId = bd ? parseInt(bd, 10) : null; }
+            if (panel.mode === "planning-nieuw") send({ type: "planningToevoegen", planningId: 0, velden: pv }, { onError: onError, after: closePanel });
+            else send({ type: "planningWijzig", planningId: panel.id, velden: pv }, { onError: onError, after: closePanel });
         } else if (panel.mode === "taak-bewerken") {
             var w = verzamelTaakVelden(false);
             if (isNaN(w.duur) || w.duur < 0) { formError("De duur moet een aantal werkdagen zijn (0 of meer)."); return; }
@@ -813,7 +905,10 @@
     $("gl-v2-pl-backdrop").addEventListener("click", closePanel);
     document.addEventListener("keydown", function (e) { if (e.key === "Escape" && panel && !document.querySelector(".gl-v2-select-panel.is-open")) closePanel(); });
     var delBtn = $("gl-v2-pl-panel-delete");
-    if (delBtn) delBtn.addEventListener("click", function () { if (panel && panel.key) { var r = rowByKey(panel.key); if (r) vraagVerwijder(r); } });
+    if (delBtn) delBtn.addEventListener("click", function () {
+        if (panel && panel.mode === "planning-bewerken") { var p = actief(); if (p && !p.isHoofd) vraagVerwijderPlanning(p); return; }
+        if (panel && panel.key) { var r = rowByKey(panel.key); if (r) vraagVerwijder(r); }
+    });
 
     // Knoppen in de kop en de lege staat
     document.addEventListener("click", function (e) {

@@ -203,6 +203,8 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<ProjectPlanning> ProjectPlanning { get; set; }
 
+    public virtual DbSet<BouwPlanning> BouwPlanning { get; set; }
+
     public virtual DbSet<PlanningSectie> PlanningSectie { get; set; }
 
     public virtual DbSet<PlanningTaak> PlanningTaak { get; set; }
@@ -2451,6 +2453,30 @@ public partial class cpmRunningContext : DbContext
                 .HasForeignKey(d => d.ParentSectieId)
                 .OnDelete(DeleteBehavior.NoAction)
                 .HasConstraintName("FK_PlanningSectie_Parent");
+
+            entity.HasOne(d => d.BouwPlanning).WithMany(p => p.PlanningSectie)
+                .HasForeignKey(d => d.BouwPlanningId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_PlanningSectie_BouwPlanning");
+        });
+
+        modelBuilder.Entity<BouwPlanning>(entity =>
+        {
+            entity.ToTable("BouwPlanning");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.ProjectId, "IX_BouwPlanning_Project");
+            entity.Property(e => e.Naam).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.IsActief).HasDefaultValue(true);
+
+            entity.HasOne(d => d.Project).WithMany()
+                .HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_BouwPlanning_Project");
+
+            entity.HasOne(d => d.PaymentGroup).WithMany()
+                .HasForeignKey(d => d.PaymentGroupId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_BouwPlanning_PaymentGroup");
         });
 
         modelBuilder.Entity<PlanningAfhankelijkheid>(entity =>

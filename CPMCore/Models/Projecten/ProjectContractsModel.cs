@@ -793,8 +793,55 @@ namespace CPMCore.Models.Projecten
         public string? Email { get; set; }
     }
 
+    /// <summary>Contactpersoon van de leverancier voor de tabbladen Leverancier en Portaaltoegang van de contractpagina
+    /// (design-handoff 14g/14h): gegevens plus de stand van de portaaluitnodiging.</summary>
+    public class SupplierTabContact
+    {
+        public int ContactId { get; set; }
+        public string Name { get; set; } = "";
+        public string? Role { get; set; }
+        public string? Phone { get; set; }
+        public string? Email { get; set; }
+        /// <summary>Werfleider op een contract van dit project.</summary>
+        public bool IsSiteManager { get; set; }
+        /// <summary>Stand van de uitnodiging (UserGuestInvitation.InvitationStatus), null = nooit uitgenodigd.</summary>
+        public string? PortalStatus { get; set; }
+        public bool IsFullCompanyAdmin { get; set; }
+        public int? LinkedUserId { get; set; }
+        public DateTime? LastLoginAt { get; set; }
+    }
+
+    /// <summary>Een contract van dezelfde leverancier in een ander (of dit) project, voor "In andere projecten" (14g).</summary>
+    public class SupplierTabContract
+    {
+        public int ContractId { get; set; }
+        public int ProjectId { get; set; }
+        public string ProjectName { get; set; } = "";
+        public string? ContractName { get; set; }
+        public bool Signed { get; set; }
+        public decimal Price { get; set; }
+    }
+
     public class ProjectContractDetailModel
     {
+        /// <summary>Contactpersonen van de leverancier met hun portaalstatus (tabbladen Leverancier en Portaaltoegang).</summary>
+        public List<SupplierTabContact> Contacts { get; set; } = new();
+
+        /// <summary>Alle contracten van de leverancier, ook in andere projecten.</summary>
+        public List<SupplierTabContract> OtherContracts { get; set; } = new();
+
+        /// <summary>De laatste geslaagde controle op inhoudingsplicht van deze leverancier (RSZ en FOD Financiën), null = nog nooit gecontroleerd.</summary>
+        public FacadeCore.RetainmentCheckVm? LastRetainment { get; set; }
+        /// <summary>De RSZ-dienst is ingesteld op deze omgeving.</summary>
+        public bool RetainmentConfigured { get; set; }
+        /// <summary>De leverancier heeft een btw- of ondernemingsnummer, dus een controle is mogelijk.</summary>
+        public bool RetainmentHasIdentifier { get; set; }
+        /// <summary>De gebruiker mag een nieuwe controle starten (schrijfrecht op facturatie, zoals bij Inhoudingsplicht zelf).</summary>
+        public bool CanCheckRetainment { get; set; }
+
+        /// <summary>Mag de gebruiker de leverancier zelf (voor alle projecten) bewerken en portaaltoegang geven?</summary>
+        public bool CanEditSupplier { get; set; }
+
         public ProjectContractDetailModel()
         {
             _contract = new ContractBO();

@@ -19,11 +19,15 @@
     further down — not a fabricated "pick one" UI 14b never designed for.
 
     Scope trims from 14b, disclosed rather than silently built as dead ends:
-    - Facturen/Leverancier/Portaaltoegang stay .is-disabled tabs (counts only) — same discipline as
-      every other gl-v2 detail page this session (Invoices/DetailV2, Klanten/DetailV2, …): only the
-      page's primary tab gets built this pass. The legacy page's Facturen/Leverancier tabs already
-      have real, working content (an invoice table, a company-info card) — a natural next tab to
-      build, just not in this pass.
+    - Tabbladen Facturen, Leverancier en Portaaltoegang (14f, 14g, 14h) zijn gebouwd, 16/11/2026: vier
+      panelen in dezelfde pagina (.gl-v2-pcd-panel, de tabbar wisselt enkel welk paneel zichtbaar is,
+      gekozen tab in de url-hash). Enkel wat uit bestaande tabellen komt is gebouwd. NIET gebouwd, want
+      er bestaat geen opslag of bron voor: zijpaneel met het factuurverloop (een factuur opent de
+      bestaande factuurpagina), gemiddelde betaaltermijn en benutte korting (geen betaaldatum),
+      inhoudingsplicht op de lijst, IBAN/BIC/Peppol/KBO-controles/historiek op Leverancier,
+      contactpersoon-tags Contract/Facturen/Attesten, "Wat de leverancier ziet" per project, de
+      toegangsactiviteit en de portaallink. Leverancier bewerken en uitnodigen/intrekken gebruiken de
+      bestaande LeveranciersController-acties (met returnUrl terug naar dit tabblad).
     - "Bijbestelling toevoegen" (14b's own "+ Bijbestelling" action on Loten & bijbestellingen) isn't
       wired here — that's the shared Partials/_BijbestellingModal + its AJAX endpoints
       (AddContractAdditionalOrder), left legacy-styled for a future pass rather than getting a one-off
@@ -79,6 +83,123 @@
         .ToList();
     var isMultiContract = sortedContracts.Count > 1;
 
+    // ── Tabblad Facturen (design-handoff 14f): alles uit de inkomende facturen van deze leverancier in dit project ──
+    var vandaag = DateOnly.FromDateTime(DateTime.Today);
+    var invoices = (Model.IncommingInvoices ?? new List<IncommingInvoiceBO>())
+        .OrderByDescending(i => i.IncommingInvoiceDate).ThenByDescending(i => i.Id).ToList();
+    // Eén status per factuur: te controleren · goedgekeurd · betaald (afgekeurd en duplicaten tellen nergens mee).
+    string InvGroup(IncommingInvoiceBO i) =>
+        i.StatusId == IncomingInvoiceStatus.Paid ? "betaald"
+        : (i.StatusId == IncomingInvoiceStatus.Approved || i.StatusId == IncomingInvoiceStatus.Booked) ? "goedgekeurd"
+        : (i.StatusId == IncomingInvoiceStatus.Rejected || i.StatusId == IncomingInvoiceStatus.Duplicate) ? "afgekeurd"
+        : "controle";
+    var countedInvoices = invoices.Where(i => InvGroup(i) != "afgekeurd").ToList();
+    var invBilled = countedInvoices.Sum(i => i.InvoicePrice);
+    var invPaid = countedInvoices.Where(i => InvGroup(i) == "betaald").Sum(i => i.InvoicePrice);
+    var invApproved = countedInvoices.Where(i => InvGroup(i) == "goedgekeurd").ToList();
+    var invApprovedSum = invApproved.Sum(i => i.InvoicePrice);
+    var invReviewCount = countedInvoices.Count(i => InvGroup(i) == "controle");
+    var invReviewSum = countedInvoices.Where(i => InvGroup(i) == "controle").Sum(i => i.InvoicePrice);
+    var invPaidCount = countedInvoices.Count(i => InvGroup(i) == "betaald");
+    var invNextDue = invApproved.Where(i => i.DueDate.HasValue).OrderBy(i => i.DueDate).Select(i => i.DueDate).FirstOrDefault();
+    var invContractTotal = Model.Contracts.Sum(c => c.Activities?.Sum(a => a.EffectivePrice) ?? 0m);
+    var invExtraTotal = Model.Contracts.Sum(c => c.Activities?.Sum(a => a.AdditionalOrdersTotal) ?? 0m);
+    var invRest = invContractTotal > 0m ? Math.Max(0m, invContractTotal - invBilled) : 0m;
+    var invPct = invContractTotal > 0m ? Math.Min(100m, Math.Round(invBilled / invContractTotal * 100m, 0)) : 0m;
+    string InvUrl(IncommingInvoiceBO i) => Url.Action("IncommingInvoiceDetail", "Projecten", new { projectid = Model.ProjectId, invoiceid = i.Id });
+    string InvNr(IncommingInvoiceBO i) => string.IsNullOrWhiteSpace(i.InvoiceExternalId) ? "zonder nummer" : i.InvoiceExternalId;
+
+    // Korting contant per factuur, uit het contract van die factuur: (vervaldatum van de korting, bedrag).
+    (DateOnly Date, decimal Amount)? InvDiscount(IncommingInvoiceBO i)
+    {
+        if (InvGroup(i) is "betaald" or "afgekeurd") return null;
+        var c = Model.Contracts.FirstOrDefault(x => x.Id == i.ContractID);
+        if (c == null || !c.CashDiscount || (c.CashDiscountPercentage ?? 0m) <= 0m || (c.CashDiscountPaymentTerm ?? 0m) <= 0m) return null;
+        return (i.IncommingInvoiceDate.AddDays((int)c.CashDiscountPaymentTerm!.Value), Math.Round(i.InvoicePrice * c.CashDiscountPercentage!.Value / 100m, 2));
+    }
+
+    // "Vraagt actie" bij de facturen (zelfde kaart als Projecten/Detail): wat je moet doen vóór de volgende betaling.
+    var invAttention = new GlV2VraagtActieVm { Subtitle = "Wat je moet doen vóór de volgende betaling." };
+    foreach (var i in countedInvoices.Where(i => InvGroup(i) == "goedgekeurd" && i.DueDate.HasValue && i.DueDate.Value < vandaag))
+    {
+        var late = vandaag.DayNumber - i.DueDate!.Value.DayNumber;
+        invAttention.Items.Add(new GlV2VraagtActieItem
+        {
+            Severity = "u", Type = "Factuur vervallen", Entiteit = InvNr(i), Icon = "ph-calendar-x", Categorie = "Betaling", BekijkUrl = InvUrl(i),
+            Extra = i.InvoicePrice.ToString("C0", be) + " excl. btw, vervaldag " + i.DueDate.Value.ToString("dd/MM/yyyy", be), Meta = $"{late} dag{(late == 1 ? "" : "en")} te laat"
+        });
+    }
+    foreach (var i in countedInvoices)
+    {
+        var disc = InvDiscount(i);
+        if (disc is null) continue;
+        var left = disc.Value.Date.DayNumber - vandaag.DayNumber;
+        if (left is >= 0 and <= 7)
+        {
+            invAttention.Items.Add(new GlV2VraagtActieItem
+            {
+                Severity = left <= 2 ? "u" : "a", Type = "Korting contant vervalt", Entiteit = InvNr(i), Icon = "ph-percent", Categorie = "Korting", BekijkUrl = InvUrl(i),
+                Extra = disc.Value.Amount.ToString("C0", be) + " korting tot " + disc.Value.Date.ToString("dd/MM/yyyy", be), Meta = left == 0 ? "vandaag" : "nog " + left + " dag" + (left == 1 ? "" : "en")
+            });
+        }
+    }
+    foreach (var i in countedInvoices.Where(i => InvGroup(i) == "controle"))
+    {
+        invAttention.Items.Add(new GlV2VraagtActieItem
+        {
+            Severity = "a", Type = "Factuur te controleren", Entiteit = InvNr(i), Icon = "ph-magnifying-glass", Categorie = "Controle", BekijkUrl = InvUrl(i),
+            Extra = i.InvoicePrice.ToString("C0", be) + " excl. btw wacht op goedkeuring", Meta = i.IncommingInvoiceDate.ToString("dd/MM/yyyy", be)
+        });
+    }
+    // Inhoudingsplicht (art. 30bis/30ter): staat die op "inhouden", dan moet je dat bij de betaling doen. Nooit gecontroleerd en er staat nog iets te betalen: eerst controleren.
+    var retLast = Model.LastRetainment;
+    if (retLast != null && retLast.HasObligation)
+    {
+        var retParts = new List<string>();
+        if (retLast.SocialObligation) retParts.Add(retLast.SocialWithholdingPercentage + " % sociale schulden");
+        if (retLast.FiscalObligation) retParts.Add(retLast.FiscalWithholdingPercentage + " % fiscale schulden");
+        invAttention.Items.Add(new GlV2VraagtActieItem
+        {
+            Severity = "u", Type = "Inhoudingsplicht", Icon = "ph-shield-warning", Categorie = "Betaling", BekijkUrl = "#leverancier",
+            Extra = "bij betaling inhouden: " + string.Join(" en ", retParts), Meta = "gecontroleerd " + retLast.CheckedAt.ToLocalTime().ToString("dd/MM/yyyy", be)
+        });
+    }
+    else if (retLast == null && Model.RetainmentConfigured && Model.RetainmentHasIdentifier && invApproved.Any())
+    {
+        invAttention.Items.Add(new GlV2VraagtActieItem
+        {
+            Severity = "a", Type = "Inhoudingsplicht nog niet gecontroleerd", Icon = "ph-shield-check", Categorie = "Betaling", BekijkUrl = "#leverancier",
+            Extra = "controleer vóór je " + invApproved.Count + " goedgekeurde factu" + (invApproved.Count == 1 ? "ur" : "ren") + " betaalt"
+        });
+    }
+    invAttention.Categories = invAttention.Items.Select(x => x.Categorie).Distinct().ToList();
+    if (invAttention.Categories.Count < 2) { invAttention.Categories.Clear(); }
+
+    // Waarborg per contract (rechterkolom van het tabblad Facturen).
+    var guaranteeContracts = Model.Contracts.Where(c => c.GuaranteeType != ContractGuaranteeType.NoGuarantee).ToList();
+
+    // ── Tabbladen Leverancier en Portaaltoegang (design-handoff 14g/14h) ──
+    string PortalLabel(string status) => status switch
+    {
+        "Draft" => "Concept", "Invited" => "Uitgenodigd", "PendingAcceptance" => "In afwachting", "Redeemed" => "Ingewisseld",
+        "Active" => "Actief", "Failed" => "Mislukt", "Revoked" => "Ingetrokken", _ => ""
+    };
+    string PortalTone(string status) => status switch
+    {
+        "Invited" or "PendingAcceptance" => "is-attention", "Redeemed" or "Active" => "is-positive", "Failed" => "is-blocked", "Revoked" => "is-inactive", _ => "is-neutral"
+    };
+    // Na uitnodigen of intrekken terug op dit tabblad (enkel een lokale url wordt gevolgd, zie LeveranciersController.BackToSupplier).
+    var returnTo = Context.Request.Path.Value + Context.Request.QueryString.Value + "#portaaltoegang";
+    var withPortal = Model.Contacts.Count(c => c.LinkedUserId.HasValue && (c.PortalStatus == "Active" || c.PortalStatus == "Redeemed"));
+    var contactsWithMail = Model.Contacts.Count(c => !string.IsNullOrWhiteSpace(c.Email));
+    var companyAddress = string.Join(", ", new[]
+    {
+        string.Join(" ", new[] { company?.Straat, company?.Huisnummer }.Where(s => !string.IsNullOrWhiteSpace(s))) + (string.IsNullOrWhiteSpace(company?.Busnummer) ? "" : " bus " + company.Busnummer),
+        string.Join(" ", new[] { company?.Postcode?.Postcode, company?.Postcode?.Gemeente }.Where(s => !string.IsNullOrWhiteSpace(s)))
+    }.Where(s => !string.IsNullOrWhiteSpace(s)));
+    var otherContractRows = Model.OtherContracts;
+    var otherProjects = otherContractRows.Select(c => c.ProjectId).Distinct().Count();
+
     string FmtPaymentTerm(ContractBO c) => c.PaymentTerm is null ? "—" : $"{c.PaymentTerm:0} dagen";
     string FmtCashDiscount(ContractBO c) => c.CashDiscount
         ? $"{c.CashDiscountPercentage?.ToString("N2", be)} % binnen {c.CashDiscountPaymentTerm:0} dagen"
@@ -104,24 +225,34 @@
         var lotCount = contract.Activities?.Count ?? 0;
         var siteManager = !missingSiteManager && Model.SiteManagers.TryGetValue(contract.SiteManagerContactId!.Value, out var smInfo) ? smInfo : null;
 
-        var attentionItems = new List<(string Title, string Meta, string ActionText, string ActionHref)>();
+        // "Vraagt actie" in dezelfde kaart als Projecten/Detail (partial GlV2/_VraagtActie). Dringend = blokkeert, aandacht = loopt achter of komt eraan.
+        var editHref = Url.Action("EditContract", "Projecten", new { projectid = Model.ProjectId, contractid = contract.Id });
+        var attention = new GlV2VraagtActieVm { Subtitle = "Wat dit contract tegenhoudt, dringend eerst." };
         if (!contract.ContractSigned)
         {
-            attentionItems.Add(("Contract niet getekend", contract.ContractSentDate.HasValue ? "verstuurd op " + contract.ContractSentDate.Value.ToString("dd/MM/yyyy", be) : "nog niet verstuurd",
-                "Herinnering sturen", ReminderMailto(contract, $"Herinnering: contract {companyName} — {Model.ProjectName}")));
-        }
-        if (!contract.PidAttest)
-        {
-            attentionItems.Add(("PID-attesten ontbreken", "nodig vóór oplevering", "Opvragen", ReminderMailto(contract, $"PID-attesten opvragen — {companyName}, {Model.ProjectName}")));
-        }
-        if (missingSiteManager && canWrite)
-        {
-            attentionItems.Add(("Geen verantwoordelijke werfleider", null, "Toewijzen", Url.Action("EditContract", "Projecten", new { projectid = Model.ProjectId, contractid = contract.Id })));
+            var reminderUrl = ReminderMailto(contract, $"Herinnering: contract {companyName} — {Model.ProjectName}");
+            attention.Items.Add(new GlV2VraagtActieItem
+            {
+                Severity = "u", Type = "Contract niet getekend", Icon = "ph-file-text", Categorie = "Contract", BekijkUrl = reminderUrl,
+                Extra = (contract.ContractSentDate.HasValue ? "verstuurd op " + contract.ContractSentDate.Value.ToString("dd/MM/yyyy", be) : "nog niet verstuurd") + (reminderUrl != null ? " · klik om een herinnering te mailen" : ""),
+                Meta = sentDaysOpen.HasValue ? sentDaysOpen + " dagen open" : null
+            });
         }
         if (contract.GuaranteeDocumentMissing && canWrite)
         {
-            attentionItems.Add(("Bankwaarborg-document ontbreekt", "nog niet ontvangen", "Toevoegen", Url.Action("EditContract", "Projecten", new { projectid = Model.ProjectId, contractid = contract.Id })));
+            attention.Items.Add(new GlV2VraagtActieItem { Severity = "u", Type = "Bankwaarborg ontbreekt", Icon = "ph-shield-warning", Categorie = "Contract", Extra = "het waarborgdocument is nog niet ontvangen", BekijkUrl = editHref });
         }
+        if (!contract.PidAttest)
+        {
+            var pidUrl = ReminderMailto(contract, $"PID-attesten opvragen — {companyName}, {Model.ProjectName}");
+            attention.Items.Add(new GlV2VraagtActieItem { Severity = "a", Type = "PID-attesten ontbreken", Icon = "ph-shield-warning", Categorie = "Attesten", BekijkUrl = pidUrl, Extra = "nodig vóór oplevering" + (pidUrl != null ? " · klik om ze op te vragen" : "") });
+        }
+        if (missingSiteManager && canWrite)
+        {
+            attention.Items.Add(new GlV2VraagtActieItem { Severity = "a", Type = "Geen verantwoordelijke werfleider", Icon = "ph-hard-hat", Categorie = "Werf", Extra = "nodig voor werfpunten en verslagen", BekijkUrl = editHref });
+        }
+        attention.Categories = attention.Items.Select(i => i.Categorie).Distinct().ToList();
+        if (attention.Categories.Count < 2) { attention.Categories.Clear(); }
 
         <span class="gl-v2-pcd-meta">
             Leverancier @companyName
@@ -164,34 +295,9 @@
             </div>
         </div>
 
-        @if (attentionItems.Any())
+        @if (attention.Items.Any())
         {
-            <div class="gl-v2-section-card is-alert gl-v2-pcd-attention-card">
-                <div class="gl-v2-section-card-header">
-                    <span class="gl-v2-section-card-icon"><i class="ph ph-warning" aria-hidden="true"></i></span>
-                    <h2 class="gl-v2-section-card-title">Vraagt actie</h2>
-                    <span class="gl-v2-field-divider"></span>
-                    <span class="gl-v2-section-card-desc">Wat dit contract tegenhoudt.</span>
-                </div>
-                <div class="gl-v2-pcd-attention-body">
-                    @foreach (var item in attentionItems)
-                    {
-                        <div class="gl-v2-pcd-attention-item">
-                            <i class="ph ph-warning-circle gl-v2-pcd-attention-icon" aria-hidden="true"></i>
-                            <span class="gl-v2-pcd-attention-title">@item.Title</span>
-                            @if (item.Meta is not null)
-                            {
-                                <span class="gl-v2-pcd-attention-meta">@item.Meta</span>
-                            }
-                            <span class="gl-v2-pcd-attention-spacer"></span>
-                            @if (item.ActionHref is not null)
-                            {
-                                <a href="@item.ActionHref" class="gl-v2-pcd-attention-action">@item.ActionText</a>
-                            }
-                        </div>
-                    }
-                </div>
-            </div>
+            @Html.Partial("GlV2/_VraagtActie", attention)
         }
 
         <div class="gl-v2-pcd-grid">
@@ -408,6 +514,7 @@
 {
     <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-projecten-contract-detail.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-vraagt-actie.css" asp-append-version="true" />
 }
 @section PageTitleBadges
 {
@@ -493,15 +600,16 @@
 </div>
 
 <div class="gl-v2-tabbar" role="tablist">
-    <button type="button" class="gl-v2-tabbar-tab is-active" role="tab" aria-selected="true" data-tab="contract">Contract</button>
-    <button type="button" class="gl-v2-tabbar-tab is-disabled" role="tab" aria-selected="false" aria-disabled="true" tabindex="-1" disabled title="Nog niet beschikbaar">Facturen <span class="gl-v2-tabbar-count">@invoiceCount</span></button>
-    <button type="button" class="gl-v2-tabbar-tab is-disabled" role="tab" aria-selected="false" aria-disabled="true" tabindex="-1" disabled title="Nog niet beschikbaar">Leverancier</button>
-    <button type="button" class="gl-v2-tabbar-tab is-disabled" role="tab" aria-selected="false" aria-disabled="true" tabindex="-1" disabled title="Nog niet beschikbaar">Portaaltoegang</button>
+    <button type="button" class="gl-v2-tabbar-tab is-active js-gl-v2-pcd-tab" role="tab" aria-selected="true" aria-controls="gl-v2-pcd-panel-contract" data-tab="contract">Contract</button>
+    <button type="button" class="gl-v2-tabbar-tab js-gl-v2-pcd-tab" role="tab" aria-selected="false" aria-controls="gl-v2-pcd-panel-facturen" tabindex="-1" data-tab="facturen">Facturen <span class="gl-v2-tabbar-count">@invoiceCount</span></button>
+    <button type="button" class="gl-v2-tabbar-tab js-gl-v2-pcd-tab" role="tab" aria-selected="false" aria-controls="gl-v2-pcd-panel-leverancier" tabindex="-1" data-tab="leverancier">Leverancier</button>
+    <button type="button" class="gl-v2-tabbar-tab js-gl-v2-pcd-tab" role="tab" aria-selected="false" aria-controls="gl-v2-pcd-panel-portaaltoegang" tabindex="-1" data-tab="portaaltoegang">Portaaltoegang @if (Model.Contacts.Any(c => c.LinkedUserId.HasValue && c.PortalStatus != null)) { <span class="gl-v2-tabbar-count">@Model.Contacts.Count(c => c.LinkedUserId.HasValue && c.PortalStatus != null)</span> }</button>
 </div>
 
 @{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
 @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
 
+<div class="gl-v2-pcd-panel" id="gl-v2-pcd-panel-contract" data-tab-panel="contract" role="tabpanel">
 @if (!Model.HasContract)
 {
     <div class="gl-v2-empty-state gl-v2-empty-state-inline">
@@ -555,6 +663,501 @@ else
 {
     RenderContractBody(sortedContracts[0]);
 }
+</div>
+
+@* ── Tabblad Facturen (design-handoff 14f) ─────────────────────────────────────────────────────── *@
+<div class="gl-v2-pcd-panel" id="gl-v2-pcd-panel-facturen" data-tab-panel="facturen" role="tabpanel" hidden>
+    <span class="gl-v2-pcd-meta">
+        Inkomende facturen van @companyName op dit project
+        · @invoices.Count factu@(invoices.Count == 1 ? "ur" : "ren")
+    </span>
+
+    <div class="gl-v2-pcd-stats">
+        <div class="gl-v2-pcd-stat">
+            <span class="gl-v2-pcd-stat-label">GEFACTUREERD</span>
+            <span class="gl-v2-pcd-stat-value">@invBilled.ToString("C0", be)</span>
+            <span class="gl-v2-pcd-stat-sub">@(invContractTotal > 0m ? invPct.ToString("N0", be) + " % van het contract" : "geen contract")</span>
+        </div>
+        <div class="gl-v2-pcd-stat">
+            <span class="gl-v2-pcd-stat-label">BETAALD</span>
+            <span class="gl-v2-pcd-stat-value">@invPaid.ToString("C0", be)</span>
+            <span class="gl-v2-pcd-stat-sub">@invPaidCount factu@(invPaidCount == 1 ? "ur" : "ren")</span>
+        </div>
+        <div class="gl-v2-pcd-stat">
+            <span class="gl-v2-pcd-stat-label">TE BETALEN</span>
+            <span class="gl-v2-pcd-stat-value">@invApprovedSum.ToString("C0", be)</span>
+            <span class="gl-v2-pcd-stat-sub">@(invApproved.Count == 0 ? "niets goedgekeurd en open" : invApproved.Count + " goedgekeurd" + (invNextDue.HasValue ? " · eerste vervaldag " + invNextDue.Value.ToString("dd/MM/yyyy", be) : ""))</span>
+        </div>
+        <div class="gl-v2-pcd-stat">
+            <span class="gl-v2-pcd-stat-label">NOG TE FACTUREREN</span>
+            <span class="gl-v2-pcd-stat-value">@(invContractTotal > 0m ? invRest.ToString("C0", be) : "—")</span>
+            <span class="gl-v2-pcd-stat-sub">@(invContractTotal > 0m ? (100m - invPct).ToString("N0", be) + " % van het contract" : "geen contract om mee te vergelijken")</span>
+        </div>
+    </div>
+
+    @if (invAttention.Items.Any())
+    {
+        @await Html.PartialAsync("GlV2/_VraagtActie", invAttention)
+    }
+
+    <div class="gl-v2-pcd-split">
+        <div class="gl-v2-section-card gl-v2-pcd-inv-card">
+            <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-receipt" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Facturen</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">Klik op een factuur voor het verloop en de betaling.</span>
+            </div>
+            @if (invoices.Any())
+            {
+                <div class="gl-v2-pcd-inv-toolbar">
+                    <div class="gl-v2-segmented is-sm js-gl-v2-pcd-inv-filter" role="group" aria-label="Filter facturen">
+                        <button type="button" class="is-active" data-filter="alle">Alles <span class="gl-v2-pcd-inv-count">@invoices.Count</span></button>
+                        <button type="button" data-filter="open">Open <span class="gl-v2-pcd-inv-count">@invoices.Count(i => InvGroup(i) is "controle" or "goedgekeurd")</span></button>
+                        <button type="button" data-filter="betaald">Betaald <span class="gl-v2-pcd-inv-count">@invPaidCount</span></button>
+                    </div>
+                </div>
+                <div class="gl-v2-pcd-inv-table">
+                    <div class="gl-v2-pcd-inv-row gl-v2-pcd-inv-head">
+                        <span>Factuur</span><span>Datum</span><span>Vervaldag</span><span class="text-end">Bedrag excl. btw</span><span class="text-end">Korting</span><span>Status</span>
+                    </div>
+                    @foreach (var inv in invoices)
+                    {
+                        var group = InvGroup(inv);
+                        var disc = InvDiscount(inv);
+                        var overdue = group == "goedgekeurd" && inv.DueDate.HasValue && inv.DueDate.Value < vandaag;
+                        var contractOfInvoice = Model.Contracts.FirstOrDefault(c => c.Id == inv.ContractID);
+                        var kindText = inv.Kind.HasValue ? inv.Kind.Value.GetDisplayName() : "Factuur";
+                        <a href="@InvUrl(inv)" class="gl-v2-pcd-inv-row js-gl-v2-pcd-inv-row" data-group="@(group == "betaald" ? "betaald" : group == "afgekeurd" ? "afgekeurd" : "open")">
+                            <span class="gl-v2-pcd-inv-nr">
+                                <b>@InvNr(inv)</b>
+                                <small>@kindText@(isMultiContract && contractOfInvoice != null ? " · " + (string.IsNullOrWhiteSpace(contractOfInvoice.ContractName) ? "Contract" : contractOfInvoice.ContractName) : "")</small>
+                            </span>
+                            <span class="gl-v2-pcd-inv-date" data-label="Datum">@inv.IncommingInvoiceDate.ToString("dd/MM/yyyy", be)</span>
+                            <span class="gl-v2-pcd-inv-date @(overdue ? "is-late" : "")" data-label="Vervaldag">@(inv.DueDate.HasValue ? inv.DueDate.Value.ToString("dd/MM/yyyy", be) : "—")</span>
+                            <span class="text-end gl-v2-pcd-inv-amount" data-label="Bedrag">@inv.InvoicePrice.ToString("C2", be)</span>
+                            <span class="text-end gl-v2-pcd-inv-discount @(disc.HasValue && disc.Value.Date < vandaag ? "is-late" : "")" data-label="Korting">@(disc.HasValue ? (disc.Value.Date < vandaag ? "verlopen" : "−" + disc.Value.Amount.ToString("C0", be) + " tot " + disc.Value.Date.ToString("dd/MM", be)) : "—")</span>
+                            <span class="gl-v2-pcd-inv-status">
+                                @switch (group)
+                                {
+                                    case "betaald":
+                                        <span class="gl-v2-badge is-positive"><i class="ph ph-check-circle" aria-hidden="true"></i>BETAALD</span>
+                                        break;
+                                    case "goedgekeurd":
+                                        <span class="gl-v2-badge is-info"><i class="ph ph-seal-check" aria-hidden="true"></i>GOEDGEKEURD</span>
+                                        break;
+                                    case "afgekeurd":
+                                        <span class="gl-v2-badge is-inactive">@IncomingInvoiceStatus.Label(inv.StatusId).ToUpperInvariant()</span>
+                                        break;
+                                    default:
+                                        <span class="gl-v2-badge is-attention"><i class="ph ph-magnifying-glass" aria-hidden="true"></i>TE CONTROLEREN</span>
+                                        break;
+                                }
+                            </span>
+                        </a>
+                    }
+                    <div class="gl-v2-pcd-inv-row gl-v2-pcd-inv-total">
+                        <span>Totaal</span><span></span><span></span>
+                        <span class="text-end gl-v2-pcd-inv-amount">@invBilled.ToString("C2", be)</span>
+                        <span></span><span></span>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                    <span class="gl-v2-empty-state-icon"><i class="ph ph-receipt" aria-hidden="true"></i></span>
+                    <h3 class="gl-v2-empty-state-title">Nog geen facturen</h3>
+                    <p class="gl-v2-empty-state-desc">Zodra @companyName een factuur voor dit project instuurt, staat ze hier.</p>
+                </div>
+            }
+        </div>
+
+        <div class="gl-v2-pcd-side">
+            <div class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-scales" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Tegenover het contract</h2>
+                </div>
+                @if (invContractTotal > 0m)
+                {
+                    <div class="gl-v2-pcd-side-body">
+                        <div class="gl-v2-pcd-side-line"><span>Contractprijs</span><b>@invContractTotal.ToString("C0", be)</b></div>
+                        <div class="gl-v2-pcd-bar" role="img" aria-label="@invPct.ToString("N0", be) procent gefactureerd"><i style="width:@(invPct.ToString("0", CultureInfo.InvariantCulture))%"></i></div>
+                        <div class="gl-v2-pcd-side-line"><span>Gefactureerd · @invPct.ToString("N0", be) %</span><b>@invBilled.ToString("C0", be)</b></div>
+                        <div class="gl-v2-pcd-side-line"><span>Nog te factureren</span><b>@invRest.ToString("C0", be)</b></div>
+                        @if (invExtraTotal > 0m)
+                        {
+                            <div class="gl-v2-pcd-side-line is-soft"><span>Waarvan bijbestellingen</span><b>@invExtraTotal.ToString("C0", be)</b></div>
+                        }
+                        @if (invBilled > invContractTotal)
+                        {
+                            <span class="gl-v2-pcd-sm-hint">Er is meer gefactureerd dan de contractprijs. Controleer of er een bijbestelling ontbreekt.</span>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="gl-v2-pcd-side-body">
+                        <span class="gl-v2-pcd-sm-hint">Er is nog geen contract met een prijs, dus er valt niets mee te vergelijken.</span>
+                    </div>
+                }
+            </div>
+
+            <div class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-shield-check" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Waarborg</h2>
+                </div>
+                @if (guaranteeContracts.Any())
+                {
+                    foreach (var gc in guaranteeContracts)
+                    {
+                        var gcPrice = gc.Activities?.Sum(a => a.EffectivePrice) ?? 0m;
+                        var gcPct = gc.GuaranteePercentage ?? 0m;
+                        // Wat de waarborg zou zijn volgens het contract, en wat er echt is ingehouden op de facturen (BorgInhouden).
+                        var gcAmount = Math.Round(gcPrice * gcPct / 100m, 2);
+                        var gcHeld = countedInvoices.Where(i => i.ContractID == gc.Id && i.BorgInhouden == true).Sum(i => i.BorgBedrag ?? 0m);
+                        var gcVo = gc.GuaranteeReleaseVOPercentageEffective;
+                        <div class="gl-v2-pcd-side-body">
+                            @if (isMultiContract)
+                            {
+                                <span class="gl-v2-detail-label">@(string.IsNullOrWhiteSpace(gc.ContractName) ? "CONTRACT" : gc.ContractName.ToUpperInvariant())</span>
+                            }
+                            <div class="gl-v2-pcd-side-line"><span>@gc.GuaranteeType.GetDisplayName()@(gcPct > 0m ? " · " + gcPct.ToString("N0", be) + " %" : "")</span></div>
+                            @if (gc.GuaranteeType == ContractGuaranteeType.FinancialGuarantee)
+                            {
+                                <div class="gl-v2-pcd-side-line"><span>Ingehouden op facturen</span><b>@(gcHeld > 0m ? gcHeld.ToString("C2", be) : "nog niets")</b></div>
+                                @if (gcPct > 0m)
+                                {
+                                    <div class="gl-v2-pcd-side-line is-soft"><span>Afgesproken: @gcPct.ToString("N0", be) % van de contractprijs</span><b>@gcAmount.ToString("C2", be)</b></div>
+                                }
+                            }
+                            @if (gc.GuaranteeType == ContractGuaranteeType.BankGuarantee)
+                            {
+                                if (!string.IsNullOrWhiteSpace(gc.GuaranteeDocFilename))
+                                {
+                                    <a href="@Url.Action("GuaranteeDoc", "Projecten", new { contractid = gc.Id })" target="_blank" rel="noopener" class="gl-v2-pcd-doc-link"><i class="ph ph-file-text" aria-hidden="true"></i>Waarborgdocument bekijken</a>
+                                }
+                                else
+                                {
+                                    <span class="gl-v2-badge is-attention">WAARBORG NOG TE ONTVANGEN</span>
+                                }
+                            }
+                            @if (gcPct > 0m)
+                            {
+                                <span class="gl-v2-pcd-sm-hint">@gcVo.ToString("N0", be) % vrij bij voorlopige oplevering · @((100m - gcVo).ToString("N0", be)) % vrij bij definitieve oplevering</span>
+                            }
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="gl-v2-pcd-side-body">
+                        <span class="gl-v2-pcd-sm-hint">Voor deze leverancier is geen waarborg afgesproken.</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ── Tabblad Leverancier (design-handoff 14g) ───────────────────────────────────────────────────── *@
+<div class="gl-v2-pcd-panel" id="gl-v2-pcd-panel-leverancier" data-tab-panel="leverancier" role="tabpanel" hidden>
+    <div class="gl-v2-notice gl-v2-notice-bar is-info" role="status">
+        <i class="ph ph-buildings" aria-hidden="true"></i>
+        <span>Deze gegevens gelden voor <b>@companyName</b> in alle projecten@(otherProjects > 1 ? " (" + otherProjects + " projecten)" : ""). Wat enkel voor dit project geldt, zoals prijs, voorwaarden en attesten, staat op het tabblad Contract.</span>
+        @if (Model.CanEditSupplier && company != null)
+        {
+            <a class="gl-v2-btn gl-v2-btn-secondary" href="@Url.Action("Edit", "Leveranciers", new { id = company.CompanyId })"><i class="ph ph-pencil-simple" aria-hidden="true"></i>Leverancier bewerken</a>
+        }
+    </div>
+
+    <div class="gl-v2-pcd-split">
+        <div class="gl-v2-pcd-main">
+            <div class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-buildings" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Bedrijfsgegevens</h2>
+                </div>
+                <div class="gl-v2-detail-grid gl-v2-pcd-2col" style="padding:16px 18px">
+                    <div class="gl-v2-detail-field">
+                        <span class="gl-v2-detail-label">Bedrijfsnaam</span>
+                        <span class="gl-v2-detail-value">@companyName</span>
+                    </div>
+                    <div class="gl-v2-detail-field">
+                        <span class="gl-v2-detail-label">Ondernemingsnummer</span>
+                        <span class="gl-v2-detail-value@(string.IsNullOrWhiteSpace(company?.OndNr) ? " is-empty" : "")">@(string.IsNullOrWhiteSpace(company?.OndNr) ? "—" : company.OndNr)</span>
+                    </div>
+                    <div class="gl-v2-detail-field">
+                        <span class="gl-v2-detail-label">Adres</span>
+                        <span class="gl-v2-detail-value@(companyAddress == "" ? " is-empty" : "")">@(companyAddress == "" ? "—" : companyAddress)</span>
+                    </div>
+                    <div class="gl-v2-detail-field">
+                        <span class="gl-v2-detail-label">Telefoon</span>
+                        <span class="gl-v2-detail-value@(string.IsNullOrWhiteSpace(company?.Telefoon1) && string.IsNullOrWhiteSpace(company?.GSM) ? " is-empty" : "")">@(!string.IsNullOrWhiteSpace(company?.Telefoon1) ? company.Telefoon1 : (!string.IsNullOrWhiteSpace(company?.GSM) ? company.GSM : "—"))</span>
+                    </div>
+                    <div class="gl-v2-detail-field">
+                        <span class="gl-v2-detail-label">E-mail</span>
+                        @if (!string.IsNullOrWhiteSpace(company?.Email))
+                        {
+                            <span class="gl-v2-detail-value"><a href="mailto:@company.Email" class="gl-v2-pcd-link">@company.Email</a></span>
+                        }
+                        else
+                        {
+                            <span class="gl-v2-detail-value is-empty">—</span>
+                        }
+                    </div>
+                    <div class="gl-v2-detail-field">
+                        <span class="gl-v2-detail-label">Website</span>
+                        @if (!string.IsNullOrWhiteSpace(company?.URL))
+                        {
+                            <span class="gl-v2-detail-value"><a href="@(company.URL.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? company.URL : "https://" + company.URL)" target="_blank" rel="noopener" class="gl-v2-pcd-link">@company.URL</a></span>
+                        }
+                        else
+                        {
+                            <span class="gl-v2-detail-value is-empty">—</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-users" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Contactpersonen</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">De tag zegt wie wat ontvangt.</span>
+                </div>
+                @if (Model.Contacts.Any())
+                {
+                    <div class="gl-v2-pcd-people">
+                        @foreach (var person in Model.Contacts)
+                        {
+                            var words = person.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                            var initials = words.Length == 0 ? "?" : string.Concat(words.Take(2).Select(w => char.ToUpperInvariant(w[0])));
+                            <div class="gl-v2-pcd-person">
+                                <span class="gl-v2-pcd-sm-avatar" aria-hidden="true">@initials</span>
+                                <div class="gl-v2-pcd-person-who">
+                                    <b>@(person.Name == "" ? "Onbekende contactpersoon" : person.Name)</b>
+                                    <small>@(person.Role ?? "geen functie")</small>
+                                </div>
+                                <div class="gl-v2-pcd-person-contact">
+                                    @if (person.Email != null) { <a href="mailto:@person.Email" class="gl-v2-pcd-link">@person.Email</a> }
+                                    @if (person.Phone != null) { <a href="tel:@(new string(person.Phone.Where(ch => char.IsDigit(ch) || ch == '+').ToArray()))" class="gl-v2-pcd-link gl-v2-pcd-sm-mono">@person.Phone</a> }
+                                    @if (person.Email == null && person.Phone == null) { <small>geen e-mail of telefoon</small> }
+                                </div>
+                                <div class="gl-v2-pcd-person-tags">
+                                    @if (person.IsSiteManager) { <span class="gl-v2-pcd-sm-chip"><i class="ph ph-hard-hat" aria-hidden="true"></i>Werf</span> }
+                                    @if (person.LinkedUserId.HasValue && person.PortalStatus != null && PortalLabel(person.PortalStatus) != "")
+                                    {
+                                        <span class="gl-v2-badge @PortalTone(person.PortalStatus)">PORTAAL · @PortalLabel(person.PortalStatus).ToUpperInvariant()</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                        <span class="gl-v2-empty-state-icon"><i class="ph ph-users" aria-hidden="true"></i></span>
+                        <h3 class="gl-v2-empty-state-title">Nog geen contactpersonen</h3>
+                        <p class="gl-v2-empty-state-desc">Voeg ze toe bij het bewerken van de leverancier.</p>
+                    </div>
+                }
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(company?.Opmerking))
+            {
+                <div class="gl-v2-section-card">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-note" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Interne notitie</h2>
+                        <span class="gl-v2-section-card-spacer"></span>
+                        <span class="gl-v2-badge is-neutral">INTERN</span>
+                    </div>
+                    <p class="gl-v2-pcd-note">@company.Opmerking</p>
+                </div>
+            }
+        </div>
+
+        <div class="gl-v2-pcd-side">
+            @if (Model.RetainmentConfigured || Model.LastRetainment != null)
+            {
+                var ret = Model.LastRetainment;
+                var retBad = ret != null && ret.HasObligation;
+                var retNone = ret != null && ret.SocialSituation == "notInDomain" && ret.FiscalSituation == "notInDomain";
+                <div class="gl-v2-section-card" id="gl-v2-pcd-controles">
+                    <div class="gl-v2-section-card-header">
+                        <span class="gl-v2-section-card-icon"><i class="ph ph-shield-check" aria-hidden="true"></i></span>
+                        <h2 class="gl-v2-section-card-title">Controles</h2>
+                        <span class="gl-v2-field-divider"></span>
+                        <span class="gl-v2-section-card-desc">Inhoudingsplicht van deze leverancier.</span>
+                    </div>
+                    <div class="gl-v2-pcd-checklist">
+                        <div class="gl-v2-pcd-check @(ret == null ? "is-missing" : retBad ? "is-missing" : "is-ok")">
+                            <span class="gl-v2-pcd-check-icon"><i class="ph @(ret != null && !retBad ? "ph-check" : "ph-x")" aria-hidden="true"></i></span>
+                            <span class="gl-v2-pcd-check-label">Inhoudingsplicht<br /><small>RSZ en FOD Financiën@(ret != null ? " · gecontroleerd " + ret.CheckedAt.ToLocalTime().ToString("dd/MM/yyyy", be) : "")</small></span>
+                            <span class="gl-v2-pcd-check-value">@(ret == null ? "nog niet gecontroleerd" : retBad ? "inhouden" : retNone ? "buiten toepassing" : "geen")</span>
+                        </div>
+                    </div>
+                    @if (retBad)
+                    {
+                        <div class="gl-v2-pcd-side-body">
+                            <span class="gl-v2-pcd-sm-hint">
+                                Bij betaling aan deze leverancier moet je
+                                @if (ret!.SocialObligation) { <b>@ret.SocialWithholdingPercentage % voor sociale schulden</b> }
+                                @if (ret.SocialObligation && ret.FiscalObligation) { <text> en </text> }
+                                @if (ret.FiscalObligation) { <b>@ret.FiscalWithholdingPercentage % voor fiscale schulden</b> }
+                                inhouden en doorstorten.
+                                @if (ret.Environment == "Simulation") { <text> Dit is een testresultaat.</text> }
+                            </span>
+                        </div>
+                    }
+                    @if (Model.CanCheckRetainment && Model.RetainmentConfigured && Model.RetainmentHasIdentifier && company != null)
+                    {
+                        <div class="gl-v2-pcd-side-body">
+                            <form method="post" action="@Url.Action("CheckSupplier", "Inhoudingsplicht")">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="companyId" value="@company.CompanyId" />
+                                <input type="hidden" name="returnUrl" value="@(Context.Request.Path.Value + Context.Request.QueryString.Value + "#leverancier")" />
+                                <button type="submit" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i>Nu controleren</button>
+                            </form>
+                        </div>
+                    }
+                    else if (ret == null && !Model.RetainmentHasIdentifier)
+                    {
+                        <div class="gl-v2-pcd-side-body"><span class="gl-v2-pcd-sm-hint">Geen btw- of ondernemingsnummer: controleren is niet mogelijk.</span></div>
+                    }
+                </div>
+            }
+            <div class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-folders" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">In andere projecten</h2>
+                </div>
+                @if (otherContractRows.Any())
+                {
+                    <div class="gl-v2-pcd-others">
+                        @foreach (var oc in otherContractRows)
+                        {
+                            var isHere = oc.ProjectId == Model.ProjectId;
+                            <a class="gl-v2-pcd-other @(isHere ? "is-here" : "")" href="@Url.Action("DetailContract", "Projecten", new { projectid = oc.ProjectId, contractid = oc.ContractId })">
+                                <span class="gl-v2-pcd-other-main">
+                                    <b>@oc.ProjectName@(isHere ? " · dit project" : "")</b>
+                                    <small>@(string.IsNullOrWhiteSpace(oc.ContractName) ? "Contract" : oc.ContractName)</small>
+                                </span>
+                                <span class="gl-v2-pcd-other-end">
+                                    <b>@oc.Price.ToString("C0", be)</b>
+                                    <span class="gl-v2-badge @(oc.Signed ? "is-positive" : "is-attention")">@(oc.Signed ? "GETEKEND" : "NIET GETEKEND")</span>
+                                </span>
+                            </a>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="gl-v2-pcd-side-body"><span class="gl-v2-pcd-sm-hint">Nog geen contracten voor deze leverancier.</span></div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ── Tabblad Portaaltoegang (design-handoff 14h) ────────────────────────────────────────────────── *@
+<div class="gl-v2-pcd-panel" id="gl-v2-pcd-panel-portaaltoegang" data-tab-panel="portaaltoegang" role="tabpanel" hidden>
+    <span class="gl-v2-pcd-meta">
+        Wie bij @companyName zich kan aanmelden in het werfportaal · @withPortal met toegang · @contactsWithMail met e-mailadres
+    </span>
+
+    <div class="gl-v2-section-card">
+        <div class="gl-v2-section-card-header">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-key" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-section-card-title">Personen met toegang</h2>
+            <span class="gl-v2-field-divider"></span>
+            <span class="gl-v2-section-card-desc">Een uitnodiging stuurt een e-mail met een link om aan te melden.</span>
+        </div>
+        @if (Model.Contacts.Any())
+        {
+            <div class="gl-v2-pcd-access">
+                <div class="gl-v2-pcd-access-row gl-v2-pcd-access-head">
+                    <span>Persoon</span><span>Toegang</span><span>Status</span><span>Laatst aangemeld</span><span></span>
+                </div>
+                @foreach (var person in Model.Contacts)
+                {
+                    var hasStatus = person.PortalStatus != null && PortalLabel(person.PortalStatus) != "";
+                    var canInvite = Model.CanEditSupplier && person.Email != null && (!person.LinkedUserId.HasValue || person.PortalStatus == null || person.PortalStatus is "Failed" or "Revoked");
+                    var canRevoke = Model.CanEditSupplier && person.LinkedUserId.HasValue && person.PortalStatus != null && person.PortalStatus is not ("Failed" or "Revoked");
+                    <div class="gl-v2-pcd-access-row">
+                        <span class="gl-v2-pcd-person-who">
+                            <b>@(person.Name == "" ? "Onbekende contactpersoon" : person.Name)</b>
+                            <small>@(person.Email ?? "geen e-mailadres") @(person.Role == null ? "" : "· " + person.Role)</small>
+                        </span>
+                        <span data-label="Toegang">@(hasStatus && person.LinkedUserId.HasValue ? (person.IsFullCompanyAdmin ? "Volledig bedrijf" : (person.IsSiteManager ? "Beperkt · eigen contracten als werfleider" : "Beperkt")) : "—")</span>
+                        <span data-label="Status">
+                            @if (hasStatus)
+                            {
+                                <span class="gl-v2-badge @PortalTone(person.PortalStatus!)">@PortalLabel(person.PortalStatus!).ToUpperInvariant()</span>
+                            }
+                            else
+                            {
+                                <span class="gl-v2-pcd-sm-hint">niet uitgenodigd</span>
+                            }
+                        </span>
+                        <span data-label="Laatst aangemeld">@(person.LastLoginAt.HasValue ? person.LastLoginAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm", be) : "—")</span>
+                        <span class="gl-v2-pcd-access-actions">
+                            @if (canInvite)
+                            {
+                                <form method="post" action="@Url.Action("InviteContact", "Leveranciers")" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="contactId" value="@person.ContactId" />
+                                    <input type="hidden" name="isFullAdmin" value="false" />
+                                    <input type="hidden" name="returnUrl" value="@returnTo" />
+                                    <button type="submit" class="gl-v2-btn gl-v2-btn-secondary" title="Hij ziet enkel de contracten waarvoor hij werfleider is"><i class="ph ph-user-plus" aria-hidden="true"></i>Beperkt uitnodigen</button>
+                                </form>
+                                <form method="post" action="@Url.Action("InviteContact", "Leveranciers")" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="contactId" value="@person.ContactId" />
+                                    <input type="hidden" name="isFullAdmin" value="true" />
+                                    <input type="hidden" name="returnUrl" value="@returnTo" />
+                                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary" title="Hij ziet alle werven van het bedrijf"><i class="ph ph-buildings" aria-hidden="true"></i>Volledig uitnodigen</button>
+                                </form>
+                            }
+                            else if (canRevoke)
+                            {
+                                <form method="post" action="@Url.Action("RevokeContactAccess", "Leveranciers")" class="d-inline" data-bv-titel="Portaaltoegang intrekken voor @(person.Name == "" ? "deze persoon" : person.Name)?" data-bv-tekst="Hij kan daarna niet meer aanmelden. Je kan hem later opnieuw uitnodigen." data-bv-ok="Toegang intrekken" data-bv-tone="warning" data-bv-icon="ph-link-break">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="contactId" value="@person.ContactId" />
+                                    <input type="hidden" name="returnUrl" value="@returnTo" />
+                                    <button type="submit" class="gl-v2-btn gl-v2-btn-danger"><i class="ph ph-link-break" aria-hidden="true"></i>Toegang intrekken</button>
+                                </form>
+                            }
+                        </span>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="gl-v2-empty-state gl-v2-empty-state-inline">
+                <span class="gl-v2-empty-state-icon"><i class="ph ph-key" aria-hidden="true"></i></span>
+                <h3 class="gl-v2-empty-state-title">Nog geen contactpersonen</h3>
+                <p class="gl-v2-empty-state-desc">Voeg eerst een contactpersoon met e-mailadres toe aan de leverancier. Daarna kan je die uitnodigen.</p>
+            </div>
+        }
+    </div>
+
+    <div class="gl-v2-section-card">
+        <div class="gl-v2-section-card-header">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-info" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-section-card-title">Wat de leverancier ziet</h2>
+        </div>
+        <div class="gl-v2-pcd-side-body">
+            <span class="gl-v2-pcd-sm-hint">In het werfportaal ziet de uitgenodigde de werven van zijn bedrijf, de voortgang per werf en de punten die aan zijn bedrijf zijn toegewezen. Bij <b>beperkt</b> ziet hij enkel de werven en punten van de contracten waarvoor hij werfleider is. Bij <b>volledig</b> ziet hij alles van het bedrijf. Toegang geldt voor het hele bedrijf, niet per project.</span>
+        </div>
+    </div>
+</div>
 
 @* Gsm (<768px) enige: dezelfde drie acties als icoonknoppen in een vaste actiebalk onderaan — de
    topbar heeft daar geen ruimte voor knoppen NÓCH voor een ...-trigger (die blijft desktop/tablet).
@@ -589,6 +1192,8 @@ else
     </div>
 </div>
 
+@await Html.PartialAsync("GlV2/_BevestigModal")
+
 @section PageScripts
 {
     <script>
@@ -598,4 +1203,5 @@ else
     </script>
     <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>
     <script src="~/js/gl-v2-projecten-contract-detail.js" asp-append-version="true"></script>
+    <script src="~/js/gl-v2-vraagt-actie.js" asp-append-version="true"></script>
 }

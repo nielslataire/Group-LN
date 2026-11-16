@@ -1,7 +1,7 @@
 # Bouwplanning (Projecten › Planning) — beslissingen en voortgang
 
 Ontwerp: `design-handoff/Menu en toast design updates – CRM Planning.html` (59a werkend prototype, 59b import, 59c toestanden, 59d PDF).
-Status: **fase 1, stap 1 (fundament) gebouwd 13/11/2026; de pagina zelf nog niet.**
+Status: **fase 1 gebouwd (13 tot 15/11/2026); stap 0 meerdere plannings gebouwd 16/11/2026, niet in de echte app getest. Zie de sectie "Meerdere plannings per project".**
 
 ## ⚠ Vóór app-start: migratie `_migrations/144_BouwplanningUitbreiding.sql` draaien
 De entiteiten `PlanningSectie`/`PlanningTaak` kennen de nieuwe kolommen al. Zonder de migratie falen élke query op die tabellen
@@ -37,6 +37,18 @@ Aanleiding: de datumbalk bleef niet staan en je kon moeilijk door de planning sc
 
 ## Mijlpaal ↔ taak koppelen vanuit de UI (15/11/2026)
 Taak- en fasepaneel kregen "Koppeling met trajectmijlpaal" (ontwerp 59a): `PlanningService.Koppel` + `POST …/Planning/Koppeling` (recht Planning schrijven én Traject schrijven), keuzelijst `PlanningStaat.TrajectMijlpalen` (enkel vrije of al aan de planning gekoppelde mijlpalen van het project; een mijlpaal die iets anders volgt wordt geweigerd). Na koppelen en na elke planningswijziging herrekent het Traject (`HerberekenTrajectAsync`, enkel bij gekoppelde mijlpalen), zodat streefdatum en "bereikt" meelopen. 5 nieuwe tests in `PlanningServiceTests` (43 slagen). Help: `taak-datums-en-verantwoordelijke.md`, `planning-handleiding.md`. **Niet gebouwd:** automatisch koppelen op `Mijlpaal.Code` bij het aanmaken van een planning of traject; planningstaken hebben geen code, dus dat vraagt eerst een beslissing (codes op taken, of een koppeltabel per sjabloon).
+
+## Meerdere plannings per project (16/11/2026, stap 0 van het projectsjabloon)
+Zie `PLANNING_SJABLOON_OVERDRACHT.md` voor het hele plan (sjablonen, schijven, AI). Stap 0 is gebouwd, **niet in de echte app getest**: 55 planningtests slagen, CPMCore compileert (incl. Razor), de UI is enkel op syntax gecontroleerd.
+- Migratie `_migrations/145_MeerderePlannings.sql` (gedraaid op 16/11/2026; nieuwe tabel `BouwPlanning`, kolom `PlanningSectie.BouwPlanningId`; bestaande fases komen in een hoofdplanning). Niet door mij uitgevoerd.
+- Hoofdplanning + één planning per bouwdeel (betalingsgroep), samen doorgerekend, startdatum per planning als ondergrens, `H:` voor voorgangers uit de hoofdplanning, tabs op de pagina, planning toevoegen/instellen/verwijderen. Details in `CPMCore/DESIGN.md`.
+- Migratie 145 is gedraaid. **Project 79 is hervuld met een voorbeeld (16/11/2026, na bevestiging van Niels):** hoofdplanning (voorbereiding, 3 taken), "Woning 1" (bouwdeel Constructiewaarde 21%, 5 fases, 24 taken) en "Woning 2" (bouwdeel Constructiewaarde 6%, kopie van woning 1 zonder voortgang) met estafette: elke taak van woning 2 wacht op dezelfde taak in woning 1 (FS, 0 dagen). De planning van project 68 (één lege fase) is gewist. Reservekopie van de oude gegevens: scratchpad `planning-backup-16112026`. De opgeslagen start- en einddatums van de taken van woning 2 zijn leeg tot de planning één keer gewijzigd wordt (de pagina rekent ze wel meteen uit).
+- Eerste test door Niels (16/11/2026): punten 1 (bestaande functies), 3, 4 en 6 van de testlijst in orde.
+- **Feedback van Niels na de eerste test (16/11/2026), nog NIET gebouwd:**
+  1. **Estafette zichtbaar en per taak te kiezen.** Voorgangers uit een ander bouwdeel moeten in het veld Voorgangers staan (nu verborgen, wel behouden). Niels wil per taak kiezen of ze wacht op dezelfde taak in de vorige woning (bv. de elektriciteit in woning 1 moet klaar zijn voor ze in woning 2 start), niet verplicht voor elke taak. Plan: voorgangers tonen en typen als `Planningsnaam:3.2` (`H:` blijft de hoofdplanning; komma, puntkomma en dubbelpunt niet toestaan in een planningsnaam), plus in het taakpaneel een keuzevakje "Wacht op dezelfde taak in de vorige planning" dat die verwijzing invult (zelfde naam, anders zelfde nummer). Elke rij krijgt daarvoor een `estafetteVoorstel`.
+  2. **Duidelijkere foutmelding.** Een fout die een actie tegenhoudt (bv. voorganger 9.9 bestaat niet) toont nu als toast rechtsonder en valt niet op. Niels wil ze in het midden en opvallend, conform design-handoff 4g (blokkerende fout inline, niet als toast). Plan: `.gl-v2-inline-error` (bestaat in `gl-v2/toasts.css`, nog zonder gebruiker) als gecentreerde banner bovenaan de planningkaart voor alle blokkerende fouten van de planningpagina (inline bewerken, paneel, koppelen), met sluitknop. Eventueel ook als gedeeld patroon opnemen in `DESIGN.md`.
+- Nog te doen in stap 0: de rest van de pagina in de echte app uitproberen (vooral punt 5 na de nieuwe foutmelding).
+- Help: `HelpContent/projecten/planning-per-bouwdeel.md`.
 
 ## Nog te doen
 1. Planning in de echte app uitproberen (permissie toekennen, taak aanmaken, voorgangers, verlet, deadline, klantwaarschuwing).

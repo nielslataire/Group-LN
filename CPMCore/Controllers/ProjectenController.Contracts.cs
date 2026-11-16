@@ -196,6 +196,7 @@ namespace CPMCore.Controllers
             model.HasContract = model.Contracts.Any();
             model.SupplierCount = GetProjectSupplierCount(projectid, allContracts);
             FillSiteManagerInfo(model);
+            FillSupplierTabs(model);
 
             var index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
@@ -253,6 +254,103 @@ namespace CPMCore.Controllers
             }
         }
 
+        /// <summary>Gegevens voor de tabbladen Leverancier en Portaaltoegang (design-handoff 14g/14h): de
+        /// contactpersonen met hun portaalstatus en alle contracten van de leverancier (ook in andere projecten).
+        /// Alles uit bestaande tabellen; er is geen eigen opslag voor dit scherm.</summary>
+        private void FillSupplierTabs(ProjectContractDetailModel model)
+        {
+            var companyId = model.Company?.CompanyId ?? 0;
+            if (companyId <= 0) return;
+
+            model.CanEditSupplier = HttpContext.RequestServices.GetRequiredService<IPermissionService>().HasWrite(PermissionCodes.Suppliers);
+
+            var siteManagerIds = model.Contracts
+                .Where(c => c.SiteManagerContactId.HasValue && c.SiteManagerContactId.Value > 0)
+                .Select(c => c.SiteManagerContactId!.Value).ToHashSet();
+
+            var rawContacts = _db.CompanyContacts.AsNoTracking()
+                .Where(c => c.CompanyId == companyId)
+                .OrderBy(c => c.ContactNaam).ThenBy(c => c.ContactVoornaam)
+                .ToList();
+
+            var emails = rawContacts.Where(c => !string.IsNullOrWhiteSpace(c.Email))
+                .Select(c => c.Email!.Trim().ToLower()).Distinct().ToList();
+            var users = emails.Count == 0
+                ? new List<Users>()
+                : _db.Users.AsNoTracking().Where(u => u.Email != null && emails.Contains(u.Email.Trim().ToLower())).ToList();
+            var userIds = users.Select(u => u.Id).ToList();
+            var invites = _db.UserGuestInvitation.AsNoTracking().Where(i => userIds.Contains(i.UserId)).ToList();
+            var access = _db.UserCompanyAccess.AsNoTracking().Where(a => a.CompanyId == companyId && userIds.Contains(a.UserId)).ToList();
+
+            model.Contacts = rawContacts.Select(c =>
+            {
+                var mail = c.Email?.Trim().ToLower();
+                var user = mail == null ? null : users.FirstOrDefault(u => u.Email?.Trim().ToLower() == mail);
+                var invite = user == null ? null : invites.FirstOrDefault(i => i.UserId == user.Id);
+                var acc = user == null ? null : access.FirstOrDefault(a => a.UserId == user.Id);
+                return new SupplierTabContact
+                {
+                    ContactId = c.ContactId,
+                    Name = ((c.ContactVoornaam ?? "") + " " + (c.ContactNaam ?? "")).Trim(),
+                    Role = string.IsNullOrWhiteSpace(c.Functie) ? null : c.Functie.Trim(),
+                    Phone = !string.IsNullOrWhiteSpace(c.Gsm) ? c.Gsm.Trim() : (string.IsNullOrWhiteSpace(c.Telefoon) ? null : c.Telefoon.Trim()),
+                    Email = string.IsNullOrWhiteSpace(c.Email) ? null : c.Email.Trim(),
+                    IsSiteManager = siteManagerIds.Contains(c.ContactId),
+                    PortalStatus = invite?.InvitationStatus,
+                    IsFullCompanyAdmin = acc?.Role == CPMCore.Services.ContractorAccessRole.VolledigVerantwoordelijk,
+                    LinkedUserId = user?.Id,
+                    LastLoginAt = invite?.LastLoginAt
+                };
+            }).ToList();
+
+            // Inhoudingsplicht: de laatste geslaagde controle, zoals op de leveranciersfiche. Nooit de pagina laten stuklopen op deze externe bron.
+            try
+            {
+                var retainment = HttpContext.RequestServices.GetRequiredService<IRetainmentCheckService>();
+                var ci = _db.CompanyInfo.AsNoTracking().Where(c => c.CompanyId == companyId).Select(c => new { c.VatNumber, c.Ondernemingsnummer }).FirstOrDefault();
+                var identifier = !string.IsNullOrWhiteSpace(ci?.VatNumber) ? ci!.VatNumber : ci?.Ondernemingsnummer;
+                model.RetainmentConfigured = retainment.IsConfigured;
+                model.RetainmentHasIdentifier = !string.IsNullOrWhiteSpace(identifier);
+                if (model.RetainmentHasIdentifier)
+                {
+                    model.LastRetainment = retainment.GetHistoryForEnterpriseAsync(identifier!, 5, HttpContext.RequestAborted).GetAwaiter().GetResult().FirstOrDefault(h => !h.Failed);
+                }
+                model.CanCheckRetainment = HttpContext.RequestServices.GetRequiredService<IPermissionService>().HasWrite(PermissionCodes.Invoicing);
+            }
+            catch { /* een storing bij de RSZ-bron mag het contract nooit stukmaken */ }
+
+            // Contractprijs = loten + bijbestellingen, zoals op de contractpagina zelf.
+            var contracts = _db.Contract.AsNoTracking()
+                .Where(c => c.CompanyId == companyId)
+                .OrderBy(c => c.ProjectId).ThenBy(c => c.Id)
+                .Select(c => new
+                {
+                    c.Id,
+                    c.ProjectId,
+                    ProjectName = c.Project != null ? c.Project.ProjectName : "",
+                    c.ContractName,
+                    Signed = c.ContractSigned == true,
+                    Lots = c.ContractActivity.Sum(a => (decimal?)a.Price) ?? 0m
+                })
+                .ToList();
+            var contractIds = contracts.Select(c => c.Id).ToList();
+            var extras = _db.ContractAdditionalOrder.AsNoTracking()
+                .Where(o => contractIds.Contains(o.ContractActivity.ContractId))
+                .GroupBy(o => o.ContractActivity.ContractId)
+                .Select(g => new { ContractId = g.Key, Total = g.Sum(o => o.Price) })
+                .ToDictionary(x => x.ContractId, x => x.Total);
+
+            model.OtherContracts = contracts.Select(c => new SupplierTabContract
+            {
+                ContractId = c.Id,
+                ProjectId = c.ProjectId,
+                ProjectName = c.ProjectName,
+                ContractName = c.ContractName,
+                Signed = c.Signed,
+                Price = c.Lots + (extras.TryGetValue(c.Id, out var extra) ? extra : 0m)
+            }).ToList();
+        }
+
         [HttpGet]
         [Breadcrumb("Leverancier detail", FromAction = "DetailContracts")]
         public ActionResult DetailSupplier(int projectid, int companyid)
@@ -291,6 +389,7 @@ namespace CPMCore.Controllers
             model.HasContract = model.Contracts.Any();
             model.SupplierCount = GetProjectSupplierCount(projectid, allContracts);
             FillSiteManagerInfo(model);
+            FillSupplierTabs(model);
 
             var index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
@@ -413,8 +512,7 @@ namespace CPMCore.Controllers
                 .FirstOrDefault();
             if (definitief != null)
             {
-                var groepen = _budgetActivityService.GetLotGroepenAsync(definitief.Id).GetAwaiter().GetResult();
-                var regels = groepen.SelectMany(g => g.Lijnen).Select(l => new BegrootRegel(l.ActivityId, l.GroupId, l.TotaalAlternatief)).ToList();
+                var regels = GetDefinitiefBegrootRegels(definitief.Id);
                 // Handmatige regels (42d "Budget instellen") overschrijven het definitieve bedrag per activiteit;
                 // een handmatige activiteit die niet in het definitief budget staat komt er gewoon bij.
                 var aangepast = legacyBudget.Select(b => b.Activity.ID).Distinct().ToList();
@@ -427,6 +525,38 @@ namespace CPMCore.Controllers
                 return (regels, $"{definitief.Naam} v{definitief.Versienummer}");
             }
             return (legacyBudget.Select(b => new BegrootRegel(b.Activity.ID, b.Activity.Group.ID, b.Price)).ToList(), null);
+        }
+
+        /// <summary>Het begroot van een definitief budget per activiteit, zoals het budget zelf rekent (stap 6 en stap 9):
+        /// (1) elke activiteitenlijn tegen het gecorrigeerde bedrag (alt. prijs x correctie per activiteit, 0 telt als geen kost,
+        /// lijnen zonder bedrag tellen niet mee), en (2) de kostenposten van het resultaat die een eigen activiteit hebben
+        /// (projectcoördinatie, architect, ingenieur, decennale + ABR, opmeting, sondering, Wet Breyne en straight loan).
+        /// Posten waarvan de activiteit al als lijn in stap 6 staat worden niet nog eens opgeteld. Onvoorzien, grondkosten, forfaits
+        /// en publiciteit hebben in het budget geen activiteit en komen dus niet in de nacalculatie.</summary>
+        private List<BegrootRegel> GetDefinitiefBegrootRegels(int versieId)
+        {
+            var groepen = _budgetActivityService.GetLotGroepenAsync(versieId).GetAwaiter().GetResult();
+            var regels = groepen.SelectMany(g => g.Lijnen)
+                .Where(l => l.TotaalAlternatief > 0m)
+                .Select(l => new BegrootRegel(l.ActivityId, l.GroupId, l.TotaalAlternatief * (l.Correctiefactor < 0m ? 1m : l.Correctiefactor)))
+                .ToList();
+
+            var resultaat = _berekeningService.BerekenAsync(versieId).GetAwaiter().GetResult();
+            var reedsAanwezig = regels.Select(r => r.ActivityId).ToHashSet();
+            var posten = resultaat.KostenOpBouw.Concat(resultaat.Financiering)
+                .Where(k => k.ActivityId.HasValue && k.Bedrag != 0m && !reedsAanwezig.Contains(k.ActivityId.Value))
+                .GroupBy(k => k.ActivityId!.Value)
+                .ToDictionary(g => g.Key, g => g.Sum(k => k.Bedrag));
+            if (posten.Count > 0)
+            {
+                var groepPerActiviteit = _db.Activity.AsNoTracking()
+                    .Where(a => posten.Keys.Contains(a.ActivityId))
+                    .ToDictionary(a => a.ActivityId, a => a.GroupId);
+                foreach (var p in posten)
+                    if (groepPerActiviteit.TryGetValue(p.Key, out var groepId))
+                        regels.Add(new BegrootRegel(p.Key, groepId, p.Value));
+            }
+            return regels;
         }
 
         /// <summary>Categorieën + per-activiteit-rijen met badges/voortgang — exact de 42a-tabel-logica,

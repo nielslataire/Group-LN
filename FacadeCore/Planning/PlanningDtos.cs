@@ -5,8 +5,11 @@ namespace FacadeCore;
 /// <summary>Eén wijziging aan de bouwplanning, vanuit de pagina. <see cref="Type"/> bepaalt welke velden gelezen worden.</summary>
 public sealed class PlanningCommando
 {
-    /// <summary>taakToevoegen · faseToevoegen · wijzig · verwijder · verplaats · basisVastleggen · verletMeetellen · herstel</summary>
+    /// <summary>taakToevoegen · faseToevoegen · wijzig · verwijder · verplaats · basisVastleggen · verletMeetellen · herstel · planningToevoegen · planningWijzig · planningVerwijder</summary>
     public string Type { get; set; } = "";
+
+    /// <summary>De planning (hoofdplanning of bouwdeel) waarop het commando slaat; leeg of 0 = de hoofdplanning. Bij planningWijzig/planningVerwijder: de planning zelf.</summary>
+    public int? PlanningId { get; set; }
 
     /// <summary>Versie van de planning waarop de pagina zich baseert (conflictdetectie).</summary>
     public int Versie { get; set; }
@@ -61,6 +64,9 @@ public sealed class PlanningUitkomst
 
     public PlanningStaat? Staat { get; set; }
 
+    /// <summary>planningToevoegen: de nieuwe planning, zodat de pagina erheen kan schakelen.</summary>
+    public int? NieuwePlanningId { get; set; }
+
     /// <summary>Momentopname van de planning vóór deze wijziging, voor "Ongedaan maken".</summary>
     public string? Undo { get; set; }
 
@@ -76,6 +82,16 @@ public sealed class PlanningStaat
     public int ProjectId { get; set; }
     public int Versie { get; set; }
     public bool HeeftPlanning { get; set; }
+
+    /// <summary>De planning waarvan de rijen en de kop getoond worden.</summary>
+    public int ActiefPlanningId { get; set; }
+
+    /// <summary>Alle plannings van het project, de hoofdplanning eerst. Bestaat er nog geen, dan staat hier een virtuele hoofdplanning met Id 0.</summary>
+    public List<PlanningInfo> Planningen { get; set; } = new();
+
+    /// <summary>Bouwdelen (betalingsgroepen) van het project, om een planning aan te koppelen.</summary>
+    public List<PlanningBouwdeelOptie> Bouwdelen { get; set; } = new();
+
     public PlanningKop Kop { get; set; } = new();
     public List<PlanningRij> Rijen { get; set; } = new();
     public List<PlanningMelding> Meldingen { get; set; } = new();
@@ -87,6 +103,32 @@ public sealed class PlanningStaat
 
     /// <summary>Mijlpalen uit het Traject van dit project die aan een taak of fase gekoppeld kunnen worden: vrije (handmatige) en die al aan de planning hangen.</summary>
     public List<PlanningMijlpaalOptie> TrajectMijlpalen { get; set; } = new();
+}
+
+public sealed class PlanningInfo
+{
+    public int Id { get; set; }
+    public string Naam { get; set; } = "";
+    public bool IsHoofd { get; set; }
+    public int? BouwdeelId { get; set; }
+    public string? BouwdeelNaam { get; set; }
+
+    /// <summary>Ingestelde startdatum van de planning (yyyy-MM-dd); leeg = aanvangsdatum van het project.</summary>
+    public string? StartDatum { get; set; }
+
+    public int AantalTaken { get; set; }
+    public string? Start { get; set; }
+    public string? Einde { get; set; }
+}
+
+public sealed class PlanningBouwdeelOptie
+{
+    public int Id { get; set; }
+    public string Naam { get; set; } = "";
+    public int AantalEenheden { get; set; }
+
+    /// <summary>De planning die dit bouwdeel al heeft; leeg = vrij.</summary>
+    public int? PlanningId { get; set; }
 }
 
 public sealed class PlanningKop
@@ -212,6 +254,9 @@ public sealed class PlanningKoppelCommando
 
     public int Id { get; set; }
 
+    /// <summary>De planning die de pagina toont, zodat het antwoord dezelfde planning teruggeeft; leeg = de hoofdplanning.</summary>
+    public int? PlanningId { get; set; }
+
     /// <summary>De mijlpaal die gekoppeld wordt; leeg = enkel ontkoppelen.</summary>
     public int? MijlpaalId { get; set; }
 
@@ -221,7 +266,8 @@ public sealed class PlanningKoppelCommando
 
 public interface IPlanningService
 {
-    Task<PlanningStaat> Laad(int projectId);
+    /// <param name="planningId">De planning die getoond wordt; leeg of onbekend = de hoofdplanning.</param>
+    Task<PlanningStaat> Laad(int projectId, int? planningId = null);
 
     Task<PlanningUitkomst> Voer(int projectId, PlanningCommando commando, string? userId);
 

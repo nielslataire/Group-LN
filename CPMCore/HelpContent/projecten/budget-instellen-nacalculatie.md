@@ -4,7 +4,7 @@ topic: projecten
 role: Projectleider
 device: Desktop · tablet
 minutes: 4
-updated: 2026-10-21
+updated: 2026-11-16
 screens: nacalculatie-budget
 synonyms: budget instellen, begroot aanpassen, afwijking, definitief budget, activiteit toevoegen
 newsTag: Nieuw
@@ -55,3 +55,5 @@ Heeft een categorie nog geen activiteiten, dan zie je een gele melding. Voeg dan
 
 ## Let op
 Een activiteit die niet in het definitieve budget staat, krijgt bij **Definitief** een streepje. Haar bedrag telt als afwijking.
+
+Het definitieve bedrag per activiteit is het gecorrigeerde bedrag uit het budget, dus met de correctie per activiteit erin. Ook de kosten die in het budget een eigen activiteit hebben, zoals architect, ingenieur, verzekeringen en financiering, staan erbij. Onvoorzien, grondkosten en forfaits horen niet bij een activiteit en komen niet in de nacalculatie.

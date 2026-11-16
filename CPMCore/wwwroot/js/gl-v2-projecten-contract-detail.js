@@ -59,3 +59,54 @@
         panel.classList.toggle("is-expanded", !expanded);
     });
 })();
+
+// Tabbladen Contract · Facturen · Leverancier · Portaaltoegang (design-handoff 14f-14h): alle vier staan in dezelfde
+// pagina, de tabbar wisselt enkel welk paneel zichtbaar is. De gekozen tab staat in de url (#facturen), zodat een
+// verversing, een uitnodiging of een gedeelde link op hetzelfde tabblad terechtkomt.
+(function () {
+    "use strict";
+    var tabs = Array.prototype.slice.call(document.querySelectorAll(".js-gl-v2-pcd-tab"));
+    var panels = Array.prototype.slice.call(document.querySelectorAll(".gl-v2-pcd-panel[data-tab-panel]"));
+    if (!tabs.length || !panels.length) return;
+
+    function show(key, focus) {
+        if (!panels.some(function (p) { return p.getAttribute("data-tab-panel") === key; })) key = "contract";
+        tabs.forEach(function (t) {
+            var on = t.getAttribute("data-tab") === key;
+            t.classList.toggle("is-active", on);
+            t.setAttribute("aria-selected", on ? "true" : "false");
+            t.tabIndex = on ? 0 : -1;
+            if (on && focus) t.focus();
+        });
+        panels.forEach(function (p) { p.hidden = p.getAttribute("data-tab-panel") !== key; });
+        try { history.replaceState(null, "", key === "contract" ? location.pathname + location.search : "#" + key); } catch (e) { }
+    }
+
+    tabs.forEach(function (t, i) {
+        t.addEventListener("click", function () { show(t.getAttribute("data-tab")); });
+        t.addEventListener("keydown", function (e) {
+            var next = e.key === "ArrowRight" ? i + 1 : e.key === "ArrowLeft" ? i - 1 : -1;
+            if (next < 0) return;
+            e.preventDefault();
+            var target = tabs[(next + tabs.length) % tabs.length];
+            show(target.getAttribute("data-tab"), true);
+        });
+    });
+    show((location.hash || "").replace("#", "") || "contract");
+    // Een link naar een ander tabblad (bv. "#leverancier" in Vraagt actie) wisselt mee.
+    window.addEventListener("hashchange", function () { var k = (location.hash || "").replace("#", ""); if (k) show(k); });
+
+    // Filter op het tabblad Facturen: Alles · Open · Betaald. Afgekeurde facturen staan enkel onder Alles.
+    var filter = document.querySelector(".js-gl-v2-pcd-inv-filter");
+    if (filter) {
+        filter.addEventListener("click", function (e) {
+            var btn = e.target.closest("button[data-filter]");
+            if (!btn) return;
+            var wanted = btn.getAttribute("data-filter");
+            Array.prototype.forEach.call(filter.querySelectorAll("button"), function (b) { b.classList.toggle("is-active", b === btn); });
+            Array.prototype.forEach.call(document.querySelectorAll(".js-gl-v2-pcd-inv-row"), function (row) {
+                row.hidden = wanted !== "alle" && row.getAttribute("data-group") !== wanted;
+            });
+        });
+    }
+})();

@@ -61,24 +61,7 @@
 .gl-v2-pcd-stat-value.is-warning { color: #8A6A32; }
 .gl-v2-pcd-stat-sub { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* ── "Vraagt actie" ───────────────────────────────────────────────────────────────────────────── */
-.gl-v2-pcd-attention-card { border-top: 3px solid var(--gl-v2-warning); }
-.gl-v2-pcd-attention-body { padding: 4px 18px 12px; }
-.gl-v2-pcd-attention-item {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-    min-height: 46px;
-    padding: 8px 0;
-    border-bottom: 1px solid rgba(139, 42, 42, .12);
-}
-.gl-v2-pcd-attention-item:last-child { border-bottom: 0; }
-.gl-v2-pcd-attention-icon { color: var(--gl-v2-danger); font-size: 16px; flex: none; }
-.gl-v2-pcd-attention-title { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); flex: none; }
-.gl-v2-pcd-attention-meta { font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
-.gl-v2-pcd-attention-spacer { flex: 1; }
-.gl-v2-pcd-attention-action { font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: none; flex: none; }
-.gl-v2-pcd-attention-action:hover { text-decoration: underline; }
+/* "Vraagt actie": gedeelde kaart, zie css/gl-v2-vraagt-actie.css en Views/Shared/GlV2/_VraagtActie.cshtml. */
 
 /* ── Voorwaarden + Veiligheid & attesten ──────────────────────────────────────────────────────── */
 /* design-handoff 14i: Voorwaarden · Werfleider aannemer · Veiligheid & attesten = drie gelijke kolommen
@@ -196,4 +179,118 @@
     .gl-v2-pcd-lots-total { grid-area: total; }
     .gl-v2-pcd-lots-row > span:nth-child(2) { grid-area: base; text-align: left; font-size: 11px; }
     .gl-v2-pcd-lots-row > span:nth-child(3) { grid-area: extra; font-size: 11px; }
+}
+
+/* ── Tabbladen Facturen, Leverancier en Portaaltoegang (design-handoff 14f, 14g, 14h) ──────────────
+   Elk tabblad is een paneel met hetzelfde verticale ritme als de pagina zelf (16px tussen de kaarten). */
+.gl-v2-pcd-panel { display: flex; flex-direction: column; gap: 16px; }
+.gl-v2-pcd-panel[hidden] { display: none; }
+.gl-v2-pcd-link { color: var(--gl-v2-primary); text-decoration: none; word-break: break-word; }
+.gl-v2-pcd-link:hover { text-decoration: underline; }
+
+/* Brede kolom + smalle kolom naast elkaar vanaf 1100px; daaronder onder elkaar. */
+.gl-v2-pcd-split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (min-width: 1100px) {
+    .gl-v2-pcd-split { grid-template-columns: minmax(0, 1fr) 340px; }
+}
+.gl-v2-pcd-main, .gl-v2-pcd-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.gl-v2-pcd-side-body { display: flex; flex-direction: column; gap: 10px; padding: 14px 18px 16px; }
+.gl-v2-pcd-side-line { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
+.gl-v2-pcd-side-line b { font-weight: 600; color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gl-v2-pcd-side-line.is-soft { font-size: 12px; }
+.gl-v2-pcd-bar { height: 8px; border-radius: 99px; background: var(--gl-v2-neutral-tint); overflow: hidden; }
+.gl-v2-pcd-bar > i { display: block; height: 100%; border-radius: 99px; background: var(--gl-v2-primary); }
+
+/* Facturen: één tabel met één status per factuur. */
+.gl-v2-pcd-inv-toolbar { padding: 10px 18px 4px; }
+.gl-v2-pcd-inv-count { font-variant-numeric: tabular-nums; opacity: .7; }
+.gl-v2-pcd-inv-table { padding: 0 18px 14px; }
+.gl-v2-pcd-inv-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) 92px 92px 130px 120px 140px;
+    gap: 12px;
+    align-items: center;
+    min-height: 52px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    color: inherit;
+    text-decoration: none;
+}
+a.gl-v2-pcd-inv-row:hover { background: var(--gl-v2-hover-tint); }
+a.gl-v2-pcd-inv-row[hidden] { display: none; }
+.gl-v2-pcd-inv-head { min-height: 0; padding: 11px 0 8px; border-bottom: 1px solid var(--gl-v2-hairline); }
+.gl-v2-pcd-inv-head span { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .09em; color: var(--gl-v2-muted); text-transform: uppercase; }
+.gl-v2-pcd-inv-row .text-end { text-align: right; }
+.gl-v2-pcd-inv-nr { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gl-v2-pcd-inv-nr b { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-pcd-inv-nr small { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-pcd-inv-date, .gl-v2-pcd-inv-amount, .gl-v2-pcd-inv-discount { font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); font-variant-numeric: tabular-nums; }
+.gl-v2-pcd-inv-amount { font-weight: 600; color: var(--gl-v2-ink); }
+.gl-v2-pcd-inv-date.is-late, .gl-v2-pcd-inv-discount.is-late { color: var(--gl-v2-danger); font-weight: 600; }
+.gl-v2-pcd-inv-total { min-height: 0; border-bottom: 0; padding-top: 12px; font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-pcd-inv-status .gl-v2-badge i { margin-right: 4px; }
+
+/* Leverancier: contactpersonen en andere projecten. */
+.gl-v2-pcd-people, .gl-v2-pcd-others { display: flex; flex-direction: column; padding: 0 18px 8px; }
+.gl-v2-pcd-person {
+    display: grid; grid-template-columns: 42px minmax(0, 1.1fr) minmax(0, 1.4fr) auto; gap: 12px; align-items: center;
+    padding: 12px 0; border-bottom: 1px solid var(--gl-v2-hairline-soft);
+}
+.gl-v2-pcd-person:last-child { border-bottom: 0; }
+.gl-v2-pcd-person-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gl-v2-pcd-person-who b { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-pcd-person-who small { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-pcd-person-contact { display: flex; flex-direction: column; gap: 2px; min-width: 0; font: 450 12.5px var(--gl-v2-font-sans); }
+.gl-v2-pcd-person-contact small { color: var(--gl-v2-muted); }
+.gl-v2-pcd-person-tags { display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end; }
+.gl-v2-pcd-other {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0;
+    border-bottom: 1px solid var(--gl-v2-hairline-soft); color: inherit; text-decoration: none;
+}
+.gl-v2-pcd-other:last-child { border-bottom: 0; }
+a.gl-v2-pcd-other:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-pcd-other-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gl-v2-pcd-other-main b { font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-pcd-other-main small { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-pcd-other-end { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: none; }
+.gl-v2-pcd-other-end b { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); font-variant-numeric: tabular-nums; }
+.gl-v2-pcd-other.is-here .gl-v2-pcd-other-main b { color: var(--gl-v2-primary); }
+.gl-v2-pcd-note { margin: 0; padding: 14px 18px 18px; font: 450 13px/1.55 var(--gl-v2-font-sans); color: var(--gl-v2-ink); white-space: pre-line; }
+.gl-v2-notice-bar .gl-v2-btn { margin-left: auto; flex: none; }
+
+/* Portaaltoegang: wie kan aanmelden en met welke status. */
+.gl-v2-pcd-access { padding: 0 18px 10px; }
+.gl-v2-pcd-access-row {
+    display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.1fr) 130px 140px auto; gap: 12px; align-items: center;
+    min-height: 56px; padding: 8px 0; border-bottom: 1px solid var(--gl-v2-hairline-soft);
+    font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft);
+}
+.gl-v2-pcd-access-row:last-child { border-bottom: 0; }
+.gl-v2-pcd-access-head { min-height: 0; padding: 11px 0 8px; border-bottom: 1px solid var(--gl-v2-hairline); }
+.gl-v2-pcd-access-head span { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .09em; color: var(--gl-v2-muted); text-transform: uppercase; }
+.gl-v2-pcd-access-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+@media (max-width: 1199.98px) {
+    .gl-v2-pcd-inv-row { grid-template-columns: minmax(0, 1.4fr) 88px 88px 120px 110px; }
+    .gl-v2-pcd-inv-row > .gl-v2-pcd-inv-status { grid-column: 1 / -1; }
+    .gl-v2-pcd-inv-head > span:last-child { display: none; }
+}
+@media (max-width: 767.98px) {
+    .gl-v2-pcd-inv-head, .gl-v2-pcd-access-head { display: none; }
+    .gl-v2-pcd-inv-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "nr amount" "date due" "disc status"; row-gap: 4px; padding: 10px 0; }
+    .gl-v2-pcd-inv-row > .gl-v2-pcd-inv-nr { grid-area: nr; }
+    .gl-v2-pcd-inv-row > .gl-v2-pcd-inv-amount { grid-area: amount; }
+    .gl-v2-pcd-inv-row > .gl-v2-pcd-inv-date:nth-child(2) { grid-area: date; }
+    .gl-v2-pcd-inv-row > .gl-v2-pcd-inv-date:nth-child(3) { grid-area: due; text-align: right; }
+    .gl-v2-pcd-inv-row > .gl-v2-pcd-inv-discount { grid-area: disc; text-align: left; }
+    .gl-v2-pcd-inv-row > .gl-v2-pcd-inv-status { grid-area: status; grid-column: auto; text-align: right; }
+    .gl-v2-pcd-inv-row .gl-v2-pcd-inv-date::before, .gl-v2-pcd-inv-row .gl-v2-pcd-inv-discount::before { content: attr(data-label) " "; color: var(--gl-v2-muted-light); font-size: 10.5px; }
+    .gl-v2-pcd-inv-total { display: flex; justify-content: space-between; }
+    .gl-v2-pcd-inv-total > span:empty { display: none; }
+    .gl-v2-pcd-person { grid-template-columns: 42px minmax(0, 1fr); }
+    .gl-v2-pcd-person-contact, .gl-v2-pcd-person-tags { grid-column: 2; justify-content: flex-start; }
+    .gl-v2-pcd-access-row { grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 12px 0; }
+    .gl-v2-pcd-access-row > span[data-label]::before { content: attr(data-label) ": "; color: var(--gl-v2-muted-light); font-size: 10.5px; }
+    .gl-v2-pcd-access-actions { justify-content: flex-start; }
+    .gl-v2-notice-bar .gl-v2-btn { margin-left: 0; }
 }

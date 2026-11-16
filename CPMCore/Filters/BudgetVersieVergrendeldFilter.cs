@@ -20,7 +20,7 @@ public sealed class BudgetVersieVergrendeldFilter : IActionFilter
     private static readonly HashSet<string> Uitzonderingen = new(StringComparer.OrdinalIgnoreCase)
     {
         "BudgetVersieOntgrendelen", "BudgetVersieDefinitief", "BudgetVersieAfronden", "BudgetVersieActiveren", "BudgetNieuweVersie",
-        "HerstelVersie", "BudgetKopieer", "DownloadBudgetExcel", "DownloadBudgetPdf"
+        "HerstelVersie", "BudgetKopieer", "DownloadBudgetExcel", "DownloadBudgetPdf", "BudgetPdfMaken", "BudgetExcelMaken"
     };
 
     private const string ItemsSleutel = "BudgetVersieId";

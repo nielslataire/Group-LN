@@ -223,7 +223,7 @@ namespace CPMCore.Controllers
         /// <summary>Controleert één leverancier vanaf zijn fiche en keert daarheen terug; de controle blijft bewaard (en telt als bewijs) zoals elke andere.</summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CheckSupplier(int companyId, [FromServices] cpmRunningContext db, CancellationToken ct = default)
+        public async Task<IActionResult> CheckSupplier(int companyId, [FromServices] cpmRunningContext db, string? returnUrl = null, CancellationToken ct = default)
         {
             await _permissionService.EnsureLoadedAsync();
             if (!_permissionService.HasWrite(PermissionCodes.Invoicing))
@@ -239,6 +239,7 @@ namespace CPMCore.Controllers
                 AddMessage("warning", item?.ErrorMessage ?? "De controle is mislukt.", "Inhoudingsplicht");
             else
                 AddMessage(item.HasObligation ? "warning" : "success", item.HasObligation ? "Deze leverancier heeft een inhoudingsplicht." : "Geen inhoudingsplicht voor deze leverancier.", "Inhoudingsplicht");
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)) return LocalRedirect(returnUrl);
             return RedirectToAction("Details", "Leveranciers", new { id = companyId });
         }
 

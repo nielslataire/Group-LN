@@ -39,7 +39,9 @@ public sealed record PlanTaak(
     DateOnly? Deadline = null,
     DateOnly? WerkelijkStart = null,
     DateOnly? WerkelijkEinde = null,
-    bool IsAfgerond = false);
+    bool IsAfgerond = false,
+    DateOnly? StartVanaf = null,
+    bool IsPlanningStart = false);
 
 /// <summary>Resultaat per taak.</summary>
 public sealed class PlanTaakResultaat
@@ -156,6 +158,13 @@ public static class PlanningCalculator
                 if (kandidaat > start) { start = kandidaat; bepalend = l.VoorgangerId; }
             }
 
+            // Startdatum van de planning waartoe de taak behoort: een ondergrens, nooit een reden om vroeger te starten.
+            if (t.StartVanaf is DateOnly sv)
+            {
+                var b0 = kalender.OpOfNa(sv, metVerlet);
+                if (b0 > start) { start = b0; bepalend = null; }
+            }
+
             // Beperkingen
             if (t.BeperkingDatum is DateOnly bd)
             {
@@ -190,7 +199,7 @@ public static class PlanningCalculator
             r.BepalendeVoorgangerId = bepalend;
 
             // Waarschuwingen
-            if (!Links(t).Any() && t.Beperking == PlanBeperking.ZoVroegMogelijk && t.WerkelijkStart is null && id != eerste)
+            if (!Links(t).Any() && t.Beperking == PlanBeperking.ZoVroegMogelijk && t.WerkelijkStart is null && id != eerste && !t.IsPlanningStart)
                 r.Waarschuwingen.Add(new PlanWaarschuwing(PlanWaarschuwingType.GeenVoorganger));
             if (t.Deadline is DateOnly dl && einde > dl)
                 r.Waarschuwingen.Add(new PlanWaarschuwing(PlanWaarschuwingType.DeadlineOverschreden, kalender.Tel(dl, einde, metVerlet)));

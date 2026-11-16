@@ -3,6 +3,7 @@ using FacadeCore;
 using CPMCore.Models.Projecten;
 using DALCore.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Globalization;
 
@@ -27,12 +28,12 @@ namespace CPMCore.Controllers
             if (definitief != null)
             {
                 vm.DefinitiefLabel = $"{definitief.Naam} v{definitief.Versienummer}";
-                var groepen = _budgetActivityService.GetLotGroepenAsync(definitief.Id).GetAwaiter().GetResult();
-                foreach (var l in groepen.SelectMany(g => g.Lijnen))
+                var namen = _db.Activity.AsNoTracking().ToDictionary(a => a.ActivityId, a => a.Omschrijving ?? "");
+                foreach (var r in GetDefinitiefBegrootRegels(definitief.Id))
                 {
-                    defPerActiviteit[l.ActivityId] = defPerActiviteit.TryGetValue(l.ActivityId, out var bestaand)
-                        ? (bestaand.Naam, bestaand.GroupId, bestaand.Bedrag + l.TotaalAlternatief)
-                        : (l.ActivityOmschrijving ?? "", l.GroupId, l.TotaalAlternatief);
+                    defPerActiviteit[r.ActivityId] = defPerActiviteit.TryGetValue(r.ActivityId, out var bestaand)
+                        ? (bestaand.Naam, bestaand.GroupId, bestaand.Bedrag + r.Bedrag)
+                        : (namen.TryGetValue(r.ActivityId, out var naam) ? naam : "", r.GroupId, r.Bedrag);
                 }
             }
 
@@ -90,8 +91,8 @@ namespace CPMCore.Controllers
                 .Select(v => new { v.Id }).FirstOrDefault();
             if (definitief != null)
             {
-                foreach (var l in _budgetActivityService.GetLotGroepenAsync(definitief.Id).GetAwaiter().GetResult().SelectMany(g => g.Lijnen))
-                    defPerActiviteit[l.ActivityId] = (defPerActiviteit.TryGetValue(l.ActivityId, out var s) ? s : 0m) + l.TotaalAlternatief;
+                foreach (var r in GetDefinitiefBegrootRegels(definitief.Id))
+                    defPerActiviteit[r.ActivityId] = (defPerActiviteit.TryGetValue(r.ActivityId, out var s) ? s : 0m) + r.Bedrag;
             }
 
             var bestaand = (_projectService.GetProjectBudget(projectid).Values ?? new List<BudgetActivityBO>())

@@ -1,0 +1,127 @@
+@model CPMCore.Models.GlV2.GlV2VraagtActieVm
+@*
+    Gedeelde kaart "Vraagt actie" (design-handoff punt 60): rode kopband + getinte kaart, DRINGEND boven AANDACHT, filter per
+    categorie, in- en uitklappen en bundels (3 of meer meldingen van hetzelfde type klappen open tot hun regels).
+    Drie toestanden: rood (er is iets dringend), goud/"calm" (enkel aandacht) en groen/"ok" (niets openstaand: één smalle regel).
+    Gebruikt op Projecten/Detail, op het contract en op de facturen van een leverancier. Stijl: css/gl-v2-vraagt-actie.css,
+    gedrag: js/gl-v2-vraagt-actie.js (werkt voor meerdere kaarten op één pagina; laad beide via PageStyle/PageScripts).
+    De directe acties per regel uit 60a (Herinnering sturen, Nieuwe datum, Alle 3 koppelen) zijn nog niet gebouwd:
+    elke regel opent het bijhorende scherm.
+*@
+@{
+    var urgentItems = Model.Urgent.ToList();
+    var normalItems = Model.Attention.ToList();
+    var allItems = urgentItems.Concat(normalItems).ToList();
+    var attGroups = allItems.GroupBy(i => (i.Type, i.Categorie)).ToList();
+    var attSummary = string.Join(" · ", attGroups.Take(3).Select(g => g.Count() >= 3 ? $"{g.Count()}× {g.Key.Type}" : g.First().Type));
+    if (attGroups.Count > 3) { attSummary += " · …"; }
+    var attState = urgentItems.Any() ? "" : (normalItems.Any() ? "is-calm" : "is-ok");
+    var attSections = new[]
+    {
+        (Sev: "u", Label: "DRINGEND", Items: urgentItems),
+        (Sev: "a", Label: "AANDACHT", Items: normalItems)
+    };
+}
+@if (!allItems.Any())
+{
+    <section class="gl-v2-pd-attention-card is-ok" aria-label="Vraagt actie">
+        <div class="gl-v2-pd-att-head">
+            <span class="gl-v2-pd-att-icon"><i class="ph ph-check" aria-hidden="true"></i></span>
+            <div class="gl-v2-pd-att-title">
+                <b class="is-quiet">@Model.EmptyTitle</b>
+                <span>@Model.EmptyText</span>
+            </div>
+        </div>
+    </section>
+}
+else
+{
+    <section class="gl-v2-pd-attention-card @attState" aria-label="Vraagt actie">
+        <div class="gl-v2-pd-att-head">
+            <span class="gl-v2-pd-att-icon"><i class="ph ph-warning" aria-hidden="true"></i></span>
+            <div class="gl-v2-pd-att-title">
+                <b>Vraagt actie<span class="gl-v2-pd-att-n" aria-label="@allItems.Count meldingen">@allItems.Count</span></b>
+                <span class="js-gl-v2-pd-att-sub-open">@Model.Subtitle</span>
+                <span class="js-gl-v2-pd-att-sub-closed" hidden>@attSummary</span>
+            </div>
+            <div class="gl-v2-pd-att-sum">
+                @if (urgentItems.Any())
+                {
+                    <span class="gl-v2-pd-att-pill is-urgent"><i></i>@urgentItems.Count dringend</span>
+                }
+                @if (normalItems.Any())
+                {
+                    <span class="gl-v2-pd-att-pill is-attention"><i></i>@normalItems.Count aandacht</span>
+                }
+            </div>
+            <span class="gl-v2-pd-attention-spacer"></span>
+            @if (Model.Categories.Any())
+            {
+                <div class="gl-v2-pd-chips js-gl-v2-pd-att-filters" role="tablist" aria-label="Filter op categorie">
+                    <button type="button" role="tab" class="gl-v2-pd-chip is-active js-gl-v2-pd-chip" data-cat="alle" aria-selected="true">Alles <em>@allItems.Count</em></button>
+                    @foreach (var cat in Model.Categories)
+                    {
+                        <button type="button" role="tab" class="gl-v2-pd-chip js-gl-v2-pd-chip" data-cat="@cat" aria-selected="false">@cat <em>@(allItems.Count(i => i.Categorie == cat))</em></button>
+                    }
+                </div>
+            }
+            <button type="button" class="gl-v2-pd-att-toggle js-gl-v2-pd-att-toggle" aria-expanded="true" aria-label="Inklappen" title="Inklappen"><i class="ph ph-caret-up" aria-hidden="true"></i></button>
+            <div class="visually-hidden js-gl-v2-pd-filter-status" aria-live="polite"></div>
+        </div>
+        <div class="gl-v2-pd-attention-body js-gl-v2-pd-attention-body">
+            @foreach (var sec in attSections)
+            {
+                if (!sec.Items.Any()) { continue; }
+                <div class="js-gl-v2-pd-attention-group">
+                    <div class="gl-v2-pd-att-sec @(sec.Sev == "a" ? "is-attention" : "")"><i></i>@sec.Label · <span class="js-gl-v2-pd-sec-n">@sec.Items.Count</span><span class="gl-v2-pd-att-sec-line"></span></div>
+                    @foreach (var grp in sec.Items.GroupBy(i => (i.Type, i.Categorie)))
+                    {
+                        var grpList = grp.ToList();
+                        if (grpList.Count >= 3)
+                        {
+                            var first = grpList[0];
+                            <div class="gl-v2-pd-att-bundle @sec.Sev js-gl-v2-pd-attention-item" data-cat="@first.Categorie" data-count="@grpList.Count">
+                                <div class="gl-v2-pd-att-row is-bundle @sec.Sev">
+                                    <span class="gl-v2-pd-att-ic"><i class="ph @first.Icon" aria-hidden="true"></i></span>
+                                    <span class="gl-v2-pd-att-main"><b>@(grpList.Count)× @first.Type</b></span>
+                                    <button type="button" class="gl-v2-pd-att-tw js-gl-v2-pd-att-bundle" aria-expanded="true" aria-label="Lijst inklappen" title="Lijst inklappen"><i class="ph ph-caret-down" aria-hidden="true"></i></button>
+                                </div>
+                                <div class="gl-v2-pd-att-sub @sec.Sev">
+                                    @foreach (var item in grpList)
+                                    {
+                                        <a class="gl-v2-pd-att-subrow" href="@item.BekijkUrl">
+                                            @if (item.Entiteit is not null) { <span class="gl-v2-pd-att-ref">@item.Entiteit</span> } else { <span></span> }
+                                            <span class="gl-v2-pd-att-desc">@item.Extra</span>
+                                            <span class="gl-v2-pd-att-meta">@item.Meta</span>
+                                            <span class="gl-v2-pd-att-go">@if (item.BekijkUrl is not null) { <i class="ph ph-caret-right" aria-hidden="true"></i> }</span>
+                                        </a>
+                                    }
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            foreach (var item in grpList)
+                            {
+                                @* Razor laat het href-attribuut weg bij een null-URL: de regel blijft dan gewone,
+                                   niet-klikbare tekst i.p.v. een link die levend lijkt maar nergens heen gaat. *@
+                                <a class="gl-v2-pd-att-row @sec.Sev js-gl-v2-pd-attention-item" data-cat="@item.Categorie" data-count="1" href="@item.BekijkUrl">
+                                    <span class="gl-v2-pd-att-ic"><i class="ph @item.Icon" aria-hidden="true"></i></span>
+                                    <span class="gl-v2-pd-att-main">
+                                        <b>
+                                            @item.Type
+                                            @if (item.Entiteit is not null) { <span>@item.Entiteit</span> }
+                                        </b>
+                                        @if (!string.IsNullOrWhiteSpace(item.Extra)) { <small title="@item.Extra">@item.Extra</small> }
+                                    </span>
+                                    <span class="gl-v2-pd-att-age @sec.Sev">@item.Meta</span>
+                                    <span class="gl-v2-pd-att-go">@if (item.BekijkUrl is not null) { <i class="ph ph-caret-right" aria-hidden="true"></i> }</span>
+                                </a>
+                            }
+                        }
+                    }
+                </div>
+            }
+        </div>
+    </section>
+}

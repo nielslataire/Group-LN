@@ -45,7 +45,7 @@ public class ProjectPlanningController : BaseController
 
     [HttpGet("")]
     [Breadcrumb("Planning")]
-    public async Task<IActionResult> Index(int projectId)
+    public async Task<IActionResult> Index(int projectId, int? planningId = null)
     {
         var projectName = await _db.Project.AsNoTracking()
             .Where(p => p.ProjectId == projectId).Select(p => p.ProjectName).FirstOrDefaultAsync();
@@ -61,7 +61,7 @@ public class ProjectPlanningController : BaseController
         ViewData["HelpScreenId"] = "planning-index";
 
         var ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
-        var staat = await _planning.Laad(projectId);
+        var staat = await _planning.Laad(projectId, planningId);
         return View("IndexV2", new PlanningIndexVm
         {
             ProjectId = projectId,
@@ -82,7 +82,7 @@ public class ProjectPlanningController : BaseController
         if (commando == null) return BadRequest();
 
         // Verwijderen vraagt het verwijderrecht (zoals Traject en Dossiers).
-        if (commando.Type == "verwijder"
+        if ((commando.Type == "verwijder" || commando.Type == "planningVerwijder")
             && !HttpContext.RequestServices.GetRequiredService<IPermissionService>().HasDelete(PermissionCodes.ProjectsPlanning))
             return Forbid();
 
@@ -108,5 +108,5 @@ public class ProjectPlanningController : BaseController
     }
 
     [HttpGet("Staat")]
-    public async Task<IActionResult> Staat(int projectId) => Json(await _planning.Laad(projectId), JsonOpties);
+    public async Task<IActionResult> Staat(int projectId, int? planningId = null) => Json(await _planning.Laad(projectId, planningId), JsonOpties);
 }

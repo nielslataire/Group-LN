@@ -56,7 +56,14 @@
         }, 2200);
         var form = new FormData(); form.append("__RequestVerificationToken", token || "");
         fetch(url, { method: "POST", body: form, credentials: "same-origin" }).then(function (r) {
-            if (!r.ok) return r.text().then(function (t) { throw new Error((t || ("status " + r.status)).slice(0, 300)); });
+            // Een gebruiker mag nooit een HTML-pagina als "PDF" te zien krijgen (omleiding naar een andere pagina, verlopen sessie, serverfout): enkel een echt PDF/Excel-bestand gaat door.
+            var type = (r.headers.get("Content-Type") || "").toLowerCase();
+            var echt = excel ? (type.indexOf("spreadsheet") >= 0 || type.indexOf("excel") >= 0 || type.indexOf("octet-stream") >= 0) : type.indexOf("application/pdf") >= 0;
+            if (!r.ok || r.redirected || !echt) {
+                if (r.redirected && /login|account/i.test(r.url)) throw new Error("je sessie is verlopen, meld je opnieuw aan");
+                if (type.indexOf("json") >= 0) return r.json().then(function (j) { throw new Error(String((j && (j.message || j.error)) || ("status " + r.status)).slice(0, 200)); });
+                throw new Error("status " + r.status + (type.indexOf("html") >= 0 ? " (de server gaf geen bestand terug)" : ""));
+            }
             var aantal = r.headers.get("X-Pagina-Aantal"), n = r.headers.get("X-Bestandsnaam");
             if (n) bestand = n;
             bewaard = r.headers.get("X-Bewaard") === "1";

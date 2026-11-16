@@ -155,7 +155,9 @@
 #gl-v2-sec-docs .gl-v2-dropzone-empty { flex: 1; min-height: 68px; }
 
 .gl-v2-unit-doc { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
-.gl-v2-unit-exec-list { display: flex; flex-direction: column; gap: 8px; }
+/* display: contents: de plan-rijen worden rechtstreeks kinderen van .gl-v2-unit-doc (zelfde 8px tussenruimte), en een LEGE lijst telt niet mee.
+   Als flex-kolom met gap kreeg ze ook leeg een eigen vak, waardoor er 8px extra boven het sleepvak stond en dat lager begon dan het verkoopplan-vak. */
+.gl-v2-unit-exec-list { display: contents; }
 .gl-v2-unit-doc-row {
     display: flex; align-items: center; gap: 12px; padding: 10px 12px;
     border: 1px solid var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-sm); background: var(--gl-v2-surface);

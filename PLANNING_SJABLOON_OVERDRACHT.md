@@ -18,49 +18,65 @@ Nog te doen aan jouw kant: de planningpagina en de nieuwe keuze in de echte app 
 
 Wens: bij een nieuw project een projecttype kiezen (verkaveling met woningen, appartementsgebouw, ...) en dan al een standaardplanning, een traject en facturatieschijven hebben, automatisch aan elkaar gekoppeld. Je zegt "fase bereikt" in de planning en de rest volgt.
 
-Status: de grilling-sessie loopt. Er is nog niets gebouwd voor deze feature. Bouw niets voor je bevestigt dat alles klopt.
+Status: de grilling-sessie is afgerond en door Niels bevestigd (16/11/2026). **Stap 0 is gebouwd** (zie onderaan), niet in de echte app getest. Stappen 1 tot 6 volgen.
 
-### Beslist (ronde 1)
+### Harde randvoorwaarde
 
-- Meerdere plannings per project: een hoofdplanning plus extra plannings (per groep woningen of per woning).
-- Verdiepingen worden gevraagd bij het toepassen van het sjabloon.
-- Variabelen: aantal verdiepingen, kelder (ja/nee), dak (hellend of plat).
-- Een woning kan niet door dezelfde aannemer tegelijk met een andere woning gebouwd worden. De woningen volgen elkaar op.
-- Geen aparte mijlpaal van 0 werkdagen in de planning. De schijf wordt aan een gewone taak of fase gekoppeld.
+De huidige versie van CPMCore moet steeds blijven werken. Enkel de planning zelf (gegevens, pagina) is niet van belang en mag gewist en hervuld worden. Alles buiten de planning (traject, facturatie, eenheden, dashboards, `ProjectVoortgangService`) mag door de bouw niet breken. Migraties blijven additief en idempotent (zie `db_migration_workflow`).
 
-### Voorgesteld in ronde 2 (Q10 tot Q15), nog niet beantwoord
+### Bevestigde beslissingen
 
-| Q | Voorstel |
-|---|----------|
-| 10 | Schijf koppelen aan een taak of fase, geen aparte mijlpaal. Koppeling in het taakpaneel onder "Koppeling met schijf". |
-| 11 | "Estafette" per taak in het sjabloon: de taak start pas als dezelfde taak in de vorige woning klaar is (met wachttijd). Alle plannings van het project worden samen doorgerekend. Het einde van de laatste woning bepaalt het projecteinde. De volgorde van de woningen kies je bij het toepassen (standaard op naam). |
-| 12 | Elk blok in het sjabloon is: altijd aanwezig, alleen als een variabele een waarde heeft, of herhaald per verdieping. |
-| 13 | Gewicht per schijf plus vast percentage voor vaste schijven. CPM verdeelt de rest, de laatste schijf krijgt de afrondingsrest, aanpasbaar voor het toepassen. |
-| 14 | Deadline per woning: termijn van de koper als die er is, anders die van het project. |
-| 15 | Appartementsgebouw: één planning per gebouw met een herhaald blok per verdieping. Een appartement bereikt zijn schijven als het blok van zijn verdieping klaar is. Ontbreekt de verdieping, dan vragen we ze bij het toepassen. |
+**Bouwdelen en plannings**
+- Een **bouwdeel** is een woning of een gebouw. Elk bouwdeel heeft een eigen planning, eigen schijven (`InvoicingPaymentGroup`) en een eigen deadline. Een woning is een bouwdeel met één eenheid, een gebouw een bouwdeel met meerdere appartementen. Alle eenheden van een gebouw hebben dezelfde schijven, ongeacht de verdieping.
+- Daarnaast heeft elk project een **hoofdplanning zonder bouwdeel** (vergunningen, wegenis, nutsvoorzieningen). Een taak in een bouwdeelplanning mag een voorganger in de hoofdplanning hebben. Verder lopen koppelingen tussen plannings enkel via de estafette.
+- **Estafette** per taak in het sjabloon: de taak start pas als dezelfde taak in de vorige woning klaar is, met instelbare wachttijd. Alle plannings van het project worden samen doorgerekend, het einde van de laatste woning bepaalt het projecteinde. De volgorde van de woningen kies je bij het toepassen, standaard op naam.
+- **Datamodel:** nieuwe entiteit `Planning` (project, naam, optioneel bouwdeel/betalingsgroep, startdatum, volgorde, herkomstsjabloon). `PlanningSectie` krijgt `PlanningId`. `ProjectPlanning` blijft één rij per project (versie, basisplanning, verlet). De startdatum van een planning is standaard berekend (voorgangers, estafette), enkel handmatig als je ze vastlegt.
+- Bestaande planningsgegevens worden gewist en project 79 wordt hervuld met een voorbeeld. Dit gebeurt pas in stap 0 van de bouw, na bevestiging van Niels.
 
-### Nog te bespreken na ronde 2
+**Sjablonen en variabelen**
+- Variabelen: aantal verdiepingen (gevraagd bij het toepassen), kelder (ja/nee), dak (hellend of plat). Ze worden bewaard op de planning van het bouwdeel, niet op `Unit`.
+- Elk blok in een sjabloon is: altijd aanwezig, alleen als een variabele een waarde heeft, of herhaald per verdieping. Meer soorten voorwaarden niet.
+- Beheer: sjablooneditor onder Instellingen › Planning en Instellingen › Schijven, met een eigen permissiecode (`Settings.Planningssjablonen`). Een projecttype-sjabloon bundelt een planningssjabloon, trajectsjabloon en schijvensjabloon. Wie planning mag schrijven kan sjablonen toepassen, enkel wie het sjabloonrecht heeft kan ze maken of wijzigen. Ook "Opslaan als sjabloon" vanuit een bestaande planning.
+- **Codes:** taken en fases in een planningssjabloon krijgen een vaste leesbare code, uniek binnen het sjabloon (bv. `RUWBOUW_KLAAR`). Trajectmijlpalen (`Mijlpaal.Code`) en schijven verwijzen naar dezelfde code. Volgorde bij het toepassen: eerst planning, dan traject (`BronRefId` wordt via de code ingevuld), dan schijven. Een code die niet gevonden wordt geeft een duidelijke waarschuwing.
 
-- Waar elke variabele wordt opgeslagen.
-- Rechten voor het beheren van sjablonen en de plek van de sjablooneditor (Instellingen).
-- Hoe bestaande plannings en projecten worden omgezet.
-- Datamodel voor meerdere plannings (bijvoorbeeld een `Planning`-entiteit, `PlanningSectie.PlanningId`, startdatum per planning, planningkeuze in de UI).
-- Automatisch koppelen via codes (planning-code, `Mijlpaal.Code`, schijf) en de keten die bij "schijf bereikt" een melding geeft.
+**Schijven**
+- Een schijf wordt gekoppeld aan een gewone taak of fase, niet aan een aparte mijlpaal van 0 werkdagen. In het taakpaneel komt "Koppeling met schijf" naast "Koppeling met trajectmijlpaal".
+- Schijven bestaan ook per verdieping en hangen dan vast aan de bouwfase van die verdieping (herhaald blok). Het percentage van het hele blok staat in het sjabloon en wordt bij het toepassen gelijk verdeeld over de verdiepingen, afrondingsrest op de laatste.
+- Percentages: elke schijf heeft een minimum (standaard 5%, aanpasbaar) en een vast richtpercentage (bv. ruwbouw ongeveer 25%) of een gewicht waarmee de rest over de grootte verdeeld wordt. Vaste percentages gaan eerst af van de 100%, de laatste schijf krijgt de afrondingsrest. Alles is aanpasbaar voor het toepassen. Onder het minimum is een waarschuwing, geen blokkade.
+- **Schijf bereikt:** niet automatisch. Als de gekoppelde taak of fase klaar is, krijgt de verantwoordelijke een melding (of punt) "Schijf X van bouwdeel Y is bereikt, markeren?". Met één klik markeer je de schijf voor alle eenheden van het bouwdeel (`UnitPaymentStageReached`). Later per sjabloonschijf een optie "automatisch markeren". De trajectmijlpaal volgt automatisch. De trigger-actie "schijf bereikt" bestaat nog niet.
 
-### Voorgestelde bouwvolgorde (na bevestiging)
+**Deadlines**
+- Deadline per woning: uitvoeringstermijn van de koper als die er is, anders die van het project. De planning waarschuwt als de woning daar niet binnen blijft. `Project.DeliveryDate` blijft de effectieve oplevering.
 
-0. Basis voor meerdere plannings, inclusief gezamenlijk doorrekenen.
-1. Planningsjablonen met codes en automatische koppeling aan trajectmijlpalen.
-2. Schijvensjabloon en koppeling.
-3. Projectsjabloon en keuze bij het aanmaken van een project.
-4. Automatisch "schijf bereikt" met melding.
+**AI (open gedachte van Niels, nu als eerste versie vastgelegd)**
+- De AI doet enkel een **voorstel** en schrijft nooit rechtstreeks weg. Niets wordt bewaard voor Niels het in de gewone editor heeft nagekeken.
+- Eerste versie: in de **sjablooneditor**. De AI stelt enkele gerichte vragen (type project, verdiepingen, kelder, dak, bouwwijze) en geeft een gestructureerd concept terug: blokken, duur, voorgangers, schijfkoppelingen, mijlpalen met codes en triggers en acties (verwittig rol of gebruiker, maak taak, enz.). Het concept wordt gevalideerd tegen de echte codes en acties voor het in de editor verschijnt.
+- Later: de AI bij het toepassen op een project (voorstel van de schijven), en daarna waarschuwingen over deadlines. De AI bepaalt nooit zelf een deadline, die komt uit de berekening. Hij kan wel duur per taak, volgorde van woningen, richtpercentages en startdatum per bouwdeel voorstellen.
+- Techniek: hergebruik de bestaande Anthropic-koppeling (`AnthropicQuoteAnalysisService`, `PuntenSpraakService`, `AnthropicModel` in `appsettings.json`) via een nieuwe kleine service, bv. `PlanningSjabloonAiService`.
 
-Bij elke stap hoort een help- en `DESIGN.md`-update.
+### Stand van de bouw
+
+- **Stap 0 gebouwd (16/11/2026):** migratie `145_MeerderePlannings.sql` (vóór app-start), entiteit `BouwPlanning`, `PlanningSectie.BouwPlanningId`, gezamenlijk doorrekenen, `H:`-voorgangers, tabs en planningbeheer op de pagina, 11 nieuwe tests. Project 79 is gewist en hervuld met een voorbeeld (hoofdplanning, woning 1, woning 2 met estafette; zie `PLANNING_VOORTGANG.md`). Niet gebouwd in stap 0: de estafette-vlag in een sjabloon (hoort bij stap 1).
+- Open na de test van Niels (16/11/2026), te bouwen vóór stap 1: (a) voorgangers uit een ander bouwdeel zichtbaar maken als `Planningsnaam:3.2` en per taak een keuzevakje "Wacht op dezelfde taak in de vorige planning" (de estafette is dus per taak te kiezen, niet verplicht), (b) blokkerende fouten als opvallende gecentreerde inline melding (4g) in plaats van een toast rechtsonder. Details in `PLANNING_VOORTGANG.md`.
+- Rekenregel die in stap 1 nog telt: een voorganger uit een ander bouwdeel blijft behouden bij het bewerken van het voorgangersveld, maar is er niet zichtbaar. Toon ze in de sjablooneditor of in het taakpaneel.
+
+### Bevestigde bouwvolgorde
+
+Bij elke stap hoort een help- en `DESIGN.md`-update, en de huidige CPMCore moet blijven werken.
+
+0. Basis voor meerdere plannings: `Planning`, bouwdeel (betalingsgroep), hoofdplanning, gezamenlijk doorrekenen, estafette. Project 79 wissen en hervullen met een voorbeeld (eerst bevestiging vragen).
+1. Planningssjablonen met codes, variabelen en blokken (altijd, voorwaardelijk, herhaald per verdieping).
+2. Schijvensjabloon (minimum, richtpercentage, gewicht, herhaling per verdieping) en koppeling aan een taak of fase.
+3. Trajectsjabloon met codes en acties, en de nieuwe actie "schijf bereikt" met melding.
+4. Projectsjabloon en de keuze bij het aanmaken van een project.
+5. AI in de sjablooneditor.
+6. Later: AI bij het toepassen op een project, daarna deadlinewaarschuwingen.
 
 ## 3. Kennis van de codebase
 
 - Planning: `PlanningSectie`, `PlanningTaak`, `PlanningAfhankelijkheid`, `ProjectPlanning` (één rij per project). Rekenlogica in `ServiceCore/Planning` (`PlanningCalculator`, `PlanningService`, `WerkKalender`).
-- Traject: `TrajectSjabloon/Fase/Mijlpaal/Trigger`, `Projecttraject`, `Mijlpaal` (`BronBinding` 4 = taak, 5 = fase; `BronRefId`). `TrajectInstantiationService.Instantiate` kopieert `BronBinding` en `BronParam`, maar niet `BronRefId`. Er is nog geen trigger-actie "schijf bereikt".
+- Traject: `TrajectSjabloon/Fase/Mijlpaal/Trigger`, `Projecttraject`, `Mijlpaal` (`BronBinding` 4 = taak, 5 = fase; `BronRefId`). `TrajectInstantiationService.Instantiate` kopieert `BronBinding` en `BronParam`, maar niet `BronRefId`. Er is nog geen trigger-actie "schijf bereikt". Bestaande `TriggerEvent`: bij bereiken, bij overschrijding, X dagen voor streefdatum, bij statuswijziging, bij afronding van de fase. Bestaande `TriggerActie`: verwittig rol of gebruiker, maak taak, maak dossier, zet projectvlag of status, plan herinnering, deblokkeer volgende fase, stuur dossier-aanvraagmail.
 - Schijven: `InvoicingPaymentGroup`, `InvoicingPaymentStages`, `UnitPaymentStageReached` (`MarkStageReached` / `UnmarkStageReached`).
 - Eenheden: `Unit` heeft `Level/LevelId`, `PaymentGroupId`, `BuildingType`. Er is geen gebouw- of blokbegrip. `Project.ProjectType` kent alleen Woonproject en Commercieel.
+- AI: Anthropic-API al in gebruik in CPMCore (offerteanalyse, Punten-spraak), model in `appsettings.json` (`AnthropicModel`).
 - Bestanden zijn CRLF. Patch ze met een node-script dat de regeleinden normaliseert.

@@ -28,10 +28,16 @@ namespace CPMCore.Controllers;
 /// <summary>Werfportaal-toegang voor leverancierscontacten: uitnodigen en intrekken; geen eigen views. Opgesplitst uit LeveranciersController.cs (okt. 2026, structureren) - views in Views/Leveranciers/Portal/. Zelfde partial class: alle private velden/services van LeveranciersController.cs blijven gewoon bruikbaar.</summary>
 public partial class LeveranciersController
 {
+    /// <summary>Terug naar de pagina waar de actie startte (bv. het tabblad Portaaltoegang van de contractpagina); enkel een lokale url, anders de leverancierspagina.</summary>
+    private IActionResult BackToSupplier(string? returnUrl, int companyId)
+        => !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
+            ? LocalRedirect(returnUrl)
+            : RedirectToAction(nameof(Details), new { id = companyId });
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     [CPMCore.Filters.PermissionWrite(PermissionCodes.Suppliers)]
-    public async Task<IActionResult> InviteContact(int contactId, bool isFullAdmin, CancellationToken ct)
+    public async Task<IActionResult> InviteContact(int contactId, bool isFullAdmin, string? returnUrl, CancellationToken ct)
     {
         var contact = await _db.CompanyContacts
             .AsNoTracking()
@@ -40,13 +46,13 @@ public partial class LeveranciersController
         if (contact == null)
         {
             TempData["Error"] = "Contact niet gevonden.";
-            return RedirectToAction(nameof(Details), new { id = 0 });
+            return BackToSupplier(returnUrl, 0);
         }
 
         if (string.IsNullOrWhiteSpace(contact.Email))
         {
             TempData["Error"] = "Dit contact heeft geen e-mailadres. Voeg eerst een e-mailadres toe.";
-            return RedirectToAction(nameof(Details), new { id = contact.CompanyId });
+            return BackToSupplier(returnUrl, contact.CompanyId);
         }
 
         var appBaseUrl = $"{Request.Scheme}://{Request.Host}";
@@ -68,20 +74,20 @@ public partial class LeveranciersController
             ? $"Uitnodiging verstuurd naar {contact.Email}."
             : result.ErrorMessage ?? "Uitnodiging mislukt.";
 
-        return RedirectToAction(nameof(Details), new { id = contact.CompanyId });
+        return BackToSupplier(returnUrl, contact.CompanyId);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     [CPMCore.Filters.PermissionWrite(PermissionCodes.Suppliers)]
-    public async Task<IActionResult> RevokeContactAccess(int contactId, CancellationToken ct)
+    public async Task<IActionResult> RevokeContactAccess(int contactId, string? returnUrl, CancellationToken ct)
     {
         var contact = await _db.CompanyContacts
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.ContactId == contactId, ct);
 
         if (contact == null)
-            return RedirectToAction(nameof(Details), new { id = 0 });
+            return BackToSupplier(returnUrl, 0);
 
         var email = contact.Email?.Trim().ToLowerInvariant();
         if (email != null)
@@ -104,7 +110,7 @@ public partial class LeveranciersController
         }
 
         TempData["Message"] = "Portaaltoegang ingetrokken.";
-        return RedirectToAction(nameof(Details), new { id = contact.CompanyId });
+        return BackToSupplier(returnUrl, contact.CompanyId);
     }
 
 }
