@@ -1,14 +1,16 @@
 ---
 title: De planning lezen en opvolgen
 topic: projecten
+parent: planning-handleiding
+treeOrder: 7
 role: Projectleider
 device: Desktop · tablet
 minutes: 5
-updated: 2026-11-13
+updated: 2026-11-15
 newsTag: Nieuw
 screens: planning-index
-related: planning-opbouwen, voorgangers-en-wachttijd-invullen, slechtweerdagen-registreren
-synonyms: planning, deadline, oplevering, marge, kritiek pad, basisplanning, afwijking, verlet, weerverlet, voortgang, ongedaan maken
+related: planning-handleiding, planning-navigeren, basisplanning-vastleggen, planning-bijhouden-tijdens-de-bouw, planning-problemen-oplossen, slechtweerdagen-registreren
+synonyms: planning, deadline, oplevering, marge, kritiek pad, basisplanning, afwijking, verlet, weerverlet, voortgang, ongedaan maken, scrollen, zoomen, overzicht, volledig scherm, lijst breder maken
 description: de kop, de deadline, het kritieke pad en de basisplanning begrijpen
 intro: |
   Bovenaan de planning zie je wanneer de bouw start en eindigt en of dat past binnen de voorziene oplevering. Hier lees je wat elk cijfer betekent.
@@ -22,7 +24,9 @@ faq:
   - q: Wat als het project geen weerstation heeft?
     a: Dan rekent CPM zonder weerverlet en toont ze een waarschuwing. Kies een weerstation in het projectformulier.
   - q: Kan ik de planning zonder weerverlet bekijken?
-    a: Ja. Zet de knop **Verlet** uit. Dat is een simulatie. Zet je de knop terug aan, dan telt het verlet weer mee.
+    a: Ja. Zet de knop **Verlet** uit. Dat is een simulatie. De keuze wordt bewaard voor het hele project, ook voor je collega's. Zet de knop daarna terug aan, dan telt het verlet weer mee.
+  - q: Wat is speling?
+    a: Het aantal werkdagen dat een taak mag uitlopen zonder dat het einde van de planning opschuift. Je ziet ze in het paneel van de taak. Een taak zonder speling ligt op het kritieke pad.
 ---
 ## De kop
 
@@ -34,13 +38,17 @@ faq:
 
 ## Lijst en grafiek
 
-De lijst staat links en de grafiek rechts. Beide lopen gelijk. Met **Dag**, **Week** en **Maand** kies je de schaal. De lijn **Vandaag** toont waar je nu bent. De gearceerde vakken zijn weekends, feestdagen, bouwverlof en weerverlet.
+De lijst staat links en de grafiek rechts, rij voor rij gelijk. De kolomkoppen en de datumbalk blijven staan als je scrolt. Hoe je zoomt, de lijst verbreedt of volledig scherm gebruikt, staat in "Door een grote planning navigeren".
 
-Een gouden rand en het woordje **verschoven** tonen wat net is opgeschoven door je laatste wijziging.
+Een gouden rand en het woordje **verschoven** tonen wat net is opgeschoven door je laatste wijziging. De gouden lijn is vandaag, de rode streeplijn de deadline van het project.
+
+## Verlet
+
+De knop **Verlet** is aan als weerverletdagen als niet-werkdag meetellen. Zet je haar uit, dan rekent CPM zonder verlet en schuift het einde vooruit. Zo zie je hoeveel een slechte winter kost. Het is een simulatie, geen definitieve keuze. Zet de knop daarna weer aan.
 
 ## Het kritieke pad
 
-Zet **Kritiek pad** aan. De taken zonder speling worden rood gearceerd en krijgen een **K**. Schuift zo een taak op, dan schuift het einde van de planning mee. Bij een taak zie je hoeveel werkdagen speling ze heeft.
+Zet **Kritiek pad** aan. De taken zonder speling worden rood gearceerd en krijgen een **K**. Schuift zo een taak op, dan schuift het einde van de planning mee. Bij een fase staat de **K** als minstens een van haar taken kritiek is. Bij een taak zie je in haar paneel hoeveel werkdagen speling ze heeft. Een afgeronde taak is nooit kritiek.
 
 ## Een wijziging ongedaan maken
 
@@ -48,8 +56,8 @@ Na elke wijziging toont de balk bovenaan wat er verschoven is, bijvoorbeeld "7 a
 
 ## De basisplanning
 
-Klik op **Basis vastleggen** om de huidige planning als basis te bewaren. Zet daarna **Basisplanning** aan. Onder elke balk staat een grijze lijn met de oorspronkelijke datums. De afwijking van het einde staat bij de rij.
+Klik op **Basis vastleggen** om de huidige planning als basis te bewaren. Zet daarna **Basisplanning** aan om de afwijkingen te zien. Lees "Een basisplanning vastleggen en afwijkingen volgen".
 
 ## Aandachtspunten
 
-Bovenaan de planning staan meldingen, bijvoorbeeld een einde na de deadline of een taak zonder voorganger. Klik op **Toon taak** om naar de rij te gaan.
+Bovenaan de planning staat één regel met het aantal aandachtspunten, bijvoorbeeld een einde na de deadline of een taak zonder voorganger. Klik op **Tonen** om ze te lezen. Klik daarna op **Toon taak** om naar de rij te gaan.

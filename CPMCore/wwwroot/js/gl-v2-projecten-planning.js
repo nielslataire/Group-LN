@@ -14,6 +14,7 @@
     var $ = function (id) { return document.getElementById(id); };
     var canWrite = root.getAttribute("data-can-write") === "1";
     var canDelete = root.getAttribute("data-can-delete") === "1";
+    var canLink = root.getAttribute("data-can-link") === "1";   // schrijfrecht op het Traject: nodig om een mijlpaal te koppelen
     var toast = (window.GlV2Toast && window.GlV2Toast.notify) || function () {};
 
     var state = cfg.staat || { rijen: [], kop: {}, meldingen: [], gebruikers: [], lots: [], nietWerkdagen: [] };
@@ -25,8 +26,8 @@
     var firstRender = true;
 
     var UI_KEY = "gl-v2-pl-ui-" + cfg.projectId;
-    var ui = { scale: "week", kritiek: false, basis: false, collapsed: {} };
-    try { var raw = window.localStorage.getItem(UI_KEY); if (raw) { var p = JSON.parse(raw); ui.scale = p.scale || ui.scale; ui.kritiek = !!p.kritiek; ui.basis = !!p.basis; ui.collapsed = p.collapsed || {}; } } catch (e) { /* geen opslag: gewoon de standaard */ }
+    var ui = { scale: "week", kritiek: false, basis: false, collapsed: {}, listW: 0, noticesOpen: false };
+    try { var raw = window.localStorage.getItem(UI_KEY); if (raw) { var p = JSON.parse(raw); ui.scale = p.scale || ui.scale; ui.kritiek = !!p.kritiek; ui.basis = !!p.basis; ui.collapsed = p.collapsed || {}; ui.listW = +p.listW || 0; ui.noticesOpen = !!p.noticesOpen; } } catch (e) { /* geen opslag: gewoon de standaard */ }
     function saveUi() { try { window.localStorage.setItem(UI_KEY, JSON.stringify(ui)); } catch (e) { /* idem */ } }
 
     function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c]; }); }
@@ -90,7 +91,7 @@
             }).join("");
             if (perRow.length > 6) lijst += "<li>en nog " + (perRow.length - 6) + " andere</li>";
             html += "<div class=\"gl-v2-notice gl-v2-notice-expanded is-" + ernst + "\" role=\"status\"><span class=\"gl-v2-notice-expanded-icon\"><i class=\"ph " + ICON[ernst] + "\" aria-hidden=\"true\"></i></span>" +
-                "<div class=\"gl-v2-notice-body\"><span class=\"gl-v2-notice-title\">" + (perRow.length === 1 ? "1 aandachtspunt" : perRow.length + " aandachtspunten") + " in de planning</span><ul class=\"gl-v2-pl-notice-list\">" + lijst + "</ul></div></div>";
+                "<div class=\"gl-v2-notice-body\"><div class=\"gl-v2-pl-notice-head\"><span class=\"gl-v2-notice-title\">" + (perRow.length === 1 ? "1 aandachtspunt" : perRow.length + " aandachtspunten") + " in de planning</span><button type=\"button\" class=\"gl-v2-pl-notice-toggle\" data-notices-toggle aria-expanded=\"" + (ui.noticesOpen ? "true" : "false") + "\">" + (ui.noticesOpen ? "Verbergen" : "Tonen") + "</button></div><ul class=\"gl-v2-pl-notice-list\"" + (ui.noticesOpen ? "" : " hidden") + ">" + lijst + "</ul></div></div>";
         }
         host.innerHTML = html;
     }
@@ -114,18 +115,18 @@
         return "<div class=\"" + cls + "\" role=\"row\" data-key=\"" + esc(r.sleutel) + "\">" +
             "<span class=\"gl-v2-pl-c is-wbs\" role=\"cell\" data-act=\"open\">" + esc(r.wbs) + "</span>" +
             "<span class=\"gl-v2-pl-c\" role=\"cell\"><span class=\"gl-v2-pl-name\" style=\"--pl-level:" + r.niveau + "\">" + naam + "</span></span>" +
-            "<span class=\"gl-v2-pl-c is-num x-sec x-tab" + (!fase && canWrite ? " is-edit" : " is-muted") + "\" role=\"cell\" " + (!fase && canWrite ? "data-edit=\"duur\"" : "") + ">" + duurTxt + "</span>" +
-            "<span class=\"gl-v2-pl-c x-sec\" role=\"cell\" data-act=\"open\">" + fmt(r.start) + "</span>" +
-            "<span class=\"gl-v2-pl-c x-sec\" role=\"cell\" data-act=\"open\">" + fmt(r.einde) + afw + "</span>" +
-            "<span class=\"gl-v2-pl-c x-sec x-tab" + (!fase && canWrite ? " is-edit" : "") + "\" role=\"cell\" " + (!fase && canWrite ? "data-edit=\"voorgangers\" title=\"Klik om de voorgangers te wijzigen\"" : "") + ">" + (fase ? "" : (r.voorgangers ? esc(r.voorgangers) : "<span style=\"color:var(--gl-v2-muted-light)\">—</span>")) + "</span>" +
-            "<span class=\"gl-v2-pl-c is-num x-sec x-tab is-muted\" role=\"cell\">" + (r.voortgang > 0 || r.afgerond ? r.voortgang + "%" : "") + "</span>" +
+            "<span class=\"gl-v2-pl-c is-num c-dur" + (!fase && canWrite ? " is-edit" : " is-muted") + "\" role=\"cell\" " + (!fase && canWrite ? "data-edit=\"duur\"" : "") + ">" + duurTxt + "</span>" +
+            "<span class=\"gl-v2-pl-c c-start\" role=\"cell\" data-act=\"open\">" + fmt(r.start) + "</span>" +
+            "<span class=\"gl-v2-pl-c c-einde\" role=\"cell\" data-act=\"open\">" + fmt(r.einde) + afw + "</span>" +
+            "<span class=\"gl-v2-pl-c c-vg" + (!fase && canWrite ? " is-edit" : "") + "\" role=\"cell\" " + (!fase && canWrite ? "data-edit=\"voorgangers\" title=\"Klik om de voorgangers te wijzigen\"" : "") + ">" + (fase ? "" : (r.voorgangers ? esc(r.voorgangers) : "<span style=\"color:var(--gl-v2-muted-light)\">—</span>")) + "</span>" +
+            "<span class=\"gl-v2-pl-c is-num c-pct is-muted\" role=\"cell\">" + (r.voortgang > 0 || r.afgerond ? r.voortgang + "%" : "") + "</span>" +
             "<span class=\"gl-v2-pl-c\" role=\"cell\">" + (canWrite ? "<button type=\"button\" class=\"gl-v2-pl-rowmenu js-gl-v2-menu-trigger\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-controls=\"gl-v2-pl-menu\" aria-label=\"Acties voor " + esc(r.naam) + "\"><i class=\"ph ph-dots-three\" aria-hidden=\"true\"></i></button>" : "") + "</span>" +
             "</div>";
     }
 
     function renderList(vis) {
-        var head = "<div class=\"gl-v2-pl-lh\" role=\"row\"><span role=\"columnheader\">WBS</span><span role=\"columnheader\">Taak</span><span class=\"x-sec x-tab\" role=\"columnheader\" style=\"text-align:right\">Duur</span><span class=\"x-sec\" role=\"columnheader\">Start</span><span class=\"x-sec\" role=\"columnheader\">Einde</span><span class=\"x-sec x-tab\" role=\"columnheader\">Voorgangers</span><span class=\"x-sec x-tab\" role=\"columnheader\" style=\"text-align:right\">%</span><span></span></div>";
-        $("gl-v2-pl-list").innerHTML = head + vis.map(rowHtml).join("");
+        var head = "<div class=\"gl-v2-pl-lh\" role=\"row\"><span role=\"columnheader\">WBS</span><span role=\"columnheader\">Taak</span><span class=\"c-dur\" role=\"columnheader\" style=\"text-align:right\">Duur</span><span class=\"c-start\" role=\"columnheader\">Start</span><span class=\"c-einde\" role=\"columnheader\">Einde</span><span class=\"c-vg\" role=\"columnheader\">Voorgangers</span><span class=\"c-pct\" role=\"columnheader\" style=\"text-align:right\">%</span><span></span></div>";
+        $("gl-v2-pl-list").innerHTML = head + vis.map(rowHtml).join("") + "<div class=\"gl-v2-pl-split\" role=\"separator\" aria-orientation=\"vertical\" tabindex=\"0\" aria-label=\"Breedte van de lijst aanpassen\" title=\"Sleep om de lijst breder of smaller te maken (dubbelklik: compact)\"></div>";
     }
 
     // ── Gantt ──
@@ -140,7 +141,7 @@
 
     function renderGantt(vis) {
         var scroller = $("gl-v2-pl-scroll");
-        var left = scroller.scrollLeft;
+        var anchor = gantt ? gantt.dateAt(scroller.scrollLeft) : null; // de datum die nu links in beeld staat, zodat zoomen/herladen niet wegspringt
         var rows = vis.map(function (r) {
             return {
                 key: r.sleutel, type: r.soort === "fase" ? "phase" : (r.isMijlpaal ? "milestone" : "task"),
@@ -158,15 +159,26 @@
         });
         gantt = window.GlV2Gantt.render($("gl-v2-pl-gantt"), {
             rows: rows, links: links, nonWorking: state.nietWerkdagen || [], today: todayIso(), deadline: (state.kop || {}).deadline || null,
-            scale: ui.scale, showCritical: ui.kritiek, showBase: ui.basis, rowHeight: 34
+            scale: ui.scale, fitWidth: Math.max(320, scroller.clientWidth - curListW - 24), showCritical: ui.kritiek, showBase: ui.basis, rowHeight: 34
         }, {
             onOpen: function (key) { selected = key; markSelected(); if (canWrite) openEdit(key); }
         });
-        if (firstRender && gantt) { gantt.scrollToToday(scroller); firstRender = false; } else { scroller.scrollLeft = left; }
+        var todayBtn = $("gl-v2-pl-today");
+        todayBtn.disabled = !gantt.hasToday;
+        todayBtn.title = gantt.hasToday ? "Naar vandaag" : "Vandaag valt buiten de planning";
+        if (firstRender) {
+            firstRender = false;
+            // Eerst openen op vandaag, en valt vandaag buiten de planning dan op het begin ervan (niet in een lege zone ernaast)
+            if (!gantt.scrollToToday(scroller, true)) gantt.scrollToStart(scroller, true);
+        } else if (anchor) {
+            scroller.scrollLeft = ui.scale === "alles" ? 0 : gantt.xOf(anchor);
+        }
+        gantt.select(selected);
     }
 
     function markSelected() {
         document.querySelectorAll("#gl-v2-pl-list .gl-v2-pl-r").forEach(function (el) { el.classList.toggle("is-selected", el.getAttribute("data-key") === selected); });
+        if (gantt) gantt.select(selected);
     }
 
     // ── Alles tekenen ──
@@ -189,9 +201,13 @@
         });
         var anyOpen = state.rijen.some(function (r) { return r.soort === "fase" && !ui.collapsed[r.sleutel]; });
         $("gl-v2-pl-collapse").querySelector("span").textContent = anyOpen ? "Fases inklappen" : "Alles uitklappen";
+        var scr = $("gl-v2-pl-scroll"), keepTop = scr.scrollTop;
+        ensureListW();
         var vis = visibleRows();
+        hoverKey = null;
         renderList(vis);
         renderGantt(vis);
+        scr.scrollTop = keepTop; // een herteken mag de verticale positie niet verspringen
     }
     function setPressed(id, on) { var b = $(id); b.setAttribute("aria-pressed", on ? "true" : "false"); }
 
@@ -297,6 +313,7 @@
         var ed = e.target.closest("[data-edit]");
         if (ed && canWrite && !(r.soort === "fase" && ed.getAttribute("data-edit") !== "naam")) { selected = key; markSelected(); startEdit(ed, key, ed.getAttribute("data-edit")); return; }
         selected = key; markSelected();
+        if (gantt) gantt.scrollToKey(key, $("gl-v2-pl-scroll"));
         if (canWrite) openEdit(key);
     });
 
@@ -383,14 +400,123 @@
         else run();
     });
     $("gl-v2-pl-notices").addEventListener("click", function (e) {
+        if (e.target.closest("[data-notices-toggle]")) { ui.noticesOpen = !ui.noticesOpen; saveUi(); renderNotices(); return; }
         var b = e.target.closest("[data-toon]"); if (!b) return;
         var key = b.getAttribute("data-toon"), r = rowByKey(key); if (!r) return;
         // een ingeklapte fase openen
         state.rijen.forEach(function (x) { if (x.soort === "fase" && ui.collapsed[x.sleutel] && r.wbs.indexOf(x.wbs + ".") === 0) ui.collapsed[x.sleutel] = false; });
         selected = key; render();
-        var el = document.querySelector("#gl-v2-pl-list [data-key=\"" + key + "\"]");
-        if (el && el.scrollIntoView) el.scrollIntoView({ block: "center", behavior: "smooth" });
+        if (gantt) gantt.scrollToKey(key, $("gl-v2-pl-scroll"));
     });
+
+    // ── Scrollvlak: lijstbreedte, rijmarkering, verschuiven met de muis, volledig scherm ──
+    var scrollEl = $("gl-v2-pl-scroll"), listEl = $("gl-v2-pl-list"), card = $("gl-v2-pl-card");
+    var curListW = 0, hoverKey = null, pan = null, suppressClick = false;
+    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+    function defaultListW() { return clamp(Math.round(scrollEl.clientWidth * 0.42), 340, 640); }
+    function applyListW(w, persist) {
+        curListW = clamp(Math.round(w), 240, Math.max(260, scrollEl.clientWidth - 240));
+        scrollEl.style.setProperty("--pl-list-w", curListW + "px");
+        if (persist) { ui.listW = curListW; saveUi(); }
+    }
+    function ensureListW() { if (!curListW && scrollEl.clientWidth) applyListW(ui.listW || defaultListW(), false); }
+    function widthChanged(refocus) {
+        if (ui.scale !== "alles") return;
+        render(); // "Alles" past de planning in de breedte naast de lijst: dan moet de grafiek opnieuw
+        if (refocus) { var sp = listEl.querySelector(".gl-v2-pl-split"); if (sp) sp.focus(); }
+    }
+
+    // Scheiding tussen lijst en grafiek: slepen, dubbelklik (compact of standaard) en pijltjestoetsen
+    scrollEl.addEventListener("pointerdown", function (e) {
+        var sp = e.target.closest(".gl-v2-pl-split");
+        if (sp) {
+            e.preventDefault();
+            var x0 = e.clientX, w0 = curListW;
+            sp.classList.add("is-drag");
+            var mv = function (ev) { applyListW(w0 + ev.clientX - x0, false); };
+            var up = function () {
+                document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up); document.removeEventListener("pointercancel", up);
+                sp.classList.remove("is-drag"); ui.listW = curListW; saveUi(); widthChanged(false);
+            };
+            document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up); document.addEventListener("pointercancel", up);
+            return;
+        }
+        // De grafiek vastpakken en verschuiven (enkel met de muis; aanraking scrolt zelf). Een balk aanklikken blijft een klik.
+        if (e.button !== 0 || e.pointerType !== "mouse" || !e.target.closest(".gl-v2-pl-chart") || e.target.closest(".gl-v2-gantt-bar")) return;
+        pan = { x: e.clientX, y: e.clientY, l: scrollEl.scrollLeft, t: scrollEl.scrollTop, moved: false };
+    });
+    function endPan() {
+        if (!pan) return;
+        var moved = pan.moved; pan = null; scrollEl.classList.remove("is-panning");
+        if (moved) { suppressClick = true; window.setTimeout(function () { suppressClick = false; }, 0); }
+    }
+    document.addEventListener("pointermove", function (e) {
+        if (!pan) return;
+        if (e.buttons === 0) { endPan(); return; }
+        var dx = e.clientX - pan.x, dy = e.clientY - pan.y;
+        if (!pan.moved && Math.abs(dx) + Math.abs(dy) < 4) return;
+        pan.moved = true; scrollEl.classList.add("is-panning");
+        scrollEl.scrollLeft = pan.l - dx; scrollEl.scrollTop = pan.t - dy;
+    });
+    document.addEventListener("pointerup", endPan);
+    document.addEventListener("pointercancel", endPan);
+    scrollEl.addEventListener("click", function (e) { if (suppressClick) { e.stopPropagation(); e.preventDefault(); } }, true);
+    scrollEl.addEventListener("dblclick", function (e) {
+        if (!e.target.closest(".gl-v2-pl-split")) return;
+        applyListW(curListW > 360 ? 320 : defaultListW(), true); widthChanged(false);
+    });
+    scrollEl.addEventListener("keydown", function (e) {
+        if (!e.target.closest(".gl-v2-pl-split")) return;
+        var d = e.key === "ArrowLeft" ? -24 : e.key === "ArrowRight" ? 24 : 0;
+        if (!d) return;
+        e.preventDefault(); applyListW(curListW + d, true); widthChanged(true);
+    });
+
+    // Rijmarkering: wie met de muis op een rij in de lijst of in de grafiek staat, kleurt de hele rij in beide
+    function setHover(key) {
+        if (key === hoverKey) return;
+        var prev = listEl.querySelector(".gl-v2-pl-r.is-hover"); if (prev) prev.classList.remove("is-hover");
+        hoverKey = key;
+        if (gantt) gantt.hover(key);
+    }
+    scrollEl.addEventListener("pointermove", function (e) {
+        if (pan) return;
+        var row = e.target.closest(".gl-v2-pl-r"), key = null, fromChart = false;
+        if (row) key = row.getAttribute("data-key");
+        else if (gantt && e.target.closest(".gl-v2-pl-chart")) { key = gantt.keyAt(e.clientY); fromChart = true; }
+        if (key === hoverKey) return;
+        setHover(key);
+        if (fromChart && key) { var el = listEl.querySelector(".gl-v2-pl-r[data-key=\"" + key + "\"]"); if (el) el.classList.add("is-hover"); }
+    });
+    scrollEl.addEventListener("pointerleave", function () { setHover(null); });
+
+    // Navigatie
+    $("gl-v2-pl-start").addEventListener("click", function () { if (gantt) gantt.scrollToStart(scrollEl); });
+
+    // Volledig scherm
+    var fsBtn = $("gl-v2-pl-fs");
+    function setFs(on) {
+        card.classList.toggle("is-fullscreen", on); document.documentElement.classList.toggle("gl-v2-pl-fs", on);
+        fsBtn.setAttribute("aria-pressed", on ? "true" : "false");
+        fsBtn.querySelector("i").className = "ph " + (on ? "ph-arrows-in" : "ph-arrows-out");
+        fsBtn.querySelector("span").textContent = on ? "Sluiten" : "Volledig scherm";
+    }
+    fsBtn.addEventListener("click", function () { setFs(!card.classList.contains("is-fullscreen")); });
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && card.classList.contains("is-fullscreen") && !panel && !document.querySelector(".gl-v2-select-panel.is-open")) setFs(false);
+    });
+
+    // Het scrollvlak wordt breder of smaller (venster, volledig scherm): lijstbreedte bijstellen, en bij "Alles" opnieuw passen
+    if (window.ResizeObserver) {
+        var lastW = 0;
+        new ResizeObserver(function () {
+            var w = scrollEl.clientWidth;
+            if (!w || Math.abs(w - lastW) < 24) return;
+            lastW = w;
+            if (curListW) applyListW(ui.listW || defaultListW(), false);
+            if (ui.scale === "alles" && gantt) render();
+        }).observe(scrollEl);
+    }
 
     // ══════════ Zijpaneel ══════════
     var panel = null; // { mode, key, id, sectieId, naId, naSoort }
@@ -442,6 +568,54 @@
         return kinderen.length ? kinderen[kinderen.length - 1].wbs : "";
     }
 
+    // ── Koppeling met een trajectmijlpaal (optioneel; de mijlpaal in het Traject volgt dan de planning) ──
+    function trajItems(sleutel) {
+        return (state.trajectMijlpalen || []).map(function (m) {
+            var tekst = m.naam + (m.faseNaam ? " · " + m.faseNaam : "");
+            if (m.gekoppeldAanSleutel && m.gekoppeldAanSleutel !== sleutel) tekst += " (nu aan " + m.gekoppeldAanTekst + ")";
+            return { value: String(m.id), text: tekst };
+        });
+    }
+    function trajHuidig(sleutel) {
+        var m = (state.trajectMijlpalen || []).filter(function (x) { return x.gekoppeldAanSleutel === sleutel; })[0];
+        return m ? m.id : null;
+    }
+    // Toont de keuzelijst in het paneel (enkel bij bewerken, met Traject-schrijfrecht en als er trajectmijlpalen zijn)
+    function toonTraj(wrapId, selectId, sleutel) {
+        var wrap = $(wrapId), items = trajItems(sleutel);
+        var aan = !!sleutel && canLink && items.length > 0;
+        wrap.hidden = !aan;
+        if (panel) panel.trajOud = aan ? trajHuidig(sleutel) : null;
+        if (aan) setSelect(selectId, items, panel.trajOud != null ? String(panel.trajOud) : "", "Geen koppeling");
+    }
+    // Wat moet na het bewaren nog gekoppeld worden? null = niets veranderd of niet toegestaan.
+    function koppelKeuze() {
+        if (!panel || !panel.key) return null;
+        var fase = panel.mode === "fase-bewerken";
+        var wrap = $(fase ? "gl-v2-pl-wrap-trajf" : "gl-v2-pl-wrap-traj");
+        if (!canLink || wrap.hidden) return null;
+        var v = getSelect(fase ? "gl-v2-pl-f-trajf" : "gl-v2-pl-f-traj");
+        var nieuw = v ? parseInt(v, 10) : null;
+        if (nieuw === (panel.trajOud == null ? null : panel.trajOud)) return null;
+        return { soort: fase ? "fase" : "taak", id: panel.id, mijlpaalId: nieuw, vorigeMijlpaalId: panel.trajOud == null ? null : panel.trajOud };
+    }
+    function koppelNa(kz) {
+        if (!kz) return;
+        fetch(cfg.koppelUrl, {
+            method: "POST", credentials: "same-origin",
+            headers: { "Content-Type": "application/json", "RequestVerificationToken": token(), "X-Requested-With": "XMLHttpRequest" },
+            body: JSON.stringify(kz)
+        }).then(function (r) {
+            if (r.status === 403) throw new Error("Je hebt geen schrijfrecht op het Traject.");
+            if (!r.ok) throw new Error("Koppelen mislukt. Probeer het zo opnieuw.");
+            return r.json();
+        }).then(function (res) {
+            if (!res.ok) { toast("danger", "Koppelen mislukt", res.fout || "De koppeling is niet bewaard."); return; }
+            state = res.staat; render();
+            toast("success", kz.mijlpaalId ? "Mijlpaal gekoppeld" : "Koppeling weggehaald", kz.mijlpaalId ? "De mijlpaal in het Traject volgt nu de planning." : "De mijlpaal in het Traject volgt de planning niet meer.");
+        }).catch(function (e) { toast("danger", "Koppelen mislukt", e.message || "Controleer je verbinding en probeer opnieuw."); });
+    }
+
     function openNieuwTaak(ctx) {
         if (!canWrite) return;
         ctx = ctx || {};
@@ -460,6 +634,7 @@
         setSelect("gl-v2-pl-f-bep", BEPERKINGEN, "0"); setDate("gl-v2-pl-f-bepdatum", ""); updateBeperkingVeld();
         setDate("gl-v2-pl-f-deadline", "");
         $("gl-v2-pl-wrap-werkelijk").hidden = true; showField("gl-v2-pl-f-pct", false);
+        $("gl-v2-pl-wrap-traj").hidden = true; // een nieuwe taak heeft nog geen id om aan te koppelen
         setSelect("gl-v2-pl-f-wie", (state.gebruikers || []).map(function (g) { return { value: g.id, text: g.naam }; }), "", "Niemand");
         $("gl-v2-pl-panel-delete") && ($("gl-v2-pl-panel-delete").hidden = true);
         $("gl-v2-pl-panel-again").hidden = false;
@@ -485,6 +660,7 @@
         $("gl-v2-pl-wrap-faseplaats").hidden = false;
         $("gl-v2-pl-wrap-eerste").hidden = false;
         $("gl-v2-pl-f-eerste").value = ""; $("gl-v2-pl-f-eerste-duur").value = "1"; $("gl-v2-pl-f-startna").value = "";
+        $("gl-v2-pl-wrap-trajf").hidden = true;
         setSelect("gl-v2-pl-f-lot", (state.lots || []).map(function (g) { return { value: g.id, text: g.naam }; }), "", "Geen lot");
         $("gl-v2-pl-f-teltmee").checked = false; $("gl-v2-pl-f-teltmee").disabled = true;
         $("gl-v2-pl-panel-delete") && ($("gl-v2-pl-panel-delete").hidden = true);
@@ -507,6 +683,7 @@
         $("gl-v2-pl-wrap-werkelijk").hidden = false; setDate("gl-v2-pl-f-wstart", r.werkelijkStart); setDate("gl-v2-pl-f-weinde", r.werkelijkEinde);
         showField("gl-v2-pl-f-pct", true); $("gl-v2-pl-f-pct").value = r.voortgang;
         setSelect("gl-v2-pl-f-wie", (state.gebruikers || []).map(function (g) { return { value: g.id, text: g.naam }; }), r.verantwoordelijkeId || "", "Niemand");
+        toonTraj("gl-v2-pl-wrap-traj", "gl-v2-pl-f-traj", key);
 
         var info = "<span><b>" + esc(r.wbs) + "</b> · " + fmtFull(r.start) + " tot " + fmtFull(r.einde) + (r.isMijlpaal ? "" : " · " + dagen(r.duur)) + "</span>";
         if (r.speling != null) info += "<span>" + (r.kritiek ? "<span class=\"is-crit\">Kritiek pad</span>, geen speling" : "Speling: " + dagen(r.speling)) + "</span>";
@@ -529,6 +706,7 @@
         $("gl-v2-pl-wrap-faseplaats").hidden = true; $("gl-v2-pl-wrap-eerste").hidden = true;
         setSelect("gl-v2-pl-f-lot", (state.lots || []).map(function (g) { return { value: g.id, text: g.naam }; }), r.lotId != null ? String(r.lotId) : "", "Geen lot");
         $("gl-v2-pl-f-teltmee").checked = !!r.teltMee; $("gl-v2-pl-f-teltmee").disabled = r.lotId == null;
+        toonTraj("gl-v2-pl-wrap-trajf", "gl-v2-pl-f-trajf", r.sleutel);
         var info = "<span><b>" + esc(r.wbs) + "</b> · " + fmtFull(r.start) + " tot " + fmtFull(r.einde) + " · " + dagen(r.duur) + " · " + r.voortgang + "% klaar</span>";
         (r.mijlpalen || []).forEach(function (m) { info += "<span>Bepaalt de streefdatum van mijlpaal <b>" + esc(m.naam) + "</b> in het traject</span>"; });
         var infoEl = $("gl-v2-pl-info"); infoEl.innerHTML = info; infoEl.hidden = false;
@@ -608,7 +786,8 @@
             var w = verzamelTaakVelden(false);
             if (isNaN(w.duur) || w.duur < 0) { formError("De duur moet een aantal werkdagen zijn (0 of meer)."); return; }
             if (w.beperking && !w.beperkingDatum) { formError("Kies een datum bij de beperking."); return; }
-            send({ type: "wijzig", soort: "taak", id: panel.id, velden: w }, { onError: onError, after: closePanel });
+            var kzTaak = koppelKeuze();
+            send({ type: "wijzig", soort: "taak", id: panel.id, velden: w }, { onError: onError, after: function () { koppelNa(kzTaak); closePanel(); } });
         } else if (panel.mode === "fase-nieuw") {
             var plaats = getSelect("gl-v2-pl-f-faseplaats") || "einde", cmd = { type: "faseToevoegen", velden: { naam: naam } };
             if (plaats.indexOf("in:") === 0) cmd.sectieId = parseInt(plaats.slice(3), 10);
@@ -622,7 +801,8 @@
             send(cmd, { onError: onError, after: closePanel });
         } else if (panel.mode === "fase-bewerken") {
             var fv = { naam: naam, lotId: getSelect("gl-v2-pl-f-lot") ? parseInt(getSelect("gl-v2-pl-f-lot"), 10) : null, teltMee: $("gl-v2-pl-f-teltmee").checked };
-            send({ type: "wijzig", soort: "fase", id: panel.id, velden: fv }, { onError: onError, after: closePanel });
+            var kzFase = koppelKeuze();
+            send({ type: "wijzig", soort: "fase", id: panel.id, velden: fv }, { onError: onError, after: function () { koppelNa(kzFase); closePanel(); } });
         }
     }
 

@@ -20,8 +20,13 @@ public class PlanningService : IPlanningService
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     private readonly cpmRunningContext _db;
+    private readonly ITrajectRecalculationService? _traject;
 
-    public PlanningService(cpmRunningContext db) => _db = db;
+    public PlanningService(cpmRunningContext db, ITrajectRecalculationService? traject = null)
+    {
+        _db = db;
+        _traject = traject;
+    }
 
     // ── Interne gegevens ──
 
@@ -272,6 +277,25 @@ public class PlanningService : IPlanningService
             staat.Rijen.Add(rij);
         }
 
+        // Mijlpalen uit het Traject die aan de planning gekoppeld kunnen worden: vrije (handmatige) en die al aan de planning hangen.
+        // Een mijlpaal die automatisch uit iets anders volgt (document, dossier, factuur …) blijft buiten de lijst: koppelen zou die bron overschrijven.
+        var sectieTekst = Plat(dr.Boom).Where(k => k.IsFase).ToDictionary(k => k.Sectie!.Id, k => k.Wbs + " " + k.Sectie!.Naam);
+        var taakTekst = Plat(dr.Boom).Where(k => !k.IsFase).ToDictionary(k => k.Taak!.Id, k => k.Wbs + " " + k.Taak!.Naam);
+        var trajectMijlpalen = await _db.Mijlpaal.AsNoTracking()
+            .Where(m => m.Projecttraject.ProjectId == d.Project.ProjectId && m.UnitId == null && m.Status != 3
+                        && (m.BronBinding == null || m.BronBinding == 0 || m.BronBinding == 4 || m.BronBinding == 5))
+            .OrderBy(m => m.Volgorde)
+            .Select(m => new { m.Id, m.Naam, m.BronBinding, m.BronRefId, m.BronParam, FaseNaam = m.ProjecttrajectFase != null ? m.ProjecttrajectFase.Naam : null })
+            .ToListAsync();
+        foreach (var m in trajectMijlpalen)
+        {
+            var optie = new PlanningMijlpaalOptie { Id = m.Id, Naam = m.Naam ?? "", FaseNaam = m.FaseNaam };
+            var verwijst = m.BronRefId ?? (int.TryParse((m.BronParam ?? "").Trim(), out var px) ? px : (int?)null);
+            if (m.BronBinding == 4 && verwijst is int tid && taakTekst.TryGetValue(tid, out var tt)) { optie.GekoppeldAanSleutel = "t" + tid; optie.GekoppeldAanTekst = tt; }
+            else if (m.BronBinding == 5 && verwijst is int sid && sectieTekst.TryGetValue(sid, out var st)) { optie.GekoppeldAanSleutel = "f" + sid; optie.GekoppeldAanTekst = st; }
+            staat.TrajectMijlpalen.Add(optie);
+        }
+
         // Kop
         var kop = staat.Kop;
         kop.VerletMeetellen = metVerlet;
@@ -458,6 +482,7 @@ public class PlanningService : IPlanningService
             d.Kop.ModifiedByUserId = userId;
             await _db.SaveChangesAsync();
             await tx.CommitAsync();
+            await HerberekenTrajectAsync(projectId);
 
             var uitkomst = new PlanningUitkomst { Ok = true, Undo = voorSnap, Staat = await Bouw(d, dr) };
 
@@ -484,6 +509,86 @@ public class PlanningService : IPlanningService
             _db.ChangeTracker.Clear();
             throw;
         }
+    }
+
+    /// <summary>
+    /// Gekoppelde trajectmijlpalen volgen de planning: na een wijziging herrekent het Traject zijn streefdata (en zet een mijlpaal op bereikt
+    /// zodra haar taak afgerond is). Faalt dat, dan blijft de planning gewoon bewaard; het Traject herrekent ook zelf op de achtergrond.
+    /// </summary>
+    private async Task HerberekenTrajectAsync(int projectId)
+    {
+        if (_traject == null) return;
+        try
+        {
+            var gekoppeld = await _db.Mijlpaal.AsNoTracking()
+                .AnyAsync(m => m.Projecttraject.ProjectId == projectId && (m.BronBinding == 4 || m.BronBinding == 5));
+            if (gekoppeld) await _traject.RecalculateProject(projectId, null);
+        }
+        catch
+        {
+            // bewust genegeerd: zie samenvatting
+        }
+    }
+
+    private static int? VerwijstNaar(Mijlpaal m) => m.BronRefId ?? (int.TryParse((m.BronParam ?? "").Trim(), out var x) ? x : (int?)null);
+
+    public async Task<PlanningUitkomst> Koppel(int projectId, PlanningKoppelCommando c, string? userId)
+    {
+        if (c == null) return new PlanningUitkomst { Fout = "Geen koppeling opgegeven." };
+        var isFase = c.Soort == "fase";
+        var binding = isFase ? 5 : 4;
+
+        var doelOk = isFase
+            ? await _db.PlanningSectie.AnyAsync(s => s.Id == c.Id && s.ProjectId == projectId && s.IsActief)
+            : await _db.PlanningTaak.AnyAsync(t => t.Id == c.Id && t.PlanningSectie.ProjectId == projectId && t.PlanningSectie.IsActief);
+        if (!doelOk) return new PlanningUitkomst { Fout = isFase ? "De fase bestaat niet meer." : "De taak bestaat niet meer." };
+
+        var ids = new[] { c.MijlpaalId, c.VorigeMijlpaalId }.Where(x => x != null).Select(x => x!.Value).Distinct().ToList();
+        var mijlpalen = await _db.Mijlpaal.Where(m => ids.Contains(m.Id) && m.Projecttraject.ProjectId == projectId).ToListAsync();
+        var nu = DateTime.UtcNow;
+
+        // Eerst losmaken wat in de keuzelijst stond, maar enkel als het echt aan dit doel hing.
+        if (c.VorigeMijlpaalId is int vid && vid != c.MijlpaalId)
+        {
+            var oud = mijlpalen.FirstOrDefault(m => m.Id == vid);
+            if (oud != null && oud.BronBinding == binding && VerwijstNaar(oud) == c.Id)
+            {
+                oud.BronBinding = null; oud.BronRefId = null; oud.BronParam = null;
+                oud.ModifiedByUserId = userId; oud.ModifiedDate = nu;
+                _db.MijlpaalHistoriek.Add(new MijlpaalHistoriek
+                {
+                    MijlpaalId = oud.Id, Actie = (int)BOCore.MijlpaalHistoriekActie.Bijgewerkt, UserId = userId, Timestamp = nu,
+                    Opmerking = "Koppeling met de planning losgemaakt",
+                });
+            }
+        }
+
+        if (c.MijlpaalId is int nid)
+        {
+            var m = mijlpalen.FirstOrDefault(x => x.Id == nid);
+            if (m == null) return new PlanningUitkomst { Fout = "Deze mijlpaal hoort niet bij het Traject van dit project." };
+            if (m.UnitId != null) return new PlanningUitkomst { Fout = "Enkel een mijlpaal van het hele project kan aan de planning gekoppeld worden, niet een van één eenheid." };
+            var vrij = m.BronBinding == null || m.BronBinding == 0 || m.BronBinding == 4 || m.BronBinding == 5;
+            if (!vrij)
+                return new PlanningUitkomst { Fout = "Deze mijlpaal volgt al automatisch iets anders, bijvoorbeeld een document of een dossier. Haal die koppeling eerst weg in het Traject." };
+            if (!(m.BronBinding == binding && VerwijstNaar(m) == c.Id))
+            {
+                m.BronBinding = binding; m.BronRefId = c.Id; m.BronParam = null;
+                m.ModifiedByUserId = userId; m.ModifiedDate = nu;
+                _db.MijlpaalHistoriek.Add(new MijlpaalHistoriek
+                {
+                    MijlpaalId = m.Id, Actie = (int)BOCore.MijlpaalHistoriekActie.Bijgewerkt, UserId = userId, Timestamp = nu,
+                    Opmerking = isFase ? "Gekoppeld aan een fase van de planning" : "Gekoppeld aan een taak van de planning",
+                });
+            }
+        }
+
+        await _db.SaveChangesAsync();
+        await HerberekenTrajectAsync(projectId);
+
+        var d = await LaadData(projectId);
+        if (d == null) return new PlanningUitkomst { Fout = "Project niet gevonden." };
+        return new PlanningUitkomst { Ok = true, Staat = await Bouw(d, Rekenen(d)) };
     }
 
     private static string? BasisVastleggen(Data d)

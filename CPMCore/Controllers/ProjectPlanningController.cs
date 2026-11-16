@@ -68,6 +68,7 @@ public class ProjectPlanningController : BaseController
             ProjectName = projectName,
             CanWrite = ps.HasWrite(PermissionCodes.ProjectsPlanning),
             CanDelete = ps.HasDelete(PermissionCodes.ProjectsPlanning),
+            CanLinkTraject = ps.HasWrite(PermissionCodes.ProjectsTraject),
             StaatJson = JsonSerializer.Serialize(staat, JsonOpties),
         });
     }
@@ -86,6 +87,23 @@ public class ProjectPlanningController : BaseController
             return Forbid();
 
         var uitkomst = await _planning.Voer(projectId, commando, UserId);
+        return Json(uitkomst, JsonOpties);
+    }
+
+    /// <summary>
+    /// Koppelt een trajectmijlpaal aan een taak of fase van de planning (of haalt de koppeling weg). Vraagt naast schrijfrecht op de planning
+    /// ook schrijfrecht op het Traject: de mijlpaal in het Traject volgt voortaan de planning.
+    /// </summary>
+    [HttpPost("Koppeling")]
+    [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsPlanning)]
+    public async Task<IActionResult> Koppeling(int projectId, [FromBody] PlanningKoppelCommando commando)
+    {
+        if (commando == null) return BadRequest();
+        if (!HttpContext.RequestServices.GetRequiredService<IPermissionService>().HasWrite(PermissionCodes.ProjectsTraject))
+            return Forbid();
+
+        var uitkomst = await _planning.Koppel(projectId, commando, UserId);
         return Json(uitkomst, JsonOpties);
     }
 

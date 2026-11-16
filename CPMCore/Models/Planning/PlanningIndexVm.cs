@@ -8,6 +8,9 @@ public class PlanningIndexVm
     public bool CanWrite { get; set; }
     public bool CanDelete { get; set; }
 
+    /// <summary>Schrijfrecht op het Traject: nodig om een taak of fase aan een trajectmijlpaal te koppelen.</summary>
+    public bool CanLinkTraject { get; set; }
+
     /// <summary>De volledig doorgerekende planning (<c>FacadeCore.PlanningStaat</c>) als JSON.</summary>
     public string StaatJson { get; set; } = "{}";
 }

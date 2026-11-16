@@ -270,4 +270,107 @@ public class PlanningServiceTests
         Assert.Equal(new DateOnly(2026, 11, 25), ServiceCore.Traject.TrajectRecalculationService.GeplandUitPlanning(mFase, taken, secties));
         Assert.Null(ServiceCore.Traject.TrajectRecalculationService.GeplandUitPlanning(new Mijlpaal(), taken, secties));
     }
+
+    // ── Koppeling met een trajectmijlpaal ──
+
+    private static async Task<(Mijlpaal M, Mijlpaal Vreemd)> MaakTraject(TestDb db)
+    {
+        var traject = new Projecttraject { ProjectId = ProjectId, Naam = "Traject", Status = 0 };
+        db.Projecttraject.Add(traject);
+        db.Project.Add(new Project { ProjectId = 2, ProjectName = "Ander project" });
+        await db.SaveChangesAsync();
+        var anderTraject = new Projecttraject { ProjectId = 2, Naam = "Ander traject", Status = 0 };
+        db.Projecttraject.Add(anderTraject);
+        await db.SaveChangesAsync();
+        var m = new Mijlpaal { ProjecttrajectId = traject.Id, Code = "RUWBOUW", Naam = "Ruwbouw klaar", Status = 0 };
+        var vreemd = new Mijlpaal { ProjecttrajectId = anderTraject.Id, Code = "X", Naam = "Van een ander project", Status = 0 };
+        db.Mijlpaal.AddRange(m, vreemd);
+        await db.SaveChangesAsync();
+        return (m, vreemd);
+    }
+
+    [Fact]
+    public async Task Een_vrije_trajectmijlpaal_koppelen_aan_een_taak_en_weer_losmaken()
+    {
+        var (svc, db, s) = await MetTweeTaken();
+        var (m, _) = await MaakTraject(db);
+        var taak = await db.PlanningTaak.SingleAsync(t => t.Naam == "Funderingen");
+
+        // De keuzelijst toont de vrije mijlpaal, nog niet gekoppeld.
+        var lijst = (await svc.Laad(ProjectId)).TrajectMijlpalen;
+        Assert.Equal("Ruwbouw klaar", Assert.Single(lijst).Naam);
+        Assert.Null(lijst[0].GekoppeldAanSleutel);
+
+        var u = await svc.Koppel(ProjectId, new PlanningKoppelCommando { Soort = "taak", Id = taak.Id, MijlpaalId = m.Id }, "u1");
+        Assert.True(u.Ok, u.Fout);
+        var opgeslagen = await db.Mijlpaal.AsNoTracking().SingleAsync(x => x.Id == m.Id);
+        Assert.Equal((4, taak.Id), (opgeslagen.BronBinding, opgeslagen.BronRefId));
+        Assert.Equal("t" + taak.Id, u.Staat!.TrajectMijlpalen.Single().GekoppeldAanSleutel);
+        Assert.Equal("1.2 Funderingen", u.Staat.TrajectMijlpalen.Single().GekoppeldAanTekst);
+        Assert.Contains(Rij(u.Staat, "1.2").Mijlpalen, x => x.Id == m.Id);
+
+        var los = await svc.Koppel(ProjectId, new PlanningKoppelCommando { Soort = "taak", Id = taak.Id, MijlpaalId = null, VorigeMijlpaalId = m.Id }, "u1");
+        Assert.True(los.Ok, los.Fout);
+        var vrij = await db.Mijlpaal.AsNoTracking().SingleAsync(x => x.Id == m.Id);
+        Assert.Null(vrij.BronBinding);
+        Assert.Null(vrij.BronRefId);
+    }
+
+    [Fact]
+    public async Task Een_mijlpaal_koppelen_aan_een_fase_gebruikt_binding_5()
+    {
+        var (svc, db, _) = await MetTweeTaken();
+        var (m, _) = await MaakTraject(db);
+        var fase = await db.PlanningSectie.SingleAsync();
+        var u = await svc.Koppel(ProjectId, new PlanningKoppelCommando { Soort = "fase", Id = fase.Id, MijlpaalId = m.Id }, "u1");
+        Assert.True(u.Ok, u.Fout);
+        var opgeslagen = await db.Mijlpaal.AsNoTracking().SingleAsync(x => x.Id == m.Id);
+        Assert.Equal((5, fase.Id), (opgeslagen.BronBinding, opgeslagen.BronRefId));
+    }
+
+    [Fact]
+    public async Task Een_mijlpaal_die_al_iets_anders_volgt_wordt_geweigerd_en_blijft_ongewijzigd()
+    {
+        var (svc, db, _) = await MetTweeTaken();
+        var (m, _) = await MaakTraject(db);
+        m.BronBinding = 1; // volgt een projectdocument
+        await db.SaveChangesAsync();
+        var taak = await db.PlanningTaak.FirstAsync();
+
+        Assert.DoesNotContain(m.Id, (await svc.Laad(ProjectId)).TrajectMijlpalen.Select(x => x.Id));
+        var u = await svc.Koppel(ProjectId, new PlanningKoppelCommando { Soort = "taak", Id = taak.Id, MijlpaalId = m.Id }, "u1");
+        Assert.False(u.Ok);
+        Assert.Contains("automatisch", u.Fout);
+        Assert.Equal(1, (await db.Mijlpaal.AsNoTracking().SingleAsync(x => x.Id == m.Id)).BronBinding);
+    }
+
+    [Fact]
+    public async Task Een_mijlpaal_van_een_ander_project_of_een_onbekende_taak_wordt_geweigerd()
+    {
+        var (svc, db, _) = await MetTweeTaken();
+        var (_, vreemd) = await MaakTraject(db);
+        var taak = await db.PlanningTaak.FirstAsync();
+
+        var a = await svc.Koppel(ProjectId, new PlanningKoppelCommando { Soort = "taak", Id = taak.Id, MijlpaalId = vreemd.Id }, "u1");
+        Assert.False(a.Ok);
+        Assert.Null((await db.Mijlpaal.AsNoTracking().SingleAsync(x => x.Id == vreemd.Id)).BronBinding);
+
+        var b = await svc.Koppel(ProjectId, new PlanningKoppelCommando { Soort = "taak", Id = 9999, MijlpaalId = vreemd.Id }, "u1");
+        Assert.False(b.Ok);
+    }
+
+    [Fact]
+    public async Task Losmaken_raakt_een_mijlpaal_niet_die_aan_een_andere_taak_hangt()
+    {
+        var (svc, db, _) = await MetTweeTaken();
+        var (m, _) = await MaakTraject(db);
+        var taken = await db.PlanningTaak.OrderBy(t => t.Volgorde).ToListAsync();
+        await svc.Koppel(ProjectId, new PlanningKoppelCommando { Soort = "taak", Id = taken[1].Id, MijlpaalId = m.Id }, "u1");
+
+        // "Vorige" verwijst naar de mijlpaal, maar die hangt niet aan taak 1: ze moet blijven staan.
+        var u = await svc.Koppel(ProjectId, new PlanningKoppelCommando { Soort = "taak", Id = taken[0].Id, MijlpaalId = null, VorigeMijlpaalId = m.Id }, "u1");
+        Assert.True(u.Ok, u.Fout);
+        var nog = await db.Mijlpaal.AsNoTracking().SingleAsync(x => x.Id == m.Id);
+        Assert.Equal((4, taken[1].Id), (nog.BronBinding, nog.BronRefId));
+    }
 }

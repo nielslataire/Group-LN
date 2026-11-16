@@ -29,14 +29,20 @@ Gebouwd, nog **niet in de echte app getest** (enkel een statische render met hea
 - Nieuw projectwijd component: Gantt (`wwwroot/css/gl-v2/gantt.css`, `wwwroot/js/gl-v2-gantt.js`), gedocumenteerd in `CPMCore/DESIGN.md` ("Projecten/Planning").
 - Wat de pagina kan: kop (start, einde, duur, deadline met marge, verletdagen, basisplanning), meldingen, lijst en Gantt (dag/week/maand), fases in- en uitklappen, taken en fases toevoegen/bewerken/verwijderen/verplaatsen (omhoog, omlaag, inspringen, uitspringen), inline bewerken van naam/duur/voorgangers,
   afvinken, beperkingen, deadline per taak, werkelijke data, voortgang, verantwoordelijke, notitie, kritiek pad, basisplanning vastleggen, verlet meetellen aan/uit, wijzigingsbalk met Ongedaan maken/Opnieuw, conflictmelding via `ProjectPlanning.Versie`.
-- Traject: `TrajectRecalculationService.GeplandUitPlanning` zet de geplande einddatum van een gekoppelde taak/fase in `Mijlpaal.DoeldatumBerekend`. De koppeling zelf (`BronBinding` 4/5 + `BronRefId`) wordt nog enkel via de trajectsjablonen gelegd, **nergens vanuit de planning of de mijlpaalmodal**.
+- Traject: `TrajectRecalculationService.GeplandUitPlanning` zet de geplande einddatum van een gekoppelde taak/fase in `Mijlpaal.DoeldatumBerekend`. De koppeling zelf (`BronBinding` 4/5 + `BronRefId`) werd eerst enkel via de trajectsjablonen gelegd; sinds 15/11/2026 ook vanuit het taak- en fasepaneel (zie hieronder).
 - Help: `HelpContent/projecten/planning-opbouwen.md`, `voorgangers-en-wachttijd-invullen.md`, `planning-lezen-en-opvolgen.md`.
+
+## Scrollen en overzicht verbeterd (15/11/2026)
+Aanleiding: de datumbalk bleef niet staan en je kon moeilijk door de planning scrollen. Oorzaak: lijst en Gantt zaten in een horizontaal scrollvlak zonder begrensde hoogte, waardoor niets aan de bovenkant kon vastplakken en de scrollbalk onderaan een lange pagina lag. Nu vult de kaart de schermhoogte met één scrollvlak (kop en lijst plakken), versleepbare lijstbreedte met kolommen die meeschalen (container query), zoom **Alles**, Begin/Vandaag, rijmarkering over lijst en grafiek, grafiek slepen, volledig scherm en dichtgeklapte aandachtspunten. Details in `CPMCore/DESIGN.md` (Projecten/Planning, "Scrollen en overzicht"). Getest met een statische render in headless Edge op de echte data van project 79 (1440×900, 1280×720, 1100×760), niet in de echte app.
+
+## Mijlpaal ↔ taak koppelen vanuit de UI (15/11/2026)
+Taak- en fasepaneel kregen "Koppeling met trajectmijlpaal" (ontwerp 59a): `PlanningService.Koppel` + `POST …/Planning/Koppeling` (recht Planning schrijven én Traject schrijven), keuzelijst `PlanningStaat.TrajectMijlpalen` (enkel vrije of al aan de planning gekoppelde mijlpalen van het project; een mijlpaal die iets anders volgt wordt geweigerd). Na koppelen en na elke planningswijziging herrekent het Traject (`HerberekenTrajectAsync`, enkel bij gekoppelde mijlpalen), zodat streefdatum en "bereikt" meelopen. 5 nieuwe tests in `PlanningServiceTests` (43 slagen). Help: `taak-datums-en-verantwoordelijke.md`, `planning-handleiding.md`. **Niet gebouwd:** automatisch koppelen op `Mijlpaal.Code` bij het aanmaken van een planning of traject; planningstaken hebben geen code, dus dat vraagt eerst een beslissing (codes op taken, of een koppeltabel per sjabloon).
 
 ## Nog te doen
 1. Planning in de echte app uitproberen (permissie toekennen, taak aanmaken, voorgangers, verlet, deadline, klantwaarschuwing).
-2. Mijlpaal ↔ taak koppelen vanuit de UI (planningspaneel of mijlpaalmodal) en automatisch op `Mijlpaal.Code` bij het aanmaken van een planning/traject.
+2. ~~Mijlpaal ↔ taak koppelen vanuit de UI~~ gedaan op 15/11/2026. Nog open: automatisch koppelen op `Mijlpaal.Code` (zie hierboven) en koppelen vanuit de mijlpaalmodal van het Traject.
 3. Fase 2: werkkalender-paneel (bedrijfsdagen lezen + projecteigen dagen), planningssjablonen ("Opslaan als sjabloon", Instellingen › Planning), "Fases uit het budget" in de lege staat, dashboard/Projectdetail-kaart.
 4. Fase 3: import (MS Project-XML, Excel) met voorbeeldscherm, export (Excel, PDF A3 in Documentlayout-stijl).
 5. Fase 4: balken slepen (verschuiven, duur, afhankelijkheid trekken), rechtsklikmenu, samenvoegen bij een conflict, tablet-/gsm-verfijning, toetsenbord (pijltjes op een balk).
 6. Klantdetail toont nog geen waarschuwing bij een ontbrekend weerstation.
-7. De vooraf ingestelde scroll van de Gantt bij het openen springt naar "vandaag"; bij een planning die geheel in het verleden ligt toont ze de eerste taken dan buiten beeld.
+7. ~~Scroll bij het openen~~ opgelost op 15/11/2026: opent op vandaag, of op het begin van de planning als vandaag buiten het bereik valt.

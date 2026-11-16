@@ -1,32 +1,53 @@
 /* gl-v2 component — Gantt-tijdlijn (nov. 2026). Markup en gedrag: js/gl-v2-gantt.js; ontwerp: design-handoff "CRM Planning" 59a.
    Wordt door de pagina geladen via @section PageStyle (niet door _LayoutV2), dus alles staat onder .gl-v2 voor specificiteit boven de shell.
-   Kleur is nooit de enige drager: kritiek = rood + diagonale arcering, vastgepind = punaise, verschoven = gouden rand, klaar = vinkje-donker. */
+   Kleur is nooit de enige drager: kritiek = rood + diagonale arcering, vastgepind = punaise, verschoven = gouden rand, klaar = vinkje-donker.
+
+   Scrollen: de kop plakt bovenaan (sticky), maand-/jaarlabels plakken links naast de lijst, vandaag/deadline plakken onder de kop.
+   Dat werkt enkel binnen een scrollvlak met begrensde hoogte (de pagina zet overflow:auto op de ouder) en met overflow:clip
+   (nooit hidden) op elementen waarin iets moet blijven plakken. */
 
 .gl-v2 .gl-v2-gantt { position: relative; flex: 1 1 auto; min-width: 0; }
 .gl-v2 .gl-v2-gantt-inner { position: relative; }
 
-/* Kop: twee rijen van 24px (samen de 48px van de lijstkop) */
-.gl-v2 .gl-v2-gantt-head { position: relative; height: 48px; background: var(--gl-v2-bg, #F2F5EF); border-bottom: 1px solid var(--gl-v2-hairline, rgba(44, 59, 42, .12)); }
+/* Kop: twee rijen van 24px (samen de 48px van de lijstkop), blijft bovenaan staan */
+.gl-v2 .gl-v2-gantt-head {
+    position: sticky; top: 0; z-index: 7; height: 48px; background: var(--gl-v2-bg, #F2F5EF);
+    border-bottom: 1px solid var(--gl-v2-hairline, rgba(44, 59, 42, .12));
+}
 .gl-v2 .gl-v2-gantt-head-top, .gl-v2 .gl-v2-gantt-head-bottom { position: relative; height: 24px; }
 .gl-v2 .gl-v2-gantt-h1, .gl-v2 .gl-v2-gantt-h2 {
     position: absolute; top: 0; height: 24px; display: flex; align-items: center; justify-content: center;
     font: 600 10.5px var(--gl-v2-font-sans, 'IBM Plex Sans', sans-serif); color: var(--gl-v2-muted, #5a6b58);
-    border-left: 1px solid var(--gl-v2-hairline-soft, rgba(44, 59, 42, .08)); overflow: hidden; white-space: nowrap; text-transform: lowercase;
+    border-left: 1px solid var(--gl-v2-hairline-soft, rgba(44, 59, 42, .08)); overflow: clip; white-space: nowrap; text-transform: lowercase;
 }
-.gl-v2 .gl-v2-gantt-h1 { justify-content: flex-start; padding-left: 8px; text-transform: none; color: var(--gl-v2-ink, #2C3B2A); letter-spacing: .02em; }
+.gl-v2 .gl-v2-gantt-h1 { justify-content: flex-start; text-transform: none; color: var(--gl-v2-ink, #2C3B2A); letter-spacing: .02em; }
+/* Het label blijft links in beeld (naast de vaste lijst) zolang zijn maand/jaar nog zichtbaar is */
+.gl-v2 .gl-v2-gantt-lbl { position: sticky; left: calc(var(--gl-v2-gantt-stick, 0px) + 8px); flex: none; font-style: normal; padding-right: 8px; }
 .gl-v2 .gl-v2-gantt-h2 { font-weight: 500; font-variant-numeric: tabular-nums; }
 .gl-v2 .gl-v2-gantt-h2.is-weekend { color: var(--gl-v2-muted-light, #9aa898); }
 
-/* Lichaam: rij-strepen, niet-werkdagen, lijnen */
+/* Lichaam: rij-strepen, weeklijnen, niet-werkdagen */
 .gl-v2 .gl-v2-gantt-body {
     position: relative;
-    background-image: repeating-linear-gradient(180deg, transparent 0 calc(var(--gl-v2-gantt-rh, 34px) - 1px), var(--gl-v2-hairline-soft, rgba(44, 59, 42, .08)) calc(var(--gl-v2-gantt-rh, 34px) - 1px) var(--gl-v2-gantt-rh, 34px));
+    background-image:
+        repeating-linear-gradient(180deg, transparent 0 calc(var(--gl-v2-gantt-rh, 34px) - 1px), var(--gl-v2-hairline-soft, rgba(44, 59, 42, .08)) calc(var(--gl-v2-gantt-rh, 34px) - 1px) var(--gl-v2-gantt-rh, 34px)),
+        repeating-linear-gradient(90deg, transparent 0 calc(var(--gl-v2-gantt-wk, 70px) - 1px), rgba(44, 59, 42, .06) calc(var(--gl-v2-gantt-wk, 70px) - 1px) var(--gl-v2-gantt-wk, 70px));
 }
+.gl-v2 .gl-v2-gantt-body.is-coarse { background-image: repeating-linear-gradient(180deg, transparent 0 calc(var(--gl-v2-gantt-rh, 34px) - 1px), var(--gl-v2-hairline-soft, rgba(44, 59, 42, .08)) calc(var(--gl-v2-gantt-rh, 34px) - 1px) var(--gl-v2-gantt-rh, 34px)); }
 .gl-v2 .gl-v2-gantt-nw { position: absolute; top: 0; bottom: 0; pointer-events: none; }
 .gl-v2 .gl-v2-gantt-nw.is-weekend { background: rgba(44, 59, 42, .045); }
 .gl-v2 .gl-v2-gantt-nw.is-verlof { background: repeating-linear-gradient(135deg, rgba(201, 169, 110, .30) 0 4px, rgba(201, 169, 110, .12) 4px 8px); }
 .gl-v2 .gl-v2-gantt-nw.is-verlet { background: repeating-linear-gradient(135deg, rgba(74, 112, 160, .30) 0 4px, rgba(74, 112, 160, .10) 4px 8px); }
+/* Maandgrens (en jaargrens iets steviger) over de hele hoogte */
+.gl-v2 .gl-v2-gantt-vl { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px solid rgba(44, 59, 42, .13); pointer-events: none; }
+.gl-v2 .gl-v2-gantt-vl.is-year { border-left-color: rgba(44, 59, 42, .30); }
 .gl-v2 .gl-v2-gantt-svg { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 2; overflow: visible; }
+
+/* Rijmarkering: onder de muis (gedeeld met de lijst) en geselecteerd */
+.gl-v2 .gl-v2-gantt-band { position: absolute; left: 0; right: 0; z-index: 1; pointer-events: none; }
+.gl-v2 .gl-v2-gantt-band[hidden] { display: none; }
+.gl-v2 .gl-v2-gantt-band.is-hover { background: rgba(0, 83, 45, .055); }
+.gl-v2 .gl-v2-gantt-band.is-sel { background: rgba(0, 83, 45, .09); box-shadow: inset 0 1px 0 rgba(0, 83, 45, .16), inset 0 -1px 0 rgba(0, 83, 45, .16); }
 
 .gl-v2 .gl-v2-gantt-link { fill: none; stroke: var(--gl-v2-muted-light, #9aa898); stroke-width: 1.2; }
 .gl-v2 .gl-v2-gantt-link.is-critical { stroke: var(--gl-v2-danger, #8B2A2A); }
@@ -75,15 +96,16 @@
 .gl-v2 .gl-v2-gantt-base { position: absolute; z-index: 3; height: 4px; border-radius: 2px; background: var(--gl-v2-muted-light, #9aa898); pointer-events: none; }
 .gl-v2 .gl-v2-gantt-base-ms { position: absolute; z-index: 3; width: 9px; height: 9px; transform: rotate(45deg); border: 1.5px solid #8a978a; background: #fff; pointer-events: none; }
 
-/* Vandaag en deadline */
+/* Vandaag en deadline: de lijn loopt over de volle hoogte, het label zit in de vaste kop (onderrand) en blijft dus altijd zichtbaar */
 .gl-v2 .gl-v2-gantt-today, .gl-v2 .gl-v2-gantt-deadline { position: absolute; top: 0; bottom: 0; width: 0; z-index: 5; pointer-events: none; }
 .gl-v2 .gl-v2-gantt-today { border-left: 2px solid var(--gl-v2-gold, #C9A96E); }
 .gl-v2 .gl-v2-gantt-deadline { border-left: 2px dashed var(--gl-v2-danger, #8B2A2A); }
-.gl-v2 .gl-v2-gantt-today b, .gl-v2 .gl-v2-gantt-deadline b {
-    position: absolute; top: 0; left: 3px; font: 600 9.5px/1 var(--gl-v2-font-sans, 'IBM Plex Sans', sans-serif); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap;
+.gl-v2 .gl-v2-gantt-flag {
+    position: absolute; top: 41px; z-index: 2; transform: translateX(-50%); padding: 2px 6px; border-radius: 3px; pointer-events: none;
+    font: 600 9.5px/1 var(--gl-v2-font-sans, 'IBM Plex Sans', sans-serif); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap;
 }
-.gl-v2 .gl-v2-gantt-today b { color: #8A6A32; }
-.gl-v2 .gl-v2-gantt-deadline b { color: var(--gl-v2-danger, #8B2A2A); top: 14px; }
+.gl-v2 .gl-v2-gantt-flag.is-today { color: #6B5120; background: #F3E8CC; box-shadow: 0 0 0 1px rgba(201, 169, 110, .6); }
+.gl-v2 .gl-v2-gantt-flag.is-deadline { color: var(--gl-v2-danger, #8B2A2A); background: #F6E4E1; box-shadow: 0 0 0 1px rgba(139, 42, 42, .35); }
 
 @media (prefers-reduced-motion: no-preference) {
     .gl-v2 .gl-v2-gantt-bar { transition: box-shadow .15s ease, filter .12s ease; }

@@ -84,6 +84,9 @@ public sealed class PlanningStaat
     /// <summary>Budgetlots waaraan een fase gekoppeld kan worden (voor de fysieke voortgang).</summary>
     public List<PlanningGebruiker> Lots { get; set; } = new();
     public List<PlanningNietWerkdag> NietWerkdagen { get; set; } = new();
+
+    /// <summary>Mijlpalen uit het Traject van dit project die aan een taak of fase gekoppeld kunnen worden: vrije (handmatige) en die al aan de planning hangen.</summary>
+    public List<PlanningMijlpaalOptie> TrajectMijlpalen { get; set; } = new();
 }
 
 public sealed class PlanningKop
@@ -185,9 +188,43 @@ public sealed class PlanningNietWerkdag
     public string Soort { get; set; } = "";
 }
 
+/// <summary>Een mijlpaal uit het Traject, als keuze bij "Koppeling met trajectmijlpaal".</summary>
+public sealed class PlanningMijlpaalOptie
+{
+    public int Id { get; set; }
+    public string Naam { get; set; } = "";
+
+    /// <summary>De fase van het Traject waarin de mijlpaal staat (voor de weergave).</summary>
+    public string? FaseNaam { get; set; }
+
+    /// <summary>Sleutel (t12 / f3) van de taak of fase waaraan de mijlpaal nu hangt; leeg = vrij.</summary>
+    public string? GekoppeldAanSleutel { get; set; }
+
+    /// <summary>Nummer en naam van die taak of fase, voor de weergave ("3.2 Dakbedekking").</summary>
+    public string? GekoppeldAanTekst { get; set; }
+}
+
+/// <summary>Koppelt een trajectmijlpaal aan een taak of fase van de planning, of haalt de koppeling weg.</summary>
+public sealed class PlanningKoppelCommando
+{
+    /// <summary>"taak" of "fase".</summary>
+    public string Soort { get; set; } = "taak";
+
+    public int Id { get; set; }
+
+    /// <summary>De mijlpaal die gekoppeld wordt; leeg = enkel ontkoppelen.</summary>
+    public int? MijlpaalId { get; set; }
+
+    /// <summary>De mijlpaal die tot nu toe in de keuzelijst stond en losgekoppeld wordt (leeg = geen).</summary>
+    public int? VorigeMijlpaalId { get; set; }
+}
+
 public interface IPlanningService
 {
     Task<PlanningStaat> Laad(int projectId);
 
     Task<PlanningUitkomst> Voer(int projectId, PlanningCommando commando, string? userId);
+
+    /// <summary>Koppelt een trajectmijlpaal aan een taak of fase (of haalt de koppeling weg). De mijlpaal in het Traject volgt dan de planning.</summary>
+    Task<PlanningUitkomst> Koppel(int projectId, PlanningKoppelCommando commando, string? userId);
 }

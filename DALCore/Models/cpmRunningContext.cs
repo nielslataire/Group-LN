@@ -2495,7 +2495,8 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Naam)
                 .IsRequired()
                 .HasMaxLength(300);
-            entity.Property(e => e.Duur).HasDefaultValue(1);
+            // Duur 0 = mijlpaal: ValueGeneratedNever zorgt dat EF een 0 ook echt wegschrijft i.p.v. de databasedefault (1) te laten gelden.
+            entity.Property(e => e.Duur).HasDefaultValue(1).ValueGeneratedNever();
             entity.Property(e => e.VerantwoordelijkeUserId).HasMaxLength(450);
 
             entity.HasOne(d => d.PlanningSectie).WithMany(p => p.PlanningTaak)

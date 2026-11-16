@@ -199,3 +199,18 @@ Opnemen op een venster van ongeveer 1024 px breed en een open offerte in concept
 |---|---|---|---|---|---|
 | wijzigingsopdracht-opmaken | Werken op een kleiner scherm | CPMCore/wwwroot/img/help/facturatie-wijzigingen/wijzigingsopdracht-opmaken/regels-tablet.png | Projecten/ChangeOrderDetailV2, venster 1024 px breed | kaart Regels met twee regels in de vorm met twee lijnen | klant- en projectnaam staan niet in de uitsnede |
 | wijzigingsopdracht-opmaken | Werken op een kleiner scherm | CPMCore/wwwroot/img/help/facturatie-wijzigingen/wijzigingsopdracht-opmaken/actiebalk-meer-acties.png | idem, onderaan | actiebalk met het menu Meer acties open (Omzetten en Verwijderen) | geen |
+
+## Planning (bouwplanning), handleiding van 15/11/2026
+
+De `![...]`-regels staan al in de artikels. Maak de opnames met het Playwright-recept uit `DESIGN.md` op een project met een volledige planning (aanmaken via de planningspagina zelf). Planning is een nieuwe pagina: neem op 1440 × 900 en snij uit tot de genoemde kaart of het paneel.
+
+| artikel-slug | stap | pad | route/pagina | uitsnede | anonimiseren |
+|---|---|---|---|---|---|
+| planning-handleiding | De planning controleren | CPMCore/wwwroot/img/help/projecten/planning-handleiding/1-planning-overzicht.png | Projecten/{id}/Planning, project met een volledige planning, Kritiek pad aan | kaart met werkbalk, lijst en grafiek (zonder topbalk) | projectnaam staat niet in de uitsnede |
+| planning-voorbereiden | De startdatum en de uitvoeringstermijn invullen | CPMCore/wwwroot/img/help/projecten/planning-voorbereiden/1-tabblad-planning.png | Projecten/Core/EditV2, tabblad Planning | sectiekaart Planning | geen |
+| taak-datums-en-verantwoordelijke | Een beperking kiezen | CPMCore/wwwroot/img/help/projecten/taak-datums-en-verantwoordelijke/1-taakpaneel.png | Planning, klik op een taak | het zijpaneel (rechts) volledig | naam van de verantwoordelijke vervangen door een fictieve |
+| taak-datums-en-verantwoordelijke | Een mijlpaal uit het Traject koppelen | CPMCore/wwwroot/img/help/projecten/taak-datums-en-verantwoordelijke/2-koppeling-traject.png | Planning, klik op een taak, keuze Koppeling met trajectmijlpaal open (project met een Traject) | onderste deel van het zijpaneel met de keuzelijst open | geen |
+| planning-navigeren | De schaal kiezen | CPMCore/wwwroot/img/help/projecten/planning-navigeren/1-schaal-alles.png | Planning, schaal Alles | kaart met werkbalk, lijst en grafiek | projectnaam staat niet in de uitsnede |
+| planning-navigeren | De lijst breder of smaller maken | CPMCore/wwwroot/img/help/projecten/planning-navigeren/2-lijstbreedte.png | Planning, lijst gesleept naar ongeveer 320 px en naar ongeveer 640 px (twee opnames naast elkaar) | lijst en begin van de grafiek | geen |
+| basisplanning-vastleggen | De afwijkingen bekijken | CPMCore/wwwroot/img/help/projecten/basisplanning-vastleggen/1-basisplanning-aan.png | Planning, na Basis vastleggen en een wijziging die taken liet opschuiven, Basisplanning aan | lijst met de kolom Einde en de grafiek | geen |
+| planning-voortgang-budget | Een fase koppelen aan een lot | CPMCore/wwwroot/img/help/projecten/planning-voortgang-budget/1-fasepaneel-lot.png | Planning, klik op een fase | het zijpaneel (rechts) volledig | geen |

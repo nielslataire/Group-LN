@@ -1,13 +1,15 @@
 ---
 title: Voorgangers en wachttijd invullen
 topic: projecten
+parent: planning-handleiding
+treeOrder: 4
 role: Projectleider
 device: Desktop · tablet
 minutes: 4
-updated: 2026-11-13
+updated: 2026-11-15
 newsTag: Nieuw
 screens: planning-index
-related: planning-opbouwen, planning-lezen-en-opvolgen
+related: planning-handleiding, planning-opbouwen, taak-datums-en-verantwoordelijke, planning-problemen-oplossen
 synonyms: voorganger, afhankelijkheid, wachttijd, overlap, FS, SS, FF, SF, droogtijd, kritiek pad, beperking
 description: bepalen welke taak op welke wacht en hoe lang
 intro: |
@@ -21,6 +23,10 @@ faq:
     a: CPM weigert dat en toont welke taken op elkaar zouden wachten. Er wordt niets bewaard.
   - q: Wat is een beperking?
     a: Een beperking dwingt een datum af, bijvoorbeeld Moet beginnen op. Zo een taak schuift niet mee met haar voorgangers. Niet later dan geeft enkel een waarschuwing.
+  - q: Wanneer gebruik ik SS, FF of SF?
+    a: SS als twee taken samen starten, zoals leidingen en vloerverwarming. FF als ze samen eindigen, zoals een afwerking die niet langer mag duren dan de ruwbouw. SF komt zelden voor. De meeste voorgangers zijn FS.
+  - q: Hoe zie ik waarom een taak op een bepaalde dag start?
+    a: Open de taak. Bovenaan staat "Start bepaald door taak" met het nummer van de voorganger die het laatst klaar is.
   - q: Kan ik naar een fase verwijzen?
     a: Ja. Typ het nummer van de fase. De taak wacht dan op alle taken in die fase.
 ---
@@ -46,7 +52,9 @@ Zonder soort neemt CPM **FS**: de taak start de werkdag na het einde van de voor
 2. Typ de nieuwe waarde en druk op **Enter**.
 3. De balk bovenaan toont hoeveel andere taken zijn verschoven en wat het einde van de planning doet.
 
-Je ziet de voorgangers ook als pijlen in de grafiek.
+Je ziet de voorgangers ook als pijlen in de grafiek. Met **Kritiek pad** aan zijn de pijlen op het kritieke pad rood.
+
+Wijzig je een voorganger, dan schuiven de taken erachter mee. Een taak die vastgepind is of al een werkelijke start heeft, schuift niet mee.
 
 ## Een datum afdwingen
 

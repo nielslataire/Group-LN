@@ -1,10 +1,20 @@
 /* gl-v2 — Projecten › Planning (design-handoff "CRM Planning" 59a–59c). Eigen namespace gl-v2-pl-*.
-   De Gantt zelf is het projectwijde component gl-v2/gantt.css. Pagina-CSS laadt vóór de shell: regels staan onder .gl-v2 voor extra specificiteit. */
+   De Gantt zelf is het projectwijde component gl-v2/gantt.css. Pagina-CSS laadt vóór de shell: regels staan onder .gl-v2 voor extra specificiteit.
+
+   Scrollen (nov. 2026): vanaf 768px vult de kaart de schermhoogte (kop en meldingen erboven nemen hun eigen hoogte, de kaart de rest, minstens 440px).
+   Lijst en grafiek zitten in EEN scrollvlak (#gl-v2-pl-scroll, overflow:auto): de koppen plakken bovenaan, de lijst plakt links en de scrollbalken
+   liggen onderaan de kaart i.p.v. onderaan een lange pagina. De breedte van de lijst is versleepbaar (--pl-list-w); welke kolommen er in passen
+   regelt een container query op de lijst zelf, niet het scherm. */
 
 .gl-v2 .gl-v2-pl { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+@media (min-width: 768px) {
+    .gl-v2 .gl-v2-pl { flex: 1 1 auto; min-height: 0; }
+    .gl-v2 .gl-v2-pl > * { flex: none; }
+    .gl-v2 .gl-v2-pl > .gl-v2-pl-card:not([hidden]) { flex: 1 1 0; min-height: 440px; }
+}
 
 /* ── Kop ── */
-.gl-v2 .gl-v2-pl-kop { display: flex; align-items: center; gap: 18px 28px; flex-wrap: wrap; padding: 14px 18px; }
+.gl-v2 .gl-v2-pl-kop { display: flex; align-items: center; gap: 10px 28px; flex-wrap: wrap; padding: 10px 18px; }
 .gl-v2 .gl-v2-pl-kop-title { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .gl-v2 .gl-v2-pl-kop-title h2 { margin: 0; font: 500 20px var(--gl-v2-font-serif); color: var(--gl-v2-ink); }
 .gl-v2 .gl-v2-pl-chip {
@@ -23,8 +33,12 @@
 .gl-v2 .gl-v2-pl-notices { display: flex; flex-direction: column; gap: 8px; }
 .gl-v2 .gl-v2-pl-notices:empty { display: none; }
 .gl-v2 .gl-v2-pl-notice-list { margin: 6px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 3px; }
+.gl-v2 .gl-v2-pl-notice-list[hidden] { display: none; }
 .gl-v2 .gl-v2-pl-notice-list li { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
 .gl-v2 .gl-v2-pl-notice-list button { border: 0; background: none; padding: 0; color: inherit; text-decoration: underline; font: 600 12px var(--gl-v2-font-sans); cursor: pointer; }
+/* De aandachtspunten staan standaard dichtgeklapt: één regel i.p.v. een blok dat de planning naar beneden duwt */
+.gl-v2 .gl-v2-pl-notice-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.gl-v2 .gl-v2-pl-notice-head .gl-v2-pl-notice-toggle { border: 0; background: none; padding: 0; color: inherit; text-decoration: underline; font: 600 12px var(--gl-v2-font-sans); cursor: pointer; }
 
 .gl-v2 .gl-v2-pl-changebar {
     display: flex; align-items: center; gap: 10px; padding: 9px 12px 9px 14px; border-radius: var(--gl-v2-radius-sm);
@@ -37,12 +51,13 @@
 .gl-v2 .gl-v2-pl-changebar-undo { border: 0; background: none; padding: 4px 8px; color: var(--gl-v2-primary); font: 600 12.5px var(--gl-v2-font-sans); text-decoration: underline; cursor: pointer; }
 
 /* ── Kaart, werkbalk ── */
-.gl-v2 .gl-v2-pl-card { padding: 0; overflow: hidden; }
+.gl-v2 .gl-v2-pl-card { padding: 0; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
 .gl-v2 .gl-v2-pl-card[hidden], .gl-v2 .gl-v2-pl-empty[hidden] { display: none; }
-.gl-v2 .gl-v2-pl-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 14px; border-bottom: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2 .gl-v2-pl-toolbar { flex: none; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 14px; border-bottom: 1px solid var(--gl-v2-hairline-soft); }
 .gl-v2 .gl-v2-pl-toolbar-spacer { flex: 1; }
 .gl-v2 .gl-v2-pl-zoom { width: auto; }
 .gl-v2 .gl-v2-pl-small { height: 30px; padding: 0 10px; font-size: 12px; }
+.gl-v2 .gl-v2-pl-small:disabled { opacity: .45; cursor: not-allowed; }
 .gl-v2 .gl-v2-pl-toggle {
     display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 999px; cursor: pointer;
     border: 1px solid var(--gl-v2-hairline); background: var(--gl-v2-surface); color: var(--gl-v2-muted-soft); font: 600 12px var(--gl-v2-font-sans);
@@ -52,22 +67,43 @@
 .gl-v2 .gl-v2-pl-toggle[aria-pressed="true"] { background: var(--gl-v2-primary-tint); border-color: var(--gl-v2-accent-sage); color: var(--gl-v2-primary); }
 .gl-v2 .gl-v2-pl-toggle:focus-visible { outline: 2px solid var(--gl-v2-gold); outline-offset: 2px; }
 
-/* ── Lijst en Gantt in één scrollvlak: de lijst blijft links plakken ── */
-.gl-v2 .gl-v2-pl-scroll { display: flex; align-items: flex-start; overflow-x: auto; position: relative; }
-.gl-v2 .gl-v2-pl-list { flex: none; width: 720px; position: sticky; left: 0; z-index: 8; background: var(--gl-v2-surface); border-right: 1px solid var(--gl-v2-hairline); }
-.gl-v2 .gl-v2-pl-chart { flex: none; min-width: 0; }
+/* Volledig scherm: de kaart ligt over de pagina (Esc of de knop sluit). */
+.gl-v2 .gl-v2-pl-card.is-fullscreen { position: fixed; inset: 0; z-index: 1000; border-radius: 0; box-shadow: none; min-height: 0; }
+html.gl-v2-pl-fs { overflow: hidden; }
+
+/* ── Lijst en Gantt in één scrollvlak: koppen plakken bovenaan, de lijst links ── */
+.gl-v2 .gl-v2-pl-scroll {
+    --pl-list-w: 560px; --gl-v2-gantt-stick: var(--pl-list-w);
+    flex: 1 1 0; min-height: 0; display: flex; align-items: flex-start; overflow: auto; position: relative;
+    overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: rgba(44, 59, 42, .35) transparent;
+}
+.gl-v2 .gl-v2-pl-scroll:focus-visible { outline: 2px solid var(--gl-v2-gold); outline-offset: -2px; }
+.gl-v2 .gl-v2-pl-list {
+    flex: none; width: var(--pl-list-w); min-height: 100%; position: sticky; left: 0; z-index: 8; background: var(--gl-v2-surface);
+    border-right: 1px solid var(--gl-v2-hairline); box-shadow: 10px 0 12px -12px rgba(44, 59, 42, .4); container: pl-list / inline-size;
+}
+.gl-v2 .gl-v2-pl-chart { flex: none; min-width: 0; min-height: 100%; cursor: grab; user-select: none; }
+.gl-v2 .gl-v2-pl-scroll.is-panning, .gl-v2 .gl-v2-pl-scroll.is-panning * { cursor: grabbing !important; user-select: none; }
+
+/* Versleepbare scheiding tussen lijst en grafiek */
+.gl-v2 .gl-v2-pl-split { position: absolute; top: 0; bottom: 0; right: -6px; width: 11px; cursor: col-resize; z-index: 9; touch-action: none; }
+.gl-v2 .gl-v2-pl-split::after { content: ""; position: absolute; left: 4px; top: 0; bottom: 0; width: 3px; border-radius: 2px; background: transparent; transition: background .12s ease; }
+.gl-v2 .gl-v2-pl-split:hover::after, .gl-v2 .gl-v2-pl-split.is-drag::after, .gl-v2 .gl-v2-pl-split:focus-visible::after { background: var(--gl-v2-accent-sage); }
+.gl-v2 .gl-v2-pl-split:focus-visible { outline: none; }
 
 .gl-v2 .gl-v2-pl-lh, .gl-v2 .gl-v2-pl-r {
     display: grid; align-items: center; column-gap: 8px; padding: 0 10px;
     grid-template-columns: 46px minmax(0, 1fr) 54px 76px 76px 104px 42px 30px;
 }
 .gl-v2 .gl-v2-pl-lh {
-    height: 48px; background: var(--gl-v2-bg); border-bottom: 1px solid var(--gl-v2-hairline);
+    position: sticky; top: 0; z-index: 3; height: 48px; background: var(--gl-v2-bg); border-bottom: 1px solid var(--gl-v2-hairline);
     font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .08em; color: var(--gl-v2-muted); text-transform: uppercase;
 }
 .gl-v2 .gl-v2-pl-r { height: 34px; border-bottom: 1px solid var(--gl-v2-hairline-soft); font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); background: var(--gl-v2-surface); }
 .gl-v2 .gl-v2-pl-r.is-fase { font-weight: 600; background: var(--gl-v2-hover-tint); }
-.gl-v2 .gl-v2-pl-r.is-selected { box-shadow: inset 3px 0 0 var(--gl-v2-primary); background: #F4F8F1; }
+.gl-v2 .gl-v2-pl-r:hover, .gl-v2 .gl-v2-pl-r.is-hover { background: #F4F8F1; }
+.gl-v2 .gl-v2-pl-r.is-fase:hover, .gl-v2 .gl-v2-pl-r.is-fase.is-hover { background: #E6EEE1; }
+.gl-v2 .gl-v2-pl-r.is-selected { box-shadow: inset 3px 0 0 var(--gl-v2-primary); background: #EAF1E5; }
 .gl-v2 .gl-v2-pl-r.is-shifted { background: var(--gl-v2-gold-tint); }
 .gl-v2 .gl-v2-pl-r.is-fase.is-shifted { background: #EFE6CF; }
 .gl-v2 .gl-v2-pl-r.is-done .gl-v2-pl-name-text { color: var(--gl-v2-muted); }
@@ -76,6 +112,20 @@
 .gl-v2 .gl-v2-pl-c.is-muted { color: var(--gl-v2-muted); }
 .gl-v2 .gl-v2-pl-c.is-wbs { color: var(--gl-v2-muted); font-size: 11.5px; }
 .gl-v2 .gl-v2-pl-r.is-fase .gl-v2-pl-c.is-wbs { color: var(--gl-v2-ink); }
+
+/* Welke kolommen er in de lijst passen hangt van de breedte van de LIJST af (versleepbaar), niet van het scherm */
+@container pl-list (max-width: 639.98px) {
+    .gl-v2 .gl-v2-pl-lh, .gl-v2 .gl-v2-pl-r { grid-template-columns: 46px minmax(0, 1fr) 54px 76px 76px 30px; }
+    .gl-v2 .c-vg, .gl-v2 .c-pct { display: none; }
+}
+@container pl-list (max-width: 479.98px) {
+    .gl-v2 .gl-v2-pl-lh, .gl-v2 .gl-v2-pl-r { grid-template-columns: 44px minmax(0, 1fr) 70px 70px 30px; }
+    .gl-v2 .c-dur { display: none; }
+}
+@container pl-list (max-width: 339.98px) {
+    .gl-v2 .gl-v2-pl-lh, .gl-v2 .gl-v2-pl-r { grid-template-columns: 40px minmax(0, 1fr) 70px 30px; }
+    .gl-v2 .c-start { display: none; }
+}
 
 /* Naamcel: inspringing, pijltje, afvinkrondje, tekst, badges */
 .gl-v2 .gl-v2-pl-name { display: flex; align-items: center; gap: 6px; min-width: 0; padding-left: calc(var(--pl-level, 0) * 16px); }
@@ -103,7 +153,7 @@
 .gl-v2 .gl-v2-pl-r:hover .gl-v2-pl-add-in-fase, .gl-v2 .gl-v2-pl-add-in-fase:focus-visible { opacity: 1; }
 
 /* ── Legenda ── */
-.gl-v2 .gl-v2-pl-legend { display: flex; gap: 6px 16px; flex-wrap: wrap; padding: 10px 14px; border-top: 1px solid var(--gl-v2-hairline-soft); font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2 .gl-v2-pl-legend { flex: none; display: flex; gap: 4px 16px; flex-wrap: wrap; padding: 7px 14px; border-top: 1px solid var(--gl-v2-hairline-soft); font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 .gl-v2 .gl-v2-pl-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .gl-v2 .gl-v2-pl-legend .lg { display: inline-block; width: 16px; height: 8px; border-radius: 2px; }
 .gl-v2 .gl-v2-pl-legend .lg-task { background: var(--gl-v2-accent-sage); }
@@ -147,18 +197,12 @@
 .gl-v2 .gl-v2-pl-info b { color: var(--gl-v2-ink); font-weight: 600; }
 .gl-v2 .gl-v2-pl-info .is-crit { color: var(--gl-v2-danger); font-weight: 600; }
 
-/* ── Tablet: lijst smaller; gsm: enkel lijst met start en einde ── */
-@media (max-width: 1099.98px) {
-    .gl-v2 .gl-v2-pl-list { width: 380px; }
-    .gl-v2 .gl-v2-pl-lh, .gl-v2 .gl-v2-pl-r { grid-template-columns: 40px minmax(0, 1fr) 30px; }
-    .gl-v2 .gl-v2-pl-c.x-sec { display: none; }
-}
+/* ── Gsm: enkel de lijst (start en einde), de pagina scrolt zelf ── */
 @media (max-width: 767.98px) {
-    .gl-v2 .gl-v2-pl-chart, .gl-v2 .gl-v2-pl-legend, .gl-v2 .gl-v2-pl-zoom, .gl-v2 .gl-v2-pl-toggle { display: none; }
-    .gl-v2 .gl-v2-pl-list { width: 100%; position: static; border-right: 0; }
-    .gl-v2 .gl-v2-pl-lh, .gl-v2 .gl-v2-pl-r { grid-template-columns: 40px minmax(0, 1fr) 66px 66px 30px; }
-    .gl-v2 .gl-v2-pl-c.x-sec { display: block; }
-    .gl-v2 .gl-v2-pl-c.x-tab { display: none; }
+    .gl-v2 .gl-v2-pl-scroll { overflow: visible; display: block; }
+    .gl-v2 .gl-v2-pl-chart, .gl-v2 .gl-v2-pl-legend, .gl-v2 .gl-v2-pl-zoom, .gl-v2 .gl-v2-pl-toggle, .gl-v2 .gl-v2-pl-split, .gl-v2 #gl-v2-pl-fs { display: none; }
+    .gl-v2 .gl-v2-pl-list { width: 100%; position: static; border-right: 0; box-shadow: none; }
+    .gl-v2 .gl-v2-pl-lh { position: static; }
     .gl-v2 .gl-v2-pl-row2 { grid-template-columns: 1fr; }
 }
 
