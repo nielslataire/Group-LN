@@ -1,5 +1,6 @@
 @model BOCore.ClientContactBO
 @using HtmlHelpers.BeginCollectionItemCore
+@using CPMCore.Models.GlV2
 @*
     gl-v2-vertaling van Partials/_CoOwnerRow.cshtml — zelfde Html.BeginCollectionItem("Client.
     CoOwners")-wrapper, binding/index-gedrag ongewijzigd. Rijkste rij van de hele pilot: naam/
@@ -21,6 +22,17 @@
     // BlankCoOwnerRow zet dit al in ViewData; een rechtstreekse @@Html.Partial-aanroep bij het eerste
     // laden van de pagina (het bestaande foreach hieronder) geeft het zelf mee of laat de standaard staan.
     var coOwnerCollectionName = ViewData["CoOwnerCollectionName"] as string ?? "Client.CoOwners";
+
+    // Native <select> → gedeelde Basis-keuzelijst (GlV2/_SelectList); zelfde terugval als een native
+    // select: staat de huidige waarde niet in de lijst, dan de eerste optie.
+    List<GlV2SelectItem> SelectItems(object? source) =>
+        ((source as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>) ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>())
+            .Select(i => new GlV2SelectItem { Value = i.Value ?? "", Text = i.Text ?? "" }).ToList();
+    GlV2SelectListVm SelectVm(string name, string id, string label, List<GlV2SelectItem> items, string current, Dictionary<string, string>? data = null)
+    {
+        var value = items.Any(i => i.Value == current) ? current : (items.FirstOrDefault()?.Value ?? "");
+        return new GlV2SelectListVm { Name = name, Id = id, Label = label, Items = items, Value = value, Data = data ?? new() };
+    }
 }
 <div class="gl-v2-client-row">
 @using (Html.BeginCollectionItem(coOwnerCollectionName))
@@ -38,12 +50,9 @@
         </div>
         <div class="gl-v2-card-body">
             <div class="gl-v2-field-group">
-                <div class="gl-v2-field">
-                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Salutation)">Aanspreking</label>
-                    <div class="gl-v2-field-box">
-                        @Html.DropDownListFor(m => m.Salutation, Html.GetEnumSelectList<BOCore.Salutation>(), new { @class = "gl-v2-field-input", data_role = "salutation-select" })
-                    </div>
-                </div>
+                @Html.Partial("GlV2/_SelectList", SelectVm(Html.NameFor(m => m.Salutation), Html.IdFor(m => m.Salutation), "Aanspreking",
+                    Html.GetEnumSelectList<BOCore.Salutation>().Select(i => new GlV2SelectItem { Value = i.Value, Text = i.Text }).ToList(), ((int)Model.Salutation).ToString(),
+                    new Dictionary<string, string> { ["data-role"] = "salutation-select" }))
                 <div class="gl-v2-field">
                     <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Name)">Naam</label>
                     <div class="gl-v2-field-box">
@@ -58,17 +67,7 @@
                 </div>
             </div>
             <div class="gl-v2-field-group">
-                <div class="gl-v2-field">
-                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.CoOwnerType.Id)">Type eigenaar</label>
-                    <div class="gl-v2-field-box">
-                        <select id="@Html.IdFor(m => m.CoOwnerType.Id)" name="@Html.NameFor(m => m.CoOwnerType.Id)" class="gl-v2-field-input">
-                            @foreach (var ownerType in (ViewData["OwnerTypes"] as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>) ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>())
-                            {
-                                <option value="@ownerType.Value" selected="@(ownerType.Value == Model.CoOwnerType.Id.ToString() ? "selected" : null)">@ownerType.Text</option>
-                            }
-                        </select>
-                    </div>
-                </div>
+                @Html.Partial("GlV2/_SelectList", SelectVm(Html.NameFor(m => m.CoOwnerType.Id), Html.IdFor(m => m.CoOwnerType.Id), "Type eigenaar", SelectItems(ViewData["OwnerTypes"]), Model.CoOwnerType.Id.ToString()))
                 <div class="gl-v2-field">
                     <label class="gl-v2-field-label" for="@Html.IdFor(m => m.CoOwnerPercentage)">Percentage</label>
                     <div class="gl-v2-field-box">
@@ -142,17 +141,8 @@
                 </div>
             </div>
             <div class="gl-v2-field-group" data-gl-v2-address-block>
-                <div class="gl-v2-field">
-                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Postalcode.Country.CountryId)">Land</label>
-                    <div class="gl-v2-field-box">
-                        <select id="@Html.IdFor(m => m.Postalcode.Country.CountryId)" name="@Html.NameFor(m => m.Postalcode.Country.CountryId)" class="gl-v2-field-input" data-role="country-select">
-                            @foreach (var country in (ViewData["Countries"] as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>) ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>())
-                            {
-                                <option value="@country.Value" selected="@(country.Value == Model.Postalcode.Country.CountryId.ToString() ? "selected" : null)">@country.Text</option>
-                            }
-                        </select>
-                    </div>
-                </div>
+                @Html.Partial("GlV2/_SelectList", SelectVm(Html.NameFor(m => m.Postalcode.Country.CountryId), Html.IdFor(m => m.Postalcode.Country.CountryId), "Land",
+                    SelectItems(ViewData["Countries"]), Model.Postalcode.Country.CountryId.ToString(), new Dictionary<string, string> { ["data-role"] = "country-select" }))
                 @Html.EditorFor(m => m.Postalcode.PostcodeId, "GlV2SearchSelect", new
                 {
                     Label = "Gemeente / postcode",
@@ -197,17 +187,8 @@
                 </div>
             </div>
             <div class="gl-v2-field-group" data-role="coowner-invoice-address-fields" data-gl-v2-address-block hidden="@(Model.InvoiceAddress != true)">
-                <div class="gl-v2-field">
-                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.InvoicePostalcode.Country.CountryId)">Land (facturatie)</label>
-                    <div class="gl-v2-field-box">
-                        <select id="@Html.IdFor(m => m.InvoicePostalcode.Country.CountryId)" name="@Html.NameFor(m => m.InvoicePostalcode.Country.CountryId)" class="gl-v2-field-input" data-role="country-select">
-                            @foreach (var country in (ViewData["Countries"] as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>) ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>())
-                            {
-                                <option value="@country.Value" selected="@(country.Value == Model.InvoicePostalcode.Country.CountryId.ToString() ? "selected" : null)">@country.Text</option>
-                            }
-                        </select>
-                    </div>
-                </div>
+                @Html.Partial("GlV2/_SelectList", SelectVm(Html.NameFor(m => m.InvoicePostalcode.Country.CountryId), Html.IdFor(m => m.InvoicePostalcode.Country.CountryId), "Land (facturatie)",
+                    SelectItems(ViewData["Countries"]), Model.InvoicePostalcode.Country.CountryId.ToString(), new Dictionary<string, string> { ["data-role"] = "country-select" }))
                 @Html.EditorFor(m => m.InvoicePostalcode.PostcodeId, "GlV2SearchSelect", new
                 {
                     Label = "Gemeente / postcode (facturatie)",

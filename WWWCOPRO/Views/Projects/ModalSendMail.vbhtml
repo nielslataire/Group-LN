@@ -94,6 +94,10 @@ End Using
                 type: "POST",
                 success: function (result) {
                     $("#modalsendmailpanel").html(result);
+                    if (String(result).indexOf('contact-modal-header-success') !== -1) {
+                        window.dataLayer = window.dataLayer || [];
+                        window.dataLayer.push({ event: 'project_contact_form_submit' });
+                    }
                 },
                 error: function () {
                     $("#btnSendMail").removeClass("hidden");

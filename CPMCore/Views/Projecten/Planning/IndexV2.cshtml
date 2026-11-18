@@ -63,7 +63,17 @@
 
 @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuPhoneVm)
 
-<div id="gl-v2-pl-root" class="gl-v2-pl" data-project-id="@Model.ProjectId" data-can-write="@(Model.CanWrite ? "1" : "0")" data-can-delete="@(Model.CanDelete ? "1" : "0")" data-can-link="@(Model.CanLinkTraject ? "1" : "0")">
+<div id="gl-v2-pl-root" class="gl-v2-pl" data-project-id="@Model.ProjectId" data-can-write="@(Model.CanWrite ? "1" : "0")" data-can-delete="@(Model.CanDelete ? "1" : "0")" data-can-link="@(Model.CanLinkTraject ? "1" : "0")" data-can-sjabloon="@(Model.CanSaveTemplate ? "1" : "0")" data-can-sjabloon-delete="@(Model.CanDeleteTemplate ? "1" : "0")">
+
+    @* Blokkerende fout (4g): opvallend, gecentreerd, blijft staan tot je ze sluit of een volgende actie lukt *@
+    <div class="gl-v2-inline-error gl-v2-pl-fout" id="gl-v2-pl-fout" role="alert" hidden>
+        <span class="gl-v2-inline-error-icon"><i class="ph ph-warning-circle" aria-hidden="true"></i></span>
+        <div class="gl-v2-inline-error-text">
+            <div class="gl-v2-inline-error-title" id="gl-v2-pl-fout-titel">Dat kan niet</div>
+            <div class="gl-v2-inline-error-desc" id="gl-v2-pl-fout-tekst"></div>
+        </div>
+        <button type="button" class="gl-v2-inline-error-close" id="gl-v2-pl-fout-close" aria-label="Melding sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+    </div>
 
     @* Tabs: de plannings van het project (hoofdplanning en één per bouwdeel) *@
     <div class="gl-v2-pl-tabs" id="gl-v2-pl-tabs" role="tablist" aria-label="Plannings van dit project" hidden></div>
@@ -176,7 +186,20 @@
                 <div class="gl-v2-field" id="gl-v2-pl-wrap-voor">
                     <label class="gl-v2-field-label" for="gl-v2-pl-f-voor">Voorgangers</label>
                     <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gl-v2-pl-f-voor" placeholder="bv. 5.1  of  5.1SS  of  5.1FS+3d" /></div>
-                    <span class="gl-v2-field-help">Het nummer van de taak, daarna het soort (FS, SS, FF, SF) en een wachttijd in werkdagen, ook negatief. Meerdere voorgangers scheid je met ;<span id="gl-v2-pl-voor-help-hoofd" hidden> Een taak uit de hoofdplanning schrijf je met H: ervoor, bv. H:3.1</span></span>
+                    <span class="gl-v2-field-help">Het nummer van de taak, daarna het soort (FS, SS, FF, SF) en een wachttijd in werkdagen, ook negatief. Meerdere voorgangers scheid je met ;<span id="gl-v2-pl-voor-help-hoofd" hidden> Een taak uit de hoofdplanning schrijf je met H: ervoor, bv. H:3.1.</span><span id="gl-v2-pl-voor-help-andere" hidden> Een taak uit een andere planning schrijf je met de naam van die planning ervoor, bv. <span id="gl-v2-pl-voor-help-voorbeeld">Woning 1:3.2</span>.</span></span>
+                    <div>
+                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-pl-kies-open" aria-expanded="false" aria-controls="gl-v2-pl-kies"><i class="ph ph-list-magnifying-glass" aria-hidden="true"></i>Kies uit de lijst</button>
+                    </div>
+                    <div class="gl-v2-pl-kies" id="gl-v2-pl-kies" hidden>
+                        <div class="gl-v2-field-box"><input type="search" class="gl-v2-field-input" id="gl-v2-pl-kies-zoek" placeholder="Zoek op naam of nummer" autocomplete="off" aria-label="Zoek een taak of fase" /></div>
+                        <div class="gl-v2-pl-kies-lijst" id="gl-v2-pl-kies-lijst" role="listbox" aria-multiselectable="true" aria-label="Taken en fases van alle plannings"></div>
+                    </div>
+                </div>
+                <div class="gl-v2-field" id="gl-v2-pl-wrap-estafette" hidden>
+                    <span class="gl-v2-field-label">Estafette</span>
+                    <span class="gl-v2-field-help">Laat deze taak wachten tot dezelfde taak in een andere woning of een ander gebouw klaar is. Kies de planning in de lijst, ze komt in het veld Voorgangers te staan. Je kiest dit per taak, en zo vaak je wilt.</span>
+                    <div class="gl-v2-pl-chips" id="gl-v2-pl-estafette-chips"></div>
+                    @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-estafette-kies", "estafette", ""))
                 </div>
                 <div id="gl-v2-pl-wrap-plaats">
                     @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-f-plaats", "plaats", "Plaats in de fase"))
@@ -200,6 +223,9 @@
                     </div>
                     @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-f-wie", "verantwoordelijke", "Verantwoordelijke"))
                 </div>
+                <div id="gl-v2-pl-wrap-uitv">
+                    @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-f-uitv", "uitvoerder", "Uitvoerder (aannemer)", "Optioneel. Kies de aannemer zodra die is aangesteld. Leeg = de uitvoerder van de fase."))
+                </div>
                 <div id="gl-v2-pl-wrap-traj" hidden>
                     @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-f-traj", "trajectmijlpaal", "Koppeling met trajectmijlpaal", "Optioneel. De mijlpaal in het Traject volgt dan het einde van deze taak en staat op bereikt zodra de taak klaar is."))
                 </div>
@@ -209,10 +235,12 @@
                 </div>
             </div>
 
-            @* Planning (hoofdplanning of bouwdeel) *@
+            @* Planning (hoofdplanning of planning voor een of meer eenheden) *@
             <div class="gl-v2-pl-only-planning" hidden>
-                <div id="gl-v2-pl-wrap-bouwdeel">
-                    @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-f-bouwdeel", "bouwdeel", "Bouwdeel", "Optioneel. De woning of het gebouw (betalingsgroep) waar deze planning bij hoort. Elk bouwdeel heeft hoogstens één planning."))
+                <div class="gl-v2-field" id="gl-v2-pl-wrap-bouwdeel">
+                    <span class="gl-v2-field-label" id="gl-v2-pl-f-eenheden-label">Woningen en gebouwen</span>
+                    <div class="gl-v2-pl-eenheden" id="gl-v2-pl-f-eenheden" role="group" aria-labelledby="gl-v2-pl-f-eenheden-label"></div>
+                    <span class="gl-v2-field-help">Optioneel. Kies de woningen of het gebouw waar deze planning voor geldt. Een planning mag meerdere eenheden bundelen; een eenheid zit in hoogstens één planning, ook als de betalingsgroep meerdere eenheden heeft.</span>
                 </div>
                 @await Html.PartialAsync("GlV2/_DateField", Date("gl-v2-pl-f-pstart", "startDatum", "Startdatum van de planning (optioneel)"))
                 <span class="gl-v2-field-help">Eerste dag waarop deze planning mag beginnen. Leeg = de aanvangsdatum van het project. Een voorganger kan haar nog later laten starten.</span>
@@ -247,6 +275,7 @@
                     @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-f-trajf", "trajectmijlpaalfase", "Koppeling met trajectmijlpaal", "Optioneel. De mijlpaal in het Traject volgt dan het einde van de laatste taak van de fase en staat op bereikt zodra alle taken klaar zijn."))
                 </div>
                 <div class="gl-v2-pl-lot" id="gl-v2-pl-wrap-lot">
+                    @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-f-uitvf", "uitvoerderfase", "Uitvoerder (aannemer)", "Optioneel. Taken in deze fase zonder eigen uitvoerder nemen deze over."))
                     @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-f-lot", "lot", "Budgetlot (optioneel)", "Koppelt de fase aan een lot uit het budget."))
                     <label class="gl-v2-toggle-row" for="gl-v2-pl-f-teltmee">
                         <input type="checkbox" id="gl-v2-pl-f-teltmee" class="gl-v2-toggle-switch" />
@@ -274,6 +303,142 @@
 
 <div class="gl-v2-menu" id="gl-v2-pl-menu" role="menu" aria-label="Acties voor deze rij"></div>
 
+    @* Sjabloon toepassen op woningen of gebouwen (TYPE 2 formulier-modal) *@
+    <div class="modal fade gl-v2-modal-form gl-v2-pl-sj-modal" id="gl-v2-pl-sj-toepas" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-pl-sj-toepas-titel">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-fullscreen-md-down">
+            <form class="modal-content" novalidate autocomplete="off">
+                <div class="modal-header"><h2 class="modal-title" id="gl-v2-pl-sj-toepas-titel">Sjabloon toepassen</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body">
+                    <div class="gl-v2-field-full">
+                        @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-sj-kies", "sjabloon", "Sjabloon"))
+                        <span class="gl-v2-field-help" id="gl-v2-pl-sj-info"></span>
+                    </div>
+                    <div class="gl-v2-field gl-v2-field-full" id="gl-v2-pl-sj-bouwdelen-wrap" hidden>
+                        <span class="gl-v2-field-label">Woningen en gebouwen</span>
+                        <span class="gl-v2-field-help" id="gl-v2-pl-sj-bouwdelen-help"></span>
+                        <div class="gl-v2-pl-sj-tabel" id="gl-v2-pl-sj-tabel" role="group" aria-label="Woningen en gebouwen"></div>
+                    </div>
+                    <span class="gl-v2-field-help gl-v2-field-full gl-v2-pl-sj-fout" id="gl-v2-pl-sj-fout" role="alert" hidden></span>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text gl-v2-pl-sj-verwijder" id="gl-v2-pl-sj-verwijder" hidden><i class="ph ph-trash" aria-hidden="true"></i>Sjabloon verwijderen</button>
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-pl-sj-ok">Toepassen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @* Planning bewaren als sjabloon *@
+    <div class="modal fade gl-v2-modal-form gl-v2-pl-sj-modal" id="gl-v2-pl-sj-bewaar" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-pl-sj-bewaar-titel">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <form class="modal-content" novalidate autocomplete="off">
+                <div class="modal-header"><h2 class="modal-title" id="gl-v2-pl-sj-bewaar-titel">Bewaren als sjabloon</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body">
+                    <p class="gl-v2-pl-sj-uitleg" id="gl-v2-pl-sj-bewaar-uitleg"></p>
+                    <div class="gl-v2-field gl-v2-field-full"><label class="gl-v2-field-label" for="gl-v2-pl-sj-naam">Naam van het sjabloon</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="gl-v2-pl-sj-naam" maxlength="200" required /></div></div>
+                    <div class="gl-v2-field gl-v2-field-full"><label class="gl-v2-field-label" for="gl-v2-pl-sj-besch">Omschrijving <span class="gl-v2-pl-sj-optioneel">· optioneel</span></label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="gl-v2-pl-sj-besch" maxlength="1000" /></div></div>
+                    <span class="gl-v2-field-help gl-v2-field-full gl-v2-pl-sj-fout" id="gl-v2-pl-sj-bewaar-fout" role="alert" hidden></span>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-pl-sj-bewaar-ok">Bewaren</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @* Planning importeren uit MS Project-XML (design-handoff 59b): Bestand · Controle · Opties · Resultaat *@
+    <div class="modal fade gl-v2-modal-form gl-v2-pl-imp-modal" id="gl-v2-pl-imp" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-pl-imp-titel">
+        <div class="modal-dialog modal-dialog-centered modal-xl modal-fullscreen-lg-down">
+            <form class="modal-content" novalidate autocomplete="off">
+                <div class="modal-header"><h2 class="modal-title" id="gl-v2-pl-imp-titel">Planning importeren</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <ol class="gl-v2-pl-imp-stappen" id="gl-v2-pl-imp-stappen" aria-label="Stappen"></ol>
+                <div class="modal-body">
+                    @* 1 Bestand *@
+                    <div class="gl-v2-pl-imp-stap" data-stap="0">
+                        <div class="gl-v2-pl-imp-drop" id="gl-v2-pl-imp-drop">
+                            <i class="ph ph-upload-simple" aria-hidden="true"></i>
+                            <b>Sleep je bestand hierheen</b>
+                            <span>MS Project-XML (.xml) · max. 10 MB</span>
+                            <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-pl-imp-kies">Bestand kiezen</button>
+                            <input type="file" id="gl-v2-pl-imp-file" accept=".xml,text/xml,application/xml" hidden />
+                        </div>
+                        <div class="gl-v2-notice gl-v2-notice-compact is-info"><span class="gl-v2-notice-icon"><i class="ph ph-info" aria-hidden="true"></i></span><span class="gl-v2-notice-text"><b>Een .mpp-bestand?</b> Dat kan niet rechtstreeks. Open het in MS Project, kies <b>Bestand › Opslaan als</b> en dan <b>XML-indeling (*.xml)</b>, en kies dat bestand hier. Taken, duur, voorgangers en fases gaan mee.</span></div>
+                    </div>
+                    @* 2 Controle *@
+                    <div class="gl-v2-pl-imp-stap" data-stap="1" hidden>
+                        <div class="gl-v2-pl-imp-bestand" id="gl-v2-pl-imp-bestand"></div>
+                        <div class="gl-v2-pl-imp-kpis" id="gl-v2-pl-imp-kpis"></div>
+                        <div class="gl-v2-notice gl-v2-notice-compact is-warning"><span class="gl-v2-notice-icon"><i class="ph ph-warning" aria-hidden="true"></i></span><span class="gl-v2-notice-text"><b>Wat we niet overnemen:</b> resources en kosten worden genegeerd, duren in uren worden afgerond naar werkdagen, “zo laat mogelijk” wordt “zo vroeg mogelijk”, en voorgangers die niet bestaan of een kring zouden maken worden weggelaten. Beperkingen, deadlines, basisplanning, werkelijke data en voortgang gaan wel mee.</span></div>
+                        <div class="gl-v2-pl-imp-filter">
+                            <div class="gl-v2-segmented is-sm" id="gl-v2-pl-imp-filter" role="group" aria-label="Filter"></div>
+                            <span class="gl-v2-field-help" id="gl-v2-pl-imp-filter-info"></span>
+                        </div>
+                        <div class="gl-v2-pl-imp-tabel" id="gl-v2-pl-imp-tabel" role="table" aria-label="Voorbeeld van het bestand"></div>
+                    </div>
+                    @* 3 Uitvoerders koppelen (enkel als het bestand resources heeft) *@
+                    <div class="gl-v2-pl-imp-stap" data-stap="2" hidden>
+                        <div class="gl-v2-notice gl-v2-notice-compact is-info"><span class="gl-v2-notice-icon"><i class="ph ph-info" aria-hidden="true"></i></span><span class="gl-v2-notice-text">Het bestand heeft <b>resources</b> (meestal aannemers). Koppel ze aan een bedrijf uit je project, dan staat dat bedrijf als <b>uitvoerder</b> bij de taak. CPM stelt een koppeling voor op basis van de naam. Een naam die je niet koppelt, komt als tekst in de notitie van de taak, zodat je later nog kunt koppelen.</span></div>
+                        <div class="gl-v2-pl-imp-filter"><span class="gl-v2-field-help" id="gl-v2-pl-imp-res-info"></span></div>
+                        <div class="gl-v2-pl-imp-tabel" id="gl-v2-pl-imp-res" role="table" aria-label="Resources koppelen aan bedrijven"></div>
+                    </div>
+                    @* 4 Opties *@
+                    <div class="gl-v2-pl-imp-stap" data-stap="3" hidden>
+                        <div class="gl-v2-field gl-v2-field-full">
+                            <span class="gl-v2-field-label">Waar komt de planning terecht?</span>
+                            <div class="gl-v2-pl-imp-kaarten" role="radiogroup" aria-label="Doelplanning">
+                                <label class="gl-v2-pl-imp-kaart" id="gl-v2-pl-imp-k-nieuw"><input type="radio" name="gl-v2-pl-imp-doel" value="nieuw" checked /><span><b>Nieuwe planning</b><small>Een eigen planning voor één of meer woningen of een gebouw.</small></span></label>
+                                <label class="gl-v2-pl-imp-kaart" id="gl-v2-pl-imp-k-huidig"><input type="radio" name="gl-v2-pl-imp-doel" value="huidig" /><span><b id="gl-v2-pl-imp-k-huidig-naam">Deze planning</b><small>Achteraan toevoegen, of de huidige fases en taken vervangen.</small></span></label>
+                            </div>
+                        </div>
+                        <div id="gl-v2-pl-imp-o-nieuw">
+                            <div class="gl-v2-field gl-v2-field-full"><label class="gl-v2-field-label" for="gl-v2-pl-imp-naam">Naam van de planning</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="gl-v2-pl-imp-naam" maxlength="200" /></div></div>
+                            <div class="gl-v2-field gl-v2-field-full">
+                                <span class="gl-v2-field-label" id="gl-v2-pl-imp-een-label">Woningen en gebouwen</span>
+                                <div class="gl-v2-pl-eenheden" id="gl-v2-pl-imp-eenheden" role="group" aria-labelledby="gl-v2-pl-imp-een-label"></div>
+                                <span class="gl-v2-field-help">Optioneel. Alleen eenheden die nog in geen planning zitten staan in de lijst.</span>
+                            </div>
+                        </div>
+                        <div id="gl-v2-pl-imp-o-huidig" hidden>
+                            <div class="gl-v2-field gl-v2-field-full">
+                                <span class="gl-v2-field-label">Wat met de huidige planning?</span>
+                                <div class="gl-v2-pl-imp-kaarten" role="radiogroup" aria-label="Modus">
+                                    <label class="gl-v2-pl-imp-kaart"><input type="radio" name="gl-v2-pl-imp-modus" value="toevoegen" checked /><span><b>Toevoegen</b><small>De geïmporteerde fases komen achteraan; wat er staat blijft.</small></span></label>
+                                    <label class="gl-v2-pl-imp-kaart"><input type="radio" name="gl-v2-pl-imp-modus" value="vervangen" /><span><b>Vervangen</b><small>De huidige fases en taken verdwijnen. Dit kan je niet ongedaan maken.</small></span></label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="gl-v2-field gl-v2-field-full">
+                            <span class="gl-v2-field-label">Startdatum</span>
+                            <div class="gl-v2-pl-imp-kaarten" role="radiogroup" aria-label="Startdatum">
+                                <label class="gl-v2-pl-imp-kaart" id="gl-v2-pl-imp-s-bestand"><input type="radio" name="gl-v2-pl-imp-start" value="bestand" checked /><span><b>Zoals in het bestand</b><small id="gl-v2-pl-imp-s-bestand-info"></small></span></label>
+                                <label class="gl-v2-pl-imp-kaart"><input type="radio" name="gl-v2-pl-imp-start" value="nieuw" /><span><b>Nieuwe startdatum</b><small>Alle taken schuiven mee; vastgepinde taken blijven staan. De werkkalender van het project (feestdagen, bouwverlof) wordt toegepast.</small></span></label>
+                                <label class="gl-v2-pl-imp-kaart" id="gl-v2-pl-imp-s-geen" hidden><input type="radio" name="gl-v2-pl-imp-start" value="geen" /><span><b>De planning niet aanraken</b><small>De startdatum van de planning blijft zoals ze is.</small></span></label>
+                            </div>
+                        </div>
+                        <div id="gl-v2-pl-imp-o-datum" hidden>
+                            @await Html.PartialAsync("GlV2/_DateField", Date("gl-v2-pl-imp-startdatum", "importStart", "Nieuwe startdatum"))
+                        </div>
+                    </div>
+                    @* 4 Resultaat *@
+                    <div class="gl-v2-pl-imp-stap" data-stap="4" hidden>
+                        <div class="gl-v2-pl-imp-resultaat" id="gl-v2-pl-imp-resultaat"></div>
+                    </div>
+                    <span class="gl-v2-field-help gl-v2-field-full gl-v2-pl-sj-fout" id="gl-v2-pl-imp-fout" role="alert" hidden></span>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" id="gl-v2-pl-imp-terug" hidden>← Vorige</button>
+                    <span class="gl-v2-pl-panel-foot-spacer"></span>
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal" id="gl-v2-pl-imp-annuleer">Annuleren</button>
+                    <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-pl-imp-nogeen" hidden>Nog een bestand</button>
+                    @* type=button: de generieke "bezig"-knopstaat van gl-v2-modal-form zou een submit-knop na de eerste klik vergrendelen; de stappen sturen zelf *@
+                    <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-pl-imp-ok" hidden>Volgende →</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 @await Html.PartialAsync("GlV2/_BevestigModal")
 
 @section PageScripts
@@ -283,7 +448,10 @@
         "projectId": @Model.ProjectId,
         "commandoUrl": "@Url.Action("Commando", "ProjectPlanning", new { projectId = Model.ProjectId })",
         "staatUrl": "@Url.Action("Staat", "ProjectPlanning", new { projectId = Model.ProjectId })",
+        "importControleUrl": "@Url.Action("ImportControle", "ProjectPlanning", new { projectId = Model.ProjectId })",
         "koppelUrl": "@Url.Action("Koppeling", "ProjectPlanning", new { projectId = Model.ProjectId })",
+        "sjabloonBewaarUrl": "@Url.Action("SjabloonBewaren", "ProjectPlanning", new { projectId = Model.ProjectId })",
+        "sjabloonVerwijderUrl": "@Url.Action("SjabloonVerwijderen", "ProjectPlanning", new { projectId = Model.ProjectId })",
         "staat": @Html.Raw(Model.StaatJson)
     }
     </script>

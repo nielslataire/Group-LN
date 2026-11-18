@@ -35,12 +35,14 @@
         </div>
         <div class="gl-v2-card-body">
             <div class="gl-v2-field-group">
-                <div class="gl-v2-field">
-                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Salutation)">Aanspreking</label>
-                    <div class="gl-v2-field-box">
-                        @Html.DropDownListFor(m => m.Salutation, Html.GetEnumSelectList<BOCore.Salutation>(), new { @class = "gl-v2-field-input" })
-                    </div>
-                </div>
+                @Html.Partial("GlV2/_SelectList", new CPMCore.Models.GlV2.GlV2SelectListVm
+                {
+                    Name = Html.NameFor(m => m.Salutation),
+                    Id = Html.IdFor(m => m.Salutation),
+                    Label = "Aanspreking",
+                    Items = Html.GetEnumSelectList<BOCore.Salutation>().Select(i => new CPMCore.Models.GlV2.GlV2SelectItem { Value = i.Value, Text = i.Text }).ToList(),
+                    Value = ((int)Model.Salutation).ToString()
+                })
                 <div class="gl-v2-field">
                     <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Name)">Naam</label>
                     <div class="gl-v2-field-box">

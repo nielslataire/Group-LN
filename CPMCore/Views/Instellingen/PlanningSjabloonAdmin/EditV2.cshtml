@@ -1,0 +1,206 @@
+@using System.Text.Json
+@using BOCore
+@using FacadeCore
+@model PlanningSjabloonBewerk
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen › Planningssjablonen › bewerken (design-handoff "CRM Planningssjablonen" 63b). Links: de kop (naam, omschrijving, reageert op, actief) en de blokken met per taak één regel
+    (naam met vaste code, duur, voorgangers als chips, start, estafette, ⋯). Rechts, meeschuivend: het voorbeeld (duur per blok, totaal, kritiek pad, proefdraaien met 1-4 woningen en 1-3
+    verdiepingen) en de controle. Het voorbeeld komt van de server (POST Proef, dezelfde uitrol en calculator als bij het toepassen), het document gaat als één JSON naar Opslaan.
+    Logica: wwwroot/js/gl-v2-instellingen-planningsjabloon.js. Validatie: PlanningSjabloonService.Bouw.
+*@
+@{
+    var isNieuw = Model.Id == 0;
+    ViewData["Title"] = isNieuw ? "Nieuw sjabloon" : Model.Naam;
+    ViewData["PageIcon"] = "ph ph-calendar-check";
+    ViewData["HelpScreenId"] = "instellingen-planningssjablonen-bewerken";
+    ViewData["BackUrl"] = Url.Action("Index");
+    var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsPlanningSjablonen);
+    var data = new
+    {
+        id = Model.Id,
+        naam = Model.Naam,
+        beschrijving = Model.Beschrijving ?? "",
+        isActief = Model.IsActief,
+        reageertOp = Model.ReageertOp ?? "",
+        blokken = Model.Blokken,
+    };
+    var opties = PlanningSjabloonReageertOp.Opties.Select(o => new { v = o.Sleutel, t = o.Tekst });
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-automatisatie.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-planningsjabloon.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge is-attention" id="pls-dirty" hidden>NIET-OPGESLAGEN WIJZIGINGEN</span>
+}
+@section PageActions
+{
+    <a href="@Url.Action("Index")" class="gl-v2-btn gl-v2-btn-text" id="pls-annuleren">Annuleren</a>
+    @if (canWrite)
+    {
+        <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="pls-opslaan"><i class="ph ph-floppy-disk" aria-hidden="true"></i>Sjabloon opslaan</button>
+    }
+}
+
+@Html.AntiForgeryToken()
+<div class="gl-v2-pls" id="pls-root" data-can-write="@(canWrite ? "1" : "0")" data-opslaan-url="@Url.Action("Opslaan")" data-proef-url="@Url.Action("Proef")" data-lijst-url="@Url.Action("Index")" data-bewerken-url="@Url.Action("Bewerken", new { id = 0 })">
+    <div class="gl-v2-inline-error gl-v2-pls-fouten" id="pls-fouten" role="alert" hidden>
+        <span class="gl-v2-inline-error-icon"><i class="ph ph-warning-circle" aria-hidden="true"></i></span>
+        <div class="gl-v2-inline-error-text">
+            <div class="gl-v2-inline-error-title" id="pls-fouten-titel">Het sjabloon is nog niet bewaard</div>
+            <ul class="gl-v2-inline-error-desc gl-v2-pls-foutlijst" id="pls-fouten-lijst"></ul>
+        </div>
+        <button type="button" class="gl-v2-inline-error-close" id="pls-fouten-close" aria-label="Melding sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+    </div>
+
+    <div class="gl-v2-pls-grid">
+        <div class="gl-v2-pls-links">
+            <section class="gl-v2-section-card gl-v2-pls-kop">
+                <div class="gl-v2-field gl-v2-pls-kop-naam">
+                    <label class="gl-v2-field-label" for="pls-naam">Naam <span class="gl-v2-field-req" aria-hidden="true">*</span></label>
+                    <div class="gl-v2-field-box"><input type="text" id="pls-naam" class="gl-v2-field-input" maxlength="200" /></div>
+                </div>
+                <div class="gl-v2-field gl-v2-pls-kop-oms">
+                    <label class="gl-v2-field-label" for="pls-beschrijving">Korte omschrijving</label>
+                    <div class="gl-v2-field-box"><input type="text" id="pls-beschrijving" class="gl-v2-field-input" maxlength="1000" /></div>
+                </div>
+                <div class="gl-v2-pls-kop-trig">
+                    <span class="gl-v2-field-label" id="pls-trig-label">Reageert op</span>
+                    <div id="pls-trig-host"></div>
+                    <span class="gl-v2-field-help">Om het sjabloon later automatisch voor te stellen op het project. Voorlopig wordt de keuze enkel bewaard.</span>
+                </div>
+                <div class="gl-v2-pls-kop-act">
+                    <span class="gl-v2-field-label" aria-hidden="true">&nbsp;</span>
+                    <label class="gl-v2-toggle-row gl-v2-pls-act-box" for="pls-actief"><input type="checkbox" id="pls-actief" class="gl-v2-toggle-switch" /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Actief</span><span class="gl-v2-toggle-desc">enkel actieve sjablonen kan je toepassen</span></span></label>
+                </div>
+            </section>
+
+            <div class="gl-v2-pls-tool">
+                <b>Blokken en taken</b>
+                <span>een blok wordt een fase in de planning</span>
+                <span class="gl-v2-pls-spacer"></span>
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" id="pls-alles-open">Alles uitklappen</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" id="pls-alles-dicht">Alles inklappen</button>
+            </div>
+
+            <div id="pls-blokken" class="gl-v2-pls-blokken"></div>
+            @if (canWrite)
+            {
+                <button type="button" class="gl-v2-pls-addb" id="pls-blok-toevoegen"><i class="ph ph-plus" aria-hidden="true"></i>Blok toevoegen</button>
+            }
+        </div>
+
+        <aside class="gl-v2-pls-rechts" aria-label="Voorbeeld en controle">
+            <section class="gl-v2-section-card" id="pls-voorbeeld">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-chart-bar-horizontal" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Voorbeeld</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc" id="pls-vb-sub"></span>
+                </div>
+                <div class="gl-v2-pls-vb">
+                    <div class="gl-v2-pls-vb-tot"><b id="pls-vb-tot">—</b><span id="pls-vb-mnd"></span></div>
+                    <div class="gl-v2-pls-pv" id="pls-vb-blokken"></div>
+                    <div class="gl-v2-pls-crit" id="pls-vb-crit" hidden></div>
+                </div>
+            </section>
+
+            <section class="gl-v2-section-card" id="pls-proef">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-play-circle" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Proefdraaien</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">zoals bij het toepassen op een project</span>
+                </div>
+                <div class="gl-v2-pls-vb">
+                    <div class="gl-v2-pls-seg"><span>Woningen</span><div class="gl-v2-segmented is-sm" id="pls-seg-woningen" role="group" aria-label="Aantal woningen"></div></div>
+                    <div class="gl-v2-pls-seg"><span>Verdiepingen</span><div class="gl-v2-segmented is-sm" id="pls-seg-verdiepingen" role="group" aria-label="Aantal verdiepingen"></div></div>
+                    <div class="gl-v2-pls-pv" id="pls-vb-woningen"></div>
+                    <div class="gl-v2-pls-ud" id="pls-vb-alle"></div>
+                </div>
+            </section>
+
+            <section class="gl-v2-section-card" id="pls-controle">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-seal-check" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">Controle</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc" id="pls-ct-sub"></span>
+                </div>
+                <div class="gl-v2-pls-vb" id="pls-ct"></div>
+            </section>
+
+            <section class="gl-v2-section-card gl-v2-pls-uitleg">
+                <button type="button" class="gl-v2-pls-uitleg-kop" id="pls-uitleg-kop" aria-expanded="false" aria-controls="pls-uitleg-lijst">
+                    <i class="ph ph-info" aria-hidden="true"></i><b>Hoe werkt dit?</b><i class="ph ph-caret-down gl-v2-pls-uitleg-caret" aria-hidden="true"></i>
+                </button>
+                <ul id="pls-uitleg-lijst" hidden>
+                    <li><b>Code</b> — elk blok en elke taak krijgt bij het aanmaken een vaste code (grijs onder de naam). Voorgangers verwijzen naar die code, dus een naam wijzigen breekt niets.</li>
+                    <li><b>Voorgangers</b> — klik op + voorganger en kies een taak of een heel blok (= al zijn taken). Klik op een voorganger om het type (FS, SS, FF, SF) en de wachttijd te kiezen, bv. “Funderingen SS+3d”.</li>
+                    <li><b>Estafette</b> — bij meerdere woningen wacht de taak op dezelfde taak in de woning ervoor. Via ⋯ voeg je extra wachtdagen toe.</li>
+                    <li><b>Per verdieping</b> — het blok komt terug als “Technieken ruwbouw verdieping 1, 2 …”; elke verdieping start na de vorige.</li>
+                    <li><b>Komt voor</b> — het blok valt weg als het project niet aan de voorwaarde voldoet (bv. enkel met kelder).</li>
+                </ul>
+            </section>
+        </aside>
+    </div>
+</div>
+
+<div class="gl-v2-menu" id="pls-menu" role="menu" aria-label="Acties"></div>
+
+@* Voorganger kiezen of aanpassen *@
+<div class="modal fade gl-v2-modal-form gl-v2-pls-modal" id="pls-pick" tabindex="-1" aria-hidden="true" aria-labelledby="pls-pick-titel">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div><span class="gl-v2-pls-pick-voor">VOORGANGER VOOR</span><h2 class="modal-title" id="pls-pick-titel"></h2></div>
+                <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="gl-v2-pls-pick-rel" id="pls-pick-rel" hidden>
+                    <div class="gl-v2-segmented is-sm" id="pls-pick-types" role="group" aria-label="Soort afhankelijkheid"></div>
+                    <div class="gl-v2-field-box gl-v2-pls-pick-lag"><input type="number" class="gl-v2-field-input" id="pls-pick-lag" min="-3650" max="3650" aria-label="Wachttijd in werkdagen" /><span class="gl-v2-field-unit">d</span></div>
+                </div>
+                <p class="gl-v2-pls-pick-zin" id="pls-pick-zin" hidden></p>
+                <div class="gl-v2-field-box gl-v2-pls-pick-zoek"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input type="search" class="gl-v2-field-input" id="pls-pick-q" placeholder="Zoek een taak of blok" aria-label="Zoek een taak of blok" autocomplete="off" /></div>
+                <div class="gl-v2-pls-pick-lijst" id="pls-pick-lijst"></div>
+            </div>
+            <div class="modal-footer">
+                <span class="gl-v2-pls-pick-uitleg">FS = na het einde · SS = samen starten · FF = samen eindigen · wachttijd mag negatief</span>
+                <button type="button" class="gl-v2-btn gl-v2-btn-primary" data-bs-dismiss="modal">Klaar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Weggaan met niet-bewaarde wijzigingen: bewaren, niet bewaren of blijven *@
+<div class="modal fade gl-v2-modal-confirm gl-v2-pls-verlaat" id="pls-verlaat" tabindex="-1" aria-hidden="true" aria-labelledby="pls-verlaat-titel">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content is-warning">
+            <div class="modal-body">
+                <span class="gl-v2-modal-icon is-warning"><i class="ph ph-warning" aria-hidden="true"></i></span>
+                <div class="gl-v2-modal-text">
+                    <h2 class="gl-v2-modal-title" id="pls-verlaat-titel">Wijzigingen bewaren?</h2>
+                    <p class="gl-v2-modal-desc">Je hebt wijzigingen in dit sjabloon die nog niet bewaard zijn. Bewaar ze, of ga weg zonder te bewaren.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Blijven</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-verlaat="weg">Niet bewaren</button>
+                <button type="button" class="gl-v2-btn gl-v2-btn-primary" data-verlaat="bewaar">Bewaren</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@await Html.PartialAsync("GlV2/_BevestigModal")
+
+@section PageScripts
+{
+    <script id="pls-data" type="application/json">@Html.Raw(JsonSerializer.Serialize(data, new JsonSerializerOptions(JsonSerializerDefaults.Web)).Replace("<", "\\u003c"))</script>
+    <script id="pls-opties" type="application/json">@Html.Raw(JsonSerializer.Serialize(opties, new JsonSerializerOptions(JsonSerializerDefaults.Web)).Replace("<", "\\u003c"))</script>
+    <script src="~/js/gl-v2-instellingen-planningsjabloon.js" asp-append-version="true"></script>
+}

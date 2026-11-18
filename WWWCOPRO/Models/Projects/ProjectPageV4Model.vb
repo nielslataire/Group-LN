@@ -127,9 +127,11 @@ Public Class ProjectPageV4Model
             If Not String.IsNullOrWhiteSpace(HeroLineOverride) Then Return HeroLineOverride
             Dim av = AvailableLots
             If av.Count = 0 Then Return ""
-            If av.Count = 1 Then Return av(0).Name & " · " & av(0).Type.ToLowerInvariant() & " · " & av(0).LivingArea & " m²"
-            Dim types = String.Join(" & ", av.Select(Function(l) l.Type.ToLowerInvariant()).Distinct())
-            Return av.Count & " woningen · " & types & " · " & V4Format.Range(av.Select(Function(l) CDec(l.LivingArea)), " m²")
+            ' Het type "woning" laten we weg: "5 woningen · woning · ..." zegt twee keer hetzelfde
+            Dim typeNamen = av.Select(Function(l) If(l.Type, "").Trim().ToLowerInvariant()).Where(Function(t) t <> "" AndAlso t <> "woning").Distinct().ToList()
+            Dim types = String.Join(" & ", typeNamen)
+            If av.Count = 1 Then Return av(0).Name & If(types <> "", " · " & types, "") & " · " & av(0).LivingArea & " m²"
+            Return av.Count & " woningen" & If(types <> "", " · " & types, "") & " · " & V4Format.Range(av.Select(Function(l) CDec(l.LivingArea)), " m²")
         End Get
     End Property
 

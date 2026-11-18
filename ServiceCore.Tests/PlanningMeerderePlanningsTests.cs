@@ -26,6 +26,8 @@ public class PlanningMeerderePlanningsTests
         db.Project.Add(new Project { ProjectId = ProjectId, ProjectName = "Verkaveling", StartDateConstruction = new DateOnly(2026, 11, 16) }); // maandag
         db.InvoicingPaymentGroup.Add(new InvoicingPaymentGroup { Id = 11, Name = "Woning 1", ProjectId = ProjectId });
         db.InvoicingPaymentGroup.Add(new InvoicingPaymentGroup { Id = 12, Name = "Woning 2", ProjectId = ProjectId });
+        db.Units.Add(new Units { Id = 11, Name = "Woning 1", ProjectId = ProjectId, PaymentGroupId = 11 });
+        db.Units.Add(new Units { Id = 12, Name = "Woning 2", ProjectId = ProjectId, PaymentGroupId = 12 });
         db.SaveChanges();
         return (new PlanningService(db), db);
     }
@@ -51,7 +53,7 @@ public class PlanningMeerderePlanningsTests
     private static PlanningCommando NieuwePlanning(string naam, int? bouwdeel = null, string? start = null)
     {
         var velden = new List<(string, object?)> { ("naam", naam) };
-        if (bouwdeel != null) velden.Add(("bouwdeelId", bouwdeel));
+        if (bouwdeel != null) velden.Add(("eenheden", new[] { bouwdeel.Value }));
         if (start != null) velden.Add(("startDatum", start));
         return new PlanningCommando { Type = "planningToevoegen", Velden = V(velden.ToArray()) };
     }
@@ -85,13 +87,35 @@ public class PlanningMeerderePlanningsTests
     }
 
     [Fact]
+    public async Task Het_globale_overzicht_toont_alle_plannings_als_groepen_met_hun_taken_en_een_gezamenlijke_kop()
+    {
+        var (svc, _, s, hoofdId, woningId) = await MetHoofdEnWoning();
+        s = await Doe(svc, s, Taak(woningId, "Ruwbouw", 10, "H:1.1"));
+
+        var g = await svc.Laad(ProjectId, PlanningService.GlobaalId);
+        Assert.Equal(PlanningService.GlobaalId, g.ActiefPlanningId);
+        Assert.True(g.HeeftPlanning);
+        var groepen = g.Rijen.Where(r => r.Niveau == 0).ToList();
+        Assert.Equal(new[] { "Hoofdplanning", "Woning 1" }, groepen.Select(r => r.Naam).ToArray());
+        Assert.All(groepen, r => Assert.Equal("fase", r.Soort));
+        Assert.Contains(g.Rijen, r => r.Soort == "taak" && r.Naam == "Wegenis");
+        Assert.Contains(g.Rijen, r => r.Soort == "taak" && r.Naam == "Ruwbouw");
+        // De woning wacht op de wegenis: haar groep begint pas daarna, en de kop loopt over alles.
+        var hoofd = groepen[0]; var woning = groepen[1];
+        Assert.True(string.CompareOrdinal(woning.Start, hoofd.Start) > 0);
+        Assert.Equal(woning.Einde, g.Kop.Einde);
+        Assert.Equal(hoofd.Start, g.Kop.Start);
+        Assert.Equal(2, g.Planningen.Count);
+    }
+
+    [Fact]
     public async Task Een_planning_toevoegen_toont_enkel_haar_eigen_rijen_met_eigen_nummering()
     {
         var (svc, _, s, hoofdId, woningId) = await MetHoofdEnWoning();
         Assert.Equal(woningId, s.ActiefPlanningId);
         Assert.Empty(s.Rijen);
         Assert.Equal(2, s.Planningen.Count);
-        Assert.Equal("Woning 1", s.Planningen.Single(p => p.Id == woningId).BouwdeelNaam);
+        Assert.Equal("Woning 1", s.Planningen.Single(p => p.Id == woningId).EenhedenTekst);
 
         s = await Doe(svc, s, Taak(woningId, "Ruwbouw", 10));
         Assert.Equal(new[] { "1", "1.1" }, s.Rijen.Select(r => r.Wbs));
@@ -139,27 +163,66 @@ public class PlanningMeerderePlanningsTests
     }
 
     [Fact]
-    public async Task Het_voorgangersveld_van_een_bouwdeel_laat_een_voorganger_uit_een_ander_bouwdeel_staan()
+    public async Task Een_voorganger_uit_een_ander_bouwdeel_staat_zichtbaar_in_het_veld_met_de_planningsnaam_ervoor()
     {
         var (svc, db, s, _, woningId) = await MetHoofdEnWoning();
         var u2 = await svc.Voer(ProjectId, new PlanningCommando { Type = "planningToevoegen", Versie = s.Versie, Velden = NieuwePlanning("Woning 2", 12).Velden }, "u1");
         var woning2 = u2.NieuwePlanningId!.Value;
-        s = await Doe(svc, u2.Staat, Taak(woningId, "Ruwbouw woning 1", 10));
-        s = await Doe(svc, s, Taak(woning2, "Ruwbouw woning 2", 10));
+        s = await Doe(svc, u2.Staat, Taak(woningId, "Ruwbouw", 10));
+        s = await Doe(svc, s, Taak(woning2, "Ruwbouw", 10, "Woning 1:1.1"));
 
-        var t1 = await db.PlanningTaak.SingleAsync(t => t.Naam == "Ruwbouw woning 1");
-        var t2 = await db.PlanningTaak.SingleAsync(t => t.Naam == "Ruwbouw woning 2");
-        db.PlanningAfhankelijkheid.Add(new PlanningAfhankelijkheid { VoorgangerTaakId = t1.Id, OpvolgerTaakId = t2.Id, Type = 0, WachtDagen = 0 });
-        await db.SaveChangesAsync();
-
-        // Woning 2 wacht nu op woning 1: start na het einde van woning 1.
+        var t2 = await db.PlanningTaak.OrderByDescending(t => t.Id).FirstAsync();
         var staat2 = await svc.Laad(ProjectId, woning2);
-        Assert.Equal("2026-11-30", staat2.Rijen.Single(r => r.Soort == "taak").Start);
+        var rij = staat2.Rijen.Single(r => r.Soort == "taak");
+        Assert.Equal("Woning 1:1.1", rij.Voorgangers);
+        Assert.Equal("2026-11-30", rij.Start);   // woning 1 eindigt vrijdag 27 november
 
-        // Een voorganger in dezelfde planning of de hoofdplanning bewerken laat die koppeling ongemoeid.
-        s = await Doe(svc, staat2, new PlanningCommando { Type = "wijzig", Soort = "taak", Id = t2.Id, PlanningId = woning2, Velden = V(("voorgangers", "H:1.1")) });
+        // Het veld vervangt alles: de estafette weghalen kan, een andere voorganger erbij zetten ook.
+        s = await Doe(svc, staat2, new PlanningCommando { Type = "wijzig", Soort = "taak", Id = t2.Id, PlanningId = woning2, Velden = V(("voorgangers", "H:1.1; Woning 1:1.1SS+1d")) });
         Assert.Equal(2, await db.PlanningAfhankelijkheid.CountAsync(l => l.OpvolgerTaakId == t2.Id));
-        Assert.Equal("2026-11-30", s.Rijen.Single(r => r.Soort == "taak").Start);
+        s = await Doe(svc, s, new PlanningCommando { Type = "wijzig", Soort = "taak", Id = t2.Id, PlanningId = woning2, Velden = V(("voorgangers", "")) });
+        Assert.Equal(0, await db.PlanningAfhankelijkheid.CountAsync(l => l.OpvolgerTaakId == t2.Id));
+    }
+
+    [Fact]
+    public async Task Een_onbekende_planningsnaam_of_taak_geeft_een_duidelijke_fout()
+    {
+        var (svc, _, s, _, woningId) = await MetHoofdEnWoning();
+        var a = await svc.Voer(ProjectId, new PlanningCommando { Type = "taakToevoegen", Versie = s.Versie, PlanningId = woningId, Velden = V(("naam", "X"), ("duur", 1), ("voorgangers", "Villa:1.1")) }, "u1");
+        Assert.False(a.Ok);
+        Assert.Contains("Er is geen planning", a.Fout);
+        var b = await svc.Voer(ProjectId, new PlanningCommando { Type = "taakToevoegen", Versie = s.Versie, PlanningId = woningId, Velden = V(("naam", "X"), ("duur", 1), ("voorgangers", "Woning 1:1.1")) }, "u1");
+        Assert.False(b.Ok);
+        Assert.Contains("zelf", b.Fout);
+    }
+
+    [Fact]
+    public async Task Een_planningsnaam_mag_geen_dubbelpunt_bevatten_en_moet_uniek_zijn()
+    {
+        var (svc, _, s, _, _) = await MetHoofdEnWoning();
+        var a = await svc.Voer(ProjectId, new PlanningCommando { Type = "planningToevoegen", Versie = s.Versie, Velden = NieuwePlanning("Woning: 2").Velden }, "u1");
+        Assert.False(a.Ok);
+        var b = await svc.Voer(ProjectId, new PlanningCommando { Type = "planningToevoegen", Versie = s.Versie, Velden = NieuwePlanning("woning 1").Velden }, "u1");
+        Assert.False(b.Ok);
+        Assert.Contains("al een planning", b.Fout);
+        var c = await svc.Voer(ProjectId, new PlanningCommando { Type = "planningToevoegen", Versie = s.Versie, Velden = NieuwePlanning("H").Velden }, "u1");
+        Assert.False(c.Ok);
+    }
+
+    [Fact]
+    public async Task Elke_taak_krijgt_een_estafettevoorstel_per_andere_bouwdeelplanning()
+    {
+        var (svc, _, s, _, woningId) = await MetHoofdEnWoning();
+        var u2 = await svc.Voer(ProjectId, new PlanningCommando { Type = "planningToevoegen", Versie = s.Versie, Velden = NieuwePlanning("Woning 2", 12).Velden }, "u1");
+        var woning2 = u2.NieuwePlanningId!.Value;
+        s = await Doe(svc, u2.Staat, Taak(woningId, "Elektriciteit", 4));
+        s = await Doe(svc, s, Taak(woning2, "Elektriciteit", 4));
+
+        var rij = (await svc.Laad(ProjectId, woning2)).Rijen.Single(r => r.Soort == "taak");
+        Assert.Equal("Woning 1:1.1", Assert.Single(rij.EstafetteVoorstellen).Verwijzing);
+        // Elke andere bouwdeelplanning is een keuze, ook de volgende: er is geen vaste volgorde.
+        Assert.Equal("Woning 2:1.1", Assert.Single((await svc.Laad(ProjectId, woningId)).Rijen.Single(r => r.Soort == "taak").EstafetteVoorstellen).Verwijzing);
+        Assert.Equal("", rij.Voorgangers);
     }
 
     [Fact]
@@ -170,7 +233,7 @@ public class PlanningMeerderePlanningsTests
         Assert.Equal("Algemeen", s.Planningen.Single().Naam);
         Assert.Equal("2026-12-01", s.Planningen.Single().StartDatum);
 
-        var u = await svc.Voer(ProjectId, new PlanningCommando { Type = "planningWijzig", Versie = s.Versie, PlanningId = 0, Velden = V(("bouwdeelId", 11)) }, "u1");
+        var u = await svc.Voer(ProjectId, new PlanningCommando { Type = "planningWijzig", Versie = s.Versie, PlanningId = 0, Velden = V(("eenheden", new[] { 11 })) }, "u1");
         Assert.False(u.Ok);
         Assert.Contains("hele project", u.Fout);
         Assert.True((await db.BouwPlanning.SingleAsync()).IsHoofd);
@@ -182,9 +245,9 @@ public class PlanningMeerderePlanningsTests
         var (svc, db, s, _, _) = await MetHoofdEnWoning();
         var dubbel = await svc.Voer(ProjectId, new PlanningCommando { Type = "planningToevoegen", Versie = s.Versie, Velden = NieuwePlanning("Nog een", 11).Velden }, "u1");
         Assert.False(dubbel.Ok);
-        Assert.Contains("al een planning", dubbel.Fout);
+        Assert.Contains("al in een andere planning", dubbel.Fout);
 
-        db.InvoicingPaymentGroup.Add(new InvoicingPaymentGroup { Id = 99, Name = "Elders", ProjectId = 2 });
+        db.Units.Add(new Units { Id = 99, Name = "Elders", ProjectId = 2 });
         await db.SaveChangesAsync();
         var vreemd = await svc.Voer(ProjectId, new PlanningCommando { Type = "planningToevoegen", Versie = s.Versie, Velden = NieuwePlanning("Vreemd", 99).Velden }, "u1");
         Assert.False(vreemd.Ok);
@@ -241,5 +304,24 @@ public class PlanningMeerderePlanningsTests
         s = await Doe(svc, s, new PlanningCommando { Type = "wijzig", Soort = "taak", Id = wegenis.Id, PlanningId = hoofdId, Velden = V(("duur", 10)) });
         var woning = await svc.Laad(ProjectId, woningId);
         Assert.Equal("2026-11-30", woning.Rijen.Single(r => r.Soort == "taak").Start);
+    }
+
+    [Fact]
+    public async Task De_keuzelijst_voor_voorgangers_bevat_alle_plannings_met_de_tekst_om_in_het_veld_te_typen()
+    {
+        var (svc, _, s, _, woningId) = await MetHoofdEnWoning();
+        var u2 = await svc.Voer(ProjectId, new PlanningCommando { Type = "planningToevoegen", Versie = s.Versie, Velden = NieuwePlanning("Woning 2", 12).Velden }, "u1");
+        var woning2 = u2.NieuwePlanningId!.Value;
+        s = await Doe(svc, u2.Staat, Taak(woningId, "Ruwbouw", 10));
+        s = await Doe(svc, s, Taak(woning2, "Dak", 3));
+
+        var staat = await svc.Laad(ProjectId, woning2);
+        Assert.Contains(staat.Keuzes, k => k.Verwijzing == "1.1" && k.Naam == "Dak" && k.IsEigen && !k.IsFase);
+        Assert.Contains(staat.Keuzes, k => k.Verwijzing == "H:1.1" && k.Naam == "Wegenis");
+        Assert.Contains(staat.Keuzes, k => k.Verwijzing == "Woning 1:1.1" && k.Naam == "Ruwbouw");
+        Assert.Contains(staat.Keuzes, k => k.Verwijzing == "Woning 1:1" && k.IsFase);
+        // De eigen planning komt eerst, daarna de hoofdplanning.
+        Assert.True(staat.Keuzes[0].IsEigen);
+        Assert.Equal("Hoofdplanning", staat.Keuzes.First(k => !k.IsEigen).Planning);
     }
 }

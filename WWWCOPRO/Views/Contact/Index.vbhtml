@@ -84,6 +84,7 @@ End Section
                         Bericht ontvangen@(If(Not String.IsNullOrWhiteSpace(CStr(ViewBag.SubmittedNaam)), ", " & ViewBag.SubmittedNaam, "")), helemaal volgens plan! We werken het verder uit en laten iets horen op @ViewBag.SubmittedEmail.
                     </p>
                     <a href="@Url.Action("Index", "Contact")" class="contact-success-link">&larr; Nog een bericht versturen</a>
+                    <script>window.dataLayer = window.dataLayer || []; window.dataLayer.push({ event: 'contact_form_submit' });</script>
                 </div>
             Else
                 @<text>

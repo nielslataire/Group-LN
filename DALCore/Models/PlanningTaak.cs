@@ -11,6 +11,9 @@ public partial class PlanningTaak
 
     public int PlanningSectieId { get; set; }
 
+    /// <summary>De uitvoerder (aannemer, <see cref="CompanyInfo.CompanyId"/>) van deze taak (migratie 150); leeg = die van de fase.</summary>
+    public int? UitvoerderCompanyId { get; set; }
+
     public string Naam { get; set; }
 
     public string Beschrijving { get; set; }

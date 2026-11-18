@@ -555,8 +555,9 @@
             counter(titleCount, titleInput.value.length);
             counter(descCount, descInput.value.length);
             if (!serp) return;
-            var slug = serp.getAttribute("data-slug") || "";
-            document.getElementById("gl-v2-pf-serp-url").textContent = "groupln.be › projecten" + (slug ? " › " + slug : "");
+            var slugInput = document.getElementById("Project_Slug");
+            var slug = (slugInput ? slugInput.value.trim() : (serp.getAttribute("data-slug") || ""));
+            document.getElementById("gl-v2-pf-serp-url").textContent = "groupln.be › " + (serp.getAttribute("data-path") || "woonprojecten") + (slug ? " › " + slug : "");
             var t = document.getElementById("gl-v2-pf-serp-title");
             var d = document.getElementById("gl-v2-pf-serp-desc");
             var title = titleInput.value.trim();
@@ -568,6 +569,8 @@
         }
         titleInput.addEventListener("input", update);
         descInput.addEventListener("input", update);
+        var slugField = document.getElementById("Project_Slug");
+        if (slugField) slugField.addEventListener("input", update);
         update();
     }
 

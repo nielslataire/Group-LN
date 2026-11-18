@@ -189,6 +189,11 @@ End Section
                 <a href="#contact" class="pdv4-btn pdv4-btn--white">Informatie aanvragen</a>
             </div>
         </div>
+        @If layers.Count > 1 Then
+            @* Bladerpijltjes: op touch altijd zichtbaar, op desktop enkel bij hover over het beeld (CSS); JS verbergt ze bij minder dan 2 foto's *@
+            @<button type="button" class="pdv4-media__arrow pdv4-media__arrow--prev" id="pdv4MediaPrev" aria-label="Vorige foto"><svg width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2 2 10l8 8"/></svg></button>
+            @<button type="button" class="pdv4-media__arrow pdv4-media__arrow--next" id="pdv4MediaNext" aria-label="Volgende foto"><svg width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m2 2 8 8-8 8"/></svg></button>
+        End If
     </aside>
 
     @* ═════════ RECHTS: scrollverhaal ═════════ *@

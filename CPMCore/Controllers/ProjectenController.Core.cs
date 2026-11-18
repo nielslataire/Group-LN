@@ -780,7 +780,29 @@ namespace CPMCore.Controllers
             // Geen gemeente gekozen -> null bewaren i.p.v. 0 (0 is geen geldige FK).
             model.Project.Postalcode.PostcodeId = model.SelectedPostalcode > 0 ? model.SelectedPostalcode : (int?)null;
             model.Project.Status.Id = model.SelectedStatus;
-            model.Project.Slug = GetSlugForPostcodeId(model.SelectedPostalcode, model.Project.Name ?? string.Empty);
+            // Slug: de ingevulde waarde (handmatig aanpasbaar, altijd door dezelfde opschoning als de automatische);
+            // leeg = automatisch uit projectnaam + gemeente. De vorige slug gaat naar de historiek (oude link verwijst door).
+            var oudeSlug = _projectService.GetProjectSlugById(model.Project.Id);
+            model.Project.Slug = string.IsNullOrWhiteSpace(model.Project.Slug)
+                ? GetSlugForPostcodeId(model.SelectedPostalcode, model.Project.Name ?? string.Empty)
+                : _projectService.GenerateSlug(model.Project.Slug);
+            if (string.IsNullOrWhiteSpace(model.Project.Slug))
+                model.Project.Slug = GetSlugForPostcodeId(model.SelectedPostalcode, model.Project.Name ?? string.Empty);
+
+            // De slug is de link op de website: twee projecten mogen er niet dezelfde hebben.
+            var slugKey = model.Project.Slug;
+            var projectIdForSlug = model.Project.Id;
+            if (_db.Set<DALCore.Models.Project>().Any(p => p.Slug == slugKey && p.ProjectId != projectIdForSlug))
+            {
+                ModelState.AddModelError("Project.Slug", "Deze slug is al in gebruik door een ander project.");
+                SetPageHeader("bx bx-building-house", $"Project - {model.Project.Name}");
+                FillInAddSelectListsDetailEdit(model);
+                FillInAvailableUsers(model);
+                ViewData["HelpScreenId"] = "projecten-bewerken";
+                model.Users = GetOrderedUsers();
+                SetEditBreadcrumbV2(model);
+                return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditV2" : "Edit", model);
+            }
 
             // Routeberekening bij wijziging coördinatieproject-instellingen
             if (model.Project.CoordinationIssuerCompanyId.HasValue && model.SelectedPostalcode > 0)
@@ -810,6 +832,8 @@ namespace CPMCore.Controllers
             if (response.Success)
             {
                 var projectId = model.Project.Id;
+
+                await BewaarOudeSlugAsync(projectId, oudeSlug, model.Project.Slug);
 
                 // Sla contract schijven op
                 service.SaveContractSlices(projectId, model.ContractSlices?.Select(s => new ProjectContractSliceBO
@@ -862,6 +886,26 @@ namespace CPMCore.Controllers
             model.Users = GetOrderedUsers();
             SetEditBreadcrumbV2(model);
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditV2" : "Edit", model);
+        }
+
+        // De slug wordt bij elk opslaan opnieuw gemaakt (naam + gemeente). Verandert hij, dan bewaren we de oude in
+        // dbo.ProjectSlugHistory (migratie 148) zodat de website een oude link permanent doorverwijst. Keert een
+        // project terug naar een eerdere slug, dan verdwijnt die uit de historiek (anders verwees hij naar zichzelf).
+        // Mislukt dit (bv. tabel nog niet aangemaakt), dan loopt het opslaan van het project gewoon door.
+        private async Task BewaarOudeSlugAsync(int projectId, string oudeSlug, string nieuweSlug)
+        {
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(nieuweSlug))
+                    await _db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM dbo.ProjectSlugHistory WHERE Slug = {nieuweSlug.ToLowerInvariant()}");
+                if (!string.IsNullOrWhiteSpace(oudeSlug) && !string.Equals(oudeSlug, nieuweSlug, StringComparison.OrdinalIgnoreCase))
+                    await _db.Database.ExecuteSqlInterpolatedAsync($@"IF NOT EXISTS (SELECT 1 FROM dbo.ProjectSlugHistory WHERE Slug = {oudeSlug.ToLowerInvariant()})
+                        INSERT INTO dbo.ProjectSlugHistory (ProjectId, Slug) VALUES ({projectId}, {oudeSlug.ToLowerInvariant()})");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Oude slug van project {ProjectId} niet bewaard (migratie 148 gedraaid?)", projectId);
+            }
         }
 
         // Herweergave na een mislukte Edit-POST: de gl-v2-view heeft de kruimel (tot de projectnaam) en

@@ -623,3 +623,57 @@
         font-size: 16px;
     }
 }
+
+/* ------------------------------------------------
+   Grond of pand aanbieden: CTA in de hero + formulier onderaan
+   (veldstijlen komen uit contact.css)
+   ------------------------------------------------ */
+.about-hero-cta {
+    margin-top: 32px;
+}
+/* Op de donkergroene hero valt de standaard (groene) knop weg: hier de gouden knop met witte tekst */
+.about-hero-cta .cta-btn {
+    padding: 18px 34px;
+    font-size: 14px;
+    color: #fff;
+    background: var(--color-cta, #C9A96E);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    transition: background 0.25s ease, transform 0.2s ease;
+}
+.about-hero-cta .cta-btn:hover,
+.about-hero-cta .cta-btn:focus {
+    color: #fff;
+    background: var(--color-cta-hover, #B8975A);
+    transform: translateY(-1px);
+}
+.grond-aanvraag {
+    background: #fff;
+    padding: 100px 0;
+    scroll-margin-top: 80px;
+}
+.grond-aanvraag-inner {
+    max-width: 680px;
+    margin: 0 auto;
+}
+.grond-aanvraag-inner .contact-form-title,
+.grond-aanvraag-inner .contact-form-sub {
+    max-width: none;
+}
+.grond-aanvraag-inner .contact-form-sub {
+    margin-bottom: 32px;
+}
+.grond-aanvraag-fout {
+    margin: 0 0 20px;
+    font-size: 14px;
+}
+.grond-aanvraag .about-cta-mail {
+    text-align: center;
+}
+@media (max-width: 575px) {
+    .grond-aanvraag {
+        padding: 64px 0;
+    }
+    .grond-aanvraag .contact-form-grid {
+        grid-template-columns: 1fr;
+    }
+}

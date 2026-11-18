@@ -58,6 +58,7 @@ Public NotInheritable Class PermissionCatalog
             New PermissionDefinition(PermissionCodes.SettingsIssueNotifications, "Puntmeldingen", PermissionCodes.SettingsAutomatisatie, 95),
             New PermissionDefinition(PermissionCodes.SettingsMarketDataStatus, "Marktdata-status", PermissionCodes.SettingsAutomatisatie, 97),
             New PermissionDefinition(PermissionCodes.SettingsTrajectSjablonen, "Trajectsjablonen", PermissionCodes.SettingsAutomatisatie, 99),
+            New PermissionDefinition(PermissionCodes.SettingsPlanningSjablonen, "Planningssjablonen", PermissionCodes.SettingsAutomatisatie, 99),
             New PermissionDefinition(PermissionCodes.SettingsHomeHeroProject, "Home hero — uitgelicht project", PermissionCodes.SettingsWebsite, 98),
             New PermissionDefinition(PermissionCodes.Marktanalyse, "Marktanalyse", Nothing, 90),
             New PermissionDefinition(PermissionCodes.DocumentCenter, "Documentencentrum", Nothing, 100),

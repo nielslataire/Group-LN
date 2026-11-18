@@ -57,8 +57,10 @@ De huidige versie van CPMCore moet steeds blijven werken. Enkel de planning zelf
 ### Stand van de bouw
 
 - **Stap 0 gebouwd (16/11/2026):** migratie `145_MeerderePlannings.sql` (vóór app-start), entiteit `BouwPlanning`, `PlanningSectie.BouwPlanningId`, gezamenlijk doorrekenen, `H:`-voorgangers, tabs en planningbeheer op de pagina, 11 nieuwe tests. Project 79 is gewist en hervuld met een voorbeeld (hoofdplanning, woning 1, woning 2 met estafette; zie `PLANNING_VOORTGANG.md`). Niet gebouwd in stap 0: de estafette-vlag in een sjabloon (hoort bij stap 1).
-- Open na de test van Niels (16/11/2026), te bouwen vóór stap 1: (a) voorgangers uit een ander bouwdeel zichtbaar maken als `Planningsnaam:3.2` en per taak een keuzevakje "Wacht op dezelfde taak in de vorige planning" (de estafette is dus per taak te kiezen, niet verplicht), (b) blokkerende fouten als opvallende gecentreerde inline melding (4g) in plaats van een toast rechtsonder. Details in `PLANNING_VOORTGANG.md`.
-- Rekenregel die in stap 1 nog telt: een voorganger uit een ander bouwdeel blijft behouden bij het bewerken van het voorgangersveld, maar is er niet zichtbaar. Toon ze in de sjablooneditor of in het taakpaneel.
+- Verwerkt op 17/11/2026 (niet in de echte app getest):  (a) voorgangers uit een ander bouwdeel zichtbaar maken als `Planningsnaam:3.2` en per taak een keuzevakje "Wacht op dezelfde taak in de vorige planning" (de estafette is dus per taak te kiezen, niet verplicht), (b) blokkerende fouten als opvallende gecentreerde inline melding (4g) in plaats van een toast rechtsonder. Details in `PLANNING_VOORTGANG.md`.
+- Het voorgangersveld toont nu alle voorgangers, ook uit andere plannings (`Planningsnaam:3.2`). De sjablooneditor (stap 1) moet de estafette per taak als vlag bewaren en bij het toepassen omzetten naar zulke koppelingen.
+
+- **Stap 1a gebouwd (17/11/2026):** migratie `146_PlanningSjablonen.sql`, entiteiten `PlanningSjabloon/Blok/Taak/Voorganger`, `PlanningSjabloonUitrol` (zuivere uitrol), `PlanningSjabloonService` (lijst, bewaren vanuit een planning, verwijderen), commando `sjabloonToepassen`, knoppen en modals op de planningpagina. **Stap 1b herwerkt naar de design-handoff op 18/11/2026 (migratie 147, proefdraai via `PlanningSjabloonProef`, lijst met gebruik/gewijzigd/reageert op, dupliceren, inactief zetten).** **Stap 1b gebouwd (17/11/2026, niet in de browser getest):** `PlanningSjabloonAdminController`, `IndexV2`/`EditV2`, `gl-v2-instellingen-planningsjabloon.js/.css`, `PlanningSjabloonService.Haal/Bewaar/BeheerLijst`, kaart bij Automatisatie. (Oorspronkelijke opdracht stap 1b:) sjablooneditor onder Instellingen › Planning (blokken, voorwaarden, herhaling per verdieping, codes, estafettevlag met wachttijd, voorgangers via codes), met rechtencontrole `Settings.Planningssjablonen`. Daarna stap 2 (schijven).
 
 ### Bevestigde bouwvolgorde
 
@@ -80,3 +82,10 @@ Bij elke stap hoort een help- en `DESIGN.md`-update, en de huidige CPMCore moet 
 - Eenheden: `Unit` heeft `Level/LevelId`, `PaymentGroupId`, `BuildingType`. Er is geen gebouw- of blokbegrip. `Project.ProjectType` kent alleen Woonproject en Commercieel.
 - AI: Anthropic-API al in gebruik in CPMCore (offerteanalyse, Punten-spraak), model in `appsettings.json` (`AnthropicModel`).
 - Bestanden zijn CRLF. Patch ze met een node-script dat de regeleinden normaliseert.
+
+
+## Besluit 18/11/2026: planning los van betalingsgroep (richting B)
+Een betalingsgroep heeft voor alle woningen dezelfde schijven, maar elke woning heeft een eigen planning, dus een schijf wordt per woning op een ander moment bereikt. Planning krijgt een eigen bouwdeel (woning/gebouw), schijven verwijzen naar taken of fases per woning. Uitwerking in stap 2, eerst ontwerpvragen.
+
+## Besluit 18/11/2026: globaal overzicht en aannemerplanning (vóór stap 2)
+Volgorde: (a) tab **Globaal** = alle plannings samen in één alleen-lezen Gantt, per planning een groep (gebouwd 18/11/2026); (b) veld **Uitvoerder** bij fase en taak (optioneel, kan later ingevuld worden zodra een aannemer aangesteld is; kiezen uit de leveranciers/contracten van het project; taak erft van fase); (c) weergave **Planning van [aannemer]** (alle taken uit alle plannings, met woning/planning, start, einde; print/PDF; portaal later); (d) pas daarna stap 2 (schijven). Planning per woning als je timing per woning wilt zien; een gebundelde planning enkel bij gelijktijdig werk. Sjabloon-taak met discipline/soort werk: later.

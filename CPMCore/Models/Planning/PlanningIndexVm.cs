@@ -11,6 +11,10 @@ public class PlanningIndexVm
     /// <summary>Schrijfrecht op het Traject: nodig om een taak of fase aan een trajectmijlpaal te koppelen.</summary>
     public bool CanLinkTraject { get; set; }
 
+    /// <summary>Recht om planningssjablonen te maken (Instellingen) en te verwijderen; toepassen kan met het gewone planningsrecht.</summary>
+    public bool CanSaveTemplate { get; set; }
+    public bool CanDeleteTemplate { get; set; }
+
     /// <summary>De volledig doorgerekende planning (<c>FacadeCore.PlanningStaat</c>) als JSON.</summary>
     public string StaatJson { get; set; } = "{}";
 }

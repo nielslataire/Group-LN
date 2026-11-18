@@ -139,7 +139,7 @@
         function countryId() {
             var block = root.closest("[data-gl-v2-address-block]");
             var countrySelect = block && block.querySelector('[data-role="country-select"]');
-            return countrySelect ? countrySelect.value : "";
+            return selValue(countrySelect);
         }
 
         function renderHint(text) {
@@ -319,6 +319,13 @@
     //    er is dan geen eigen voornaam. Werkt op eigenaar 1 én, via de scope-parameter, op elke (ook
     //    dynamisch toegevoegde) mede-eigenaar-rij — zie initCoOwnerRows. .gl-v2-field-input:disabled
     //    heeft al de grijze opmaak (gl-v2-shell.css). ────────────────────────────────────────────────
+// Waarde van een native <select> of van een gedeelde keuzelijst (.gl-v2-select met verborgen input).
+    function selValue(el) {
+        if (!el) return "";
+        if (el.hasAttribute && el.hasAttribute("data-gl-v2-select")) { var h = el.querySelector('input[type="hidden"]'); return h ? h.value : ""; }
+        return el.value;
+    }
+
     function initSalutationFirstnameToggle(scope) {
         scope.querySelectorAll('[data-role="salutation-select"]').forEach(wireSalutationFirstnameToggle);
     }
@@ -331,7 +338,7 @@
         if (!input) return;
 
         function apply() {
-            input.disabled = parseInt(select.value, 10) >= 2;
+            input.disabled = parseInt(selValue(select), 10) >= 2;
         }
 
         select.addEventListener("change", function () {
@@ -399,6 +406,7 @@
                         if (!rowEl) return;
                         rows.appendChild(rowEl);
                         initSearchSelects(rowEl);
+                        if (window.GlV2Select) window.GlV2Select.init(rowEl);
                         initSalutationFirstnameToggle(rowEl);
                         initUblDependency(rowEl);
                         if (window.GlV2Phone) window.GlV2Phone.init(rowEl);
@@ -508,6 +516,7 @@
                         if (!rowEl) return;
                         rows.appendChild(rowEl);
                         initSearchSelects(rowEl);
+                        if (window.GlV2Select) window.GlV2Select.init(rowEl);
                         initSalutationFirstnameToggle(rowEl);
                         if (window.GlV2Phone) window.GlV2Phone.init(rowEl);
                         var card = rowEl.querySelector(".gl-v2-card");

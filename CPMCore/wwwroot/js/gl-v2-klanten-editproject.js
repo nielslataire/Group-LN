@@ -298,7 +298,7 @@
         function countryId() {
             var block = root.closest("[data-gl-v2-address-block]");
             var countrySelect = block && block.querySelector('[data-role="country-select"]');
-            return countrySelect ? countrySelect.value : "";
+            return selValue(countrySelect);
         }
 
         function renderHint(text) {
@@ -487,7 +487,7 @@
         if (!input) return;
 
         function apply() {
-            input.disabled = parseInt(select.value, 10) >= 2;
+            input.disabled = parseInt(selValue(select), 10) >= 2;
         }
 
         select.addEventListener("change", function () {
@@ -535,6 +535,13 @@
         if (countEl) countEl.textContent = container.querySelectorAll(rowSelector).length;
     }
 
+// Waarde van een native <select> of van een gedeelde keuzelijst (.gl-v2-select met verborgen input).
+    function selValue(el) {
+        if (!el) return "";
+        if (el.hasAttribute && el.hasAttribute("data-gl-v2-select")) { var h = el.querySelector('input[type="hidden"]'); return h ? h.value : ""; }
+        return el.value;
+    }
+
     // ── Contacten-rijen. ────────────────────────────────────────────────────────────────────────
     function initContactRows() {
         var rows = document.getElementById("gl-v2-contact-rows");
@@ -553,6 +560,7 @@
                         if (!rowEl) return;
                         rows.appendChild(rowEl);
                         initSearchSelects(rowEl);
+                        if (window.GlV2Select) window.GlV2Select.init(rowEl);
                         initUblDependency(rowEl);
                         if (window.GlV2Phone) window.GlV2Phone.init(rowEl);
                         updateTabCount("contacten", rows, ".gl-v2-client-row");
@@ -659,6 +667,7 @@
                         if (!rowEl) return;
                         rows.appendChild(rowEl);
                         initSearchSelects(rowEl);
+                        if (window.GlV2Select) window.GlV2Select.init(rowEl);
                         initSalutationFirstnameToggle(rowEl);
                         if (window.GlV2Phone) window.GlV2Phone.init(rowEl);
                         var card = rowEl.querySelector(".gl-v2-card");
@@ -788,7 +797,7 @@
         var ownerField = panel.querySelector('[data-role="billedto-owner-field"]');
         if (billedToSelect && ownerField) {
             billedToSelect.addEventListener("change", function () {
-                ownerField.hidden = billedToSelect.value !== "1";
+                ownerField.hidden = selValue(billedToSelect) !== "1";
             });
         }
 
@@ -796,7 +805,7 @@
         var addInput = document.getElementById("gl-v2-kep-recipient-add");
         var suggestionsHost = panel.querySelector('[data-role="recipient-suggestions"]');
         var recipientIndex = recipients ? recipients.querySelectorAll(".gl-v2-kep-recipient-chip").length : 0;
-        var namePrefix = (billedToSelect && billedToSelect.name || "").replace(/BilledToType$/, "InvoiceRecipients");
+        var namePrefix = ((billedToSelect && (billedToSelect.querySelector('input[type="hidden"]') || billedToSelect).name) || "").replace(/BilledToType$/, "InvoiceRecipients");
 
         function escapeAttr(value) {
             return String(value || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");

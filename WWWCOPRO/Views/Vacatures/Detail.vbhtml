@@ -467,6 +467,8 @@ End If
                         if (data && data.success) {
                             successTextEl.textContent = 'De eerste steen is gelegd, ' + voornaam + '! Wij bouwen dit verder af en laten snel iets horen via ' + email + '.';
                             successEl.style.display = '';
+                            window.dataLayer = window.dataLayer || [];
+                            window.dataLayer.push({ event: 'vacature_form_submit' });
                         } else {
                             fieldsWrap.style.display = '';
                             if (window.glBusy) { window.glBusy(submitBtn, false); } else if (submitBtn) { submitBtn.disabled = false; }

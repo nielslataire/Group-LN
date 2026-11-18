@@ -433,16 +433,51 @@ Public Class ClientAccountBO
     ' De ENE canonieke plek voor "toon een klantnaam" — achternaam eerst, zoals op de akte
     ' (design-handoff 23: "familienaam eerst"). Vrijwel elke view/PDF roept DisplayName aan, dus deze
     ' ene wijziging laat Voornaam overal mee verschijnen zonder 29 losse view-aanpassingen.
+    ' Heeft de klant mede-eigenaars (ClientContacts met IsCoOwner), dan is de klantnaam de combinatie van
+    ' alle eigenaars: delen ze de familienaam dan "Janssen Jan en Maria", anders "Janssen Jan en Peeters Els"
+    ' (3 of meer: "A, B en C"). Zonder mede-eigenaars (of als ze niet geladen zijn) blijft het de naam van
+    ' eigenaar 1 zoals voorheen.
     Public ReadOnly Property DisplayName() As String
         Get
             If Name IsNot Nothing Then
-                If Not String.IsNullOrWhiteSpace(Firstname) Then
-                    Return Name & " " & Firstname
+                Dim ownerFirst As String = If(String.IsNullOrWhiteSpace(Firstname), Nothing, Firstname.Trim())
+                Dim owners As New List(Of Tuple(Of String, String))
+                owners.Add(Tuple.Create(Name.Trim(), ownerFirst))
+                If _coowners IsNot Nothing Then
+                    For Each co In _coowners
+                        If co Is Nothing OrElse String.IsNullOrWhiteSpace(co.Name) Then Continue For
+                        owners.Add(Tuple.Create(co.Name.Trim(), If(String.IsNullOrWhiteSpace(co.Firstname), Nothing, co.Firstname.Trim())))
+                    Next
                 End If
-                Return Name
+
+                If owners.Count = 1 Then
+                    Return If(ownerFirst Is Nothing, Name, Name & " " & ownerFirst)
+                End If
+
+                Dim sameSurname As Boolean = owners.All(Function(o) String.Equals(o.Item1, owners(0).Item1, StringComparison.OrdinalIgnoreCase)) _
+                    AndAlso owners.All(Function(o) o.Item2 IsNot Nothing)
+                Dim parts As List(Of String)
+                If sameSurname Then
+                    parts = owners.Select(Function(o) o.Item2).ToList()
+                    Return owners(0).Item1 & " " & JoinNames(parts)
+                End If
+                parts = owners.Select(Function(o) If(o.Item2 Is Nothing, o.Item1, o.Item1 & " " & o.Item2)).ToList()
+                Return JoinNames(parts)
             Else
                 Return CompanyName
             End If
+        End Get
+    End Property
+
+    Private Shared Function JoinNames(parts As List(Of String)) As String
+        If parts.Count = 1 Then Return parts(0)
+        Return String.Join(", ", parts.Take(parts.Count - 1)) & " en " & parts(parts.Count - 1)
+    End Function
+
+    ''' <summary>True als de klantnaam uit meerdere eigenaars bestaat (dan geen aanspreking ervoor zetten).</summary>
+    Public ReadOnly Property HasCoOwners() As Boolean
+        Get
+            Return _coowners IsNot Nothing AndAlso _coowners.Any(Function(c) c IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(c.Name))
         End Get
     End Property
 

@@ -3,6 +3,22 @@
     Layout = "~/Views/Shared/_Layout.vbhtml"
     Dim jarenErvaring As Integer = DateTime.Now.Year - 1999
 
+    ' Formulier onderaan (ContactController.GrondAanbieden): bij een fout komt de pagina terug met de ingevulde
+    ' waarden en de foutmeldingen per veld; na een geslaagde verzending (post-redirect-get) staat er een bevestiging.
+    Dim grondForm As wwwcopro.MailModel = TryCast(ViewData("GrondForm"), wwwcopro.MailModel)
+    If grondForm Is Nothing Then grondForm = New wwwcopro.MailModel()
+    Dim grondFout As String = TryCast(ViewData("GrondFout"), String)
+    Dim grondSuccesNaam As String = TryCast(TempData("GrondSuccessNaam"), String)
+    Dim grondSuccesEmail As String = TryCast(TempData("GrondSuccessEmail"), String)
+    Dim grondSucces As Boolean = Not String.IsNullOrEmpty(grondSuccesEmail)
+    Dim veldFout As Func(Of String, String) =
+        Function(sleutel As String) As String
+            If ViewData.ModelState.ContainsKey(sleutel) AndAlso ViewData.ModelState(sleutel).Errors.Count > 0 Then
+                Return ViewData.ModelState(sleutel).Errors(0).ErrorMessage
+            End If
+            Return Nothing
+        End Function
+
     ' Eén bron voor zowel het zichtbare FAQ-accordeon als het FAQPage-schema.
     Dim faqItems As New List(Of Tuple(Of String, String)) From {
         Tuple.Create(
@@ -53,6 +69,7 @@ End Code
 @section PageStyle
     <link rel="stylesheet" href="~/Content/home-sections.css" />
     <link rel="stylesheet" href="~/Content/about.css" />
+    <link rel="stylesheet" href="~/Content/contact.css" />
 End Section
 
 @*
@@ -78,6 +95,9 @@ End Section
             <p class="about-hero-kicker">Grond- en pandverwerving</p>
             <h1 class="about-hero-title">Uw grond of pand, ons volgende project</h1>
             <p class="about-hero-text">Heeft u een bouwgrond, een oude woning of een verouderd pand in bezit? Wij vertalen het naar een concreet ontwikkelingsvoorstel — met een correcte prijs, een duidelijk traject en zonder verplichtingen vooraf.</p>
+            <div class="about-hero-cta">
+                <a class="cta-btn" href="#grond-formulier">Uw grond of pand nu aanbieden <i class="fa fa-arrow-right"></i></a>
+            </div>
         </div>
     </div>
 </section>
@@ -175,15 +195,95 @@ End Section
     </div>
 </section>
 
-@* ── CTA: grond of pand aanbieden ── *@
-<section class="about-eind-cta on-white">
-    <div class="container reveal">
-        <h2>Grond of pand aanbieden?</h2>
-        <p>Bezorg ons vrijblijvend de gegevens van uw grond of pand. Wij onderzoeken de mogelijkheden en komen binnen 7 werkdagen bij u terug.</p>
-        <div class="about-cta-actions">
-            <a class="cta-btn" href="@Url.Action("Index", "Contact", New With {.onderwerp = "Grond of pand aanbieden"})">Grond of pand aanbieden <i class="fa fa-arrow-right"></i></a>
+@* ── Formulier: grond of pand aanbieden (onderwerp staat vast, zie ContactController.GrondAanbieden) ── *@
+<section class="grond-aanvraag" id="grond-formulier">
+    <div class="container">
+        <div class="grond-aanvraag-inner reveal">
+            @If grondSucces Then
+                @<div class="contact-success">
+                    <div class="contact-success-check">
+                        <svg viewBox="0 0 64 64" width="56" height="56">
+                            <circle class="contact-success-check-circle" cx="32" cy="32" r="28" fill="none" stroke-width="3" />
+                            <path class="contact-success-check-mark" fill="none" stroke-width="4" d="M20 33l8 8 16-17" />
+                        </svg>
+                    </div>
+                    <h2 class="contact-form-title">Bedankt@(If(Not String.IsNullOrWhiteSpace(grondSuccesNaam), ", " & grondSuccesNaam, ""))!</h2>
+                    <p class="contact-form-sub">We hebben uw aanbod ontvangen. We onderzoeken de mogelijkheden en laten binnen 7 werkdagen iets horen op @grondSuccesEmail.</p>
+                    <script>window.dataLayer = window.dataLayer || []; window.dataLayer.push({ event: 'grond_form_submit' });</script>
+                </div>
+            Else
+                @<text>
+                    <h2 class="contact-form-title">Grond of pand aanbieden?</h2>
+                    <p class="contact-form-sub">Bezorg ons vrijblijvend de gegevens van uw grond of pand: waar ligt het, hoe groot is het en wat is de huidige toestand? Wij onderzoeken de mogelijkheden en komen binnen 7 werkdagen bij u terug.</p>
+
+                    @If Not String.IsNullOrEmpty(grondFout) Then
+                        @<p class="contact-field-error grond-aanvraag-fout">@grondFout</p>
+                    End If
+
+                    @Using Html.BeginForm("GrondAanbieden", "Contact", FormMethod.Post, New With {.id = "grondForm", .autocomplete = "on"})
+                        @<text>
+                            @Html.AntiForgeryToken()
+
+                            @* Honeypot: enkel bots vullen dit verborgen veld in *@
+                            <div style="position:absolute;left:-9999px;top:-9999px;opacity:0;" aria-hidden="true">
+                                <input type="text" name="website_url" tabindex="-1" autocomplete="off" />
+                            </div>
+                            <input type="hidden" name="g-recaptcha-response" id="gRecaptchaResponse" />
+
+                            <div class="contact-form-grid">
+                                <div class="contact-field">
+                                    <label for="Voornaam">Voornaam<span class="req">*</span></label>
+                                    <input type="text" class="form-control" id="Voornaam" name="Voornaam" value="@grondForm.Voornaam" autocomplete="given-name" required="required" />
+                                    @If veldFout("Voornaam") IsNot Nothing Then
+                                        @<span class="contact-field-error">@veldFout("Voornaam")</span>
+                                    End If
+                                </div>
+                                <div class="contact-field">
+                                    <label for="Achternaam">Achternaam<span class="req">*</span></label>
+                                    <input type="text" class="form-control" id="Achternaam" name="Achternaam" value="@grondForm.Achternaam" autocomplete="family-name" required="required" />
+                                    @If veldFout("Achternaam") IsNot Nothing Then
+                                        @<span class="contact-field-error">@veldFout("Achternaam")</span>
+                                    End If
+                                </div>
+                                <div class="contact-field">
+                                    <label for="EmailTo">E-mailadres<span class="req">*</span></label>
+                                    <input type="email" class="form-control" id="EmailTo" name="EmailTo" value="@grondForm.EmailTo" autocomplete="email" required="required" />
+                                    @If veldFout("EmailTo") IsNot Nothing Then
+                                        @<span class="contact-field-error">@veldFout("EmailTo")</span>
+                                    End If
+                                </div>
+                                <div class="contact-field">
+                                    <label for="Phone">Telefoonnummer</label>
+                                    <input type="text" class="form-control" id="Phone" name="Phone" value="@grondForm.Phone" autocomplete="tel" />
+                                    @If veldFout("Phone") IsNot Nothing Then
+                                        @<span class="contact-field-error">@veldFout("Phone")</span>
+                                    End If
+                                </div>
+                                <div class="contact-field contact-field-full">
+                                    <label for="Message">Uw grond of pand<span class="req">*</span></label>
+                                    <textarea class="form-control" id="Message" name="Message" rows="5" placeholder="Adres of ligging, oppervlakte, huidige toestand en eventuele bestaande vergunningen" required="required">@grondForm.Message</textarea>
+                                    @If veldFout("Message") IsNot Nothing Then
+                                        @<span class="contact-field-error">@veldFout("Message")</span>
+                                    End If
+                                </div>
+                            </div>
+
+                            <div class="contact-privacy">
+                                <input type="checkbox" id="PrivacyAkkoord" name="PrivacyAkkoord" value="true" checked="@(If(grondForm.PrivacyAkkoord, "checked", Nothing))" />
+                                <input type="hidden" name="PrivacyAkkoord" value="false" />
+                                <label for="PrivacyAkkoord">Ik ga akkoord dat Group LN mijn gegevens gebruikt om mijn aanbod te beantwoorden, conform het <a href="@Url.Action("Privacybeleid", "Legal")" target="_blank" rel="noopener">privacybeleid</a>.</label>
+                            </div>
+                            @If veldFout("PrivacyAkkoord") IsNot Nothing Then
+                                @<span class="contact-field-error">@veldFout("PrivacyAkkoord")</span>
+                            End If
+
+                            <button type="submit" class="contact-submit-btn">Aanbod versturen <i class="fa fa-arrow-right"></i></button>
+                        </text>
+                    End Using
+                    <span class="about-cta-mail">of mail rechtstreeks naar <a href="mailto:info@groupln.be">info@groupln.be</a></span>
+                </text>
+            End If
         </div>
-        <span class="about-cta-mail">of mail rechtstreeks naar <a href="mailto:info@groupln.be">info@groupln.be</a></span>
     </div>
 </section>
 
@@ -234,3 +334,52 @@ End Section
         </div>
     </div>
 </section>
+
+@section scripts
+    <script src="https://www.google.com/recaptcha/api.js?render=@ViewBag.ReCaptchaSiteKey"></script>
+    <script>
+        // Hero-knop: soepel naar het formulier scrollen, onder de vaste header (zoals de ankerlinks op de projectpagina).
+        // Geen globale scroll-behavior: smooth, dat maakt gewoon scrollen traag.
+        (function () {
+            var cta = document.querySelector('.about-hero-cta a[href^="#"]');
+            if (!cta) return;
+            cta.addEventListener('click', function (e) {
+                var target = document.getElementById(cta.getAttribute('href').slice(1));
+                if (!target) return;
+                e.preventDefault();
+                var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                var top = target.getBoundingClientRect().top + window.pageYOffset - 100;
+                window.scrollTo({ top: top, behavior: reduced ? 'auto' : 'smooth' });
+                if (history.replaceState) history.replaceState(null, '', '#' + target.id);
+            });
+        })();
+
+        // reCAPTCHA v3-token ophalen vlak voor het versturen (onzichtbaar voor de bezoeker), zoals op de contactpagina
+        (function () {
+            var form = document.getElementById('grondForm');
+            if (!form) return;
+            if (window.glBusy) {
+                form.addEventListener('submit', function () { window.glBusy(form.querySelector('button[type=submit]'), true, 'Bezig met verzenden…'); });
+            }
+            var siteKey = '@ViewBag.ReCaptchaSiteKey';
+            var action = '@ViewBag.ReCaptchaAction';
+            var input = document.getElementById('gRecaptchaResponse');
+            if (!siteKey || typeof grecaptcha === 'undefined') return;
+
+            form.addEventListener('submit', function (e) {
+                if (form.dataset.captchaReady === '1') return;
+                e.preventDefault();
+                grecaptcha.ready(function () {
+                    grecaptcha.execute(siteKey, { action: action || 'contact' }).then(function (token) {
+                        input.value = token;
+                        form.dataset.captchaReady = '1';
+                        form.submit();
+                    }, function () {
+                        form.dataset.captchaReady = '1';
+                        form.submit();
+                    });
+                });
+            });
+        })();
+    </script>
+End Section

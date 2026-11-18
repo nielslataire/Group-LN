@@ -5,8 +5,8 @@ using System.Collections.Generic;
 namespace DALCore.Models;
 
 /// <summary>
-/// Eén planning van een project (migratie 145): de hoofdplanning (<see cref="IsHoofd"/>, zonder bouwdeel) of de planning van een
-/// bouwdeel (woning of gebouw = <see cref="InvoicingPaymentGroup"/>). Alle plannings van een project worden samen doorgerekend.
+/// Eén planning van een project (migratie 145): de hoofdplanning (<see cref="IsHoofd"/>, zonder bouwdeel) of een planning voor een of meer eenheden
+/// (woningen of een gebouw, zie <see cref="BouwPlanningEenheid"/>). Alle plannings van een project worden samen doorgerekend.
 /// </summary>
 public partial class BouwPlanning
 {
@@ -18,7 +18,7 @@ public partial class BouwPlanning
 
     public bool IsHoofd { get; set; }
 
-    /// <summary>Het bouwdeel (betalingsgroep) van deze planning; null bij de hoofdplanning.</summary>
+    /// <summary>Verouderd sinds migratie 148: de eenheden van een planning staan in <see cref="Eenheden"/>. Wordt niet meer gebruikt.</summary>
     public int? PaymentGroupId { get; set; }
 
     /// <summary>Eerste dag waarop de planning mag starten; null = aanvangsdatum van het project.</summary>
@@ -28,6 +28,9 @@ public partial class BouwPlanning
 
     public bool IsActief { get; set; } = true;
 
+    /// <summary>Het planningssjabloon waaruit deze planning gemaakt is (migratie 147); null = met de hand opgebouwd.</summary>
+    public int? SjabloonId { get; set; }
+
     public DateTime CreatedDate { get; set; }
 
     public virtual Project Project { get; set; }
@@ -35,4 +38,7 @@ public partial class BouwPlanning
     public virtual InvoicingPaymentGroup PaymentGroup { get; set; }
 
     public virtual ICollection<PlanningSectie> PlanningSectie { get; set; } = new List<PlanningSectie>();
+
+    /// <summary>De eenheden (woningen/gebouwen) die tot deze planning behoren; leeg bij de hoofdplanning.</summary>
+    public virtual ICollection<BouwPlanningEenheid> Eenheden { get; set; } = new List<BouwPlanningEenheid>();
 }

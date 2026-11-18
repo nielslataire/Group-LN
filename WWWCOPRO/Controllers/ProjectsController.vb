@@ -168,7 +168,14 @@ Namespace Controllers
             Dim service = ServiceFactory.GetProjectService
             Dim response = service.GetProjectBySlug(slug)
             Dim data = If(response.Success, response.Values.FirstOrDefault, Nothing)
-            If data Is Nothing OrElse data.Id = 0 Then Return HttpNotFound()
+            If data Is Nothing OrElse data.Id = 0 Then
+                ' Oude slug (naam of gemeente is gewijzigd)? Permanent doorsturen naar de huidige slug.
+                Dim huidige = ProjectSlugHistoryReader.CurrentSlugFor(slug)
+                If huidige IsNot Nothing AndAlso Not String.Equals(huidige, slug, StringComparison.OrdinalIgnoreCase) Then
+                    Return RedirectToRoutePermanent("ProjectBySlug", New With {.slug = huidige})
+                End If
+                Return HttpNotFound()
+            End If
 
             ' Eenmaal opgeleverd hoort een project bij de realisaties, niet meer bij de
             ' woonprojecten — permanent doorsturen zodat er geen verouderde "te koop"-pagina
@@ -194,7 +201,13 @@ Namespace Controllers
             Dim service = ServiceFactory.GetProjectService
             Dim response = service.GetProjectBySlug(slug)
             Dim data = If(response.Success, response.Values.FirstOrDefault, Nothing)
-            If data Is Nothing OrElse data.Id = 0 Then Return HttpNotFound()
+            If data Is Nothing OrElse data.Id = 0 Then
+                Dim huidige = ProjectSlugHistoryReader.CurrentSlugFor(slug)
+                If huidige IsNot Nothing AndAlso Not String.Equals(huidige, slug, StringComparison.OrdinalIgnoreCase) Then
+                    Return RedirectToRoutePermanent("CommercieelBySlug", New With {.slug = huidige})
+                End If
+                Return HttpNotFound()
+            End If
 
             If data.Status IsNot Nothing AndAlso data.Status.Id = CInt(ProjectStatusType.Opgeleverd) Then
                 Return RedirectToRoutePermanent("ReferenceBySlug", New With {.slug = slug})
@@ -1195,7 +1208,13 @@ Namespace Controllers
             Dim service = ServiceFactory.GetProjectService
             Dim response = service.GetProjectBySlug(slug)
             If response.Success Then model.Data = response.Values.FirstOrDefault
-            If model.Data Is Nothing OrElse model.Data.Id = 0 Then Return HttpNotFound()
+            If model.Data Is Nothing OrElse model.Data.Id = 0 Then
+                Dim huidige = ProjectSlugHistoryReader.CurrentSlugFor(slug)
+                If huidige IsNot Nothing AndAlso Not String.Equals(huidige, slug, StringComparison.OrdinalIgnoreCase) Then
+                    Return RedirectToRoutePermanent("ProjectInschrijvingBySlug", New With {.slug = huidige})
+                End If
+                Return HttpNotFound()
+            End If
             model.Data.Pictures = model.Data.Pictures.Where(Function(m) Not m.Type = PictureType.Nieuws).ToList
 
             Dim ids As New List(Of Integer)

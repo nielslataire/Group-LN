@@ -1,0 +1,92 @@
+@using BOCore
+@using FacadeCore
+@model List<PlanningSjabloonBeheerRij>
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen › Planningssjablonen: de lijst (design-handoff "CRM Planningssjablonen" 63a). Een sjabloon is een standaardplanning: blokken worden fases, taken krijgen een duur
+    en voorgangers. Kolommen: naam, blokken, taken, duur (in werkdagen, van één woning), reageert op, gebruikt in, gewijzigd, status. Het ⋯-menu (gedeeld .gl-v2-menu, gevuld door
+    gl-v2-instellingen-planningsjabloon-lijst.js) dupliceert, zet (in)actief of verwijdert; verwijderen kan enkel als het nergens gebruikt is en vraagt altijd eerst de bevestigingsmodal.
+*@
+@{
+    ViewData["Title"] = "Planningssjablonen";
+    ViewData["PageIcon"] = "ph ph-calendar-check";
+    ViewData["HelpScreenId"] = "instellingen-planningssjablonen";
+    ViewData["BackUrl"] = Url.Action("Index", "Instellingen");
+    var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsPlanningSjablonen);
+    var canDelete = PermissionService.HasDelete(PermissionCodes.SettingsPlanningSjablonen);
+    var nl = new System.Globalization.CultureInfo("nl-BE");
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-automatisatie.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-planningsjabloon.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @if (canWrite)
+    {
+        <a href="@Url.Action("Nieuw")" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-plus" aria-hidden="true"></i>Nieuw sjabloon</a>
+    }
+}
+
+<div class="gl-v2-auto gl-v2-pls-lijst">
+    <div class="gl-v2-notice gl-v2-notice-compact">
+        <i class="ph ph-info" aria-hidden="true"></i>
+        <span>Een sjabloon is een standaardplanning: blokken worden fases, taken krijgen een duur in werkdagen en voorgangers. Toepassen doe je in <b>Projecten › Planning › Sjabloon</b>, daarna pas je de planning per project aan zonder het sjabloon te wijzigen.</span>
+    </div>
+
+    <section class="gl-v2-section-card">
+        @if (Model.Count == 0)
+        {
+            <div class="gl-v2-blank gl-v2-auto-none is-big">
+                <i class="ph ph-calendar-check" aria-hidden="true"></i><b>Nog geen planningssjablonen</b>
+                <span>Bouw je dezelfde woning meerdere keren, maak dan een sjabloon. Je kan ook een bestaande planning als sjabloon bewaren via Projecten › Planning.</span>
+            </div>
+        }
+        else
+        {
+            <div class="gl-v2-auto-head gl-v2-auto-grid--pls"><span>Naam</span><span class="r">Blokken</span><span class="r">Taken</span><span>Duur</span><span>Reageert op</span><span>Gebruikt in</span><span>Gewijzigd</span><span>Status</span><span></span></div>
+            @foreach (var s in Model)
+            {
+                var gebruikt = s.GebruiktAantal > 0;
+                <div class="gl-v2-auto-row gl-v2-auto-grid--pls gl-v2-listrow @(s.IsActief ? "" : "is-muted-row")" data-row-href="@Url.Action("Bewerken", new { id = s.Id })" data-id="@s.Id" data-naam="@s.Naam" data-actief="@(s.IsActief ? "1" : "0")" data-gebruikt="@s.GebruiktAantal">
+                    <a class="gl-v2-auto-who gl-v2-pls-wie" href="@Url.Action("Bewerken", new { id = s.Id })"><span class="t">@s.Naam</span>@if (!string.IsNullOrWhiteSpace(s.Beschrijving)) { <span class="o">@s.Beschrijving</span> }</a>
+                    <span class="gl-v2-auto-cell r">@s.AantalBlokken</span>
+                    <span class="gl-v2-auto-cell r">@s.AantalTaken</span>
+                    <span class="gl-v2-auto-cell">@(s.Duur > 0 ? s.Duur + " wd" : "—")@if (s.HeeftVerdiepingen) { <span class="gl-v2-pls-verd"> · @s.Verdiepingen verd.</span> }</span>
+                    <span class="gl-v2-auto-cell is-muted gl-v2-pls-trig">@(string.IsNullOrEmpty(s.ReageertOp) ? "Niets — handmatig" : s.ReageertOpTekst)</span>
+                    <span class="gl-v2-auto-cell is-muted gl-v2-pls-gebruik">@if (gebruikt) { @string.Join(", ", s.GebruiktIn)@(s.GebruiktAantal > s.GebruiktIn.Count ? $" +{s.GebruiktAantal - s.GebruiktIn.Count}" : "") } else { <text>—</text> }</span>
+                    <span class="gl-v2-auto-cell is-muted">@(s.GewijzigdOp?.ToLocalTime().ToString("dd/MM/yyyy", nl))@(string.IsNullOrEmpty(s.GewijzigdDoor) ? "" : " · " + s.GewijzigdDoor)</span>
+                    <span><span class="gl-v2-badge @(s.IsActief ? "is-positive" : "is-inactive")">@(s.IsActief ? "Actief" : "Inactief")</span></span>
+                    <span class="gl-v2-auto-acts"><span class="gl-v2-rowact">
+                        <i class="ph ph-caret-right gl-v2-rowact-chev" aria-hidden="true"></i>
+                        <span class="gl-v2-rowact-btns">
+                            <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="pls-lijst-menu" aria-label="Acties voor @s.Naam" title="Meer acties"><i class="ph ph-dots-three" aria-hidden="true"></i></button>
+                        </span>
+                    </span></span>
+                    @* Formulieren voor de menu-acties; het menu stuurt ze door met requestSubmit() zodat de bevestigingsmodal (data-bv-*) werkt. *@
+                    @if (canWrite)
+                    {
+                        <form method="post" action="@Url.Action("Dupliceren", new { id = s.Id })" class="gl-v2-pls-vorm" data-actie="dupliceer">@Html.AntiForgeryToken()</form>
+                        <form method="post" action="@Url.Action("Actief", new { id = s.Id, actief = !s.IsActief })" class="gl-v2-pls-vorm" data-actie="actief">@Html.AntiForgeryToken()</form>
+                    }
+                    @if (canDelete && !gebruikt)
+                    {
+                        <form method="post" action="@Url.Action("Verwijderen", new { id = s.Id })" class="gl-v2-pls-vorm" data-actie="verwijder" data-bv-titel="Sjabloon verwijderen?" data-bv-tekst="Sjabloon “@s.Naam” verwijderen? Dit kan je niet ongedaan maken." data-bv-ok="Verwijderen" data-bv-tone="danger" data-bv-icon="ph-trash">@Html.AntiForgeryToken()</form>
+                    }
+                </div>
+            }
+            <div class="gl-v2-auto-foot">@Model.Count @(Model.Count == 1 ? "sjabloon" : "sjablonen") · ⋯ = dupliceren, inactief zetten of verwijderen (enkel als het nergens gebruikt is)</div>
+        }
+    </section>
+</div>
+
+<div class="gl-v2-menu" id="pls-lijst-menu" role="menu" aria-label="Acties voor dit sjabloon"></div>
+
+@await Html.PartialAsync("GlV2/_BevestigModal")
+
+@section PageScripts
+{
+    <script>window.PlsLijst = { canWrite: @(canWrite ? "true" : "false"), canDelete: @(canDelete ? "true" : "false") };</script>
+    <script src="~/js/gl-v2-instellingen-planningsjabloon-lijst.js" asp-append-version="true"></script>
+}

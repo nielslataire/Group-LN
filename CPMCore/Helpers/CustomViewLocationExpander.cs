@@ -44,6 +44,7 @@ namespace CPMCore.Helpers
             ["HomeHeroProject"]        = "Instellingen/HomeHeroProject",
             ["IssueNotificationAdmin"] = "Instellingen/IssueNotificationAdmin",
             ["TrajectSjabloonAdmin"]   = "Instellingen/TrajectSjabloonAdmin",
+            ["PlanningSjabloonAdmin"]  = "Instellingen/PlanningSjabloonAdmin",
             // Projecten-satellieten
             ["ProjectDossiers"]        = "Projecten/Dossiers",
             ["ProjectTraject"]         = "Projecten/Traject",

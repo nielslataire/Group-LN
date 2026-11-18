@@ -23,6 +23,8 @@ faq:
     a: CPM weigert dat en toont welke taken op elkaar zouden wachten. Er wordt niets bewaard.
   - q: Wat is een beperking?
     a: Een beperking dwingt een datum af, bijvoorbeeld Moet beginnen op. Zo een taak schuift niet mee met haar voorgangers. Niet later dan geeft enkel een waarschuwing.
+  - q: Wat betekenen FS, SS, FF en SF precies?
+    a: Het zegt hoe twee taken aan elkaar hangen. FS (einde naar begin): de volgende taak start pas als de vorige klaar is; dit is de standaard en CPM toont het niet. SS (begin naar begin): beide taken starten samen. FF (einde naar einde): beide taken eindigen samen, de latere kan dus niet vroeger klaar zijn dan de andere. SF (begin naar einde): de taak kan pas eindigen nadat een andere gestart is; dit komt zelden voor. Een wachttijd zoals +3d betekent 3 werkdagen later, −2d betekent 2 werkdagen eerder.
   - q: Wanneer gebruik ik SS, FF of SF?
     a: SS als twee taken samen starten, zoals leidingen en vloerverwarming. FF als ze samen eindigen, zoals een afwerking die niet langer mag duren dan de ruwbouw. SF komt zelden voor. De meeste voorgangers zijn FS.
   - q: Hoe zie ik waarom een taak op een bepaalde dag start?

@@ -5,7 +5,7 @@ parent: project-bewerken
 role: Projectleider
 device: Desktop · tablet
 minutes: 3
-updated: 2026-10-12
+updated: 2026-11-18
 screens: projecten-bewerken
 synonyms: gepubliceerd, website, seo, commerciële titel, seo-titel, meta-omschrijving, publieke projectpagina
 description: de schakelaar Gepubliceerd en het tabblad SEO & website
@@ -24,6 +24,7 @@ faq:
 1. Open **Bewerken** en kies het tabblad **SEO & website**.
 2. Vul de **Titel** en de **Tekst** in. Dit is de tekst die bezoekers op de publieke projectpagina lezen. Je kunt de tekst opmaken met vet, lijsten en links.
 3. Vul eventueel onder **SEO** de **SEO-titel** (maximaal 120 tekens) en de **Meta-omschrijving** in. Google toont die in de zoekresultaten. Laat je ze leeg, dan maakt CPM ze zelf.
+4. Onder **SEO** staat ook de **Slug**: de link van de projectpagina op de website. CPM maakt ze uit de projectnaam en de gemeente. Je kan ze zelf aanpassen, met kleine letters, cijfers en streepjes. Laat je ze leeg, dan maakt CPM ze opnieuw. Een slug mag maar bij één project horen. Wijzig je de slug, dan verwijst de oude link automatisch door naar de nieuwe.
 
 ![De tekst van de publieke projectpagina](/img/help/projecten/project-publiceren/2-website-tekst.png)
 

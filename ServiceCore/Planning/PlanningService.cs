@@ -16,7 +16,7 @@ namespace ServiceCore.Planning;
 public class PlanningService : IPlanningService
 {
     private static readonly CultureInfo Nl = CultureInfo.GetCultureInfo("nl-BE");
-    private static readonly Regex VoorgangerRegex = new(@"^\s*(H:)?(\d+(?:\.\d+)*)\s*(FS|SS|FF|SF)?\s*([+-]\s*\d+)?\s*d?\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex VoorgangerRegex = new(@"^\s*(?:([^:;,]+?)\s*:\s*)?(\d+(?:\.\d+)*)\s*(FS|SS|FF|SF)?\s*([+-]\s*\d+)?\s*d?\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     private readonly cpmRunningContext _db;
@@ -35,6 +35,7 @@ public class PlanningService : IPlanningService
         public required Project Project { get; init; }
         public ProjectPlanning? Kop { get; set; }
         public List<BouwPlanning> Planningen { get; set; } = new();
+        public List<BouwPlanningEenheid> Eenheden { get; set; } = new();
         public List<PlanningSectie> Secties { get; set; } = new();
         public List<PlanningTaak> Taken { get; set; } = new();
         public List<PlanningAfhankelijkheid> Links { get; set; } = new();
@@ -78,6 +79,8 @@ public class PlanningService : IPlanningService
 
         var planningen = await _db.BouwPlanning.Where(b => b.ProjectId == projectId && b.IsActief)
             .OrderByDescending(b => b.IsHoofd).ThenBy(b => b.Volgorde).ThenBy(b => b.Id).ToListAsync();
+        var planningIds = planningen.Select(b => b.Id).ToList();
+        var eenheden = await _db.BouwPlanningEenheid.Where(e => planningIds.Contains(e.BouwPlanningId)).ToListAsync();
         var secties = await _db.PlanningSectie.Where(s => s.ProjectId == projectId && s.IsActief).ToListAsync();
         var sectieIds = secties.Select(s => s.Id).ToList();
         var taken = await _db.PlanningTaak.Where(t => sectieIds.Contains(t.PlanningSectieId)).ToListAsync();
@@ -90,6 +93,7 @@ public class PlanningService : IPlanningService
             Project = project,
             Kop = kop,
             Planningen = planningen,
+            Eenheden = eenheden,
             Secties = secties,
             Taken = taken,
             Links = links,
@@ -162,6 +166,40 @@ public class PlanningService : IPlanningService
         return ids.Distinct().ToDictionary(id => id, id => BouwBoom(d, id));
     }
 
+    /// <summary>Planning-id van het globale overzicht: alle plannings van het project samen, enkel lezen.</summary>
+    public const int GlobaalId = -1;
+
+    /// <summary>
+    /// De boom van het globale overzicht: per planning één groep (een fase met de naam van de planning) met daaronder haar eigen fases en taken.
+    /// De knopen zijn kopieën, zodat de nummering en het niveau van de echte bomen ongemoeid blijven. De WBS-nummers blijven die van de eigen planning.
+    /// </summary>
+    private static List<Knoop> GlobaleBoom(Data d, Doorgerekend dr)
+    {
+        static Knoop Kloon(Knoop k, Knoop? ouder, int niveau)
+        {
+            var n = new Knoop { IsFase = k.IsFase, Sectie = k.Sectie, Taak = k.Taak, Ouder = ouder, Wbs = k.Wbs, Niveau = niveau };
+            foreach (var kind in k.Kinderen) n.Kinderen.Add(Kloon(kind, n, niveau + 1));
+            return n;
+        }
+
+        var lijst = new List<Knoop>();
+        var volgorde = dr.Bomen.Keys.OrderBy(id => id == d.HoofdId ? 0 : 1).ThenBy(id => d.Planningen.FirstOrDefault(p => p.Id == id)?.Volgorde ?? 0).ThenBy(id => id);
+        foreach (var pid in volgorde)
+        {
+            var wortels = dr.Bomen[pid];
+            if (wortels.Count == 0) continue;
+            var bp = d.Planningen.FirstOrDefault(p => p.Id == pid);
+            var kop = new Knoop
+            {
+                IsFase = true, Niveau = 0, Wbs = "",
+                Sectie = new PlanningSectie { Id = -(pid + 1), Naam = bp == null || bp.IsHoofd ? "Hoofdplanning" : bp.Naam, Volgorde = lijst.Count },
+            };
+            foreach (var w in wortels) kop.Kinderen.Add(Kloon(w, kop, 1));
+            lijst.Add(kop);
+        }
+        return lijst;
+    }
+
     private static IEnumerable<Knoop> AllePlat(Dictionary<int, List<Knoop>> bomen) => bomen.Values.SelectMany(Plat);
 
     private static IEnumerable<Knoop> Taken(Knoop fase) => Plat(fase.Kinderen).Where(k => !k.IsFase);
@@ -217,7 +255,7 @@ public class PlanningService : IPlanningService
     {
         var d = await LaadData(projectId);
         if (d == null) return new PlanningStaat { ProjectId = projectId };
-        return await Bouw(d, Rekenen(d), d.Doel(planningId));
+        return await Bouw(d, Rekenen(d), planningId == GlobaalId ? GlobaalId : d.Doel(planningId));
     }
 
     private static string? Iso(DateOnly? d) => d?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
@@ -229,7 +267,8 @@ public class PlanningService : IPlanningService
         var res = dr.Resultaat;
         var kal = d.Kalender;
         var metVerlet = dr.MetVerlet;
-        var boom = dr.Bomen[actief];
+        var globaal = actief == GlobaalId;
+        var boom = globaal ? GlobaleBoom(d, dr) : dr.Bomen[actief];
         var actieveTaken = Plat(boom).Where(k => !k.IsFase).Select(k => k.Taak!).ToList();
         var actieveRes = actieveTaken.Where(t => res.Taken.ContainsKey(t.Id)).Select(t => res.Taken[t.Id]).ToList();
         DateOnly? planStart = actieveRes.Count > 0 ? actieveRes.Min(r => r.Start) : null;
@@ -245,17 +284,30 @@ public class PlanningService : IPlanningService
 
         // WBS per taak-id, voor de weergave van voorgangers: die van de getoonde planning, en die van de hoofdplanning met "H:" ervoor.
         var wbsPerTaak = Plat(boom).Where(k => !k.IsFase).ToDictionary(k => k.Taak!.Id, k => k.Wbs);
-        if (actief != d.HoofdId && dr.Bomen.TryGetValue(d.HoofdId, out var hoofdBoom))
-            foreach (var k in Plat(hoofdBoom).Where(k => !k.IsFase))
-                wbsPerTaak[k.Taak!.Id] = "H:" + k.Wbs;
+        foreach (var (pid, andereBoom) in dr.Bomen.Where(b => b.Key != actief))
+        {
+            var voorvoegsel = pid == d.HoofdId ? "H" : d.Planningen.FirstOrDefault(p => p.Id == pid)?.Naam;
+            if (voorvoegsel == null) continue;
+            foreach (var k in Plat(andereBoom).Where(k => !k.IsFase))
+                wbsPerTaak[k.Taak!.Id] = voorvoegsel + ":" + k.Wbs;
+        }
+
+        // Estafettevoorstellen: dezelfde taak (naam, anders hetzelfde nummer) in elke andere bouwdeelplanning.
+        var actiefIsBouwdeel = d.Planningen.Any(a => a.Id == actief && !a.IsHoofd);
+        var andereTaken = actiefIsBouwdeel
+            ? d.Planningen.Where(p => !p.IsHoofd && p.Id != actief).OrderBy(p => p.Volgorde)
+                .Where(p => dr.Bomen.ContainsKey(p.Id))
+                .Select(p => (Plan: p, Taken: Plat(dr.Bomen[p.Id]).Where(k => !k.IsFase).ToList())).ToList()
+            : new List<(BouwPlanning Plan, List<Knoop> Taken)>();
 
         // Overzicht van alle plannings
-        var bouwdelen = await _db.InvoicingPaymentGroup.AsNoTracking()
-            .Where(g => g.ProjectId == d.Project.ProjectId).OrderBy(g => g.Name)
-            .Select(g => new { g.Id, g.Name }).ToListAsync();
-        var eenhedenPerGroep = await _db.Units.AsNoTracking()
-            .Where(u => u.ProjectId == d.Project.ProjectId && u.PaymentGroupId != null)
-            .GroupBy(u => u.PaymentGroupId!.Value).Select(g => new { g.Key, N = g.Count() }).ToDictionaryAsync(g => g.Key, g => g.N);
+        var eenheden = await (from u in _db.Units.AsNoTracking()
+                              where u.ProjectId == d.Project.ProjectId
+                              join g in _db.InvoicingPaymentGroup.AsNoTracking() on u.PaymentGroupId equals (int?)g.Id into gg
+                              from g in gg.DefaultIfEmpty()
+                              orderby u.Name
+                              select new { u.Id, u.Name, Groep = g.Name }).ToListAsync();
+        var eenheidNaam = eenheden.ToDictionary(e => e.Id, e => e.Name ?? "");
         var lijstPlannings = d.Planningen.Count > 0 ? d.Planningen : new List<BouwPlanning> { new() { Id = 0, Naam = "Hoofdplanning", IsHoofd = true } };
         foreach (var bp in lijstPlannings)
         {
@@ -264,10 +316,10 @@ public class PlanningService : IPlanningService
                 Id = bp.Id,
                 Naam = bp.Naam,
                 IsHoofd = bp.IsHoofd,
-                BouwdeelId = bp.PaymentGroupId,
-                BouwdeelNaam = bp.PaymentGroupId is int gid ? bouwdelen.FirstOrDefault(b => b.Id == gid)?.Name : null,
+                EenheidIds = d.Eenheden.Where(e => e.BouwPlanningId == bp.Id).Select(e => e.UnitId).ToList(),
                 StartDatum = Iso(bp.StartDatum),
             };
+            info.EenhedenTekst = info.EenheidIds.Count == 0 ? null : string.Join(", ", info.EenheidIds.Select(i => eenheidNaam.TryGetValue(i, out var nm) ? nm : "?"));
             if (dr.Bomen.TryGetValue(bp.Id, out var pb))
             {
                 var ts = Plat(pb).Where(k => !k.IsFase && res.Taken.ContainsKey(k.Taak!.Id)).Select(k => res.Taken[k.Taak!.Id]).ToList();
@@ -276,13 +328,11 @@ public class PlanningService : IPlanningService
             }
             staat.Planningen.Add(info);
         }
-        foreach (var g in bouwdelen)
-            staat.Bouwdelen.Add(new PlanningBouwdeelOptie
+        foreach (var e in eenheden)
+            staat.Eenheden.Add(new PlanningEenheidOptie
             {
-                Id = g.Id,
-                Naam = g.Name ?? "",
-                AantalEenheden = eenhedenPerGroep.TryGetValue(g.Id, out var n) ? n : 0,
-                PlanningId = d.Planningen.FirstOrDefault(p => p.PaymentGroupId == g.Id)?.Id,
+                Id = e.Id, Naam = e.Name ?? "", GroepNaam = e.Groep,
+                PlanningId = d.Eenheden.FirstOrDefault(x => x.UnitId == e.Id)?.BouwPlanningId,
             });
 
         // Gekoppelde trajectmijlpalen (de koppeling staat aan de trajectkant: BronBinding = PlanningTaak/PlanningSectie).
@@ -296,6 +346,25 @@ public class PlanningService : IPlanningService
 
         var lots = await _db.ActivityGroup.AsNoTracking().ToDictionaryAsync(g => g.GroupId, g => g.Name);
 
+        // Uitvoerders: bedrijven met een contract in dit project, plus alle die al ergens gekozen zijn.
+        var contractBedrijven = await _db.Contract.AsNoTracking().Where(c => c.ProjectId == d.Project.ProjectId).Select(c => c.CompanyId).Distinct().ToListAsync();
+        var gekozen = d.Secties.Where(s => s.UitvoerderCompanyId != null).Select(s => s.UitvoerderCompanyId!.Value)
+            .Concat(d.Taken.Where(t => t.UitvoerderCompanyId != null).Select(t => t.UitvoerderCompanyId!.Value)).Distinct().ToList();
+        var bedrijfIds = contractBedrijven.Concat(gekozen).Distinct().ToList();
+        var bedrijfNamen = await _db.CompanyInfo.AsNoTracking().Where(c => bedrijfIds.Contains(c.CompanyId))
+            .Select(c => new { c.CompanyId, c.BedrijfsNaam }).ToDictionaryAsync(c => c.CompanyId, c => c.BedrijfsNaam ?? "");
+        foreach (var bid in bedrijfIds.Where(bedrijfNamen.ContainsKey).OrderBy(b => bedrijfNamen[b], StringComparer.CurrentCultureIgnoreCase))
+            staat.Uitvoerders.Add(new PlanningUitvoerderOptie { Id = bid, Naam = bedrijfNamen[bid], InProject = contractBedrijven.Contains(bid) });
+        void ZetEffectief(PlanningRij rij, Knoop knoop)
+        {
+            int? eigen = knoop.IsFase ? knoop.Sectie!.UitvoerderCompanyId : knoop.Taak!.UitvoerderCompanyId;
+            var effectief = eigen;
+            for (var o = knoop.Ouder; effectief == null && o != null; o = o.Ouder) effectief = o.Sectie?.UitvoerderCompanyId;
+            rij.UitvoerderEffectiefId = effectief;
+            rij.UitvoerderGeerfd = eigen == null && effectief != null;
+            rij.UitvoerderNaam = effectief != null && bedrijfNamen.TryGetValue(effectief.Value, out var nm) ? nm : null;
+        }
+
         foreach (var k in Plat(boom))
         {
             var rij = new PlanningRij { Sleutel = k.Sleutel, Id = k.Id, Wbs = k.Wbs, Niveau = k.Niveau, OuderFaseId = k.Ouder?.Sectie?.Id };
@@ -306,6 +375,8 @@ public class PlanningService : IPlanningService
                 rij.Soort = "fase";
                 rij.Naam = s.Naam;
                 rij.TeltMee = s.TeltMeeVoorVoortgang;
+                rij.UitvoerderId = s.UitvoerderCompanyId;
+                ZetEffectief(rij, k);
                 rij.LotId = s.ActivityGroupId;
                 rij.LotNaam = s.ActivityGroupId is int lid && lots.TryGetValue(lid, out var ln) ? ln : null;
                 rij.Mijlpalen = LinksVoor(5, s.Id);
@@ -344,6 +415,12 @@ public class PlanningService : IPlanningService
                 rij.Afgerond = t.IsAfgerond;
                 rij.Kritiek = r.IsKritiek;
                 rij.Speling = r.InCyclus ? null : r.Speling;
+                foreach (var (plan, taken) in andereTaken)
+                {
+                    var match = taken.FirstOrDefault(x => string.Equals(x.Taak!.Naam, t.Naam, StringComparison.OrdinalIgnoreCase))
+                                ?? taken.FirstOrDefault(x => x.Wbs == k.Wbs);
+                    if (match != null) rij.EstafetteVoorstellen.Add(new PlanningEstafetteVoorstel { Planning = plan.Naam, Verwijzing = plan.Naam + ":" + match.Wbs, TaakId = match.Taak!.Id });
+                }
                 rij.Voorgangers = VoorgangersTekst(d.Links.Where(l => l.OpvolgerTaakId == t.Id), wbsPerTaak);
                 rij.VoorgangerLinks = d.Links.Where(l => l.OpvolgerTaakId == t.Id && wbsPerTaak.ContainsKey(l.VoorgangerTaakId))
                     .Select(l => new PlanningLinkInfo { TaakId = l.VoorgangerTaakId, Type = ((PlanLinkType)l.Type).ToString(), Wacht = l.WachtDagen }).ToList();
@@ -355,6 +432,8 @@ public class PlanningService : IPlanningService
                 rij.WerkelijkEinde = Iso(t.AfgerondOp);
                 rij.Notitie = t.Beschrijving;
                 rij.VerantwoordelijkeId = t.VerantwoordelijkeUserId;
+                rij.UitvoerderId = t.UitvoerderCompanyId;
+                ZetEffectief(rij, k);
                 rij.BasisStart = Iso(t.BasisStart);
                 rij.BasisEinde = Iso(t.BasisEinde);
                 if (t.BasisEinde is DateOnly bse) rij.Afwijking = Verschil(kal, bse, r.Einde, metVerlet);
@@ -362,6 +441,26 @@ public class PlanningService : IPlanningService
                 foreach (var w in r.Waarschuwingen) rij.Waarschuwingen.Add(WaarschuwingTekst(w));
             }
             staat.Rijen.Add(rij);
+        }
+
+        staat.Sjablonen = await PlanningSjabloonService.LijstVan(_db);
+
+        // Keuzelijst voor het veld Voorgangers: alle fases en taken van alle plannings, met de tekst die je in het veld zou typen.
+        var keuzeVolgorde = dr.Bomen.Keys
+            .OrderBy(pid => pid == actief ? 0 : pid == d.HoofdId ? 1 : 2)
+            .ThenBy(pid => d.Planningen.FirstOrDefault(p => p.Id == pid)?.Volgorde ?? 0);
+        foreach (var pid in keuzeVolgorde)
+        {
+            var pl = d.Planningen.FirstOrDefault(p => p.Id == pid);
+            var planningNaam = pl?.Naam ?? "Hoofdplanning";
+            var voorvoegsel = pid == actief ? "" : pid == d.HoofdId ? "H:" : planningNaam + ":";
+            foreach (var k in Plat(dr.Bomen[pid]))
+                staat.Keuzes.Add(new PlanningKeuze
+                {
+                    Verwijzing = voorvoegsel + k.Wbs, PlanningId = pid, Planning = planningNaam, IsEigen = pid == actief,
+                    Wbs = k.Wbs, Naam = k.IsFase ? k.Sectie!.Naam : k.Taak!.Naam, IsFase = k.IsFase, Niveau = k.Niveau,
+                    TaakId = k.IsFase ? null : k.Taak!.Id,
+                });
         }
 
         // Mijlpalen uit het Traject die aan de planning gekoppeld kunnen worden: vrije (handmatige) en die al aan de planning hangen.
@@ -460,7 +559,7 @@ public class PlanningService : IPlanningService
             }
         }
 
-        foreach (var rij in staat.Rijen.Where(r => r.Soort == "taak"))
+        foreach (var rij in staat.Rijen.Where(r => r.Soort == "taak" && !globaal))
             foreach (var w in res.Taken[rij.Id].Waarschuwingen)
                 staat.Meldingen.Add(new PlanningMelding
                 {
@@ -528,6 +627,7 @@ public class PlanningService : IPlanningService
         var voor = d.Taken.ToDictionary(t => t.Id, t => (t.Startdatum, t.Einddatum));
         var voorEinde = d.Taken.Count > 0 ? d.Taken.Max(t => t.Einddatum) : null;
         var bewerkt = new HashSet<string>();
+        var waarschuwingen = new List<string>();
 
         await using var tx = await _db.Database.BeginTransactionAsync();
         try
@@ -551,6 +651,8 @@ public class PlanningService : IPlanningService
                 "planningToevoegen" => await PlanningToevoegen(d, c, bewerkt),
                 "planningWijzig" => await PlanningWijzig(d, c),
                 "planningVerwijder" => await PlanningVerwijder(d, c),
+                "sjabloonToepassen" => await SjabloonToepassen(d, c, bewerkt, waarschuwingen),
+                "importeren" => await Importeren(d, c, bewerkt, waarschuwingen),
                 _ => "Onbekende actie.",
             };
             if (fout != null) { await tx.RollbackAsync(); _db.ChangeTracker.Clear(); return new PlanningUitkomst { Fout = fout }; }
@@ -576,7 +678,7 @@ public class PlanningService : IPlanningService
             await HerberekenTrajectAsync(projectId);
 
             // Plannings aanmaken, wijzigen of verwijderen is niet ongedaan te maken met een momentopname van de fases.
-            var planningCommando = c.Type.StartsWith("planning", StringComparison.Ordinal);
+            var planningCommando = c.Type.StartsWith("planning", StringComparison.Ordinal) || c.Type == "sjabloonToepassen" || c.Type == "importeren";
             var nieuw = bewerkt.FirstOrDefault(b => b.StartsWith("p", StringComparison.Ordinal));
             int? nieuwId = nieuw != null && int.TryParse(nieuw[1..], out var np) ? np : null;
             var toon = c.Type == "planningVerwijder" ? d.HoofdId : d.Doel(nieuwId ?? c.PlanningId);
@@ -585,6 +687,7 @@ public class PlanningService : IPlanningService
                 Ok = true,
                 Undo = planningCommando ? null : voorSnap,
                 NieuwePlanningId = nieuwId,
+                Waarschuwingen = waarschuwingen,
                 Staat = await Bouw(d, dr, toon),
             };
 
@@ -790,6 +893,11 @@ public class PlanningService : IPlanningService
             var s = notitie.ValueKind == JsonValueKind.String ? notitie.GetString() : null;
             t.Beschrijving = string.IsNullOrWhiteSpace(s) ? null : (s!.Length > 1000 ? s[..1000] : s);
         }
+        if (v.TryGetValue("uitvoerder", out var uitv))
+        {
+            if (!TryInt(uitv, out var uid)) return "Ongeldige uitvoerder.";
+            t.UitvoerderCompanyId = uid is > 0 ? uid : null;
+        }
         if (v.TryGetValue("verantwoordelijke", out var wie))
             t.VerantwoordelijkeUserId = wie.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(wie.GetString()) ? wie.GetString() : null;
 
@@ -853,6 +961,11 @@ public class PlanningService : IPlanningService
             if (string.IsNullOrEmpty(n)) return "Geef de fase een naam.";
             s.Naam = n.Length > 200 ? n[..200] : n;
         }
+        if (v.TryGetValue("uitvoerder", out var uitv))
+        {
+            if (!TryInt(uitv, out var uid)) return "Ongeldige uitvoerder.";
+            s.UitvoerderCompanyId = uid is > 0 ? uid : null;
+        }
         if (v.TryGetValue("lotId", out var lot))
         {
             if (!TryInt(lot, out var id)) return "Ongeldig budgetlot.";
@@ -876,8 +989,8 @@ public class PlanningService : IPlanningService
         uit = new List<(int, byte, int)>();
         if (string.IsNullOrWhiteSpace(tekst)) return null;
         var perWbs = Plat(BouwBoom(d, planningId)).ToDictionary(k => k.Wbs, k => k);
-        // "H:3.1" verwijst naar de hoofdplanning (enkel vanuit een bouwdeelplanning).
-        var perHoofdWbs = planningId == d.HoofdId ? null : Plat(BouwBoom(d, d.HoofdId)).ToDictionary(k => k.Wbs, k => k);
+        // "H:3.1" verwijst naar de hoofdplanning, "Woning 1:3.2" naar een andere planning (estafette).
+        Dictionary<string, Knoop> WbsVan(int pid) => Plat(BouwBoom(d, pid)).ToDictionary(k => k.Wbs, k => k);
 
         foreach (var deel in tekst.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
         {
@@ -887,8 +1000,19 @@ public class PlanningService : IPlanningService
             Knoop? knoop;
             if (m.Groups[1].Success)
             {
-                if (perHoofdWbs == null) return "“H:” verwijst naar de hoofdplanning en kan enkel in een bouwdeelplanning.";
-                if (!perHoofdWbs.TryGetValue(nummer, out knoop)) return $"Taak H:{nummer} bestaat niet in de hoofdplanning.";
+                var voor = m.Groups[1].Value.Trim();
+                if (voor.Equals("H", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (planningId == d.HoofdId) return "“H:” verwijst naar de hoofdplanning en kan enkel in een bouwdeelplanning.";
+                    if (!WbsVan(d.HoofdId).TryGetValue(nummer, out knoop)) return $"Taak H:{nummer} bestaat niet in de hoofdplanning.";
+                }
+                else
+                {
+                    var doel = d.Planningen.FirstOrDefault(p => !p.IsHoofd && p.Naam.Equals(voor, StringComparison.OrdinalIgnoreCase));
+                    if (doel == null) return $"Er is geen planning “{voor}”. Typ de naam van een planning, gevolgd door een dubbelpunt en het taaknummer, bv. {(d.Planningen.FirstOrDefault(p => !p.IsHoofd)?.Naam ?? "Woning 1")}:3.2.";
+                    if (doel.Id == planningId) return $"“{voor}” is deze planning zelf. Typ gewoon het nummer, bv. {nummer}.";
+                    if (!WbsVan(doel.Id).TryGetValue(nummer, out knoop)) return $"Taak {nummer} bestaat niet in {doel.Naam}.";
+                }
             }
             else if (!perWbs.TryGetValue(nummer, out knoop)) return $"Taak {nummer} bestaat niet.";
             var type = m.Groups[3].Success ? (byte)Enum.Parse<PlanLinkType>(m.Groups[3].Value.ToUpperInvariant()) : (byte)PlanLinkType.FS;
@@ -903,20 +1027,10 @@ public class PlanningService : IPlanningService
         return null;
     }
 
-    /// <summary>
-    /// Vervangt de voorgangers die je in de pagina ziet: die uit dezelfde planning en uit de hoofdplanning. Voorgangers uit een andere
-    /// bouwdeelplanning (estafette) staan niet in dat veld en blijven dus behouden.
-    /// </summary>
+    /// <summary>Vervangt alle voorgangers van de taak: uit dezelfde planning, de hoofdplanning en andere plannings (estafette) staan allemaal in het veld.</summary>
     private void ZetVoorgangers(int opvolgerId, List<(int Taak, byte Type, int Wacht)> nieuw, Data d, int planningId)
     {
-        bool Zichtbaar(int voorgangerId)
-        {
-            var t = d.Taken.FirstOrDefault(x => x.Id == voorgangerId);
-            if (t == null) return true;
-            var pid = d.PlanningVanTaak(t);
-            return pid == planningId || pid == d.HoofdId;
-        }
-        foreach (var l in d.Links.Where(l => l.OpvolgerTaakId == opvolgerId && Zichtbaar(l.VoorgangerTaakId)).ToList())
+        foreach (var l in d.Links.Where(l => l.OpvolgerTaakId == opvolgerId).ToList())
         {
             _db.PlanningAfhankelijkheid.Remove(l);
             d.Links.Remove(l);
@@ -1164,13 +1278,48 @@ public class PlanningService : IPlanningService
             if (!TryDatum(sd, out var dat, out var f)) return f;
             bp.StartDatum = dat;
         }
-        if (v.TryGetValue("bouwdeelId", out var bd))
-        {
-            if (!TryInt(bd, out var gid)) return "Ongeldig bouwdeel.";
-            if (bp.IsHoofd && gid != null) return "De hoofdplanning hoort bij het hele project en kan niet aan een bouwdeel hangen.";
-            bp.PaymentGroupId = gid;
-        }
         return null;
+    }
+
+    /// <summary>Leest "eenheden" (een lijst eenheid-id's) uit de velden; null als het veld ontbreekt.</summary>
+    private static List<int>? LeesEenheden(Dictionary<string, JsonElement>? v, out string? fout)
+    {
+        fout = null;
+        if (v == null || !v.TryGetValue("eenheden", out var el)) return null;
+        var lijst = new List<int>();
+        if (el.ValueKind == JsonValueKind.Array)
+            foreach (var x in el.EnumerateArray())
+            {
+                if (x.ValueKind == JsonValueKind.Number && x.TryGetInt32(out var n)) lijst.Add(n);
+                else if (x.ValueKind == JsonValueKind.String && int.TryParse(x.GetString(), out var n2)) lijst.Add(n2);
+                else { fout = "Ongeldige eenheid."; return null; }
+            }
+        else if (el.ValueKind != JsonValueKind.Null) { fout = "Ongeldige eenheden."; return null; }
+        return lijst;
+    }
+
+    /// <summary>De eenheden moeten bij dit project horen en mogen nog in geen andere planning zitten.</summary>
+    private async Task<string?> ControleerEenheden(Data d, BouwPlanning bp, List<int> ids)
+    {
+        if (ids.Count == 0) return null;
+        if (bp.IsHoofd) return "De hoofdplanning hoort bij het hele project en heeft geen eenheden.";
+        if (ids.Distinct().Count() != ids.Count) return "Een eenheid staat twee keer in de lijst.";
+        var geldig = await _db.Units.CountAsync(u => ids.Contains(u.Id) && u.ProjectId == d.Project.ProjectId);
+        if (geldig != ids.Count) return "Een gekozen eenheid hoort niet bij dit project.";
+        if (d.Eenheden.Any(e => ids.Contains(e.UnitId) && e.BouwPlanningId != bp.Id)) return "Een gekozen eenheid zit al in een andere planning.";
+        return null;
+    }
+
+    /// <summary>Zet de eenheden van een (al bewaarde) planning op exact deze lijst.</summary>
+    private async Task ZetEenheden(Data d, BouwPlanning bp, List<int> ids)
+    {
+        foreach (var weg in d.Eenheden.Where(e => e.BouwPlanningId == bp.Id && !ids.Contains(e.UnitId)).ToList()) { _db.BouwPlanningEenheid.Remove(weg); d.Eenheden.Remove(weg); }
+        foreach (var id in ids.Where(i => !d.Eenheden.Any(e => e.BouwPlanningId == bp.Id && e.UnitId == i)))
+        {
+            var nieuw = new BouwPlanningEenheid { BouwPlanningId = bp.Id, UnitId = id };
+            _db.BouwPlanningEenheid.Add(nieuw); d.Eenheden.Add(nieuw);
+        }
+        await _db.SaveChangesAsync();
     }
 
     private async Task<string?> PlanningToevoegen(Data d, PlanningCommando c, HashSet<string> bewerkt)
@@ -1183,12 +1332,17 @@ public class PlanningService : IPlanningService
         var fout = PlanningVelden(bp, c.Velden ?? new Dictionary<string, JsonElement>());
         if (fout != null) return fout;
         if (string.IsNullOrWhiteSpace(bp.Naam)) return "Geef de planning een naam.";
-        fout = await ControleerBouwdeel(d, bp);
+        fout = ControleerNaam(d, bp);
+        if (fout != null) return fout;
+        var eenheden = LeesEenheden(c.Velden, out fout);
+        if (fout != null) return fout;
+        fout = await ControleerEenheden(d, bp, eenheden ?? new List<int>());
         if (fout != null) return fout;
 
         _db.BouwPlanning.Add(bp);
         await _db.SaveChangesAsync();
         d.Planningen.Add(bp);
+        if (eenheden is { Count: > 0 }) await ZetEenheden(d, bp, eenheden);
         bewerkt.Add("p" + bp.Id);
         return null;
     }
@@ -1199,16 +1353,307 @@ public class PlanningService : IPlanningService
         if (bp == null) return "De planning bestaat niet meer.";
         var fout = PlanningVelden(bp, c.Velden ?? new Dictionary<string, JsonElement>());
         if (fout != null) return fout;
-        return await ControleerBouwdeel(d, bp);
+        fout = ControleerNaam(d, bp);
+        if (fout != null) return fout;
+        var eenheden = LeesEenheden(c.Velden, out fout);
+        if (fout != null) return fout;
+        if (eenheden != null)
+        {
+            fout = await ControleerEenheden(d, bp, eenheden);
+            if (fout != null) return fout;
+            await ZetEenheden(d, bp, eenheden);
+        }
+        else await _db.SaveChangesAsync();
+        return null;
     }
 
-    /// <summary>Het bouwdeel moet bij dit project horen en nog geen andere planning hebben.</summary>
-    private async Task<string?> ControleerBouwdeel(Data d, BouwPlanning bp)
+    /// <summary>De naam van een bouwplanning moet bruikbaar zijn als verwijzing in het veld Voorgangers en uniek zijn.</summary>
+    private static string? ControleerNaam(Data d, BouwPlanning bp)
     {
-        if (bp.PaymentGroupId is not int gid) return null;
-        var bestaat = await _db.InvoicingPaymentGroup.AnyAsync(g => g.Id == gid && g.ProjectId == d.Project.ProjectId);
-        if (!bestaat) return "Dit bouwdeel hoort niet bij dit project.";
-        if (d.Planningen.Any(p => p.Id != bp.Id && p.PaymentGroupId == gid)) return "Dit bouwdeel heeft al een planning.";
+        if (!bp.IsHoofd)
+        {
+            if (bp.Naam.IndexOfAny(new[] { ':', ';', ',' }) >= 0) return "Een planningsnaam mag geen dubbelpunt, puntkomma of komma bevatten: je gebruikt de naam om in het veld Voorgangers naar de planning te verwijzen.";
+            if (bp.Naam.Equals("H", StringComparison.OrdinalIgnoreCase)) return "De naam “H” is gereserveerd voor de hoofdplanning.";
+            if (d.Planningen.Any(p => p.Id != bp.Id && !p.IsHoofd && p.Naam.Equals(bp.Naam, StringComparison.OrdinalIgnoreCase))) return "Er bestaat al een planning met deze naam.";
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Rolt een sjabloon uit tot een planning per gekozen rij (in de gekozen volgorde): een bestaande planning die het sjabloon vult of vervangt,
+    /// of een nieuwe planning voor een of meer eenheden zonder planning. Taken met de estafettevlag wachten op dezelfde taak
+    /// in de planning ervoor. Niet ongedaan te maken met een momentopname; verwijder de planningen om terug te keren.
+    /// </summary>
+    private async Task<string?> SjabloonToepassen(Data d, PlanningCommando c, HashSet<string> bewerkt, List<string> waarschuwingen)
+    {
+        var t = c.Toepassing;
+        if (t == null || t.Planningen.Count == 0) return "Kies minstens één planning of woning.";
+        var sjabloon = await _db.PlanningSjabloon.Include(s => s.Blokken).ThenInclude(b => b.Taken).ThenInclude(x => x.Voorgangers)
+            .FirstOrDefaultAsync(s => s.Id == t.SjabloonId && s.IsActief);
+        if (sjabloon == null) return "Het sjabloon bestaat niet meer.";
+        if (sjabloon.Blokken.Count == 0) return "Dit sjabloon is leeg.";
+
+        // Elke rij omzetten naar: de bestaande planning (of null) en de naam voor een nieuwe planning.
+        var rijen = new List<(PlanningToepassingPlanning B, BouwPlanning? Bestaand, string Naam)>();
+        var gebruikteEenheden = new HashSet<int>();
+        var bestaandeIds = new HashSet<int>();
+        foreach (var b in t.Planningen)
+        {
+            if (b.PlanningId is int pid && pid != 0)
+            {
+                var bestaand = d.Planningen.FirstOrDefault(p => p.Id == pid);
+                if (bestaand == null) return "Een gekozen planning bestaat niet meer.";
+                if (bestaand.IsHoofd) return "De hoofdplanning kan niet door een sjabloon vervangen worden.";
+                if (!bestaandeIds.Add(pid)) return $"{bestaand.Naam} staat twee keer in de lijst.";
+                if (!b.Vervang && d.Taken.Any(x => d.Secties.Any(s => s.Id == x.PlanningSectieId && d.PlanningVan(s) == bestaand.Id)))
+                    return $"{bestaand.Naam} heeft al taken. Bevestig dat het sjabloon die mag vervangen.";
+                rijen.Add((b, bestaand, bestaand.Naam));
+            }
+            else
+            {
+                if (b.EenheidIds.Count == 0) return "Kies bij een nieuwe planning minstens één woning of gebouw.";
+                if (b.EenheidIds.Any(i => !gebruikteEenheden.Add(i))) return "Een woning of gebouw staat twee keer in de lijst.";
+                var eenheden = await _db.Units.AsNoTracking().Where(u => b.EenheidIds.Contains(u.Id) && u.ProjectId == d.Project.ProjectId).ToListAsync();
+                if (eenheden.Count != b.EenheidIds.Count) return "Een gekozen woning of gebouw hoort niet bij dit project.";
+                if (d.Eenheden.Any(e => b.EenheidIds.Contains(e.UnitId))) return "Een gekozen woning of gebouw zit al in een planning.";
+                var eerste = eenheden.OrderBy(u => b.EenheidIds.IndexOf(u.Id)).First();
+                var naam = (eerste.Name ?? "").Trim() + (eenheden.Count > 1 ? " e.a." : "");
+                var fout = ControleerNaam(d, new BouwPlanning { Naam = naam });
+                if (fout != null) return string.IsNullOrWhiteSpace(naam) ? "Een gekozen woning heeft geen naam." : $"{fout} (planning “{naam}”)";
+                if (rijen.Any(r => r.Bestaand == null && r.Naam.Equals(naam, StringComparison.OrdinalIgnoreCase))) return $"Er komen twee plannings met de naam {naam}.";
+                rijen.Add((b, null, naam));
+            }
+        }
+
+        var volgorde = (d.Planningen.Count == 0 ? 0 : d.Planningen.Max(p => p.Volgorde)) + 10;
+        Dictionary<string, int>? vorigeTaken = null;
+        var eersteNieuw = true;
+        foreach (var (b, bestaand, naam) in rijen)
+        {
+            DateOnly? start = null;
+            if (!string.IsNullOrWhiteSpace(b.StartDatum))
+            {
+                if (!DateOnly.TryParse(b.StartDatum, out var sd)) return $"Ongeldige startdatum bij {naam}.";
+                start = sd;
+            }
+            var bp = bestaand;
+            if (bp != null)
+            {
+                // Bestaande planning: haal de fases en taken weg en vul ze met het sjabloon.
+                var wortels = d.Secties.Where(s => s.ParentSectieId == null && d.PlanningVan(s) == bp.Id).ToList();
+                if (wortels.Count > 0)
+                {
+                    var fout = await Verwijder(d, new PlanningCommando { Items = wortels.Select(w => new PlanningItemRef { Soort = "fase", Id = w.Id }).ToList() });
+                    if (fout != null) return fout;
+                }
+                bp.SjabloonId = sjabloon.Id;
+                if (start != null) bp.StartDatum = start;
+                await _db.SaveChangesAsync();
+            }
+            else
+            {
+                bp = new BouwPlanning { ProjectId = d.Project.ProjectId, Naam = naam, IsHoofd = false, StartDatum = start, Volgorde = volgorde, IsActief = true, SjabloonId = sjabloon.Id, CreatedDate = DateTime.UtcNow };
+                volgorde += 10;
+                _db.BouwPlanning.Add(bp);
+                await _db.SaveChangesAsync();
+                d.Planningen.Add(bp);
+                await ZetEenheden(d, bp, b.EenheidIds);
+            }
+            if (eersteNieuw) { bewerkt.Add("p" + bp.Id); eersteNieuw = false; }
+
+            var uit = PlanningSjabloonUitrol.Rol(sjabloon, new SjabloonVariabelen(Math.Max(1, b.Verdiepingen), b.Kelder, b.Dak));
+            foreach (var w in uit.Waarschuwingen) waarschuwingen.Add($"{naam}: {w}");
+
+            var taakIdPerSleutel = new Dictionary<string, int>();
+            var uitTaken = new List<(UitgerolTaak Uit, PlanningTaak Taak)>();
+            var faseVolgorde = 10;
+            foreach (var f in uit.Fases)
+            {
+                var sectie = new PlanningSectie { ProjectId = d.Project.ProjectId, Naam = f.Naam, Volgorde = faseVolgorde, IsActief = true, BouwPlanningId = bp.Id };
+                faseVolgorde += 10;
+                _db.PlanningSectie.Add(sectie);
+                await _db.SaveChangesAsync();
+                d.Secties.Add(sectie);
+                var tv = 10;
+                foreach (var ut in f.Taken)
+                {
+                    var taak = new PlanningTaak { PlanningSectieId = sectie.Id, Naam = ut.Naam, Beschrijving = ut.Beschrijving, Duur = ut.Duur, Volgorde = tv };
+                    tv += 10;
+                    _db.PlanningTaak.Add(taak);
+                    uitTaken.Add((ut, taak));
+                }
+                await _db.SaveChangesAsync();
+                foreach (var (ut, taak) in uitTaken.Where(x => x.Taak.PlanningSectieId == sectie.Id)) { taakIdPerSleutel[ut.Sleutel] = taak.Id; d.Taken.Add(taak); }
+            }
+
+            foreach (var (ut, taak) in uitTaken)
+            {
+                foreach (var (sleutel, type, wacht) in ut.Voorgangers)
+                    if (taakIdPerSleutel.TryGetValue(sleutel, out var vid))
+                        _db.PlanningAfhankelijkheid.Add(new PlanningAfhankelijkheid { VoorgangerTaakId = vid, OpvolgerTaakId = taak.Id, Type = type, WachtDagen = wacht });
+                // Estafette: dezelfde taak in het vorige bouwdeel moet klaar zijn.
+                if (ut.Estafette && vorigeTaken != null && vorigeTaken.TryGetValue(ut.Sleutel, out var vorigId))
+                    _db.PlanningAfhankelijkheid.Add(new PlanningAfhankelijkheid { VoorgangerTaakId = vorigId, OpvolgerTaakId = taak.Id, Type = (byte)PlanLinkType.FS, WachtDagen = ut.EstafetteWacht });
+            }
+            await _db.SaveChangesAsync();
+            vorigeTaken = taakIdPerSleutel;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Zet de regels van een ingelezen MS Project-bestand om in fases, taken en voorgangers: in een nieuwe planning, of achteraan in
+    /// (of in plaats van de inhoud van) een bestaande planning. Valt de import in een kring, dan gebeurt er niets (de transactie draait terug).
+    /// </summary>
+    private async Task<string?> Importeren(Data d, PlanningCommando c, HashSet<string> bewerkt, List<string> waarschuwingen)
+    {
+        var imp = c.Import;
+        if (imp == null || imp.Rijen.Count == 0) return "Er is niets om te importeren.";
+        if (imp.Rijen.Count > MsProjectXmlParser.MaxRijen) return $"Een import mag hoogstens {MsProjectXmlParser.MaxRijen} regels hebben.";
+        if (imp.Rijen.Any(r => string.IsNullOrWhiteSpace(r.Naam))) return "Een regel heeft geen naam.";
+        if (imp.Rijen.Select(r => r.Uid).Distinct().Count() != imp.Rijen.Count) return "Het bestand bevat regels met hetzelfde nummer.";
+        if (!imp.Rijen.Any(r => r.Soort != "fase")) return "Er staan geen taken in dit bestand.";
+
+        DateOnly? nieuweStart = null;
+        if (imp.StartModus == "nieuw")
+        {
+            if (!DateOnly.TryParse(imp.StartDatum, CultureInfo.InvariantCulture, out var sd)) return "Geef een geldige nieuwe startdatum.";
+            nieuweStart = sd;
+        }
+        else if (imp.StartModus == "bestand" && DateOnly.TryParse(imp.BestandStart, CultureInfo.InvariantCulture, out var bs)) nieuweStart = bs;
+
+        BouwPlanning bp;
+        if (imp.Nieuw)
+        {
+            bp = new BouwPlanning
+            {
+                ProjectId = d.Project.ProjectId, Naam = (imp.Naam ?? "").Trim(), IsHoofd = false, IsActief = true, CreatedDate = DateTime.UtcNow,
+                Volgorde = (d.Planningen.Count == 0 ? 0 : d.Planningen.Max(p => p.Volgorde)) + 10, StartDatum = nieuweStart,
+            };
+            if (bp.Naam.Length > 200) bp.Naam = bp.Naam[..200];
+            if (string.IsNullOrWhiteSpace(bp.Naam)) return "Geef de planning een naam.";
+            var naamFout = ControleerNaam(d, bp);
+            if (naamFout != null) return naamFout;
+            var eenheidFout = await ControleerEenheden(d, bp, imp.EenheidIds);
+            if (eenheidFout != null) return eenheidFout;
+            _db.BouwPlanning.Add(bp);
+            await _db.SaveChangesAsync();
+            d.Planningen.Add(bp);
+            if (imp.EenheidIds.Count > 0) await ZetEenheden(d, bp, imp.EenheidIds);
+            bewerkt.Add("p" + bp.Id);
+        }
+        else
+        {
+            var gevonden = d.Planningen.FirstOrDefault(p => p.Id == (c.PlanningId is null or 0 ? d.HoofdId : c.PlanningId));
+            if (gevonden == null) return "De planning bestaat niet meer.";
+            bp = gevonden;
+            if (imp.Modus == "vervangen")
+            {
+                var wortels = d.Secties.Where(s => s.ParentSectieId == null && d.PlanningVan(s) == bp.Id).ToList();
+                if (wortels.Count > 0)
+                {
+                    var fout = await Verwijder(d, new PlanningCommando { Items = wortels.Select(w => new PlanningItemRef { Soort = "fase", Id = w.Id }).ToList() });
+                    if (fout != null) return fout;
+                }
+            }
+            if (nieuweStart != null && imp.StartModus == "nieuw") bp.StartDatum = nieuweStart;
+            await _db.SaveChangesAsync();
+        }
+
+        static DateOnly? Dat(string? s) => DateOnly.TryParse(s, CultureInfo.InvariantCulture, out var x) ? x : null;
+        var rootVolgorde = d.Secties.Where(s => s.ParentSectieId == null && d.PlanningVan(s) == bp.Id).Select(s => s.Volgorde).DefaultIfEmpty(0).Max() + 10;
+        var open = new List<(int Niveau, int Uid, PlanningSectie Sectie)>();    // de fases waarin we nu zitten
+        PlanningSectie? standaardFase = null;
+        var taakPerUid = new Dictionary<int, PlanningTaak>();
+        var eersteTaakVanFase = new Dictionary<int, PlanningTaak>();             // uid van de fase → haar eerste taak
+        var nieuweTaken = new List<PlanningTaak>();
+
+        foreach (var r in imp.Rijen)
+        {
+            while (open.Count > 0 && open[^1].Niveau >= r.Niveau) open.RemoveAt(open.Count - 1);
+            var ouder = open.Count > 0 ? open[^1].Sectie : null;
+            if (r.Soort == "fase")
+            {
+                var sectie = new PlanningSectie
+                {
+                    ProjectId = d.Project.ProjectId, Naam = r.Naam.Length > 300 ? r.Naam[..300] : r.Naam, IsActief = true, BouwPlanningId = bp.Id,
+                    ParentSectieId = ouder?.Id,
+                    Volgorde = ouder == null ? rootVolgorde : d.Secties.Where(s => s.ParentSectieId == ouder.Id).Select(s => s.Volgorde).DefaultIfEmpty(0).Max() + 10,
+                };
+                if (ouder == null) rootVolgorde += 10;
+                _db.PlanningSectie.Add(sectie);
+                await _db.SaveChangesAsync();
+                d.Secties.Add(sectie);
+                open.Add((r.Niveau, r.Uid, sectie));
+                continue;
+            }
+
+            var doel = ouder;
+            if (doel == null)
+            {
+                if (standaardFase == null)
+                {
+                    standaardFase = new PlanningSectie { ProjectId = d.Project.ProjectId, Naam = "Taken", IsActief = true, BouwPlanningId = bp.Id, Volgorde = rootVolgorde };
+                    rootVolgorde += 10;
+                    _db.PlanningSectie.Add(standaardFase);
+                    await _db.SaveChangesAsync();
+                    d.Secties.Add(standaardFase);
+                }
+                doel = standaardFase;
+            }
+            var taak = new PlanningTaak
+            {
+                PlanningSectieId = doel.Id, Naam = r.Naam.Length > 300 ? r.Naam[..300] : r.Naam, Beschrijving = r.Notitie,
+                Duur = r.Soort == "mijlpaal" ? 0 : Math.Clamp(r.Duur, 0, 3650),
+                Volgorde = d.Taken.Where(t => t.PlanningSectieId == doel.Id).Select(t => t.Volgorde).DefaultIfEmpty(0).Max() + 10,
+                VoortgangPct = Math.Clamp(r.Voortgang, 0, 100),
+                BeperkingType = r.Beperking <= 6 ? r.Beperking : (byte)0, BeperkingDatum = Dat(r.BeperkingDatum),
+                Deadline = Dat(r.Deadline), WerkelijkStart = Dat(r.WerkelijkStart),
+                BasisStart = Dat(r.BasisStart), BasisEinde = Dat(r.BasisEinde),
+            };
+            if (taak.BeperkingType != 0 && taak.BeperkingDatum == null) taak.BeperkingType = 0;
+            // Uitvoerder: de eerste resource met een koppeling; alle andere namen komen als tekst in de notitie.
+            if (r.Resources.Count > 0)
+            {
+                var niet = new List<string>();
+                foreach (var rn in r.Resources)
+                {
+                    if (taak.UitvoerderCompanyId == null && imp.Uitvoerders.TryGetValue(rn, out var cid) && cid > 0) taak.UitvoerderCompanyId = cid;
+                    else if (!(imp.Uitvoerders.TryGetValue(rn, out var cid2) && cid2 > 0 && cid2 == taak.UitvoerderCompanyId)) niet.Add(rn);
+                }
+                if (niet.Count > 0)
+                {
+                    var tekst = "Uitvoerder (uit MS Project): " + string.Join(", ", niet);
+                    taak.Beschrijving = string.IsNullOrWhiteSpace(taak.Beschrijving) ? tekst : taak.Beschrijving + "\n" + tekst;
+                    if (taak.Beschrijving.Length > 1000) taak.Beschrijving = taak.Beschrijving[..1000];
+                }
+            }
+            if (taak.VoortgangPct >= 100) { taak.IsAfgerond = true; taak.AfgerondOp = Dat(r.WerkelijkEinde) ?? Dat(r.Einde); }
+            _db.PlanningTaak.Add(taak);
+            await _db.SaveChangesAsync();
+            d.Taken.Add(taak);
+            taakPerUid[r.Uid] = taak;
+            nieuweTaken.Add(taak);
+            foreach (var (_, uid, _) in open) eersteTaakVanFase.TryAdd(uid, taak);
+        }
+
+        // Voorgangers. Een fase als opvolger geldt voor haar eerste taak (de parser zet de voorganger bij de fase).
+        foreach (var r in imp.Rijen)
+        {
+            if (r.Voorgangers.Count == 0) continue;
+            var opvolger = taakPerUid.TryGetValue(r.Uid, out var t0) ? t0 : (eersteTaakVanFase.TryGetValue(r.Uid, out var t1) ? t1 : null);
+            if (opvolger == null) continue;
+            foreach (var v in r.Voorgangers)
+            {
+                if (!taakPerUid.TryGetValue(v.Uid, out var voor) || voor.Id == opvolger.Id) continue;
+                var type = v.Type switch { "SS" => PlanLinkType.SS, "FF" => PlanLinkType.FF, "SF" => PlanLinkType.SF, _ => PlanLinkType.FS };
+                _db.PlanningAfhankelijkheid.Add(new PlanningAfhankelijkheid { VoorgangerTaakId = voor.Id, OpvolgerTaakId = opvolger.Id, Type = (byte)type, WachtDagen = Math.Clamp(v.Wacht, -3650, 3650) });
+            }
+        }
+        await _db.SaveChangesAsync();
+        foreach (var taak in nieuweTaken) bewerkt.Add("t" + taak.Id);
+        var aandacht = imp.Rijen.Count(r => r.Status == "waarschuwing");
+        if (aandacht > 0) waarschuwingen.Add(aandacht == 1 ? "1 regel had een aandachtspunt, zie het voorbeeld." : $"{aandacht} regels hadden een aandachtspunt, zie het voorbeeld.");
         return null;
     }
 
@@ -1232,18 +1677,18 @@ public class PlanningService : IPlanningService
 
     // ── Momentopname (ongedaan maken) ──
 
-    private sealed record SnapSectie(int Id, string Naam, int? Ouder, int Volgorde, int? Lot, bool TeltMee, int Planning = 0);
+    private sealed record SnapSectie(int Id, string Naam, int? Ouder, int Volgorde, int? Lot, bool TeltMee, int Planning = 0, int? Uitvoerder = null);
     private sealed record SnapTaak(int Id, int Sectie, string Naam, string? Besch, int Duur, int Volgorde, byte Beperking, DateOnly? BD, DateOnly? Deadline,
-        DateOnly? WStart, DateOnly? AfgerondOp, bool IsAfgerond, int Voortgang, string? Wie, DateOnly? BasisStart, DateOnly? BasisEinde);
+        DateOnly? WStart, DateOnly? AfgerondOp, bool IsAfgerond, int Voortgang, string? Wie, DateOnly? BasisStart, DateOnly? BasisEinde, int? Uitvoerder = null);
     private sealed record SnapLink(int Voor, int Op, byte Type, int Wacht);
     private sealed record Snap(List<SnapSectie> S, List<SnapTaak> T, List<SnapLink> L, bool Verlet, DateTime? BasisOp);
 
     private static string Momentopname(Data d)
     {
         var snap = new Snap(
-            d.Secties.Select(s => new SnapSectie(s.Id, s.Naam, s.ParentSectieId, s.Volgorde, s.ActivityGroupId, s.TeltMeeVoorVoortgang, d.PlanningVan(s))).ToList(),
+            d.Secties.Select(s => new SnapSectie(s.Id, s.Naam, s.ParentSectieId, s.Volgorde, s.ActivityGroupId, s.TeltMeeVoorVoortgang, d.PlanningVan(s), s.UitvoerderCompanyId)).ToList(),
             d.Taken.Select(t => new SnapTaak(t.Id, t.PlanningSectieId, t.Naam, t.Beschrijving, t.Duur, t.Volgorde, t.BeperkingType, t.BeperkingDatum, t.Deadline,
-                t.WerkelijkStart, t.AfgerondOp, t.IsAfgerond, t.VoortgangPct, t.VerantwoordelijkeUserId, t.BasisStart, t.BasisEinde)).ToList(),
+                t.WerkelijkStart, t.AfgerondOp, t.IsAfgerond, t.VoortgangPct, t.VerantwoordelijkeUserId, t.BasisStart, t.BasisEinde, t.UitvoerderCompanyId)).ToList(),
             d.Links.Select(l => new SnapLink(l.VoorgangerTaakId, l.OpvolgerTaakId, l.Type, l.WachtDagen)).ToList(),
             d.Kop?.VerletMeetellen ?? true,
             d.Kop?.BasisVastgelegdOp);
@@ -1281,6 +1726,7 @@ public class PlanningService : IPlanningService
             s.Volgorde = ss.Volgorde;
             s.ActivityGroupId = ss.Lot;
             s.TeltMeeVoorVoortgang = ss.TeltMee;
+            s.UitvoerderCompanyId = ss.Uitvoerder;
             // Een planning die intussen verwijderd is, valt terug op de hoofdplanning.
             s.BouwPlanningId = d.Planningen.Any(x => x.Id == ss.Planning) ? ss.Planning : (d.HoofdId != 0 ? d.HoofdId : null);
             s.ParentSectieId = ss.Ouder is int o && sectieMap.TryGetValue(o, out var nieuwOuder) ? nieuwOuder : null;
@@ -1304,7 +1750,7 @@ public class PlanningService : IPlanningService
             t.Naam = st.Naam; t.Beschrijving = st.Besch; t.Duur = st.Duur; t.Volgorde = st.Volgorde;
             t.BeperkingType = st.Beperking; t.BeperkingDatum = st.BD; t.Deadline = st.Deadline;
             t.WerkelijkStart = st.WStart; t.AfgerondOp = st.AfgerondOp; t.IsAfgerond = st.IsAfgerond; t.VoortgangPct = st.Voortgang;
-            t.VerantwoordelijkeUserId = st.Wie; t.BasisStart = st.BasisStart; t.BasisEinde = st.BasisEinde;
+            t.VerantwoordelijkeUserId = st.Wie; t.BasisStart = st.BasisStart; t.BasisEinde = st.BasisEinde; t.UitvoerderCompanyId = st.Uitvoerder;
             await _db.SaveChangesAsync();
             taakMap[st.Id] = t.Id;
         }

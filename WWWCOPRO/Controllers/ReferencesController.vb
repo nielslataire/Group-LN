@@ -38,7 +38,14 @@ Public Class ReferencesController
         Dim service = ServiceFactory.GetProjectService
         Dim response = service.GetProjectBySlug(slug)
         If (response.Success) Then model.Data = response.Values.FirstOrDefault
-        If model.Data Is Nothing OrElse model.Data.Id = 0 Then Return HttpNotFound()
+        If model.Data Is Nothing OrElse model.Data.Id = 0 Then
+            ' Oude slug (naam of gemeente is gewijzigd)? Permanent doorsturen naar de huidige slug.
+            Dim huidige = ProjectSlugHistoryReader.CurrentSlugFor(slug)
+            If huidige IsNot Nothing AndAlso Not String.Equals(huidige, slug, StringComparison.OrdinalIgnoreCase) Then
+                Return RedirectToRoutePermanent("ReferenceBySlug", New With {.slug = huidige})
+            End If
+            Return HttpNotFound()
+        End If
 
         ' Nog niet opgeleverd? Dan hoort dit project (nog) bij woonprojecten, niet bij realisaties.
         If model.Data.Status Is Nothing OrElse model.Data.Status.Id <> CInt(ProjectStatusType.Opgeleverd) Then

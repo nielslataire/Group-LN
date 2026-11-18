@@ -37,12 +37,19 @@ Public Class AboutUsController
     ' GET: /grond-of-pand-aanbieden
     <Route("grond-of-pand-aanbieden", Name:="Grondverwerving")>
     Function Grondverwerving() As ActionResult
-        ViewData("HeroHeader") = True
-        ViewData("StickyStartAt") = 20
-        ViewData("Title") = "Grond of pand verkopen aan projectontwikkelaar | Group LN"
-        ViewData("MetaDescription") = "Bouwgrond, een oude woning of verouderd pand? Wij onderzoeken de mogelijkheden, doen een concurrentieel voorstel en nemen het volledige traject uit handen."
-        ViewData("canonical") = "https://www.groupln.be/grond-of-pand-aanbieden"
+        ApplyGrondViewData(ViewData)
+        ViewBag.ReCaptchaSiteKey = System.Configuration.ConfigurationManager.AppSettings("ReCaptchaV3SiteKey")
+        ViewBag.ReCaptchaAction = "contact"
         Return View()
     End Function
+
+    ' Gedeeld met ContactController.GrondAanbieden, die deze pagina opnieuw toont bij een fout in het formulier.
+    Friend Shared Sub ApplyGrondViewData(vd As System.Web.Mvc.ViewDataDictionary)
+        vd("HeroHeader") = True
+        vd("StickyStartAt") = 20
+        vd("Title") = "Grond of pand verkopen aan projectontwikkelaar | Group LN"
+        vd("MetaDescription") = "Bouwgrond, een oude woning of verouderd pand? Wij onderzoeken de mogelijkheden, doen een concurrentieel voorstel en nemen het volledige traject uit handen."
+        vd("canonical") = "https://www.groupln.be/grond-of-pand-aanbieden"
+    End Sub
 
 End Class

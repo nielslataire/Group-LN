@@ -13,6 +13,9 @@ public partial class PlanningSectie
 
     public int? ActivityGroupId { get; set; }
 
+    /// <summary>De uitvoerder (aannemer, <see cref="CompanyInfo.CompanyId"/>) van deze fase (migratie 150); taken zonder eigen uitvoerder nemen die over.</summary>
+    public int? UitvoerderCompanyId { get; set; }
+
     public string Naam { get; set; }
 
     public int Volgorde { get; set; }

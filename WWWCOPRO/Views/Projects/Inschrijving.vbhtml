@@ -266,6 +266,8 @@ end section
 
                 function onSuccess(response) {
                     if (response && response.success) {
+                        window.dataLayer = window.dataLayer || [];
+                        window.dataLayer.push({ event: 'inschrijving_form_submit' });
                         $('#inschrijving-form-wrap').hide();
                         $('#inschrijving-result').html(
                             '<div class="inschrijving-succes">' +

@@ -34,7 +34,7 @@
 *@
 @{
     var client = Model.Client;
-    ViewData["Title"] = $"{client.Salutation.GetDisplayName()} {client.DisplayName}".Trim();
+    ViewData["Title"] = (client.HasCoOwners ? client.DisplayName : $"{client.Salutation.GetDisplayName()} {client.DisplayName}").Trim();
     ViewData["PageIcon"] = "ph ph-user";
     ViewData["GlV2FullHeightBody"] = true;
     ViewData["BackUrl"] = Url.Action("DetailClients", "Projecten", new { projectid = Model.ProjectId });

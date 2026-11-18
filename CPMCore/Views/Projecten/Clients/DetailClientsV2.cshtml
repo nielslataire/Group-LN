@@ -227,7 +227,8 @@
                         @foreach (var item in Model.ClientAccounts)
                         {
                             var client = item.Client;
-                            var displayName = client.Name is not null ? $"{client.Salutation.GetDisplayName()} {client.DisplayName}" : client.DisplayName;
+                            // Met mede-eigenaars is DisplayName al de combinatie van alle eigenaars: dan geen aanspreking ervoor.
+                            var displayName = client.Name is not null && !client.HasCoOwners ? $"{client.Salutation.GetDisplayName()} {client.DisplayName}" : client.DisplayName;
                             var initials = string.Join("", (displayName ?? "?").Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(p => char.ToUpperInvariant(p[0])).Take(2));
                             if (string.IsNullOrWhiteSpace(initials)) initials = "?";
 

@@ -5,7 +5,7 @@ treeOrder: 5
 role: Projectleider
 device: Desktop · tablet
 minutes: 3
-updated: 2026-10-13
+updated: 2026-11-17
 screens: projecten-klanten
 synonyms: klantenlijst, kopers, eigenaars, klant toevoegen, klantenlijst afdrukken
 newsTag: Nieuw
@@ -32,7 +32,7 @@ meerdere eenhedenlijnen, gegroepeerd per type (**Wooneenheid**, **Commerciële r
 
 | Kolom | Betekent |
 |---|---|
-| Klant | de naam van de koper. Klik op de rij om de klantfiche te openen |
+| Klant | de naam van de koper. Heeft de klant mede-eigenaars, dan staan alle namen samen, bijvoorbeeld **Janssen Jan en Maria** (zelfde familienaam) of **Janssen Jan en Peeters Els**. Klik op de rij om de klantfiche te openen |
 | Eenheden | de eenheden van deze klant in dit project, per type |
 | Contact | het e-mailadres. Je mailt of kopieert het met de knoppen ernaast |
 | Verkoopdatum | de datum van de verkoopovereenkomst |

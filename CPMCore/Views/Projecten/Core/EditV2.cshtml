@@ -989,6 +989,18 @@
                     <span class="gl-v2-section-card-desc">Laat leeg om automatisch te genereren.</span>
                 </div>
                 <div class="gl-v2-section-grid">
+                    @* Slug = de link van de projectpagina op de website. Handmatig aanpasbaar; leeg = automatisch uit
+                       projectnaam + gemeente. De controller schoont hem op en bewaart de vorige in de historiek. *@
+                    <div class="gl-v2-col-12">
+                        <div class="gl-v2-field">
+                            <label class="gl-v2-field-label" for="Project_Slug">Slug (URL van de projectpagina)</label>
+                            <div class="gl-v2-field-box">
+                                @Html.TextBoxFor(m => m.Project.Slug, new { @class = "gl-v2-field-input", placeholder = "Leeg = automatisch uit projectnaam en gemeente", maxlength = "100", autocomplete = "off", id = "Project_Slug" })
+                            </div>
+                            <span class="gl-v2-field-help">de link op de website: @(project.ProjectType == ProjectType.Commerciëel ? "/commerciele-projecten/" : "/woonprojecten/")…. Enkel kleine letters, cijfers en streepjes; andere tekens worden bij het opslaan weggehaald. Wijzig je de slug, dan verwijst de oude link automatisch door</span>
+                            @Html.ValidationMessageFor(m => m.Project.Slug, "", new { @class = "gl-v2-field-help is-error" })
+                        </div>
+                    </div>
                     <div class="gl-v2-col-12">
                         <div class="gl-v2-field">
                             <label class="gl-v2-field-label" for="Project_SeoTitle">SEO-titel</label>
@@ -1010,7 +1022,7 @@
                     </div>
                     <div class="gl-v2-col-12">
                         <span class="gl-v2-field-label">Voorbeeld in Google</span>
-                        <div class="gl-v2-pf-serp" id="gl-v2-pf-serp" data-slug="@project.Slug" data-fallback-title="@projectName">
+                        <div class="gl-v2-pf-serp" id="gl-v2-pf-serp" data-slug="@project.Slug" data-path="@(project.ProjectType == ProjectType.Commerciëel ? "commerciele-projecten" : "woonprojecten")" data-fallback-title="@projectName">
                             <span class="gl-v2-pf-serp-url" id="gl-v2-pf-serp-url"></span>
                             <span class="gl-v2-pf-serp-title" id="gl-v2-pf-serp-title"></span>
                             <span class="gl-v2-pf-serp-desc" id="gl-v2-pf-serp-desc"></span>

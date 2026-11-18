@@ -68,6 +68,7 @@ Public NotInheritable Class PermissionCodes
     Public Const SettingsIssueNotifications As String = "Settings.IssueNotifications"
     Public Const SettingsMarketDataStatus As String = "Settings.MarketDataStatus"
     Public Const SettingsTrajectSjablonen As String = "Settings.TrajectSjablonen"
+    Public Const SettingsPlanningSjablonen As String = "Settings.Planningssjablonen"
 
     ' Marktanalyse
     Public Const Marktanalyse As String = "Marktanalyse"

@@ -1,0 +1,175 @@
+/* gl-v2 — Instellingen › Planningssjablonen: lijst (63a) en editor (63b) uit de design-handoff "CRM Planningssjablonen". Eigen namespace gl-v2-pls-*; sectiekaart, velden, keuzelijst,
+   toggles, badges, segmented, contextmenu, form-modal en knoppen komen uit de gedeelde gl-v2-CSS. Tokens enkel binnen .gl-v2; page-CSS laadt vóór de shell, dus regels staan onder
+   .gl-v2-pls of .gl-v2-auto voor extra specificiteit. */
+
+/* ── Lijst ── */
+.gl-v2-auto-grid--pls { grid-template-columns: minmax(0, 2.1fr) 70px 60px 130px minmax(0, 1.6fr) minmax(0, 1.3fr) 140px 90px 56px; }
+.gl-v2-pls-lijst .gl-v2-pls-wie { flex-direction: column; align-items: flex-start; gap: 1px; }
+.gl-v2-pls-lijst .gl-v2-pls-wie .o { font: 400 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.gl-v2-pls-lijst .gl-v2-pls-verd { color: var(--gl-v2-muted); }
+.gl-v2-pls-lijst .gl-v2-pls-trig, .gl-v2-pls-lijst .gl-v2-pls-gebruik { white-space: normal; line-height: 1.35; }
+.gl-v2-pls-lijst .gl-v2-pls-vorm { display: none; }
+.gl-v2-pls-lijst [hidden] { display: none !important; }
+.gl-v2-pls-lijst .r { text-align: right; justify-content: flex-end; }
+@media (max-width: 1100px) {
+    .gl-v2-auto-grid--pls { grid-template-columns: minmax(0, 2fr) 60px 56px 110px 90px 44px; }
+    .gl-v2-auto-grid--pls > :nth-child(5), .gl-v2-auto-grid--pls > :nth-child(6), .gl-v2-auto-grid--pls > :nth-child(7) { display: none; }
+}
+
+/* ── Editor: twee kolommen ── */
+.gl-v2-pls { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.gl-v2-pls [hidden] { display: none !important; }
+.gl-v2-pls .r { text-align: right; justify-content: flex-end; }
+.gl-v2-pls-grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; align-items: start; }
+.gl-v2-pls-links { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.gl-v2-pls-rechts { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 12px; min-width: 0; }
+.gl-v2-pls-spacer { flex: 1 1 auto; }
+@media (max-width: 1180px) {
+    .gl-v2-pls-grid { grid-template-columns: minmax(0, 1fr); }
+    .gl-v2-pls-rechts { position: static; }
+}
+
+.gl-v2-pls-foutlijst { margin: 4px 0 0; padding-left: 18px; }
+.gl-v2-pls-foutlijst li { margin: 2px 0; }
+
+/* ── Kop ── */
+.gl-v2-pls-kop { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) 240px auto; gap: 14px; padding: 14px 16px; align-items: start; }
+.gl-v2-pls-kop-trig { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.gl-v2-pls-kop-act { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.gl-v2-pls-kop-act .gl-v2-field-label { visibility: hidden; }
+.gl-v2-pls-act-box { margin: 0; height: var(--gl-v2-field-h, 40px); align-items: center; }
+.gl-v2-pls-kop-act .gl-v2-toggle-text { gap: 1px; }
+.gl-v2-pls-kop-act .gl-v2-toggle-label { font-size: 13px; line-height: 1.2; }
+.gl-v2-pls-kop-act .gl-v2-toggle-desc { font-size: 10.5px; line-height: 1.25; }
+@media (max-width: 1400px) { .gl-v2-pls-kop { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+@media (max-width: 700px) { .gl-v2-pls-kop { grid-template-columns: minmax(0, 1fr); } }
+
+.gl-v2-pls-tool { display: flex; align-items: center; gap: 10px; padding: 4px 2px 0; flex-wrap: wrap; }
+.gl-v2-pls-tool b { font: 700 13px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+.gl-v2-pls-tool > span:nth-child(2) { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* ── Blokken ── */
+.gl-v2-pls-blokken { display: flex; flex-direction: column; gap: 12px; }
+.gl-v2-pls .gl-v2-pls-blok { overflow: visible; }
+.gl-v2-pls-bh { display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 10px; flex-wrap: wrap; }
+.gl-v2-pls-chev { border: 0; background: none; padding: 4px; margin: 0 -2px 0 0; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; color: var(--gl-v2-muted-soft); cursor: pointer; border-radius: var(--gl-v2-radius-xs); font-size: 16px; }
+.gl-v2-pls-chev:hover { color: var(--gl-v2-primary); }
+.gl-v2-pls-chev:focus-visible { outline: 3px solid var(--gl-v2-gold); outline-offset: 1px; }
+.gl-v2-pls-bt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.gl-v2-pls-bn { border: 1px solid transparent; border-radius: var(--gl-v2-radius-s); background: transparent; font: 600 14.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); padding: 3px 6px; margin-left: -6px; width: min(340px, 100%); }
+.gl-v2-pls-bn:hover { border-color: var(--gl-v2-hairline); }
+.gl-v2-pls-bn:focus { outline: none; border-color: var(--gl-v2-primary); box-shadow: 0 0 0 3px var(--gl-v2-primary-tint); background: var(--gl-v2-surface); }
+.gl-v2-pls-bt > span { display: flex; gap: 8px; align-items: center; font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-pls-bt code, .gl-v2-pls-pick-lijst code { font: 500 10px var(--gl-v2-font-mono, ui-monospace, Consolas, monospace); color: var(--gl-v2-muted); background: var(--gl-v2-hover-tint); padding: 1px 5px; border-radius: var(--gl-v2-radius-xs); }
+.gl-v2-pls-when { display: flex; align-items: center; gap: 8px; }
+.gl-v2-pls-when-l { font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .09em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gl-v2-pls-when .gl-v2-select { width: 190px; }
+.gl-v2-pls-floor .gl-v2-toggle-row { margin: 0; }
+
+/* Taakregel: één regel per taak */
+.gl-v2-pls-tr .gl-v2-field-box { --gl-v2-field-h: 34px; --gl-v2-field-pad: 9px; padding: 0 9px; gap: 6px; }
+.gl-v2-pls-tr .gl-v2-field-input { font-size: 13px; min-width: 0; }
+.gl-v2-pls-dur .gl-v2-field-unit { padding: 0 9px; }
+.gl-v2-pls-th, .gl-v2-pls-tr { display: grid; grid-template-columns: 18px minmax(0, 1.3fr) 96px minmax(0, 2fr) 76px 32px 28px; gap: 10px; align-items: start; padding: 0 12px 0 10px; }
+.gl-v2-pls-th { height: 28px; align-items: center; background: var(--gl-v2-hover-tint); border-top: 1px solid var(--gl-v2-hairline-soft); font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .09em; color: var(--gl-v2-muted); }
+.gl-v2-pls-tr { padding-top: 7px; padding-bottom: 7px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-pls-tr:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-pls-tr.is-sleep { opacity: .45; }
+.gl-v2-pls-tr.is-doel { box-shadow: inset 0 2px 0 var(--gl-v2-primary); }
+.gl-v2-pls-grip { padding-top: 9px; cursor: grab; color: var(--gl-v2-muted); opacity: .5; font-size: 16px; line-height: 1; user-select: none; }
+.gl-v2-pls-tr:hover .gl-v2-pls-grip { opacity: 1; }
+.gl-v2-pls-nm { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gl-v2-pls-nm small { font: 500 9.5px var(--gl-v2-font-mono, ui-monospace, Consolas, monospace); color: var(--gl-v2-muted-light); padding-left: var(--gl-v2-radius-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2-pls-dur input { text-align: right; }
+
+/* Voorgangers als chips */
+.gl-v2-pls-ps { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; min-height: 34px; min-width: 0; }
+.gl-v2-pls-chip { display: inline-flex; align-items: center; height: 26px; border-radius: var(--gl-v2-radius-pill); background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary-deep); overflow: hidden; max-width: 100%; }
+.gl-v2-pls-chip.is-bad { background: var(--gl-v2-danger-tint); color: var(--gl-v2-danger); }
+.gl-v2-pls-cb { border: 0; background: none; height: 26px; padding: 0 4px 0 10px; font: 500 12px var(--gl-v2-font-sans); color: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; min-width: 0; }
+.gl-v2-pls-cl { overflow: hidden; text-overflow: ellipsis; max-width: 190px; }
+.gl-v2-pls-cb em { font-style: normal; font: 600 10.5px var(--gl-v2-font-mono, ui-monospace, Consolas, monospace); background: var(--gl-v2-surface); border-radius: var(--gl-v2-radius-xs); padding: 0 4px; color: var(--gl-v2-warning); }
+.gl-v2-pls-cx { border: 0; background: none; width: 22px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: inherit; opacity: .55; }
+.gl-v2-pls-cx:hover { opacity: 1; background: rgba(0, 0, 0, .06); }
+.gl-v2-pls-add { height: 26px; padding: 0 9px; border-radius: var(--gl-v2-radius-pill); border: 1px dashed var(--gl-v2-dashed); background: var(--gl-v2-surface); display: inline-flex; align-items: center; gap: 4px; font: 500 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); cursor: pointer; }
+.gl-v2-pls-add:hover { border-color: var(--gl-v2-primary); color: var(--gl-v2-primary); }
+.gl-v2-pls-geen { font: italic 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); }
+
+/* Start (uit de proefdraai) en estafette */
+.gl-v2-pls-st { padding-top: 9px; font: 500 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.gl-v2-pls-k { font: 700 9px var(--gl-v2-font-sans); color: var(--gl-v2-warning); background: var(--gl-v2-warning-tint); border-radius: var(--gl-v2-radius-xs); padding: 1px 4px; margin-left: 4px; }
+.gl-v2-pls .gl-v2-pls-menubtn { width: 26px; height: 26px; margin-top: 4px; font-size: 16px; }
+.gl-v2-pls-bh .gl-v2-pls-menubtn { margin-top: 0; }
+.gl-v2-pls-est { width: 32px; height: 32px; border-radius: var(--gl-v2-radius-s); border: 1px solid var(--gl-v2-hairline); background: var(--gl-v2-surface); color: var(--gl-v2-muted-light); display: flex; align-items: center; justify-content: center; cursor: pointer; margin-top: 1px; }
+.gl-v2-pls-est.is-on { background: var(--gl-v2-primary-tint); border-color: var(--gl-v2-accent-sage); color: var(--gl-v2-primary-deep); }
+.gl-v2-pls-est:hover:not(:disabled) { border-color: var(--gl-v2-primary); }
+.gl-v2-pls-est:disabled { cursor: default; }
+
+.gl-v2-pls-bf { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 8px 12px 12px 38px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-pls-addt, .gl-v2-pls-addb { border: 0; background: none; display: inline-flex; align-items: center; gap: 6px; font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); cursor: pointer; padding: 6px 8px; border-radius: var(--gl-v2-radius-s); }
+.gl-v2-pls-addt:hover { background: var(--gl-v2-primary-tint); }
+.gl-v2-pls-addb { align-self: flex-start; border: 1.5px dashed var(--gl-v2-dashed); padding: 10px 16px; border-radius: var(--gl-v2-radius-md); background: var(--gl-v2-surface); }
+.gl-v2-pls-addb:hover { border-color: var(--gl-v2-primary); }
+.gl-v2-pls-leeg { padding: 14px 16px; color: var(--gl-v2-muted); font: 400 13px var(--gl-v2-font-sans); border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-pls-leeg.is-big { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 40px 16px; text-align: center; border-top: 0; }
+.gl-v2-pls-leeg.is-big i { font-size: 30px; }
+
+@media (max-width: 900px) {
+    .gl-v2-pls-th { display: none; }
+    .gl-v2-pls-tr { grid-template-columns: 18px minmax(0, 1fr) 86px 34px 32px; }
+    .gl-v2-pls-tr > .gl-v2-pls-ps { grid-column: 2 / -1; }
+    .gl-v2-pls-tr > .gl-v2-pls-st { display: none; }
+}
+
+/* ── Rechts: voorbeeld, proefdraai, controle ── */
+.gl-v2-pls-vb { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px 16px; }
+.gl-v2-pls-vb-tot { display: flex; align-items: baseline; gap: 10px; }
+.gl-v2-pls-vb-tot b { font: 600 22px var(--gl-v2-font-serif); color: var(--gl-v2-ink); }
+.gl-v2-pls-vb-tot span { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-pls-pv { display: flex; flex-direction: column; gap: 7px; }
+.gl-v2-pls-pr { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 2px 8px; align-items: center; }
+.gl-v2-pls-pn { grid-column: 1 / -1; font: 500 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); display: flex; gap: 6px; align-items: center; min-width: 0; }
+.gl-v2-pls-pn i { font-style: normal; font: 600 9.5px var(--gl-v2-font-sans); color: var(--gl-v2-warning); background: var(--gl-v2-warning-tint); padding: 0 5px; border-radius: var(--gl-v2-radius-xs); white-space: nowrap; }
+.gl-v2-pls-pb { position: relative; height: 10px; border-radius: 5px; background: var(--gl-v2-hover-tint); min-width: 0; }
+.gl-v2-pls-pb i { position: absolute; top: 0; bottom: 0; border-radius: 5px; background: var(--gl-v2-accent-sage); }
+.gl-v2-pls-pb.is-u i { background: var(--gl-v2-primary-deep); }
+.gl-v2-pls-pd { font: 500 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); text-align: right; font-variant-numeric: tabular-nums; }
+.gl-v2-pls-pr .gl-v2-pls-ud { grid-column: 2; }
+.gl-v2-pls-ud { font: 500 11px var(--gl-v2-font-mono, ui-monospace, Consolas, monospace); color: var(--gl-v2-muted); }
+.gl-v2-pls-pr:has(.gl-v2-pls-ud) { grid-template-columns: minmax(0, 1fr) auto; }
+.gl-v2-pls-crit { display: flex; gap: 8px; align-items: flex-start; font: 450 11px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted); padding-top: 6px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2-pls-seg { display: flex; align-items: center; justify-content: space-between; gap: 8px; font: 500 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft); }
+.gl-v2-pls-ok { display: flex; gap: 6px; align-items: center; font: 500 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary-deep); background: var(--gl-v2-primary-tint); padding: 8px 10px; border-radius: var(--gl-v2-radius-md); }
+.gl-v2-pls-iss { display: flex; flex-direction: column; gap: 1px; padding: 8px 10px; border-radius: var(--gl-v2-radius-md); font: 450 11.5px var(--gl-v2-font-sans); }
+.gl-v2-pls-iss b { font-weight: 600; font-size: 12px; }
+.gl-v2-pls-iss.is-rood { background: var(--gl-v2-danger-tint); color: var(--gl-v2-danger); }
+.gl-v2-pls-iss.is-goud { background: var(--gl-v2-gold-tint); color: var(--gl-v2-warning); }
+
+.gl-v2-pls-uitleg-kop { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; background: none; padding: 12px 16px; cursor: pointer; text-align: left; }
+.gl-v2-pls-uitleg-kop b { font: 700 13px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+.gl-v2-pls-uitleg-kop .ph-info { color: var(--gl-v2-primary); }
+.gl-v2-pls-uitleg-caret { margin-left: auto; transition: transform .15s; }
+.gl-v2-pls-uitleg-kop.is-open .gl-v2-pls-uitleg-caret { transform: rotate(180deg); }
+.gl-v2-pls-uitleg ul { margin: 0; padding: 0 16px 14px 32px; display: flex; flex-direction: column; gap: 7px; font: 450 12px/1.55 var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+@media (prefers-reduced-motion: reduce) { .gl-v2-pls-uitleg-caret { transition: none; } }
+
+/* ── Voorganger kiezen (modal) ── */
+.gl-v2-modal-form.gl-v2-pls-modal .modal-dialog { max-width: 480px; }
+.gl-v2-modal-form.gl-v2-pls-modal .modal-body { display: flex; flex-direction: column; gap: 0; }
+.gl-v2-modal-form.gl-v2-pls-modal .modal-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.gl-v2-modal-form.gl-v2-pls-modal .modal-header { align-items: flex-start; }
+.gl-v2-modal-form.gl-v2-pls-modal .gl-v2-field-box { --gl-v2-field-pad: 12px; padding: 0 12px; }
+.gl-v2-pls-pick-voor { display: block; font: 700 9.5px var(--gl-v2-font-sans); letter-spacing: .09em; color: var(--gl-v2-muted); }
+.gl-v2-pls-pick-rel { display: flex; gap: 8px; align-items: center; padding-bottom: 8px; flex-wrap: wrap; }
+.gl-v2-pls-pick-lag { width: 110px; flex: none; }
+.gl-v2-pls-pick-zin { margin: 0 0 10px; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-info); }
+.gl-v2-pls-pick-zoek { margin-bottom: 8px; }
+.gl-v2-pls-pick-lijst { max-height: 320px; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; }
+.gl-v2-pls-pg { font: 700 9.5px var(--gl-v2-font-sans); letter-spacing: .09em; color: var(--gl-v2-muted); text-transform: uppercase; padding: 10px 8px 4px; }
+.gl-v2-pls-po { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 36px; width: 100%; padding: 0 8px; border: 0; border-radius: var(--gl-v2-radius-s); background: none; cursor: pointer; font: 450 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); text-align: left; }
+.gl-v2-pls-po > span { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-pls-po > code { flex: none; max-width: 48%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-pls-po:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2-pls-po.is-on { background: var(--gl-v2-primary-tint); font-weight: 600; color: var(--gl-v2-primary); }
+.gl-v2-pls-po.is-blk span { font-style: italic; color: var(--gl-v2-muted-soft); }
+.gl-v2-pls-pick-uitleg { flex: 1 1 220px; font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }

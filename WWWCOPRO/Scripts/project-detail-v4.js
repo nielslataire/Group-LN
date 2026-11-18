@@ -370,8 +370,11 @@
         }
         return layers.filter(function (l) { return l.getAttribute('data-key') === key; })[0] || layers[0];
     }
+    // Handmatig bladeren met de pijltjes: de gekozen foto blijft staan tot de scroll een andere sectie activeert
+    var manualLayer = null;
+    var browsable = layers.filter(function (l) { return l.querySelector('img'); });
     function applyMedia() {
-        var target = layerFor(state.media);
+        var target = manualLayer || layerFor(state.media);
         layers.forEach(function (l) { l.classList.toggle('is-active', l === target); });
         var bar = $('#pdv4Bar');
         if (bar) {
@@ -385,10 +388,24 @@
         if (!secs.length || !('IntersectionObserver' in window)) { return; }
         var io = new IntersectionObserver(function (entries) {
             entries.forEach(function (e) {
-                if (e.isIntersecting) { state.media = e.target.getAttribute('data-media'); applyMedia(); }
+                if (e.isIntersecting) { state.media = e.target.getAttribute('data-media'); manualLayer = null; applyMedia(); }
             });
         }, { rootMargin: '-45% 0px -45% 0px' });
         secs.forEach(function (s) { io.observe(s); });
+    })();
+    (function () {
+        var prev = $('#pdv4MediaPrev'), next = $('#pdv4MediaNext');
+        if (!prev || !next) { return; }
+        if (browsable.length < 2) { prev.setAttribute('hidden', ''); next.setAttribute('hidden', ''); return; }
+        function step(dir) {
+            var cur = layers.filter(function (l) { return l.classList.contains('is-active'); })[0];
+            var i = browsable.indexOf(cur);
+            if (i < 0) { i = 0; }
+            manualLayer = browsable[(i + dir + browsable.length) % browsable.length];
+            applyMedia();
+        }
+        prev.addEventListener('click', function () { step(-1); });
+        next.addEventListener('click', function () { step(1); });
     })();
     window.addEventListener('resize', applyMedia);
     (function () {
@@ -718,6 +735,8 @@
                 email: mail, phone: ph, message: f.message.value.trim()
             }).then(function () {
                 window.saveContactInfoToCookie({ firstname: firstName, name: lastName, email: mail, phone: ph });
+                window.dataLayer = window.dataLayer || [];
+                window.dataLayer.push({ event: 'project_contact_form_submit' });
                 var thanks = $('#pdv4Thanks'), sec = $('#contact');
                 form.setAttribute('hidden', ''); thanks.removeAttribute('hidden');
                 if (sec) { sec.classList.add('is-sent'); }
@@ -740,6 +759,8 @@
             var btn = $('button[type=submit]', fm); busy(btn, true, 'Bezig met verzenden…');
             post(D.endpoints[kind], { project: D.project.name, email: mail }).then(function () {
                 fm.setAttribute('hidden', '');
+                window.dataLayer = window.dataLayer || [];
+                window.dataLayer.push({ event: 'project_' + kind + '_form_submit' });
                 var done = fm.parentNode.querySelector('.pdv4-inline-done'); if (done) { done.removeAttribute('hidden'); }
             }).catch(function () {
                 busy(btn, false); showFormError(err, 'Het versturen is niet gelukt. Probeer het opnieuw of bel ons op 09/216.49.50.');

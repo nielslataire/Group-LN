@@ -84,6 +84,60 @@ Public Class ContactController
 
         If (Not ModelState.IsValid) Then Return View("index", model)
 
+        If Not VerwerkAanvraag(model, "Contact", "ContactController.Send") Then
+            AddMessage("error", "Uw bericht kon niet worden verstuurd. Probeer het opnieuw.", "Fout!")
+            Return View("index", model)
+        End If
+
+        ViewBag.SubmitSuccess = True
+        ViewBag.SubmittedNaam = model.Voornaam
+        ViewBag.SubmittedEmail = model.EmailTo
+        Return View("index", New MailModel())
+    End Function
+
+    ' Onderwerp van het formulier onderaan de pagina "Grond of pand aanbieden": vast, de bezoeker kiest het niet.
+    Private Const GrondOnderwerp As String = "Websiteaanvraag: aanbieden van een grond of gebouw"
+
+    ' POST: /Contact/GrondAanbieden - formulier onderaan /grond-of-pand-aanbieden (zelfde velden als Contact, zonder onderwerp).
+    <Route("Contact/GrondAanbieden")>
+    <HttpPost>
+    <ValidateInput(False)>
+    Function GrondAanbieden(model As MailModel) As ActionResult
+        model.Title = GrondOnderwerp
+        ModelState.Remove("Title")   ' het onderwerp is vast; de [Required] daarop geldt hier niet
+
+        If Not model.PrivacyAkkoord Then
+            ModelState.AddModelError("PrivacyAkkoord", "Gelieve akkoord te gaan met het privacybeleid.")
+        End If
+
+        If Not ModelState.IsValid Then
+            ' Zelfde pagina opnieuw, met de ingevulde waarden en de foutmeldingen bij de velden
+            ToonGrondPagina(model, Nothing)
+            Return View("~/Views/AboutUs/Grondverwerving.vbhtml")
+        End If
+
+        If Not VerwerkAanvraag(model, "Grond of pand aanbieden", "ContactController.GrondAanbieden") Then
+            ToonGrondPagina(model, "Uw bericht kon niet worden verstuurd. Probeer het opnieuw of mail naar info@groupln.be.")
+            Return View("~/Views/AboutUs/Grondverwerving.vbhtml")
+        End If
+
+        ' Post-redirect-get: een refresh verstuurt het formulier niet nog eens
+        TempData("GrondSuccessNaam") = model.Voornaam
+        TempData("GrondSuccessEmail") = model.EmailTo
+        Return Redirect(Url.RouteUrl("Grondverwerving") & "#grond-formulier")
+    End Function
+
+    Private Sub ToonGrondPagina(model As MailModel, fout As String)
+        AboutUsController.ApplyGrondViewData(ViewData)
+        ViewBag.ReCaptchaSiteKey = ConfigurationManager.AppSettings("ReCaptchaV3SiteKey")
+        ViewBag.ReCaptchaAction = ReCaptchaActionName
+        ViewData("GrondForm") = model
+        ViewData("GrondFout") = fout
+    End Sub
+
+    ' Gedeelde verwerking van een ingevuld formulier: spamcontrole, mail naar de bezoeker en intern, opslag.
+    ' True = klaar (ook bij geweerde spam, bewust zonder foutmelding); False = de bevestigingsmail kon niet verstuurd worden.
+    Private Function VerwerkAanvraag(model As MailModel, requestType As String, originFallback As String) As Boolean
         ' Honeypot: verborgen veld dat enkel bots invullen
         Dim isHoneypotTriggered = Not String.IsNullOrEmpty(Request.Form("website_url"))
 
@@ -97,10 +151,7 @@ Public Class ContactController
         If isHoneypotTriggered OrElse Not captchaResult.Success OrElse bevatVerdachteLink Then
             LogError("CONTACT: SPAM GEWEERD | honeypot=" & isHoneypotTriggered & " | captcha=" & captchaResult.Success & " | verdachteLink=" & bevatVerdachteLink & " | email=" & model.EmailTo)
             ' Bewust geen foutmelding: een generiek succesbericht ontmoedigt bots niet om te blijven proberen
-            ViewBag.SubmitSuccess = True
-            ViewBag.SubmittedNaam = model.Voornaam
-            ViewBag.SubmittedEmail = model.EmailTo
-            Return View("index", New MailModel())
+            Return True
         End If
 
         Dim externalMailStatus As String = "Niet verzonden"
@@ -108,7 +159,7 @@ Public Class ContactController
         Dim externalMailSent As Boolean = False
 
         ' Zelfde SMTP-pad als het (bewezen werkende) documentaanvraag-formulier
-        ' (ProjectsController.SendDoc) — expliciete Office365-relay met credentials
+        ' (ProjectsController.SendDoc) - expliciete Office365-relay met credentials
         ' uit environment variables, i.p.v. de onbetrouwbare Postal/<system.net><mailSettings>-relay.
         Try
             ViewBag.To = model.EmailTo
@@ -164,23 +215,15 @@ Public Class ContactController
             .Phone = model.Phone,
             .Subject = model.Title,
             .Question = model.Message,
-            .RequestType = "Contact",
-            .Origin = ResolveOrigin("ContactController.Send"),
+            .RequestType = requestType,
+            .Origin = ResolveOrigin(originFallback),
             .SourceSite = "Group LN",
             .ExternalMailStatus = externalMailStatus,
             .InternalMailStatus = internalMailStatus
         }
         SaveContactRequest(contactRequest)
 
-        If Not externalMailSent Then
-            AddMessage("error", "Uw bericht kon niet worden verstuurd. Probeer het opnieuw.", "Fout!")
-            Return View("index", model)
-        End If
-
-        ViewBag.SubmitSuccess = True
-        ViewBag.SubmittedNaam = model.Voornaam
-        ViewBag.SubmittedEmail = model.EmailTo
-        Return View("index", New MailModel())
+        Return externalMailSent
     End Function
 
     Public Sub AddMessage(ByVal messagetype As String, ByVal message As String, ByVal messagetitle As String)

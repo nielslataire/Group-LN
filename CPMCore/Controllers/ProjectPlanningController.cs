@@ -27,11 +27,13 @@ public class ProjectPlanningController : BaseController
 
     private readonly cpmRunningContext _db;
     private readonly IPlanningService _planning;
+    private readonly IPlanningSjabloonService _sjablonen;
 
-    public ProjectPlanningController(cpmRunningContext db, IPlanningService planning)
+    public ProjectPlanningController(cpmRunningContext db, IPlanningService planning, IPlanningSjabloonService sjablonen)
     {
         _db = db;
         _planning = planning;
+        _sjablonen = sjablonen;
     }
 
     private string? UserId => User.FindFirst(CpmClaims.UserId)?.Value;
@@ -69,6 +71,8 @@ public class ProjectPlanningController : BaseController
             CanWrite = ps.HasWrite(PermissionCodes.ProjectsPlanning),
             CanDelete = ps.HasDelete(PermissionCodes.ProjectsPlanning),
             CanLinkTraject = ps.HasWrite(PermissionCodes.ProjectsTraject),
+            CanSaveTemplate = ps.HasWrite(PermissionCodes.SettingsPlanningSjablonen),
+            CanDeleteTemplate = ps.HasDelete(PermissionCodes.SettingsPlanningSjablonen),
             StaatJson = JsonSerializer.Serialize(staat, JsonOpties),
         });
     }
@@ -104,6 +108,72 @@ public class ProjectPlanningController : BaseController
             return Forbid();
 
         var uitkomst = await _planning.Koppel(projectId, commando, UserId);
+        return Json(uitkomst, JsonOpties);
+    }
+
+    public sealed class SjabloonBewaarVerzoek
+    {
+        public int? PlanningId { get; set; }
+        public string Naam { get; set; } = "";
+        public string? Beschrijving { get; set; }
+    }
+
+    public sealed class SjabloonVerwijderVerzoek
+    {
+        public int Id { get; set; }
+    }
+
+    /// <summary>Bewaart de getoonde planning als sjabloon. Vraagt naast schrijfrecht op de planning het recht op planningssjablonen.</summary>
+    [HttpPost("SjabloonBewaren")]
+    [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsPlanning)]
+    public async Task<IActionResult> SjabloonBewaren(int projectId, [FromBody] SjabloonBewaarVerzoek verzoek)
+    {
+        if (verzoek == null) return BadRequest();
+        if (!HttpContext.RequestServices.GetRequiredService<IPermissionService>().HasWrite(PermissionCodes.SettingsPlanningSjablonen))
+            return Forbid();
+        return Json(await _sjablonen.BewaarVanPlanning(projectId, verzoek.PlanningId, verzoek.Naam, verzoek.Beschrijving, UserId), JsonOpties);
+    }
+
+    [HttpPost("SjabloonVerwijderen")]
+    [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsPlanning)]
+    public async Task<IActionResult> SjabloonVerwijderen(int projectId, [FromBody] SjabloonVerwijderVerzoek verzoek)
+    {
+        if (verzoek == null) return BadRequest();
+        if (!HttpContext.RequestServices.GetRequiredService<IPermissionService>().HasDelete(PermissionCodes.SettingsPlanningSjablonen))
+            return Forbid();
+        var fout = await _sjablonen.Verwijder(verzoek.Id);
+        return Json(new { ok = fout == null, fout }, JsonOpties);
+    }
+
+    /// <summary>
+    /// Stap 1 en 2 van "Planning importeren": leest een MS Project-XML in en geeft het voorbeeld terug (niets wordt bewaard).
+    /// De pagina stuurt het resultaat daarna als commando <c>importeren</c> terug.
+    /// </summary>
+    [HttpPost("ImportControle")]
+    [ValidateAntiForgeryToken]
+    [RequestSizeLimit(12 * 1024 * 1024)]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsPlanning)]
+    public async Task<IActionResult> ImportControle(int projectId, IFormFile? bestand)
+    {
+        if (bestand == null || bestand.Length == 0) return Json(new FacadeCore.PlanningImportBestand { Fout = "Kies een bestand." }, JsonOpties);
+        if (bestand.Length > 10 * 1024 * 1024) return Json(new FacadeCore.PlanningImportBestand { Fout = "Het bestand is groter dan 10 MB." }, JsonOpties);
+        var naam = Path.GetFileName(bestand.FileName);
+        if (naam.EndsWith(".mpp", StringComparison.OrdinalIgnoreCase))
+            return Json(new FacadeCore.PlanningImportBestand { Bestandsnaam = naam, Fout = "Een .mpp-bestand kan niet rechtstreeks. Open het in MS Project, kies Bestand › Opslaan als › XML-indeling (*.xml) en kies dat bestand." }, JsonOpties);
+        if (!naam.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+            return Json(new FacadeCore.PlanningImportBestand { Bestandsnaam = naam, Fout = "Enkel MS Project-XML (.xml) kan nu ingelezen worden." }, JsonOpties);
+        using var stream = bestand.OpenReadStream();
+        var uitkomst = ServiceCore.Planning.MsProjectXmlParser.Lees(stream, naam);
+        if (uitkomst.Ok && uitkomst.Resources.Count > 0)
+        {
+            // Bedrijven om resources aan te koppelen: eerst die met een contract in dit project, daarna alle andere.
+            var inProject = await _db.Contract.AsNoTracking().Where(c => c.ProjectId == projectId).Select(c => c.CompanyId).Distinct().ToListAsync();
+            var bedrijven = await _db.CompanyInfo.AsNoTracking().Where(c => c.BedrijfsNaam != null && c.BedrijfsNaam != "")
+                .OrderBy(c => c.BedrijfsNaam).Select(c => new { c.CompanyId, c.BedrijfsNaam }).ToListAsync();
+            uitkomst.Bedrijven = bedrijven.Select(b => new FacadeCore.PlanningUitvoerderOptie { Id = b.CompanyId, Naam = b.BedrijfsNaam!, InProject = inProject.Contains(b.CompanyId) }).ToList();
+        }
         return Json(uitkomst, JsonOpties);
     }
 

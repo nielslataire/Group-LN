@@ -50,6 +50,17 @@ Zie `PLANNING_SJABLOON_OVERDRACHT.md` voor het hele plan (sjablonen, schijven, A
 - Nog te doen in stap 0: de rest van de pagina in de echte app uitproberen (vooral punt 5 na de nieuwe foutmelding).
 - Help: `HelpContent/projecten/planning-per-bouwdeel.md`.
 
+### Eerste-testpunten verwerkt (17/11/2026)
+- **Estafette zichtbaar en per taak te kiezen:** het veld Voorgangers toont en vervangt alle voorgangers, ook uit andere plannings (`Woning 1:3.2`, `H:3.1` voor de hoofdplanning). In het taakpaneel staat de schakelaar "Wacht op dezelfde taak in …" (voorstel = zelfde naam, anders zelfde nummer, in de vorige bouwdeelplanning). Planningsnamen: geen `: ; ,`, niet "H", uniek. 58 planningtests slagen (4 nieuw of aangepast).
+- **Blokkerende fouten gecentreerd:** `.gl-v2-inline-error.gl-v2-pl-fout` in plaats van een toast rechtsonder (inline bewerken, koppelen, netwerkfout). Sluit met kruisje of Esc, verdwijnt bij de volgende geslaagde actie.
+- **Estafette per planning (17/11):** geen vaste volgorde tussen woningen meer; per taak een keuzelijst met chips voor de andere bouwdeelplanningen (`EstafetteVoorstellen`), werkbaar bij tientallen woningen.
+- **Keuzelijst bij Voorgangers (17/11):** knop "Kies uit de lijst" met zoekveld over alle plannings (`PlanningStaat.Keuzes`), klik zet de verwijzing in het veld; 59 tests.
+- **Planningssjablonen, stap 1 (17/11/2026):** **migratie `_migrations/146_PlanningSjablonen.sql` vóór app-start** (vier tabellen, raakt niets bestaands). Een planning bewaren als sjabloon (knop met diskette-icoon, recht `Settings.Planningssjablonen` per rol toekennen) en toepassen op meerdere woningen of gebouwen (knop **Sjabloon**): volgorde, verdiepingen, kelder, dak, estafette per taak via de sjabloonvlag. 65 planningtests slagen (6 nieuw in `PlanningSjabloonTests.cs`). **Nog geen sjablooneditor**: estafettevlag, herhaling per verdieping, voorwaarden en codes zijn pas instelbaar na de editor (stap 1b); nu kun je ze enkel via de database zetten. Help: `planning-sjablonen.md`. Na de eerste test (17/11): keuzelijsten in de sjabloonmodal en bij Estafette zijn nu de projectbrede `_SelectList`; de knoppen naast de tabs hebben tekst (Sjabloon, Als sjabloon, Instellen); in het instelpaneel staat een hint als je rol geen verwijderrecht op Planning heeft.
+- **Sjablooneditor, stap 1b (17/11/2026):** Instellingen › Planningssjablonen (lijst + editor): blokken met voorwaarde (kelder, hellend of plat dak), per verdieping herhalen, taken met duur, voorgangers via codes en estafettevlag met wachttijd; validatie bij opslaan. Geen nieuwe migratie (146 volstaat); rol moet `Settings.Planningssjablonen` krijgen. 69 planningtests slagen (3 nieuw). Niet in de browser getest.
+- **Sjablonen-pagina's herwerkt naar de design-handoff (18/11/2026):** lijst (63a) en editor (63b) volgens "CRM Planningssjablonen": chips met voorganger-kiezer, type/wachttijd per voorganger, estafette-knop, inklapbare blokken, ⋯-menu's, slepen, live voorbeeld/proefdraaien/controle van de server, dupliceren en (de)activeren, kolommen duur, reageert op, gebruikt in, gewijzigd. **Migratie `_migrations/147_PlanningSjabloonBeheer.sql` vóór app-start** (3 nullable kolommen). 73 planningtests slagen. "Reageert op" wordt enkel bewaard (automatisch voorstellen volgt in stap 3/4). Niet in de browser getest.
+- Niet in de echte app getest (enkel build, syntaxcontrole en tests). Help: `planning-per-bouwdeel.md` bijgewerkt, DESIGN.md bijgewerkt. Screenshot van de fout en van de schakelaar nog te noteren.
+- Let op: de bestaande estafette-koppelingen van project 79 (woning 2) staan nu zichtbaar in het veld, ook als je ze niet wilt: haal ze weg door de schakelaar uit te zetten.
+
 ## Nog te doen
 1. Planning in de echte app uitproberen (permissie toekennen, taak aanmaken, voorgangers, verlet, deadline, klantwaarschuwing).
 2. ~~Mijlpaal ↔ taak koppelen vanuit de UI~~ gedaan op 15/11/2026. Nog open: automatisch koppelen op `Mijlpaal.Code` (zie hierboven) en koppelen vanuit de mijlpaalmodal van het Traject.
@@ -58,3 +69,17 @@ Zie `PLANNING_SJABLOON_OVERDRACHT.md` voor het hele plan (sjablonen, schijven, A
 5. Fase 4: balken slepen (verschuiven, duur, afhankelijkheid trekken), rechtsklikmenu, samenvoegen bij een conflict, tablet-/gsm-verfijning, toetsenbord (pijltjes op een balk).
 6. Klantdetail toont nog geen waarschuwing bij een ontbrekend weerstation.
 7. ~~Scroll bij het openen~~ opgelost op 15/11/2026: opent op vandaag, of op het begin van de planning als vandaag buiten het bereik valt.
+
+## 18/11/2026 – Planning los van de betalingsgroep
+- Een planning hoort nu bij **eenheden** (`BouwPlanningEenheid`, migratie `_migrations/149_PlanningEenheden.sql` vóór app-start; bestaande plannings nemen de eenheden van hun groep over, `PaymentGroupId` blijft ongebruikt staan). Planning toevoegen/instellen kiest eenheden met vinkjes; een planning mag meerdere eenheden bundelen, een eenheid zit in hoogstens één planning.
+- "Sjabloon toepassen": rijen zijn bestaande plannings (vullen of na bevestiging vervangen) en eenheden zonder planning (nieuwe planning). 75 planningtests slagen. Niet in de browser getest.
+- Volgende: stap 2 (schijvensjabloon). Een schijf hangt aan de betalingsgroep (zelfde schijven voor alle woningen) en wordt per eenheid bereikt via een taak of fase in de planning van die eenheid.
+
+## 18/11/2026 – Globaal overzicht en import uit MS Project-XML
+- **Tab Globaal** (planning-id `-1`): alle plannings samen in één alleen-lezen Gantt, per planning een groep. Geen migratie.
+- **Importeren uit MS Project-XML** (design 59b): `MsProjectXmlParser`, commando `importeren`, endpoint `ImportControle`, modal in vier stappen. Nieuwe planning (met eenheden) of toevoegen/vervangen in de huidige. Excel/CSV later; resources genegeerd. 80 planningtests slagen (waarvan 4 voor de import). Niet in de browser getest; help `planning-importeren-ms-project.md`, DESIGN.md en HELP_SCREENSHOTS.md bijgewerkt.
+- Volgende: veld Uitvoerder bij fase/taak (optioneel), weergave "Planning van [aannemer]", daarna stap 2 (schijven).
+
+## 19/11/2026 – Uitvoerder en uitvoerders koppelen bij de import
+- Veld **Uitvoerder** (optioneel) bij fase en taak, migratie `_migrations/150_PlanningUitvoerder.sql` vóór app-start; taken erven van hun fase. Import-stap "Uitvoerders koppelen" (resources uit het MS Project-bestand → bedrijf, met voorstel op naam); niet-gekoppelde namen komen in de notitie. 82 planningtests slagen. Niet in de browser getest.
+- Volgende: weergave "Planning van [aannemer]", daarna stap 2 (schijven). Open: verlofdagen 2027 in de weerverlet-kalender controleren (verklaart het verschil met 19/10/2027).

@@ -286,6 +286,16 @@ public partial class InstellingenController
                     Href = Url.Action("Index", "TrajectSjabloonAdmin") ?? "#"
                 });
             }
+            if (permissionService.HasRead(PermissionCodes.SettingsPlanningSjablonen))
+            {
+                automatisatie.Items.Add(new SettingsItemVm
+                {
+                    Icon = "ph-calendar-check",
+                    Title = "Planningssjablonen",
+                    Description = "Beheer de standaardplanningen met blokken, taken, voorgangers en estafette die je met één handeling op woningen en gebouwen toepast.",
+                    Href = Url.Action("Index", "PlanningSjabloonAdmin") ?? "#"
+                });
+            }
             if (automatisatie.Items.Count > 0) vm.Groups.Add(automatisatie);
 
             ViewData["HelpScreenId"] = "instellingen-overzicht";

@@ -94,7 +94,9 @@
                 var block = root.closest("[data-gl-v2-address-block]");
                 el = block && block.querySelector('[data-role="country-select"]');
             }
-            return el ? el.value : "";
+            if (!el) return "";
+            if (el.hasAttribute("data-gl-v2-select")) { var h = el.querySelector('input[type="hidden"]'); return h ? h.value : ""; }
+            return el.value;
         }
 
         // ── paneel ─────────────────────────────────────────────────────────────────────────────────

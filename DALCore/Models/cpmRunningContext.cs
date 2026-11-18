@@ -205,6 +205,16 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<BouwPlanning> BouwPlanning { get; set; }
 
+    public virtual DbSet<BouwPlanningEenheid> BouwPlanningEenheid { get; set; }
+
+    public virtual DbSet<PlanningSjabloon> PlanningSjabloon { get; set; }
+
+    public virtual DbSet<PlanningSjabloonBlok> PlanningSjabloonBlok { get; set; }
+
+    public virtual DbSet<PlanningSjabloonTaak> PlanningSjabloonTaak { get; set; }
+
+    public virtual DbSet<PlanningSjabloonVoorganger> PlanningSjabloonVoorganger { get; set; }
+
     public virtual DbSet<PlanningSectie> PlanningSectie { get; set; }
 
     public virtual DbSet<PlanningTaak> PlanningTaak { get; set; }
@@ -2477,6 +2487,69 @@ public partial class cpmRunningContext : DbContext
                 .HasForeignKey(d => d.PaymentGroupId)
                 .OnDelete(DeleteBehavior.NoAction)
                 .HasConstraintName("FK_BouwPlanning_PaymentGroup");
+        });
+
+        modelBuilder.Entity<BouwPlanningEenheid>(entity =>
+        {
+            entity.ToTable("BouwPlanningEenheid");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.UnitId, "UX_BouwPlanningEenheid_Unit").IsUnique();
+            entity.HasIndex(e => e.BouwPlanningId, "IX_BouwPlanningEenheid_Planning");
+            entity.HasOne(d => d.BouwPlanning).WithMany(p => p.Eenheden)
+                .HasForeignKey(d => d.BouwPlanningId).OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_BouwPlanningEenheid_BouwPlanning");
+            entity.HasOne(d => d.Unit).WithMany()
+                .HasForeignKey(d => d.UnitId).OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_BouwPlanningEenheid_Unit");
+        });
+
+        modelBuilder.Entity<PlanningSjabloon>(entity =>
+        {
+            entity.ToTable("PlanningSjabloon");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Naam).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Beschrijving).HasMaxLength(1000);
+            entity.Property(e => e.CreatedByUserId).HasMaxLength(450);
+            entity.Property(e => e.ModifiedByUserId).HasMaxLength(450);
+            entity.Property(e => e.ReageertOp).HasMaxLength(40);
+            entity.Property(e => e.IsActief).HasDefaultValue(true);
+        });
+
+        modelBuilder.Entity<PlanningSjabloonBlok>(entity =>
+        {
+            entity.ToTable("PlanningSjabloonBlok");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.SjabloonId, "IX_PlanningSjabloonBlok_Sjabloon");
+            entity.Property(e => e.Code).HasMaxLength(60);
+            entity.Property(e => e.Naam).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.VoorwaardeVariabele).HasMaxLength(20);
+            entity.Property(e => e.VoorwaardeWaarde).HasMaxLength(20);
+            entity.HasOne(d => d.Sjabloon).WithMany(p => p.Blokken)
+                .HasForeignKey(d => d.SjabloonId).OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_PlanningSjabloonBlok_Sjabloon");
+        });
+
+        modelBuilder.Entity<PlanningSjabloonTaak>(entity =>
+        {
+            entity.ToTable("PlanningSjabloonTaak");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.BlokId, "IX_PlanningSjabloonTaak_Blok");
+            entity.Property(e => e.Code).HasMaxLength(60);
+            entity.Property(e => e.Naam).IsRequired().HasMaxLength(200);
+            entity.HasOne(d => d.Blok).WithMany(p => p.Taken)
+                .HasForeignKey(d => d.BlokId).OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_PlanningSjabloonTaak_Blok");
+        });
+
+        modelBuilder.Entity<PlanningSjabloonVoorganger>(entity =>
+        {
+            entity.ToTable("PlanningSjabloonVoorganger");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.TaakId, "IX_PlanningSjabloonVoorganger_Taak");
+            entity.Property(e => e.VoorgangerCode).IsRequired().HasMaxLength(60);
+            entity.HasOne(d => d.Taak).WithMany(p => p.Voorgangers)
+                .HasForeignKey(d => d.TaakId).OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_PlanningSjabloonVoorganger_Taak");
         });
 
         modelBuilder.Entity<PlanningAfhankelijkheid>(entity =>

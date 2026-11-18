@@ -8,7 +8,7 @@ minutes: 10
 updated: 2026-11-15
 newsTag: Nieuw
 screens: planning-index
-related: planning-voorbereiden, planning-opbouwen, planning-per-bouwdeel, voorgangers-en-wachttijd-invullen, taak-datums-en-verantwoordelijke, planning-lezen-en-opvolgen, basisplanning-vastleggen, planning-bijhouden-tijdens-de-bouw, planning-voortgang-budget, planning-navigeren, planning-problemen-oplossen
+related: planning-voorbereiden, planning-opbouwen, planning-per-bouwdeel, planning-importeren-ms-project, voorgangers-en-wachttijd-invullen, taak-datums-en-verantwoordelijke, planning-lezen-en-opvolgen, basisplanning-vastleggen, planning-bijhouden-tijdens-de-bouw, planning-voortgang-budget, planning-navigeren, planning-problemen-oplossen
 synonyms: planning, bouwplanning, planning opstellen, planning maken, gantt, werkwijze, handleiding, fases, taken, mijlpaal, voorgangers, kritiek pad, deadline, oplevering
 description: de hele planning van een bouwproject opbouwen, controleren en opvolgen, stap voor stap
 intro: |

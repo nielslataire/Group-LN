@@ -511,7 +511,11 @@ End If
                             'g-recaptcha-response': captchaToken || '',
                             __RequestVerificationToken: token
                         },
-                        complete: function () {
+                        complete: function (xhr) {
+                            if (xhr && xhr.status === 200 && String(xhr.responseText || '').indexOf('contact-success') !== -1) {
+                                window.dataLayer = window.dataLayer || [];
+                                window.dataLayer.push({ event: 'blog_contact_form_submit' });
+                            }
                             var f = document.getElementById('blogContactForm');
                             if (f) {
                                 f.outerHTML =

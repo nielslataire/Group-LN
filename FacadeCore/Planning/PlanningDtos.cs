@@ -5,7 +5,7 @@ namespace FacadeCore;
 /// <summary>Eén wijziging aan de bouwplanning, vanuit de pagina. <see cref="Type"/> bepaalt welke velden gelezen worden.</summary>
 public sealed class PlanningCommando
 {
-    /// <summary>taakToevoegen · faseToevoegen · wijzig · verwijder · verplaats · basisVastleggen · verletMeetellen · herstel · planningToevoegen · planningWijzig · planningVerwijder</summary>
+    /// <summary>sjabloonToepassen · taakToevoegen · faseToevoegen · wijzig · verwijder · verplaats · basisVastleggen · verletMeetellen · herstel · planningToevoegen · planningWijzig · planningVerwijder · importeren</summary>
     public string Type { get; set; } = "";
 
     /// <summary>De planning (hoofdplanning of bouwdeel) waarop het commando slaat; leeg of 0 = de hoofdplanning. Bij planningWijzig/planningVerwijder: de planning zelf.</summary>
@@ -44,6 +44,12 @@ public sealed class PlanningCommando
     /// <summary>verplaats: omhoog · omlaag · inspringen · uitspringen.</summary>
     public string? Actie { get; set; }
 
+    /// <summary>sjabloonToepassen: welk sjabloon op welke bouwdelen.</summary>
+    public PlanningSjabloonToepassing? Toepassing { get; set; }
+
+    /// <summary>importeren: het ingelezen bestand en de keuzes uit stap 3.</summary>
+    public PlanningImportOpdracht? Import { get; set; }
+
     /// <summary>herstel: de momentopname die bij de vorige uitkomst hoorde (<see cref="PlanningUitkomst.Undo"/>).</summary>
     public string? Momentopname { get; set; }
 }
@@ -67,6 +73,9 @@ public sealed class PlanningUitkomst
     /// <summary>planningToevoegen: de nieuwe planning, zodat de pagina erheen kan schakelen.</summary>
     public int? NieuwePlanningId { get; set; }
 
+    /// <summary>Opmerkingen bij het toepassen van een sjabloon (bv. een voorganger die niet gevonden werd).</summary>
+    public List<string> Waarschuwingen { get; set; } = new();
+
     /// <summary>Momentopname van de planning vóór deze wijziging, voor "Ongedaan maken".</summary>
     public string? Undo { get; set; }
 
@@ -89,13 +98,22 @@ public sealed class PlanningStaat
     /// <summary>Alle plannings van het project, de hoofdplanning eerst. Bestaat er nog geen, dan staat hier een virtuele hoofdplanning met Id 0.</summary>
     public List<PlanningInfo> Planningen { get; set; } = new();
 
-    /// <summary>Bouwdelen (betalingsgroepen) van het project, om een planning aan te koppelen.</summary>
-    public List<PlanningBouwdeelOptie> Bouwdelen { get; set; } = new();
+    /// <summary>Alle eenheden (woningen, gebouwen) van het project, om een planning aan te koppelen.</summary>
+    public List<PlanningEenheidOptie> Eenheden { get; set; } = new();
+
+    /// <summary>De beschikbare planningssjablonen, voor "Sjabloon toepassen".</summary>
+    public List<PlanningSjabloonInfo> Sjablonen { get; set; } = new();
+
+    /// <summary>Alle fases en taken van alle plannings, voor de keuzelijst bij Voorgangers.</summary>
+    public List<PlanningKeuze> Keuzes { get; set; } = new();
 
     public PlanningKop Kop { get; set; } = new();
     public List<PlanningRij> Rijen { get; set; } = new();
     public List<PlanningMelding> Meldingen { get; set; } = new();
     public List<PlanningGebruiker> Gebruikers { get; set; } = new();
+
+    /// <summary>Bedrijven die als uitvoerder gekozen kunnen worden: die met een contract in dit project en die al ergens gekozen zijn.</summary>
+    public List<PlanningUitvoerderOptie> Uitvoerders { get; set; } = new();
 
     /// <summary>Budgetlots waaraan een fase gekoppeld kan worden (voor de fysieke voortgang).</summary>
     public List<PlanningGebruiker> Lots { get; set; } = new();
@@ -110,8 +128,11 @@ public sealed class PlanningInfo
     public int Id { get; set; }
     public string Naam { get; set; } = "";
     public bool IsHoofd { get; set; }
-    public int? BouwdeelId { get; set; }
-    public string? BouwdeelNaam { get; set; }
+    /// <summary>De eenheden (woningen/gebouw) waar deze planning voor geldt; leeg bij de hoofdplanning.</summary>
+    public List<int> EenheidIds { get; set; } = new();
+
+    /// <summary>De namen van die eenheden, kommagescheiden, voor een tooltip.</summary>
+    public string? EenhedenTekst { get; set; }
 
     /// <summary>Ingestelde startdatum van de planning (yyyy-MM-dd); leeg = aanvangsdatum van het project.</summary>
     public string? StartDatum { get; set; }
@@ -121,13 +142,15 @@ public sealed class PlanningInfo
     public string? Einde { get; set; }
 }
 
-public sealed class PlanningBouwdeelOptie
+public sealed class PlanningEenheidOptie
 {
     public int Id { get; set; }
     public string Naam { get; set; } = "";
-    public int AantalEenheden { get; set; }
 
-    /// <summary>De planning die dit bouwdeel al heeft; leeg = vrij.</summary>
+    /// <summary>De betalingsgroep van de eenheid, ter informatie.</summary>
+    public string? GroepNaam { get; set; }
+
+    /// <summary>De planning waar de eenheid al in zit; leeg = vrij.</summary>
     public int? PlanningId { get; set; }
 }
 
@@ -174,6 +197,9 @@ public sealed class PlanningRij
     /// <summary>De voorgangers als gegevens (voor de pijlen in de Gantt).</summary>
     public List<PlanningLinkInfo> VoorgangerLinks { get; set; } = new();
     public string? BepalendeVoorganger { get; set; }
+
+    /// <summary>Estafette: dezelfde taak in elke andere bouwdeelplanning, als voorgangertekst (bv. "Woning 1:3.2").</summary>
+    public List<PlanningEstafetteVoorstel> EstafetteVoorstellen { get; set; } = new();
     public byte Beperking { get; set; }
     public string? BeperkingDatum { get; set; }
     public string? Deadline { get; set; }
@@ -181,6 +207,14 @@ public sealed class PlanningRij
     public string? WerkelijkEinde { get; set; }
     public string? Notitie { get; set; }
     public string? VerantwoordelijkeId { get; set; }
+
+    /// <summary>De uitvoerder (bedrijf) die bij deze rij zelf is ingesteld; leeg = geen of overgenomen van de fase.</summary>
+    public int? UitvoerderId { get; set; }
+
+    /// <summary>De uitvoerder die geldt (eigen of die van de fase) en zijn naam.</summary>
+    public int? UitvoerderEffectiefId { get; set; }
+    public string? UitvoerderNaam { get; set; }
+    public bool UitvoerderGeerfd { get; set; }
     public string? BasisStart { get; set; }
     public string? BasisEinde { get; set; }
     public int? Afwijking { get; set; }
@@ -189,6 +223,28 @@ public sealed class PlanningRij
     public string? LotNaam { get; set; }
     public List<PlanningMijlpaalLink> Mijlpalen { get; set; } = new();
     public List<string> Waarschuwingen { get; set; } = new();
+}
+
+/// <summary>Een fase of taak die je als voorganger kunt kiezen, in om het even welke planning van het project.</summary>
+public sealed class PlanningKeuze
+{
+    /// <summary>De tekst voor het veld Voorgangers: "3.2", "H:3.2" of "Woning 1:3.2".</summary>
+    public string Verwijzing { get; set; } = "";
+    public int PlanningId { get; set; }
+    public string Planning { get; set; } = "";
+    public bool IsEigen { get; set; }
+    public string Wbs { get; set; } = "";
+    public string Naam { get; set; } = "";
+    public bool IsFase { get; set; }
+    public int Niveau { get; set; }
+    public int? TaakId { get; set; }
+}
+
+public sealed class PlanningEstafetteVoorstel
+{
+    public string Planning { get; set; } = "";
+    public string Verwijzing { get; set; } = "";
+    public int TaakId { get; set; }
 }
 
 public sealed class PlanningLinkInfo
@@ -214,6 +270,15 @@ public sealed class PlanningMelding
     public string Titel { get; set; } = "";
     public string? Tekst { get; set; }
     public string? RijSleutel { get; set; }
+}
+
+public sealed class PlanningUitvoerderOptie
+{
+    public int Id { get; set; }
+    public string Naam { get; set; } = "";
+
+    /// <summary>Het bedrijf heeft een contract in dit project.</summary>
+    public bool InProject { get; set; }
 }
 
 public sealed class PlanningGebruiker
@@ -262,6 +327,80 @@ public sealed class PlanningKoppelCommando
 
     /// <summary>De mijlpaal die tot nu toe in de keuzelijst stond en losgekoppeld wordt (leeg = geen).</summary>
     public int? VorigeMijlpaalId { get; set; }
+}
+
+public sealed class PlanningSjabloonInfo
+{
+    public int Id { get; set; }
+    public string Naam { get; set; } = "";
+    public string? Beschrijving { get; set; }
+    public int AantalBlokken { get; set; }
+    public int AantalTaken { get; set; }
+
+    /// <summary>Welke variabelen het sjabloon gebruikt, zodat het toepassen enkel daar naar vraagt.</summary>
+    public bool HeeftVerdiepingen { get; set; }
+    public bool HeeftKelder { get; set; }
+    public bool HeeftDak { get; set; }
+    public bool HeeftEstafette { get; set; }
+}
+
+public sealed class PlanningSjabloonToepassing
+{
+    public int SjabloonId { get; set; }
+
+    /// <summary>De plannings in de volgorde van de estafette: een taak met estafettevlag wacht op dezelfde taak in de planning ervoor.</summary>
+    public List<PlanningToepassingPlanning> Planningen { get; set; } = new();
+}
+
+public sealed class PlanningToepassingPlanning
+{
+    /// <summary>Een bestaande planning die het sjabloon vult (of vervangt, zie <see cref="Vervang"/>); leeg = er komt een nieuwe planning voor <see cref="EenheidIds"/>.</summary>
+    public int? PlanningId { get; set; }
+
+    /// <summary>Bij een nieuwe planning: de eenheden die erbij horen (nog zonder planning). De planning krijgt de naam van de eerste eenheid.</summary>
+    public List<int> EenheidIds { get; set; } = new();
+    public int Verdiepingen { get; set; } = 1;
+    public bool Kelder { get; set; }
+
+    /// <summary>De bestaande planning (met taken) mag door het sjabloon vervangen worden.</summary>
+    public bool Vervang { get; set; }
+
+    /// <summary>"hellend" of "plat"; leeg = geen keuze.</summary>
+    public string? Dak { get; set; }
+    public string? StartDatum { get; set; }
+}
+
+public sealed class PlanningSjabloonBewaarUitkomst
+{
+    public bool Ok { get; set; }
+    public string? Fout { get; set; }
+    public int SjabloonId { get; set; }
+    public int Blokken { get; set; }
+    public int Taken { get; set; }
+
+    /// <summary>Voorgangers uit een andere planning, die niet in het sjabloon kunnen.</summary>
+    public int Overgeslagen { get; set; }
+}
+
+public interface IPlanningSjabloonService
+{
+    Task<List<PlanningSjabloonInfo>> Lijst();
+    Task<PlanningSjabloonBewaarUitkomst> BewaarVanPlanning(int projectId, int? planningId, string naam, string? beschrijving, string? userId);
+    Task<string?> Verwijder(int id);
+
+    /// <summary>Alle sjablonen (ook inactieve) voor de beheerpagina.</summary>
+    Task<List<PlanningSjabloonBeheerRij>> BeheerLijst();
+    Task<PlanningSjabloonBewerk?> Haal(int id);
+
+    /// <summary>Bewaart een sjabloon uit de editor (Id 0 = nieuw). Valideert codes, voorgangers en kringverwijzingen.</summary>
+    Task<PlanningSjabloonBewerkUitkomst> Bewaar(PlanningSjabloonBewerk sjabloon, string? userId);
+
+    /// <summary>Rekent het sjabloon uit de editor door voor een aantal woningen en verdiepingen, zonder iets te bewaren.</summary>
+    PlanningSjabloonProefUitkomst Proef(PlanningSjabloonProefVerzoek verzoek);
+
+    /// <summary>Maakt een kopie (zelfde blokken en codes) onder de naam "… (kopie)". Geeft het nieuwe id, of een fout.</summary>
+    Task<(int? Id, string? Fout)> Dupliceer(int id, string? userId);
+    Task<string?> ZetActief(int id, bool actief, string? userId);
 }
 
 public interface IPlanningService

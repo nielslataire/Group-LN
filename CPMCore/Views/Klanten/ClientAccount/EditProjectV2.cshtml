@@ -27,6 +27,18 @@
         .ToList();
     ViewData["Listactivities"] = Model.ListActivities;
 
+    // Native <select> → gedeelde Basis-keuzelijst (GlV2/_SelectList). Staat de huidige waarde niet in de
+    // lijst, dan valt ze terug op de eerste optie: zo verstuurt het formulier wat een native select
+    // ook zou versturen.
+    List<GlV2SelectItem> SelectItems(IEnumerable<SelectListItem> source) =>
+        source.Select(i => new GlV2SelectItem { Value = i.Value ?? "", Text = i.Text ?? "" }).ToList();
+    GlV2SelectListVm SelectVm(string name, string id, string label, List<GlV2SelectItem> items, string current, Dictionary<string, string>? data = null, string? help = null)
+    {
+        var value = items.Any(i => i.Value == current) ? current : (items.FirstOrDefault()?.Value ?? "");
+        return new GlV2SelectListVm { Name = name, Id = id, Label = label, Items = items, Value = value, Help = help, Data = data ?? new() };
+    }
+    var salutationItems = Html.GetEnumSelectList<Salutation>().Select(i => new GlV2SelectItem { Value = i.Value, Text = i.Text }).ToList();
+
     bool KeyHasError(string prefix) => ViewContext.ModelState.Any(kvp => kvp.Value.Errors.Count > 0 && (kvp.Key == prefix || kvp.Key.StartsWith(prefix + ".", StringComparison.Ordinal) || kvp.Key.StartsWith(prefix + "[", StringComparison.Ordinal)));
     var algemeenHasError = ViewContext.ModelState.Any(kvp => kvp.Value.Errors.Count > 0
         && !kvp.Key.StartsWith("Client.Contacts", StringComparison.Ordinal)
@@ -164,13 +176,9 @@
                 </div>
                 <div class="gl-v2-section-grid">
                     <div class="gl-v2-col-3">
-                        <div class="gl-v2-field">
-                            <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Client.Salutation)">Aanspreking</label>
-                            <div class="gl-v2-field-box">
-                                @Html.DropDownListFor(m => m.Client.Salutation, Html.GetEnumSelectList<Salutation>(), new { @class = "gl-v2-field-input", data_role = "salutation-select" })
-                            </div>
-                            <span class="gl-v2-field-help">"Dhr. &amp; Mevr." e.d. = koppel als één eigenaar (geen eigen voornaam); elk een eigen aandeel/adres → tab Mede-eigenaars.</span>
-                        </div>
+                        @await Html.PartialAsync("GlV2/_SelectList", SelectVm(Html.NameFor(m => m.Client.Salutation), Html.IdFor(m => m.Client.Salutation), "Aanspreking", salutationItems, ((int)Model.Client.Salutation).ToString(),
+                            new Dictionary<string, string> { ["data-role"] = "salutation-select" },
+                            "\"Dhr. & Mevr.\" e.d. = koppel als één eigenaar (geen eigen voornaam); elk een eigen aandeel/adres → tab Mede-eigenaars."))
                     </div>
                     <div class="gl-v2-col-3">
                         <div class="gl-v2-field">
@@ -189,17 +197,8 @@
                         </div>
                     </div>
                     <div class="gl-v2-col-3">
-                        <div class="gl-v2-field">
-                            <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Client.OwnerType.Id)">Type eigenaar</label>
-                            <div class="gl-v2-field-box">
-                                <select id="@Html.IdFor(m => m.Client.OwnerType.Id)" name="@Html.NameFor(m => m.Client.OwnerType.Id)" class="gl-v2-field-input">
-                                    @foreach (var ownerType in Model.OwnerTypes)
-                                    {
-                                        <option value="@ownerType.ID" selected="@(ownerType.ID == Model.Client.OwnerType.Id ? "selected" : null)">@ownerType.Display</option>
-                                    }
-                                </select>
-                            </div>
-                        </div>
+                        @await Html.PartialAsync("GlV2/_SelectList", SelectVm(Html.NameFor(m => m.Client.OwnerType.Id), Html.IdFor(m => m.Client.OwnerType.Id), "Type eigenaar",
+                            Model.OwnerTypes.Select(o => new GlV2SelectItem { Value = o.ID.ToString(), Text = o.Display }).ToList(), Model.Client.OwnerType.Id.ToString()))
                     </div>
                     <div class="gl-v2-col-12">
                         <div class="gl-v2-switch-group">
@@ -265,17 +264,8 @@
                         </div>
                     </div>
                     <div class="gl-v2-field-group gl-v2-col-5" data-gl-v2-address-block>
-                        <div class="gl-v2-field">
-                            <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Client.Postalcode.Country.CountryId)">Land</label>
-                            <div class="gl-v2-field-box">
-                                <select id="@Html.IdFor(m => m.Client.Postalcode.Country.CountryId)" name="@Html.NameFor(m => m.Client.Postalcode.Country.CountryId)" class="gl-v2-field-input" data-role="country-select">
-                                    @foreach (var country in countryItems)
-                                    {
-                                        <option value="@country.Value" selected="@(country.Value == Model.Client.Postalcode.Country.CountryId.ToString() ? "selected" : null)">@country.Text</option>
-                                    }
-                                </select>
-                            </div>
-                        </div>
+                        @await Html.PartialAsync("GlV2/_SelectList", SelectVm(Html.NameFor(m => m.Client.Postalcode.Country.CountryId), Html.IdFor(m => m.Client.Postalcode.Country.CountryId), "Land",
+                            SelectItems(countryItems), Model.Client.Postalcode.Country.CountryId.ToString(), new Dictionary<string, string> { ["data-role"] = "country-select" }))
                         @Html.EditorFor(m => m.SelectedPostalcodeId, "GlV2SearchSelect", new
                         {
                             Label = "Gemeente / postcode",
@@ -322,17 +312,8 @@
                                 </div>
                             </div>
                             <div class="gl-v2-field-group gl-v2-col-5" data-gl-v2-address-block>
-                                <div class="gl-v2-field">
-                                    <label class="gl-v2-field-label" for="@Html.IdFor(m => m.Client.InvoicePostalcode.Country.CountryId)">Land (facturatie)</label>
-                                    <div class="gl-v2-field-box">
-                                        <select id="@Html.IdFor(m => m.Client.InvoicePostalcode.Country.CountryId)" name="@Html.NameFor(m => m.Client.InvoicePostalcode.Country.CountryId)" class="gl-v2-field-input" data-role="country-select">
-                                            @foreach (var country in countryItems)
-                                            {
-                                                <option value="@country.Value" selected="@(country.Value == Model.Client.InvoicePostalcode.Country.CountryId.ToString() ? "selected" : null)">@country.Text</option>
-                                            }
-                                        </select>
-                                    </div>
-                                </div>
+                                @await Html.PartialAsync("GlV2/_SelectList", SelectVm(Html.NameFor(m => m.Client.InvoicePostalcode.Country.CountryId), Html.IdFor(m => m.Client.InvoicePostalcode.Country.CountryId), "Land (facturatie)",
+                                    SelectItems(countryItems), Model.Client.InvoicePostalcode.Country.CountryId.ToString(), new Dictionary<string, string> { ["data-role"] = "country-select" }))
                                 @Html.EditorFor(m => m.SelectedInvoicePostalcodeId, "GlV2SearchSelect", new
                                 {
                                     Label = "Gemeente / postcode (facturatie)",
@@ -565,35 +546,30 @@
                         </div>
                     </div>
                     <div class="gl-v2-col-6">
-                        <div class="gl-v2-field">
-                            <label class="gl-v2-field-label" for="gl-v2-kep-billedto">Op naam van</label>
-                            <div class="gl-v2-field-box">
-                                <select class="gl-v2-field-input" id="gl-v2-kep-billedto" name="@Html.NameFor(m => m.Client.BilledToType)" data-role="billedto-select">
-                                    <option value="" selected="@(Model.Client.BilledToType is null or ClientBilledToType.AllOwners ? "selected" : null)">Alle eigenaars</option>
-                                    <option value="@((int)ClientBilledToType.SpecificOwner)" selected="@(Model.Client.BilledToType == ClientBilledToType.SpecificOwner ? "selected" : null)">Eén eigenaar …</option>
-                                    @if (Model.IsCompany)
-                                    {
-                                        <option value="@((int)ClientBilledToType.Company)" selected="@(Model.Client.BilledToType == ClientBilledToType.Company ? "selected" : null)">Bedrijf</option>
-                                    }
-                                </select>
-                            </div>
-                        </div>
+                        @{
+                            var billedToItems = new List<GlV2SelectItem>
+                            {
+                                new() { Value = "", Text = "Alle eigenaars" },
+                                new() { Value = ((int)ClientBilledToType.SpecificOwner).ToString(), Text = "Eén eigenaar …" }
+                            };
+                            if (Model.IsCompany) billedToItems.Add(new() { Value = ((int)ClientBilledToType.Company).ToString(), Text = "Bedrijf" });
+                            var billedToCurrent = Model.Client.BilledToType is null or ClientBilledToType.AllOwners ? "" : ((int)Model.Client.BilledToType.Value).ToString();
+                        }
+                        @await Html.PartialAsync("GlV2/_SelectList", SelectVm(Html.NameFor(m => m.Client.BilledToType), "gl-v2-kep-billedto", "Op naam van", billedToItems, billedToCurrent,
+                            new Dictionary<string, string> { ["data-role"] = "billedto-select" }))
                     </div>
                     <div class="gl-v2-col-6" data-role="billedto-owner-field" hidden="@(Model.Client.BilledToType != ClientBilledToType.SpecificOwner)">
-                        <div class="gl-v2-field">
-                            <label class="gl-v2-field-label" for="gl-v2-kep-billedto-contact">Welke eigenaar</label>
-                            <div class="gl-v2-field-box">
-                                <select class="gl-v2-field-input" id="gl-v2-kep-billedto-contact" name="@Html.NameFor(m => m.Client.BilledToClientContactId)">
-                                    <option value="">Eigenaar 1 — @Model.Client.DisplayName</option>
-                                    @foreach (var co in Model.Client.CoOwners.Where(c => c.Id > 0))
-                                    {
-                                        var coLabel = !string.IsNullOrWhiteSpace(co.Name) ? (co.Name + (string.IsNullOrWhiteSpace(co.Firstname) ? "" : " " + co.Firstname)) : (co.CompanyName ?? "Mede-eigenaar");
-                                        <option value="@co.Id" selected="@(Model.Client.BilledToClientContactId == co.Id ? "selected" : null)">@coLabel</option>
-                                    }
-                                </select>
-                            </div>
-                            <span class="gl-v2-field-help">Nog niet opgeslagen mede-eigenaars zijn hier pas kiesbaar na een eerste keer opslaan.</span>
-                        </div>
+                        @{
+                            var ownerName = string.IsNullOrWhiteSpace(Model.Client.Name) ? Model.Client.CompanyName : (Model.Client.Name + (string.IsNullOrWhiteSpace(Model.Client.Firstname) ? "" : " " + Model.Client.Firstname));
+                            var billedToOwnerItems = new List<GlV2SelectItem> { new() { Value = "", Text = "Eigenaar 1 — " + ownerName } };
+                            foreach (var co in Model.Client.CoOwners.Where(c => c.Id > 0))
+                            {
+                                var coLabel = !string.IsNullOrWhiteSpace(co.Name) ? (co.Name + (string.IsNullOrWhiteSpace(co.Firstname) ? "" : " " + co.Firstname)) : (co.CompanyName ?? "Mede-eigenaar");
+                                billedToOwnerItems.Add(new() { Value = co.Id.ToString(), Text = coLabel });
+                            }
+                        }
+                        @await Html.PartialAsync("GlV2/_SelectList", SelectVm(Html.NameFor(m => m.Client.BilledToClientContactId), "gl-v2-kep-billedto-contact", "Welke eigenaar", billedToOwnerItems,
+                            Model.Client.BilledToClientContactId?.ToString() ?? "", null, "Nog niet opgeslagen mede-eigenaars zijn hier pas kiesbaar na een eerste keer opslaan."))
                     </div>
                     <div class="gl-v2-col-12">
                         <div class="gl-v2-field">
