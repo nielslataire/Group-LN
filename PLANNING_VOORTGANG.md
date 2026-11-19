@@ -83,3 +83,11 @@ Zie `PLANNING_SJABLOON_OVERDRACHT.md` voor het hele plan (sjablonen, schijven, A
 ## 19/11/2026 – Uitvoerder en uitvoerders koppelen bij de import
 - Veld **Uitvoerder** (optioneel) bij fase en taak, migratie `_migrations/150_PlanningUitvoerder.sql` vóór app-start; taken erven van hun fase. Import-stap "Uitvoerders koppelen" (resources uit het MS Project-bestand → bedrijf, met voorstel op naam); niet-gekoppelde namen komen in de notitie. 82 planningtests slagen. Niet in de browser getest.
 - Volgende: weergave "Planning van [aannemer]", daarna stap 2 (schijven). Open: verlofdagen 2027 in de weerverlet-kalender controleren (verklaart het verschil met 19/10/2027).
+
+## 19/11/2026 – Uitvoerders: enkel aannemers met een contract in het project
+- **Probleem:** de koppelstap van de import bood alle bedrijven aan en de naamsuggestie koos ook bedrijven buiten het project.
+- **Nu:** `ImportControle` geeft enkel bedrijven met een `Contract` in het project terug; het commando `importeren` negeert server-side koppelingen naar andere bedrijven; de suggestie op naam kijkt enkel naar projectaannemers. De staat (`PlanningStaat.Uitvoerders`) bevat enkel contractbedrijven; de naam van een eerder gekozen ander bedrijf blijft wel zichtbaar in de rij.
+- **UI:** de `<select>` in de importstap en de velden Uitvoerder bij fase en taak zijn vervangen door de doorzoekbare keuzelijst `gl-v2-combo` (nieuw partial `Views/Shared/GlV2/_UitvoerderCombo.cshtml`). Help `planning-importeren-ms-project.md` bijgewerkt. Geen migratie.
+- CPMCore en ServiceCore bouwen zonder fouten; de planningtests zijn niet opnieuw gedraaid en niets is in de browser getest. Niet gecommit.
+- Let op: een bestaande taak/fase met een uitvoerder zonder contract toont die naam in de rij, maar het veld is leeg bij bewerken en opslaan wist die uitvoerder.
+- Volgende: browsertest van de importkoppeling en de velden Uitvoerder, daarna weergave "Planning van [aannemer]" en stap 2 (schijven).
