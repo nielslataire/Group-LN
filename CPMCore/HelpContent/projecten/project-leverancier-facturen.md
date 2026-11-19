@@ -4,9 +4,9 @@ topic: projecten
 parent: project-leverancier-detail
 treeOrder: 1
 role: Projectleider
-device: Desktop · tablet
+device: Desktop · tablet · gsm
 minutes: 3
-updated: 2026-11-16
+updated: 2026-11-20
 screens: projecten-leverancier-detail
 synonyms: facturen leverancier, te betalen, gefactureerd, nog te factureren, korting contant, vervallen factuur, waarborg
 description: wat een leverancier al gefactureerd heeft in dit project, wat nog betaald moet worden en wat je eerst moet doen
@@ -57,6 +57,16 @@ Klik op een regel om de factuur te openen en de actie af te ronden. Is er niets,
 
 Onder het nummer staat het soort: **Vordering**, **Eindvordering** of **Creditnota**. Heeft de leverancier meerdere contracten in dit project, dan staat daar ook de naam van het contract.
 In de kolom **Korting** zie je hoeveel korting contant je nog kan krijgen en tot wanneer. Is die datum voorbij, dan staat er **verlopen**.
+
+## Op je gsm
+
+Op een gsm staat alles onder elkaar, in deze volgorde:
+
+1. **Vier kerncijfers**: gefactureerd (met het echte percentage van het contract, ook boven 100 %), betaald, te controleren en goedgekeurd maar nog open.
+2. **Vraagt actie** in goud, als samenvatting: hoeveel facturen te controleren zijn en sinds wanneer, welke vervallen zijn, en hoeveel korting contant je al hebt gemist. **Controle starten** opent de oudste factuur om te controleren.
+3. **Facturen** met filters **Alle**, **Te controleren**, **Te betalen** en **Betaald**. Per factuur zie je het nummer, de datum, de vervaldag, het bedrag en de status. De eerste 5 staan zichtbaar, tik op **Nog N facturen** voor de rest en op **Minder tonen** om weer in te klappen.
+4. **Tegenover het contract**: één balk met het contract in groen en het deel erboven in goud. Is er meer gefactureerd dan het contract, dan zie je de vraag of er een bijbestelling ontbreekt, met een link om ze toe te voegen.
+5. **Waarborg** in korte velden: soort, afgesproken, ingehouden en vrijgave.
 
 ## Het contract en de waarborg ernaast
 

@@ -7,7 +7,7 @@ minutes: 4
 updated: 2026-10-26
 newsTag: Nieuw
 screens: projecten-betalingsschijven
-related: project-factureren, betalingsgroep-instellen, factuur-bekijken
+related: planning-schijven-koppelen, project-factureren, betalingsgroep-instellen, factuur-bekijken
 synonyms: schijf bereikt, betalingsschijf, schijven, eenheden, bewijs, werffoto, eindafrekening, betalingsgroep, terug uitzetten, factureerbaar
 description: per eenheid zien welke schijf gefactureerd, bereikt of nog niet bereikt is
 intro: |
@@ -59,6 +59,8 @@ De stand geldt per eenheid. Dezelfde schijf kan bij de ene eenheid bereikt zijn 
 5. Klik op de knop onderaan, bijvoorbeeld **Bereikt voor 2 eenheden**.
 
 CPM toont "Bereikt voor N eenheden" en de bolletjes zijn gevuld. Op de pagina Facturatie van het project staat de schijf nu klaar. Er wordt nog niets gefactureerd. Zie "Facturen opmaken voor schijven en wijzigingen van een project".
+
+Wil je dat CPM je er attent op maakt zodra de bouwstap klaar is? Koppel de schijf dan aan een taak of fase in de planning (zie "Schijven koppelen aan de planning").
 
 ## Eén eenheid snel aanduiden of terugzetten
 

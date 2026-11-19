@@ -4,9 +4,9 @@ topic: projecten
 parent: project-leverancier-detail
 treeOrder: 3
 role: Projectleider
-device: Desktop · tablet
+device: Desktop · tablet · gsm
 minutes: 3
-updated: 2026-11-16
+updated: 2026-11-20
 screens: projecten-leverancier-detail
 synonyms: portaaltoegang, uitnodigen aannemer, toegang intrekken, werfportaal, volledig uitnodigen, beperkt uitnodigen
 description: vanuit het contract van een leverancier mensen uitnodigen voor het werfportaal of hun toegang intrekken
@@ -37,6 +37,10 @@ faq:
 
 CPM maakt een gebruiker aan voor dat e-mailadres, als die nog niet bestaat, en verstuurt een uitnodiging.
 Je blijft op dit tabblad en ziet **Uitnodiging verstuurd naar** het e-mailadres.
+
+## Op je gsm
+
+Het tabblad heet op een gsm **Portaal**. Bovenaan staat in één kaart hoeveel mensen zijn uitgenodigd en hoeveel er toegang hebben. Per persoon zie je labels in plaats van losse regels: de stand van de uitnodiging, **Beperkt** of **Volledig**, en wanneer die persoon zich voor het laatst aanmeldde. Onder een persoon staan de acties: **Intrekken** (met bevestiging) of **Opnieuw uitnodigen** als de toegang mislukt of ingetrokken was. Daaronder leggen twee vakken uit wat **Beperkt** en **Volledig** betekenen. Bij **Iemand uitnodigen** kies je per contactpersoon met e-mailadres **Beperkt** of **Volledig**. Zonder zo'n contactpersoon voeg je er eerst een toe bij het tabblad Leverancier.
 
 ## De status volgen
 

@@ -38,64 +38,97 @@
     // klikbare kaart-styling weg i.p.v. een lege/kapotte trigger te tonen. ─────────────────────────
     var mobileList = document.getElementById("gl-v2-dc-mobile-list");
 
-    function buildMobileCard(tr) {
-        var cells = tr.querySelectorAll("td");
-        var card = document.createElement("div");
-        card.className = "gl-v2-dc-card";
-        var detailUrl = tr.getAttribute("data-detail-url");
-        if (detailUrl) card.setAttribute("data-detail-url", detailUrl);
+    // Klantkaart op gsm (design-handoff 64c): één kaart per klant — tikbare kop (avatar met initialen, naam, "Lot · type · m²"),
+    // ⋯ als ronde knop van 44 (opent het bestaande rij-menu als bottom sheet), chip met de stand + e-mail, en het verkooptraject
+    // als drie stappen (verkocht → akte → oplevering; vinkje = gebeurd, goud = volgende stap). Gebouwd uit de data-* van de tabelrij.
+    function esc(text) { var d = document.createElement("div"); d.textContent = text == null ? "" : text; return d.innerHTML; }
 
-        var headRow = document.createElement("div");
-        headRow.className = "gl-v2-dc-card-row";
-        var clientCell = cells[0].querySelector(".gl-v2-dc-client");
-        if (clientCell) headRow.appendChild(clientCell.cloneNode(true));
+    // Zoekterm markeren in de naam (64d beeld 4): <mark> om elk voorkomen, hoofdletterongevoelig.
+    function highlight(text) {
+        var t = text == null ? "" : String(text);
+        var term = (typeof mobileTerm === "string" ? mobileTerm : "").trim();
+        if (!term) return esc(t);
+        var lower = t.toLowerCase(), q = term.toLowerCase(), out = "", i = 0, at;
+        while ((at = lower.indexOf(q, i)) !== -1) {
+            out += esc(t.slice(i, at)) + "<mark>" + esc(t.slice(at, at + q.length)) + "</mark>";
+            i = at + q.length;
+        }
+        return out + esc(t.slice(i));
+    }
+
+    function stepHtml(label, value, state) {
+        var icon = state === "ok" ? '<i class="ph ph-check" aria-hidden="true"></i>' : "";
+        return '<li class="gl-v2-m-step' + (state ? " is-" + state : "") + '"><i>' + icon + '</i><span>' + esc(label) + '</span><b>' + esc(value) + '</b></li>';
+    }
+
+    function buildMobileCard(tr) {
+        var d = tr.dataset;
+        var detailUrl = tr.getAttribute("data-detail-url") || "#";
+        var stage = d.stage || "plannen";
+        var chipClass = stage === "plannen" ? "gl-v2-m-chip is-gold" : "gl-v2-m-chip is-ok";
+
+        var card = document.createElement("article");
+        card.className = "gl-v2-m-card gl-v2-m-client";
+        var html =
+            '<a class="gl-v2-m-client-head" href="' + esc(detailUrl) + '">' +
+                '<span class="gl-v2-m-avatar">' + esc(d.initials || "?") + '</span>' +
+                '<span class="gl-v2-m-client-t"><b>' + highlight(d.name) + '</b><small>' + esc(d.unitSub) + '</small></span>' +
+            '</a>' +
+            '<div class="gl-v2-m-client-meta"><i class="' + chipClass + '">' + esc(d.stageLabel) + '</i>' +
+                (d.email ? '<span><i class="ph ph-envelope-simple" aria-hidden="true"></i>' + esc(d.email) + '</span>' : '') + '</div>';
+
+        var deedOk = !!d.d2, soldOk = !!d.d1, deliveredOk = stage === "opgeleverd";
+        html += '<ol class="gl-v2-m-steps">' +
+            stepHtml("Verkocht", d.d1 || "—", soldOk ? "ok" : "") +
+            stepHtml("Akte", deedOk ? d.d2 : (soldOk ? "te plannen" : "—"), deedOk ? "ok" : (soldOk ? "next" : "")) +
+            stepHtml("Oplevering", d.d3 || (deedOk ? "nog niet gepland" : "—"), deliveredOk ? "ok" : (deedOk && !d.d3 ? "" : "")) +
+            '</ol>';
+        card.innerHTML = html;
 
         var menu = tr.querySelector(".gl-v2-menu");
-        if (menu) {
-            var trigger = tr.querySelector(".js-gl-v2-menu-trigger").cloneNode(true);
+        var trigger = tr.querySelector(".js-gl-v2-menu-trigger");
+        if (menu && trigger) {
+            var more = trigger.cloneNode(true);
             var menuClone = menu.cloneNode(true);
             var mobileMenuId = menu.id + "-m";
             menuClone.id = mobileMenuId;
-            trigger.setAttribute("aria-controls", mobileMenuId);
-            headRow.appendChild(trigger);
-            card.appendChild(headRow);
+            more.setAttribute("aria-controls", mobileMenuId);
+            more.className = "gl-v2-m-roundbtn gl-v2-m-client-more js-gl-v2-menu-trigger";
+            more.setAttribute("aria-label", "Acties voor " + (d.name || "klant"));
+            card.appendChild(more);
             card.appendChild(menuClone);
-        } else {
-            card.appendChild(headRow);
+            // Bellen-keuzeblad: de tabelrij is op gsm verborgen, dus ook dit blad moet een kopie in de kaart krijgen (en de knop moet ernaar wijzen).
+            var callMenu = tr.querySelector('.gl-v2-menu[id^="gl-v2-dc-call-"]');
+            if (callMenu) {
+                var callClone = callMenu.cloneNode(true);
+                callClone.id = callMenu.id + "-m";
+                card.appendChild(callClone);
+                var callBtn = menuClone.querySelector(".js-gl-v2-dc-call");
+                if (callBtn) callBtn.setAttribute("data-target", callClone.id);
+            }
         }
-
-        var unitsCell = cells[1].querySelector(".gl-v2-dc-units");
-        if (unitsCell) {
-            var meta = unitsCell.cloneNode(true);
-            meta.className = "gl-v2-dc-card-meta";
-            card.appendChild(meta);
-        }
-
-        var contact = document.createElement("div");
-        contact.className = "gl-v2-dc-card-contact";
-        contact.innerHTML = cells[2].innerHTML;
-        card.appendChild(contact);
-
-        var stats = document.createElement("div");
-        stats.className = "gl-v2-dc-card-stats";
-        [["Verkocht", 3], ["Akte", 4], ["Oplevering", 5]].forEach(function (pair) {
-            var value = (cells[pair[1]].textContent || "").trim();
-            var stat = document.createElement("span");
-            stat.className = "gl-v2-dc-card-stat";
-            stat.innerHTML = '<span class="gl-v2-dc-card-stat-label">' + pair[0] + '</span><span class="gl-v2-dc-card-stat-value"></span>';
-            stat.querySelector(".gl-v2-dc-card-stat-value").textContent = value || "—";
-            stats.appendChild(stat);
-        });
-        card.appendChild(stats);
-
         return card;
     }
+
+    // Filter op verkoopstand (pillen) en sortering (op lot / op naam) — enkel gsm.
+    var mobileStage = "";
+    var mobileSort = "lot";
+    var mobileTerm = "";
 
     function renderMobileCards() {
         if (!mobileList || window.innerWidth >= 768) return;
         mobileList.innerHTML = "";
-        var rows = table.rows({ search: "applied" }).nodes().toArray();
+        // "Nog geen klant"-rijen (eenheden zonder klant) hebben geen data-stage: die blijven op tablet/desktop; de gsm-lijst is de klantenlijst.
+        var rows = table.rows({ search: "applied" }).nodes().toArray().filter(function (tr) { return tr.dataset.stage; });
+        if (mobileSort === "naam") rows.sort(function (x, y) { return (x.dataset.name || "").localeCompare(y.dataset.name || "", "nl"); });
         rows.forEach(function (tr) { mobileList.appendChild(buildMobileCard(tr)); });
+        var count = document.getElementById("gl-v2-dc-m-count");
+        var total = table.rows().nodes().toArray().filter(function (tr) { return tr.dataset.stage; }).length;
+        var sortBtn = document.getElementById("gl-v2-dc-m-sort");
+        if (sortBtn) sortBtn.hidden = !!mobileTerm;
+        if (count) count.textContent = mobileTerm
+            ? rows.length + " van " + total + (total === 1 ? " klant" : " klanten")
+            : rows.length + (rows.length === 1 ? " klant" : " klanten") + " · op " + (mobileSort === "naam" ? "naam" : "lot");
     }
 
     document.addEventListener("click", function (e) {
@@ -151,6 +184,68 @@
             if (!rowTypes.includes(selectedType)) return false;
         }
         return true;
+    });
+
+    // Gsm-filter (64c): verkoopstand-pillen. Zelfde ext.search-mechanisme als Status/Eenheidstype hierboven.
+    $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
+        if (settings.nTable !== tableElement || !mobileStage || window.innerWidth >= 768) return true;
+        var row = settings.aoData[dataIndex]?.nTr;
+        return !row || row.dataset.stage === mobileStage;
+    });
+
+    var mobilePills = document.getElementById("gl-v2-dc-m-pills");
+    if (mobilePills) {
+        mobilePills.addEventListener("click", function (e) {
+            var pill = e.target.closest(".gl-v2-pill");
+            if (!pill) return;
+            mobileStage = pill.getAttribute("data-stage") || "";
+            mobilePills.querySelectorAll(".gl-v2-pill").forEach(function (p) { p.classList.toggle("is-active", p === pill); });
+            table.draw();
+        });
+    }
+    var mobileSearch = document.getElementById("gl-v2-dc-m-search");
+    var mobileTool = document.getElementById("gl-v2-dc-m-tool");
+    var mobileClear = document.getElementById("gl-v2-dc-m-search-x");
+    function syncSearching() {
+        var on = !!mobileSearch && (document.activeElement === mobileSearch || mobileSearch.value !== "");
+        if (mobileTool) mobileTool.classList.toggle("is-searching", on);
+        document.body.classList.toggle("gl-v2-searching", on);
+    }
+    if (mobileSearch) {
+        mobileSearch.addEventListener("input", function () { mobileTerm = mobileSearch.value; syncSearching(); table.search(mobileSearch.value).draw(); });
+        mobileSearch.addEventListener("focus", syncSearching);
+        mobileSearch.addEventListener("blur", function () { window.setTimeout(syncSearching, 0); });
+    }
+    if (mobileClear) mobileClear.addEventListener("mousedown", function (e) { e.preventDefault(); });
+    if (mobileClear) mobileClear.addEventListener("click", function () {
+        mobileSearch.value = ""; mobileTerm = ""; syncSearching(); table.search("").draw(); mobileSearch.focus();
+    });
+
+    // "Bellen" bij meerdere nummers (64d beeld 2): sluit het klantmenu en open het keuzeblad.
+    document.addEventListener("click", function (e) {
+        var btn = e.target.closest(".js-gl-v2-dc-call");
+        if (!btn) return;
+        e.preventDefault();
+        var target = document.getElementById(btn.getAttribute("data-target"));
+        if (!target) return;
+        var ownMenu = btn.closest(".gl-v2-menu");
+        var trigger = ownMenu ? document.querySelector('.js-gl-v2-menu-trigger[aria-controls="' + ownMenu.id + '"]') : null;
+        if (window.GlV2Menu) window.GlV2Menu.closeAll();
+        if (!target.querySelector(".gl-v2-menu-cancel")) {
+            var cancel = document.createElement("button");
+            cancel.type = "button"; cancel.className = "gl-v2-menu-cancel"; cancel.textContent = "Annuleren";
+            cancel.addEventListener("click", function () { if (window.GlV2Menu) window.GlV2Menu.closeAll(); });
+            target.appendChild(cancel);
+        }
+        target.classList.add("is-open");
+        var backdrop = document.getElementById("gl-v2-menu-backdrop");
+        if (backdrop) backdrop.classList.add("is-open");
+        if (trigger && window.GlV2Menu) window.GlV2Menu.reposition(trigger, target);
+    });
+    var mobileSortBtn = document.getElementById("gl-v2-dc-m-sort");
+    if (mobileSortBtn) mobileSortBtn.addEventListener("click", function () {
+        mobileSort = mobileSort === "lot" ? "naam" : "lot";
+        renderMobileCards();
     });
 
     // ── Generieke .gl-v2-select-init, zelfde aanpak als gl-v2-leveranciers.js se initSelect(). ─────

@@ -251,6 +251,7 @@ public class PlanningImportTests
 
         var (svc, db) = Maak();
         db.CompanyInfo.Add(new CompanyInfo { CompanyId = 5, BedrijfsNaam = "Demeyer Dakwerken" });
+        db.Contract.Add(new Contract { Id = 1, ProjectId = ProjectId, CompanyId = 5 });   // enkel aannemers met een contract in het project
         await db.SaveChangesAsync();
         var opdracht = Opdracht(f);
         opdracht.Import!.Uitvoerders["Dakw. Demeyer"] = 5;          // Elektro Verstraete blijft ongekoppeld

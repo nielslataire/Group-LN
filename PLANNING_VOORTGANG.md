@@ -66,7 +66,7 @@ Zie `PLANNING_SJABLOON_OVERDRACHT.md` voor het hele plan (sjablonen, schijven, A
 2. ~~Mijlpaal ↔ taak koppelen vanuit de UI~~ gedaan op 15/11/2026. Nog open: automatisch koppelen op `Mijlpaal.Code` (zie hierboven) en koppelen vanuit de mijlpaalmodal van het Traject.
 3. Fase 2: werkkalender-paneel (bedrijfsdagen lezen + projecteigen dagen), planningssjablonen ("Opslaan als sjabloon", Instellingen › Planning), "Fases uit het budget" in de lege staat, dashboard/Projectdetail-kaart.
 4. Fase 3: import (MS Project-XML, Excel) met voorbeeldscherm, export (Excel, PDF A3 in Documentlayout-stijl).
-5. Fase 4: balken slepen (verschuiven, duur, afhankelijkheid trekken), rechtsklikmenu, samenvoegen bij een conflict, tablet-/gsm-verfijning, toetsenbord (pijltjes op een balk).
+5. Fase 4: ~~balken slepen (verschuiven, duur, voortgang), rechtsklikmenu, toetsenbord, rijen slepen~~ gedaan op 19/11/2026 (niet in de browser getest). Nog open: een hele fase slepen, afhankelijkheid trekken, selectiebalk met meerdere rijen (punt 15), PDF A3 (59d), samenvoegen bij een conflict, tablet-/gsm-verfijning.
 6. Klantdetail toont nog geen waarschuwing bij een ontbrekend weerstation.
 7. ~~Scroll bij het openen~~ opgelost op 15/11/2026: opent op vandaag, of op het begin van de planning als vandaag buiten het bereik valt.
 
@@ -91,3 +91,19 @@ Zie `PLANNING_SJABLOON_OVERDRACHT.md` voor het hele plan (sjablonen, schijven, A
 - CPMCore en ServiceCore bouwen zonder fouten; de planningtests zijn niet opnieuw gedraaid en niets is in de browser getest. Niet gecommit.
 - Let op: een bestaande taak/fase met een uitvoerder zonder contract toont die naam in de rij, maar het veld is leeg bij bewerken en opslaan wist die uitvoerder.
 - Volgende: browsertest van de importkoppeling en de velden Uitvoerder, daarna weergave "Planning van [aannemer]" en stap 2 (schijven).
+
+## 19/11/2026 (vervolg): per aannemer, rechtsklikmenu, schijven, fase 4 (deels)
+- **Per aannemer** (tab, client-side, afdrukken). **Rechtsklikmenu** (voortgang 0-100, vandaag gestart, bijwerken volgens schema, vastpinnen). **Schijven**: migratie `151_PlanningSchijfKoppeling.sql` vóór app-start; schijf per planning aan taak of fase koppelen, label "bereikt, markeren?" met één klik (`UnitPaymentStageReached`), terugzetten; betalingsgroep ligt vast zodra één schijf gefactureerd is. **Fase 4**: balken slepen (verschuiven, duur, voortgang), toetsenbord op een balk, rijen slepen (verplaats-actie `naar`). 89 planningtests slagen. Niet in de browser getest.
+
+## 19/11/2026 (avond): test- en correctieronde na de eerste browsertest
+Eerste echte test door Niels op project 79; dit viel op en is opgelost (nog niet opnieuw getest, niets gecommit):
+- **Schijven vonden geen eenheden.** `EenhedenVan` las `Units.PaymentGroupId` (bij project 79 overal leeg). De V2-pagina's leggen de groep vast via `UnitConstructionValue.PaymentGroupId`; dat is nu de bron, `Units.PaymentGroupId` blijft alleen terugval. Gevolg: "Geen schijven" in het taakpaneel.
+- **Hoofdplanning krijgt alle eenheden, ook na import met een selectie.** Bij importeren in een bestaande planning werd de eenhedenkeuze genegeerd. Nieuwe regel: de hoofdplanning mag eigen eenheden hebben (`ControleerEenheden` weigert dat niet meer); met eigen eenheden geldt ze enkel daarvoor, zonder eigen eenheden voor alle eenheden zonder andere planning. Import-stap 3 toont de eenhedenlijst nu ook bij "Deze planning" (huidige keuze voorgevinkt, leeg = ongewijzigd). Planning bewerken van de hoofdplanning toont de eenheden en laat ze kiezen (enkel meesturen als de keuze wijzigt).
+- **Koppeling met schijven: meerdere + zoeken.** Het veld in taak- en fasepaneel is nu een vinkjeslijst met zoekveld (`gl-v2-pl-wrap-schijf(f)-lijst/-zoek`); bij opslaan worden eerst de weggehaalde, dan de nieuwe koppelingen na elkaar verstuurd. Server ongewijzigd (kon al meerdere per taak).
+- **Compact schijflabel in de rij:** "Schijf 3 · 0/2" en "Schijf 3 bereikt?" (volledige naam in de tooltip); `PlanningSchijfLink.Nummer` toegevoegd. De lange naam drukte de taaknaam weg.
+- **Rechtsklikmenu:** "Bijwerken volgens schema" heet nu **Op schema zetten**; scrollen sluit het menu.
+- **Slepen:** pijltje links-rechts (`ew-resize`) boven de rechterrand en het voortgangsstreepje van een balk (ook tijdens het slepen); handpalm blijft voor verschuiven (`data-drag` op de balk, `data-pl-drag` op body).
+- Tests: 90 planningtests slagen (nieuw: hoofdplanning met eigen eenheden + groep enkel via constructiewaarde; een oude test over "hoofdplanning heeft geen eenheden" is aangepast). De 2 falende `StructuredReferenceServiceTests` zijn niet planning-gerelateerd.
+- **Nog te testen door Niels:** punt 6 (slepen, toetsenbord) en 7 (algemeen) uit de testlijst; punt 1 (per aannemer) en 5 (vergrendeling groep) zijn nog niet bevestigd.
+- **Voor deploy/gebruik:** migraties 149, 150, 151 draaien; app herstarten (C#-wijzigingen); verlof 2026/2027 invullen; alles committen (nog niets van 19/11 is gecommit).
+- **Volgende:** commit; dan stap 3 (trajectsjabloon + trigger-actie "schijf bereikt" als echte melding) of de rest van fase 4 (hele fase slepen, afhankelijkheid trekken, selectiebalk, PDF A3, samenvoegen bij conflict, tablet/gsm); daarna schijvensjabloon (min 5 %, richtpercentage, herhaling per verdieping).

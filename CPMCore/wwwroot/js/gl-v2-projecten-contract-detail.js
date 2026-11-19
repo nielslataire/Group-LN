@@ -110,3 +110,49 @@
         });
     }
 })();
+
+// Gsm (64j): "Werfleider kiezen" — de hoofdknop noemt de gekozen persoon en staat uit tot er een keuze is.
+(function () {
+    "use strict";
+    document.querySelectorAll(".js-gl-v2-m-sm-form").forEach(function (form) {
+        var btn = form.querySelector(".js-gl-v2-m-sm-submit");
+        var label = form.querySelector(".js-gl-v2-m-sm-label");
+        function sync() {
+            var picked = form.querySelector('input[name="contactid"]:checked');
+            btn.disabled = !picked;
+            label.textContent = picked ? picked.getAttribute("data-first") + " als werfleider" : "Kies een werfleider";
+        }
+        form.addEventListener("change", sync);
+        sync();
+    });
+})();
+
+// Gsm (64k): factuurpillen (Alle · Te controleren · Te betalen · Betaald) en "Nog N facturen" / "Minder tonen".
+(function () {
+    "use strict";
+    var card = document.getElementById("gl-v2-m-inv-card");
+    if (!card) return;
+    var rows = Array.prototype.slice.call(card.querySelectorAll("[data-m-inv]"));
+    var pills = document.getElementById("gl-v2-m-inv-pills");
+    var more = document.getElementById("gl-v2-m-inv-more");
+    var LIMIT = 5, filter = "", expanded = false;
+    function apply() {
+        var match = rows.filter(function (r) { return !filter || r.getAttribute("data-group") === filter; });
+        rows.forEach(function (r) { r.hidden = true; });
+        var all = expanded || !!filter;
+        match.forEach(function (r, i) { r.hidden = !(all || i < LIMIT); });
+        if (more) {
+            more.hidden = !!filter || match.length <= LIMIT;
+            more.innerHTML = expanded ? 'Minder tonen<i class="ph ph-caret-up" aria-hidden="true"></i>' : 'Nog ' + (match.length - LIMIT) + ' facturen<i class="ph ph-caret-down" aria-hidden="true"></i>';
+        }
+    }
+    if (pills) pills.addEventListener("click", function (e) {
+        var p = e.target.closest(".gl-v2-pill");
+        if (!p) return;
+        filter = p.getAttribute("data-filter") || "";
+        pills.querySelectorAll(".gl-v2-pill").forEach(function (x) { x.classList.toggle("is-active", x === p); });
+        apply();
+    });
+    if (more) more.addEventListener("click", function () { expanded = !expanded; apply(); });
+    apply();
+})();

@@ -37,6 +37,9 @@
     // tot haar eigen inhoud, exact zoals .gl-v2-project-menu-slot ernaast.
     ViewData["GlV2FullHeightBody"] = true;
     ViewData["BackUrl"] = Url.Action("Index", "Projecten");
+    // Mobiele componenten 64e: kicker "Project · code" boven de titel; de statuschips zitten op gsm in de kopkaart.
+    ViewData["TopbarKicker"] = "Project" + (string.IsNullOrWhiteSpace(Model.Project.ProjectCode) ? "" : " · " + Model.Project.ProjectCode);
+    ViewData["BadgesDesktopOnly"] = true;
 
     var canWriteProject = ViewBag.CanWriteProject as bool? ?? false;
     var editUrl = Url.Action("Edit", "Projecten", new { projectid = Model.Project.Id });
@@ -52,7 +55,14 @@
         ProjectId = projectId,
         ProjectName = Model.Project.Name,
         ProjectSubtitle = $"project · {Model.UnitRows.Count} eenhe" + (Model.UnitRows.Count == 1 ? "id" : "den"),
-        IsCoordinationProject = Model.Project.IsOnlyCoordinationProject
+        IsCoordinationProject = Model.Project.IsOnlyCoordinationProject,
+        // Tellers in de gsm-tabs (64e): klanten, open punten, documenten.
+        ItemCounts = new Dictionary<string, int>
+        {
+            ["Klanten"] = Model.UnitRows.Where(r => r.ClientId.HasValue).Select(r => r.ClientId!.Value).Distinct().Count(),
+            ["Punten"] = Model.OpenIssuesCount,
+            ["Documenten"] = Model.LatestDocs.Count
+        }
     };
 
     // ── Statistiekenrij: 6 tegels, elke tegel een echte waarde, percentages als balkje (12a §1) ──
@@ -284,14 +294,292 @@
         <a href="@editUrl" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-pencil-simple" aria-hidden="true"></i>Bewerken</a>
     }
 }
+@* 64e punt 11 / 65d: snelactiebalk voor de werf — Foto · Document · Planning · Werfpunt (hoofdactie). Rondgang en Inspreken uit het voorbeeld bestaan nog niet op deze pagina
+   (Inspreken zit enkel op Punten, Rondgang is nog niet gebouwd) en staan er dus niet. *@
+@section MobileQuickActions
+{
+    <a href="@Url.Action("DetailPhotos", "Projecten", new { projectid = projectId })" class="gl-v2-mobile-quickaction">
+        <i class="ph ph-camera" aria-hidden="true"></i>Foto
+    </a>
+    <a href="@Url.Action("DetailDocs", "Projecten", new { projectid = projectId })" class="gl-v2-mobile-quickaction">
+        <i class="ph ph-file-arrow-up" aria-hidden="true"></i>Document
+    </a>
+    <a href="@Url.Action("Index", "ProjectPlanning", new { projectId = projectId })" class="gl-v2-mobile-quickaction">
+        <i class="ph ph-chart-bar-horizontal" aria-hidden="true"></i>Planning
+    </a>
+    <a href="@Url.Action("Create", "ProjectsIssues", new { projectId = projectId })" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary">
+        <i class="ph ph-plus" aria-hidden="true"></i>Werfpunt
+    </a>
+}
 @section ProjectMenu
 {
     @{ menuVm.Mode = CPMCore.Models.GlV2.GlV2ProjectMenuMode.Outer; }
     @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
 }
 
+@* ══ Gsm (design-handoff 64e "Projectdetail · Overzicht") — eigen blok naast de desktopweergave; zelfde data, andere indeling. Bouwstenen: gl-v2/mobile-components.css ══ *@
+@{
+    var firstPic = Model.LatestPictures.FirstOrDefault();
+    var addrStreet = $"{Model.Project.Street} {Model.Project.HouseNumber}".Trim();
+    var addrCity = $"{Model.Project.Postalcode?.Postcode} {Model.Project.Postalcode?.Gemeente}".Trim();
+    var addrLine = string.Join(", ", new[] { addrStreet, Model.Project.Postalcode?.Gemeente }.Where(x => !string.IsNullOrWhiteSpace(x)));
+    var routeUrl = "https://www.google.com/maps/search/?api=1&query=" + Uri.EscapeDataString(addrStreet + " " + addrCity);
+
+    // Gegevens (64e punt 7): de zes belangrijkste in twee kolommen, lege velden samengevat, de rest achter "Alle gegevens".
+    var gvPrimary = new List<(string Label, string? Value)>
+    {
+        ("Projectcode", Model.Project.ProjectCode), ("Weerstation", Model.Project.WheaterStation?.Name), ("Ontwikkelaar", Model.Project.Developer?.Display),
+        ("Aannemer", Model.Project.Builder?.Display), ("Projectleider", projectLeaderName), ("Architect", Model.Project.Architect?.Display)
+    };
+    var gvSecondary = new List<(string Label, string? Value)>
+    {
+        ("Verkoopverantwoordelijke", salesResponsibleName), ("Notaris", Model.Project.Notary?.Display), ("Ingenieur stabiliteit", Model.Project.Engineer?.Display),
+        ("Veiligheidscoördinator", Model.Project.SecurityCoordinator?.Display), ("EPB-verslaggever", Model.Project.EpbReporter?.Display)
+    };
+    var gvEmpty = gvPrimary.Concat(gvSecondary).Where(f => string.IsNullOrWhiteSpace(f.Value)).Select(f => f.Label.ToLowerInvariant()).ToList();
+    var gvTotal = 1 + gvPrimary.Count + gvSecondary.Count;   // adres + de rest
+    var attentionAll = urgentItems.Select(i => (Urgent: true, Item: i)).Concat(normalItems.Select(i => (Urgent: false, Item: i))).ToList();
+    var mijlpaalDagenTeLaat = volgendeMijlpaal is { TeLaat: true } late ? (today.ToDateTime(TimeOnly.MinValue) - late.Datum.ToDateTime(TimeOnly.MinValue)).Days : 0;
+    var budgetPctBesteed = (Model.Voortgang?.TotaalBegroot ?? 0m) > 0m ? (Model.Voortgang!.TotaalGefactureerd / Model.Voortgang.TotaalBegroot * 100m) : 0m;
+    string UnitChip(string status) => status == "Akte verleden" ? "is-ok" : (status == "Verkocht" ? "" : "is-gold");
+}
+<div class="gl-v2-m-hero gl-v2-m-only">
+    <span class="gl-v2-m-hero-photo">
+        @if (firstPic is not null && firstPic.MediaType != 1)
+        {
+            <img src="@Url.Content(mediaBase + "pictures/447/" + firstPic.Name)" alt="" />
+        }
+        else
+        {
+            <i class="ph ph-buildings" aria-hidden="true"></i>
+        }
+    </span>
+    <div class="gl-v2-m-hero-text">
+        <b class="gl-v2-m-hero-name">@Model.Project.Name</b>
+        <span class="gl-v2-m-hero-sub">@addrLine@(string.IsNullOrWhiteSpace(projectLeaderName) ? "" : " · PL " + projectLeaderName)</span>
+        <span class="gl-v2-m-hero-chips">
+            @if (Model.Project.Status is not null && !string.IsNullOrWhiteSpace(Model.Project.Status.Name))
+            {
+                <i class="gl-v2-m-chip is-ok">@Model.Project.Status.Name</i>
+            }
+            @if (Model.SalesData is not null)
+            {
+                <i class="gl-v2-m-chip">@Model.SalesData.LivingUnitsSold / @Model.SalesData.LivingUnits verkocht</i>
+            }
+        </span>
+    </div>
+</div>
 @{ menuVm.Mode = CPMCore.Models.GlV2.GlV2ProjectMenuMode.Phone; }
 @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
+
+<div class="gl-v2-m-only gl-v2-m-stack gl-v2-pd-m">
+    @* Vraagt actie, compact (64e punt 3): de 3 dringendste met wie, wat en hoe lang open; de rest klapt open onder "Alle N bekijken". *@
+    @if (attentionAll.Count > 0)
+    {
+        var vaFirst = attentionAll.Take(3).ToList();
+        var vaRest = attentionAll.Skip(3).ToList();
+        <section class="gl-v2-m-va" aria-label="Vraagt actie">
+            <div class="gl-v2-m-va-head">
+                <span class="gl-v2-m-va-icon"><i class="ph ph-warning-circle" aria-hidden="true"></i></span>
+                <span class="gl-v2-m-va-title"><b>Vraagt actie</b><small>@urgentItems.Count dringend · @normalItems.Count later</small></span>
+                <i class="gl-v2-m-va-n">@attentionAll.Count</i>
+            </div>
+            <div class="gl-v2-m-va-group">@(vaFirst[0].Urgent ? "Dringend · " : "Te bekijken · ")@vaFirst[0].Item.Type</div>
+            @foreach (var x in vaFirst)
+            {
+                var it = x.Item;
+                <a class="gl-v2-m-va-row" href="@(it.BekijkUrl ?? "#")">
+                    <span class="gl-v2-m-va-ico @(x.Urgent ? "" : "is-gold")"><i class="ph @it.Icon" aria-hidden="true"></i></span>
+                    <span class="gl-v2-m-rt">
+                        <b>@(it.Entiteit ?? it.Type)</b>
+                        <small>@(it.Entiteit is not null ? (it.Extra ?? it.Type) : (it.Extra ?? it.Categorie))@if (!string.IsNullOrWhiteSpace(it.Meta)) {<text> · </text><em>@it.Meta</em>}</small>
+                    </span>
+                    <i class="ph ph-caret-right" aria-hidden="true"></i>
+                </a>
+            }
+            @if (vaRest.Count > 0)
+            {
+                <details>
+                    <summary><span class="gl-v2-m-va-open">Alle @attentionAll.Count bekijken</span><span class="gl-v2-m-va-close">Minder tonen</span><i class="ph ph-caret-down" aria-hidden="true"></i></summary>
+                    @foreach (var x in vaRest)
+                    {
+                        var it = x.Item;
+                        <a class="gl-v2-m-va-row" href="@(it.BekijkUrl ?? "#")">
+                            <span class="gl-v2-m-va-ico @(x.Urgent ? "" : "is-gold")"><i class="ph @it.Icon" aria-hidden="true"></i></span>
+                            <span class="gl-v2-m-rt">
+                                <b>@(it.Entiteit ?? it.Type)</b>
+                                <small>@(it.Entiteit is not null ? (it.Extra ?? it.Type) : (it.Extra ?? it.Categorie))@if (!string.IsNullOrWhiteSpace(it.Meta)) {<text> · </text><em>@it.Meta</em>}</small>
+                            </span>
+                            <i class="ph ph-caret-right" aria-hidden="true"></i>
+                        </a>
+                    }
+                </details>
+            }
+        </section>
+    }
+
+    @* Kerncijfers in één kaart (64e punt 4): 2 × 2, werkdagen en open punten als één regel eronder. *@
+    <section class="gl-v2-m-card gl-v2-m-kpi" aria-label="Kerncijfers">
+        <div><span class="gl-v2-m-k">Verkocht</span><b>@(Model.SalesData?.LivingUnitsSold ?? 0) / @(Model.SalesData?.LivingUnits ?? 0)</b><small>eenheden@(Model.SalesData is not null ? " · " + Model.SalesData.PercentageLivingUnitsSold.ToString("0.#", be) + " %" : "")</small></div>
+        <div><span class="gl-v2-m-k">Omzet</span><b>@kpiOmzetVerkocht.ToString("C0", be)</b><small>@(kpiOmzetPotentieel > 0 ? (kpiOmzetPotentieel == kpiOmzetVerkocht ? "= volledig potentieel" : "van " + kpiOmzetPotentieel.ToString("C0", be)) : "geen potentieel")</small></div>
+        <div><span class="gl-v2-m-k">Fysiek</span><b>@fysPct.ToString("0.#", be) %</b><span class="gl-v2-m-bar"><i style="width:@(BarW(fysPct))%"></i></span></div>
+        <div><span class="gl-v2-m-k">Financieel</span><b>@finPct.ToString("0.#", be) %</b><span class="gl-v2-m-bar is-blue"><i style="width:@(BarW(finPct))%"></i></span></div>
+        <p class="gl-v2-m-mini">
+            <span><i class="ph ph-calendar-blank" aria-hidden="true"></i>Werkdagen: <em>@(Model.WorkingDaysLeft == -9999 ? "geen einddatum" : (werkdagenLaat ? $"{-Model.WorkingDaysLeft} te laat" : Model.WorkingDaysLeft.ToString()))</em></span>
+            <span><i class="ph ph-list-checks" aria-hidden="true"></i>Open punten: <em>@Model.OpenIssuesCount</em></span>
+        </p>
+    </section>
+
+    @if (canSeeTraject && traject is not null)
+    {
+        <section class="gl-v2-m-card">
+            <div class="gl-v2-m-card-head"><span class="gl-v2-m-card-icon"><i class="ph ph-flow-arrow" aria-hidden="true"></i></span><b>Traject</b><span class="gl-v2-m-spacer"></span><a href="@mijlpaalTrajectUrl" class="gl-v2-m-link">Openen</a></div>
+            <div class="gl-v2-m-inner">
+                <div class="gl-v2-m-tr"><span>Huidige fase</span><b>@(huidigeFase?.Naam ?? "—")</b></div>
+                <div class="gl-v2-m-tl"><span><b>@mijlpalenBereikt van @mijlpalenTotal</b> mijlpalen bereikt</span>@if (mijlpalenAchterstallig > 0) {<span class="gl-v2-m-red">@mijlpalenAchterstallig achterstallig</span>}</div>
+                <span class="gl-v2-m-bar"><i style="width:@(mijlpalenTotal > 0 ? BarW((decimal)mijlpalenBereikt / mijlpalenTotal * 100m) : "0")%"></i></span>
+                @if (volgendeMijlpaal is { } nm)
+                {
+                    <div class="gl-v2-m-next">
+                        <span class="gl-v2-m-k">Volgende mijlpaal</span>
+                        <b>@nm.Naam@(nm.Unit is not null ? " · " + nm.Unit : "")</b>
+                        <span><em>@nm.Datum.ToString("dd/MM/yyyy")</em>@if (nm.TeLaat) {<text> · </text><i class="gl-v2-m-chip is-red">@mijlpaalDagenTeLaat dagen te laat</i>}</span>
+                    </div>
+                }
+            </div>
+        </section>
+    }
+
+    @* Eenheden als rijen (64e punt 6): zoekveld weg, bedrag op één regel. *@
+    <section class="gl-v2-m-card">
+        <div class="gl-v2-m-card-head"><span class="gl-v2-m-card-icon"><i class="ph ph-buildings" aria-hidden="true"></i></span><b>Eenheden</b><span class="gl-v2-m-count">@Model.UnitRows.Count</span><span class="gl-v2-m-spacer"></span><a href="@Url.Action("DetailUnits", "Projecten", new { projectid = projectId })" class="gl-v2-m-link">Alle</a></div>
+        @foreach (var u in Model.UnitRows.Take(8))
+        {
+            var sold = u.Status == "Verkocht" || u.Status == "Akte verleden";
+            <a class="gl-v2-m-row" href="@(u.ClientId.HasValue ? Url.Action("Detail", "Klanten", new { clientid = u.ClientId, projectid = projectId }) : Url.Action("EditUnit", "Projecten", new { projectid = projectId, unitid = u.UnitId }))">
+                <span class="gl-v2-m-rt"><b>@u.Naam</b><small>@u.TypeName@(u.Oppervlakte.HasValue ? " · " + u.Oppervlakte.Value.ToString("0") + " m²" : "")@(u.ClientId.HasValue ? " · " + u.KlantNaam : "")</small></span>
+                <span class="gl-v2-m-amt"><b>@((sold || u.Afwerkingen.Count == 0 ? u.Vraagprijs : u.Vraagprijs + u.Afwerkingen.Min(a => a.Cost)).ToString("C0", be))</b><i class="gl-v2-m-chip @UnitChip(u.Status)">@u.Status</i></span>
+                <i class="ph ph-caret-right" aria-hidden="true"></i>
+            </a>
+        }
+        @if (Model.UnitRows.Count > 8)
+        {
+            <a class="gl-v2-m-all" href="@Url.Action("DetailUnits", "Projecten", new { projectid = projectId })">Alle @Model.UnitRows.Count eenheden<i class="ph ph-caret-right" aria-hidden="true"></i></a>
+        }
+    </section>
+
+    @* Gegevens (64e punt 7): adres met kopieer- en routeknop, 6 belangrijkste in twee kolommen, lege velden in een gouden regel, de rest achter "Alle gegevens". *@
+    <section class="gl-v2-m-card">
+        <div class="gl-v2-m-card-head"><span class="gl-v2-m-card-icon"><i class="ph ph-info" aria-hidden="true"></i></span><b>Gegevens</b><span class="gl-v2-m-spacer"></span>@if (canWriteProject) {<a href="@editUrl" class="gl-v2-m-link"><i class="ph ph-pencil-simple" aria-hidden="true"></i>Bewerken</a>}</div>
+        <div class="gl-v2-m-inner" style="padding-top:0">
+            @if (!string.IsNullOrWhiteSpace(addrStreet))
+            {
+                <div class="gl-v2-m-adr">
+                    <span><span class="gl-v2-m-k">Adres</span><b>@addrStreet<br />@addrCity</b></span>
+                    <span style="display:flex;gap:6px">
+                        <button type="button" class="gl-v2-m-roundbtn js-gl-v2-m-copy" data-copy="@(addrStreet + ", " + addrCity)" aria-label="Adres kopiëren"><i class="ph ph-copy" aria-hidden="true"></i></button>
+                        <a class="gl-v2-m-roundbtn" href="@routeUrl" target="_blank" rel="noopener" aria-label="Route"><i class="ph ph-map-pin" aria-hidden="true"></i></a>
+                    </span>
+                </div>
+            }
+            <dl class="gl-v2-m-dl">
+                @foreach (var f in gvPrimary.Where(f => !string.IsNullOrWhiteSpace(f.Value)))
+                {
+                    <div><dt>@f.Label</dt><dd>@f.Value</dd></div>
+                }
+            </dl>
+            @if (gvEmpty.Count > 0)
+            {
+                <div class="gl-v2-m-gap"><i class="ph ph-info" aria-hidden="true"></i><span><b>@gvEmpty.Count @(gvEmpty.Count == 1 ? "veld" : "velden") leeg</b> — @string.Join(", ", gvEmpty)</span>@if (canWriteProject) {<a href="@editUrl">Aanvullen</a>}</div>
+            }
+        </div>
+        <details>
+            <summary class="gl-v2-m-all" style="list-style:none;cursor:pointer">Alle gegevens (@gvTotal)<i class="ph ph-caret-down" aria-hidden="true"></i></summary>
+            <div class="gl-v2-m-inner">
+                <dl class="gl-v2-m-dl">
+                    @foreach (var f in gvSecondary.Where(f => !string.IsNullOrWhiteSpace(f.Value)))
+                    {
+                        <div><dt>@f.Label</dt><dd>@f.Value</dd></div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(countryName))
+                    {
+                        <div><dt>Land</dt><dd>@countryName</dd></div>
+                    }
+                </dl>
+            </div>
+        </details>
+    </section>
+
+    @if (!voortgangIsEmpty)
+    {
+        <section class="gl-v2-m-card">
+            <div class="gl-v2-m-card-head"><span class="gl-v2-m-card-icon"><i class="ph ph-chart-bar" aria-hidden="true"></i></span><b>Budget</b><span class="gl-v2-m-spacer"></span><a href="@Url.Action("Recalculation", "Projecten", new { projectid = projectId })" class="gl-v2-m-link">Nacalculatie</a></div>
+            <div class="gl-v2-m-inner" style="padding-top:0">
+                <div class="gl-v2-m-b2">
+                    <div><span class="gl-v2-m-k">Budget</span><b>@((Model.Voortgang?.TotaalBegroot ?? 0m).ToString("C0", be))</b><small>besteed @((Model.Voortgang?.TotaalGefactureerd ?? 0m).ToString("C0", be)) · @budgetPctBesteed.ToString("0", be) %</small><span class="gl-v2-m-bar is-blue"><i style="width:@(BarW(budgetPctBesteed))%"></i></span></div>
+                    <div><span class="gl-v2-m-k">Gecontracteerd</span><b>@((Model.Voortgang?.TotaalGecontracteerd ?? 0m).ToString("C0", be))</b><small>@((Model.Voortgang?.ContractueleVolwassenheidPct ?? 0m).ToString("0.#", be)) % van budget</small><span class="gl-v2-m-bar"><i style="width:@(BarW(Model.Voortgang?.ContractueleVolwassenheidPct ?? 0m))%"></i></span></div>
+                </div>
+            </div>
+        </section>
+    }
+
+    @if (facturenRows.Any())
+    {
+        <section class="gl-v2-m-card">
+            <div class="gl-v2-m-card-head"><span class="gl-v2-m-card-icon"><i class="ph ph-invoice" aria-hidden="true"></i></span><b>Facturatie</b><span class="gl-v2-m-count">@facturenRows.Count</span><span class="gl-v2-m-spacer"></span></div>
+            @foreach (var inv in facturenRows)
+            {
+                <a class="gl-v2-m-row" href="@Url.Action("Detail", "Invoices", new { id = inv.Id })">
+                    <span class="gl-v2-m-rt"><code class="gl-v2-m-nr">@(string.IsNullOrWhiteSpace(inv.PublicId) ? "Proforma" : inv.PublicId)</code><small>@inv.ClientName · @inv.StatusName</small></span>
+                    <b class="gl-v2-m-eur">@((inv.GrossTotal ?? 0m).ToString("C0", be))</b>
+                    <i class="ph ph-caret-right" aria-hidden="true"></i>
+                </a>
+            }
+            <div class="gl-v2-m-total"><span>Totaal @facturenRows.Count @(facturenRows.Count == 1 ? "factuur" : "facturen")</span><b>@facturenGetoondTotaal.ToString("C0", be)</b></div>
+            <a class="gl-v2-m-all" href="@Url.Action("InvoicingV2", "Projecten", new { projectid = projectId })">Alle facturen<i class="ph ph-caret-right" aria-hidden="true"></i></a>
+        </section>
+    }
+
+    @if (documentRows.Any())
+    {
+        <section class="gl-v2-m-card">
+            <div class="gl-v2-m-card-head"><span class="gl-v2-m-card-icon"><i class="ph ph-folder" aria-hidden="true"></i></span><b>Documenten</b><span class="gl-v2-m-count">@Model.LatestDocs.Count</span><span class="gl-v2-m-spacer"></span><a href="@Url.Action("DetailDocs", "Projecten", new { projectid = projectId })" class="gl-v2-m-link"><i class="ph ph-plus" aria-hidden="true"></i>Toevoegen</a></div>
+            @foreach (var doc in documentRows)
+            {
+                var docTitle = string.IsNullOrWhiteSpace(doc.Name) ? doc.Type.GetDisplayName() : doc.Name;
+                <a class="gl-v2-m-row" href="@Url.Action("ViewDoc", "Projecten", new { id = doc.Docid })" target="_blank" rel="noopener">
+                    <span class="gl-v2-m-pdf">PDF</span>
+                    <span class="gl-v2-m-rt"><b>@docTitle</b><small>@doc.Type.GetDisplayName()@(doc.DocDate.HasValue ? " · " + doc.DocDate.Value.ToString("dd/MM/yyyy") : "")</small></span>
+                    <i class="ph ph-caret-right" aria-hidden="true"></i>
+                </a>
+            }
+            <a class="gl-v2-m-all" href="@Url.Action("DetailDocs", "Projecten", new { projectid = projectId })">Alle documenten<i class="ph ph-caret-right" aria-hidden="true"></i></a>
+        </section>
+    }
+
+    @if (Model.LatestPictures.Any())
+    {
+        var galleryPics = Model.LatestPictures.Take(5).ToList();
+        <section class="gl-v2-m-card">
+            <div class="gl-v2-m-card-head"><span class="gl-v2-m-card-icon"><i class="ph ph-image" aria-hidden="true"></i></span><b>Foto's &amp; media</b><span class="gl-v2-m-count">@Model.TotalPictureCount</span><span class="gl-v2-m-spacer"></span><a href="@Url.Action("DetailPhotos", "Projecten", new { projectid = projectId })" class="gl-v2-m-link">Alle</a></div>
+            <div class="gl-v2-m-gal">
+                @foreach (var pic in galleryPics)
+                {
+                    <a class="gl-v2-m-tile" href="@Url.Action("DetailPhotos", "Projecten", new { projectid = projectId })">
+                        @if (pic.MediaType == 1) { <video src="@Url.Content(mediaBase + "videos/" + pic.Name)" preload="metadata" muted playsinline></video> }
+                        else { <img src="@Url.Content(mediaBase + "pictures/447/" + pic.Name)" alt="" loading="lazy" /> }
+                    </a>
+                }
+                @if (Model.TotalPictureCount > galleryPics.Count)
+                {
+                    <a class="gl-v2-m-more" href="@Url.Action("DetailPhotos", "Projecten", new { projectid = projectId })"><b>+ @(Model.TotalPictureCount - galleryPics.Count)</b><small>meer</small></a>
+                }
+            </div>
+        </section>
+    }
+</div>
+
+<div class="gl-v2-d-wrap">
 
 <span class="gl-v2-pd-meta">
     Projectcode @(string.IsNullOrWhiteSpace(Model.Project.ProjectCode) ? "—" : Model.Project.ProjectCode)
@@ -704,6 +992,7 @@
     </div>
 </div>
 
+</div>
 @section PageScripts
 {
     <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>

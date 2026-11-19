@@ -111,6 +111,28 @@ public class ProjectPlanningController : BaseController
         return Json(uitkomst, JsonOpties);
     }
 
+    /// <summary>Koppelt een betalingsschijf aan een taak of fase van de planning (of haalt de koppeling weg).</summary>
+    [HttpPost("SchijfKoppeling")]
+    [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsPlanning)]
+    public async Task<IActionResult> SchijfKoppeling(int projectId, [FromBody] PlanningSchijfKoppelCommando commando)
+    {
+        if (commando == null) return BadRequest();
+        return Json(await _planning.KoppelSchijf(projectId, commando, UserId), JsonOpties);
+    }
+
+    /// <summary>"Schijf bereikt" markeren voor de eenheden van de planning (of terugzetten). Vraagt ook schrijfrecht op de facturatie.</summary>
+    [HttpPost("SchijfMarkeren")]
+    [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsPlanning)]
+    public async Task<IActionResult> SchijfMarkeren(int projectId, [FromBody] PlanningSchijfMarkeerCommando commando)
+    {
+        if (commando == null) return BadRequest();
+        if (!HttpContext.RequestServices.GetRequiredService<IPermissionService>().HasWrite(PermissionCodes.ProjectsInvoicing))
+            return Forbid();
+        return Json(await _planning.MarkeerSchijf(projectId, commando, UserId), JsonOpties);
+    }
+
     public sealed class SjabloonBewaarVerzoek
     {
         public int? PlanningId { get; set; }

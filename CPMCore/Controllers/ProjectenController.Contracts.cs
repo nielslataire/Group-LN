@@ -111,6 +111,9 @@ namespace CPMCore.Controllers
             }
 
             model.SupplierRows = rows.OrderBy(r => r.Company?.Display).ToList();
+            FillSupplierRowContacts(model.SupplierRows);
+            var projectForCode = service.GetProjectByID(projectid);
+            model.ProjectCode = projectForCode.Success ? projectForCode.Value?.ProjectCode : null;
 
 
             model.ProjectId = projectid;
@@ -228,6 +231,36 @@ namespace CPMCore.Controllers
             SetPageHeader("bx bx-building-house", $"{model.ProjectName} - {model.Company?.Bedrijfsnaam ?? "Leverancier detail"}");
             ViewData["HelpScreenId"] = "projecten-leverancier-detail";
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "DetailContractV2" : "DetailContract", model);
+        }
+
+        /// <summary>Wie je belt/mailt per leverancier en wat die doet (gsm-lijst, design-handoff 64g/64h): voorkeur voor de werfleider van het contract,
+        /// anders de eerste contactpersoon met een nummer, anders het nummer van de fiche. Eén query per tabel, geen N+1.</summary>
+        private void FillSupplierRowContacts(List<ContractSupplierRowModel> rows)
+        {
+            var ids = rows.Where(r => r.Company != null).Select(r => r.Company.ID).Distinct().ToList();
+            if (ids.Count == 0) return;
+            var infos = _db.CompanyInfo.AsNoTracking().Where(c => ids.Contains(c.CompanyId))
+                .Select(c => new { c.CompanyId, c.Email, c.Telefoon1, c.Gsm }).ToList().ToDictionary(c => c.CompanyId);
+            var contacts = _db.CompanyContacts.AsNoTracking().Where(c => ids.Contains(c.CompanyId)).ToList()
+                .GroupBy(c => c.CompanyId).ToDictionary(g => g.Key, g => g.ToList());
+            string? Pick(string? a, string? b) => !string.IsNullOrWhiteSpace(a) ? a.Trim() : (string.IsNullOrWhiteSpace(b) ? null : b.Trim());
+            foreach (var row in rows)
+            {
+                if (row.Company == null) continue;
+                infos.TryGetValue(row.Company.ID, out var info);
+                contacts.TryGetValue(row.Company.ID, out var list);
+                list ??= new();
+                var smId = row.Contracts.Select(c => c.SiteManagerContactId).FirstOrDefault(x => x.HasValue && x.Value > 0);
+                var person = (smId.HasValue ? list.FirstOrDefault(c => c.ContactId == smId.Value) : null)
+                    ?? list.FirstOrDefault(c => !string.IsNullOrWhiteSpace(c.Gsm) || !string.IsNullOrWhiteSpace(c.Telefoon));
+                row.Phone = Pick(person?.Gsm, person?.Telefoon) ?? Pick(info?.Gsm, info?.Telefoon1);
+                row.ContactName = person == null ? null : ((person.ContactVoornaam ?? "") + " " + (person.ContactNaam ?? "")).Trim();
+                if (string.IsNullOrWhiteSpace(row.ContactName)) row.ContactName = null;
+                row.Email = Pick(info?.Email, person?.Email) ?? list.Select(c => c.Email).FirstOrDefault(e => !string.IsNullOrWhiteSpace(e))?.Trim();
+                var names = row.Contracts.SelectMany(c => c.Activities ?? new List<ContractActivityBO>()).Select(a => a.Activity?.Name)
+                    .Where(n => !string.IsNullOrWhiteSpace(n)).Distinct().Take(2).ToList();
+                row.Subtitle = names.Count > 0 ? string.Join(", ", names) : row.Contracts.Select(c => c.ContractName).FirstOrDefault(n => !string.IsNullOrWhiteSpace(n));
+            }
         }
 
         /// <summary>Naam, functie, gsm en e-mail van de werfleiders van de contracten op de detailpagina
@@ -497,7 +530,7 @@ namespace CPMCore.Controllers
             .Where(b => groupId == null || b.GroupId == groupId)
             .Where(b => activityId == null || b.ActivityId == activityId)
             .Sum(b => b.Bedrag);
-        private static string RecalcGeld(decimal v) => $"€ {v:N0}";
+        private static string RecalcGeld(decimal v) => $"€ {v:N2}";
 
         /// <summary>Begroot-bron bepalen: het definitief budget (via de budgetflow-module, design-handoff 42e
         /// punt 01) als er één bestaat voor dit project, anders het oude, eenvoudige per-activiteit-budget
@@ -1877,6 +1910,26 @@ namespace CPMCore.Controllers
             PopulateAddContractLookups(model);
             ViewData["HelpScreenId"] = "projecten-leverancier-toevoegen";
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "EditContractV2" : "EditContract", model);
+        }
+        /// <summary>Werfleider van een contract kiezen uit de contactpersonen van de leverancier (gsm-blad "Werfleider kiezen", design-handoff 64j).
+        /// Enkel contactpersonen van het bedrijf van dit contract zijn toegelaten; terug naar de contractpagina.</summary>
+        [HttpPost]
+        public async Task<ActionResult> SetContractSiteManager(int projectid, int contractid, int contactid)
+        {
+            var back = Url.Action("DetailContract", "Projecten", new { projectid, contractid });
+            if (!HttpContext.RequestServices.GetRequiredService<IPermissionService>().HasWrite(PermissionCodes.ProjectsSuppliers)) return Forbid();
+            var contract = _db.Contract.FirstOrDefault(c => c.Id == contractid && c.ProjectId == projectid);
+            if (contract == null) return NotFound();
+            var contact = _db.CompanyContacts.AsNoTracking().FirstOrDefault(c => c.ContactId == contactid && c.CompanyId == contract.CompanyId);
+            if (contact == null)
+            {
+                AddMessage("error", "Die contactpersoon hoort niet bij deze leverancier.", "Fout!");
+                return Redirect(back!);
+            }
+            contract.SiteManagerContactId = contactid;
+            await _db.SaveChangesAsync();
+            AddMessage("success", ((contact.ContactVoornaam ?? "") + " " + (contact.ContactNaam ?? "")).Trim() + " is nu de werfleider van dit contract.", "Geslaagd!");
+            return Redirect(back!);
         }
         [HttpGet]
         public ActionResult ModalDeleteContract(int id)

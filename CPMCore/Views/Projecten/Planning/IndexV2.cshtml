@@ -113,6 +113,9 @@
     </div>
 
     @* Lijst en Gantt *@
+    @* Per aannemer: alle taken van één uitvoerder uit alle plannings (enkel lezen, gevuld door JS) *@
+    <div class="gl-v2-card gl-v2-pl-aann" id="gl-v2-pl-aann" hidden></div>
+
     <div class="gl-v2-card gl-v2-pl-card" id="gl-v2-pl-card" hidden>
         <div class="gl-v2-pl-toolbar">
             <div class="gl-v2-segmented is-sm gl-v2-pl-zoom" id="gl-v2-pl-zoom" role="group" aria-label="Tijdschaal">
@@ -230,6 +233,12 @@
                 <div id="gl-v2-pl-wrap-uitv">
                     @await Html.PartialAsync("GlV2/_UitvoerderCombo", Uitvoerder("gl-v2-pl-f-uitv", "uitvoerder", "Optioneel. Kies de aannemer zodra die is aangesteld. Leeg = de uitvoerder van de fase."))
                 </div>
+                <div class="gl-v2-field" id="gl-v2-pl-wrap-schijf" hidden>
+                    <span class="gl-v2-field-label" id="gl-v2-pl-wrap-schijf-label">Koppeling met schijven</span>
+                    <div class="gl-v2-field-box"><input type="search" class="gl-v2-field-input" id="gl-v2-pl-wrap-schijf-zoek" placeholder="Zoek een schijf…" autocomplete="off" aria-label="Zoek een schijf" /></div>
+                    <div class="gl-v2-pl-eenheden" id="gl-v2-pl-wrap-schijf-lijst" role="group" aria-labelledby="gl-v2-pl-wrap-schijf-label"></div>
+                    <span class="gl-v2-field-help">Optioneel. Vink één of meer schijven aan. Is deze taak klaar, dan krijg je de vraag of de schijf bereikt is voor de eenheden van deze planning.</span>
+                </div>
                 <div id="gl-v2-pl-wrap-traj" hidden>
                     @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-f-traj", "trajectmijlpaal", "Koppeling met trajectmijlpaal", "Optioneel. De mijlpaal in het Traject volgt dan het einde van deze taak en staat op bereikt zodra de taak klaar is."))
                 </div>
@@ -244,7 +253,7 @@
                 <div class="gl-v2-field" id="gl-v2-pl-wrap-bouwdeel">
                     <span class="gl-v2-field-label" id="gl-v2-pl-f-eenheden-label">Woningen en gebouwen</span>
                     <div class="gl-v2-pl-eenheden" id="gl-v2-pl-f-eenheden" role="group" aria-labelledby="gl-v2-pl-f-eenheden-label"></div>
-                    <span class="gl-v2-field-help">Optioneel. Kies de woningen of het gebouw waar deze planning voor geldt. Een planning mag meerdere eenheden bundelen; een eenheid zit in hoogstens één planning, ook als de betalingsgroep meerdere eenheden heeft.</span>
+                    <span class="gl-v2-field-help" id="gl-v2-pl-f-eenheden-help">Optioneel. Kies de woningen of het gebouw waar deze planning voor geldt. Een planning mag meerdere eenheden bundelen; een eenheid zit in hoogstens één planning, ook als de betalingsgroep meerdere eenheden heeft.</span>
                 </div>
                 @await Html.PartialAsync("GlV2/_DateField", Date("gl-v2-pl-f-pstart", "startDatum", "Startdatum van de planning (optioneel)"))
                 <span class="gl-v2-field-help">Eerste dag waarop deze planning mag beginnen. Leeg = de aanvangsdatum van het project. Een voorganger kan haar nog later laten starten.</span>
@@ -274,6 +283,12 @@
                         <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input" id="gl-v2-pl-f-startna" placeholder="bv. 4.2  of  5.1FS+2d" /></div>
                         <span class="gl-v2-field-help">Zonder voorganger start de fase op de eerste projectdag. Een fase is een groep: ze bestaat uit taken en neemt hun begin en einde over.</span>
                     </div>
+                </div>
+                <div class="gl-v2-field" id="gl-v2-pl-wrap-schijff" hidden>
+                    <span class="gl-v2-field-label" id="gl-v2-pl-wrap-schijff-label">Koppeling met schijven</span>
+                    <div class="gl-v2-field-box"><input type="search" class="gl-v2-field-input" id="gl-v2-pl-wrap-schijff-zoek" placeholder="Zoek een schijf…" autocomplete="off" aria-label="Zoek een schijf" /></div>
+                    <div class="gl-v2-pl-eenheden" id="gl-v2-pl-wrap-schijff-lijst" role="group" aria-labelledby="gl-v2-pl-wrap-schijff-label"></div>
+                    <span class="gl-v2-field-help">Optioneel. Vink één of meer schijven aan. Zijn alle taken van deze fase klaar, dan krijg je de vraag of de schijf bereikt is voor de eenheden van deze planning.</span>
                 </div>
                 <div id="gl-v2-pl-wrap-trajf" hidden>
                     @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-f-trajf", "trajectmijlpaalfase", "Koppeling met trajectmijlpaal", "Optioneel. De mijlpaal in het Traject volgt dan het einde van de laatste taak van de fase en staat op bereikt zodra alle taken klaar zijn."))
@@ -398,11 +413,11 @@
                         </div>
                         <div id="gl-v2-pl-imp-o-nieuw">
                             <div class="gl-v2-field gl-v2-field-full"><label class="gl-v2-field-label" for="gl-v2-pl-imp-naam">Naam van de planning</label><div class="gl-v2-field-box"><input class="gl-v2-field-input" id="gl-v2-pl-imp-naam" maxlength="200" /></div></div>
-                            <div class="gl-v2-field gl-v2-field-full">
-                                <span class="gl-v2-field-label" id="gl-v2-pl-imp-een-label">Woningen en gebouwen</span>
-                                <div class="gl-v2-pl-eenheden" id="gl-v2-pl-imp-eenheden" role="group" aria-labelledby="gl-v2-pl-imp-een-label"></div>
-                                <span class="gl-v2-field-help">Optioneel. Alleen eenheden die nog in geen planning zitten staan in de lijst.</span>
-                            </div>
+                        </div>
+                        <div class="gl-v2-field gl-v2-field-full">
+                            <span class="gl-v2-field-label" id="gl-v2-pl-imp-een-label">Woningen en gebouwen</span>
+                            <div class="gl-v2-pl-eenheden" id="gl-v2-pl-imp-eenheden" role="group" aria-labelledby="gl-v2-pl-imp-een-label"></div>
+                            <span class="gl-v2-field-help">Optioneel. Voor welke eenheden geldt deze planning? Leeg bij een bestaande planning laat de eenheden zoals ze zijn. Alleen eenheden zonder andere planning staan in de lijst.</span>
                         </div>
                         <div id="gl-v2-pl-imp-o-huidig" hidden>
                             <div class="gl-v2-field gl-v2-field-full">
@@ -454,6 +469,8 @@
         "staatUrl": "@Url.Action("Staat", "ProjectPlanning", new { projectId = Model.ProjectId })",
         "importControleUrl": "@Url.Action("ImportControle", "ProjectPlanning", new { projectId = Model.ProjectId })",
         "koppelUrl": "@Url.Action("Koppeling", "ProjectPlanning", new { projectId = Model.ProjectId })",
+        "schijfKoppelUrl": "@Url.Action("SchijfKoppeling", "ProjectPlanning", new { projectId = Model.ProjectId })",
+        "schijfMarkeerUrl": "@Url.Action("SchijfMarkeren", "ProjectPlanning", new { projectId = Model.ProjectId })",
         "sjabloonBewaarUrl": "@Url.Action("SjabloonBewaren", "ProjectPlanning", new { projectId = Model.ProjectId })",
         "sjabloonVerwijderUrl": "@Url.Action("SjabloonVerwijderen", "ProjectPlanning", new { projectId = Model.ProjectId })",
         "staat": @Html.Raw(Model.StaatJson)

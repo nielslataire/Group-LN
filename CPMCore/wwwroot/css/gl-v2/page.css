@@ -57,7 +57,31 @@
    garantie goedkoper dan opnieuw moeten uitzoeken welke laag daar exact overloopt). Geen effect
    wanneer er toch al niets te scrollen valt boven de balk — sticky doet dan gewoon niets. */
 @media (max-width: 767.98px) {
-    .gl-v2-tabbar { position: sticky; top: 0; z-index: 30; }
+    /* Tabs (65c, voorbeeld .mx-tabs): plakken ONDER de sticky topbar (live hoogte via gl-v2-shell.js), 48 hoog, 14/500 gedempt,
+       actief 600 met gouden lijn van 3px, teller als grijs bolletje, horizontaal scrollen met vervaging rechts. */
+    .gl-v2-tabbar {
+        position: sticky;
+        top: var(--gl-v2-m-topbar-live, var(--gl-v2-m-topbar-h, 56px));
+        z-index: 30;
+        align-items: stretch;
+        gap: 2px;
+        padding: 0 8px;
+        scrollbar-width: none;
+        -webkit-mask-image: linear-gradient(90deg, #000 86%, transparent);
+        mask-image: linear-gradient(90deg, #000 86%, transparent);
+    }
+    .gl-v2-tabbar::-webkit-scrollbar { display: none; }
+    .gl-v2-tabbar-tab { height: 48px; min-height: 48px; padding: 0 12px; border-bottom-width: 3px; font: 500 14px var(--gl-v2-font-sans); color: #5A6B58; }
+    .gl-v2-tabbar-tab.is-active { color: #2C3B2A; font-weight: 600; }
+    .gl-v2-tabbar-count { font: 600 11px var(--gl-v2-font-sans); background: #EDEFEB; color: #4A5B48; border-radius: 9px; padding: 1px 6px; }
+}
+
+/* Sectiekaart op gsm (65f, voorbeeld .mx-card/.mx-ch/.mx-ci): kop min. 52 hoog, titel 14/700 groen, icoontegel 28 (radius 8, #D6E5CC). */
+@media (max-width: 767.98px) {
+    .gl-v2-section-card { box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 12px 26px -22px rgba(44, 59, 42, .45); }
+    .gl-v2-section-card-header { min-height: 52px; padding: 0 10px 0 14px; gap: 8px; }
+    .gl-v2-section-card-icon { width: 28px; height: 28px; border-radius: 8px; background: #D6E5CC; font-size: 15px; }
+    .gl-v2-section-card-title { font-size: 14px; }
 }
 .gl-v2-tabbar-tab {
     flex: none;
@@ -316,6 +340,14 @@
     }
     .gl-v2-form-actionbar-status { flex: 1 1 100%; order: -1; }
     .gl-v2-form-actionbar-actions { flex: 1; justify-content: flex-end; }
+    /* Actiebalk 65d: Annuleren + primaire knop 48 hoog, radius 12. */
+    .gl-v2-form-actionbar .gl-v2-btn { min-height: 48px; border-radius: 12px; font: 600 15px var(--gl-v2-font-sans); }
+    /* Voorbeeld .mx-ab: witte balk, rand .1, 10px 12px, gap 10; hoofdknop 1,4 × breed, tweede knop 1 × (groene rand). */
+    .gl-v2-form-actionbar { padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); gap: 10px; border-top-color: rgba(44, 59, 42, .1); }
+    .gl-v2-form-actionbar-actions { gap: 10px; justify-content: stretch; }
+    .gl-v2-form-actionbar-actions > .gl-v2-btn { flex: 1; }
+    .gl-v2-form-actionbar-actions > .gl-v2-btn-primary { flex: 1.4; }
+    .gl-v2-form-actionbar-actions > .gl-v2-btn-secondary { border-color: #7A9E6E; }
 }
 
 /* ── Tabel: e-mail in een cel (design-handoff optie 8g, "AANBEVOLEN · GEWONE TEKST, ACTIES OP

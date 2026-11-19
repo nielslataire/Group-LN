@@ -213,3 +213,13 @@
     background: var(--gl-v2-surface);
     color: var(--gl-v2-primary);
 }
+
+/* Aanraakdoelen op touch (≤1023px): minimaal 44px. Knoppen groeien in hoogte; de icoonknoppen in rij-acties blijven 32px zichtbaar
+   (rijhoogte is vast) maar krijgen via een onzichtbaar pseudo-element een 44px raakvlak. Klein-variant (.gl-v2-btn-sm) en
+   pagina's die zelf 44px zetten blijven ongemoeid. */
+@media (max-width: 1023.98px) and (pointer: coarse) {
+    .gl-v2-btn:not(.gl-v2-btn-sm) { min-height: 44px; }
+    .gl-v2-icon-btn { min-width: 44px; min-height: 44px; }
+    .gl-v2-rowact-btns .gl-v2-icon-btn { min-width: 32px; min-height: 32px; position: relative; }
+    .gl-v2-rowact-btns .gl-v2-icon-btn::after { content: ""; position: absolute; inset: -6px; }
+}

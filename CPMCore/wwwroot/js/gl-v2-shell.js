@@ -16,6 +16,10 @@ window.GlV2.byId = function (id) { return document.getElementById(id); };
     initModalButtonLoading();
     initToasts();
     initKpiToggle();
+    initMobileSelectionBar();
+    initMobileFormTopbar();
+    initMobileKeyboard();
+    initMobileTopbarSticky();
     initContextMenus();
     initTableEmailActions();
     initClickableRows();
@@ -178,12 +182,14 @@ window.GlV2.byId = function (id) { return document.getElementById(id); };
         observer.observe(topbar);
     }
 
-    // Optie 6b: elke pagina die meer dan 4 @section MobileQuickActions-tegels meegeeft, ziet enkel
-    // de eerste 4 als icoon — tegel 5+ verhuist naar een sheet die achter een 5de "Meer"-tegel zit.
-    // Puur generiek chrome-gedrag (geen Facturen-specifieke logica), dus werkt ongewijzigd op elke
-    // gl-v2-pagina die toevallig meer dan 4 snelacties heeft.
+    // Snelactiebalk (65h–65k). Elke pagina die @section MobileQuickActions vult krijgt deze balk; dit blok regelt het gedrag:
+    //  · hoofdactie (.gl-v2-mobile-quickaction-primary) staat net vóór Meer; Meer staat uiterst rechts en bestaat zodra er acties naar het blad moeten
+    //    (tegel 5+, of tegels met .gl-v2-mobile-quickaction-extra die enkel in het blad staan) — max. 8 rijen;
+    //  · teller op een tegel: data-badge="12" (+ data-badge-tone="danger" voor dringend, anders goud), voorgelezen in het label ("Rondgang, 12 open");
+    //  · niet beschikbaar: aria-disabled="true" + data-off-message — grijs (45 %), tikken toont een info-toast i.p.v. te verbergen;
+    //  · haptiek: korte trilling bij indrukken; · opname: window.GlV2QuickActions.record(...) verandert de balk in een opnamebalk.
     function initMobileQuickActions() {
-        var MAX_VISIBLE = 4;
+        var MAX_VISIBLE = 4, MAX_SHEET = 8;
         var bar = document.getElementById("gl-v2-mobile-quickactions");
         var sheet = document.getElementById("gl-v2-quickactions-sheet");
         var backdrop = document.getElementById("gl-v2-quickactions-backdrop");
@@ -191,50 +197,88 @@ window.GlV2.byId = function (id) { return document.getElementById(id); };
         var closeBtn = document.getElementById("gl-v2-quickactions-sheet-close");
         if (!bar || !sheet || !backdrop || !list) return;
 
-        var items = Array.prototype.slice.call(bar.querySelectorAll(".gl-v2-mobile-quickaction"));
-        if (items.length <= MAX_VISIBLE) return;
+        var all = Array.prototype.slice.call(bar.querySelectorAll(".gl-v2-mobile-quickaction"));
+        var extras = all.filter(function (el) { return el.classList.contains("gl-v2-mobile-quickaction-extra"); });
+        var items = all.filter(function (el) { return extras.indexOf(el) === -1; });
+        var more = null;
 
-        var more = document.createElement("button");
-        more.type = "button";
-        more.className = "gl-v2-mobile-quickaction gl-v2-mobile-quickaction-more";
-        more.setAttribute("aria-haspopup", "dialog");
-        more.setAttribute("aria-expanded", "false");
-        more.setAttribute("aria-controls", "gl-v2-quickactions-sheet");
-        more.innerHTML =
-            '<i class="ph ph-dots-three" aria-hidden="true" data-role="rest-icon"></i>' +
-            '<i class="ph ph-x" aria-hidden="true" data-role="open-icon" hidden></i>' +
-            '<span data-role="rest-label">Meer</span>' +
-            '<span data-role="open-label" hidden>Sluiten</span>';
+        function labelOf(el) { return (el.getAttribute("data-label") || el.textContent || "").trim(); }
+
+        // Teller (65i "Met teller"): bolletje rechtsboven op het icoon, goud = open werk, rood = dringend.
+        function setBadge(el, count, tone) {
+            var old = el.querySelector(".gl-v2-qa-badge");
+            if (old) old.remove();
+            if (!count) { el.removeAttribute("aria-label"); return; }
+            var b = document.createElement("em");
+            b.className = "gl-v2-qa-badge" + (tone === "danger" ? " is-danger" : "");
+            b.textContent = count > 99 ? "99+" : String(count);
+            b.setAttribute("aria-hidden", "true");
+            el.appendChild(b);
+            el.setAttribute("aria-label", labelOf(el) + ", " + count + (el.getAttribute("data-badge-label") ? " " + el.getAttribute("data-badge-label") : " open"));
+        }
+        // Niet beschikbaar (65i): grijs, blijft tikbaar en legt uit waarom.
+        function setDisabled(el, off, message) {
+            el.classList.toggle("is-off", !!off);
+            if (off) el.setAttribute("aria-disabled", "true"); else el.removeAttribute("aria-disabled");
+            if (message) el.setAttribute("data-off-message", message);
+        }
+        items.concat(extras).forEach(function (el) {
+            var n = parseInt(el.getAttribute("data-badge") || "0", 10);
+            if (n) setBadge(el, n, el.getAttribute("data-badge-tone"));
+            if (el.getAttribute("aria-disabled") === "true") el.classList.add("is-off");
+            el.addEventListener("click", function (e) {
+                if (el.getAttribute("aria-disabled") !== "true") return;
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                if (window.GlV2Toast) window.GlV2Toast.show({ tone: "info", title: el.getAttribute("data-off-message") || "Niet beschikbaar" });
+            }, true);
+            el.addEventListener("pointerdown", function () {
+                if (el.getAttribute("aria-disabled") === "true") return;
+                if (navigator.vibrate) { try { navigator.vibrate(10); } catch (_) { } }
+            });
+        });
+
+        // De ene hoofdactie staat altijd NET VÓÓR Meer — dus als laatste zichtbare tegel.
+        var primary = items.filter(function (el) { return el.classList.contains("gl-v2-mobile-quickaction-primary"); })[0];
+        var overflow = items.length > MAX_VISIBLE ? items.slice(MAX_VISIBLE) : [];
+        var visible = items.slice(0, MAX_VISIBLE);
+        if (primary) {
+            var others = items.filter(function (el) { return el !== primary; });
+            var slot = Math.min(MAX_VISIBLE, items.length) - 1;
+            var ordered = others.slice();
+            ordered.splice(slot, 0, primary);
+            visible = ordered.slice(0, MAX_VISIBLE);
+            overflow = ordered.slice(MAX_VISIBLE);
+            ordered.forEach(function (el) { bar.appendChild(el); });
+        }
+        var sheetItems = overflow.concat(extras).slice(0, MAX_SHEET);
 
         function setOpen(isOpen) {
             sheet.hidden = !isOpen;
             backdrop.hidden = !isOpen;
             bar.classList.toggle("has-open-sheet", isOpen);
-            more.classList.toggle("is-open", isOpen);
-            more.setAttribute("aria-expanded", isOpen ? "true" : "false");
-            more.querySelector('[data-role="rest-icon"]').hidden = isOpen;
-            more.querySelector('[data-role="open-icon"]').hidden = !isOpen;
-            more.querySelector('[data-role="rest-label"]').hidden = isOpen;
-            more.querySelector('[data-role="open-label"]').hidden = !isOpen;
+            if (more) {
+                more.classList.toggle("is-open", isOpen);
+                more.setAttribute("aria-expanded", isOpen ? "true" : "false");
+            }
             document.body.style.overflow = isOpen ? "hidden" : "";
         }
 
         function buildSheetRow(original) {
             var iconEl = original.querySelector("i");
-            var label = (original.textContent || "").trim();
+            var label = labelOf(original);
             var subtitle = original.getAttribute("data-subtitle") || "";
-
             var row = document.createElement("button");
             row.type = "button";
             row.className = "gl-v2-quickactions-sheet-row";
-
+            if (original.getAttribute("aria-disabled") === "true") row.classList.add("is-off");
+            if (original.getAttribute("data-tone") === "danger") row.classList.add("is-danger");
             var iconSpan = document.createElement("span");
             iconSpan.className = "gl-v2-quickactions-sheet-row-icon";
             var icon = document.createElement("i");
             icon.className = iconEl ? iconEl.className : "ph ph-circle";
             icon.setAttribute("aria-hidden", "true");
             iconSpan.appendChild(icon);
-
             var textSpan = document.createElement("span");
             textSpan.className = "gl-v2-quickactions-sheet-row-text";
             var titleSpan = document.createElement("span");
@@ -247,18 +291,9 @@ window.GlV2.byId = function (id) { return document.getElementById(id); };
                 subtitleSpan.textContent = subtitle;
                 textSpan.appendChild(subtitleSpan);
             }
-
-            var chevron = document.createElement("i");
-            chevron.className = "ph ph-caret-right gl-v2-quickactions-sheet-row-chevron";
-            chevron.setAttribute("aria-hidden", "true");
-
             row.appendChild(iconSpan);
             row.appendChild(textSpan);
-            row.appendChild(chevron);
-
-            // Delegeert naar het originele (verborgen) element i.p.v. href/form-submit te
-            // dupliceren — respecteert zo vanzelf een disabled knop (click() op disabled doet
-            // niets) zonder de disabled-state hier apart te moeten bijhouden.
+            // Delegeert naar het originele (verborgen) element i.p.v. href/form-submit te dupliceren.
             row.addEventListener("click", function () {
                 setOpen(false);
                 original.click();
@@ -266,18 +301,79 @@ window.GlV2.byId = function (id) { return document.getElementById(id); };
             return row;
         }
 
-        items.slice(MAX_VISIBLE).forEach(function (item) {
-            item.hidden = true;
-            list.appendChild(buildSheetRow(item));
-        });
-        bar.appendChild(more);
+        extras.forEach(function (el) { el.hidden = true; });
+        overflow.forEach(function (el) { el.hidden = true; });
+        sheetItems.forEach(function (item) { list.appendChild(buildSheetRow(item)); });
 
-        more.addEventListener("click", function () { setOpen(sheet.hidden); });
-        backdrop.addEventListener("click", function () { setOpen(false); });
-        if (closeBtn) closeBtn.addEventListener("click", function () { setOpen(false); });
-        document.addEventListener("keydown", function (e) {
-            if (e.key === "Escape" && !sheet.hidden) setOpen(false);
-        });
+        if (sheetItems.length) {
+            more = document.createElement("button");
+            more.type = "button";
+            more.className = "gl-v2-mobile-quickaction gl-v2-mobile-quickaction-more";
+            more.setAttribute("aria-haspopup", "dialog");
+            more.setAttribute("aria-expanded", "false");
+            more.setAttribute("aria-controls", "gl-v2-quickactions-sheet");
+            more.innerHTML = '<i class="ph ph-dots-three" aria-hidden="true"></i><span>Meer</span>';
+            more.addEventListener("pointerdown", function () { if (navigator.vibrate) { try { navigator.vibrate(10); } catch (_) { } } });
+            bar.appendChild(more);   // Meer staat altijd uiterst rechts
+            more.addEventListener("click", function () { setOpen(sheet.hidden); });
+            backdrop.addEventListener("click", function () { setOpen(false); });
+            if (closeBtn) closeBtn.addEventListener("click", function () { setOpen(false); });
+            var cancelBtn = document.getElementById("gl-v2-quickactions-sheet-cancel");
+            if (cancelBtn) cancelBtn.addEventListener("click", function () { setOpen(false); });
+            document.addEventListener("keydown", function (e) {
+                if (e.key === "Escape" && !sheet.hidden) setOpen(false);
+            });
+        }
+
+        // Opnamebalk (65i "Inspreken loopt", 65k): rode stip, tijd, golf, Stop — geen andere acties tot je stopt.
+        var recording = null;
+        function record(opts) {
+            opts = opts || {};
+            if (recording) return recording.api;
+            var saved = Array.prototype.slice.call(bar.children);
+            var wrap = document.createElement("div");
+            wrap.className = "gl-v2-qa-rec";
+            var wave = "";
+            for (var i = 0; i < 12; i++) wave += '<i style="animation-delay:' + (i * 0.09).toFixed(2) + 's"></i>';
+            wrap.innerHTML = '<span class="gl-v2-qa-rec-dot" aria-hidden="true"></span>' +
+                '<span class="gl-v2-qa-rec-text"><b>0:00</b><small></small></span>' +
+                '<span class="gl-v2-qa-rec-wave" aria-hidden="true">' + wave + '</span>' +
+                '<button type="button" class="gl-v2-qa-rec-stop">Stop</button>';
+            var timeEl = wrap.querySelector("b"), subEl = wrap.querySelector("small");
+            subEl.textContent = opts.subtitle || "";
+            saved.forEach(function (el) { el.setAttribute("data-qa-saved", "1"); el.style.display = "none"; });
+            bar.classList.add("is-recording");
+            bar.setAttribute("aria-label", "Opname");
+            bar.appendChild(wrap);
+            var started = Date.now();
+            var timer = window.setInterval(function () {
+                var s = Math.floor((Date.now() - started) / 1000);
+                timeEl.textContent = Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2);
+            }, 250);
+            var api = {
+                setSubtitle: function (t) { subEl.textContent = t || ""; },
+                stop: function () {
+                    if (!recording) return;
+                    window.clearInterval(timer);
+                    var seconds = Math.floor((Date.now() - started) / 1000);
+                    wrap.remove();
+                    saved.forEach(function (el) { el.style.display = ""; el.removeAttribute("data-qa-saved"); });
+                    bar.classList.remove("is-recording");
+                    bar.removeAttribute("aria-label");
+                    recording = null;
+                    if (typeof opts.onStop === "function") opts.onStop(seconds);
+                }
+            };
+            wrap.querySelector(".gl-v2-qa-rec-stop").addEventListener("click", api.stop);
+            recording = { api: api };
+            return api;
+        }
+
+        window.GlV2QuickActions = {
+            setBadge: function (key, count, tone) { var el = bar.querySelector('[data-qa-key="' + key + '"]'); if (el) setBadge(el, count, tone); },
+            setDisabled: function (key, off, message) { var el = bar.querySelector('[data-qa-key="' + key + '"]'); if (el) setDisabled(el, off, message); },
+            record: record
+        };
     }
 
     // Design-handoff 4j's "bezig"-knopstaat, generiek toegepast op elke Type 1/2-modal: een submit
@@ -323,11 +419,13 @@ window.GlV2.byId = function (id) { return document.getElementById(id); };
     // zelf, voor de bestaande TempData-meldingen) roept enkel window.GlV2Toast.show({...}) aan.
     function initToasts() {
         var MAX_VISIBLE = 3;
-        var AUTO_DISMISS_MS = 5000;
+        var AUTO_DISMISS_MS = 5000;      // succes + info
+        var WARNING_DISMISS_MS = 8000;   // waarschuwing
+        var UNDO_DISMISS_MS = 8000;      // melding met "Ongedaan maken" (balkje loopt af)
         var container = document.getElementById("gl-v2-toast-container");
         if (!container) return;
 
-        var TONE_ICONS = { success: "ph-check-circle", danger: "ph-warning-circle", warning: "ph-warning", info: "ph-info" };
+        var TONE_ICONS = { success: "ph-check-circle", danger: "ph-warning-circle", warning: "ph-warning", info: "ph-info", busy: "ph-spinner-gap" };
 
         function show(opts) {
             opts = opts || {};
@@ -335,7 +433,8 @@ window.GlV2.byId = function (id) { return document.getElementById(id); };
 
             var el = document.createElement("div");
             el.className = "gl-v2-toast is-" + tone;
-            el.setAttribute("role", "status");
+            // Mobiele componenten 65g: een fout wordt voorgelezen als alert, de rest als status.
+            el.setAttribute("role", tone === "danger" ? "alert" : "status");
 
             var icon = document.createElement("span");
             icon.className = "gl-v2-toast-icon";
@@ -379,18 +478,73 @@ window.GlV2.byId = function (id) { return document.getElementById(id); };
             el.appendChild(close);
 
             enableSwipeDismiss(el);
+            // "Tikken op de toast houdt hem vast" (65g): een tik buiten kruisje/actie stopt de afteltimer.
+            el.addEventListener("click", function (e) {
+                if (e.target.closest(".gl-v2-toast-close, .gl-v2-toast-action")) return;
+                hold(el);
+            });
 
             // column-reverse op de container: als laatste kind toegevoegd betekent hier "onderaan de
             // stapel, dicht bij de hoek" — precies waar een nieuwe melding hoort te verschijnen.
             container.appendChild(el);
             enforceMax();
 
-            // Fouten blijven staan tot ze gesloten worden (4g's eigen regel); elke andere toon
-            // verdwijnt na 5 sec. vanzelf.
-            if (tone !== "danger" && !opts.sticky) {
-                el.dataset.glV2Timer = window.setTimeout(function () { dismiss(el); }, AUTO_DISMISS_MS);
-            }
+            arm(el, tone, opts);
 
+            return el;
+        }
+
+        // Duur per soort (65g): succes/info 5 s, waarschuwing 8 s, ongedaan maken 8 s met afloopbalkje; een fout blijft
+        // staan tot hij gesloten wordt, "bezig" tot de pagina hem met update() omzet in een succes.
+        function arm(el, tone, opts) {
+            window.clearTimeout(Number(el.dataset.glV2Timer));
+            var oldBar = el.querySelector(".gl-v2-toast-timer");
+            if (oldBar) oldBar.remove();
+            if (tone === "danger" || tone === "busy" || opts.sticky) return;
+            var undo = !!(opts.action && opts.undo);
+            var ms = undo ? UNDO_DISMISS_MS : (tone === "warning" ? WARNING_DISMISS_MS : AUTO_DISMISS_MS);
+            if (undo) {
+                var bar = document.createElement("span");
+                bar.className = "gl-v2-toast-timer";
+                bar.style.setProperty("--gl-v2-toast-ms", ms + "ms");
+                el.appendChild(bar);
+            }
+            el.dataset.glV2Timer = window.setTimeout(function () { dismiss(el); }, ms);
+        }
+
+        function hold(el) {
+            window.clearTimeout(Number(el.dataset.glV2Timer));
+            var bar = el.querySelector(".gl-v2-toast-timer");
+            if (bar) bar.remove();
+        }
+
+        // update(el, opts): zet een "bezig"-toast om (bv. "Klantenlijst wordt gemaakt" -> succes met Bekijken).
+        function update(el, opts) {
+            if (!el || !el.isConnected) return show(opts);
+            opts = opts || {};
+            var tone = TONE_ICONS[opts.tone] ? opts.tone : "info";
+            el.className = "gl-v2-toast is-" + tone;
+            el.setAttribute("role", tone === "danger" ? "alert" : "status");
+            var glyph = el.querySelector(".gl-v2-toast-icon i");
+            if (glyph) glyph.className = "ph " + (opts.icon || TONE_ICONS[tone]);
+            var t = el.querySelector(".gl-v2-toast-title");
+            if (t) t.textContent = opts.title || "";
+            var b = el.querySelector(".gl-v2-toast-body");
+            if (b) b.textContent = opts.body || "";
+            var old = el.querySelector(".gl-v2-toast-action");
+            if (old) old.remove();
+            if (opts.action) {
+                var action = document.createElement("button");
+                action.type = "button";
+                action.className = "gl-v2-toast-action";
+                action.textContent = opts.action;
+                action.addEventListener("click", function () {
+                    dismiss(el);
+                    if (typeof opts.onAction === "function") opts.onAction();
+                });
+                el.appendChild(action);
+            }
+            arm(el, tone, opts);
             return el;
         }
 
@@ -413,7 +567,9 @@ window.GlV2.byId = function (id) { return document.getElementById(id); };
         // bonus naast het altijd-aanwezige kruisje, geen vervanging.
         function enableSwipeDismiss(el) {
             var startX = null;
+            var startY = null;
             var dx = 0;
+            var dy = 0;
 
             el.addEventListener("pointerdown", function (e) {
                 // Niet vastgrijpen als de aanraking op het kruisje/de actielink zelf begint — anders
@@ -422,19 +578,28 @@ window.GlV2.byId = function (id) { return document.getElementById(id); };
                 // enkel de klik zelf kwam nooit aan — projectwijd bug, gevonden via Niels, 2026-09-30).
                 if (e.target.closest(".gl-v2-toast-close, .gl-v2-toast-action")) return;
                 startX = e.clientX;
+                startY = e.clientY;
                 dx = 0;
+                dy = 0;
                 el.setPointerCapture(e.pointerId);
                 el.style.transition = "none";
             });
             el.addEventListener("pointermove", function (e) {
                 if (startX === null) return;
                 dx = e.clientX - startX;
-                if (dx > 0) el.style.transform = "translateX(" + dx + "px)";
+                dy = e.clientY - startY;
+                // Gsm (65g): omhoog vegen sluit. Tablet/desktop: naar rechts vegen.
+                if (dy < 0 && Math.abs(dy) > Math.abs(dx)) el.style.transform = "translateY(" + dy + "px)";
+                else if (dx > 0) el.style.transform = "translateX(" + dx + "px)";
             });
             function end() {
                 if (startX === null) return;
                 el.style.transition = "";
-                if (dx > 80) {
+                if (dy < -40 && Math.abs(dy) > Math.abs(dx)) {
+                    el.style.transform = "translateY(-120%)";
+                    el.style.opacity = "0";
+                    window.setTimeout(function () { dismiss(el); }, 150);
+                } else if (dx > 80) {
                     el.style.transform = "translateX(120%)";
                     el.style.opacity = "0";
                     window.setTimeout(function () { dismiss(el); }, 150);
@@ -442,7 +607,9 @@ window.GlV2.byId = function (id) { return document.getElementById(id); };
                     el.style.transform = "";
                 }
                 startX = null;
+                startY = null;
                 dx = 0;
+                dy = 0;
             }
             el.addEventListener("pointerup", end);
             el.addEventListener("pointercancel", end);
@@ -450,12 +617,120 @@ window.GlV2.byId = function (id) { return document.getElementById(id); };
 
         // notify(tone, title, body): de korte vorm die de pagina-scripts gebruikten (eerder per pagina gekopieerd als lokale toast()).
         function notify(tone, title, body) { show({ tone: tone, title: title, body: body || "" }); }
-        window.GlV2Toast = { show: show, dismiss: dismiss, notify: notify };
+        window.GlV2Toast = { show: show, update: update, dismiss: dismiss, notify: notify };
     }
 
     // Design-handoff 7a's mobiele "Toon alles" — gedelegeerd op document, generiek voor elke
     // .gl-v2-kpi-strip op elke gl-v2-pagina (niet dashboard-specifiek, dezelfde reden als de andere
     // gedelegeerde listeners hierboven: werkt ook op een strip die pas later in de DOM verschijnt).
+    // ── Mobiele componenten (design-handoff 65b/65d) — gsm-gedrag dat markup + JS vraagt ─────────────────────
+    //
+    // 1) Selectiemodus-topbar (65b "Selectie"): donkere balk #1F2A1E over de topbar met × (selectie opheffen) en "N geselecteerd".
+    //    Generiek: een pagina met een eigen selectie roept window.GlV2Selection.set(aantal, { onCancel: fn, label: "…" }) aan
+    //    telkens het aantal verandert (0 = balk weg). Enkel zichtbaar op gsm (CSS, gl-v2/breakpoints.css).
+    // 2) Formulier-topbar (65b "Formulier · volledig scherm"): op een pagina met .gl-v2-form-actionbar krijgt de topbar op gsm
+    //    een × links (i.p.v. chevron) en een tekstknop "Opslaan" rechts die de primaire knop van de actiebalk indrukt.
+    // 3) Toetsenbord (65d): met het schermtoetsenbord open schuift de actiebalk mee omhoog (visualViewport) en verdwijnt de snelactiebalk.
+    function initMobileSelectionBar() {
+        var host = document.querySelector(".gl-v2");
+        if (!host) return;
+        var bar = null;
+        var cancelFn = null;
+        function build() {
+            bar = document.createElement("div");
+            bar.className = "gl-v2-selbar";
+            bar.setAttribute("role", "region");
+            bar.setAttribute("aria-label", "Selectie");
+            bar.hidden = true;
+            var x = document.createElement("button");
+            x.type = "button";
+            x.className = "gl-v2-selbar-x";
+            x.setAttribute("aria-label", "Selectie opheffen");
+            x.innerHTML = '<i class="ph ph-x" aria-hidden="true"></i>';
+            x.addEventListener("click", function () { if (typeof cancelFn === "function") cancelFn(); });
+            var count = document.createElement("span");
+            count.className = "gl-v2-selbar-count";
+            count.setAttribute("aria-live", "polite");
+            bar.appendChild(x);
+            bar.appendChild(count);
+            host.appendChild(bar);
+        }
+        window.GlV2Selection = {
+            set: function (n, opts) {
+                opts = opts || {};
+                if (!bar) build();
+                cancelFn = opts.onCancel || null;
+                bar.hidden = !(n > 0);
+                document.body.classList.toggle("is-selecting", n > 0);
+                bar.querySelector(".gl-v2-selbar-count").textContent = opts.label || (n + " geselecteerd");
+            }
+        };
+    }
+
+    function initMobileFormTopbar() {
+        var actionbar = document.querySelector(".gl-v2-form-actionbar");
+        var topbar = document.querySelector(".gl-v2-topbar");
+        if (!actionbar || !topbar) return;
+        var primary = actionbar.querySelector(".gl-v2-btn-primary");
+        document.body.classList.add("is-form-page");
+
+        // × i.p.v. chevron in de terugknop (het element/id blijft: pagina's hangen er hun "niet-opgeslagen wijzigingen"-prompt aan).
+        var back = document.getElementById("gl-v2-topbar-back-link");
+        if (back) {
+            var glyph = back.querySelector("i");
+            var mq = window.matchMedia("(max-width: 767.98px)");
+            var syncBack = function () {
+                if (glyph) glyph.className = mq.matches ? "ph ph-x" : "ph ph-caret-left";
+                back.setAttribute("aria-label", mq.matches ? "Sluiten zonder opslaan" : "Terug");
+            };
+            syncBack();
+            if (mq.addEventListener) mq.addEventListener("change", syncBack);
+        }
+
+        if (!primary || topbar.querySelector(".gl-v2-topbar-save")) return;
+        var save = document.createElement("button");
+        save.type = "button";
+        save.className = "gl-v2-topbar-save";
+        save.textContent = "Opslaan";
+        save.disabled = primary.disabled;
+        save.addEventListener("click", function () { primary.click(); });
+        topbar.appendChild(save);
+        new MutationObserver(function () { save.disabled = primary.disabled; })
+            .observe(primary, { attributes: true, attributeFilter: ["disabled"] });
+    }
+
+    // Sticky topbar (65b): schaduw zodra de pagina gescrold is, en de LIVE hoogte van de topbar (kan hoger zijn met een badge-/zoekstrook)
+    // als --gl-v2-m-topbar-live, zodat de plakkende tabs er precies onder blijven staan.
+    function initMobileTopbarSticky() {
+        var topbar = document.querySelector(".gl-v2-topbar");
+        if (!topbar) return;
+        var root = document.documentElement;
+        function measure() { root.style.setProperty("--gl-v2-m-topbar-live", topbar.offsetHeight + "px"); }
+        function onScroll() { document.body.classList.toggle("is-scrolled", (window.scrollY || 0) > 4); }
+        measure();
+        onScroll();
+        window.addEventListener("scroll", onScroll, { passive: true });
+        window.addEventListener("resize", measure);
+        if (window.ResizeObserver) new ResizeObserver(measure).observe(topbar);
+    }
+
+    function initMobileKeyboard() {
+        var vv = window.visualViewport;
+        if (!vv) return;
+        var root = document.documentElement;
+        function sync() {
+            // Verschil tussen layout- en visuele viewport = hoogte van het toetsenbord (iOS). Android Chrome met
+            // interactive-widget=resizes-content krimpt de layout-viewport zelf: dan is het verschil 0 en blijft `bottom:0` juist.
+            var inset = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+            var open = inset > 120;
+            root.style.setProperty("--gl-v2-kb-inset", open ? inset + "px" : "0px");
+            document.body.classList.toggle("is-keyboard-open", open);
+        }
+        vv.addEventListener("resize", sync);
+        vv.addEventListener("scroll", sync);
+        sync();
+    }
+
     function initKpiToggle() {
         document.addEventListener("click", function (e) {
             var btn = e.target.closest(".js-gl-v2-kpi-toggle");
@@ -526,6 +801,15 @@ window.GlV2.byId = function (id) { return document.getElementById(id); };
             var wasOpen = menu.classList.contains("is-open");
             closeAllMenus();
             if (wasOpen) return;
+            // 64d: op gsm heeft elk blad een Annuleren-knop onderaan (CSS toont hem enkel <768px).
+            if (!menu.querySelector(".gl-v2-menu-cancel")) {
+                var cancel = document.createElement("button");
+                cancel.type = "button";
+                cancel.className = "gl-v2-menu-cancel";
+                cancel.textContent = "Annuleren";
+                cancel.addEventListener("click", closeAllMenus);
+                menu.appendChild(cancel);
+            }
             menu.classList.add("is-open");
             trigger.classList.add("is-menu-open");
             trigger.setAttribute("aria-expanded", "true");

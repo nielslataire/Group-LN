@@ -3,9 +3,9 @@ title: De leveranciers van een project bekijken
 topic: projecten
 treeOrder: 6
 role: Projectleider
-device: Desktop · tablet
+device: Desktop · tablet · gsm
 minutes: 3
-updated: 2026-10-13
+updated: 2026-11-20
 screens: projecten-leveranciers
 synonyms: contracten, aannemers, aannemerslijst, contractstatus, waarborg
 newsTag: Nieuw
@@ -46,6 +46,17 @@ Onderaan de tabel staat de **Totaal**-rij met de som van alle contractprijzen en
 
 Boven de tabel kies je tussen **Alle**, **Met contract**, **Niet getekend** en **Zonder contract**.
 Typ in het zoekveld om te zoeken op leverancier of contractnaam.
+
+## Op je gsm
+
+Op een gsm staan de leveranciers in drie groepen onder elkaar, zodat je meteen ziet wat aandacht vraagt.
+
+- **Niet getekend — vraagt actie** staat bovenaan, in goud. Elke leverancier toont de contractprijs en wanneer het contract verstuurd is, bijvoorbeeld *verstuurd 16/11 · 3 dagen open*.
+- **Getekend** toont per leverancier hoeveel er gefactureerd is ten opzichte van de contractprijs, als balk. Is er méér gefactureerd dan het contract, dan staat er in goud bijvoorbeeld *+ 6 % boven contract*.
+- **Zonder contract — enkel facturen** toont enkel de naam en het gefactureerde bedrag.
+- Zoek bovenaan op leverancier of contract, of kies een filter: **Niet getekend**, **Getekend** of **Zonder contract**. Tik op **Alle …** onder een groep om de volledige groep te zien.
+- Tik op de ronde **⋯** knop voor de acties. Bovenaan staat de belangrijkste: **Herinnering sturen** bij een niet-getekend contract, **Contract toevoegen** bij een leverancier zonder contract. Daaronder vind je **Contract openen**, **Bellen**, **Mailen**, **Documenten** en **Verwijderen uit project**. Een actie die niet kan, staat grijs met de reden erbij.
+- In de groene balk onderaan tik je op **Afdrukken** (kolomkeuze voor de aannemerslijst), **Exporteren** of **Leverancier** om een leverancier toe te voegen.
 
 ## De aannemerslijst afdrukken
 

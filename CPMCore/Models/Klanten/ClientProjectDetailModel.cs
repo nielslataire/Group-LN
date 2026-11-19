@@ -51,6 +51,7 @@ namespace CPMCore.Models.Klanten
         // projectdossier-inner-menu (GlV2/_ProjectInnerMenuV2) heeft die nodig op elke pagina die het
         // meerendert, niet enkel op Projecten/DetailV2.
         public bool IsCoordinationProject { get; set; }
+        public string? ProjectCode { get; set; }
 
         // gl-v2 (DetailClientsV2, design-handoff 12d): wooneenheden/commerciële ruimtes (Type.GroupId
         // 1/4) zonder klant — ClientAccounts hierboven komt enkel via GetClientAccountsByProjectIdWith

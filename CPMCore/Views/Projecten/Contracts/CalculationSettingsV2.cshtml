@@ -13,7 +13,7 @@
     ViewData["BackUrl"] = Url.Action("Recalculation", "Projecten", new { projectid = Model.ProjectId });
     var nl = CultureInfo.GetCultureInfo("nl-BE");
     string Num(decimal v) => v.ToString("N2", nl);
-    string Eur0(decimal v) => "€ " + v.ToString("N0", nl);
+    string Eur0(decimal v) => "€ " + v.ToString("N2", nl);
     var groepenMetRijen = Model.Groepen;
     var i = 0;
 }

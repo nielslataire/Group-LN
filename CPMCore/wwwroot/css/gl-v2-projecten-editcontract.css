@@ -185,3 +185,81 @@
        voor dit specifieke veld ondubbelzinnig en onafhankelijk toetsbaar. */
     .gl-v2-ec-sentdate-col { grid-column: 1 / -1; }
 }
+
+/* ── Gsm (design-handoff 64n "Contract bewerken — formulier volgens 65"): kaarten per onderwerp, velden 48 hoog, labels in gewone letters,
+   btw als 4 keuzes, korting contant als schakelaar + twee velden, tienjarige als keuzerondjes met uitleg, lot als kaartje. ───────────────── */
+.gl-v2-ec-m-only { display: none; }
+@media (max-width: 767.98px) {
+    .gl-v2 .gl-v2-ec-m-only { display: flex; }
+    .gl-v2 .gl-v2-ec-d-only { display: none; }
+    .gl-v2 .gl-v2-ec-required-note { font: 450 12px var(--gl-v2-font-sans); color: #5A6B58; padding: 0 2px; }
+    .gl-v2 .gl-v2-ec-scroll { gap: 12px; }
+    .gl-v2 .gl-v2-ec-grid { gap: 12px; }
+    .gl-v2 .gl-v2-ec-fields { padding: 14px; gap: 14px; }
+    .gl-v2 .gl-v2-ec-fields .gl-v2-field-label, .gl-v2 .gl-v2-ec-m-label { font: 600 13px var(--gl-v2-font-sans); letter-spacing: 0; text-transform: none; color: #2C3B2A; }
+    .gl-v2 .gl-v2-ec-fields .gl-v2-field-box { min-height: 48px; border-radius: 12px; }
+    .gl-v2 .gl-v2-section-card-header .gl-v2-field-divider { display: none; }
+    .gl-v2 .gl-v2-section-card-header .gl-v2-section-card-desc { font: 450 12px var(--gl-v2-font-sans); color: #7A8A78; }
+    .gl-v2 #btnNewSiteManager { display: none; }
+
+    /* Btw: vier keuzes */
+    .gl-v2 .gl-v2-ec-m-vat { flex-direction: column; gap: 6px; }
+    .gl-v2 .gl-v2-ec-m-seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 4px; border-radius: 12px; background: #EDEFEB; }
+    .gl-v2 .gl-v2-ec-m-seg button { height: 40px; border: 0; border-radius: 9px; background: none; font: 500 13px var(--gl-v2-font-sans); color: #4A5B48; padding: 0 4px; }
+    .gl-v2 .gl-v2-ec-m-seg button.on { background: #fff; color: var(--gl-v2-primary); font-weight: 700; box-shadow: 0 1px 2px rgba(44, 59, 42, .18); }
+    .gl-v2 .gl-v2-ec-m-note { font: 450 12px/1.45 var(--gl-v2-font-sans); color: #5A6B58; }
+    .gl-v2 #gl-v2-ec-vat-col.is-preset > .gl-v2-field { display: none; }
+
+    /* Korting contant: tekst + schakelaar, daaronder twee velden */
+    .gl-v2 .gl-v2-ec-disc { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 10px; align-items: end; }
+    .gl-v2 .gl-v2-ec-m-tgtext { grid-column: 1; grid-row: 1; flex-direction: column; gap: 2px; align-self: center; min-height: 52px; justify-content: center; }
+    .gl-v2 .gl-v2-ec-m-tgtext b { font: 600 14px var(--gl-v2-font-sans); color: #2C3B2A; }
+    .gl-v2 .gl-v2-ec-m-tgtext small { font: 450 12px var(--gl-v2-font-sans); color: #5A6B58; }
+    .gl-v2 .gl-v2-ec-disc > .gl-v2-toggle-switch { grid-column: 2; grid-row: 1; justify-self: end; align-self: center; }
+    .gl-v2 .gl-v2-ec-disc > .gl-v2-ec-inline-field { display: flex; flex-direction: column; gap: 6px; }
+
+    /* Tienjarige aansprakelijkheid: keuzerondjes met uitleg. De gedeelde .gl-v2-segmented (is-outline) kleurt het aangevinkte vak volledig groen; dat wordt hier per optie teruggezet (voorvoegsel .gl-v2 + extra klasse wint van segmented.css). */
+    .gl-v2 .gl-v2-segmented.gl-v2-ec-ten { display: flex; flex-direction: column; border-radius: 12px; box-shadow: inset 0 0 0 1px rgba(44, 59, 42, .14); background: transparent; padding: 0; overflow: hidden; gap: 0; height: auto; }
+    .gl-v2 .gl-v2-segmented.gl-v2-ec-ten > label { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0; border: 0; border-top: 1px solid rgba(44, 59, 42, .08); border-radius: 0; background: transparent; box-shadow: none; cursor: pointer; }
+    .gl-v2 .gl-v2-segmented.gl-v2-ec-ten > label:first-child { border-top: 0; }
+    .gl-v2 .gl-v2-segmented.gl-v2-ec-ten > label > input + span,
+    .gl-v2 .gl-v2-segmented.gl-v2-ec-ten > label + label > input + span,
+    .gl-v2 .gl-v2-segmented.gl-v2-ec-ten > label > input:checked + span {
+        display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; flex: 1; min-width: 0; height: auto; min-height: 56px; padding: 8px 12px;
+        border: 0; border-radius: 0; background: transparent; box-shadow: none; color: #2C3B2A; font: 600 14px var(--gl-v2-font-sans); white-space: normal; text-align: left; overflow: visible; text-overflow: clip;
+    }
+    .gl-v2 .gl-v2-segmented.gl-v2-ec-ten > label > input:checked + span { color: var(--gl-v2-primary); }
+    .gl-v2 .gl-v2-segmented.gl-v2-ec-ten > label::after { content: ""; width: 22px; height: 22px; flex: none; border-radius: 11px; box-shadow: inset 0 0 0 2px #9AA898; margin-right: 12px; }
+    .gl-v2 .gl-v2-segmented.gl-v2-ec-ten > label:has(input:checked) { background: #F2F5EF; }
+    .gl-v2 .gl-v2-segmented.gl-v2-ec-ten > label:has(input:checked)::after { box-shadow: inset 0 0 0 7px var(--gl-v2-primary); }
+    .gl-v2 .gl-v2-ec-m-desc { display: block; font: 450 12px var(--gl-v2-font-sans); color: #5A6B58; }
+
+    /* Loten en bijbestellingen */
+    .gl-v2 .gl-v2-ec-lots-body { padding: 14px; gap: 12px; }
+    .gl-v2 .gl-v2-ec-lot-row { grid-template-columns: minmax(0, 1fr) 44px; grid-template-areas: "name del" "price price"; gap: 10px; align-items: center; padding: 12px; border: 0; border-radius: 12px; background: #F7F9F5; box-shadow: inset 0 0 0 1px rgba(44, 59, 42, .08); margin-top: 4px; }
+    .gl-v2 .gl-v2-ec-lot-row-name { grid-area: name; height: auto; padding: 0; border: 0; background: none; font: 600 14.5px var(--gl-v2-font-sans); }
+    .gl-v2 .gl-v2-ec-lot-row-price { display: contents; }
+    .gl-v2 .gl-v2-ec-lot-row-price .gl-v2-field { grid-area: price; }
+    .gl-v2 .gl-v2-ec-lot-row-price .gl-v2-field::before { content: "Bedrag lot"; font: 600 13px var(--gl-v2-font-sans); color: #2C3B2A; }
+    .gl-v2 .gl-v2-ec-lot-row-price .deleterow { grid-area: del; width: 44px; height: 44px; border-radius: 22px; border: 0; background: #F6E3E3; color: #8B2A2A; }
+    .gl-v2 .gl-v2-ec-lot-order-row { margin-left: 0; padding: 8px 4px 8px 12px; }
+    .gl-v2 .gl-v2-ec-lot-order-actions { width: auto; }
+    .gl-v2 .gl-v2-ec-lot-add-row { margin: 0; padding: 0 6px; min-height: 44px; border-left: 0; font: 600 13px var(--gl-v2-font-sans); }
+    .gl-v2 .gl-v2-ec-lot-add-field .gl-v2-ec-inline-group { flex-direction: column; align-items: stretch; }
+    .gl-v2 .gl-v2-ec-add-lot { height: 44px; border-radius: 12px; border: 1px solid rgba(0, 83, 45, .4); background: #fff; color: var(--gl-v2-primary); font: 600 13.5px var(--gl-v2-font-sans); justify-content: center; }
+    .gl-v2 .gl-v2-ec-lots-total { margin: 0 -14px -14px; padding: 12px 14px; background: #F7F9F5; border-top: 1px solid rgba(44, 59, 42, .08); border-radius: 0 0 14px 14px; font: 500 12.5px var(--gl-v2-font-sans); color: #4A5B48; }
+    .gl-v2 .gl-v2-ec-lots-total span:last-child { font: 700 15px var(--gl-v2-font-sans); }
+
+    /* Actiebalk (65d): Annuleren + Contract opslaan; "Opslaan en verder" vervalt (er is al Opslaan in de topbar). */
+    .gl-v2 #gl-v2-ec-save-continue { display: none; }
+    .gl-v2 .gl-v2-form-actionbar > .gl-v2-form-actionbar-spacer { display: none; }
+    .gl-v2 .gl-v2-form-actionbar > #gl-v2-ec-cancel-link { flex: 1; justify-content: center; border: 1px solid #7A9E6E; background: #fff; color: var(--gl-v2-primary); }
+    .gl-v2 .gl-v2-form-actionbar > .gl-v2-btn-primary { flex: 1.4; justify-content: center; }
+}
+/* Btw-keuze en veld eronder: ruimte ertussen (vorige pas plakte het veld aan de uitleg). */
+@media (max-width: 767.98px) {
+    .gl-v2 #gl-v2-ec-vat-col { display: flex; flex-direction: column; gap: 14px; }
+}
+/* "Lot toevoegen": staat er geen enkel lot meer in de lijst (alles al toegevoegd, of het filter vindt niets), dan staat er een uitleg i.p.v. een leeg paneel. */
+.gl-v2-select-empty { display: none; padding: 12px 14px; font: 450 12.5px/1.45 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2-select-options:not(:has(.gl-v2-select-option:not([hidden]))) > .gl-v2-select-empty { display: block; }

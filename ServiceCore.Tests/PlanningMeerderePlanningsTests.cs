@@ -226,7 +226,7 @@ public class PlanningMeerderePlanningsTests
     }
 
     [Fact]
-    public async Task De_hoofdplanning_hernoemen_met_Id_0_werkt_ook_voor_ze_in_de_database_staat_maar_krijgt_geen_bouwdeel()
+    public async Task De_hoofdplanning_hernoemen_met_Id_0_werkt_ook_voor_ze_in_de_database_staat()
     {
         var (svc, db) = Maak();
         var s = await Doe(svc, null, new PlanningCommando { Type = "planningWijzig", PlanningId = 0, Velden = V(("naam", "Algemeen"), ("startDatum", "2026-12-01")) });
@@ -234,8 +234,8 @@ public class PlanningMeerderePlanningsTests
         Assert.Equal("2026-12-01", s.Planningen.Single().StartDatum);
 
         var u = await svc.Voer(ProjectId, new PlanningCommando { Type = "planningWijzig", Versie = s.Versie, PlanningId = 0, Velden = V(("eenheden", new[] { 11 })) }, "u1");
-        Assert.False(u.Ok);
-        Assert.Contains("hele project", u.Fout);
+        Assert.True(u.Ok, u.Fout);   // de hoofdplanning mag eigen eenheden krijgen (dan geldt ze enkel daarvoor)
+        Assert.Equal(new[] { 11 }, u.Staat!.Planningen.Single().EenheidIds.ToArray());
         Assert.True((await db.BouwPlanning.SingleAsync()).IsHoofd);
     }
 

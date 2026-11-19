@@ -32,6 +32,10 @@
     ViewData["PageIcon"] = "ph ph-users";
     ViewData["GlV2FullHeightBody"] = true;
     ViewData["BackUrl"] = Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId });
+    // Mobiele componenten 65b/64c: titel = projectnaam met "Project · code" als kicker; de sectie (Klanten) zit in de tabs.
+    ViewData["TitleMobile"] = Model.ProjectName;
+    ViewData["BadgesDesktopOnly"] = true;
+    ViewData["TopbarKicker"] = "Project" + (string.IsNullOrWhiteSpace(Model.ProjectCode) ? "" : " · " + Model.ProjectCode);
 
     var canWrite = ViewBag.CanWriteProjectCustomers as bool? ?? false;
     var canDelete = ViewBag.CanDeleteProjectCustomers as bool? ?? false;
@@ -48,6 +52,28 @@
 
     // Groepslabels exact zoals de legacy Clients.cshtml (GroupId 1/4/3/2) — hier gebruikt als
     // filter-waarden (Eenheidstype) én als kolomlabel binnen de samengevoegde "Eenheden"-cel.
+    // Initialen (64c punt 4): eerste letter van elke achternaam — niet van "Dhr. &" (gaf "D&"). Aanspreektitels en & vallen weg.
+    string Initials(string? name)
+    {
+        var skip = new[] { "dhr", "dhr.", "mevr", "mevr.", "mevrouw", "mijnheer", "de", "heer", "&", "en" };
+        var letters = (name ?? "").Replace("–", " ").Replace("-", " ").Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(p => !skip.Contains(p.ToLowerInvariant()) && char.IsLetter(p[0]))
+            .Select(p => char.ToUpperInvariant(p[0])).Take(2);
+        var result = string.Concat(letters);
+        return string.IsNullOrWhiteSpace(result) ? "?" : result;
+    }
+    // Verkoopstand voor de filterpillen en de chip: opgeleverd > akte verleden > akte te plannen.
+    string StageOf(ClientAccountWithUnitsBO a) =>
+        a.Client.DeliveryDate.HasValue && string.CompareOrdinal(a.Client.DeliveryDate.Value.ToString("yyyyMMdd"), DateTime.Today.ToString("yyyyMMdd")) <= 0 ? "opgeleverd"
+        : a.Client.DateDeedOfSale.HasValue ? "akte" : "plannen";
+    string StageLabel(string stage) => stage switch { "opgeleverd" => "Opgeleverd", "akte" => "Akte verleden", _ => "Akte te plannen" };
+    string UnitShort(int groupId) => groupId switch { 1 => "Woning", 4 => "Commerciële ruimte", 3 => "Parking", 2 => "Berging", _ => "Eenheid" };
+    var stageCounts = new Dictionary<string, int> { ["akte"] = 0, ["plannen"] = 0, ["opgeleverd"] = 0 };
+    foreach (var a in Model.ClientAccounts) stageCounts[StageOf(a)]++;
+    string EffectiveEmail(ClientAccountWithUnitsBO a) => !string.IsNullOrWhiteSpace(a.Client.Email) ? a.Client.Email
+        : a.Client.Contacts.OrderByDescending(cc => cc.IsPrimaryContact).ThenBy(cc => cc.Id).Select(cc => cc.Email).FirstOrDefault(c => !string.IsNullOrWhiteSpace(c)) ?? "";
+    var allEmails = Model.ClientAccounts.Select(EffectiveEmail).Where(e => !string.IsNullOrWhiteSpace(e)).Distinct().ToList();
+
     string GroupLabel(int groupId) => groupId switch
     {
         1 => "Wooneenheid",
@@ -89,13 +115,20 @@
 }
 @section MobileQuickActions
 {
+    @* 64c punt 8 / 65d: Klantenlijst · Mailen (aan alle klanten) · Klant toevoegen als hoofdactie. "Meer" (importeren, Excel) bestaat in CPM nog niet en staat er dus niet. *@
     <a href="@Url.Action("PrintClientList", "Projecten", new { projectid = Model.ProjectId })" target="_blank" rel="noopener" class="gl-v2-mobile-quickaction">
         <i class="ph ph-printer" aria-hidden="true"></i>Klantenlijst
     </a>
+    @if (allEmails.Count > 0)
+    {
+        <a href="mailto:?bcc=@Uri.EscapeDataString(string.Join(",", allEmails))" class="gl-v2-mobile-quickaction">
+            <i class="ph ph-envelope-simple" aria-hidden="true"></i>Mailen
+        </a>
+    }
     @if (canWrite)
     {
-        <a href="@Url.Action("AddClientAccount", "Klanten", new { id = Model.ProjectId })" class="gl-v2-mobile-quickaction">
-            <i class="ph ph-plus" aria-hidden="true"></i>Klant toevoegen
+        <a href="@Url.Action("AddClientAccount", "Klanten", new { id = Model.ProjectId })" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary">
+            <i class="ph ph-plus" aria-hidden="true"></i>Klant
         </a>
     }
 }
@@ -120,7 +153,21 @@
 @{ menuVm.Mode = CPMCore.Models.GlV2.GlV2ProjectMenuMode.Phone; }
 @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
 
-<div class="gl-v2-toolbar-card gl-v2-filters-card">
+@* Gsm (64c punt 2): zoekveld 44 hoog zonder extra kaart + filterpillen op de verkoopstand, plakt onder de tabs. *@
+<div class="gl-v2-m-tool gl-v2-m-only" id="gl-v2-dc-m-tool">
+    <label class="gl-v2-m-search">
+        <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+        <input type="search" id="gl-v2-dc-m-search" placeholder="Zoek op naam, lot of e-mail" autocomplete="off" aria-label="Zoek op naam, lot of e-mail" />
+        <button type="button" class="gl-v2-m-search-x" id="gl-v2-dc-m-search-x" aria-label="Wissen"><i class="ph ph-x" aria-hidden="true"></i></button>
+    </label>
+    <div class="gl-v2-m-pills" id="gl-v2-dc-m-pills" role="group" aria-label="Verkoopstand">
+        <button type="button" class="gl-v2-pill is-active" data-stage="">Alle <span class="gl-v2-pill-count">@Model.ClientAccounts.Count</span></button>
+        <button type="button" class="gl-v2-pill" data-stage="akte">Akte verleden <span class="gl-v2-pill-count">@stageCounts["akte"]</span></button>
+        <button type="button" class="gl-v2-pill" data-stage="plannen">Akte te plannen <span class="gl-v2-pill-count">@stageCounts["plannen"]</span></button>
+        <button type="button" class="gl-v2-pill" data-stage="opgeleverd">Opgeleverd <span class="gl-v2-pill-count">@stageCounts["opgeleverd"]</span></button>
+    </div>
+</div>
+<div class="gl-v2-toolbar-card gl-v2-filters-card gl-v2-d-only">
     <div class="gl-v2-filters-row">
         <div class="gl-v2-field gl-v2-toolbar-search">
             <div class="gl-v2-field-box">
@@ -229,8 +276,25 @@
                             var client = item.Client;
                             // Met mede-eigenaars is DisplayName al de combinatie van alle eigenaars: dan geen aanspreking ervoor.
                             var displayName = client.Name is not null && !client.HasCoOwners ? $"{client.Salutation.GetDisplayName()} {client.DisplayName}" : client.DisplayName;
-                            var initials = string.Join("", (displayName ?? "?").Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(p => char.ToUpperInvariant(p[0])).Take(2));
-                            if (string.IsNullOrWhiteSpace(initials)) initials = "?";
+                            var initials = Initials(client.DisplayName);
+                            var stage = StageOf(item);
+                            var phone = !string.IsNullOrWhiteSpace(client.Cellphone) ? client.Cellphone : client.Phone;
+                            var callTargets = new List<(string Name, string Number, string Role)>();
+                            void AddCall(string? n, string? nr, string role)
+                            {
+                                nr = (nr ?? "").Trim();
+                                if (nr.Length > 0 && !callTargets.Any(c => c.Number.Replace(" ", "") == nr.Replace(" ", ""))) callTargets.Add((string.IsNullOrWhiteSpace(n) ? "Klant" : n!, nr, role));
+                            }
+                            AddCall(client.DisplayName, !string.IsNullOrWhiteSpace(client.Cellphone) ? client.Cellphone : client.Phone, "Hoofdcontact");
+                            foreach (var cc in client.Contacts.OrderByDescending(c => c.IsPrimaryContact).ThenBy(c => c.Id))
+                            {
+                                AddCall(((cc.Firstname ?? "") + " " + (cc.Name ?? "")).Trim(), !string.IsNullOrWhiteSpace(cc.Cellphone) ? cc.Cellphone : cc.Phone, cc.IsCoOwner ? "Mede-eigenaar" : "Contactpersoon");
+                            }
+                            var firstUnit = item.Units.FirstOrDefault();
+                            var unitSub = firstUnit is null ? "" : $"{firstUnit.Name} · {UnitShort(firstUnit.Type.GroupId)}"
+                                + (Convert.ToDecimal(firstUnit.Surface ?? 0) > 0 ? $" · {Convert.ToDecimal(firstUnit.Surface ?? 0):0} m²" : "")
+                                + (item.Units.Count > 1 ? $" · +{item.Units.Count - 1}" : "");
+                            var sheetTitle = (client.DisplayName ?? "").Replace("Dhr. & Mevr. ", "").Replace("Dhr. ", "").Replace("Mevr. ", "") + (firstUnit is null ? "" : " · " + firstUnit.Name);
 
                             var statuses = new HashSet<string>();
                             var types = item.Units.Select(u => u.Type.GroupId).Distinct().Select(g => g.ToString());
@@ -254,7 +318,7 @@
                                     .Select(cc => cc.Email)
                                     .FirstOrDefault(c => !string.IsNullOrWhiteSpace(c));
 
-                            <tr data-detail-url="@detailUrl" data-search="@($"{displayName} {effectiveEmail} {string.Join(' ', item.Units.Select(u => u.Name))}".ToLowerInvariant())" data-statuses="@string.Join(",", statuses)" data-types="@string.Join(",", types)">
+                            <tr data-detail-url="@detailUrl" data-search="@($"{displayName} {effectiveEmail} {string.Join(' ', item.Units.Select(u => u.Name))}".ToLowerInvariant())" data-statuses="@string.Join(",", statuses)" data-types="@string.Join(",", types)" data-stage="@stage" data-stage-label="@StageLabel(stage)" data-initials="@initials" data-name="@displayName" data-unit-sub="@unitSub" data-email="@effectiveEmail" data-d1="@(client.DateSalesAgreement?.ToString("dd/MM/yyyy"))" data-d2="@(client.DateDeedOfSale?.ToString("dd/MM/yyyy"))" data-d3="@(client.DeliveryDate?.ToString("dd/MM/yyyy"))">
                                 <td>
                                     <div class="gl-v2-dc-client">
                                         <span class="gl-v2-avatar">@initials</span>
@@ -293,13 +357,44 @@
                                         <i class="ph ph-dots-three" aria-hidden="true"></i>
                                     </button>
                                     <div class="gl-v2-menu" id="gl-v2-dc-menu-@client.Id">
-                                        <a href="@detailUrl" class="gl-v2-menu-item"><i class="ph ph-eye" aria-hidden="true"></i>Detail</a>
-                                        <a href="@Url.Action("DetailDocs", "Projecten", new { projectid = Model.ProjectId, client = client.Id })" class="gl-v2-menu-item"><i class="ph ph-folder-open" aria-hidden="true"></i>Documenten</a>
+                                        <b class="gl-v2-menu-sheet-title">@sheetTitle</b>
+                                        <a href="@detailUrl" class="gl-v2-menu-item"><i class="ph ph-eye" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Klant openen</span><span class="gl-v2-menu-item-sub">overzicht, wijzigingen, facturen</span></span></a>
+                                        @if (callTargets.Count == 1)
+                                        {
+                                            <a href="tel:@callTargets[0].Number.Replace(" ", "")" class="gl-v2-menu-item"><i class="ph ph-phone" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Bellen</span><span class="gl-v2-menu-item-sub">@callTargets[0].Number</span></span></a>
+                                        }
+                                        else if (callTargets.Count > 1)
+                                        {
+                                            <button type="button" class="gl-v2-menu-item js-gl-v2-dc-call" data-target="gl-v2-dc-call-@client.Id"><i class="ph ph-phone" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Bellen</span><span class="gl-v2-menu-item-sub">@callTargets.Count nummers, je kiest wie</span></span></button>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(effectiveEmail))
+                                        {
+                                            <a href="mailto:@effectiveEmail" class="gl-v2-menu-item"><i class="ph ph-envelope-simple" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Mailen</span><span class="gl-v2-menu-item-sub">@effectiveEmail</span></span></a>
+                                        }
+                                        <a href="@Url.Action("DetailDocs", "Projecten", new { projectid = Model.ProjectId, client = client.Id })" class="gl-v2-menu-item"><i class="ph ph-folder-open" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Documenten</span><span class="gl-v2-menu-item-sub">alle documenten van deze klant</span></span></a>
                                         @if (canDelete)
                                         {
-                                            <a href="#" class="gl-v2-menu-item is-danger js-gl-v2-dc-delete" data-id="@client.Id"><i class="ph ph-trash" aria-hidden="true"></i>Verwijderen</a>
+                                            <div class="gl-v2-menu-divider"></div>
+                                            <a href="#" class="gl-v2-menu-item is-danger js-gl-v2-dc-delete" data-id="@client.Id"><i class="ph ph-trash" aria-hidden="true"></i><span class="gl-v2-menu-item-text"><span class="gl-v2-menu-item-label">Verwijderen</span><span class="gl-v2-menu-item-sub">vraagt eerst bevestiging</span></span></a>
                                         }
                                     </div>
+                                    @if (callTargets.Count > 1)
+                                    {
+                                        @* 64d beeld 2: "Wie wil je bellen?" — één rij per nummer met sms- en belknop. Heeft de klant maar één nummer, dan belt "Bellen" meteen. *@
+                                        <div class="gl-v2-menu" id="gl-v2-dc-call-@client.Id">
+                                            <b class="gl-v2-menu-sheet-title">Wie wil je bellen?</b>
+                                            <div class="gl-v2-menu-sheet-sub">@sheetTitle</div>
+                                            @foreach (var ct in callTargets)
+                                            {
+                                                <div class="gl-v2-menu-call">
+                                                    <span class="gl-v2-m-avatar">@Initials(ct.Name)</span>
+                                                    <span class="gl-v2-menu-item-text"><b>@ct.Name</b><span class="gl-v2-menu-call-nr">@ct.Number</span><small>@ct.Role</small></span>
+                                                    <a class="gl-v2-menu-call-btn" href="sms:@ct.Number.Replace(" ", "")" aria-label="Sms @ct.Name"><i class="ph ph-chat-text" aria-hidden="true"></i></a>
+                                                    <a class="gl-v2-menu-call-btn is-tel" href="tel:@ct.Number.Replace(" ", "")" aria-label="Bel @ct.Name"><i class="ph ph-phone" aria-hidden="true"></i></a>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -333,6 +428,7 @@
             @* Optie 4c "Mobiel — als kaarten" (zelfde recept als Klanten/IndexV2's gl-v2-klanten.js
                renderMobileCards()) — echt gescheiden markup, gevuld uit de tabelrijen op elke
                DataTable-"draw" i.p.v. de tabel zelf smaller te knijpen. *@
+            <div class="gl-v2-m-countline" id="gl-v2-dc-m-countline"><span id="gl-v2-dc-m-count"></span><button type="button" class="gl-v2-m-link" id="gl-v2-dc-m-sort" style="border:0;background:none"><i class="ph ph-arrows-down-up" aria-hidden="true"></i><span>Sorteren</span></button></div>
             <div class="gl-v2-dc-mobile-list" id="gl-v2-dc-mobile-list"></div>
         }
         else

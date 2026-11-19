@@ -205,3 +205,9 @@ label.gl-v2-npg-item { display: flex; align-items: center; gap: 10px; min-height
     .gl-v2-npg-modes, .gl-v2-npg-copy, .gl-v2-npg-fields { grid-template-columns: minmax(0, 1fr); }
     .gl-v2-pg-pick-item, .gl-v2-npg-item { min-height: 52px; }
 }
+
+/* Groep met een gefactureerde schijf: aantal, naam en percentage liggen vast */
+.gl-v2-pg-rows.is-groep-vast .gl-v2-pg-handle,
+.gl-v2-pg-rows.is-groep-vast .gl-v2-pg-col-check,
+.gl-v2-pg-rows.is-groep-vast .js-pg-del,
+.gl-v2-pg-rows.is-groep-vast .js-pg-dup { display: none; }

@@ -9,7 +9,7 @@ minutes: 6
 updated: 2026-11-19
 newsTag: Nieuw
 screens: planning-index
-related: planning-per-bouwdeel, planning-sjablonen, planning-opbouwen, voorgangers-en-wachttijd-invullen
+related: planning-per-aannemer, planning-per-bouwdeel, planning-sjablonen, planning-opbouwen, voorgangers-en-wachttijd-invullen
 synonyms: importeren, import, ms project, project xml, xml, mpp, planning overnemen, bestaande planning, aannemer planning, gantt importeren
 description: een planning uit MS Project overnemen met fases, taken, duur en voorgangers, zonder alles opnieuw in te typen
 intro: |

@@ -112,11 +112,11 @@
                     <button type="button" class="gln-nc-grid-cols gln-nc-row-cat @(cat.IsLeeg ? "is-empty" : "")" aria-expanded="false" @(cat.IsLeeg ? "disabled" : "") data-group="@cat.GroupId">
                         <i class="ph ph-caret-right gln-nc-chevron" aria-hidden="true"></i>
                         <span class="gln-nc-naam">@cat.Naam @if (cat.BadgeLabel != null) { <span class="gl-v2-badge @cat.BadgeTone">@cat.BadgeLabel</span> }</span>
-                        <span class="gln-nc-amount">€ @cat.Begroot.ToString("N0")</span>
-                        <span class="gln-nc-amount @(cat.Gecontracteerd == 0 ? "is-muted" : "")">€ @cat.Gecontracteerd.ToString("N0")</span>
-                        <span class="gln-nc-amount is-strong @(cat.Gefactureerd == 0 ? "is-muted" : "")">€ @cat.Gefactureerd.ToString("N0")</span>
-                        <span class="gln-nc-amount @(vbc < 0 ? "is-neg" : "")">@(vbc < 0 ? "– " : "")€ @Math.Abs(vbc).ToString("N0")</span>
-                        <span class="gln-nc-amount @(vcf < 0 ? "is-neg" : "")">@(vcf < 0 ? "– " : "")€ @Math.Abs(vcf).ToString("N0")</span>
+                        <span class="gln-nc-amount">€ @cat.Begroot.ToString("N2")</span>
+                        <span class="gln-nc-amount @(cat.Gecontracteerd == 0 ? "is-muted" : "")">€ @cat.Gecontracteerd.ToString("N2")</span>
+                        <span class="gln-nc-amount is-strong @(cat.Gefactureerd == 0 ? "is-muted" : "")">€ @cat.Gefactureerd.ToString("N2")</span>
+                        <span class="gln-nc-amount @(vbc < 0 ? "is-neg" : "")">@(vbc < 0 ? "– " : "")€ @Math.Abs(vbc).ToString("N2")</span>
+                        <span class="gln-nc-amount @(vcf < 0 ? "is-neg" : "")">@(vcf < 0 ? "– " : "")€ @Math.Abs(vcf).ToString("N2")</span>
                         <span class="gln-nc-progress">
                             <span class="gl-v2-progress-track"><span class="gl-v2-progress-fill @(progressOver ? "is-over" : "")" style="width:@(Math.Min(cat.VoortgangPercent, 100).ToString(System.Globalization.CultureInfo.InvariantCulture))%"></span></span>
                             <span class="gln-nc-progress-val @(progressOver ? "is-over" : "")">@cat.VoortgangPercent.ToString("N1") %</span>
@@ -132,11 +132,11 @@
                                 <a class="gln-nc-grid-cols gln-nc-row-act" data-search="@a.Naam.ToLowerInvariant()" href="@Url.Action("RecalculationDetail", "Projecten", new { projectid = Model.ProjectId, groupid = cat.GroupId, activityid = a.ActivityId })">
                                     <span></span>
                                     <span class="gln-nc-naam">@a.Naam</span>
-                                    <span class="gln-nc-amount">@(a.Begroot.HasValue ? $"€ {a.Begroot.Value:N0}" : "—")</span>
-                                    <span class="gln-nc-amount @(a.Gecontracteerd == 0 ? "is-muted" : "")">€ @a.Gecontracteerd.ToString("N0")</span>
-                                    <span class="gln-nc-amount @(a.Gefactureerd == 0 ? "is-muted" : "")">€ @a.Gefactureerd.ToString("N0")</span>
-                                    <span class="gln-nc-amount @(avbc < 0 ? "is-neg" : "")">@(avbc < 0 ? "– " : "")€ @Math.Abs(avbc).ToString("N0")</span>
-                                    <span class="gln-nc-amount @(avcf < 0 ? "is-neg" : "")">@(avcf < 0 ? "– " : "")€ @Math.Abs(avcf).ToString("N0")</span>
+                                    <span class="gln-nc-amount">@(a.Begroot.HasValue ? $"€ {a.Begroot.Value:N2}" : "—")</span>
+                                    <span class="gln-nc-amount @(a.Gecontracteerd == 0 ? "is-muted" : "")">€ @a.Gecontracteerd.ToString("N2")</span>
+                                    <span class="gln-nc-amount @(a.Gefactureerd == 0 ? "is-muted" : "")">€ @a.Gefactureerd.ToString("N2")</span>
+                                    <span class="gln-nc-amount @(avbc < 0 ? "is-neg" : "")">@(avbc < 0 ? "– " : "")€ @Math.Abs(avbc).ToString("N2")</span>
+                                    <span class="gln-nc-amount @(avcf < 0 ? "is-neg" : "")">@(avcf < 0 ? "– " : "")€ @Math.Abs(avcf).ToString("N2")</span>
                                     <span><span class="gl-v2-badge @a.StatusTone">@a.Status</span></span>
                                 </a>
                             }
@@ -149,11 +149,11 @@
             }
             <div class="gln-nc-grid-cols gln-nc-row-total">
                 <span></span><span>Totaal</span>
-                <span class="gln-nc-amount">€ @Model.Categorieen.Sum(c => c.Begroot).ToString("N0")</span>
-                <span class="gln-nc-amount">€ @Model.Categorieen.Sum(c => c.Gecontracteerd).ToString("N0")</span>
-                <span class="gln-nc-amount">€ @Model.Categorieen.Sum(c => c.Gefactureerd).ToString("N0")</span>
-                <span class="gln-nc-amount">€ @Model.Categorieen.Sum(c => c.VerschilBegrootContract).ToString("N0")</span>
-                <span class="gln-nc-amount">€ @Model.Categorieen.Sum(c => c.VerschilContractFactuur).ToString("N0")</span>
+                <span class="gln-nc-amount">€ @Model.Categorieen.Sum(c => c.Begroot).ToString("N2")</span>
+                <span class="gln-nc-amount">€ @Model.Categorieen.Sum(c => c.Gecontracteerd).ToString("N2")</span>
+                <span class="gln-nc-amount">€ @Model.Categorieen.Sum(c => c.Gefactureerd).ToString("N2")</span>
+                <span class="gln-nc-amount">€ @Model.Categorieen.Sum(c => c.VerschilBegrootContract).ToString("N2")</span>
+                <span class="gln-nc-amount">€ @Model.Categorieen.Sum(c => c.VerschilContractFactuur).ToString("N2")</span>
                 @{
                     var totGecontracteerd = Model.Categorieen.Sum(c => c.Gecontracteerd);
                     var totGefactureerd = Model.Categorieen.Sum(c => c.Gefactureerd);

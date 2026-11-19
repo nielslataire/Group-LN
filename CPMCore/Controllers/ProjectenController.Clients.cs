@@ -96,6 +96,7 @@ namespace CPMCore.Controllers
             // "geen foto's/nieuws/contacten"-uitzondering nodig als op Projecten/DetailV2.
             var projectResponse = service2.GetProjectByID(projectid);
             model.IsCoordinationProject = projectResponse.Success && projectResponse.Value?.IsOnlyCoordinationProject == true;
+            model.ProjectCode = projectResponse.Success ? projectResponse.Value?.ProjectCode : null;
             //BREADCRUMBS
             // Kruimelpad stopt bij de projectnaam (wáár dit zit) i.p.v. nog een "Klanten"-knoop toe te
             // voegen die de paginatitel herhaalt — zelfde design-handoff punt 13, regel 2-fix als

@@ -116,21 +116,48 @@
     .gl-v2-topbar-pin-hamburger { right: 14px; font-size: 18px; }
     #gl-v2-topbar-pin.is-visible .gl-v2-topbar-pin-btn { opacity: 1; pointer-events: auto; transform: translateY(0); }
 
+    /* Mobiele componenten 65a/65b: topbar = veilige zone + 56px, groen loopt door achter de statusbalk, inhoud begint eronder.
+       --gl-v2-m-topbar-h is dé maat voor alles wat "onder de topbar" hangt (toasts, mobiele meldingenkop). */
+    .gl-v2 { --gl-v2-m-topbar-h: calc(56px + env(safe-area-inset-top, 0px)); --gl-v2-radius-lg: 14px; }
     .gl-v2-topbar {
         background: var(--gl-v2-primary);
-        padding: 0 14px;
+        height: var(--gl-v2-m-topbar-h);
+        padding: env(safe-area-inset-top, 0px) 10px 0 8px;   /* voorbeeld .mx-bar56: 0 10px 0 8px, gap 8 */
         border-bottom: 0;
-        gap: 10px;
+        gap: 8px;
+        /* Sticky (65b): "bij scrollen blijft de topbar staan en krijgt hij een schaduw; hij klapt niet in". .gl-v2-body knipt op gsm met
+           overflow:clip (geen scrollcontainer, dus sticky blijft werken). */
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        transition: box-shadow .15s ease;
     }
+    .gl-v2-body { overflow: clip; }
+    body.is-scrolled .gl-v2-topbar { box-shadow: 0 8px 18px -12px rgba(0, 0, 0, .55); }
+    .gl-v2-topbar-pin { display: none; }   /* de vastgeprikte knoppen zijn overbodig nu de echte topbar blijft staan */
+    .gl-v2-topbar-titles { gap: 1px; }
+    .gl-v2-topbar:has(.gl-v2-topbar-badges:not(.is-desktop-only)),
+    .gl-v2-topbar:has(.gl-v2-topbar-search) { height: auto; min-height: var(--gl-v2-m-topbar-h); padding-top: calc(env(safe-area-inset-top, 0px) + 10px); }
+    /* Pagina's die de statuschips in een kopkaart tonen (ViewData["BadgesDesktopOnly"]): geen badge-strook onder de topbar, topbar blijft 56. */
+    .gl-v2-topbar-badges.is-desktop-only { display: none; }
+    .gl-v2-topbar:has(.gl-v2-topbar-badges.is-desktop-only) { height: var(--gl-v2-m-topbar-h); min-height: 0; flex-wrap: nowrap; padding: env(safe-area-inset-top, 0px) 10px 0 8px; }
+    .gl-v2-topbar-badges { margin-left: -12px; margin-right: -12px; padding-left: 12px; padding-right: 12px; }
+    /* Ringknoppen 36, raakvlak 44 (65a "Raakvlak minimaal 44 × 44, ook als het icoon kleiner is"). */
+    /* Voorbeeld .mx-ib.ring: knop 44 × 44 met een ring van 36 (inset 4) in wit .38; :active vult de ring licht. */
+    .gl-v2-hamburger, .gl-v2-topbar-back { width: 44px; height: 44px; border: 0; border-radius: 0; background: transparent; position: relative; }
+    .gl-v2-hamburger::before, .gl-v2-topbar-back::before { content: ""; position: absolute; inset: 4px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .38); }
+    .gl-v2-hamburger:active::before, .gl-v2-topbar-back:active::before { background: rgba(255, 255, 255, .14); }
+    .gl-v2-hamburger i, .gl-v2-topbar-back i { position: relative; }
     .gl-v2-topbar-icon { display: none; }
-    .gl-v2-topbar-title { color: var(--gl-v2-surface); font-size: 18px; line-height: 1.2; }
+    .gl-v2-topbar-title { color: var(--gl-v2-surface); font-size: 19px; line-height: 1.2; }
 
     /* Optie 3a/3e houden een compacte, eenregelige subtitel onder de titel (bv. "Home" of
        "Klanten / LN Bouw") — niet volledig verbergen zoals eerst, enkel het bestaande
        kruimelpad-uiterlijk vervangen door de witte/gedimde mobiele variant uit het voorbeeld. */
     .gl-v2-topbar .breadcrumbs {
         color: rgba(255, 255, 255, .75);
-        font-size: 10px;
+        font-size: 11px;
+        font-weight: 500;
         flex-wrap: nowrap;
         overflow: hidden;
     }
@@ -152,9 +179,69 @@
        te worden. */
     .gl-v2-desktop-userbox { display: none; }
 
-    .gl-v2-content { padding: 14px; }
+    .gl-v2-content { padding: 12px; }   /* zijmarge/tussenruimte 12 (65a) */
     /* .gl-v2-tabbar/.gl-v2-form-actionbar heffen .gl-v2-content se padding op via deze twee vars
        (zie hun eigen regels) — op mobiel is die padding 14px rondom i.p.v. de 20/22px-desktopsplit,
        dus de vars moeten hier mee veranderen anders knipt de negatieve margin verkeerd af. */
-    .gl-v2 { --gl-v2-content-pad-x: 14px; --gl-v2-content-pad-y: 14px; }
+    .gl-v2 { --gl-v2-content-pad-x: 12px; --gl-v2-content-pad-y: 12px; }
+}
+
+/* ── Mobiele componenten 65b/65d — selectiemodus, formulier-topbar, toetsenbord (gedrag in gl-v2-shell.js) ───────────────── */
+.gl-v2-selbar, .gl-v2-topbar-save { display: none; }
+@media (max-width: 767.98px) {
+    /* Selectiemodus (65b): donkere balk over de topbar zodat je ziet dat je in een andere modus zit. */
+    .gl-v2-selbar:not([hidden]) {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 600;
+        height: var(--gl-v2-m-topbar-h);
+        padding: env(safe-area-inset-top, 0px) 10px 0 8px;
+        background: #1F2A1E;
+        color: var(--gl-v2-surface);
+    }
+    .gl-v2-selbar-x {
+        position: relative;
+        width: 44px;
+        height: 44px;
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        background: transparent;
+        color: var(--gl-v2-surface);
+        font-size: 18px;
+    }
+    .gl-v2-selbar-x::before { content: ""; position: absolute; inset: 4px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .38); }
+    .gl-v2-selbar-x i { position: relative; }
+    .gl-v2-selbar-count { font: 600 16px var(--gl-v2-font-sans); }
+
+    /* Formulier (65b): links ×, rechts enkel de tekstknop "Opslaan" (die de primaire knop van de actiebalk indrukt) — geen menu. */
+    .is-form-page .gl-v2-hamburger,
+    .is-form-page .gl-v2-topbar-help-btn,
+    .is-form-page .gl-v2-mobile-search-stub { display: none; }
+    .is-form-page .gl-v2-topbar-title { font: 600 16px var(--gl-v2-font-sans); }   /* voorbeeld .mx-top.form: titel 16/600 sans */
+    .gl-v2-topbar-save {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 10px;
+        margin-left: auto;
+        border: 0;
+        background: transparent;
+        color: var(--gl-v2-surface);
+        font: 600 15px var(--gl-v2-font-sans);
+    }
+    .gl-v2-topbar-save:disabled { opacity: .5; }
+
+    /* Toetsenbord open (65d): de actiebalk schuift mee boven het toetsenbord, de snelactiebalk verdwijnt. */
+    .is-form-page .gl-v2-form-actionbar { bottom: var(--gl-v2-kb-inset, 0px); }
+    body.is-keyboard-open .gl-v2-form-actionbar { padding-bottom: 10px; }
+    body.is-keyboard-open .gl-v2-mobile-quickactions { display: none; }
 }

@@ -121,6 +121,9 @@ public sealed class PlanningStaat
 
     /// <summary>Mijlpalen uit het Traject van dit project die aan een taak of fase gekoppeld kunnen worden: vrije (handmatige) en die al aan de planning hangen.</summary>
     public List<PlanningMijlpaalOptie> TrajectMijlpalen { get; set; } = new();
+
+    /// <summary>Betalingsschijven van de betalingsgroepen waartoe de eenheden van deze planning behoren, om aan een taak of fase te koppelen.</summary>
+    public List<PlanningSchijfOptie> SchijfOpties { get; set; } = new();
 }
 
 public sealed class PlanningInfo
@@ -222,6 +225,9 @@ public sealed class PlanningRij
     public int? LotId { get; set; }
     public string? LotNaam { get; set; }
     public List<PlanningMijlpaalLink> Mijlpalen { get; set; } = new();
+
+    /// <summary>Betalingsschijven die aan deze taak of fase gekoppeld zijn (alleen in een gewone planning).</summary>
+    public List<PlanningSchijfLink> Schijven { get; set; } = new();
     public List<string> Waarschuwingen { get; set; } = new();
 }
 
@@ -296,6 +302,71 @@ public sealed class PlanningNietWerkdag
 }
 
 /// <summary>Een mijlpaal uit het Traject, als keuze bij "Koppeling met trajectmijlpaal".</summary>
+/// <summary>Een betalingsschijf die gekoppeld kan worden, met de huidige koppeling in deze planning.</summary>
+public sealed class PlanningSchijfOptie
+{
+    public int StageId { get; set; }
+    public string Tekst { get; set; } = "";
+    public string? GekoppeldAanSleutel { get; set; }
+    public string? GekoppeldAanTekst { get; set; }
+}
+
+/// <summary>Een schijf die aan een taak of fase hangt, met hoever de eenheden van de planning zijn.</summary>
+public sealed class PlanningSchijfLink
+{
+    public int StageId { get; set; }
+    /// <summary>Volgnummer van de schijf in haar betalingsgroep (voor een compact label in de rij).</summary>
+    public int Nummer { get; set; }
+    public string Naam { get; set; } = "";
+    public decimal Percentage { get; set; }
+    public string GroepNaam { get; set; } = "";
+
+    /// <summary>Eenheden van deze planning in de betalingsgroep van de schijf.</summary>
+    public int AantalEenheden { get; set; }
+
+    /// <summary>Daarvan al bereikt of gefactureerd.</summary>
+    public int AantalBereikt { get; set; }
+
+    /// <summary>De taak of fase is klaar en er zijn eenheden die nog gemarkeerd kunnen worden.</summary>
+    public bool KlaarOmTeMarkeren { get; set; }
+
+    /// <summary>Eenheden die nog gemarkeerd kunnen worden.</summary>
+    public int TeMarkeren { get; set; }
+
+    /// <summary>Eenheden die (nog) niet gemarkeerd kunnen worden: niet verkocht of akte nog niet verleden.</summary>
+    public int Overgeslagen { get; set; }
+
+    /// <summary>De schijf is voor alle eenheden bereikt: terugzetten kan nog, zolang niet gefactureerd.</summary>
+    public bool AllesBereikt { get; set; }
+}
+
+/// <summary>Koppelt een betalingsschijf (per planning) aan een taak of fase, of haalt de koppeling weg.</summary>
+public sealed class PlanningSchijfKoppelCommando
+{
+    /// <summary>"taak" of "fase".</summary>
+    public string Soort { get; set; } = "taak";
+
+    public int Id { get; set; }
+
+    public int? PlanningId { get; set; }
+
+    /// <summary>De schijf die gekoppeld wordt; leeg = enkel ontkoppelen.</summary>
+    public int? StageId { get; set; }
+
+    /// <summary>De schijf die tot nu toe in de keuzelijst stond en losgekoppeld wordt.</summary>
+    public int? VorigeStageId { get; set; }
+}
+
+/// <summary>"Schijf bereikt" markeren voor de eenheden van een planning, of terugzetten.</summary>
+public sealed class PlanningSchijfMarkeerCommando
+{
+    public int? PlanningId { get; set; }
+    public int StageId { get; set; }
+
+    /// <summary>True = terugzetten (enkel wat nog niet gefactureerd is).</summary>
+    public bool Terugzetten { get; set; }
+}
+
 public sealed class PlanningMijlpaalOptie
 {
     public int Id { get; set; }
@@ -412,4 +483,10 @@ public interface IPlanningService
 
     /// <summary>Koppelt een trajectmijlpaal aan een taak of fase (of haalt de koppeling weg). De mijlpaal in het Traject volgt dan de planning.</summary>
     Task<PlanningUitkomst> Koppel(int projectId, PlanningKoppelCommando commando, string? userId);
+
+    /// <summary>Koppelt een betalingsschijf aan een taak of fase van een planning (of haalt de koppeling weg).</summary>
+    Task<PlanningUitkomst> KoppelSchijf(int projectId, PlanningSchijfKoppelCommando commando, string? userId);
+
+    /// <summary>Markeert een schijf als bereikt voor de eenheden van de planning die er recht op hebben, of zet ze terug.</summary>
+    Task<PlanningUitkomst> MarkeerSchijf(int projectId, PlanningSchijfMarkeerCommando commando, string? userId);
 }

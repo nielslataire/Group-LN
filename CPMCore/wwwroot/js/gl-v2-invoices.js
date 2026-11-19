@@ -121,6 +121,16 @@
         // Optie 4e selectie-toolbar: enkel zichtbaar met een selectie, telt exact dezelfde
         // checkboxes als hierboven (geen apart selectiemodel, dit IS de boeken-selectie).
         $("#gl-v2-selection-toolbar").prop("hidden", !hasSelection);
+        // Gsm (65b): selectiemodus-topbar. Telt dezelfde checkboxes; × heft de selectie op.
+        if (window.GlV2Selection) {
+            window.GlV2Selection.set(checkedCount, {
+                label: checkedCount + " geselecteerd",
+                onCancel: function () {
+                    $('.invoice-book-checkbox[data-bookable="true"]:checked:enabled').prop("checked", false).trigger("change");
+                    syncBookButton();
+                }
+            });
+        }
         $("#gl-v2-selection-toolbar-count").text(
             checkedCount + " " + (checkedCount === 1 ? entity.singular : entity.plural) + " geselecteerd"
         );

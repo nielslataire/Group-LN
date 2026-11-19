@@ -105,7 +105,30 @@
     .gl-v2-toast-close { display: none; }
 }
 
-/* Mobiel: bovenaan onder de topbar (62px, zie .gl-v2-topbar) i.p.v. rechtsonder — de referentie
+/* Bezig (65g): grijs icoon dat draait tot de pagina de toast met GlV2Toast.update() omzet in een succes. */
+.gl-v2-toast.is-busy .gl-v2-toast-icon { background: #EDEFEB; color: var(--gl-v2-muted); }
+.gl-v2-toast.is-busy .gl-v2-toast-icon i { animation: gl-v2-toast-spin 1s linear infinite; }
+@keyframes gl-v2-toast-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .gl-v2-toast.is-busy .gl-v2-toast-icon i { animation: none; } }
+/* Ongedaan maken (65g): balkje onderaan toont de resterende tijd. */
+.gl-v2-toast-timer { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: var(--gl-v2-primary); opacity: .55; transform-origin: left; animation: gl-v2-toast-timer var(--gl-v2-toast-ms, 8s) linear forwards; }
+@keyframes gl-v2-toast-timer { to { transform: scaleX(0); } }
+@media (prefers-reduced-motion: reduce) { .gl-v2-toast-timer { animation: none; } }
+
+/* Foutmelding op gsm (voorbeeld .mx-ts.err): rode rand links via inset-schaduw, geen border (blijft binnen de afgeronde hoek). */
+@media (max-width: 767.98px) {
+    .gl-v2-toast { padding: 12px; column-gap: 10px; border-radius: 12px; box-shadow: 0 1px 2px rgba(0, 83, 45, .06), 0 18px 38px -22px rgba(44, 59, 42, .55); }
+    .gl-v2-toast.is-danger { box-shadow: inset 3px 0 0 #8B2A2A, 0 1px 2px rgba(0, 83, 45, .06), 0 18px 38px -22px rgba(44, 59, 42, .55); }
+    .gl-v2-toast-title { font: 600 13px var(--gl-v2-font-sans); color: #2C3B2A; }
+    .gl-v2-toast-body { font: 450 12px/1.5 var(--gl-v2-font-sans); color: #5A6B58; }
+    .gl-v2-toast-action { font: 600 12.5px var(--gl-v2-font-sans); min-height: 40px; margin: -8px 0 -12px; display: inline-flex; align-items: center; }
+    .gl-v2-toast.is-danger .gl-v2-toast-action { color: #8B2A2A; }
+    /* Afloopbalkje (ongedaan maken): spoor #EDEFEB met vulling #7A9E6E. */
+    .gl-v2-toast:has(> .gl-v2-toast-timer)::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: #EDEFEB; }
+    .gl-v2-toast-timer { background: #7A9E6E; opacity: 1; }
+}
+
+/* Mobiel: bovenaan onder de topbar (veilige zone + 56px, zie .gl-v2-topbar) i.p.v. rechtsonder — de referentie
    noemt dit expliciet als de reden: onderaan zou onder de bottom-quickactionsbar/duim vallen. Actie
    verhuist van "naast de tekst" naar "onder de tekst" (derde grid-rij, zelfde kolom als titel/body)
    via een tweede grid-template-areas — geen aparte markup nodig, zie de uitleg bovenaan deze sectie. */
@@ -113,12 +136,21 @@
     .gl-v2-toast-container {
         left: 12px;
         right: 12px;
-        top: 72px;
+        top: calc(var(--gl-v2-m-topbar-h, calc(56px + env(safe-area-inset-top, 0px))) + 10px);   /* 10px onder de topbar (65e/65g) */
         bottom: auto;
         width: auto;
         max-width: none;
-        flex-direction: column;
+        flex-direction: column-reverse;   /* nieuwste bovenaan (65g); een fout (order:1) staat altijd bovenaan */
     }
+    .gl-v2-toast { touch-action: none; position: relative; overflow: hidden; }   /* omhoog vegen sluit */
+    .gl-v2-toast.is-danger { order: 1; }
+    /* Stapelen (65g): max. 3 (gl-v2-shell.js); de derde in de rij toont enkel nog een rand. */
+    .gl-v2-toast:nth-last-child(3) { max-height: 10px; padding-top: 0; padding-bottom: 0; opacity: .75; }
+    .gl-v2-toast:nth-last-child(3) > * { visibility: hidden; }
+    /* Enkel een fout krijgt een kruisje (raakvlak 44): hij verdwijnt niet vanzelf. */
+    .gl-v2-toast.is-danger { grid-template-columns: 32px 1fr auto; grid-template-areas: "icon title close" "icon body close" "icon action action"; }
+    .gl-v2-toast.is-danger .gl-v2-toast-close { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin: -12px -14px -12px 0; }
+    .gl-v2-toast.is-danger .gl-v2-toast-close i { font-size: 16px; }
     .gl-v2-toast {
         grid-template-columns: 32px 1fr;
         grid-template-areas: "icon title" "icon body" "icon action";

@@ -101,17 +101,21 @@
             if (firstFocusable) firstFocusable.focus({ preventScroll: true });
         }
 
+        var focusTarget = openBtn;   // na sluiten gaat de focus terug naar de "Alle N"-tab
+
         function close() {
             sheet.hidden = true;
             backdrop.hidden = true;
             openBtn.setAttribute("aria-expanded", "false");
             document.body.style.overflow = "";
+            if (focusTarget && window.matchMedia("(max-width: 767.98px)").matches) focusTarget.focus({ preventScroll: true });
         }
 
-        openBtn.addEventListener("click", open);
+        root.querySelectorAll(".js-gl-v2-pm-open").forEach(function (b) { b.addEventListener("click", open); });
         root.querySelectorAll(".js-gl-v2-pm-close").forEach(function (btn) {
             btn.addEventListener("click", close);
         });
+
         document.addEventListener("keydown", function (e) {
             if (e.key === "Escape" && !sheet.hidden) close();
         });

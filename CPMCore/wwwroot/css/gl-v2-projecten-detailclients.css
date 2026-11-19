@@ -99,33 +99,15 @@
 @media (max-width: 767.98px) {
     .gl-v2-detail-table-card .table-responsive-md { display: none; }
 
-    .gl-v2-dc-mobile-list { display: flex; flex-direction: column; gap: 10px; }
-
-    .gl-v2-dc-card {
-        display: flex;
-        flex-direction: column;
-        gap: 9px;
-        padding: 13px 14px;
-        border-radius: var(--gl-v2-radius-md);
-        background: var(--gl-v2-surface);
-        box-shadow: 0 1px 2px rgba(0, 83, 45, .06), 0 10px 22px -16px rgba(44, 59, 42, .4);
-    }
-
-    .gl-v2-dc-card-row { display: flex; align-items: center; gap: 8px; }
-    .gl-v2-dc-card-row > .js-gl-v2-menu-trigger { flex: none; }
-    .gl-v2-dc-card .gl-v2-dc-client { flex: 1; min-width: 0; }
-    .gl-v2-dc-card .gl-v2-dc-client-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-    .gl-v2-dc-card-contact { padding-top: 8px; border-top: 1px solid var(--gl-v2-hairline-soft); }
-    .gl-v2-dc-card-contact .gl-v2-dc-empty-cell { font: 450 12px var(--gl-v2-font-sans); }
-
-    .gl-v2-dc-card-stats { padding-top: 8px; border-top: 1px solid var(--gl-v2-hairline-soft); display: flex; gap: 12px; }
-    .gl-v2-dc-card-stat { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-    .gl-v2-dc-card-stat-label { font: 500 9.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); letter-spacing: .06em; text-transform: uppercase; }
-    .gl-v2-dc-card-stat-value { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); white-space: nowrap; }
+    /* 64c: geen kaart-in-een-kaart — de lijstkaart verdwijnt, elke klant is zelf één kaart (.gl-v2-m-card.gl-v2-m-client, gl-v2/mobile-components.css). */
+    .gl-v2-card.gl-v2-detail-table-card { background: transparent; box-shadow: none; padding: 0; border-radius: 0; overflow: visible; }
+    .gl-v2-detail-table-card .gl-v2-card-body { padding: 0; }
+    .gl-v2-dc-mobile-list { display: flex; flex-direction: column; gap: 12px; }
+    .gl-v2-detail-table-card .gl-v2-m-countline { padding-bottom: 8px; }
+    .gl-v2-detail-table-card .gl-v2-m-countline .gl-v2-m-link { margin-right: -6px; }
 }
 @media (min-width: 768px) {
-    .gl-v2-dc-mobile-list { display: none; }
+    .gl-v2-dc-mobile-list, .gl-v2-detail-table-card .gl-v2-m-countline { display: none; }
 }
 
 /* ── Tablet (768–1023.98px): enkel Klant/Eenheden/Actie blijven over — Contact/Verkoopdatum/

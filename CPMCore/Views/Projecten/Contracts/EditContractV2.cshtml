@@ -87,9 +87,6 @@
     @await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
 }
 
-@{ menuVm.Mode = GlV2ProjectMenuMode.Phone; }
-@await Html.PartialAsync("GlV2/_ProjectInnerMenuV2", menuVm)
-
 <span class="gl-v2-ec-required-note">Velden met <span class="gl-v2-ec-required-star">*</span> zijn verplicht</span>
 
 @using (Html.BeginForm("EditContract", "Projecten", FormMethod.Post, new { @class = "gl-v2-ec-form", id = "gl-v2-ec-form", enctype = "multipart/form-data", novalidate = "novalidate" }))
@@ -170,21 +167,30 @@
                     <span class="gl-v2-section-card-desc">Betaling, korting en waarborg.</span>
                 </div>
                 <div class="gl-v2-ec-fields">
-                    <div class="gl-v2-ec-col-6">
+                    <div class="gl-v2-ec-col-6" id="gl-v2-ec-vat-col">
+                        @* Gsm (64n punt 3): vier keuzes i.p.v. een vrij getal; "Ander" toont het gewone veld. Schrijft in hetzelfde invoerveld, dus niets verandert aan het opslaan. *@
+                        <div class="gl-v2-ec-m-only gl-v2-ec-m-vat">
+                            <span class="gl-v2-ec-m-label">Btw</span>
+                            <div class="gl-v2-ec-m-seg" id="gl-v2-ec-vat-seg" role="group" aria-label="Btw">
+                                <button type="button" data-v="0">0 %</button><button type="button" data-v="6">6 %</button><button type="button" data-v="21">21 %</button><button type="button" data-v="">Ander</button>
+                            </div>
+                            <span class="gl-v2-ec-m-note">0 % = btw verlegd (bouwpromotie, aannemer).</span>
+                        </div>
                         @Html.EditorFor(m => m.Contract.VatPercentage, "GlV2NumberUnit", new { Unit = "%", Max = "0 % = btw verlegd" })
                     </div>
                     <div class="gl-v2-ec-col-6">
                         @Html.EditorFor(m => m.Contract.PaymentTerm, "GlV2NumberUnit", new { Unit = "dagen", Placeholder = "Aantal dagen", Masked = false, Required = true })
                     </div>
                     <div class="gl-v2-field gl-v2-ec-col-12">
-                        <span class="gl-v2-field-label">@Html.DisplayNameFor(m => m.Contract.CashDiscountPaymentTerm)</span>
-                        <div class="gl-v2-ec-inline-group">
+                        <span class="gl-v2-field-label gl-v2-ec-d-only">@Html.DisplayNameFor(m => m.Contract.CashDiscountPaymentTerm)</span>
+                        <div class="gl-v2-ec-inline-group gl-v2-ec-disc">
+                            <span class="gl-v2-ec-m-only gl-v2-ec-m-tgtext"><b>Korting bij snelle betaling</b><small>korting contant</small></span>
                             @Html.CheckBoxFor(m => m.Contract.CashDiscount, new { id = "chkCashDiscount", @class = "gl-v2-toggle-switch" })
-                            <div class="gl-v2-ec-inline-field">@Html.EditorFor(m => m.Contract.CashDiscountPercentage, "GlV2NumberUnit", new { Unit = "%", Bare = true })</div>
-                            <span class="gl-v2-ec-inline-label">binnen</span>
-                            <div class="gl-v2-ec-inline-field">@Html.EditorFor(m => m.Contract.CashDiscountPaymentTerm, "GlV2NumberUnit", new { Unit = "dagen", Placeholder = "dagen", Masked = false, Bare = true })</div>
+                            <div class="gl-v2-ec-inline-field"><span class="gl-v2-ec-m-only gl-v2-ec-m-label">Korting</span>@Html.EditorFor(m => m.Contract.CashDiscountPercentage, "GlV2NumberUnit", new { Unit = "%", Bare = true })</div>
+                            <span class="gl-v2-ec-inline-label gl-v2-ec-d-only">binnen</span>
+                            <div class="gl-v2-ec-inline-field"><span class="gl-v2-ec-m-only gl-v2-ec-m-label">Binnen</span>@Html.EditorFor(m => m.Contract.CashDiscountPaymentTerm, "GlV2NumberUnit", new { Unit = "dagen", Placeholder = "dagen", Masked = false, Bare = true })</div>
                         </div>
-                        <span class="gl-v2-ec-field-hint">leest als één zin: korting % bij betaling binnen N dagen — waarden blijven bewaard als je de schakelaar weer aanzet</span>
+                        <span class="gl-v2-ec-field-hint gl-v2-ec-d-only">leest als één zin: korting % bij betaling binnen N dagen — waarden blijven bewaard als je de schakelaar weer aanzet</span>
                     </div>
                     <div class="gl-v2-ec-col-6">
                         @Html.EditorFor(m => m.Contract.GuaranteeType, "GlV2Select")
@@ -194,7 +200,7 @@
                     </div>
                     <div class="gl-v2-ec-col-6" id="guaranteeReleaseRow" style="@(Model.Contract.GuaranteeType == ContractGuaranteeType.FinancialGuarantee || Model.Contract.GuaranteeType == ContractGuaranteeType.BankGuarantee ? "" : "display:none")">
                         @Html.EditorFor(m => m.Contract.GuaranteeReleaseVOPercentage, "GlV2NumberUnit", new { Unit = "%", Max = "Maximaal 100 %", Label = "Borg vrij bij voorlopige oplevering", Placeholder = "50" })
-                        <span class="gl-v2-field-help">De rest komt vrij bij de definitieve oplevering. Leeg = 50 %. Bij een bankwaarborg gebeurt de vrijgave via een brief.</span>
+                        <span class="gl-v2-field-help gl-v2-ec-d-only">De rest komt vrij bij de definitieve oplevering. Leeg = 50 %. Bij een bankwaarborg gebeurt de vrijgave via een brief.</span>
                     </div>
                     <div class="gl-v2-field gl-v2-ec-col-12" id="guaranteeDocRow" style="@(Model.Contract.GuaranteeType == ContractGuaranteeType.BankGuarantee ? "" : "display:none")">
                         <span class="gl-v2-field-label">Waarborgdocument <span class="gl-v2-ec-field-hint">(pdf/jpg)</span></span>
@@ -259,13 +265,13 @@
             <div class="gl-v2-field" style="padding:0 18px 16px">
                 <span class="gl-v2-field-label">TIENJARIGE AANSPRAKELIJKHEID</span>
                 <input type="hidden" name="Contract.TienjarigeBronGepost" value="true" />
-                <div class="gl-v2-segmented is-outline is-fill" role="radiogroup" aria-label="Tienjarige aansprakelijkheid">
-                    <label><input type="radio" name="Contract.TienjarigeBron" value="" checked="@(Model.Contract.TienjarigeBron == null)" /><span>Nog niet bepaald</span></label>
-                    <label><input type="radio" name="Contract.TienjarigeBron" value="0" checked="@(Model.Contract.TienjarigeBron == 0)" /><span>Via de aannemer</span></label>
-                    <label><input type="radio" name="Contract.TienjarigeBron" value="1" checked="@(Model.Contract.TienjarigeBron == 1)" /><span>Via projectpolis</span></label>
-                    <label><input type="radio" name="Contract.TienjarigeBron" value="2" checked="@(Model.Contract.TienjarigeBron == 2)" /><span>Niet vereist</span></label>
+                <div class="gl-v2-segmented is-outline is-fill gl-v2-ec-ten" role="radiogroup" aria-label="Tienjarige aansprakelijkheid">
+                    <label><input type="radio" name="Contract.TienjarigeBron" value="" checked="@(Model.Contract.TienjarigeBron == null)" /><span>Nog niet bepaald<small class="gl-v2-ec-m-desc">volgt de keuze van het project</small></span></label>
+                    <label><input type="radio" name="Contract.TienjarigeBron" value="0" checked="@(Model.Contract.TienjarigeBron == 0)" /><span>Via de aannemer<small class="gl-v2-ec-m-desc">attest per woning van deze aannemer</small></span></label>
+                    <label><input type="radio" name="Contract.TienjarigeBron" value="1" checked="@(Model.Contract.TienjarigeBron == 1)" /><span>Via projectpolis<small class="gl-v2-ec-m-desc">globale polis dekt de aannemer</small></span></label>
+                    <label><input type="radio" name="Contract.TienjarigeBron" value="2" checked="@(Model.Contract.TienjarigeBron == 2)" /><span>Niet vereist<small class="gl-v2-ec-m-desc">geen tienjarige voor dit contract</small></span></label>
                 </div>
-                <span class="gl-v2-field-help">Bepaalt of CPM bij Verzekeringen een attest per woning van deze aannemer verwacht. Via projectpolis: een globale polis van de ontwikkelaar dekt de aannemer, dus geen eigen attest. Bij Nog niet bepaald volgt het contract de keuze voor het hele project (bij Verzekeringen), en anders leidt CPM het af uit de werken in het contract.</span>
+                <span class="gl-v2-field-help gl-v2-ec-d-only">Bepaalt of CPM bij Verzekeringen een attest per woning van deze aannemer verwacht. Via projectpolis: een globale polis van de ontwikkelaar dekt de aannemer, dus geen eigen attest. Bij Nog niet bepaald volgt het contract de keuze voor het hele project (bij Verzekeringen), en anders leidt CPM het af uit de werken in het contract.</span>
             </div>
         </div>
 
@@ -311,6 +317,7 @@
                             </div>
                             <div class="gl-v2-select-panel gl-v2-select-panel-search">
                                 <div class="gl-v2-select-options" data-role="options">
+                                    <div class="gl-v2-select-empty">Geen lot beschikbaar: alle loten van deze leverancier staan al op het contract.</div>
                                     @foreach (var activity in Model.Activities)
                                     {
                                         var isAdded = Model.Contract.Activities.Any(ca => ca.Activity.ID == activity.ID);
@@ -333,7 +340,7 @@
                             </div>
                             <div data-role="hidden-inputs"></div>
                         </div>
-                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="btnAddActivities"><i class="ph ph-plus" aria-hidden="true"></i>Toevoegen</button>
+                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary gl-v2-ec-add-lot" id="btnAddActivities"><i class="ph ph-plus" aria-hidden="true"></i>Toevoegen</button>
                     </div>
                 </div>
 

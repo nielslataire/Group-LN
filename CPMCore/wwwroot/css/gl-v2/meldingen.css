@@ -74,8 +74,8 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    height: 62px;
-    padding: 0 14px;
+    height: calc(56px + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) 12px 0;
     background: var(--gl-v2-primary);
     flex: none;
 }

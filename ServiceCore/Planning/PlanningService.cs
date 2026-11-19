@@ -444,6 +444,8 @@ public class PlanningService : IPlanningService
             staat.Rijen.Add(rij);
         }
 
+        if (!globaal) await VulSchijven(d, staat, actief);
+
         staat.Sjablonen = await PlanningSjabloonService.LijstVan(_db);
 
         // Keuzelijst voor het veld Voorgangers: alle fases en taken van alle plannings, met de tekst die je in het veld zou typen.
@@ -795,6 +797,148 @@ public class PlanningService : IPlanningService
         var d = await LaadData(projectId);
         if (d == null) return new PlanningUitkomst { Fout = "Project niet gevonden." };
         return new PlanningUitkomst { Ok = true, Staat = await Bouw(d, Rekenen(d), d.Doel(c.PlanningId)) };
+    }
+
+    // ── Betalingsschijven gekoppeld aan taken en fases ──
+
+    private sealed record SchijfEenheid(int Id, int GroepId, bool Verkocht, bool HeeftWaarde);
+
+    /// <summary>De eenheden van een planning: de gekozen eenheden, of voor de hoofdplanning alle eenheden zonder eigen planning.</summary>
+    private async Task<List<SchijfEenheid>> EenhedenVan(Data d, int planningId)
+    {
+        // Een planning met eigen eenheden geldt enkel voor die eenheden. De hoofdplanning zonder eigen eenheden geldt voor alle eenheden zonder planning.
+        var inPlanning = d.Eenheden.Where(e => e.BouwPlanningId == planningId).Select(e => e.UnitId).ToHashSet();
+        var hoofdAlgemeen = planningId == d.HoofdId && inPlanning.Count == 0;
+        var metPlanning = d.Eenheden.Select(e => e.UnitId).ToHashSet();
+        // De groepskoppeling van de V2-pagina staat op UnitConstructionValue.PaymentGroupId; Units.PaymentGroupId is de oudere koppeling (enkel als terugval).
+        var units = await _db.Units.AsNoTracking().Where(u => u.ProjectId == d.Project.ProjectId)
+            .Select(u => new
+            {
+                u.Id, Legacy = u.PaymentGroupId, Verkocht = u.ClientAccountId != null,
+                Cv = u.UnitConstructionValue.Where(c => c.PaymentGroupId != null).Select(c => new { Groep = c.PaymentGroupId.Value, Waarde = c.ValueSold > 0 }).ToList(),
+            })
+            .ToListAsync();
+        var resultaat = new List<SchijfEenheid>();
+        foreach (var u in units.Where(u => inPlanning.Contains(u.Id) || (hoofdAlgemeen && !metPlanning.Contains(u.Id))))
+        {
+            if (u.Cv.Count > 0)
+                foreach (var g in u.Cv.GroupBy(c => c.Groep))
+                    resultaat.Add(new SchijfEenheid(u.Id, g.Key, u.Verkocht, g.Any(c => c.Waarde)));
+            else if (u.Legacy != null)
+                resultaat.Add(new SchijfEenheid(u.Id, u.Legacy.Value, u.Verkocht, false));
+        }
+        return resultaat;
+    }
+
+    private async Task VulSchijven(Data d, PlanningStaat staat, int actief)
+    {
+        var eenheden = await EenhedenVan(d, actief);
+        var groepIds = eenheden.Select(e => e.GroepId).Distinct().ToList();
+        if (groepIds.Count == 0) return;
+        var groepen = await _db.InvoicingPaymentGroup.AsNoTracking().Where(g => groepIds.Contains(g.Id)).ToDictionaryAsync(g => g.Id, g => g.Name);
+        var stages = await _db.InvoicingPaymentStages.AsNoTracking().Where(s => groepIds.Contains(s.GroupId)).OrderBy(s => s.Id).ToListAsync();
+        var stageIds = stages.Select(s => s.Id).ToList();
+        var koppelingen = await _db.PlanningSchijfKoppeling.AsNoTracking().Where(k => k.BouwPlanningId == actief && stageIds.Contains(k.PaymentStageId)).ToListAsync();
+        var bereikt = (await _db.UnitPaymentStageReached.AsNoTracking().Where(r => stageIds.Contains(r.PaymentStageId)).Select(r => new { r.PaymentStageId, r.UnitId }).ToListAsync())
+            .Select(r => (r.PaymentStageId, r.UnitId)).ToHashSet();
+        var gefactureerd = (await _db.InvoicesDetails.AsNoTracking().Where(x => x.LineType == "Stages" && x.PaymentStageId != null && stageIds.Contains(x.PaymentStageId.Value) && x.UnitId != null)
+            .Select(x => new { S = x.PaymentStageId.Value, U = x.UnitId.Value }).ToListAsync()).Select(x => (x.S, x.U)).ToHashSet();
+
+        var rijPerSleutel = staat.Rijen.ToDictionary(r => r.Sleutel);
+        var volgnr = stages.GroupBy(s => s.GroupId).SelectMany(g => g.Select((s, i) => (s.Id, Nr: i + 1))).ToDictionary(x => x.Id, x => x.Nr);
+        string Tekst(InvoicingPaymentStages s) => groepen[s.GroupId] + " · " + volgnr[s.Id] + ". " + s.Name + " (" + s.Percentage.ToString("0.##", Nl) + " %)";
+
+        foreach (var s in stages)
+        {
+            var optie = new PlanningSchijfOptie { StageId = s.Id, Tekst = Tekst(s) };
+            var k = koppelingen.FirstOrDefault(x => x.PaymentStageId == s.Id);
+            var sleutel = k == null ? null : k.TaakId != null ? "t" + k.TaakId : k.SectieId != null ? "f" + k.SectieId : null;
+            if (sleutel != null && rijPerSleutel.TryGetValue(sleutel, out var rij))
+            {
+                optie.GekoppeldAanSleutel = sleutel; optie.GekoppeldAanTekst = rij.Wbs + " " + rij.Naam;
+                var leden = eenheden.Where(e => e.GroepId == s.GroupId).ToList();
+                bool Klaar(SchijfEenheid e) => s.Invoicable || bereikt.Contains((s.Id, e.Id)) || gefactureerd.Contains((s.Id, e.Id));
+                var gedaan = leden.Count(Klaar);
+                var kandidaten = leden.Where(e => !Klaar(e)).ToList();
+                var markeerbaar = kandidaten.Count(e => e.Verkocht && e.HeeftWaarde);
+                rij.Schijven.Add(new PlanningSchijfLink
+                {
+                    StageId = s.Id, Nummer = volgnr[s.Id], Naam = s.Name ?? "", Percentage = s.Percentage, GroepNaam = groepen[s.GroupId],
+                    AantalEenheden = leden.Count, AantalBereikt = gedaan, TeMarkeren = markeerbaar, Overgeslagen = kandidaten.Count - markeerbaar,
+                    KlaarOmTeMarkeren = rij.Afgerond && markeerbaar > 0,
+                    AllesBereikt = leden.Count > 0 && gedaan == leden.Count,
+                });
+            }
+            staat.SchijfOpties.Add(optie);
+        }
+    }
+
+    public async Task<PlanningUitkomst> KoppelSchijf(int projectId, PlanningSchijfKoppelCommando c, string? userId)
+    {
+        if (c == null) return new PlanningUitkomst { Fout = "Geen koppeling opgegeven." };
+        var d = await LaadData(projectId);
+        if (d == null) return new PlanningUitkomst { Fout = "Project niet gevonden." };
+        var planningId = d.Doel(c.PlanningId);
+        var isFase = c.Soort == "fase";
+        var sectie = isFase ? d.Secties.FirstOrDefault(s => s.Id == c.Id) : null;
+        var taak = isFase ? null : d.Taken.FirstOrDefault(t => t.Id == c.Id);
+        if (isFase ? sectie == null : taak == null) return new PlanningUitkomst { Fout = isFase ? "De fase bestaat niet meer." : "De taak bestaat niet meer." };
+
+        // Opruimen: verweesde koppelingen van deze planning (taak of fase bestaat niet meer).
+        var bestaand = await _db.PlanningSchijfKoppeling.Where(k => k.BouwPlanningId == planningId).ToListAsync();
+        foreach (var k in bestaand.Where(k => (k.TaakId != null && d.Taken.All(t => t.Id != k.TaakId)) || (k.SectieId != null && d.Secties.All(s => s.Id != k.SectieId))).ToList())
+        { _db.PlanningSchijfKoppeling.Remove(k); bestaand.Remove(k); }
+
+        bool Dit(PlanningSchijfKoppeling k) => isFase ? k.SectieId == c.Id : k.TaakId == c.Id;
+        if (c.VorigeStageId is int vid && vid != c.StageId)
+            foreach (var k in bestaand.Where(k => k.PaymentStageId == vid && Dit(k)).ToList()) { _db.PlanningSchijfKoppeling.Remove(k); bestaand.Remove(k); }
+
+        if (c.StageId is int sid)
+        {
+            var eenheden = await EenhedenVan(d, planningId);
+            var stage = await _db.InvoicingPaymentStages.AsNoTracking().FirstOrDefaultAsync(s => s.Id == sid);
+            if (stage == null || eenheden.All(e => e.GroepId != stage.GroupId))
+                return new PlanningUitkomst { Fout = "Deze schijf hoort niet bij een betalingsgroep van de eenheden van deze planning." };
+            var huidig = bestaand.FirstOrDefault(k => k.PaymentStageId == sid);
+            if (huidig == null)
+                _db.PlanningSchijfKoppeling.Add(new PlanningSchijfKoppeling { PaymentStageId = sid, BouwPlanningId = planningId, TaakId = taak?.Id, SectieId = sectie?.Id });
+            else { huidig.TaakId = taak?.Id; huidig.SectieId = sectie?.Id; }   // een schijf hangt per planning aan één plek: verplaatsen
+        }
+        await _db.SaveChangesAsync();
+        return new PlanningUitkomst { Ok = true, Staat = await Bouw(d, Rekenen(d), planningId) };
+    }
+
+    public async Task<PlanningUitkomst> MarkeerSchijf(int projectId, PlanningSchijfMarkeerCommando c, string? userId)
+    {
+        if (c == null) return new PlanningUitkomst { Fout = "Geen schijf opgegeven." };
+        var d = await LaadData(projectId);
+        if (d == null) return new PlanningUitkomst { Fout = "Project niet gevonden." };
+        var planningId = d.Doel(c.PlanningId);
+        var stage = await _db.InvoicingPaymentStages.AsNoTracking().FirstOrDefaultAsync(s => s.Id == c.StageId);
+        var koppeling = stage == null ? null : await _db.PlanningSchijfKoppeling.AsNoTracking().FirstOrDefaultAsync(k => k.BouwPlanningId == planningId && k.PaymentStageId == c.StageId);
+        if (stage == null || koppeling == null) return new PlanningUitkomst { Fout = "Deze schijf is niet aan deze planning gekoppeld." };
+
+        var eenheden = (await EenhedenVan(d, planningId)).Where(e => e.GroepId == stage.GroupId).ToList();
+        var ids = eenheden.Select(e => e.Id).ToList();
+        int? actor = int.TryParse(userId, out var a) ? a : null;
+        var rijen = await _db.UnitPaymentStageReached.Where(r => r.PaymentStageId == c.StageId && ids.Contains(r.UnitId)).ToListAsync();
+        var gefactureerd = (await _db.InvoicesDetails.AsNoTracking().Where(x => x.LineType == "Stages" && x.PaymentStageId == c.StageId && x.UnitId != null && ids.Contains(x.UnitId.Value))
+            .Select(x => x.UnitId.Value).ToListAsync()).ToHashSet();
+
+        if (c.Terugzetten)
+        {
+            _db.UnitPaymentStageReached.RemoveRange(rijen.Where(r => !gefactureerd.Contains(r.UnitId)));
+        }
+        else
+        {
+            if (stage.Invoicable) return new PlanningUitkomst { Fout = "Deze schijf is voor de hele groep al factureerbaar gezet." };
+            var al = rijen.Select(r => r.UnitId).ToHashSet();
+            var nu = DateTime.Now;
+            foreach (var e in eenheden.Where(e => e.Verkocht && e.HeeftWaarde && !al.Contains(e.Id) && !gefactureerd.Contains(e.Id)))
+                _db.UnitPaymentStageReached.Add(new UnitPaymentStageReached { UnitId = e.Id, PaymentStageId = c.StageId, ReachedDate = DateOnly.FromDateTime(nu), ReachedByUserId = actor, CreatedAt = nu });
+        }
+        await _db.SaveChangesAsync();
+        return new PlanningUitkomst { Ok = true, Staat = await Bouw(d, Rekenen(d), planningId) };
     }
 
     private static string? BasisVastleggen(Data d)
@@ -1245,6 +1389,36 @@ public class PlanningService : IPlanningService
                 ZetVolgorde(doel);
                 break;
             }
+            case "naar":
+            {
+                // Slepen naar een willekeurige plaats: SectieId = de fase waarin de rij komt (leeg = hoogste niveau, enkel voor fases),
+                // NaId/NaSoort = na welke rij in die fase (leeg = achteraan, NaSoort "begin" = vooraan).
+                Knoop? nieuweOuder = null;
+                if (c.SectieId is int oid)
+                {
+                    nieuweOuder = Plat(boom).FirstOrDefault(k => k.IsFase && k.Id == oid);
+                    if (nieuweOuder == null) return "De doelfase bestaat niet meer in deze planning.";
+                }
+                if (nieuweOuder == null && !isFase) return "Een taak hoort altijd in een fase.";
+                for (var o = nieuweOuder; o != null; o = o.Ouder)
+                    if (o == knoop) return "Een fase kan niet in zichzelf verplaatst worden.";
+                var doelLijst = nieuweOuder == null ? boom : nieuweOuder.Kinderen;
+                lijst.Remove(knoop);
+                ZetVolgorde(lijst);
+                var pos = doelLijst.Count;
+                if (c.NaSoort == "begin") pos = 0;
+                else if (c.NaId is int naId)
+                {
+                    var referentie = doelLijst.FirstOrDefault(k => k.Id == naId && k.IsFase == (c.NaSoort == "fase"));
+                    if (referentie == null) return "De rij waarna je plaatst bestaat niet meer.";
+                    pos = doelLijst.IndexOf(referentie) + 1;
+                }
+                doelLijst.Insert(pos, knoop);
+                if (isFase) knoop.Sectie!.ParentSectieId = nieuweOuder?.Sectie!.Id;
+                else knoop.Taak!.PlanningSectieId = nieuweOuder!.Sectie!.Id;
+                ZetVolgorde(doelLijst);
+                break;
+            }
             default:
                 return "Onbekende verplaatsing.";
         }
@@ -1303,7 +1477,6 @@ public class PlanningService : IPlanningService
     private async Task<string?> ControleerEenheden(Data d, BouwPlanning bp, List<int> ids)
     {
         if (ids.Count == 0) return null;
-        if (bp.IsHoofd) return "De hoofdplanning hoort bij het hele project en heeft geen eenheden.";
         if (ids.Distinct().Count() != ids.Count) return "Een eenheid staat twee keer in de lijst.";
         var geldig = await _db.Units.CountAsync(u => ids.Contains(u.Id) && u.ProjectId == d.Project.ProjectId);
         if (geldig != ids.Count) return "Een gekozen eenheid hoort niet bij dit project.";
@@ -1563,6 +1736,12 @@ public class PlanningService : IPlanningService
             }
             if (nieuweStart != null && imp.StartModus == "nieuw") bp.StartDatum = nieuweStart;
             await _db.SaveChangesAsync();
+            if (imp.EenheidIds.Count > 0)
+            {
+                var eenheidFout = await ControleerEenheden(d, bp, imp.EenheidIds);
+                if (eenheidFout != null) return eenheidFout;
+                await ZetEenheden(d, bp, imp.EenheidIds);
+            }
         }
 
         static DateOnly? Dat(string? s) => DateOnly.TryParse(s, CultureInfo.InvariantCulture, out var x) ? x : null;

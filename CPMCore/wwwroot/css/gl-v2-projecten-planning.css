@@ -76,6 +76,7 @@
 .gl-v2-pl-sj-rij.is-uit { opacity: .5; }
 .gl-v2-pl-eenheden { display: flex; flex-direction: column; max-height: 240px; overflow-y: auto; border: 1px solid var(--gl-v2-line); border-radius: var(--gl-v2-radius-sm); padding: 4px 0; }
 .gl-v2-pl-een { display: flex; align-items: center; gap: 10px; padding: 6px 12px; font: 450 13px var(--gl-v2-font-sans); cursor: pointer; }
+.gl-v2-pl-een[hidden], #gl-v2-pl-wrap-schijf[hidden], #gl-v2-pl-wrap-schijff[hidden] { display: none; }
 .gl-v2-pl-een:hover { background: var(--gl-v2-surface-hover, rgba(0, 0, 0, 0.03)); }
 .gl-v2-pl-een.is-uit { opacity: 0.55; cursor: not-allowed; }
 .gl-v2-pl-een input { flex: none; accent-color: var(--gl-v2-primary); }
@@ -356,3 +357,48 @@ html.gl-v2-pl-fs { overflow: hidden; }
 .gl-v2-pl-imp-tr > span { min-width: 0; }
 .gl-v2-pl-imp-tr .is-melding { overflow-wrap: anywhere; }
 .gl-v2-pl-imp-tabel { max-height: min(420px, 50vh); }
+
+/* Per aannemer */
+.gl-v2-pl-aann { padding: 16px 20px; }
+.gl-v2-pl-aann-kop { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+.gl-v2-pl-aann-kop h2 { margin: 0; font-size: 16px; }
+.gl-v2-pl-aann-acties { display: flex; gap: 8px; align-items: center; }
+.gl-v2-pl-aann-sel { min-width: 220px; padding: 6px 10px; border: 1px solid var(--gl-v2-line); border-radius: var(--gl-v2-radius-xs); font: 450 13px var(--gl-v2-font-sans); background: var(--gl-v2-surface, #fff); }
+.gl-v2-pl-aann-groep { margin-top: 18px; }
+.gl-v2-pl-aann-groep header { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; margin-bottom: 6px; }
+.gl-v2-pl-aann-groep h3 { margin: 0; font-size: 14px; }
+.gl-v2-pl-aann-sub { font-size: 12px; color: var(--gl-v2-text-muted, #666); }
+.gl-v2-pl-aann-tabel { width: 100%; border-collapse: collapse; font-size: 13px; }
+.gl-v2-pl-aann-tabel th, .gl-v2-pl-aann-tabel td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--gl-v2-line); }
+.gl-v2-pl-aann-tabel th { font-weight: 600; font-size: 12px; color: var(--gl-v2-text-muted, #666); }
+.gl-v2-pl-aann-tabel .is-num { text-align: right; white-space: nowrap; }
+.gl-v2-pl-aann-tabel .is-mono { font-family: var(--gl-v2-font-mono, monospace); font-size: 12px; color: var(--gl-v2-text-muted, #666); }
+.gl-v2-pl-aann[hidden] { display: none; }
+
+/* Voortgangsrij in het rijmenu (rechtsklik of ⋯) */
+.gl-v2-pl-menu-pct { display: flex; align-items: center; gap: 4px; padding: 6px 12px; }
+.gl-v2-pl-menu-pct > span { flex: 1; font-size: 12px; color: var(--gl-v2-text-muted, #666); }
+.gl-v2-pl-menu-pctbtn { min-width: 34px; padding: 3px 6px; border: 1px solid var(--gl-v2-line); border-radius: var(--gl-v2-radius-xs); background: transparent; font: 500 12px var(--gl-v2-font-sans); cursor: pointer; }
+.gl-v2-pl-menu-pctbtn:hover { background: var(--gl-v2-hover, rgba(0,0,0,.05)); }
+.gl-v2-pl-menu-pctbtn.is-on { background: var(--gl-v2-accent, #2f5d50); border-color: transparent; color: #fff; }
+
+/* Betalingsschijf bij een taak of fase */
+.gl-v2-pl-schijf { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--gl-v2-line); background: transparent; font: 500 11px var(--gl-v2-font-sans); color: var(--gl-v2-text-muted, #666); white-space: nowrap; }
+.gl-v2-pl-schijf.is-bereikt { color: var(--gl-v2-success, #2f7d4f); border-color: currentColor; }
+.gl-v2-pl-schijf.is-klaar { cursor: pointer; color: #fff; background: var(--gl-v2-success, #2f7d4f); border-color: transparent; }
+.gl-v2-pl-schijf.is-klaar:hover { filter: brightness(1.08); }
+
+/* Slepen: balken, rijen en het label tijdens het slepen */
+.gl-v2-pl-card .gl-v2-gantt-bar:not(.is-phase) { cursor: grab; touch-action: pan-x pan-y; }
+.gl-v2-pl-card .gl-v2-gantt-bar:not(.is-phase):active { cursor: grabbing; }
+body.gl-v2-pl-is-dragging, body.gl-v2-pl-is-dragging * { cursor: grabbing !important; user-select: none; }
+/* Rechterrand (duur) en voortgangsstreepje: pijltje links-rechts in plaats van de handpalm, ook tijdens het slepen */
+.gl-v2-pl-card .gl-v2-gantt-bar[data-drag="duur"], .gl-v2-pl-card .gl-v2-gantt-bar[data-drag="voortgang"],
+.gl-v2-pl-card .gl-v2-gantt-bar[data-drag="duur"]:active, .gl-v2-pl-card .gl-v2-gantt-bar[data-drag="voortgang"]:active { cursor: ew-resize; }
+body.gl-v2-pl-is-dragging[data-pl-drag="duur"], body.gl-v2-pl-is-dragging[data-pl-drag="duur"] *,
+body.gl-v2-pl-is-dragging[data-pl-drag="voortgang"], body.gl-v2-pl-is-dragging[data-pl-drag="voortgang"] * { cursor: ew-resize !important; }
+.gl-v2-pl-draglabel { position: fixed; z-index: 1200; padding: 3px 9px; border-radius: 6px; background: var(--gl-v2-ink, #1c1b19); color: #fff; font: 600 12px var(--gl-v2-font-sans); pointer-events: none; white-space: nowrap; }
+.gl-v2-pl-grip { display: inline-flex; align-items: center; margin-right: 2px; color: var(--gl-v2-text-muted, #999); cursor: grab; opacity: 0; transition: opacity .12s; touch-action: none; }
+.gl-v2-pl-r:hover .gl-v2-pl-grip, .gl-v2-pl-grip:focus-visible { opacity: 1; }
+.gl-v2-pl-r.is-dropinto { outline: 2px solid var(--gl-v2-accent, #2f5d50); outline-offset: -2px; background: var(--gl-v2-hover, rgba(47, 93, 80, .08)); }
+.gl-v2-pl-dropline { position: fixed; z-index: 1200; height: 0; border-top: 2px solid var(--gl-v2-accent, #2f5d50); pointer-events: none; }

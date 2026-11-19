@@ -426,3 +426,37 @@
         initErrorSummary();
     });
 })();
+
+// Gsm (64n): btw als vier keuzes (0 · 6 · 21 · Ander). Schrijft in het gewone invoerveld; "Ander" toont dat veld.
+(function () {
+    "use strict";
+    var seg = document.getElementById("gl-v2-ec-vat-seg");
+    var col = document.getElementById("gl-v2-ec-vat-col");
+    var input = document.getElementById("Contract_VatPercentage") || (col && col.querySelector("input:not([type=hidden])"));
+    if (!seg || !col || !input) return;
+    var buttons = Array.prototype.slice.call(seg.querySelectorAll("button"));
+    var other = false;
+    function parse() { var v = (input.value || "").replace(",", ".").trim(); return v === "" ? null : parseFloat(v); }
+    function sync() {
+        var v = parse();
+        var preset = !other && (v === 0 || v === 6 || v === 21);
+        buttons.forEach(function (b) {
+            var d = b.getAttribute("data-v");
+            b.classList.toggle("on", d === "" ? !preset : preset && parseFloat(d) === v);
+        });
+        col.classList.toggle("is-preset", preset);
+    }
+    seg.addEventListener("click", function (e) {
+        var b = e.target.closest("button");
+        if (!b) return;
+        var d = b.getAttribute("data-v");
+        if (d === "") { other = true; sync(); input.focus(); return; }
+        other = false;
+        input.value = d;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+        sync();
+    });
+    input.addEventListener("input", sync);
+    sync();
+})();

@@ -283,3 +283,82 @@
         tableState.finish();
     }
 })();
+
+// ── Gsm-lijst (design-handoff 64g): filterpillen + zoeken + "Alle N …" per groep. Pure DOM, de rijen komen server-side. ──
+(function () {
+    "use strict";
+    var groups = document.getElementById("gl-v2-pc-m-groups");
+    if (!groups) return;
+    var pills = document.getElementById("gl-v2-pc-m-pills");
+    var search = document.getElementById("gl-v2-pc-m-search");
+    var clear = document.getElementById("gl-v2-pc-m-search-x");
+    var tool = document.getElementById("gl-v2-pc-m-tool");
+    var none = document.getElementById("gl-v2-pc-m-none");
+    var filter = "", term = "";
+    var expanded = {};
+
+    function apply() {
+        var any = false;
+        groups.querySelectorAll("[data-m-group]").forEach(function (g) {
+            var key = g.getAttribute("data-m-group");
+            var limit = parseInt(g.getAttribute("data-limit") || "999", 10);
+            var inFilter = !filter || filter === key;
+            var rows = Array.prototype.slice.call(g.querySelectorAll("[data-m-row]"));
+            var matches = rows.filter(function (r) { return !term || (r.getAttribute("data-search") || "").indexOf(term) !== -1; });
+            var searching = !!term || !!filter;
+            var showAll = expanded[key] || searching;
+            rows.forEach(function (r) { r.hidden = true; });
+            matches.forEach(function (r, i) { r.hidden = !(showAll || i < limit); });
+            var more = g.querySelector(".js-gl-v2-pc-more");
+            if (more) {
+                if (!more.hasAttribute("data-html")) more.setAttribute("data-html", more.innerHTML);
+                // Tijdens zoeken/filteren staat alles open; anders wisselt de knop tussen "Alle N …" en "Minder tonen" (terug naar de standaardweergave).
+                more.hidden = searching || matches.length <= limit;
+                more.innerHTML = expanded[key] ? 'Minder tonen<i class="ph ph-caret-up" aria-hidden="true"></i>' : more.getAttribute("data-html");
+                more.setAttribute("aria-expanded", expanded[key] ? "true" : "false");
+            }
+            var visible = inFilter && matches.length > 0;
+            g.hidden = !visible;
+            if (visible) any = true;
+        });
+        if (none) none.hidden = any;
+    }
+    function syncSearching() {
+        var on = document.activeElement === search || (search && search.value !== "");
+        if (tool) tool.classList.toggle("is-searching", on);
+        document.body.classList.toggle("gl-v2-searching", on);
+    }
+    if (pills) pills.addEventListener("click", function (e) {
+        var pill = e.target.closest(".gl-v2-pill");
+        if (!pill) return;
+        filter = pill.getAttribute("data-filter") || "";
+        pills.querySelectorAll(".gl-v2-pill").forEach(function (p) { p.classList.toggle("is-active", p === pill); });
+        apply();
+    });
+    if (search) {
+        search.addEventListener("input", function () { term = search.value.trim().toLowerCase(); syncSearching(); apply(); });
+        search.addEventListener("focus", syncSearching);
+        search.addEventListener("blur", function () { window.setTimeout(syncSearching, 0); });
+    }
+    if (clear) {
+        clear.addEventListener("mousedown", function (e) { e.preventDefault(); });
+        clear.addEventListener("click", function () { search.value = ""; term = ""; syncSearching(); apply(); search.focus(); });
+    }
+    groups.addEventListener("click", function (e) {
+        var more = e.target.closest(".js-gl-v2-pc-more");
+        if (!more) return;
+        var key = more.closest("[data-m-group]").getAttribute("data-m-group");
+        expanded[key] = !expanded[key];
+        apply();
+        if (!expanded[key]) more.closest("[data-m-group]").scrollIntoView({ block: "nearest" });
+    });
+    // Exporteren (snelactiebalk) = dezelfde Excel-export als de knop in de paginakop.
+    document.addEventListener("click", function (e) {
+        var b = e.target.closest(".js-gl-v2-pc-export-m");
+        if (!b) return;
+        e.preventDefault();
+        var desktop = document.getElementById("gl-v2-pc-export-excel");
+        if (desktop) desktop.click();
+    });
+    apply();
+})();

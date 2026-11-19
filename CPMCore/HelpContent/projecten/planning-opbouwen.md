@@ -6,7 +6,7 @@ treeOrder: 3
 role: Projectleider
 device: Desktop · tablet
 minutes: 5
-updated: 2026-11-15
+updated: 2026-11-19
 newsTag: Nieuw
 screens: planning-index
 related: planning-handleiding, voorgangers-en-wachttijd-invullen, taak-datums-en-verantwoordelijke, planning-navigeren
@@ -48,6 +48,21 @@ faq:
 4. Klik op **Fase toevoegen**.
 
 Een deelfase springt in onder haar fase. Met **Inspringen** en **Uitspringen** in het menu van de rij verplaats je een bestaande fase of taak een niveau.
+
+## Rechtstreeks in de grafiek werken
+
+Je kunt de planning ook aanpassen door aan de balken te slepen. Dit werkt met de muis in een planning waarin je mag schrijven.
+
+- **Verschuiven**: sleep een balk naar links of rechts. Een label toont de nieuwe startdatum. CPM zet bij de taak **Niet eerder beginnen dan** op die datum (of **Moet beginnen op** als de taak al vastgepind is). Een taak kan niet vroeger starten dan haar voorganger toelaat: CPM meldt dan op welke datum de taak start.
+- **Duur**: sleep de rechterrand van een balk. Het label toont het aantal werkdagen.
+- **Voortgang**: sleep het streepje op de donkere voortgang van de balk. Het label toont het percentage, in stappen van 5 %.
+- **Rijen verplaatsen**: sleep een rij aan het handvat ⋮⋮ links van de naam. Laat je ze op het midden van een fase vallen, dan komt ze in die fase. Een lijn toont waar ze terechtkomt.
+- **Toetsenbord**: selecteer een balk met Tab. Met **0** tot **4** zet je de voortgang op 0, 25, 50, 75 of 100 %. Met de pijltjes **←** en **→** schuif je een taak een werkdag. **Delete** verwijdert (met bevestiging), en de menutoets of **Shift+F10** opent het menu.
+- Een afgeronde taak verschuift niet, en een hele fase slepen kan nog niet. Druk op **Esc** om een sleepbeweging te annuleren.
+
+Elke wijziging is met **Ongedaan maken** terug te draaien.
+
+Het menu van een rij open je met **⋯**, of met een **rechtsklik** op de rij in de lijst of op de balk in de grafiek. Bij een taak kies je daar ook meteen de voortgang (0, 25, 50, 75 of 100 %), **Vandaag gestart**, **Op schema zetten** (de voortgang volgt hoeveel van de geplande periode voorbij is) en **Vastpinnen op de startdatum**.
 
 ## Een taak toevoegen
 

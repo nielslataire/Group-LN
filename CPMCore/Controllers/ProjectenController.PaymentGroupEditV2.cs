@@ -195,6 +195,12 @@ namespace CPMCore.Controllers
                 var existingById = group.InvoicingPaymentStages.ToDictionary(s => s.Id);
                 if (rows.Any(r => r.Id > 0 && !existingById.ContainsKey(r.Id)))
                     errors.Add(("Stages", "Een schijf hoort niet bij deze groep. Laad de pagina opnieuw."));
+                if (GroupHasInvoicedStage(existingById.Keys.ToList()))
+                {
+                    var gewijzigd = rows.Count != existingById.Count
+                        || rows.Any(r => !existingById.TryGetValue(r.Id, out var e) || e.Percentage != r.Percentage || !string.Equals((e.Name ?? "").Trim(), r.Name, StringComparison.Ordinal));
+                    if (gewijzigd) errors.Add(("Stages", "Deze groep heeft al een gefactureerde schijf. Het aantal schijven, hun naam en percentage kunnen niet meer gewijzigd worden."));
+                }
                 foreach (var lockedId in lockedIds)
                 {
                     var row = rows.FirstOrDefault(r => r.Id == lockedId);
@@ -322,6 +328,11 @@ namespace CPMCore.Controllers
             return decimal.TryParse(s, NumberStyles.Number, CultureInfo.InvariantCulture, out var v) ? Math.Round(v, 2) : null;
         }
 
+        /// <summary>Is minstens één schijf van de groep al gefactureerd? Dan ligt de hele groep vast (naam en percentage van de schijven).</summary>
+        private bool GroupHasInvoicedStage(List<int> stageIds)
+            => stageIds.Count > 0 && _db.InvoicesDetails.AsNoTracking()
+                .Any(d => d.LineType == "Stages" && d.PaymentStageId.HasValue && stageIds.Contains(d.PaymentStageId.Value));
+
         /// <summary>Stage-ids die vastliggen: gefactureerd, per eenheid bereikt of trigger van een
         /// wijzigingsopdracht-betaalschijf.</summary>
         private HashSet<int> GetLockedStageIds(List<int> stageIds)
@@ -387,6 +398,7 @@ namespace CPMCore.Controllers
         {
             var stages = _db.InvoicingPaymentStages.AsNoTracking().Where(s => s.GroupId == vm.GroupId).OrderBy(s => s.Id).ToList();
             var locked = GetLockedStageIds(stages.Select(s => s.Id).ToList());
+            vm.GroupInvoiced = GroupHasInvoicedStage(stages.Select(s => s.Id).ToList());
             vm.Stages = stages.Select(s => new PaymentGroupEditStageV2
             {
                 Id = s.Id,

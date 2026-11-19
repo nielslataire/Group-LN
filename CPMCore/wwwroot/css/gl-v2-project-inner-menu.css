@@ -331,9 +331,14 @@
 }
 
 /* ── Gsm (<768px, design-handoff 9c) — groene "waar ben ik"-balk + volledig blad ─────────────── */
+.gl-v2-tabbar.gl-v2-pm-tabs { display: none; }   /* hoger dan .gl-v2-tabbar (page.css laadt later) */
 @media (max-width: 767.98px) {
-    .gl-v2-pm-phone { display: block; }
-
+    .gl-v2-tabbar.gl-v2-pm-tabs { display: flex; }
+    /* Mobiele componenten 65c/64c/64e: de projectsecties zijn tabs onder de topbar (.gl-v2-tabbar.gl-v2-pm-tabs, gedeelde tabbalk uit page.css).
+       display:contents haalt de wrapper uit de layout zodat de plakkende tabbalk meescrolt over de hele pagina i.p.v. enkel binnen zijn (korte) wrapper. */
+    .gl-v2-project-menu { display: contents; }
+    .gl-v2-pm-tab-all { color: var(--gl-v2-primary); font-weight: 600; }
+    .gl-v2-pm-tab-all i { font-size: 16px; }
     .gl-v2-pm-phone-trigger {
         width: 100%;
         height: 48px;

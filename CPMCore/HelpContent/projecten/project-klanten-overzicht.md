@@ -3,9 +3,9 @@ title: De klanten van een project bekijken
 topic: projecten
 treeOrder: 5
 role: Projectleider
-device: Desktop · tablet
+device: Desktop · tablet · gsm
 minutes: 3
-updated: 2026-11-17
+updated: 2026-11-19
 screens: projecten-klanten
 synonyms: klantenlijst, kopers, eigenaars, klant toevoegen, klantenlijst afdrukken
 newsTag: Nieuw
@@ -45,6 +45,19 @@ Rijen zonder klant staan onderaan met **Nog geen klant** in plaats van een naam.
 
 1. Typ in het zoekveld om te zoeken op naam, eenheid of e-mailadres.
 2. Klik op **Filters** om te filteren op **Status** of **Eenheidstype**.
+
+## Op je gsm
+
+Op een gsm zie je geen tabel maar één kaart per klant. Tik op de naam om de klant te openen.
+
+- Bovenaan staan de tabs van het project. Tik op **Klanten**, **Planning** of **Alle** voor de andere onderdelen.
+- Zoek op naam, lot of e-mailadres. Terwijl je typt, verdwijnen de filters en de tabs en worden je letters in de naam gemarkeerd. Met het kruisje wis je het zoekveld. Daaronder filter je op de stand van de verkoop: **Akte verleden**, **Akte te plannen** of **Opgeleverd**.
+- Onder de naam staat het lot, het type en de oppervlakte. Een kleine balk toont drie stappen: verkocht, akte en oplevering. Een vinkje betekent dat de stap gebeurd is. De volgende stap staat in goud.
+- Tik op de ronde **⋯** knop voor **Klant openen**, **Bellen**, **Mailen** en **Documenten**. **Verwijderen** staat apart onderaan. Heeft de klant meerdere telefoonnummers, dan kies je bij **Bellen** eerst wie je wilt bellen of sms'en.
+- Tik op **Alle** in de tabs voor alle onderdelen van het project: eerst die in de tabs, daaronder de andere.
+- In de groene balk onderaan tik je op **Klantenlijst** om de lijst af te drukken, op **Mailen** om alle klanten tegelijk te mailen of op **Klant** om een klant toe te voegen.
+
+Eenheden zonder klant zie je enkel op tablet en desktop.
 
 ## Een klant toevoegen of de lijst afdrukken
 

@@ -662,6 +662,8 @@ namespace CPMCore.Models.Projecten
                 _projectname = value;
             }
         }
+        /// <summary>Projectcode voor de topbar-kicker op gsm ("Project · 132-23-05").</summary>
+        public string? ProjectCode { get; set; }
     }
 
     public class ContractSupplierRowModel
@@ -674,6 +676,11 @@ namespace CPMCore.Models.Projecten
         public ContractBO Contract => Contracts?.FirstOrDefault();
         public IdNameBO Company { get; set; }
         public decimal TotalInvoiced { get; set; }
+        // Gsm-lijst (design-handoff 64g/64h): wie je belt/mailt en wat de leverancier doet. Komt uit de contactpersonen/fiche van het bedrijf.
+        public string? ContactName { get; set; }
+        public string? Phone { get; set; }
+        public string? Email { get; set; }
+        public string? Subtitle { get; set; }
         public bool HasContract => Contracts?.Any() == true;
         public bool AllContractsSigned => Contracts?.Any() == true && Contracts.All(c => c.ContractSigned);
         // Effectieve lotprijs = basisprijs + bijbestellingen op dat lot.

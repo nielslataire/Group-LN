@@ -28,20 +28,20 @@
         right: 0;
         bottom: 0;
         z-index: 500;
+        box-sizing: border-box;
         display: flex;
-        align-items: center;
-        gap: 8px;
+        align-items: stretch;
+        gap: 0;
         height: calc(var(--gl-v2-qa-bar-h) + env(safe-area-inset-bottom, 0px));
-        padding: 0 14px;
+        padding: 6px 6px env(safe-area-inset-bottom, 0px);   /* 65d: rij 64, 6px rondom, veilige zone eronder */
         background: var(--gl-v2-primary);
-        box-shadow: 0 -8px 20px -12px rgba(44, 59, 42, .35);
     }
 
     .gl-v2-qa-rail-active { display: none; }
 
     /* De vaste balk ligt over de laatste rij inhoud heen — main krijgt evenveel bodemruimte terug
        als de balk zelf inneemt, enkel wanneer een pagina die balk ook echt vult. */
-    .gl-v2-content.has-mobile-quickactions { padding-bottom: calc(var(--gl-v2-qa-bar-h) + env(safe-area-inset-bottom, 0px)); }
+    .gl-v2-content.has-mobile-quickactions { padding-bottom: calc(var(--gl-v2-qa-bar-h) + env(safe-area-inset-bottom, 0px) + 12px); }   /* 65k: 12 extra zodat de laatste kaart niet achter de balk zit */
 
     /* Optie 4c: kaal icoon boven, label eronder — geen rand, geen vulling, net als de
        bottomNav-tegels in de referentie (daar grijs-op-wit, hier wit-op-groen voor contrast met
@@ -54,21 +54,35 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 5px;
-        padding: 6px 4px;
-        border-radius: 10px;
+        justify-content: center;
+        gap: 4px;
+        padding: 0;
+        border-radius: 12px;
         border: 0;
         background: transparent;
         text-decoration: none;
         color: var(--gl-v2-surface);
-        font: 500 10px var(--gl-v2-font-sans);
+        font: 500 10.5px var(--gl-v2-font-sans);
         white-space: nowrap;
     }
 
-    .gl-v2-mobile-quickaction:hover,
-    .gl-v2-mobile-quickaction:focus-visible { background: rgba(255, 255, 255, .12); }
+    .gl-v2-mobile-quickaction { position: relative; -webkit-tap-highlight-color: transparent; }
+    .gl-v2-mobile-quickaction:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
+    /* Ingedrukt (65i): icoonvlak wit 16 %, hoofdactie-pil #E3EDE0 en 96 % grootte. Geen hover-vulling op de hele tegel. */
+    .gl-v2-mobile-quickaction:active i { background: rgba(255, 255, 255, .16); }
+    .gl-v2-mobile-quickaction-primary:active i { background: #E3EDE0; transform: scale(.96); }
+    /* Niet beschikbaar (65i): 45 % dekking, blijft tikbaar (info-toast). */
+    .gl-v2-mobile-quickaction.is-off, .gl-v2-mobile-quickaction[aria-disabled="true"] { opacity: .45; }
+    /* Teller (65i): bolletje 18 rechtsboven op het icoon, goud = open werk, rood = dringend, ring in balkgroen. */
+    .gl-v2-qa-badge { position: absolute; top: 3px; left: calc(50% + 3px); min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box; border-radius: 9px; background: #C9A96E; color: #1F2A1E; font: 700 10px/18px var(--gl-v2-font-sans); font-style: normal; text-align: center; box-shadow: 0 0 0 2px var(--gl-v2-primary); }
+    .gl-v2-qa-badge.is-danger { background: #E25B4B; color: #fff; }
 
-    .gl-v2-mobile-quickaction i { font-size: 21px; }
+    /* 65d: elk icoon staat in een vak van 44 × 30 (radius 15); de ene hoofdactie is een witte pil van 52 × 32 met groen icoon en een vet label,
+       net vóór Meer. De pagina zet .gl-v2-mobile-quickaction-primary op precies één tegel (max. één per balk). */
+    .gl-v2-mobile-quickaction i { font-size: 21px; width: 44px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 15px; flex: none; }
+    .gl-v2-mobile-quickaction i[hidden] { display: none; }
+    .gl-v2-mobile-quickaction-primary i { width: 52px; height: 32px; border-radius: 16px; background: var(--gl-v2-surface); color: var(--gl-v2-primary); }
+    .gl-v2-mobile-quickaction-primary { font-weight: 700; }
 
     /* [hidden] en een kale class delen specificiteit en author-regels winnen bij gelijkspel — zie
        de identieke waarschuwing bij .gl-v2-mobile-menu hierboven. gl-v2-shell.js verbergt tegel 5+
@@ -84,15 +98,25 @@
 
     /* MEER AANGERAAKT: puur :active, geen JS nodig — zolang de vinger neerligt, verdwijnt zodra
        die optilt (in tegenstelling tot MEER OPEN hieronder, die blijft staan). */
-    .gl-v2-mobile-quickaction-more:active { background: rgba(255, 255, 255, .18); }
+    .gl-v2-mobile-quickaction-more:active i { background: rgba(255, 255, 255, .16); }
 
     /* MEER OPEN: blijft staan zolang het sheet open is (JS zet/verwijdert .is-open), en de overige
        tegels dimmen mee. */
-    .gl-v2-mobile-quickaction-more.is-open { background: rgba(255, 255, 255, .18); }
+    .gl-v2-mobile-quickaction-more.is-open i { background: rgba(255, 255, 255, .16); }
 
-    .gl-v2-mobile-quickactions.has-open-sheet .gl-v2-mobile-quickaction:not(.gl-v2-mobile-quickaction-more) {
-        opacity: .45;
-    }
+    /* Opnamebalk (65i/65k): rode stip, tijd (mono), golf, Stop. De gewone tegels zijn dan verborgen. */
+    .gl-v2-mobile-quickactions.is-recording { align-items: center; }
+    .gl-v2-qa-rec { flex: 1; display: flex; align-items: center; gap: 12px; padding: 0 8px; min-width: 0; }
+    .gl-v2-qa-rec-dot { width: 12px; height: 12px; border-radius: 6px; background: #E25B4B; box-shadow: 0 0 0 5px rgba(226, 91, 75, .25); flex: none; }
+    .gl-v2-qa-rec-text { display: flex; flex-direction: column; min-width: 0; }
+    .gl-v2-qa-rec-text b { font: 600 16px 'IBM Plex Mono', monospace; color: #fff; }
+    .gl-v2-qa-rec-text small { font: 450 11px var(--gl-v2-font-sans); color: rgba(255, 255, 255, .75); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .gl-v2-qa-rec-wave { flex: 1; display: flex; align-items: center; justify-content: center; gap: 3px; min-width: 0; height: 28px; }
+    .gl-v2-qa-rec-wave i { width: 3px; height: 100%; border-radius: 2px; background: rgba(255, 255, 255, .7); transform: scaleY(.25); animation: gl-v2-qa-wave 1s ease-in-out infinite alternate; }
+    @keyframes gl-v2-qa-wave { to { transform: scaleY(1); } }
+    @media (prefers-reduced-motion: reduce) { .gl-v2-qa-rec-wave i { animation: none; transform: scaleY(.6); } }
+    .gl-v2-qa-rec-stop { height: 40px; padding: 0 18px; border: 0; border-radius: 20px; background: #fff; color: #8B2A2A; font: 700 14px var(--gl-v2-font-sans); flex: none; }
+    .is-form-page .gl-v2-mobile-quickactions { display: none; }   /* 65k: in een formulier verdwijnt de snelactiebalk; de witte actiebalk staat er */
 
     /* ── Snelacties-sheet (optie 6b "MEER OPEN") ─────────────────────────────────────────── */
     /* Beide stoppen bewust boven de balk (dezelfde calc() als de balk zelf hierboven) i.p.v. tot
@@ -103,8 +127,8 @@
         top: 0;
         left: 0;
         right: 0;
-        bottom: calc(var(--gl-v2-qa-bar-h) + env(safe-area-inset-bottom, 0px));
-        background: rgba(20, 26, 19, .45);
+        bottom: 0;
+        background: rgba(31, 42, 30, .42);   /* voorbeeld .mx-ov: de balk zit achter de overlay */
         z-index: 99998;
     }
 
@@ -114,15 +138,18 @@
         position: fixed;
         left: 0;
         right: 0;
-        bottom: calc(var(--gl-v2-qa-bar-h) + env(safe-area-inset-bottom, 0px));
+        bottom: 0;
         z-index: 99999;
-        max-height: 80dvh;
+        max-height: 90dvh;
         overflow-y: auto;
         background: var(--gl-v2-surface);
-        border-radius: var(--gl-v2-radius-lg) var(--gl-v2-radius-lg) 0 0;
+        border-radius: 20px 20px 0 0;
         box-shadow: var(--gl-v2-shadow-flyout);
-        padding: 8px 16px 16px;
+        padding: 8px 14px calc(8px + env(safe-area-inset-bottom, 0px));
     }
+    /* Voorbeeld .mx-cancel: onderaan "Annuleren", 50 hoog, radius 12, #EDEFEB. */
+    .gl-v2-quickactions-sheet-cancel { display: block; width: 100%; margin-top: 10px; height: 50px; border: 0; border-radius: 12px; background: #EDEFEB; font: 600 15px var(--gl-v2-font-sans); color: #2C3B2A; }
+    .gl-v2-quickactions-sheet-close { display: none; }
 
     /* Zelfde [hidden]-vs-author-CSS-valkuil als hierboven — display:block op de sheet zou het
        display:none van [hidden] anders overstemmen. */
@@ -130,10 +157,10 @@
 
     .gl-v2-quickactions-sheet-handle {
         width: 36px;
-        height: 4px;
-        border-radius: 2px;
-        background: var(--gl-v2-hairline);
-        margin: 6px auto 10px;
+        height: 5px;
+        border-radius: 3px;
+        background: #C9D1C5;
+        margin: 2px auto 12px;
     }
 
     .gl-v2-quickactions-sheet-header {
@@ -147,8 +174,8 @@
         display: flex;
         align-items: baseline;
         gap: 6px;
-        font: 500 19px var(--gl-v2-font-serif);
-        color: var(--gl-v2-ink);
+        font: 600 16px var(--gl-v2-font-sans);   /* .mx-sht */
+        color: #2C3B2A;
         margin: 0;
     }
 
@@ -180,15 +207,16 @@
         align-items: center;
         gap: 12px;
         width: 100%;
-        padding: 12px 2px;
+        padding: 8px 14px;
+        min-height: 56px;   /* rijen min. 56 (65e) */
         border: 0;
-        border-bottom: 1px solid var(--gl-v2-hairline-soft);
+        border-top: 1px solid rgba(44, 59, 42, .06);
         background: transparent;
         text-align: left;
         text-decoration: none;
     }
 
-    .gl-v2-quickactions-sheet-row:last-child { border-bottom: 0; }
+    .gl-v2-quickactions-sheet-row:first-child { border-top: 0; }
 
     .gl-v2-quickactions-sheet-row:hover,
     .gl-v2-quickactions-sheet-row:focus-visible { background: var(--gl-v2-hover-tint); }
@@ -197,7 +225,10 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 20px;
+        width: 44px;
+        height: 44px;
+        border-radius: 22px;
+        background: #EDF2E8;
         color: var(--gl-v2-primary);
         flex: none;
     }
@@ -206,9 +237,12 @@
 
     .gl-v2-quickactions-sheet-row-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
     .gl-v2-quickactions-sheet-row-title { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
-    .gl-v2-quickactions-sheet-row-subtitle { font: 500 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+    .gl-v2-quickactions-sheet-row-subtitle { font: 450 12px var(--gl-v2-font-sans); color: #5A6B58; }
 
-    .gl-v2-quickactions-sheet-row-chevron { font-size: 13px; color: var(--gl-v2-muted); flex: none; }
+    .gl-v2-quickactions-sheet-row-chevron { display: none; }
+    .gl-v2-quickactions-sheet-row.is-off { opacity: .45; }
+    .gl-v2-quickactions-sheet-row.is-danger .gl-v2-quickactions-sheet-row-icon { background: #F6E3E3; color: #8B2A2A; }
+    .gl-v2-quickactions-sheet-row.is-danger .gl-v2-quickactions-sheet-row-title { color: #8B2A2A; }
 }
 
 /* Tablet liggend (1024–1399.98px, Bootstrap lg–tot-net-onder-xxl): dezelfde balk/sheet-elementen als
@@ -262,9 +296,9 @@
         flex-direction: column;
         gap: 4px;
         padding: 9px 4px;
-        font-size: 9.5px;
+        font-size: 10.5px;
     }
-    .gl-v2-mobile-quickaction i { font-size: 20px; }
+    .gl-v2-mobile-quickaction i { font-size: 21px; }
 
     /* Sheet dockt naast de rail i.p.v. onderaan het scherm — zelfde element/JS (optie 6b), enkel de
        positionering wisselt per breedte. */
@@ -298,10 +332,11 @@
         width: auto;
         height: calc(var(--gl-v2-qa-bar-h) + env(safe-area-inset-bottom, 0px));
         flex-direction: row;
-        align-items: center;
-        gap: 8px;
-        padding: 0 14px;
-        box-shadow: 0 -8px 20px -12px rgba(44, 59, 42, .35);
+        align-items: stretch;
+        gap: 0;
+        padding: 6px 6px env(safe-area-inset-bottom, 0px);
+        box-sizing: border-box;
+        box-shadow: none;
         overflow-y: visible;
     }
     .gl-v2-qa-no-rail .gl-v2-qa-rail-active { display: none; }
@@ -310,11 +345,14 @@
         flex: 1;
         width: auto;
         flex-direction: column;
-        gap: 5px;
-        padding: 6px 4px;
-        font-size: 10px;
+        justify-content: center;
+        gap: 4px;
+        padding: 0;
+        font-size: 10.5px;
     }
-    .gl-v2-qa-no-rail .gl-v2-mobile-quickaction i { font-size: 21px; }
+    .gl-v2-qa-no-rail .gl-v2-mobile-quickaction i { font-size: 21px; width: 44px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 15px; flex: none; }
+    .gl-v2-qa-no-rail .gl-v2-mobile-quickaction i[hidden] { display: none; }
+    .gl-v2-qa-no-rail .gl-v2-mobile-quickaction-primary i { width: 52px; height: 32px; border-radius: 16px; background: var(--gl-v2-surface); color: var(--gl-v2-primary); }
     .gl-v2-qa-no-rail .gl-v2-quickactions-backdrop { bottom: calc(var(--gl-v2-qa-bar-h) + env(safe-area-inset-bottom, 0px)); }
     .gl-v2-qa-no-rail .gl-v2-quickactions-sheet {
         top: auto;
@@ -322,7 +360,7 @@
         left: 0;
         right: 0;
         width: auto;
-        max-height: 80dvh;
-        border-radius: var(--gl-v2-radius-lg) var(--gl-v2-radius-lg) 0 0;
+        max-height: 90dvh;
+        border-radius: 20px 20px 0 0;
     }
 }

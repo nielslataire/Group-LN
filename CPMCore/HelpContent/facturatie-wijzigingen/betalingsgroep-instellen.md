@@ -4,10 +4,10 @@ topic: facturatie-wijzigingen
 role: Projectleider · Boekhouding
 device: Desktop · tablet
 minutes: 6
-updated: 2026-10-26
+updated: 2026-11-19
 newsTag: Nieuw
 screens: projecten-betalingsgroep-bewerken
-related: betalingsschijven-volgen, project-factureren
+related: betalingsschijven-volgen, project-factureren, planning-schijven-koppelen
 synonyms: betalingsgroep, schijven, percentages, eenheden koppelen, eindafrekening, dupliceren, schijf toevoegen, schijf verwijderen, btw-type, totaal 100
 description: de schijven en percentages bepalen waarmee je een eenheid factureert
 intro: |
@@ -64,6 +64,10 @@ De laatste rij is altijd de eindafrekening. Rechts boven de rijen toont CPM het 
 ## Vergrendelde schijven respecteren
 
 Een schijf met een slotje is al gefactureerd, bereikt of gekoppeld aan een wijzigingsopdracht. Je kunt haar naam wel aanpassen, maar haar percentage niet verlagen en haar niet verwijderen. Een nieuwe schijf kan niet vóór een vergrendelde schijf komen. Voeg nieuwe schijven toe na de laatste vergrendelde schijf.
+
+## Een groep met een gefactureerde schijf
+
+Is al één schijf van de groep gefactureerd, dan ligt de hele groep vast: je kunt het aantal schijven, hun naam en hun percentage niet meer wijzigen. De velden zijn dan grijs en bovenaan staat een melding. Eenheden koppelen kan nog, en je kunt de schijven nog aan de planning koppelen (zie "Schijven koppelen aan de planning").
 
 ## De groep opslaan
 

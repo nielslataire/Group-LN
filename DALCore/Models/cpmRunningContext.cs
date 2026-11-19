@@ -207,6 +207,8 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<BouwPlanningEenheid> BouwPlanningEenheid { get; set; }
 
+    public virtual DbSet<PlanningSchijfKoppeling> PlanningSchijfKoppeling { get; set; }
+
     public virtual DbSet<PlanningSjabloon> PlanningSjabloon { get; set; }
 
     public virtual DbSet<PlanningSjabloonBlok> PlanningSjabloonBlok { get; set; }
@@ -1416,19 +1418,19 @@ public partial class cpmRunningContext : DbContext
         {
             entity.Property(e => e.Id).HasColumnName("ID");
             entity.Property(e => e.CashDiscountPaymentTerm).HasColumnType("numeric(18, 0)");
-            entity.Property(e => e.CashDiscountPercentage).HasColumnType("numeric(18, 0)");
+            entity.Property(e => e.CashDiscountPercentage).HasColumnType("decimal(9, 4)");
             entity.Property(e => e.CompanyId).HasColumnName("CompanyID");
             entity.Property(e => e.ContractName).HasMaxLength(200);
             entity.Property(e => e.ContractSentDate).HasColumnType("date");
             entity.Property(e => e.ContractSentNote).HasMaxLength(200);
-            entity.Property(e => e.GuaranteePercentage).HasColumnType("numeric(18, 0)");
+            entity.Property(e => e.GuaranteePercentage).HasColumnType("decimal(9, 4)");
             entity.Property(e => e.GuaranteeDocFilename).HasMaxLength(260);
             entity.Property(e => e.GuaranteeReleasedVOAmount).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.GuaranteeReleasedDOAmount).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.PaymentTerm).HasColumnType("numeric(18, 0)");
             entity.Property(e => e.ProjectId).HasColumnName("ProjectID");
             entity.Property(e => e.SiteManagerContactId).HasColumnName("SiteManagerContactID");
-            entity.Property(e => e.VatPercentage).HasColumnType("numeric(18, 0)");
+            entity.Property(e => e.VatPercentage).HasColumnType("decimal(9, 4)");
 
             entity.HasOne(d => d.Company).WithMany(p => p.Contract)
                 .HasForeignKey(d => d.CompanyId)
@@ -2501,6 +2503,16 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.Unit).WithMany()
                 .HasForeignKey(d => d.UnitId).OnDelete(DeleteBehavior.NoAction)
                 .HasConstraintName("FK_BouwPlanningEenheid_Unit");
+        });
+
+        modelBuilder.Entity<PlanningSchijfKoppeling>(entity =>
+        {
+            entity.ToTable("PlanningSchijfKoppeling");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.BouwPlanningId, e.PaymentStageId }, "UX_PlanningSchijfKoppeling_Planning_Stage").IsUnique();
+            entity.HasOne(d => d.PaymentStage).WithMany()
+                .HasForeignKey(d => d.PaymentStageId).OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_PlanningSchijfKoppeling_Stage");
         });
 
         modelBuilder.Entity<PlanningSjabloon>(entity =>

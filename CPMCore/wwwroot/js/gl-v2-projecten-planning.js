@@ -59,26 +59,31 @@
         for (var i = 0; i < lijst.length; i++) if (lijst[i].id === state.actiefPlanningId) return lijst[i];
         return lijst[0] || null;
     }
+    var AANN = -2;              // pseudo-tab "Per aannemer": alle taken van één uitvoerder uit alle plannings (enkel lezen)
+    var aannActief = false, aannData = null, aannSel = "";
     function renderTabs() {
         var host = $("gl-v2-pl-tabs"), lijst = state.planningen || [];
         if (lijst.length <= 1 && !canWriteBasis) { host.hidden = true; return; }
         host.hidden = false;
         var html = lijst.map(function (p) {
-            var on = p.id === state.actiefPlanningId;
+            var on = p.id === state.actiefPlanningId && !aannActief;
             return "<button type=\"button\" class=\"gl-v2-pl-tab\" role=\"tab\" aria-selected=\"" + (on ? "true" : "false") + "\" data-planning=\"" + p.id + "\" title=\"" + esc(p.eenhedenTekst ? "Voor: " + p.eenhedenTekst : (p.isHoofd ? "Geldt voor het hele project" : "Geen woningen gekoppeld")) + "\">" +
                 "<i class=\"ph " + (p.isHoofd ? "ph-house-line" : "ph-buildings") + "\" aria-hidden=\"true\"></i><span>" + esc(p.naam) + "</span>" +
                 (p.aantalTaken ? "<small>" + p.aantalTaken + "</small>" : "") + "</button>";
         }).join("");
         if (lijst.length > 1) {
-            var gOn = state.actiefPlanningId === GLOBAAL;
+            var gOn = state.actiefPlanningId === GLOBAAL && !aannActief;
             html += "<button type=\"button\" class=\"gl-v2-pl-tab is-globaal\" role=\"tab\" aria-selected=\"" + (gOn ? "true" : "false") + "\" data-planning=\"" + GLOBAAL + "\" title=\"Alle plannings samen in één overzicht (enkel lezen)\"><i class=\"ph ph-stack\" aria-hidden=\"true\"></i><span>Globaal</span></button>";
+        }
+        if (state.heeftPlanning) {
+            html += "<button type=\"button\" class=\"gl-v2-pl-tab is-globaal\" role=\"tab\" aria-selected=\"" + (aannActief ? "true" : "false") + "\" data-planning=\"" + AANN + "\" title=\"Welke taken moet welke aannemer wanneer uitvoeren (enkel lezen)\"><i class=\"ph ph-hard-hat\" aria-hidden=\"true\"></i><span>Per aannemer</span></button>";
         }
         if (canWriteBasis) {
             html += "<button type=\"button\" class=\"gl-v2-pl-tab-add js-pl-add-planning\"><i class=\"ph ph-plus\" aria-hidden=\"true\"></i>Planning</button>";
             html += "<button type=\"button\" class=\"gl-v2-pl-tab-add js-pl-import\" title=\"Een planning importeren uit MS Project (XML)\"><i class=\"ph ph-upload-simple\" aria-hidden=\"true\"></i>Importeren</button>";
             html += "<button type=\"button\" class=\"gl-v2-pl-tab-add js-pl-sj-toepas\" title=\"Een sjabloon toepassen op woningen of gebouwen\"><i class=\"ph ph-copy\" aria-hidden=\"true\"></i>Sjabloon</button>";
             var act = actief();
-            if (state.actiefPlanningId === GLOBAAL) { host.innerHTML = html; return; }
+            if (state.actiefPlanningId === GLOBAAL || aannActief) { host.innerHTML = html; return; }
             if (canSjabloon && act && act.aantalTaken) html += "<button type=\"button\" class=\"gl-v2-pl-tab-add js-pl-sj-bewaar\" title=\"Deze planning bewaren als sjabloon\"><i class=\"ph ph-floppy-disk\" aria-hidden=\"true\"></i>Als sjabloon</button>";
             html += "<button type=\"button\" class=\"gl-v2-pl-tab-add js-pl-edit-planning\" title=\"Naam, woningen en startdatum wijzigen, of de planning verwijderen\"><i class=\"ph ph-gear-six\" aria-hidden=\"true\"></i>Instellen</button>";
         }
@@ -98,6 +103,8 @@
         zetUrl();
     }
     function switchPlanning(id) {
+        if (id === AANN) { openAann(); return; }
+        if (aannActief) { aannActief = false; if (id === state.actiefPlanningId) { render(); return; } }
         if (id === state.actiefPlanningId) return;
         fetch(cfg.staatUrl + (cfg.staatUrl.indexOf("?") < 0 ? "?" : "&") + "planningId=" + id, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
             .then(function (r) { if (!r.ok) throw new Error("De planning kon niet geladen worden."); return r.json(); })
@@ -117,6 +124,72 @@
         if (e.target.closest(".js-pl-add-planning")) openPlanning(false);
         else if (e.target.closest(".js-pl-edit-planning")) openPlanning(true);
         else if (e.target.closest(".js-pl-import")) openImport();
+    });
+
+    // ── Per aannemer: alle taken van één uitvoerder uit alle plannings ──
+    function openAann() {
+        fetch(cfg.staatUrl + (cfg.staatUrl.indexOf("?") < 0 ? "?" : "&") + "planningId=" + GLOBAAL, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
+            .then(function (r) { if (!r.ok) throw new Error("Het overzicht kon niet geladen worden."); return r.json(); })
+            .then(function (s) { aannData = s; aannActief = true; aannSel = ""; render(); })
+            .catch(function (e) { toast("danger", "Laden mislukt", e.message || "Controleer je verbinding en probeer opnieuw."); });
+    }
+    // Groepen per effectieve uitvoerder, taken (geen fases) op volgorde van start
+    function aannGroepen() {
+        var rijen = (aannData && aannData.rijen) || [], planning = "", fases = [], groepen = {}, volgorde = [];
+        rijen.forEach(function (r) {
+            if (r.soort === "fase") {
+                fases.length = r.niveau; fases[r.niveau] = r.naam;
+                if (r.niveau === 0) planning = r.naam;
+                return;
+            }
+            var sl = r.uitvoerderEffectiefId == null ? "0" : String(r.uitvoerderEffectiefId);
+            if (!groepen[sl]) { groepen[sl] = { id: sl, naam: r.uitvoerderNaam || "Geen uitvoerder", taken: [] }; volgorde.push(sl); }
+            var fase = fases.length > 1 ? fases[fases.length - 1] : "";
+            groepen[sl].taken.push({ naam: r.naam, wbs: r.wbs, planning: planning, fase: fase === planning ? "" : fase, start: r.start, einde: r.einde, duur: r.duur, mijlpaal: r.isMijlpaal, voortgang: r.voortgang });
+        });
+        var lijst = volgorde.map(function (k) {
+            var g = groepen[k];
+            g.taken.sort(function (a, b) { return (a.start || "") < (b.start || "") ? -1 : (a.start || "") > (b.start || "") ? 1 : 0; });
+            g.start = g.taken.reduce(function (m, t) { return t.start && (!m || t.start < m) ? t.start : m; }, null);
+            g.einde = g.taken.reduce(function (m, t) { return t.einde && (!m || t.einde > m) ? t.einde : m; }, null);
+            return g;
+        });
+        // zonder uitvoerder helemaal achteraan
+        lijst.sort(function (a, b) { return (a.id === "0") - (b.id === "0") || a.naam.localeCompare(b.naam, "nl"); });
+        return lijst;
+    }
+    function aannTabel(g, meerPlannings) {
+        return "<table class=\"gl-v2-pl-aann-tabel\"><thead><tr><th>Taak</th>" + (meerPlannings ? "<th>Planning</th>" : "") + "<th>Fase</th><th>Start</th><th>Einde</th><th class=\"is-num\">Duur</th></tr></thead><tbody>" +
+            g.taken.map(function (t) {
+                return "<tr><td><span class=\"is-mono\">" + esc(t.wbs) + "</span> " + esc(t.naam) + "</td>" + (meerPlannings ? "<td>" + esc(t.planning) + "</td>" : "") + "<td>" + esc(t.fase) + "</td><td>" + fmtFull(t.start) + "</td><td>" + fmtFull(t.einde) + "</td><td class=\"is-num\">" + (t.mijlpaal ? "mijlpaal" : dagen(t.duur)) + "</td></tr>";
+            }).join("") + "</tbody></table>";
+    }
+    function renderAann() {
+        var host = $("gl-v2-pl-aann"), groepen = aannGroepen(), meer = (state.planningen || []).length > 1;
+        if (aannSel && !groepen.some(function (g) { return g.id === aannSel; })) aannSel = "";
+        var zichtbaar = groepen.filter(function (g) { return !aannSel || g.id === aannSel; });
+        var opties = "<option value=\"\">Alle aannemers</option>" + groepen.map(function (g) { return "<option value=\"" + esc(g.id) + "\"" + (g.id === aannSel ? " selected" : "") + ">" + esc(g.naam) + " (" + g.taken.length + ")</option>"; }).join("");
+        var heeftUitv = groepen.some(function (g) { return g.id !== "0"; });
+        host.innerHTML =
+            "<div class=\"gl-v2-pl-aann-kop\"><div><h2>Planning per aannemer</h2><p class=\"gl-v2-field-help\">Alle taken van elke uitvoerder, uit alle plannings, op volgorde van start. Enkel lezen.</p></div>" +
+            "<div class=\"gl-v2-pl-aann-acties\"><select class=\"gl-v2-pl-aann-sel\" id=\"gl-v2-pl-aann-sel\" aria-label=\"Aannemer\">" + opties + "</select>" +
+            "<button type=\"button\" class=\"gl-v2-btn gl-v2-btn-text gl-v2-pl-small\" id=\"gl-v2-pl-aann-print\"><i class=\"ph ph-printer\" aria-hidden=\"true\"></i>Afdrukken</button></div></div>" +
+            (heeftUitv ? "" : "<div class=\"gl-v2-notice gl-v2-notice-compact is-info\"><span class=\"gl-v2-notice-icon\"><i class=\"ph ph-info\" aria-hidden=\"true\"></i></span><span class=\"gl-v2-notice-text\">Nog geen taak heeft een uitvoerder. Kies een uitvoerder bij een fase of taak (of koppel resources bij het importeren), dan verschijnt hier de planning per aannemer.</span></div>") +
+            zichtbaar.map(function (g) {
+                return "<section class=\"gl-v2-pl-aann-groep\"><header><h3>" + esc(g.naam) + "</h3><span class=\"gl-v2-pl-aann-sub\">" + g.taken.length + (g.taken.length === 1 ? " taak" : " taken") + (g.start ? " · " + fmtFull(g.start) + " tot " + fmtFull(g.einde) : "") + "</span></header>" + aannTabel(g, meer) + "</section>";
+            }).join("");
+    }
+    $("gl-v2-pl-aann").addEventListener("change", function (e) {
+        if (e.target.id === "gl-v2-pl-aann-sel") { aannSel = e.target.value; renderAann(); }
+    });
+    $("gl-v2-pl-aann").addEventListener("click", function (e) {
+        if (!e.target.closest("#gl-v2-pl-aann-print")) return;
+        var groepen = aannGroepen().filter(function (g) { return !aannSel || g.id === aannSel; }), meer = (state.planningen || []).length > 1;
+        var w = window.open("", "_blank");
+        if (!w) { toast("danger", "Afdrukken geblokkeerd", "Sta pop-ups toe voor deze site en probeer opnieuw."); return; }
+        w.document.write("<!doctype html><html lang=\"nl\"><head><meta charset=\"utf-8\"><title>Planning per aannemer</title><style>body{font:13px/1.4 Arial,sans-serif;margin:24px;color:#111}h1{font-size:18px;margin:0 0 16px}h2{font-size:15px;margin:22px 0 2px}.s{color:#555;margin-bottom:6px}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:4px 8px;border-bottom:1px solid #ddd}th{background:#f3f3f3}section{break-inside:avoid-page}</style></head><body><h1>Planning per aannemer</h1>" +
+            groepen.map(function (g) { return "<section><h2>" + esc(g.naam) + "</h2><div class=\"s\">" + g.taken.length + " taken" + (g.start ? " · " + fmtFull(g.start) + " tot " + fmtFull(g.einde) : "") + "</div>" + aannTabel(g, meer) + "</section>"; }).join("") + "</body></html>");
+        w.document.close(); w.focus(); setTimeout(function () { w.print(); }, 300);
     });
 
     // ── Kop ──
@@ -154,11 +227,17 @@
         var host = $("gl-v2-pl-notices");
         var html = "";
         var top = [], perRow = [];
+        var klaar = [];
+        state.rijen.forEach(function (r) { (r.schijven || []).forEach(function (s) { if (s.klaarOmTeMarkeren) klaar.push({ r: r, s: s }); }); });
         (state.meldingen || []).forEach(function (m) { (m.rijSleutel ? perRow : top).push(m); });
         top.forEach(function (m) {
             html += "<div class=\"gl-v2-notice gl-v2-notice-expanded is-" + esc(m.ernst) + "\" role=\"status\"><span class=\"gl-v2-notice-expanded-icon\"><i class=\"ph " + (ICON[m.ernst] || ICON.info) + "\" aria-hidden=\"true\"></i></span>" +
                 "<div class=\"gl-v2-notice-body\"><span class=\"gl-v2-notice-title\">" + esc(m.titel) + "</span>" + (m.tekst ? "<span class=\"gl-v2-notice-text\">" + esc(m.tekst) + "</span>" : "") + "</div></div>";
         });
+        if (klaar.length && canWrite) {
+            html += "<div class=\"gl-v2-notice gl-v2-notice-expanded is-success\" role=\"status\"><span class=\"gl-v2-notice-expanded-icon\"><i class=\"ph ph-seal-check\" aria-hidden=\"true\"></i></span><div class=\"gl-v2-notice-body\"><span class=\"gl-v2-notice-title\">" + (klaar.length === 1 ? "Een schijf is bereikt" : klaar.length + " schijven zijn bereikt") + "</span><ul class=\"gl-v2-pl-notice-list\">" +
+                klaar.map(function (k) { return "<li><b>" + esc(k.s.groepNaam) + " · " + esc(k.s.naam) + "</b><span>" + esc(k.r.wbs + " " + k.r.naam) + " is klaar. Markeren voor " + k.s.teMarkeren + (k.s.teMarkeren === 1 ? " eenheid" : " eenheden") + (k.s.overgeslagen ? " (" + k.s.overgeslagen + " overgeslagen: niet verkocht of akte nog niet verleden)" : "") + ".</span><button type=\"button\" data-schijf-markeer=\"" + k.s.stageId + "\">Markeren</button></li>"; }).join("") + "</ul></div></div>";
+        }
         if (perRow.length) {
             var ernst = perRow.some(function (m) { return m.ernst !== "info"; }) ? "warning" : "info";
             var lijst = perRow.slice(0, 6).map(function (m) {
@@ -179,7 +258,14 @@
         if (fase) naam += "<button type=\"button\" class=\"gl-v2-pl-caret\" data-act=\"caret\" aria-expanded=\"" + (ui.collapsed[r.sleutel] ? "false" : "true") + "\" aria-label=\"" + (ui.collapsed[r.sleutel] ? "Uitklappen" : "Inklappen") + "\"><i class=\"ph ph-caret-down\" aria-hidden=\"true\"></i></button>";
         else if (canWrite) naam += "<button type=\"button\" class=\"gl-v2-pl-tick" + (r.afgerond ? " is-on" : "") + "\" data-act=\"tick\" role=\"checkbox\" aria-checked=\"" + (r.afgerond ? "true" : "false") + "\" aria-label=\"Voltooid\"><i class=\"ph " + (r.afgerond ? "ph-check-circle ph-fill" : "ph-circle") + "\" aria-hidden=\"true\"></i></button>";
         else naam += "<span class=\"gl-v2-pl-spacer\"></span>";
+        if (canWrite) naam = "<span class=\"gl-v2-pl-grip\" data-grip title=\"Sleep om de rij te verplaatsen\" aria-hidden=\"true\"><i class=\"ph ph-dots-six-vertical\"></i></span>" + naam;
         naam += "<span class=\"gl-v2-pl-name-text\" " + (canWrite ? "data-edit=\"naam\" title=\"Klik om de naam te wijzigen\"" : "") + ">" + esc(r.naam) + "</span>";
+        (r.schijven || []).forEach(function (s) {
+            // Compact label (de naamkolom is smal): enkel het schijfnummer; de volledige naam staat in de tooltip
+            var tekst = "Schijf " + s.nummer + (s.aantalEenheden ? " · " + s.aantalBereikt + "/" + s.aantalEenheden : "");
+            if (s.klaarOmTeMarkeren && canWrite) naam += "<button type=\"button\" class=\"gl-v2-pl-schijf is-klaar\" data-act=\"schijf-markeer\" data-stage=\"" + s.stageId + "\" title=\"" + esc(s.groepNaam + " · " + s.naam) + ": markeer als bereikt voor " + s.teMarkeren + " eenheden\"><i class=\"ph ph-seal-check\" aria-hidden=\"true\"></i>Schijf " + s.nummer + " bereikt?</button>";
+            else naam += "<span class=\"gl-v2-pl-schijf" + (s.allesBereikt ? " is-bereikt" : "") + "\" title=\"Betalingsschijf " + esc(s.groepNaam) + " · " + esc(s.naam) + " (" + s.percentage + " %)\"><i class=\"ph " + (s.allesBereikt ? "ph-seal-check" : "ph-coins") + "\" aria-hidden=\"true\"></i>" + tekst + "</span>";
+        });
         if (ui.kritiek && r.kritiek) naam += "<span class=\"gl-v2-pl-badge\" title=\"Kritiek pad: " + (fase ? "bevat kritieke taken" : "geen speling") + "\">K</span>";
         if (shifted[r.sleutel]) naam += "<span class=\"gl-v2-pl-badge is-gold\">verschoven</span>";
         if (r.beperking === 1 && !fase) naam += "<i class=\"ph ph-push-pin\" title=\"Moet beginnen op " + fmtFull(r.beperkingDatum) + "\" aria-label=\"vastgepind\"></i>";
@@ -262,6 +348,12 @@
         canWrite = canWriteBasis && state.actiefPlanningId !== GLOBAAL;
         var heeft = !!state.heeftPlanning && state.rijen.length > 0;
         renderTabs();
+        $("gl-v2-pl-aann").hidden = !aannActief;
+        if (aannActief) {
+            $("gl-v2-pl-empty").hidden = true; $("gl-v2-pl-card").hidden = true; $("gl-v2-pl-kop").hidden = true;
+            renderAann();
+            return;
+        }
         var pl0 = actief(), emptyTitle = $("gl-v2-pl-empty-title");
         emptyTitle.textContent = pl0 && !pl0.isHoofd ? "Nog geen taken in " + pl0.naam : "Nog geen planning voor " + emptyTitle.getAttribute("data-project");
         $("gl-v2-pl-voor-help-hoofd").hidden = !pl0 || pl0.isHoofd;
@@ -390,9 +482,11 @@
     $("gl-v2-pl-list").addEventListener("click", function (e) {
         var rowEl = e.target.closest(".gl-v2-pl-r"); if (!rowEl) return;
         var key = rowEl.getAttribute("data-key"), r = rowByKey(key); if (!r) return;
-        if (e.target.closest(".gl-v2-pl-rowmenu")) return;
+        if (e.target.closest(".gl-v2-pl-rowmenu") || e.target.closest("[data-grip]")) return;
         var caret = e.target.closest("[data-act=caret]");
         if (caret) { ui.collapsed[key] = !ui.collapsed[key]; saveUi(); render(); return; }
+        var sm = e.target.closest("[data-act=schijf-markeer]");
+        if (sm && canWrite) { schijfMarkeer(parseInt(sm.getAttribute("data-stage"), 10), false); return; }
         var tick = e.target.closest("[data-act=tick]");
         if (tick && canWrite) { send({ type: "wijzig", soort: "taak", id: r.id, velden: { voortgang: r.afgerond ? 0 : 100 } }); return; }
         var add = e.target.closest("[data-act=add-in]");
@@ -418,20 +512,251 @@
         }
     }, true);
 
+    // Rechtsklik op een rij in de lijst of op een balk/rij in de grafiek: hetzelfde menu als ⋯, bij de muis
+    $("gl-v2-pl-scroll").addEventListener("contextmenu", function (e) {
+        if (!canWrite || !window.GlV2Menu || e.target.closest(".gl-v2-pl-split, input, textarea")) return;
+        var rowEl = e.target.closest(".gl-v2-pl-r"), key = null;
+        if (rowEl) key = rowEl.getAttribute("data-key");
+        else if (gantt && e.target.closest(".gl-v2-pl-chart")) key = gantt.keyAt(e.clientY);
+        var r = key ? rowByKey(key) : null;
+        if (!r) return;
+        e.preventDefault();
+        openRijMenu(key, e.clientX, e.clientY);
+    });
+    function openRijMenu(key, x, y) {
+        var r = rowByKey(key); if (!r || !window.GlV2Menu) return;
+        window.GlV2Menu.closeAll();
+        menuKey = key; selected = key; markSelected();
+        buildMenu(r);
+        var menu = $("gl-v2-pl-menu"), backdrop = document.getElementById("gl-v2-menu-backdrop");
+        menu.classList.add("is-open");
+        if (backdrop) backdrop.classList.add("is-open");
+        if (window.innerWidth >= 768) {
+            var w = menu.offsetWidth || 224, h = menu.offsetHeight || 300;
+            menu.style.left = Math.max(12, Math.min(x, window.innerWidth - w - 12)) + "px";
+            menu.style.top = Math.max(12, Math.min(y, window.innerHeight - h - 12)) + "px";
+        }
+    }
+
+    // Scrollen (pagina of planning) sluit het menu: het staat op vaste coördinaten en zou anders naast de rij blijven hangen
+    window.addEventListener("scroll", function (e) {
+        var menu = $("gl-v2-pl-menu");
+        if (!menu || !menu.classList.contains("is-open")) return;
+        if (e.target && e.target.nodeType === 1 && menu.contains(e.target)) return;
+        if (window.GlV2Menu) window.GlV2Menu.closeAll();
+    }, true);
+
+    // ── Balken slepen (verschuiven, duur, voortgang), toetsenbord op een balk en rijen slepen ──
+    var DAG = 86400000;
+    function isoN(iso) { var p = iso.split("-"); return Math.round(Date.UTC(+p[0], +p[1] - 1, +p[2]) / DAG); }
+    function nIso(n) { var d = new Date(n * DAG), z = function (v) { return (v < 10 ? "0" : "") + v; }; return d.getUTCFullYear() + "-" + z(d.getUTCMonth() + 1) + "-" + z(d.getUTCDate()); }
+    function nietWerk() {
+        if (state._nwRef !== state.nietWerkdagen) { state._nw = {}; (state.nietWerkdagen || []).forEach(function (n) { state._nw[n.datum] = true; }); state._nwRef = state.nietWerkdagen; }
+        return state._nw;
+    }
+    function isWerkdag(n) { var w = (new Date(n * DAG).getUTCDay() + 6) % 7; return w < 5 && !nietWerk()[nIso(n)]; }
+    function volgendeWerkdag(n, richting) { var g = 0; while (!isWerkdag(n) && g++ < 400) n += richting || 1; return n; }
+    function werkdagenTot(startN, eindN) { var c = 0; for (var n = startN; n <= eindN; n++) if (isWerkdag(n)) c++; return c; }
+    function verschuifWerkdagen(startN, k) { var n = startN, stap = k < 0 ? -1 : 1; for (var i = 0; i < Math.abs(k); i++) { n += stap; n = volgendeWerkdag(n, stap); } return n; }
+
+    var dragLabel = null, drag = null;
+    function zetDragLabel(x, y, tekst) {
+        if (!dragLabel) { dragLabel = document.createElement("div"); dragLabel.className = "gl-v2-pl-draglabel"; $("gl-v2-pl-root").appendChild(dragLabel); }
+        dragLabel.textContent = tekst; dragLabel.style.left = (x + 14) + "px"; dragLabel.style.top = (y - 34) + "px";
+    }
+    function wisDragLabel() { if (dragLabel && dragLabel.parentNode) dragLabel.parentNode.removeChild(dragLabel); dragLabel = null; }
+
+    // Een taak naar een nieuwe startdatum: "niet eerder beginnen dan" (of "moet beginnen op" als ze al vastgepind is)
+    function schuifTaak(r, nieuweStartIso, refocus) {
+        if (nieuweStartIso === r.start) return;
+        send({ type: "wijzig", soort: "taak", id: r.id, velden: { beperking: r.beperking === 1 ? 1 : 2, beperkingDatum: nieuweStartIso } }, {
+            silent: false,
+            after: function () {
+                var nu = rowByKey(r.sleutel);
+                if (nu && nu.start !== nieuweStartIso) toast("info", "De taak start op " + fmtFull(nu.start), "Een voorganger of een andere beperking bepaalt de start. Pas de voorganger of de wachttijd aan om vroeger te starten.");
+                if (refocus) { var b = document.querySelector("#gl-v2-pl-gantt .gl-v2-gantt-bar[data-key=\"" + r.sleutel + "\"]"); if (b) b.focus(); }
+            }
+        });
+    }
+    function zetVoortgang(r, pct, refocus) {
+        if (pct === r.voortgang) return;
+        send({ type: "wijzig", soort: "taak", id: r.id, velden: { voortgang: pct } }, {
+            after: function () { if (refocus) { var b = document.querySelector("#gl-v2-pl-gantt .gl-v2-gantt-bar[data-key=\"" + r.sleutel + "\"]"); if (b) b.focus(); } }
+        });
+    }
+
+    // Waar op de balk pak je ze vast: rechterrand = duur, voortgangsstreepje = voortgang, de rest = verschuiven
+    function dragModeBij(x, rect, r) {
+        if (!r.isMijlpaal && !r.afgerond) {
+            if (rect.right - x <= 6 && rect.width > 18) return "duur";
+            if (r.voortgang > 0 && r.voortgang < 100 && Math.abs(x - (rect.left + rect.width * r.voortgang / 100)) <= 4) return "voortgang";
+        }
+        return "move";
+    }
+    // Aanwijzer boven een balk: pijltje links-rechts op de rand en het streepje, anders de handpalm (zie CSS)
+    $("gl-v2-pl-gantt").addEventListener("pointermove", function (e) {
+        if (drag || e.pointerType !== "mouse") return;
+        var bar = e.target.closest ? e.target.closest(".gl-v2-gantt-bar") : null; if (!bar) return;
+        var r = canWrite ? rowByKey(bar.getAttribute("data-key")) : null;
+        var m = r && r.soort !== "fase" && r.start ? dragModeBij(e.clientX, bar.getBoundingClientRect(), r) : "move";
+        if (bar.getAttribute("data-drag") !== m) bar.setAttribute("data-drag", m);
+    });
+    $("gl-v2-pl-gantt").addEventListener("pointerdown", function (e) {
+        if (!canWrite || !gantt || e.button !== 0 || e.pointerType === "touch") return;
+        var bar = e.target.closest(".gl-v2-gantt-bar"); if (!bar) return;
+        var r = rowByKey(bar.getAttribute("data-key")); if (!r || r.soort === "fase" || !r.start) return;
+        var rect = bar.getBoundingClientRect(), mode = dragModeBij(e.clientX, rect, r);
+        if (r.afgerond && mode === "move") return;   // een afgeronde taak schuift niet
+        drag = { r: r, bar: bar, mode: mode, x0: e.clientX, rect: rect, px: gantt.px, moved: false, bereik: null };
+    });
+    document.addEventListener("pointermove", function (e) {
+        if (!drag) return;
+        if (e.buttons === 0) { eindeDrag(false); return; }
+        var dx = e.clientX - drag.x0;
+        if (!drag.moved && Math.abs(dx) < 4) return;
+        if (!drag.moved) { drag.moved = true; document.body.classList.add("gl-v2-pl-is-dragging"); document.body.setAttribute("data-pl-drag", drag.mode); }
+        var r = drag.r, px = drag.px || 1, tekst = "";
+        if (drag.mode === "move") {
+            var dd = Math.round(dx / px), s = volgendeWerkdag(isoN(r.start) + dd, dd < 0 ? -1 : 1);
+            drag.bereik = nIso(s);
+            drag.bar.style.transform = "translateX(" + (dd * px) + "px)";
+            tekst = "Start " + fmtFull(drag.bereik);
+        } else if (drag.mode === "duur") {
+            var sN = isoN(r.start), eN = Math.max(sN, isoN(r.einde) + Math.round(dx / px));
+            drag.bereik = werkdagenTot(sN, eN) || 1;
+            drag.bar.style.width = ((eN - sN + 1) * px) + "px";
+            tekst = dagen(drag.bereik);
+        } else {
+            var pct = Math.max(0, Math.min(100, Math.round(((e.clientX - drag.rect.left) / drag.rect.width * 100) / 5) * 5));
+            drag.bereik = pct;
+            var pg = drag.bar.querySelector(".gl-v2-gantt-progress"); if (pg) pg.style.width = pct + "%";
+            tekst = pct + " % klaar";
+        }
+        zetDragLabel(e.clientX, e.clientY, tekst);
+    });
+    function eindeDrag(commit) {
+        if (!drag) return;
+        var d = drag; drag = null;
+        document.body.classList.remove("gl-v2-pl-is-dragging"); document.body.removeAttribute("data-pl-drag"); wisDragLabel();
+        if (!d.moved) return;
+        suppressClick = true; window.setTimeout(function () { suppressClick = false; }, 0);
+        d.bar.style.transform = ""; d.bar.style.width = "";
+        if (!commit || d.bereik == null) { render(); return; }
+        if (d.mode === "move") schuifTaak(d.r, d.bereik, false);
+        else if (d.mode === "duur") { if (d.bereik === d.r.duur) render(); else send({ type: "wijzig", soort: "taak", id: d.r.id, velden: { duur: d.bereik } }); }
+        else zetVoortgang(d.r, d.bereik, false);
+    }
+    document.addEventListener("pointerup", function () { eindeDrag(true); });
+    document.addEventListener("pointercancel", function () { eindeDrag(false); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && drag) eindeDrag(false); });
+
+    // Toetsenbord op een balk: 0-4 = voortgang, pijltjes = een werkdag verschuiven, Delete = verwijderen, menutoets of Shift+F10 = menu
+    $("gl-v2-pl-gantt").addEventListener("keydown", function (e) {
+        var bar = e.target.closest(".gl-v2-gantt-bar"); if (!bar || !canWrite) return;
+        var r = rowByKey(bar.getAttribute("data-key")); if (!r) return;
+        if (e.key === "ContextMenu" || (e.shiftKey && e.key === "F10")) {
+            e.preventDefault(); var rc = bar.getBoundingClientRect(); openRijMenu(r.sleutel, rc.left + 20, rc.bottom + 4); return;
+        }
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        if (e.key === "Delete") { e.preventDefault(); selected = r.sleutel; vraagVerwijder(r); return; }
+        if (r.soort === "fase") return;
+        if (!r.isMijlpaal && /^[0-4]$/.test(e.key)) { e.preventDefault(); zetVoortgang(r, [0, 25, 50, 75, 100][+e.key], true); return; }
+        if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && !r.afgerond && r.start) {
+            e.preventDefault();
+            schuifTaak(r, nIso(verschuifWerkdagen(isoN(r.start), e.key === "ArrowLeft" ? -1 : 1)), true);
+        }
+    });
+
+    // Rijen slepen aan het ⋮⋮-handvat: naar een andere plaats of fase
+    var rijDrag = null, dropLijn = null, dropInto = null;
+    function wisDrop() { if (dropLijn && dropLijn.parentNode) dropLijn.parentNode.removeChild(dropLijn); dropLijn = null; if (dropInto) dropInto.classList.remove("is-dropinto"); dropInto = null; }
+    function dropSpec(r0, T, rel) {
+        if (!T || T.sleutel === r0.sleutel) return null;
+        if (r0.soort === "fase" && T.wbs.indexOf(r0.wbs + ".") === 0) return null;   // niet in zichzelf
+        var kinderen = state.rijen.some(function (x) { return x.ouderFaseId === T.id && T.soort === "fase"; });
+        var open = T.soort === "fase" && kinderen && !ui.collapsed[T.sleutel];
+        var into = T.soort === "fase" && ((rel > 0.3 && rel < 0.7) || (open && rel >= 0.5));
+        if (into) return { into: T, naSoort: open && rel >= 0.5 ? "begin" : null, mode: "into" };
+        var voor = rel < 0.5;
+        var bovenId = T.ouderFaseId;
+        if (bovenId == null && r0.soort === "taak") return { into: T, naSoort: voor ? "begin" : null, mode: "into" };   // een taak hoort in een fase
+        var sibs = state.rijen.filter(function (x) { return x.ouderFaseId === T.ouderFaseId && x.niveau === T.niveau; });
+        var i = sibs.indexOf(T);
+        if (voor) {
+            var P = i > 0 ? sibs[i - 1] : null;
+            if (P && P.sleutel === r0.sleutel) return null;
+            return { ouder: bovenId, na: P, naSoort: P ? null : "begin", mode: "voor", T: T };
+        }
+        return { ouder: bovenId, na: T, mode: "na", T: T };
+    }
+    $("gl-v2-pl-list").addEventListener("pointerdown", function (e) {
+        var grip = e.target.closest("[data-grip]"); if (!grip || !canWrite || e.button !== 0) return;
+        var rowEl = grip.closest(".gl-v2-pl-r"); var r = rowEl && rowByKey(rowEl.getAttribute("data-key")); if (!r) return;
+        e.preventDefault();
+        rijDrag = { r: r, spec: null, moved: false, x0: e.clientX, y0: e.clientY };
+    });
+    document.addEventListener("pointermove", function (e) {
+        if (!rijDrag) return;
+        if (e.buttons === 0) { eindeRijDrag(false); return; }
+        if (!rijDrag.moved && Math.abs(e.clientY - rijDrag.y0) + Math.abs(e.clientX - rijDrag.x0) < 5) return;
+        if (!rijDrag.moved) { rijDrag.moved = true; document.body.classList.add("gl-v2-pl-is-dragging"); }
+        wisDrop();
+        var el = document.elementFromPoint(e.clientX, e.clientY), rowEl = el && el.closest ? el.closest("#gl-v2-pl-list .gl-v2-pl-r") : null;
+        rijDrag.spec = null;
+        if (!rowEl) return;
+        var T = rowByKey(rowEl.getAttribute("data-key")), rc = rowEl.getBoundingClientRect();
+        var spec = dropSpec(rijDrag.r, T, (e.clientY - rc.top) / rc.height);
+        rijDrag.spec = spec;
+        if (!spec) return;
+        if (spec.mode === "into") { dropInto = rowEl; rowEl.classList.add("is-dropinto"); }
+        else {
+            dropLijn = document.createElement("div"); dropLijn.className = "gl-v2-pl-dropline";
+            dropLijn.style.left = rc.left + "px"; dropLijn.style.width = rc.width + "px"; dropLijn.style.top = (spec.mode === "voor" ? rc.top : rc.bottom) + "px";
+            $("gl-v2-pl-root").appendChild(dropLijn);
+        }
+    });
+    function eindeRijDrag(commit) {
+        if (!rijDrag) return;
+        var d = rijDrag; rijDrag = null;
+        document.body.classList.remove("gl-v2-pl-is-dragging"); wisDrop();
+        if (!d.moved || !commit || !d.spec) return;
+        suppressClick = true; window.setTimeout(function () { suppressClick = false; }, 0);
+        var s = d.spec, cmd = { type: "verplaats", soort: d.r.soort, id: d.r.id, actie: "naar" };
+        if (s.mode === "into") { cmd.sectieId = s.into.id; if (s.naSoort) cmd.naSoort = s.naSoort; }
+        else { cmd.sectieId = s.ouder; if (s.na) { cmd.naId = s.na.id; cmd.naSoort = s.na.soort; } else cmd.naSoort = "begin"; }
+        send(cmd);
+    }
+    document.addEventListener("pointerup", function () { eindeRijDrag(true); });
+    document.addEventListener("pointercancel", function () { eindeRijDrag(false); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && rijDrag) eindeRijDrag(false); });
+
     function menuItem(act, icon, label, danger) {
         return "<button type=\"button\" class=\"gl-v2-menu-item" + (danger ? " is-danger" : "") + "\" role=\"menuitem\" data-menu=\"" + act + "\"><i class=\"ph " + icon + "\" aria-hidden=\"true\"></i><span class=\"gl-v2-menu-item-text\"><span class=\"gl-v2-menu-item-label\">" + label + "</span></span></button>";
     }
     function buildMenu(r) {
         if (!r) return;
         var fase = r.soort === "fase", h = "";
+        if (!fase && !r.isMijlpaal) {
+            h += "<div class=\"gl-v2-pl-menu-pct\" role=\"group\" aria-label=\"Voortgang\"><span>Voortgang</span>" +
+                [0, 25, 50, 75, 100].map(function (p) { return "<button type=\"button\" role=\"menuitem\" class=\"gl-v2-pl-menu-pctbtn" + (r.voortgang === p ? " is-on" : "") + "\" data-menu=\"pct-" + p + "\">" + p + "</button>"; }).join("") + "</div>";
+        }
+        if (!fase) {
+            if (!r.afgerond && !r.werkelijkStart) h += menuItem("vandaag-gestart", "ph-play-circle", "Vandaag gestart");
+            if (!r.afgerond) h += menuItem("volgens-schema", "ph-calendar-check", "Op schema zetten");
+        }
         h += menuItem("edit", "ph-pencil-simple", "Bewerken…");
         h += menuItem(fase ? "add-in" : "add-after", "ph-plus", fase ? "Taak toevoegen in de fase" : "Taak eronder toevoegen");
         if (fase) h += menuItem("add-fase", "ph-stack-plus", "Fase eronder toevoegen");
         if (!fase) h += menuItem("tick", r.afgerond ? "ph-circle" : "ph-check-circle", r.afgerond ? "Niet meer voltooid" : "Markeren als voltooid");
+        if (!fase && !r.afgerond) h += menuItem(r.beperking === 1 ? "losmaken" : "vastpinnen", "ph-push-pin", r.beperking === 1 ? "Vastpinnen opheffen" : "Vastpinnen op de startdatum");
         h += menuItem("omhoog", "ph-arrow-up", "Omhoog");
         h += menuItem("omlaag", "ph-arrow-down", "Omlaag");
         h += menuItem("inspringen", "ph-arrow-line-right", "Inspringen");
         h += menuItem("uitspringen", "ph-arrow-line-left", "Uitspringen");
+        (r.schijven || []).forEach(function (s) {
+            if (s.teMarkeren > 0) h += menuItem("schijf-markeer-" + s.stageId, "ph-seal-check", "Schijf " + esc(s.naam) + " bereikt: markeren");
+            if (s.aantalBereikt > 0) h += menuItem("schijf-terug-" + s.stageId, "ph-arrow-counter-clockwise", "Schijf " + esc(s.naam) + " terugzetten");
+        });
         if (canDelete) h += menuItem("verwijder", "ph-trash", "Verwijderen…", true);
         $("gl-v2-pl-menu").innerHTML = h;
     }
@@ -444,10 +769,27 @@
         else if (act === "add-in") openNieuwTaak({ sectieId: r.id });
         else if (act === "add-after") openNieuwTaak({ sectieId: r.ouderFaseId, naId: r.id, naSoort: "taak" });
         else if (act === "add-fase") openNieuwFase({ faseplaats: "na:" + r.id });
+        else if (act.indexOf("schijf-markeer-") === 0) schijfMarkeer(parseInt(act.slice(15), 10), false);
+        else if (act.indexOf("schijf-terug-") === 0) schijfMarkeer(parseInt(act.slice(13), 10), true);
+        else if (act.indexOf("pct-") === 0) send({ type: "wijzig", soort: "taak", id: r.id, velden: { voortgang: parseInt(act.slice(4), 10) } });
+        else if (act === "vandaag-gestart") send({ type: "wijzig", soort: "taak", id: r.id, velden: { werkelijkStart: todayIso(), voortgang: Math.max(r.voortgang || 0, 1) } });
+        else if (act === "volgens-schema") send({ type: "wijzig", soort: "taak", id: r.id, velden: { voortgang: voortgangVolgensSchema(r) } });
+        else if (act === "vastpinnen") send({ type: "wijzig", soort: "taak", id: r.id, velden: { beperking: 1, beperkingDatum: r.start } });
+        else if (act === "losmaken") send({ type: "wijzig", soort: "taak", id: r.id, velden: { beperking: 0 } });
         else if (act === "tick") send({ type: "wijzig", soort: "taak", id: r.id, velden: { voortgang: r.afgerond ? 0 : 100 } });
         else if (act === "omhoog" || act === "omlaag" || act === "inspringen" || act === "uitspringen") send({ type: "verplaats", soort: r.soort, id: r.id, actie: act });
         else if (act === "verwijder") vraagVerwijder(r);
     });
+
+    // Voortgang volgens het schema: aandeel van de geplande periode dat al voorbij is (op kalenderdagen), afgerond naar 5 %.
+    function voortgangVolgensSchema(r) {
+        var t = todayIso();
+        if (!r.start || t <= r.start) return 0;
+        if (!r.einde || t > r.einde) return 100;
+        var d = function (s) { var p = s.split("-"); return Date.UTC(+p[0], +p[1] - 1, +p[2]) / 86400000; };
+        var tot = d(r.einde) - d(r.start) + 1, gedaan = d(t) - d(r.start);
+        return Math.max(0, Math.min(95, Math.round(gedaan / tot * 20) * 5));
+    }
 
     function vraagVerwijder(r) {
         var fase = r.soort === "fase";
@@ -488,6 +830,7 @@
     });
     $("gl-v2-pl-notices").addEventListener("click", function (e) {
         if (e.target.closest("[data-notices-toggle]")) { ui.noticesOpen = !ui.noticesOpen; saveUi(); renderNotices(); return; }
+        var sb = e.target.closest("[data-schijf-markeer]"); if (sb) { schijfMarkeer(parseInt(sb.getAttribute("data-schijf-markeer"), 10), false); return; }
         var b = e.target.closest("[data-toon]"); if (!b) return;
         var key = b.getAttribute("data-toon"), r = rowByKey(key); if (!r) return;
         // een ingeklapte fase openen
@@ -685,19 +1028,38 @@
         info.hidden = !(bestaand && p && !p.isHoofd && !canDelete);
         info.innerHTML = info.hidden ? "" : "<span>Verwijderen van een planning vraagt het recht Verwijderen op Planning. Je rol heeft dat niet.</span>";
         $("gl-v2-pl-f-naam").value = p ? p.naam : "";
+        var hoofd = panel.isHoofd;
         var eigen = p ? (p.eenheidIds || []) : [];
         var planNaam = {}; (state.planningen || []).forEach(function (x) { planNaam[x.id] = x.naam; });
+        // Hoofdplanning zonder eigen eenheden = alle eenheden zonder andere planning; met eigen eenheden = enkel die
+        var hoofdVast = hoofd && !p.id;                                   // nog niet bewaard: niets te kiezen
+        var hoofdAlgemeen = hoofd && eigen.length === 0;
+        panel.eenhedenStart = null;
+        $("gl-v2-pl-f-eenheden-label").textContent = hoofd ? "Eenheden in de hoofdplanning" : "Woningen en gebouwen";
+        $("gl-v2-pl-f-eenheden-help").textContent = hoofd
+            ? "Kies voor welke eenheden de hoofdplanning geldt. Zolang je niets kiest, geldt ze voor alle eenheden die geen eigen planning hebben. Eenheden in een andere planning kan je hier niet kiezen."
+            : "Optioneel. Kies de woningen of het gebouw waar deze planning voor geldt. Een planning mag meerdere eenheden bundelen; een eenheid zit in hoogstens één planning, ook als de betalingsgroep meerdere eenheden heeft.";
         $("gl-v2-pl-f-eenheden").innerHTML = (state.eenheden || []).length ? (state.eenheden || []).map(function (e) {
+            if (hoofd) {
+                var vrijVoorHoofd = e.planningId == null || e.planningId === p.id;
+                var aan = vrijVoorHoofd && (hoofdAlgemeen || eigen.indexOf(e.id) >= 0);
+                return "<label class=\"gl-v2-pl-een" + (vrijVoorHoofd ? "" : " is-uit") + "\"><input type=\"checkbox\" value=\"" + e.id + "\"" + (aan ? " checked" : "") + (vrijVoorHoofd && !hoofdVast ? "" : " disabled") + " /><span>" + esc(e.naam) + "</span>" +
+                    "<small>" + (vrijVoorHoofd ? esc(e.groepNaam || "") : "zit in " + esc(planNaam[e.planningId] || "een andere planning")) + "</small></label>";
+            }
             var inAndere = e.planningId != null && eigen.indexOf(e.id) < 0;
             return "<label class=\"gl-v2-pl-een" + (inAndere ? " is-uit" : "") + "\"><input type=\"checkbox\" value=\"" + e.id + "\"" + (eigen.indexOf(e.id) >= 0 ? " checked" : "") + (inAndere ? " disabled" : "") + " /><span>" + esc(e.naam) + "</span>" +
                 "<small>" + (inAndere ? "zit in " + esc(planNaam[e.planningId] || "een andere planning") : esc(e.groepNaam || "")) + "</small></label>";
         }).join("") : "<span class=\"gl-v2-field-help\" style=\"padding:8px 12px\">Dit project heeft nog geen woningen of gebouwen.</span>";
-        $("gl-v2-pl-wrap-bouwdeel").hidden = panel.isHoofd;
+        $("gl-v2-pl-wrap-bouwdeel").hidden = false;
+        if (hoofd) panel.eenhedenStart = hoofdVast ? null : gekozenEenheden().join(",");
         setDate("gl-v2-pl-f-pstart", p ? p.startDatum : "");
         var del = $("gl-v2-pl-panel-delete"); if (del) del.hidden = !(canDelete && p && !p.isHoofd && p.id);
         $("gl-v2-pl-panel-again").hidden = true;
         $("gl-v2-pl-panel-save").querySelector("span").textContent = bestaand ? "Opslaan" : "Planning toevoegen";
         showPanel("PLANNING", bestaand ? p.naam : "Nieuwe planning", bestaand ? (p.isHoofd ? "Hoofdplanning: geldt voor het hele project" : (p.eenhedenTekst ? "Voor " + p.eenhedenTekst : "")) : "Een planning voor een of meer woningen of een gebouw, naast de hoofdplanning");
+    }
+    function gekozenEenheden() {
+        return Array.prototype.map.call($("gl-v2-pl-f-eenheden").querySelectorAll("input:checked:not(:disabled)"), function (i) { return parseInt(i.value, 10); });
     }
     function vraagVerwijderPlanning(p) {
         var n = p.aantalTaken || 0;
@@ -851,7 +1213,7 @@
     var imp = null;
     var IMP_STAPPEN = ["Bestand", "Controle", "Uitvoerders", "Opties", "Resultaat"];
     function impReset() {
-        imp = { koppelingen: {}, stap: 0, data: null, filter: "alles", doel: "nieuw", modus: "toevoegen", start: "bestand", naam: "", naamAangepast: false, eenheden: [], resultaat: null, bezig: false };
+        imp = { koppelingen: {}, stap: 0, data: null, filter: "alles", doel: "nieuw", modus: "toevoegen", start: "bestand", naam: "", naamAangepast: false, eenheden: [], eenhedenAangepast: false, resultaat: null, bezig: false };
     }
     function impFout(t) { var f = $("gl-v2-pl-imp-fout"); f.textContent = t || ""; f.hidden = !t; }
     function impHuidig() { return state.actiefPlanningId === GLOBAAL ? null : actief(); }
@@ -999,7 +1361,9 @@
             $("gl-v2-pl-imp-s-geen").hidden = nieuw;
             if (nieuw && imp.start === "geen") { imp.start = "bestand"; zetRadio("gl-v2-pl-imp-start", "bestand"); }
             $("gl-v2-pl-imp-naam").value = imp.naam;
-            var vrij = (state.eenheden || []).filter(function (e) { return e.planningId == null; });
+            var hu = impHuidig();
+            var vrij = (state.eenheden || []).filter(function (e) { return e.planningId == null || (!nieuw && hu && e.planningId === hu.id); });
+            if (!nieuw && hu && !imp.eenhedenAangepast) imp.eenheden = (hu.eenheidIds || []).slice();
             $("gl-v2-pl-imp-eenheden").innerHTML = vrij.length ? vrij.map(function (e) {
                 return "<label class=\"gl-v2-pl-een\"><input type=\"checkbox\" value=\"" + e.id + "\"" + (imp.eenheden.indexOf(e.id) >= 0 ? " checked" : "") + " /><span>" + esc(e.naam) + "</span><small>" + esc(e.groepNaam || "") + "</small></label>";
             }).join("") : "<span class=\"gl-v2-field-help\" style=\"padding:8px 12px\">Alle woningen en gebouwen zitten al in een planning.</span>";
@@ -1026,8 +1390,9 @@
         var opdracht = { uitvoerders: imp.koppelingen, rijen: d.rijen, nieuw: nieuw, startModus: imp.start, bestandStart: d.projectStart, modus: imp.modus };
         if (nieuw) {
             if (!imp.naam.trim()) { impFout("Geef de planning een naam."); return; }
-            opdracht.naam = imp.naam.trim(); opdracht.eenheidIds = imp.eenheden;
+            opdracht.naam = imp.naam.trim();
         }
+        opdracht.eenheidIds = imp.eenheden;
         if (imp.start === "nieuw") {
             var sd = getDate("gl-v2-pl-imp-startdatum");
             if (!sd) { impFout("Kies de nieuwe startdatum."); return; }
@@ -1090,6 +1455,7 @@
             else if (t.name === "gl-v2-pl-imp-modus") imp.modus = t.value;
             else if (t.name === "gl-v2-pl-imp-start") { imp.start = t.value; $("gl-v2-pl-imp-o-datum").hidden = imp.start !== "nieuw"; }
             else if (t.closest("#gl-v2-pl-imp-eenheden")) {
+                imp.eenhedenAangepast = true;
                 imp.eenheden = Array.prototype.map.call($("gl-v2-pl-imp-eenheden").querySelectorAll("input:checked"), function (i) { return parseInt(i.value, 10); });
                 // Eén woning gekozen en de naam nog niet aangepast: de planning krijgt de naam van die woning.
                 if (!imp.naamAangepast && imp.eenheden.length === 1) {
@@ -1181,6 +1547,93 @@
             state = res.staat; render();
             toast("success", kz.mijlpaalId ? "Mijlpaal gekoppeld" : "Koppeling weggehaald", kz.mijlpaalId ? "De mijlpaal in het Traject volgt nu de planning." : "De mijlpaal in het Traject volgt de planning niet meer.");
         }).catch(function (e) { toonFout("Koppelen mislukt", e.message || "Controleer je verbinding en probeer opnieuw."); });
+    }
+
+    // ── Koppeling met een betalingsschijf: de eenheden van deze planning bereiken de schijf zodra de taak of fase klaar is ──
+    function schijfItems(sleutel) {
+        return (state.schijfOpties || []).map(function (o) {
+            var tekst = o.tekst;
+            if (o.gekoppeldAanSleutel && o.gekoppeldAanSleutel !== sleutel) tekst += " (nu aan " + o.gekoppeldAanTekst + ")";
+            return { value: String(o.stageId), text: tekst };
+        });
+    }
+    function schijfHuidig(sleutel) {
+        return (state.schijfOpties || []).filter(function (x) { return x.gekoppeldAanSleutel === sleutel; }).map(function (x) { return x.stageId; });
+    }
+    // Meerdere schijven per taak of fase: een lijst met vinkjes en een zoekveld
+    function toonSchijf(wrapId, sleutel) {
+        var wrap = $(wrapId), items = schijfItems(sleutel), lijst = $(wrapId + "-lijst"), zoek = $(wrapId + "-zoek");
+        // Altijd tonen (behalve in de globale weergave), ook zonder schijven, zodat duidelijk is waarom er niets te kiezen valt
+        wrap.hidden = !sleutel || state.actiefPlanningId === GLOBAAL;
+        var huidig = items.length ? schijfHuidig(sleutel) : [];
+        if (panel) panel.schijfOud = huidig;
+        zoek.value = ""; zoek.disabled = !items.length;
+        if (wrap.hidden) { lijst.innerHTML = ""; return; }
+        lijst.innerHTML = items.length ? items.map(function (it) {
+            var aan = huidig.indexOf(parseInt(it.value, 10)) >= 0;
+            return "<label class=\"gl-v2-pl-een\" data-zoek=\"" + esc(it.text.toLowerCase()) + "\"><input type=\"checkbox\" value=\"" + it.value + "\"" + (aan ? " checked" : "") + " /><span>" + esc(it.text) + "</span></label>";
+        }).join("") : "<span class=\"gl-v2-field-help\" style=\"padding:8px 12px\">Geen schijven: de eenheden van deze planning hebben geen betalingsgroep.</span>";
+    }
+    function schijfZoek(wrapId) {
+        var q = $(wrapId + "-zoek").value.trim().toLowerCase(), n = 0, lijst = $(wrapId + "-lijst");
+        Array.prototype.forEach.call(lijst.querySelectorAll(".gl-v2-pl-een"), function (l) {
+            var toon = !q || (l.getAttribute("data-zoek") || "").indexOf(q) >= 0;
+            l.hidden = !toon; if (toon) n++;
+        });
+        var leeg = lijst.querySelector(".gl-v2-pl-zoek-leeg");
+        if (!n && q && !leeg) { var s = document.createElement("span"); s.className = "gl-v2-field-help gl-v2-pl-zoek-leeg"; s.style.padding = "8px 12px"; s.textContent = "Geen schijf gevonden."; lijst.appendChild(s); }
+        else if ((n || !q) && leeg) leeg.remove();
+    }
+    ["gl-v2-pl-wrap-schijf", "gl-v2-pl-wrap-schijff"].forEach(function (id) {
+        $(id + "-zoek").addEventListener("input", function () { schijfZoek(id); });
+        $(id + "-zoek").addEventListener("keydown", function (e) { if (e.key === "Enter") e.preventDefault(); });
+    });
+    function schijfKeuze() {
+        if (!panel || !panel.key) return null;
+        var fase = panel.mode === "fase-bewerken";
+        var wrapId = fase ? "gl-v2-pl-wrap-schijff" : "gl-v2-pl-wrap-schijf";
+        if ($(wrapId).hidden) return null;
+        var nu = Array.prototype.map.call($(wrapId + "-lijst").querySelectorAll("input:checked"), function (i) { return parseInt(i.value, 10); });
+        var oud = panel.schijfOud || [];
+        var toe = nu.filter(function (x) { return oud.indexOf(x) < 0; }), weg = oud.filter(function (x) { return nu.indexOf(x) < 0; });
+        if (!toe.length && !weg.length) return null;
+        return { soort: fase ? "fase" : "taak", id: panel.id, toe: toe, weg: weg };
+    }
+    function schijfPost(url, body, ok) {
+        return fetch(url, {
+            method: "POST", credentials: "same-origin",
+            headers: { "Content-Type": "application/json", "RequestVerificationToken": token(), "X-Requested-With": "XMLHttpRequest" },
+            body: JSON.stringify(Object.assign({ planningId: state.actiefPlanningId || 0 }, body))
+        }).then(function (r) {
+            if (r.status === 403) throw new Error("Je hebt hiervoor geen schrijfrecht op de facturatie.");
+            if (!r.ok) throw new Error("Dat lukte niet. Probeer het zo opnieuw.");
+            return r.json();
+        }).then(function (res) {
+            if (!res.ok) { toonFout("Dat kan niet", res.fout || "De wijziging is niet bewaard."); return; }
+            state = res.staat; render(); if (ok) ok();
+        }).catch(function (e) { toonFout("Dat lukte niet", e.message || "Controleer je verbinding en probeer opnieuw."); });
+    }
+    // Eerst de schijf koppelen, daarna (in volgorde) de rest
+    function schijfNa(sz, daarna) {
+        if (!sz) { if (daarna) daarna(); return; }
+        // Eerst de weggehaalde, dan de nieuwe koppelingen, na elkaar (elke oproep geeft de nieuwe staat terug)
+        var stappen = sz.weg.map(function (s) { return { soort: sz.soort, id: sz.id, stageId: null, vorigeStageId: s }; })
+            .concat(sz.toe.map(function (s) { return { soort: sz.soort, id: sz.id, stageId: s }; }));
+        var keten = Promise.resolve();
+        stappen.forEach(function (b) { keten = keten.then(function () { return schijfPost(cfg.schijfKoppelUrl, b); }); });
+        keten.then(function () {
+            if (sz.toe.length) toast("success", sz.toe.length === 1 ? "Schijf gekoppeld" : sz.toe.length + " schijven gekoppeld", "Je krijgt de vraag om de schijf te markeren zodra dit klaar is.");
+            else toast("success", sz.weg.length === 1 ? "Koppeling weggehaald" : "Koppelingen weggehaald", "De schijf hangt niet meer aan deze plek.");
+            if (daarna) daarna();
+        });
+    }
+    function schijfMarkeer(stageId, terugzetten) {
+        var link = null;
+        state.rijen.forEach(function (r) { (r.schijven || []).forEach(function (s) { if (s.stageId === stageId) link = s; }); });
+        var n = link ? (terugzetten ? link.aantalBereikt : link.teMarkeren) : 0;
+        schijfPost(cfg.schijfMarkeerUrl, { stageId: stageId, terugzetten: !!terugzetten }, function () {
+            toast("success", terugzetten ? "Schijf teruggezet" : "Schijf bereikt", terugzetten ? "Gefactureerde eenheden blijven bereikt." : "Gemarkeerd voor " + n + (n === 1 ? " eenheid" : " eenheden") + ". De schijf is nu factureerbaar.");
+        });
     }
 
     function openNieuwTaak(ctx) {
@@ -1334,6 +1787,7 @@
         setSelect("gl-v2-pl-f-wie", (state.gebruikers || []).map(function (g) { return { value: g.id, text: g.naam }; }), r.verantwoordelijkeId || "", "Niemand");
         zetUitvoerderSelect("gl-v2-pl-f-uitv", r.uitvoerderId, r.uitvoerderGeerfd && r.uitvoerderNaam ? "Van de fase: " + r.uitvoerderNaam : "Geen");
         toonTraj("gl-v2-pl-wrap-traj", "gl-v2-pl-f-traj", key);
+        toonSchijf("gl-v2-pl-wrap-schijf", key);
 
         var info = "<span><b>" + esc(r.wbs) + "</b> · " + fmtFull(r.start) + " tot " + fmtFull(r.einde) + (r.isMijlpaal ? "" : " · " + dagen(r.duur)) + "</span>";
         if (r.speling != null) info += "<span>" + (r.kritiek ? "<span class=\"is-crit\">Kritiek pad</span>, geen speling" : "Speling: " + dagen(r.speling)) + "</span>";
@@ -1358,6 +1812,7 @@
         $("gl-v2-pl-f-teltmee").checked = !!r.teltMee; $("gl-v2-pl-f-teltmee").disabled = r.lotId == null;
         zetUitvoerderSelect("gl-v2-pl-f-uitvf", r.uitvoerderId, r.uitvoerderGeerfd && r.uitvoerderNaam ? "Van de bovenliggende fase: " + r.uitvoerderNaam : "Geen");
         toonTraj("gl-v2-pl-wrap-trajf", "gl-v2-pl-f-trajf", r.sleutel);
+        toonSchijf("gl-v2-pl-wrap-schijff", r.sleutel);
         var info = "<span><b>" + esc(r.wbs) + "</b> · " + fmtFull(r.start) + " tot " + fmtFull(r.einde) + " · " + dagen(r.duur) + " · " + r.voortgang + "% klaar</span>";
         (r.mijlpalen || []).forEach(function (m) { info += "<span>Bepaalt de streefdatum van mijlpaal <b>" + esc(m.naam) + "</b> in het traject</span>"; });
         var infoEl = $("gl-v2-pl-info"); infoEl.innerHTML = info; infoEl.hidden = false;
@@ -1436,15 +1891,16 @@
             });
         } else if (panel.mode === "planning-nieuw" || panel.mode === "planning-bewerken") {
             var pv = { naam: naam, startDatum: getDate("gl-v2-pl-f-pstart") };
-            if (!panel.isHoofd) pv.eenheden = Array.prototype.map.call($("gl-v2-pl-f-eenheden").querySelectorAll("input:checked"), function (i) { return parseInt(i.value, 10); });
+            // Hoofdplanning: enkel meesturen als de keuze gewijzigd is (anders blijft "alle eenheden zonder planning" gelden)
+            if (!panel.isHoofd || (panel.eenhedenStart != null && gekozenEenheden().join(",") !== panel.eenhedenStart)) pv.eenheden = gekozenEenheden();
             if (panel.mode === "planning-nieuw") send({ type: "planningToevoegen", planningId: 0, velden: pv }, { onError: onError, after: closePanel });
             else send({ type: "planningWijzig", planningId: panel.id, velden: pv }, { onError: onError, after: closePanel });
         } else if (panel.mode === "taak-bewerken") {
             var w = verzamelTaakVelden(false);
             if (isNaN(w.duur) || w.duur < 0) { formError("De duur moet een aantal werkdagen zijn (0 of meer)."); return; }
             if (w.beperking && !w.beperkingDatum) { formError("Kies een datum bij de beperking."); return; }
-            var kzTaak = koppelKeuze();
-            send({ type: "wijzig", soort: "taak", id: panel.id, velden: w }, { onError: onError, after: function () { koppelNa(kzTaak); closePanel(); } });
+            var kzTaak = koppelKeuze(), szTaak = schijfKeuze();
+            send({ type: "wijzig", soort: "taak", id: panel.id, velden: w }, { onError: onError, after: function () { schijfNa(szTaak, function () { koppelNa(kzTaak); }); closePanel(); } });
         } else if (panel.mode === "fase-nieuw") {
             var plaats = getSelect("gl-v2-pl-f-faseplaats") || "einde", cmd = { type: "faseToevoegen", velden: { naam: naam } };
             if (plaats.indexOf("in:") === 0) cmd.sectieId = parseInt(plaats.slice(3), 10);
@@ -1458,8 +1914,8 @@
             send(cmd, { onError: onError, after: closePanel });
         } else if (panel.mode === "fase-bewerken") {
             var fv = { naam: naam, uitvoerder: getSelect("gl-v2-pl-f-uitvf") ? parseInt(getSelect("gl-v2-pl-f-uitvf"), 10) : null, lotId: getSelect("gl-v2-pl-f-lot") ? parseInt(getSelect("gl-v2-pl-f-lot"), 10) : null, teltMee: $("gl-v2-pl-f-teltmee").checked };
-            var kzFase = koppelKeuze();
-            send({ type: "wijzig", soort: "fase", id: panel.id, velden: fv }, { onError: onError, after: function () { koppelNa(kzFase); closePanel(); } });
+            var kzFase = koppelKeuze(), szFase = schijfKeuze();
+            send({ type: "wijzig", soort: "fase", id: panel.id, velden: fv }, { onError: onError, after: function () { schijfNa(szFase, function () { koppelNa(kzFase); }); closePanel(); } });
         }
     }
 

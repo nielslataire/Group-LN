@@ -1,0 +1,346 @@
+/* gl-v2 component — gsm-bouwstenen uit design-handoff "Mobiele componenten" (65f) en "Mobiel" (64c/64e), project-wijd herbruikbaar.
+   Bron: design-handoff/Menu en toast design updates – CRM Mobiele componenten.html (.mx-*) en … CRM Mobiel.html (.pd-*, .kl-*).
+   Klassen heten gl-v2-m-*; de maten zijn 1-op-1 uit die handoff-CSS. Alles hier geldt enkel op gsm (≤ 767.98px) — behalve .gl-v2-m-only / .gl-v2-d-only,
+   waarmee een pagina een gsm-blok naast de desktopweergave zet (zie DESIGN.md "Mobiele componenten"). Geladen na quickactions.css. */
+
+.gl-v2-m-only { display: none; }
+/* Wrapper rond de desktopweergave van een pagina die op gsm een eigen blok heeft: onzichtbaar voor de layout ≥ 768 (display:contents), weg op gsm. */
+.gl-v2-d-wrap { display: contents; }
+.gl-v2-topbar-kicker { display: none; }
+/* Bladen (64d): titel/ondertitel/annuleren enkel op gsm */
+.gl-v2-menu-sheet-title, .gl-v2-menu-sheet-sub, .gl-v2-menu-cancel, .gl-v2-pm-sheet-cancel { display: none; }
+.gl-v2-menu-call { display: flex; align-items: center; gap: 10px; padding: 6px 8px; }
+.gl-v2-menu-call-btn { width: 32px; height: 32px; flex: none; border-radius: 16px; background: #EDF2E8; color: var(--gl-v2-primary); display: flex; align-items: center; justify-content: center; text-decoration: none; }
+.gl-v2-menu-call-btn.is-tel { background: var(--gl-v2-primary); color: #fff; }
+.gl-v2-menu-call b { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+@media (max-width: 767.98px) {
+    .gl-v2-m-only { display: block; }
+    .gl-v2-d-only, .gl-v2-d-wrap { display: none !important; }
+
+    /* ── Topbar-kicker (65b): type · nummer boven de titel, 9,5 hoofdletters ─────────────────────────────────────────────────── */
+    .gl-v2-topbar-kicker { display: block; font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .12em; text-transform: uppercase; color: #B9CDB2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ── Kopkaart (.mx-hero): wit, vlak, volle breedte; scrolt mee weg ─────────────────────────────────────────────────────── */
+    .gl-v2-m-hero { display: flex; gap: 12px; align-items: center; padding: 14px 16px; background: var(--gl-v2-surface); margin: calc(-1 * var(--gl-v2-content-pad-y, 12px)) calc(-1 * var(--gl-v2-content-pad-x, 12px)) 0; }
+    .gl-v2-m-hero-photo { width: 52px; height: 52px; flex: none; border-radius: 12px; background: linear-gradient(135deg, #C9D6C0, #9FB396); display: flex; align-items: center; justify-content: center; color: var(--gl-v2-primary); font-size: 22px; overflow: hidden; }
+    .gl-v2-m-hero-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .gl-v2-m-hero-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .gl-v2-m-hero-name { font: 600 16px/1.3 var(--gl-v2-font-sans); color: #2C3B2A; }
+    .gl-v2-m-hero-sub { font: 450 12.5px var(--gl-v2-font-sans); color: #5A6B58; }
+    .gl-v2-m-hero-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+
+    /* ── Chip (.mx-chip) ──────────────────────────────────────────────────────────────────────────────────────────────── */
+    .gl-v2-m-chip { font-style: normal; display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 11px; background: #EDEFEB; color: #4A5B48; font: 600 11px var(--gl-v2-font-sans); white-space: nowrap; }
+    .gl-v2-m-chip.is-ok { background: #E4EEDD; color: #2F6038; }
+    .gl-v2-m-chip.is-gold { background: #F6EEDC; color: #6B5226; }
+    .gl-v2-m-chip.is-red { background: #F6E3E3; color: #8B2A2A; }
+
+    /* ── Pagina-body en kaart (.mx-body/.mx-card/.mx-ch) ──────────────────────────────────────────────────────────────── */
+    .gl-v2-m-stack { display: flex; flex-direction: column; gap: 12px; }
+    .gl-v2-m-card { background: var(--gl-v2-surface); border-radius: 14px; box-shadow: 0 1px 2px rgba(0, 83, 45, .05), 0 12px 26px -22px rgba(44, 59, 42, .45); overflow: hidden; flex: none; }
+    .gl-v2-m-card-head { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 0 10px 0 14px; }
+    .gl-v2-m-card-head > b, .gl-v2-m-card-head > h2 { margin: 0; font: 700 14px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+    .gl-v2-m-card-icon { width: 28px; height: 28px; flex: none; border-radius: 8px; background: #D6E5CC; color: var(--gl-v2-primary); display: flex; align-items: center; justify-content: center; font-size: 15px; }
+    .gl-v2-m-count { font: 600 11px var(--gl-v2-font-sans); color: #4A5B48; background: #EDEFEB; border-radius: 9px; padding: 1px 7px; }
+    .gl-v2-m-spacer { flex: 1; }
+    .gl-v2-m-link { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 6px; font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: none; }
+    .gl-v2-m-inner { padding: 2px 14px 14px; display: flex; flex-direction: column; gap: 8px; }
+
+    /* ── Rij (.mx-row/.mx-rt), "Alle N …"-rij (.mx-all), ronde knop (.mx-rb), avatar (.mx-av) ──────────────────────────── */
+    .gl-v2-m-row { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 14px; border-top: 1px solid rgba(44, 59, 42, .06); text-decoration: none; color: inherit; }
+    .gl-v2-m-rt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .gl-v2-m-rt > b { font: 600 14px var(--gl-v2-font-sans); color: #2C3B2A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .gl-v2-m-rt > small { font: 450 12px var(--gl-v2-font-sans); color: #5A6B58; }
+    .gl-v2-m-all[hidden] { display: none; }
+    .gl-v2-m-all:focus-visible { outline: 2px solid var(--gl-v2-primary); outline-offset: -3px; }
+    .gl-v2-m-row > .ph { color: #7A8A78; flex: none; }
+    .gl-v2-m-all { display: flex; align-items: center; justify-content: center; gap: 4px; height: 48px; margin: 0; border: 0; border-top: 1px solid rgba(44, 59, 42, .08); border-radius: 0; box-shadow: none; appearance: none; -webkit-appearance: none; cursor: pointer; font: 600 13.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: none; background: transparent; width: 100%; }
+    .gl-v2-m-roundbtn { width: 44px; height: 44px; flex: none; border-radius: 22px; background: #EDF2E8; color: var(--gl-v2-primary); display: flex; align-items: center; justify-content: center; border: 0; padding: 0; font-size: 18px; text-decoration: none; }
+    .gl-v2-m-avatar { width: 40px; height: 40px; flex: none; border-radius: 20px; background: #D6E5CC; color: var(--gl-v2-primary); display: flex; align-items: center; justify-content: center; font: 600 13px var(--gl-v2-font-sans); }
+    .gl-v2-m-amt { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .gl-v2-m-amt > b { font: 600 14px var(--gl-v2-font-sans); color: #2C3B2A; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .gl-v2-m-nr { font: 600 13px 'IBM Plex Mono', monospace; color: #2C3B2A; }
+    .gl-v2-m-eur { font: 600 14px var(--gl-v2-font-sans); color: #2C3B2A; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .gl-v2-m-pdf { width: 32px; height: 38px; flex: none; border-radius: 5px; background: #F6E3E3; color: #8B2A2A; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 5px; font: 700 8.5px var(--gl-v2-font-sans); }
+    .gl-v2-m-total { display: flex; justify-content: space-between; align-items: baseline; padding: 12px 14px; background: #F7F9F5; border-top: 1px solid rgba(44, 59, 42, .08); font: 500 12.5px var(--gl-v2-font-sans); color: #4A5B48; }
+    .gl-v2-m-total > b { font: 700 15px var(--gl-v2-font-sans); color: var(--gl-v2-primary); }
+
+    /* ── Zoekveld (.mx-search) en filterrij (.mx-pills) ───────────────────────────────────────────────────────────────── */
+    .gl-v2-m-search { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 14px; border-radius: 12px; background: var(--gl-v2-bg); box-shadow: inset 0 0 0 1px rgba(44, 59, 42, .12); color: #7A8A78; }
+    .gl-v2-m-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: 450 16px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+    .gl-v2-m-pills { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+    .gl-v2-m-pills::-webkit-scrollbar { display: none; }
+    .gl-v2-m-pills .gl-v2-pill { flex: none; }
+    .gl-v2-m-tool { flex: none; background: var(--gl-v2-surface); padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid rgba(44, 59, 42, .08);
+        margin: 0 calc(-1 * var(--gl-v2-content-pad-x, 12px)); position: sticky; top: calc(var(--gl-v2-m-topbar-live, var(--gl-v2-m-topbar-h, 56px)) + 48px); z-index: 25; }
+    /* Staan zoekbalk en lijst in dezelfde gsm-wrapper (geen flex-gap van .gl-v2-content), dan zorgt dit voor de blokafstand van 12. */
+    .gl-v2-m-tool + .gl-v2-m-stack { margin-top: 12px; }
+    .gl-v2-m-countline { display: flex; align-items: center; justify-content: space-between; padding: 0 2px; font: 600 11px var(--gl-v2-font-sans); letter-spacing: .06em; color: #5A6B58; text-transform: uppercase; }
+    .gl-v2-m-countline .gl-v2-m-link { text-transform: none; letter-spacing: 0; }
+
+    /* ── Voortgangsbalk (.pd-bar) en kleine kop (.pd-k) ───────────────────────────────────────────────────────────────── */
+    .gl-v2-m-k { font: 600 10px var(--gl-v2-font-sans); letter-spacing: .1em; color: #5A6B58; text-transform: uppercase; }
+    .gl-v2-m-bar { display: block; height: 6px; border-radius: 3px; background: #EDEFEB; overflow: hidden; margin-top: 4px; }
+    .gl-v2-m-bar > i { display: block; height: 100%; background: var(--gl-v2-primary); border-radius: 3px; }
+    .gl-v2-m-bar.is-blue > i { background: #2F4F7A; }
+
+    /* ── Kerncijfers 2 × 2 (.pd-kpi) ──────────────────────────────────────────────────────────────────────────────────── */
+    .gl-v2-m-kpi { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 12px; padding: 14px; }
+    .gl-v2-m-kpi > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .gl-v2-m-kpi b { font: 600 20px var(--gl-v2-font-sans); color: #2C3B2A; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .gl-v2-m-kpi small { font: 450 11.5px var(--gl-v2-font-sans); color: #5A6B58; }
+    .gl-v2-m-mini { grid-column: 1 / -1; margin: 0; padding-top: 10px; border-top: 1px solid rgba(44, 59, 42, .07); display: flex; gap: 14px; flex-wrap: wrap; font: 450 12px var(--gl-v2-font-sans); color: #5A6B58; }
+    .gl-v2-m-mini span { display: flex; gap: 5px; align-items: center; }
+    .gl-v2-m-mini em { font-style: normal; color: #2C3B2A; font-weight: 600; }
+
+    /* ── Traject (.pd-tr/.pd-tl/.pd-next) ─────────────────────────────────────────────────────────────────────────────── */
+    .gl-v2-m-tr { display: flex; flex-direction: column; gap: 2px; }
+    .gl-v2-m-tr span { font: 450 12px var(--gl-v2-font-sans); color: #5A6B58; }
+    .gl-v2-m-tr b { font: 600 16px var(--gl-v2-font-sans); color: #2C3B2A; }
+    .gl-v2-m-tl { display: flex; justify-content: space-between; font: 450 12.5px var(--gl-v2-font-sans); color: #4A5B48; margin-top: 4px; }
+    .gl-v2-m-tl b { color: #2C3B2A; }
+    .gl-v2-m-red { color: #8B2A2A; font-weight: 600; }
+    .gl-v2-m-next { margin-top: 6px; padding: 10px 12px; border-radius: 10px; background: #FBF1F1; display: flex; flex-direction: column; gap: 3px; }
+    .gl-v2-m-next b { font: 600 14px var(--gl-v2-font-sans); color: #2C3B2A; }
+    .gl-v2-m-next > span:last-child { display: flex; align-items: center; gap: 8px; font: 450 12.5px var(--gl-v2-font-sans); color: #4A5B48; }
+    .gl-v2-m-next em { font-style: normal; font-weight: 600; color: #8B2A2A; }
+
+    /* ── Gegevens (.pd-adr/.pd-dl/.pd-gap) en budget (.pd-b2) ─────────────────────────────────────────────────────────── */
+    .gl-v2-m-adr { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 0 10px; border-bottom: 1px solid rgba(44, 59, 42, .07); }
+    .gl-v2-m-adr > span:first-child { display: flex; flex-direction: column; gap: 3px; }
+    .gl-v2-m-adr b { font: 500 14px/1.4 var(--gl-v2-font-sans); color: #2C3B2A; }
+    .gl-v2-m-dl { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; margin: 4px 0 0; }
+    .gl-v2-m-dl > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .gl-v2-m-dl dt { font: 600 10px var(--gl-v2-font-sans); letter-spacing: .09em; color: #5A6B58; text-transform: uppercase; }
+    .gl-v2-m-dl dd { margin: 0; font: 500 13.5px/1.35 var(--gl-v2-font-sans); color: #2C3B2A; }
+    .gl-v2-m-gap { display: flex; align-items: center; gap: 8px; margin-top: 6px; padding: 8px 10px; border-radius: 10px; background: #FBF6EC; font: 450 12px var(--gl-v2-font-sans); color: #6B5226; }
+    .gl-v2-m-gap > span { flex: 1; }
+    .gl-v2-m-gap a { font-weight: 600; color: #6B5226; min-height: 32px; display: flex; align-items: center; }
+    .gl-v2-m-b2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .gl-v2-m-b2 > div { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border-radius: 10px; background: #F7F9F5; }
+    .gl-v2-m-b2 b { font: 600 17px var(--gl-v2-font-sans); color: #2C3B2A; font-variant-numeric: tabular-nums; }
+    .gl-v2-m-b2 small { font: 450 11.5px var(--gl-v2-font-sans); color: #5A6B58; }
+
+    /* ── Foto's (.pd-gal) ─────────────────────────────────────────────────────────────────────────────────────────────── */
+    .gl-v2-m-gal { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 0 14px 14px; }
+    .gl-v2-m-tile { aspect-ratio: 1; border-radius: 10px; overflow: hidden; display: block; background: #EDEFEB; }
+    .gl-v2-m-tile img, .gl-v2-m-tile video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .gl-v2-m-more { aspect-ratio: 1; border-radius: 10px; background: #EDF2E8; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: var(--gl-v2-primary); }
+    .gl-v2-m-more b { font: 600 17px var(--gl-v2-font-sans); }
+    .gl-v2-m-more small { font: 500 11.5px var(--gl-v2-font-sans); }
+
+    /* ── Vraagt actie, compact (.pd-va) ───────────────────────────────────────────────────────────────────────────────── */
+    .gl-v2-m-va { background: #FBF1F1; border-radius: 14px; overflow: hidden; box-shadow: 0 0 0 1px rgba(139, 42, 42, .22), 0 14px 28px -20px rgba(139, 42, 42, .6); flex: none; }
+    .gl-v2-m-va-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #8B2A2A; color: #fff; }
+    .gl-v2-m-va-icon { width: 32px; height: 32px; flex: none; border-radius: 9px; background: rgba(255, 255, 255, .16); display: flex; align-items: center; justify-content: center; font-size: 17px; }
+    .gl-v2-m-va-title { flex: 1; display: flex; flex-direction: column; }
+    .gl-v2-m-va-title b { font: 500 18px var(--gl-v2-font-serif); }
+    .gl-v2-m-va-title small { font: 500 11.5px var(--gl-v2-font-sans); color: #F3D4D4; }
+    .gl-v2-m-va-n { font-style: normal; min-width: 28px; height: 28px; border-radius: 14px; background: #fff; color: #8B2A2A; display: flex; align-items: center; justify-content: center; font: 700 13px var(--gl-v2-font-sans); }
+    .gl-v2-m-va-group { padding: 10px 14px 4px; font: 700 10px var(--gl-v2-font-sans); letter-spacing: .1em; color: #8B2A2A; text-transform: uppercase; }
+    .gl-v2-m-va-row { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 14px; border-top: 1px solid rgba(139, 42, 42, .1); text-decoration: none; background: #fff; color: inherit; }
+    .gl-v2-m-va-row:first-of-type { border-top: 0; }
+    .gl-v2-m-va-ico { width: 34px; height: 34px; flex: none; border-radius: 9px; background: #F6E3E3; color: #8B2A2A; display: flex; align-items: center; justify-content: center; font-size: 17px; }
+    .gl-v2-m-va-ico.is-gold { background: #F6EEDC; color: #6B5226; }
+    .gl-v2-m-va-row .gl-v2-m-rt small em { font-style: normal; color: #8B2A2A; font-weight: 600; }
+    .gl-v2-m-va details > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; height: 48px; border-top: 1px solid rgba(139, 42, 42, .14); font: 600 13.5px var(--gl-v2-font-sans); color: #8B2A2A; background: #FBF1F1; }
+    .gl-v2-m-va details > summary::-webkit-details-marker { display: none; }
+    .gl-v2-m-va details[open] > summary .gl-v2-m-va-open { display: none; }
+    .gl-v2-m-va details:not([open]) > summary .gl-v2-m-va-close { display: none; }
+
+    /* ── Verkooptraject in 3 stappen (.kl-steps) en klantkaart (.kl-c) ────────────────────────────────────────────────── */
+    .gl-v2-m-client { position: relative; padding: 0 0 12px; }
+    .gl-v2-m-client-head { display: flex; align-items: center; gap: 12px; padding: 12px 56px 8px 14px; text-decoration: none; min-height: 64px; color: inherit; }
+    .gl-v2-m-client-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .gl-v2-m-client-t b { font: 600 15px/1.3 var(--gl-v2-font-sans); color: #2C3B2A; }
+    .gl-v2-m-client-t small { font: 450 12.5px var(--gl-v2-font-sans); color: #5A6B58; }
+    .gl-v2-m-client-more { position: absolute; right: 8px; top: 10px; }
+    .gl-v2-m-client-meta { display: flex; align-items: center; gap: 10px; padding: 0 14px 0 66px; font: 450 12.5px var(--gl-v2-font-sans); color: #4A5B48; min-width: 0; }
+    .gl-v2-m-client-meta > span { display: flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gl-v2-m-steps { list-style: none; margin: 12px 14px 0; padding: 12px 0 0; border-top: 1px solid rgba(44, 59, 42, .07); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); position: relative; }
+    .gl-v2-m-step { display: flex; flex-direction: column; gap: 2px; position: relative; padding-top: 24px; min-width: 0; }
+    .gl-v2-m-step::before { content: ""; position: absolute; top: 8px; left: 18px; right: -2px; height: 2px; background: #E1E6DD; }
+    .gl-v2-m-step:last-child::before { display: none; }
+    .gl-v2-m-step.is-ok::before { background: #7A9E6E; }
+    .gl-v2-m-step > i { position: absolute; top: 0; left: 0; width: 18px; height: 18px; border-radius: 9px; background: #fff; box-shadow: inset 0 0 0 2px #C9D1C5; display: flex; align-items: center; justify-content: center; font-size: 11px; font-style: normal; }
+    .gl-v2-m-step.is-ok > i { background: var(--gl-v2-primary); box-shadow: none; color: #fff; }
+    .gl-v2-m-step.is-next > i { box-shadow: inset 0 0 0 2px #C9A96E; background: #FBF6EC; }
+    .gl-v2-m-step > span { font: 600 10px var(--gl-v2-font-sans); letter-spacing: .08em; color: #5A6B58; text-transform: uppercase; }
+    .gl-v2-m-step > b { font: 600 13px var(--gl-v2-font-sans); color: #2C3B2A; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .gl-v2-m-step:not(.is-ok) > b { font-weight: 450; color: #7A8A78; }
+    .gl-v2-m-step.is-next > b { color: #8A6A32; font-weight: 600; }
+}
+
+/* ── 64d: kruimelpad, tabbalk, bladen, zoeken ─────────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 767.98px) {
+    /* Onder de kicker-titel staat géén kruimelpad ("Projecten") — het voorbeeld toont enkel kicker + titel. */
+    .gl-v2-topbar-titles.has-kicker .breadcrumbs { display: none; }
+    /* Tussenruimte tussen blokken 12 (65a); kopkaart en tabbalk sluiten direct op elkaar aan. */
+    .gl-v2 .gl-v2-content { gap: 12px; }
+    /* Ruimte na de laatste tab zodat "Alle N" volledig buiten de vervaging rechts kan scrollen. */
+    .gl-v2-tabbar::after { content: ""; flex: 0 0 56px; }
+
+    /* Contextmenu/sheet (.mx-sheet): radius 20, grabber 36×5, titel 16/600, rijen 56 met ronde icoonknop 44, Annuleren 50 hoog. */
+    .gl-v2-menu-backdrop.is-open { background: rgba(31, 42, 30, .42); }
+    .gl-v2-menu.is-open { border-radius: 20px 20px 0 0; padding: 8px 14px calc(8px + env(safe-area-inset-bottom, 0px)); max-height: 90dvh; gap: 0; }
+    .gl-v2-menu.is-open::before { width: 36px; height: 5px; border-radius: 3px; background: #C9D1C5; margin: 0 auto 12px; }
+    .gl-v2-menu.is-open .gl-v2-menu-sheet-title { display: block; font: 600 16px var(--gl-v2-font-sans); color: #2C3B2A; padding: 0 2px 8px; }
+    .gl-v2-menu.is-open .gl-v2-menu-sheet-sub { display: block; font: 450 12.5px var(--gl-v2-font-sans); color: #5A6B58; margin: -6px 2px 6px; }
+    .gl-v2-menu.is-open .gl-v2-menu-item { min-height: 56px; padding: 8px 14px; gap: 12px; border-radius: 0; border-top: 1px solid rgba(44, 59, 42, .06); font: 600 14px var(--gl-v2-font-sans); color: #2C3B2A; }
+    .gl-v2-menu.is-open .gl-v2-menu-item > i:first-child { width: 44px; height: 44px; border-radius: 22px; background: #EDF2E8; color: var(--gl-v2-primary); font-size: 18px; }
+    .gl-v2-menu.is-open .gl-v2-menu-item-text { gap: 2px; flex: 1; }
+    .gl-v2-menu.is-open .gl-v2-menu-item-label { font: 600 14px var(--gl-v2-font-sans); color: #2C3B2A; }
+    .gl-v2-menu.is-open .gl-v2-menu-item-sub { font: 450 12px var(--gl-v2-font-sans); color: #5A6B58; }
+    .gl-v2-menu.is-open .gl-v2-menu-item.is-danger, .gl-v2-menu.is-open .gl-v2-menu-item.is-danger .gl-v2-menu-item-label { color: #8B2A2A; }
+    .gl-v2-menu.is-open .gl-v2-menu-item.is-danger > i:first-child { background: #F6E3E3; color: #8B2A2A; }
+    .gl-v2-menu.is-open .gl-v2-menu-divider { height: 8px; margin: 4px 0 0; background: none; border-top: 1px solid rgba(44, 59, 42, .1); }
+    .gl-v2-menu.is-open .gl-v2-menu-cancel, .gl-v2-pm-sheet-cancel { display: block; width: 100%; margin-top: 10px; height: 50px; border: 0; border-radius: 12px; background: #EDEFEB; font: 600 15px var(--gl-v2-font-sans); color: #2C3B2A; flex: none; }
+
+    /* Bellen-keuze: één rij per contactpersoon met nummer, sms- en belknop. */
+    .gl-v2-menu.is-open .gl-v2-menu-call { min-height: 72px; padding: 8px 14px; border-top: 1px solid rgba(44, 59, 42, .06); }
+    .gl-v2-menu-call .gl-v2-menu-item-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .gl-v2-menu-call b { font: 600 14px var(--gl-v2-font-sans); color: #2C3B2A; }
+    .gl-v2-menu-call-nr { font: 500 13.5px var(--gl-v2-font-sans); color: #2C3B2A; font-variant-numeric: tabular-nums; }
+    .gl-v2-menu-call small { font: 450 12px var(--gl-v2-font-sans); color: #5A6B58; }
+    .gl-v2-menu-call-btn { width: 44px; height: 44px; flex: none; border-radius: 22px; background: #EDF2E8; color: var(--gl-v2-primary); display: flex; align-items: center; justify-content: center; font-size: 18px; text-decoration: none; }
+    .gl-v2-menu-call-btn.is-tel { background: var(--gl-v2-primary); color: #fff; }
+
+    /* Projectbladen "Alle secties" (64d beeld 3): zelfde recept als de menusheet. */
+    .gl-v2-pm-sheet-backdrop { background: rgba(31, 42, 30, .42); }
+    .gl-v2-pm-sheet { border-radius: 20px 20px 0 0; max-height: 90dvh; padding: 8px 14px calc(8px + env(safe-area-inset-bottom, 0px)); box-sizing: border-box; }
+    .gl-v2-pm-sheet-handle { width: 36px; height: 5px; border-radius: 3px; background: #C9D1C5; margin: 0 auto 12px; }
+    .gl-v2-pm-sheet-title { flex: none; display: block; font: 600 16px var(--gl-v2-font-sans); color: #2C3B2A; padding: 0 2px 8px; }
+    .gl-v2-pm-sheet-list { padding: 0; gap: 0; }
+    .gl-v2-pm-sheet-grp { font: 600 10px var(--gl-v2-font-sans); letter-spacing: .1em; color: #8A6A32; padding: 8px 2px 6px; }
+    .gl-v2-pm-sheet-item { height: auto; min-height: 56px; padding: 8px 14px; gap: 12px; border-radius: 0; border-top: 1px solid rgba(44, 59, 42, .06); border-left: 0; font: 600 14px var(--gl-v2-font-sans); color: #2C3B2A; }
+    .gl-v2-pm-sheet-item:first-of-type { border-top: 0; }
+    .gl-v2-pm-sheet-item .gl-v2-pm-sheet-ico { width: 44px; height: 44px; flex: none; border-radius: 22px; background: #EDF2E8; color: var(--gl-v2-primary); display: flex; align-items: center; justify-content: center; }
+    .gl-v2-pm-sheet-item .gl-v2-pm-sheet-ico i { font-size: 18px; color: inherit; }
+    .gl-v2-pm-sheet-item.is-active { background: #F2F5EF; border-radius: 10px; border-left: 0; padding-left: 14px; color: var(--gl-v2-primary); }
+    .gl-v2-pm-sheet-item .gl-v2-pm-sheet-cnt { flex: none; font: 600 11px var(--gl-v2-font-sans); color: #4A5B48; background: #EDEFEB; border-radius: 9px; padding: 1px 7px; }
+    .gl-v2-pm-sheet-item > i:last-child { font-size: 15px; color: var(--gl-v2-primary); }
+
+    /* Zoeken (64d beeld 4): actief veld wit met groene rand, wis-knop, pillen en tabs wijken tijdens het zoeken. */
+    .gl-v2-m-search:focus-within, .gl-v2-m-tool.is-searching .gl-v2-m-search { background: #fff; box-shadow: inset 0 0 0 2px var(--gl-v2-primary); color: #2C3B2A; }
+    .gl-v2-m-search-x { width: 22px; height: 22px; flex: none; border-radius: 11px; border: 0; background: #9AA898; color: #fff; display: none; align-items: center; justify-content: center; padding: 0; font-size: 12px; position: relative; }
+    .gl-v2-m-search-x::before { content: ""; position: absolute; inset: -11px; }
+    .gl-v2-m-tool.is-searching .gl-v2-m-search-x { display: flex; }
+    .gl-v2-m-tool.is-searching .gl-v2-m-pills { display: none; }
+    body.gl-v2-searching .gl-v2-tabbar.gl-v2-pm-tabs { display: none; }
+    body.gl-v2-searching .gl-v2-m-tool { top: var(--gl-v2-m-topbar-live, var(--gl-v2-m-topbar-h, 56px)); }
+    .gl-v2-m-client-t mark { background: #F6EEDC; color: inherit; border-radius: 3px; padding: 0 1px; }
+}
+
+/* ── Leveranciers/contract (64g–64j): groepskaarten, leveranciersrij, contractdetail ─────────────────────────────────────── */
+@media (max-width: 767.98px) {
+    .gl-v2-m-lv { padding: 0; }
+    .gl-v2-m-lv.is-open-work { box-shadow: 0 0 0 1px rgba(201, 169, 110, .55); }
+    .gl-v2-m-lv-g { display: flex; align-items: center; gap: 8px; padding: 12px 14px 6px; font: 700 10px var(--gl-v2-font-sans); letter-spacing: .1em; color: #4A5B48; text-transform: uppercase; }
+    .gl-v2-m-lv-g i { font-style: normal; min-width: 20px; height: 18px; border-radius: 9px; background: #EDEFEB; display: flex; align-items: center; justify-content: center; padding: 0 5px; font: 700 10.5px var(--gl-v2-font-sans); letter-spacing: 0; }
+    .gl-v2-m-lv-g.is-gold { color: #8A6A32; }
+    .gl-v2-m-lv-g.is-gold i { background: #F6EEDC; color: #6B5226; }
+    .gl-v2-m-lv-r { position: relative; border-top: 1px solid rgba(44, 59, 42, .06); padding: 0 0 12px; }
+    .gl-v2-m-lv-r[hidden] { display: none; }
+    .gl-v2-m-lv-hd { display: flex; align-items: flex-start; gap: 12px; padding: 12px 56px 6px 14px; text-decoration: none; color: inherit; }
+    .gl-v2-m-lv-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .gl-v2-m-lv-t b { font: 600 14.5px/1.3 var(--gl-v2-font-sans); color: #2C3B2A; }
+    .gl-v2-m-lv-t small { font: 450 12.5px var(--gl-v2-font-sans); color: #5A6B58; }
+    .gl-v2-m-lv-t em.is-o { font-style: normal; color: #8A6A32; font-weight: 600; }
+    .gl-v2-m-lv-a { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex: none; }
+    .gl-v2-m-lv-a b { font: 600 14px var(--gl-v2-font-sans); color: #2C3B2A; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .gl-v2-m-lv-a small { font: 450 11.5px var(--gl-v2-font-sans); color: #7A8A78; white-space: nowrap; }
+    .gl-v2-m-lv-more { position: absolute; right: 6px; top: 8px; }
+    .gl-v2-m-lv-sub { display: flex; align-items: center; gap: 6px; margin: 0 14px; padding: 7px 10px; border-radius: 8px; font: 450 12px var(--gl-v2-font-sans); color: #4A5B48; }
+    .gl-v2-m-lv-sub.is-gold { background: #FBF6EC; color: #6B5226; }
+    .gl-v2-m-lv-sub em { font-style: normal; font-weight: 600; }
+    .gl-v2-m-lv-bar { display: block; height: 6px; margin: 4px 14px 0; border-radius: 3px; background: #EDEFEB; overflow: hidden; }
+    .gl-v2-m-lv-bar i { display: block; height: 100%; background: #7A9E6E; border-radius: 3px; }
+    .gl-v2-m-lv-bar.is-o i { background: #C9A96E; }
+    .gl-v2-m-lv-z { position: relative; }
+    .gl-v2-m-lv-z .gl-v2-m-rt > b { font-weight: 500; white-space: normal; }
+    .gl-v2-m-lv-z .gl-v2-m-lv-a b { font-weight: 500; }
+    .gl-v2-m-lv-z[hidden] { display: none; }
+    .gl-v2-m-lv-empty { padding: 18px 14px; font: 450 13px var(--gl-v2-font-sans); color: #5A6B58; text-align: center; }
+
+    /* Leveranciersblad (64h): kop met naam + chip, hoofdknop, rijen */
+    .gl-v2-menu.is-open .gl-v2-m-lv-sh { display: flex; align-items: flex-start; gap: 10px; padding: 2px 2px 12px; }
+    .gl-v2-menu.is-open .gl-v2-m-lv-sh .gl-v2-m-lv-t b { font: 600 16px var(--gl-v2-font-sans); }
+    .gl-v2-menu.is-open .gl-v2-m-lv-pri { height: 48px; border: 0; border-radius: 12px; background: var(--gl-v2-primary); color: #fff; font: 600 15px var(--gl-v2-font-sans); display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 6px; flex: none; text-decoration: none; width: 100%; }
+    .gl-v2-menu.is-open .gl-v2-menu-item.is-off { opacity: .45; pointer-events: none; }
+
+    /* Contractdetail (64i): kopkaart met icoon, vraagt-actie in goud, attesten, loten */
+    .gl-v2-m-hero-ic { width: 52px; height: 52px; flex: none; border-radius: 12px; background: #EDF2E8; color: var(--gl-v2-primary); display: flex; align-items: center; justify-content: center; font-size: 24px; }
+    .gl-v2-m-va.is-gold { background: #FBF6EC; box-shadow: 0 0 0 1px rgba(201, 169, 110, .5), 0 14px 28px -20px rgba(138, 106, 50, .55); }
+    .gl-v2-m-va.is-gold .gl-v2-m-va-head { background: #8A6A32; }
+    .gl-v2-m-va.is-gold .gl-v2-m-va-title small { color: #F3E6CC; }
+    .gl-v2-m-va.is-gold .gl-v2-m-va-n { color: #8A6A32; }
+    .gl-v2-m-va.is-gold .gl-v2-m-va-row { border-top-color: rgba(138, 106, 50, .12); }
+    .gl-v2-m-va-act { flex: none; font: 600 13px var(--gl-v2-font-sans); color: var(--gl-v2-primary); min-height: 44px; display: flex; align-items: center; }
+    .gl-v2-m-kpi small.is-o { color: #8A6A32; font-weight: 600; }
+    .gl-v2-m-empty { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; font: 450 13px/1.5 var(--gl-v2-font-sans); color: #4A5B48; }
+    .gl-v2-m-sec { height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid rgba(0, 83, 45, .4); background: #fff; color: var(--gl-v2-primary); font: 600 13.5px var(--gl-v2-font-sans); display: flex; align-items: center; gap: 6px; text-decoration: none; }
+    .gl-v2-m-st { width: 24px; height: 24px; flex: none; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+    .gl-v2-m-st.is-ok { background: #D6E5CC; color: var(--gl-v2-primary); }
+    .gl-v2-m-st.is-no { background: #8B2A2A; color: #fff; }
+    .gl-v2-m-sv { font: 500 12.5px var(--gl-v2-font-sans); color: #5A6B58; }
+    .gl-v2-m-sv.is-no { color: #8B2A2A; font-weight: 600; }
+    .gl-v2-m-tip { margin: 0 14px 10px; padding: 8px 10px; border-radius: 8px; background: #F7F9F5; font: 450 12px/1.45 var(--gl-v2-font-sans); color: #5A6B58; }
+    .gl-v2-m-contract-name { font: 700 10px var(--gl-v2-font-sans); letter-spacing: .1em; color: #8A6A32; text-transform: uppercase; padding: 4px 2px 0; }
+
+    /* Werfleider kiezen (64j): radiorijen in een blad */
+    .gl-v2-menu.is-open .gl-v2-m-rad { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 14px; border-top: 1px solid rgba(44, 59, 42, .06); cursor: pointer; margin: 0; }
+    .gl-v2-menu.is-open .gl-v2-m-rad:has(input:checked) { background: #F2F5EF; border-radius: 10px; }
+    .gl-v2-m-rad input { position: absolute; opacity: 0; pointer-events: none; }
+    .gl-v2-m-rd { width: 22px; height: 22px; flex: none; border-radius: 11px; box-shadow: inset 0 0 0 2px #9AA898; }
+    .gl-v2-m-rad input:checked ~ .gl-v2-m-rd { box-shadow: inset 0 0 0 7px var(--gl-v2-primary); }
+    .gl-v2-m-rad input:focus-visible ~ .gl-v2-m-rd { outline: 2px solid var(--gl-v2-primary); outline-offset: 2px; }
+}
+
+/* ── Contractdetail-tabs Facturen · Leverancier · Portaal (64k–64m) ─────────────────────────────────────────────────────── */
+.gl-v2-tab-m { display: none; }
+@media (max-width: 767.98px) {
+    .gl-v2-tab-d { display: none; }
+    .gl-v2-tab-m { display: inline; }
+    .gl-v2-m-card-pills { padding: 0 14px 6px; }
+    .gl-v2-m-row[hidden] { display: none; }
+    .gl-v2-m-all[hidden] { display: none; }
+    .gl-v2-m-amt { align-items: flex-end; }
+    .gl-v2-m-loss { display: flex; gap: 8px; align-items: flex-start; padding: 8px 14px 12px; background: #fff; font: 450 12.5px/1.45 var(--gl-v2-font-sans); color: #6B2222; }
+    .gl-v2-m-loss b { font-weight: 700; }
+    .gl-v2-m-loss i { flex: none; margin-top: 2px; }
+    .gl-v2-m-vall { display: flex; align-items: center; justify-content: center; gap: 4px; height: 48px; border-top: 1px solid rgba(139, 42, 42, .14); font: 600 13.5px var(--gl-v2-font-sans); color: #8B2A2A; text-decoration: none; background: #FBF1F1; }
+    .gl-v2-m-va.is-gold .gl-v2-m-vall { border-top-color: rgba(138, 106, 50, .2); color: #8A6A32; background: #FBF6EC; }
+    .gl-v2-m-va.is-gold .gl-v2-m-loss { background: #FBF6EC; color: #6B5226; }
+    .gl-v2-m-ov { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: #EDEFEB; margin-top: 2px; }
+    .gl-v2-m-ovc { background: var(--gl-v2-primary); }
+    .gl-v2-m-ovx { background: #C9A96E; }
+    .gl-v2-m-lg { display: flex; flex-direction: column; gap: 4px; font: 450 12.5px var(--gl-v2-font-sans); color: #4A5B48; }
+    .gl-v2-m-lg span { display: flex; align-items: center; gap: 6px; }
+    .gl-v2-m-lg i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+    .gl-v2-m-lg i.is-g { background: var(--gl-v2-primary); }
+    .gl-v2-m-lg i.is-o { background: #C9A96E; }
+    .gl-v2-m-dl-pad { padding: 0 14px 14px; margin: 0; }
+    .gl-v2-m-info { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: #E3EAF3; font: 450 12.5px/1.5 var(--gl-v2-font-sans); color: #22385A; flex: none; }
+    .gl-v2-m-info i { flex: none; margin-top: 2px; font-size: 15px; }
+    .gl-v2-m-kv { display: flex; flex-direction: column; }
+    .gl-v2-m-k2 { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 60px; padding: 8px 14px; border-top: 1px solid rgba(44, 59, 42, .06); }
+    .gl-v2-m-k2:first-child { border-top: 0; }
+    .gl-v2-m-k2 > span:first-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .gl-v2-m-k2 b { font: 500 14px var(--gl-v2-font-sans); color: #2C3B2A; overflow-wrap: anywhere; }
+    .gl-v2-m-cp { align-items: flex-start; padding-top: 12px; padding-bottom: 12px; }
+    .gl-v2-m-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; align-items: center; }
+    .gl-v2-m-pair { display: flex; gap: 4px; flex: none; }
+    .gl-v2-m-mut { font: 450 11.5px var(--gl-v2-font-sans); color: #7A8A78; }
+    .gl-v2-m-row.is-here { background: #F2F5EF; }
+    .gl-v2-m-port-h { display: flex; flex-direction: column; gap: 3px; padding: 14px 14px 8px; }
+    .gl-v2-m-port-h b { font: 600 16px var(--gl-v2-font-sans); color: #2C3B2A; }
+    .gl-v2-m-port-h small { font: 450 12px var(--gl-v2-font-sans); color: #5A6B58; }
+    .gl-v2-m-btns { display: flex; gap: 10px; align-items: center; padding: 4px 14px 14px; flex-wrap: wrap; }
+    .gl-v2-m-btns form { margin: 0; }
+    .gl-v2-m-del { height: 44px; padding: 0 10px; border: 0; background: none; color: #8B2A2A; font: 600 13.5px var(--gl-v2-font-sans); }
+    .gl-v2-m-lvl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 14px 14px; }
+    .gl-v2-m-lvl > div { border-radius: 12px; padding: 10px 12px; box-shadow: inset 0 0 0 1px rgba(44, 59, 42, .14); display: flex; flex-direction: column; gap: 4px; }
+    .gl-v2-m-lvl > div.is-on { box-shadow: inset 0 0 0 2px var(--gl-v2-primary); background: #F2F5EF; }
+    .gl-v2-m-lvl b { font: 600 13.5px var(--gl-v2-font-sans); color: #2C3B2A; }
+    .gl-v2-m-lvl small { font: 450 11.5px/1.45 var(--gl-v2-font-sans); color: #5A6B58; }
+}

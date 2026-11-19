@@ -550,6 +550,15 @@
     .gl-v2-field-box.gl-v2-field-box-textarea { height: auto; min-height: 104px; }
 }
 
+/* Telefoon + touch: invoer 16px. iOS Safari zoomt de pagina in bij focus op een veld kleiner dan 16px en zoomt niet terug;
+   dit stond per pagina los gepatcht (marktanalyse, eenheden, betaalgroepen …) en ontbrak elders. Eén regel, voor alle gl-v2-velden.
+   De hoogte (44px) blijft; enkel de tekstgrootte in het veld stijgt. */
+@media (max-width: 767.98px) and (pointer: coarse) {
+    .gl-v2 .gl-v2-field-input,
+    .gl-v2 .gl-v2-select-trigger,
+    .gl-v2 .gl-v2-select-search input { font-size: 16px; }
+}
+
 /* ── Keuzerondje (.gl-v2-radio) en keuzekaart (.gl-v2-radio-card) ───────────────────────────────────────────────
    Opt-in: de klasse staat op het <label> rond een gewone <input type="radio"> (zo blijft elke bestaande radio met eigen opmaak,
    zoals segmentknoppen en kaarten met verborgen input, ongemoeid). Standaard, hover, gekozen, toetsenbordfocus en uitgeschakeld. */

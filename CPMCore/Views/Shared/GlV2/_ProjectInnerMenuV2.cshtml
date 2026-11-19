@@ -206,52 +206,63 @@ else
 {
     @* ── Gsm (<768px, design-handoff 9c): groene "waar ben ik"-balk, tikken opent een volledig blad ── *@
     <div class="gl-v2-project-menu">
-        <div class="gl-v2-pm-phone">
-            <button type="button" class="gl-v2-pm-phone-trigger js-gl-v2-pm-open" aria-haspopup="dialog" aria-expanded="false" aria-controls="gl-v2-pm-sheet">
-                <i class="ph @activeIcon" aria-hidden="true"></i>
-                <span class="gl-v2-pm-phone-trigger-text">
-                    <span class="gl-v2-pm-phone-trigger-name">@activeText</span>
-                    <span class="gl-v2-pm-phone-trigger-sub">@activeGroupLabel · @totalItemCount ingangen</span>
-                </span>
-                <i class="ph ph-caret-down" aria-hidden="true"></i>
+        @* Mobiele componenten 65c / 64c / 64e: de secties van het project staan op gsm als TABS direct onder de topbar (zelfde niveau op elke projectpagina);
+           het groene uitklapblok is weg. De laatste tab "Alle N" opent het blad met alle ingangen (64d). *@
+        @{
+            var tabLabels = new[] { ("Project", "Overzicht"), ("Klanten", "Klanten"), ("Leveranciers", "Leveranciers"), ("Planning", "Planning"), ("Punten", "Punten"), ("Verslagen", "Verslagen"), ("Documenten", "Documenten") };
+            var phoneTabs = tabLabels
+                .Select(t => (Label: t.Item2, Item: allItems.Select(x => x.Item).FirstOrDefault(i => i.Text == t.Item1)))
+                .Where(t => t.Item.Text is not null)
+                .ToList();
+            var activeInTabs = phoneTabs.Any(t => t.Item.Active);
+        }
+        <nav class="gl-v2-tabbar gl-v2-pm-tabs" role="tablist" aria-label="Secties van het project">
+            @foreach (var t in phoneTabs)
+            {
+                <a class="gl-v2-tabbar-tab @(t.Item.Active ? "is-active" : "")" role="tab" aria-selected="@(t.Item.Active ? "true" : "false")" href="@t.Item.Href">@t.Label@if (t.Item.Count.HasValue) {<span class="gl-v2-tabbar-count">@t.Item.Count</span>}</a>
+            }
+            <button type="button" class="gl-v2-tabbar-tab gl-v2-pm-tab-all js-gl-v2-pm-open @(activeInTabs ? "" : "is-active")" aria-haspopup="dialog" aria-expanded="false" aria-controls="gl-v2-pm-sheet">
+                <i class="ph ph-squares-four" aria-hidden="true"></i>Alle @totalItemCount
             </button>
-        </div>
+        </nav>
 
         <div class="gl-v2-pm-sheet-backdrop js-gl-v2-pm-close" id="gl-v2-pm-sheet-backdrop" hidden></div>
-        <div class="gl-v2-pm-sheet" id="gl-v2-pm-sheet" role="dialog" aria-modal="true" aria-label="Projectmenu" hidden>
+        @* 64d beeld 3: "Alle secties · {project}" — eerst de secties die als tab vastzitten, dan de andere; rijen met ronde icoonknop, teller en vinkje bij de huidige. *@
+        @{
+            var tabHrefs = phoneTabs.Select(t => t.Item.Href).ToHashSet();
+            var otherItems = allItems.Select(x => x.Item).Where(i => !tabHrefs.Contains(i.Href)).ToList();
+            var tabRows = phoneTabs.Select(t => (Text: t.Label, t.Item.Icon, t.Item.Href, t.Item.Active, t.Item.Count)).ToList();
+            var otherRows = otherItems.Select(i => (i.Text, i.Icon, i.Href, i.Active, i.Count)).ToList();
+        }
+        <div class="gl-v2-pm-sheet" id="gl-v2-pm-sheet" role="dialog" aria-modal="true" aria-label="Alle secties" hidden>
             <div class="gl-v2-pm-sheet-handle" aria-hidden="true"></div>
-            <div class="gl-v2-pm-sheet-header">
-                <span class="gl-v2-pm-sheet-title">@Model.ProjectName</span>
-                <button type="button" class="gl-v2-pm-sheet-close js-gl-v2-pm-close" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
-            </div>
-            @if (showSearch)
-            {
-                <div class="gl-v2-pm-search">
-                    <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
-                    <input type="search" class="js-gl-v2-pm-search" placeholder="Zoek in dit dossier …" aria-label="Zoek in dit dossier" />
-                </div>
-            }
+            <b class="gl-v2-pm-sheet-title">Alle secties · @Model.ProjectName</b>
             <div class="gl-v2-pm-sheet-list">
-                @foreach (var group in groups)
+                <div class="gl-v2-pm-sheet-grp">VAST IN DE TABS</div>
+                @foreach (var item in tabRows)
                 {
-                    <div class="gl-v2-pm-group" data-pm-group>
-                        <div class="gl-v2-pm-group-label">@group.Label.ToUpperInvariant()</div>
-                        @foreach (var item in group.Items)
-                        {
-                            <a class="gl-v2-pm-sheet-item @(item.Active ? "is-active" : "")" href="@item.Href" data-pm-item-text="@item.Text.ToLowerInvariant()">
-                                <i class="ph @item.Icon" aria-hidden="true"></i>
-                                <span>@item.Text</span>
-                                @if (item.Active && item.Count.HasValue)
-                                {
-                                    <span class="gl-v2-pm-item-count">@item.Count</span>
-                                }
-                                <i class="ph @(item.Active ? "ph-check" : "ph-caret-right")" aria-hidden="true"></i>
-                            </a>
-                        }
-                    </div>
+                    <a class="gl-v2-pm-sheet-item @(item.Active ? "is-active" : "")" href="@item.Href">
+                        <span class="gl-v2-pm-sheet-ico"><i class="ph @item.Icon" aria-hidden="true"></i></span>
+                        <span>@item.Text</span>
+                        @if (item.Count.HasValue) { <span class="gl-v2-pm-sheet-cnt">@item.Count</span> }
+                        @if (item.Active) { <i class="ph ph-check" aria-hidden="true"></i> }
+                    </a>
                 }
-                <div class="gl-v2-pm-empty" data-pm-empty hidden>Geen ingang gevonden.</div>
+                @if (otherRows.Count > 0)
+                {
+                    <div class="gl-v2-pm-sheet-grp">ANDERE SECTIES · @otherRows.Count</div>
+                    @foreach (var item in otherRows)
+                    {
+                        <a class="gl-v2-pm-sheet-item @(item.Active ? "is-active" : "")" href="@item.Href">
+                            <span class="gl-v2-pm-sheet-ico"><i class="ph @item.Icon" aria-hidden="true"></i></span>
+                            <span>@item.Text</span>
+                            @if (item.Count.HasValue) { <span class="gl-v2-pm-sheet-cnt">@item.Count</span> }
+                            @if (item.Active) { <i class="ph ph-check" aria-hidden="true"></i> }
+                        </a>
+                    }
+                }
             </div>
+            <button type="button" class="gl-v2-pm-sheet-cancel js-gl-v2-pm-close">Annuleren</button>
         </div>
     </div>
 }

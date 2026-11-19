@@ -306,6 +306,9 @@
 
     /* Type 2 → volledig scherm, groene kop (zelfde taal als de mobiele topbar elders in gl-v2:
        dashed-border logo-achtige kader wordt hier de sluitknop, serif titel in het wit). */
+    /* Breedte expliciet: `.gl-v2-modal-form .modal-dialog { width: 500px }` (en per-pagina varianten van 520px e.d.) wint anders
+       van Bootstrap's `.modal-fullscreen-md-down { width: 100vw }` en laat het "volledig scherm" op 375px 500px breed. */
+    .modal.gl-v2-modal-form .modal-dialog { width: 100%; max-width: 100%; margin: 0; }
     .gl-v2-modal-form .modal-content { border-radius: 0; height: 100%; display: flex; flex-direction: column; }
     .gl-v2-modal-form .modal-header {
         background: var(--gl-v2-primary);

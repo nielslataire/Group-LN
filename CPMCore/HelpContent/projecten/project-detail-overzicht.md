@@ -3,9 +3,9 @@ title: De stand van een project bekijken
 topic: projecten
 treeOrder: 2
 role: Projectleider
-device: Desktop · tablet
+device: Desktop · tablet · gsm
 minutes: 3
-updated: 2026-10-12
+updated: 2026-11-19
 screens: projecten-detail
 synonyms: projectdossier, projectpagina, kpi, kerncijfers, acties vereist
 newsTag: Nieuw
@@ -21,7 +21,7 @@ faq:
   - q: Kan ik de cijfers zelf aanpassen?
     a: Nee. Het zijn samenvattingen. De fysieke voortgang pas je aan via de activiteiten in de nacalculatie. De financiële voortgang volgt vanzelf uit contracten en facturen.
   - q: Kan ik het linkermenu ook op gsm gebruiken?
-    a: Ja. Via het hamburgermenu bovenaan staan dezelfde onderdelen als lijst.
+    a: Ja. Op gsm staan de onderdelen van het project als tabs onder de groene balk. Tik op **Alle** achteraan voor de volledige lijst met alle onderdelen van het project.
 ---
 ## Titel, status en knoppen lezen
 
@@ -33,6 +33,18 @@ verderop. Hoe je dat paneel gebruikt, lees je in "Zien wat een project nog tegen
 
 **Bewerken** opent het formulier om het project aan te passen. De knop **?** opent dit Helpcentrum met
 artikels voor precies dit scherm.
+
+## Op je gsm
+
+Op een gsm staat de pagina in een andere volgorde, zodat je minder moet scrollen.
+
+1. Bovenaan zie je de projectnaam met de projectcode erboven, en een kaart met adres, projectleider en de stand van het project.
+2. Eronder staan de tabs **Overzicht**, **Klanten**, **Leveranciers**, **Planning**, **Punten**, **Verslagen** en **Documenten**. Tik op **Alle** voor de rest.
+3. **Vraagt actie** toont de drie dringendste punten. Tik op **Alle bekijken** voor de rest.
+4. Daarna volgen de kerncijfers, het traject, de eenheden, de gegevens, het budget, de facturen, de documenten en de foto's.
+5. Bij **Gegevens** kopieer je het adres of open je de route. Velden die nog leeg zijn staan samen in een gouden regel met **Aanvullen**.
+
+In de groene balk onderaan tik je op **Foto**, **Document**, **Planning** of **Werfpunt**.
 
 ## De zes kerncijfers lezen
 

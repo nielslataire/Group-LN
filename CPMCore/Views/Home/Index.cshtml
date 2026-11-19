@@ -93,7 +93,7 @@ else
     {
         @* Boekhouding (design-handoff 1a): de acties die al bestaan en geen projectkeuze nodig hebben. Klant/Leverancier zoeken
            openen dezelfde modals als bij de projectleider (gerenderd in _DashboardBoekhoudingV2.cshtml). *@
-        <a href="@Url.Action("Create", "Invoices")" class="gl-v2-mobile-quickaction">
+        <a href="@Url.Action("Create", "Invoices")" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary">
             <i class="ph ph-file-plus" aria-hidden="true"></i>Factuur
         </a>
         <a href="@Url.Action("Index", "DocumentenCentrum")" class="gl-v2-mobile-quickaction">
@@ -126,7 +126,7 @@ else
            project? dan navigeert de link rechtstreeks; anders opent 'ie eerst de projectkiezer-modal,
            geen apart gl-punt-sheet meer nodig hier. Dat sheet blijft enkel nog bestaan voor de legacy
            #mob-nav-punt (zie _DashboardProjectleider.cshtml). *@
-        <a href="#" class="gl-v2-mobile-quickaction js-gl-v2-sa-project-action" id="gl-v2-qa-punt" data-url-template="/Projects/{id}/Issues/Create">
+        <a href="#" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary js-gl-v2-sa-project-action" id="gl-v2-qa-punt" data-url-template="/Projects/{id}/Issues/Create">
             <i class="ph ph-warning-circle" aria-hidden="true"></i>Punt
         </a>
         <button type="button" class="gl-v2-mobile-quickaction" id="gl-v2-qa-lev-search" data-bs-toggle="modal" data-bs-target="#glV2LevSearchModal">

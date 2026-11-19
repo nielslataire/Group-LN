@@ -30,6 +30,9 @@ public class PaymentGroupEditV2Vm
     /// <summary>Bij een nieuwe groep die uit een bron voorgevuld werd: de naam van die bron (voor de hint).</summary>
     public string? CopiedFromName { get; set; }
     public decimal Total => Stages.Sum(s => s.Percentage);
+
+    /// <summary>Minstens één schijf van de groep is al gefactureerd: namen, percentages en het aantal schijven liggen voor de hele groep vast (koppelen aan eenheden en planning kan nog).</summary>
+    public bool GroupInvoiced { get; set; }
 }
 
 public class PaymentGroupVatOptionV2

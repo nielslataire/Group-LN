@@ -3,9 +3,9 @@ title: Het contract van een leverancier bekijken
 topic: projecten
 parent: project-leveranciers-overzicht
 role: Projectleider
-device: Desktop · tablet
+device: Desktop · tablet · gsm
 minutes: 4
-updated: 2026-11-16
+updated: 2026-11-20
 screens: projecten-leverancier-detail
 synonyms: contractdetail, loten, bijbestellingen, waarborg, werfmelding, vgm-charter, pid-attest
 description: contractprijs, voorwaarden, attesten en loten van één leverancier
@@ -48,6 +48,19 @@ ontbreekt. **Bewerken** past deze gegevens aan.
 
 De tabel **Loten & bijbestellingen** toont elk lot met zijn basisprijs. Een bijbestelling verhoogt de
 prijs van haar lot en staat er als sublijn onder. Onderaan staat de totale contractprijs.
+
+## Op je gsm
+
+Bovenaan staat een kopkaart met de leverancier, wat hij doet en de stand van het contract. Zijn de facturen hoger dan het contract, dan zie je dat meteen als gouden label. Met de pijl linksboven ga je terug naar de leverancierslijst.
+
+1. **Vraagt actie** staat in goud en toont wat het contract tegenhoudt. Rechts staat de actie: **Herinnering** of **Opvragen** opent een mail naar de leverancier, **Kiezen** opent de keuze van de werfleider.
+2. De kerncijfers staan in één kaart: contractprijs, betaaltermijn, gefactureerd en waarborg. Daaronder staan de btw en de verzend- of tekendatum.
+3. Bij **Werfleider aannemer** bel of mail je de werfleider met de ronde knoppen. Is er nog geen werfleider, tik dan op **Werfleider kiezen**, tik de persoon aan in de lijst en bevestig met **{naam} als werfleider**. De lijst toont de contactpersonen van de leverancier.
+4. **Veiligheid & attesten** toont per attest een vinkje of kruisje met de stand.
+5. **Loten en bijbestellingen** toont het bedrag per lot en onderaan de contractprijs.
+6. In de groene balk onderaan tik je op **Bellen**, **Mailen**, **Attest** (PID-attesten opvragen) of **Bijbestelling**. Een knop die niet kan, is grijs: tik erop en CPM zegt waarom. Onder **Meer** vind je **Voorwaarden bewerken**, **Leverancierfiche** en **Contract verwijderen**. Verwijderen kan niet zolang er facturen zijn.
+
+De tabs Facturen, Leverancier en Portaaltoegang staan er gewoon onder de kopkaart.
 
 ## De andere tabbladen
 

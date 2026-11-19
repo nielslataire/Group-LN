@@ -1,7 +1,9 @@
 # Bouwplanning – stand van zaken 19/11/2026 (overdracht naar een andere pc)
 
 Lees dit eerst, daarna `PLANNING_SJABLOON_OVERDRACHT.md` (bevestigde bouwvolgorde en besluiten) en `PLANNING_VOORTGANG.md` (logboek per dag).
-Alles hieronder is gebouwd, gebuild en getest met unit tests (**82 planningtests slagen**), maar **nog niet systematisch in de browser getest**. Er is **niets gecommit**: commit en push eerst op de oude pc, anders staat het werk niet op de nieuwe.
+Alles hieronder is gebouwd, gebuild en getest met unit tests (**90 planningtests slagen**), maar **nog niet systematisch in de browser getest**. Er is **niets gecommit**: commit en push eerst op de oude pc, anders staat het werk niet op de nieuwe.
+
+> **Update 19/11 avond:** zie onderaan `PLANNING_VOORTGANG.md` (sectie "test- en correctieronde"): schijven lezen de groep via `UnitConstructionValue`, de hoofdplanning mag eigen eenheden hebben, meerdere schijven per taak met zoekveld.
 
 ## 1. Eerst doen op de nieuwe pc
 1. Haal de branch `layout-experiment` binnen (na commit/push op de oude pc).
@@ -9,6 +11,7 @@ Alles hieronder is gebouwd, gebuild en getest met unit tests (**82 planningtests
    - `145_MeerderePlannings.sql`, `146_PlanningSjablonen.sql`, `147_PlanningSjabloonBeheer.sql` (al gedraaid op de live DB).
    - `149_PlanningEenheden.sql`: planning hoort bij eenheden (tabel `BouwPlanningEenheid`). (148 is `ProjectSlugHistoriek`, niet van de planning.)
    - `150_PlanningUitvoerder.sql`: `UitvoerderCompanyId` bij `PlanningSectie` en `PlanningTaak`.
+   - `151_PlanningSchijfKoppeling.sql`: schijven per planning aan een taak of fase koppelen (tabel `PlanningSchijfKoppeling`).
 3. Rechten: `Settings.Planningssjablonen` toekennen aan rollen die sjablonen mogen beheren.
 4. Build/test: CPMCore bouwen met een tijdelijke uitvoermap als de app draait (`-p:OutDir="$TEMP/cpmout/"`); tests met `dotnet build ServiceCore.Tests --no-dependencies` en dan `dotnet test ServiceCore.Tests --no-build --filter "FullyQualifiedName~Planning"`.
 5. Na een wijziging aan een `.cshtml`: de app herstarten en Ctrl+F5.
@@ -23,7 +26,8 @@ Alles hieronder is gebouwd, gebuild en getest met unit tests (**82 planningtests
 Test van de eigen planning (Villa/EM, 73 taken, 19 fases, 88 voorgangers): einde nu 18/10/2027 tegenover 19/10/2027 in MS Project (verschil door de kalender).
 
 ## 3. Volgende stappen (afgesproken volgorde)
-1. **Weergave "Planning van [aannemer]"**: alle taken van één uitvoerder uit alle plannings, met woning/planning, start en einde; print/PDF; delen via het leveranciersportaal later. (Effectieve uitvoerder per rij staat al in de staat: `UitvoerderEffectiefId/Naam`.)
+1. ~~**Weergave "Planning van [aannemer]"**~~ gebouwd (tab Per aannemer); portaal/Gantt per aannemer nog niet. **Ook gebouwd later op 19/11:** rechtsklikmenu, schijfkoppeling (migratie **151** vóór app-start), betalingsgroep vast na facturatie, fase 4 deels (slepen). Zie PLANNING_VOORTGANG.md.
+   (oorspronkelijk:) **Weergave "Planning van [aannemer]"**: alle taken van één uitvoerder uit alle plannings, met woning/planning, start en einde; print/PDF; delen via het leveranciersportaal later. (Effectieve uitvoerder per rij staat al in de staat: `UitvoerderEffectiefId/Naam`.)
 2. **Stap 2 uit de bouwvolgorde: schijvensjabloon.** Een betalingsgroep heeft voor al haar eenheden dezelfde schijven, maar elke eenheid bereikt een schijf op een ander moment (via de taak/fase in de planning van die eenheid). Minimum 5% (aanpasbaar), vast richtpercentage of gewicht, herhaling per verdieping; vaste percentages gaan eerst van de 100% af en de laatste schijf krijgt de afrondingsrest; onder het minimum = enkel waarschuwing. "Schijf bereikt" = melding + één klik per eenheid of voor alle eenheden van de groep (`UnitPaymentStageReached`), later eventueel automatisch.
 3. Trajectsjabloon met codes en de actie "schijf bereikt"; 4. projectsjabloon; 5. AI in de sjablooneditor; 6. later AI bij toepassen en deadlinewaarschuwingen. "Reageert op" bij een sjabloon wordt nu enkel bewaard en getoond.
 

@@ -3,9 +3,9 @@ title: Een leverancier en contract toevoegen of bewerken
 topic: projecten
 parent: project-leveranciers-overzicht
 role: Projectleider
-device: Desktop · tablet
+device: Desktop · tablet · gsm
 minutes: 5
-updated: 2026-10-23
+updated: 2026-11-20
 newsTag: Bijgewerkt
 screens: projecten-leverancier-toevoegen
 synonyms: nieuwe leverancier, ondernemingsnummer controleren, btw controleren, bedrijfsvorm, contract toevoegen, contract bewerken, loten, bijbestelling, waarborgdocument, werfleider
@@ -67,6 +67,16 @@ houden bij wat je al ontvangen hebt.
 
 Onderaan staat de totale **Contractprijs**. Bij een bestaand contract voeg je per lot ook
 **Bijbestellingen** toe, die de prijs van dat lot verhogen.
+
+## Op je gsm
+
+Een contract bewerken is een formulier: linksboven het kruisje, rechtsboven **Opslaan**, onderaan **Annuleren** en **Contract opslaan**. De tabs van het project zijn dan weg en **Opslaan en verder** bestaat niet op een gsm.
+
+- **Btw**: kies **0 %**, **6 %**, **21 %** of **Ander**. Bij 0 % is de btw verlegd. Bij **Ander** typ je zelf een percentage.
+- **Korting contant**: zet de schakelaar aan en vul twee velden in, de korting in procent en binnen hoeveel dagen.
+- **Tienjarige aansprakelijkheid**: kies één van vier opties. Onder elke optie staat wat ze betekent.
+- **Loten**: elk lot is een kaartje met het bedrag, een knop om het lot te verwijderen en **Bijbestelling op …**. Onderaan staat de contractprijs, zodat je ziet wat je opslaat.
+- De **werfleider** kies je uit de lijst. Een nieuwe werfleider aanmaken kan alleen op een groter scherm.
 
 ## Resultaat
 

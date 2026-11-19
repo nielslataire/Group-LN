@@ -4,9 +4,9 @@ topic: projecten
 parent: project-leverancier-detail
 treeOrder: 2
 role: Projectleider
-device: Desktop · tablet
+device: Desktop · tablet · gsm
 minutes: 3
-updated: 2026-11-16
+updated: 2026-11-20
 screens: projecten-leverancier-detail
 synonyms: bedrijfsgegevens leverancier, contactpersonen, werfleider, andere projecten, interne notitie, ondernemingsnummer
 description: de bedrijfsgegevens en contactpersonen van een leverancier, en zijn contracten in andere projecten
@@ -35,6 +35,15 @@ Wat enkel voor dit project geldt, zoals prijs, voorwaarden en attesten, staat op
 
 De kaart **Bedrijfsgegevens** toont naam, ondernemingsnummer, adres, telefoon, e-mail en website.
 Klik op het e-mailadres of de website om ze te openen.
+
+## Op je gsm
+
+Bovenaan staat één regel die zegt dat deze gegevens voor alle projecten van de leverancier gelden. Daaronder:
+
+- **Bedrijfsgegevens** als rijen met een knop: ondernemingsnummer kopiëren, adres openen als route, telefoon bellen, e-mail mailen. Wat leeg is, zie je niet. **Bewerken** staat rechts in de kop.
+- **Contactpersonen** met een bel- en mailknop. Labels tonen wie werfleider is en wat de stand van het portaal is. **Toevoegen** staat in de kop.
+- **Controles**: het resultaat staat in de titel, bijvoorbeeld *Inhoudingsplicht: geen*. Tik op **Nu controleren** om opnieuw te controleren.
+- **In andere projecten**: dit project staat gemarkeerd bovenaan, de bedragen zijn afgerond en onderaan staat het totaal van alle contracten bij deze leverancier. De website en de interne notitie staan niet op de gsm-versie.
 
 ## De contactpersonen
 

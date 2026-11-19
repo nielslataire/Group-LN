@@ -188,6 +188,34 @@ public class PlanningServiceTests
     }
 
     [Fact]
+    public async Task Naar_een_plaats_slepen_verplaatst_een_taak_tussen_fases_en_weigert_onzin()
+    {
+        var (svc, _, s) = await MetTweeTaken();   // fase 1 (Ruwbouw) met 1.1 Graafwerken en 1.2 Funderingen
+        var f2 = await svc.Voer(ProjectId, new PlanningCommando { Type = "faseToevoegen", Versie = s.Versie, EersteTaakNaam = "Dak", EersteTaakDuur = 2, Velden = V(("naam", "Afwerking")) }, "u1");
+        Assert.True(f2.Ok, f2.Fout);
+        var fase1 = Rij(f2.Staat!, "1").Id; var fase2 = Rij(f2.Staat!, "2").Id;
+        var fundering = Rij(f2.Staat!, "1.2").Id; var dak = Rij(f2.Staat!, "2.1").Id;
+
+        // Funderingen vooraan in fase 2
+        var u = await svc.Voer(ProjectId, new PlanningCommando { Type = "verplaats", Soort = "taak", Id = fundering, Actie = "naar", SectieId = fase2, NaSoort = "begin", Versie = f2.Staat!.Versie }, "u1");
+        Assert.True(u.Ok, u.Fout);
+        Assert.Equal("Funderingen", Rij(u.Staat!, "2.1").Naam);
+        Assert.Equal("Dak", Rij(u.Staat!, "2.2").Naam);
+        Assert.Single(u.Staat!.Rijen.Where(r => r.Wbs.StartsWith("1.")));
+
+        // Fase 2 vóór fase 1 zetten (hoogste niveau, achteraan = standaard), dan tussen twee taken
+        var u2 = await svc.Voer(ProjectId, new PlanningCommando { Type = "verplaats", Soort = "taak", Id = dak, Actie = "naar", SectieId = fase1, NaId = Rij(u.Staat!, "1.1").Id, NaSoort = "taak", Versie = u.Staat!.Versie }, "u1");
+        Assert.True(u2.Ok, u2.Fout);
+        Assert.Equal("Dak", Rij(u2.Staat!, "1.2").Naam);
+
+        // Een taak kan niet op het hoogste niveau; een fase niet in zichzelf
+        var fout1 = await svc.Voer(ProjectId, new PlanningCommando { Type = "verplaats", Soort = "taak", Id = dak, Actie = "naar", Versie = u2.Staat!.Versie }, "u1");
+        Assert.False(fout1.Ok);
+        var fout2 = await svc.Voer(ProjectId, new PlanningCommando { Type = "verplaats", Soort = "fase", Id = fase1, Actie = "naar", SectieId = fase1, Versie = u2.Staat!.Versie }, "u1");
+        Assert.False(fout2.Ok);
+    }
+
+    [Fact]
     public async Task Een_fase_verwijderen_neemt_haar_taken_en_hun_afhankelijkheden_mee()
     {
         var (svc, db, s) = await MetTweeTaken();

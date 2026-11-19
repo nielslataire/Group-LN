@@ -82,6 +82,7 @@
     <link rel="stylesheet" href="~/css/gl-v2/mobile-menu.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2/breakpoints.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2/quickactions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2/mobile-components.css" asp-append-version="true" />
     @* Componentfamilie, uit gl-v2-shell.css gelicht (okt. 2026). Volgorde = de oude volgorde binnen dat
        bestand; niet herschikken zonder de specificiteits-/volgorde-afhankelijkheden na te gaan. *@
     <link rel="stylesheet" href="~/css/gl-v2/forms.css" asp-append-version="true" />
@@ -162,7 +163,12 @@
                         </a>
                     }
                     <span class="gl-v2-topbar-icon"><i class="@pageIcon" aria-hidden="true"></i></span>
-                    <div class="gl-v2-topbar-titles">
+                    <div class="gl-v2-topbar-titles@(ViewData["TopbarKicker"] is string kk && !string.IsNullOrWhiteSpace(kk) ? " has-kicker" : "")">
+                        @* Mobiele componenten 65b: type · nummer boven de titel (enkel gsm, CSS) — een pagina zet ViewData["TopbarKicker"], bv. "Project · 132-23-05". *@
+                        @if (ViewData["TopbarKicker"] is string topbarKicker && !string.IsNullOrWhiteSpace(topbarKicker))
+                        {
+                            <span class="gl-v2-topbar-kicker">@topbarKicker</span>
+                        }
                         @* <h1> (was <p>, critique fix): the one real page heading, rendered once per page
                            by the shared shell — every content card underneath uses <h2> (see
                            .gl-v2-section-card-title), so this is the top of a real heading tree instead of
@@ -195,7 +201,7 @@
                        gewoon geen extra element. *@
                     @if (IsSectionDefined("PageTitleBadges"))
                     {
-                        <div class="gl-v2-topbar-badges">
+                        <div class="gl-v2-topbar-badges @(ViewData["BadgesDesktopOnly"] as bool? == true ? "is-desktop-only" : "")">
                             @RenderSection("PageTitleBadges", required: false)
                         </div>
                     }
@@ -373,7 +379,7 @@
                        op desktop, actiebalk op mobiel zijn twee echt verschillende presentaties van
                        dezelfde acties). Generiek: elke gl-v2-pagina die @@section
                        MobileQuickActions vult krijgt deze balk, niets hier is Facturen-specifiek. *@
-                    <div class="gl-v2-mobile-quickactions" id="gl-v2-mobile-quickactions">
+                    <nav class="gl-v2-mobile-quickactions" id="gl-v2-mobile-quickactions" aria-label="Snelacties">
                         @* Enkel zichtbaar (CSS) in de tablet-liggend-railvorm van deze balk (design-
                            handoff 7g, "het actieve project staat bovenaan als eerste tegel"). Puur
                            tonend — geen klikactie in deze pas. Generiek/leeg hier: enkel een pagina
@@ -385,7 +391,7 @@
                             <span data-role="rail-active-name"></span>
                         </div>
                         @RenderSection("MobileQuickActions", required: false)
-                    </div>
+                    </nav>
                     @* Optie 6b: zodra gl-v2-shell.js meer dan 4 tegels telt, verhuizen tegel 5+ hierin
                        en komt er een "Meer"-tegel voor in de plaats — generiek, dezelfde sheet werkt
                        voor elke pagina die toevallig meer dan 4 snelacties heeft. *@
@@ -393,14 +399,16 @@
                     <div class="gl-v2-quickactions-sheet" id="gl-v2-quickactions-sheet" role="dialog" aria-modal="true" aria-labelledby="gl-v2-quickactions-sheet-title" hidden>
                         <div class="gl-v2-quickactions-sheet-handle" aria-hidden="true"></div>
                         <div class="gl-v2-quickactions-sheet-header">
+                            @* 65k: "Meer acties · {project/pagina}" — een pagina zet ViewData["QuickActionsMoreTitle"] (bv. de projectnaam). *@
                             <h2 id="gl-v2-quickactions-sheet-title" class="gl-v2-quickactions-sheet-title">
-                                Snelacties <span class="gl-v2-quickactions-sheet-title-page">op @pageTitle</span>
+                                Meer acties@(ViewData["QuickActionsMoreTitle"] is string qaMore && !string.IsNullOrWhiteSpace(qaMore) ? " · " + qaMore : "")
                             </h2>
                             <button type="button" class="gl-v2-quickactions-sheet-close" id="gl-v2-quickactions-sheet-close" aria-label="Sluiten">
                                 <i class="ph ph-x" aria-hidden="true"></i>
                             </button>
                         </div>
                         <div class="gl-v2-quickactions-sheet-list" id="gl-v2-quickactions-sheet-list"></div>
+                        <button type="button" class="gl-v2-quickactions-sheet-cancel" id="gl-v2-quickactions-sheet-cancel">Annuleren</button>
                     </div>
                 }
             </div>
