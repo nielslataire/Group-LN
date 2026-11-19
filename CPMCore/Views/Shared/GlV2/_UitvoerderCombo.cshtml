@@ -1,0 +1,9 @@
+@model CPMCore.Models.GlV2.GlV2ComboVm
+@*
+    Planning: veld "Uitvoerder (aannemer)" als keuzelijst met zoekveld (gl-v2-combo, zie DESIGN.md "Keuzelijst met zoekveld en knop").
+    De opties (enkel aannemers met een contract in het project) worden door gl-v2-projecten-planning.js gezet via GlV2Combo.setOptions().
+*@
+<div class="gl-v2-field">
+    <label class="gl-v2-field-label" for="@(Model.Id)_input">Uitvoerder (aannemer)</label>
+    @await Html.PartialAsync("GlV2/_GlV2Combo", Model)
+</div>

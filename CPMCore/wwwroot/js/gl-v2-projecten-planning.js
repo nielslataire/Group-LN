@@ -662,11 +662,17 @@
         zetUitvoerderSelect("gl-v2-pl-f-uitv", null); zetUitvoerderSelect("gl-v2-pl-f-uitvf", null);   // nieuw paneel: geen keuze van een vorige rij overhouden
     }
     function taakVorm(on) { zetVorm(on ? "taak" : "fase"); }
-    // Keuzelijst Uitvoerder: bedrijven met een contract in het project eerst, daarna de andere die al gekozen zijn.
-    function uitvoerderItems() {
-        return (state.uitvoerders || []).map(function (u) { return { value: String(u.id), text: u.naam + (u.inProject ? "" : " (geen contract)") }; });
+    // Uitvoerder: doorzoekbare keuzelijst (gl-v2-combo) met enkel aannemers die een contract hebben in het project.
+    // `leeg` = de tekst als er geen eigen keuze is (placeholder, bv. "Van de fase: …").
+    function zetUitvoerderSelect(id, waarde, leeg) {
+        var hidden = $(id), root = hidden && hidden.closest("[data-gl-v2-combo]"), cmb = window.GlV2Combo;
+        if (!root || !cmb) return;
+        var lijst = (state.uitvoerders || []).filter(function (u) { return u.inProject; });
+        cmb.setOptions(root, lijst.map(function (u) { return { id: String(u.id), text: u.naam }; }));
+        var gekozen = waarde != null ? lijst.filter(function (u) { return u.id === waarde; })[0] : null;
+        var inp = root.querySelector(".gl-v2-combo-input"); if (inp) inp.placeholder = leeg || "Geen";
+        if (gekozen) cmb.setValue(root, String(gekozen.id), gekozen.naam); else cmb.setValue(root, "", "");
     }
-    function zetUitvoerderSelect(id, waarde, leeg) { setSelect(id, uitvoerderItems(), waarde != null ? String(waarde) : "", leeg || "Geen"); }
 
     // ── Planning (hoofdplanning of bouwdeel) toevoegen of instellen ──
     function openPlanning(bestaand) {
@@ -902,8 +908,9 @@
         var beste = null, score = 0;
         (imp.data.bedrijven || []).forEach(function (b) {
             var wb = impWoorden(b.naam); if (!wb.length) return;
+            if (!b.inProject) return;   // enkel aannemers met een contract in dit project
             var gedeeld = wn.filter(function (w) { return wb.indexOf(w) >= 0; }).length;
-            var sc = gedeeld / Math.max(wn.length, wb.length) + (b.inProject ? 0.05 : 0);
+            var sc = gedeeld / Math.max(wn.length, wb.length);
             if (gedeeld > 0 && sc > score) { score = sc; beste = b; }
         });
         return score >= 0.5 ? beste.id : null;
@@ -914,19 +921,36 @@
             imp.resGezien = true;
             res.forEach(function (r) { var id = impSuggestie(r.naam); if (id != null && imp.koppelingen[r.naam] == null) imp.koppelingen[r.naam] = id; });
         }
-        var inProject = (d.bedrijven || []).filter(function (b) { return b.inProject; }), andere = (d.bedrijven || []).filter(function (b) { return !b.inProject; });
-        function opties(sel) {
-            return "<option value=\"\">— niet koppelen —</option>" +
-                (inProject.length ? "<optgroup label=\"In dit project\">" + inProject.map(function (b) { return "<option value=\"" + b.id + "\"" + (sel === b.id ? " selected" : "") + ">" + esc(b.naam) + "</option>"; }).join("") + "</optgroup>" : "") +
-                "<optgroup label=\"Andere bedrijven\">" + andere.map(function (b) { return "<option value=\"" + b.id + "\"" + (sel === b.id ? " selected" : "") + ">" + esc(b.naam) + "</option>"; }).join("") + "</optgroup>";
+        // Enkel aannemers met een contract in dit project; doorzoekbare keuzelijst (gl-v2-combo) per resource.
+        var comboOpties = (d.bedrijven || []).filter(function (b) { return b.inProject; }).map(function (b) { return { id: String(b.id), text: b.naam }; });
+        var optiesJson = esc(JSON.stringify(comboOpties));
+        function comboHtml(n, r) {
+            return "<div class=\"gl-v2-combo\" data-gl-v2-combo data-gl-v2-search-select data-options=\"" + optiesJson + "\" data-min-chars=\"0\" data-icon=\"ph-hard-hat\" data-empty-value=\"\" data-allow-new=\"false\" data-list-label=\"AANNEMERS IN DIT PROJECT\">" +
+                "<input type=\"hidden\" class=\"gl-v2-pl-imp-rsel\" data-n=\"" + n + "\" data-role=\"id-hidden\" value=\"\" />" +
+                "<div class=\"gl-v2-combo-row\"><div class=\"gl-v2-combo-field\"><i class=\"ph ph-hard-hat gl-v2-combo-lead\" aria-hidden=\"true\"></i>" +
+                "<input type=\"text\" class=\"gl-v2-combo-input\" role=\"combobox\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup=\"listbox\" autocomplete=\"off\" placeholder=\"Zoek een aannemer…\" aria-label=\"Aannemer voor " + esc(r.naam) + "\" />" +
+                "<button type=\"button\" class=\"gl-v2-combo-clear\" data-role=\"clear\" aria-label=\"Wissen\" hidden><i class=\"ph ph-x\" aria-hidden=\"true\"></i></button>" +
+                "<span class=\"gl-v2-combo-spinner\" data-role=\"spinner\" hidden></span><i class=\"ph ph-caret-down gl-v2-combo-caret\" aria-hidden=\"true\"></i></div></div>" +
+                "<div class=\"gl-v2-combo-panel\" data-role=\"panel\" role=\"listbox\"></div></div>";
         }
         var gekoppeld = res.filter(function (r) { return imp.koppelingen[r.naam] != null; }).length;
         $("gl-v2-pl-imp-res-info").textContent = gekoppeld + " van " + res.length + " resources gekoppeld";
         $("gl-v2-pl-imp-res").innerHTML = "<div class=\"gl-v2-pl-imp-th gl-v2-pl-imp-rth\" role=\"row\"><span>Resource in het bestand</span><span>Taken</span><span>Bedrijf</span></div>" +
             res.map(function (r, n) {
                 return "<div class=\"gl-v2-pl-imp-tr gl-v2-pl-imp-rtr\" role=\"row\"><span>" + esc(r.naam) + "</span><span class=\"is-mono\">" + r.aantalTaken + "</span>" +
-                    "<span><select class=\"gl-v2-pl-imp-rsel\" data-n=\"" + n + "\" aria-label=\"Bedrijf voor " + esc(r.naam) + "\">" + opties(imp.koppelingen[r.naam]) + "</select></span></div>";
+                    "<span>" + comboHtml(n, r) + "</span></div>";
             }).join("");
+        // Bedraad de keuzelijsten (ook die van een vorige render) en zet de bestaande/voorgestelde koppelingen.
+        var cmb = window.GlV2Combo;
+        if (cmb) {
+            cmb.init($("gl-v2-pl-imp-res"));
+            res.forEach(function (r, n) {
+                var id = imp.koppelingen[r.naam]; if (id == null) return;
+                var b = comboOpties.filter(function (o) { return o.id === String(id); })[0];
+                var hidden = $("gl-v2-pl-imp-res").querySelector(".gl-v2-pl-imp-rsel[data-n=\"" + n + "\"]");
+                if (b && hidden) cmb.setValue(hidden.closest("[data-gl-v2-combo]"), b.id, b.text);
+            });
+        }
     }
 
     function impKpi(label, n, waarschuwing) { return "<div class=\"gl-v2-pl-imp-kpi" + (waarschuwing ? " is-warn" : "") + "\"><span>" + label + "</span><b>" + n + "</b></div>"; }

@@ -50,10 +50,11 @@ faq:
 
 Heeft je MS Project-bestand resources, dan toont CPM ze in een lijst met het aantal taken per resource.
 
-- Kies bij elke resource het **bedrijf** dat erbij hoort. Bedrijven met een contract in dit project staan bovenaan, daarna alle andere.
+- Kies bij elke resource de **aannemer** die erbij hoort. Je kiest enkel uit aannemers met een contract in dit project; tik in het veld om te zoeken op naam.
 - CPM stelt zelf een koppeling voor op basis van de naam, bijvoorbeeld "Dakw. Demeyer" aan Demeyer Dakwerken. Controleer die voorstellen.
 - Een resource die je niet koppelt, komt als tekst in de notitie van de taak ("Uitvoerder (uit MS Project): …"). Je koppelt ze later zelf, zodra de aannemer is aangesteld.
 - Het bedrijf staat daarna als **Uitvoerder** bij de taak. Taken zonder eigen uitvoerder nemen die van hun fase over.
+- Ook het veld **Uitvoerder (aannemer)** bij een fase of taak is een keuzelijst met zoekveld en bevat enkel aannemers met een contract in dit project. Staat een aannemer er niet bij, maak dan eerst een contract voor hem aan in het project.
 
 ## Waar komt de planning terecht?
 

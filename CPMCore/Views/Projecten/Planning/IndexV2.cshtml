@@ -23,6 +23,10 @@
     {
         Id = id, Name = name, Label = label, Value = "", Items = new List<GlV2SelectItem>(), Placeholder = "Kies …", Help = help
     };
+    GlV2ComboVm Uitvoerder(string id, string name, string help) => new()
+    {
+        Id = id, Name = name, Placeholder = "Geen", Help = help, Icon = "ph-hard-hat", OptionsJson = "[]", MinChars = 0, ListLabel = "AANNEMERS IN DIT PROJECT"
+    };
     GlV2DateFieldVm Date(string id, string name, string label) => new() { Id = id, Name = name, Label = label };
 }
 @section PageStyle
@@ -224,7 +228,7 @@
                     @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-f-wie", "verantwoordelijke", "Verantwoordelijke"))
                 </div>
                 <div id="gl-v2-pl-wrap-uitv">
-                    @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-f-uitv", "uitvoerder", "Uitvoerder (aannemer)", "Optioneel. Kies de aannemer zodra die is aangesteld. Leeg = de uitvoerder van de fase."))
+                    @await Html.PartialAsync("GlV2/_UitvoerderCombo", Uitvoerder("gl-v2-pl-f-uitv", "uitvoerder", "Optioneel. Kies de aannemer zodra die is aangesteld. Leeg = de uitvoerder van de fase."))
                 </div>
                 <div id="gl-v2-pl-wrap-traj" hidden>
                     @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-f-traj", "trajectmijlpaal", "Koppeling met trajectmijlpaal", "Optioneel. De mijlpaal in het Traject volgt dan het einde van deze taak en staat op bereikt zodra de taak klaar is."))
@@ -275,7 +279,7 @@
                     @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-f-trajf", "trajectmijlpaalfase", "Koppeling met trajectmijlpaal", "Optioneel. De mijlpaal in het Traject volgt dan het einde van de laatste taak van de fase en staat op bereikt zodra alle taken klaar zijn."))
                 </div>
                 <div class="gl-v2-pl-lot" id="gl-v2-pl-wrap-lot">
-                    @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-f-uitvf", "uitvoerderfase", "Uitvoerder (aannemer)", "Optioneel. Taken in deze fase zonder eigen uitvoerder nemen deze over."))
+                    @await Html.PartialAsync("GlV2/_UitvoerderCombo", Uitvoerder("gl-v2-pl-f-uitvf", "uitvoerderfase", "Optioneel. Taken in deze fase zonder eigen uitvoerder nemen deze over."))
                     @await Html.PartialAsync("GlV2/_SelectList", Select("gl-v2-pl-f-lot", "lot", "Budgetlot (optioneel)", "Koppelt de fase aan een lot uit het budget."))
                     <label class="gl-v2-toggle-row" for="gl-v2-pl-f-teltmee">
                         <input type="checkbox" id="gl-v2-pl-f-teltmee" class="gl-v2-toggle-switch" />

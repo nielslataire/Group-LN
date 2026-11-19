@@ -353,7 +353,8 @@ public class PlanningService : IPlanningService
         var bedrijfIds = contractBedrijven.Concat(gekozen).Distinct().ToList();
         var bedrijfNamen = await _db.CompanyInfo.AsNoTracking().Where(c => bedrijfIds.Contains(c.CompanyId))
             .Select(c => new { c.CompanyId, c.BedrijfsNaam }).ToDictionaryAsync(c => c.CompanyId, c => c.BedrijfsNaam ?? "");
-        foreach (var bid in bedrijfIds.Where(bedrijfNamen.ContainsKey).OrderBy(b => bedrijfNamen[b], StringComparer.CurrentCultureIgnoreCase))
+        // De keuzelijst bevat enkel aannemers met een contract in het project; de namen van reeds gekozen andere bedrijven blijven wel beschikbaar voor de weergave.
+        foreach (var bid in contractBedrijven.Where(bedrijfNamen.ContainsKey).OrderBy(b => bedrijfNamen[b], StringComparer.CurrentCultureIgnoreCase))
             staat.Uitvoerders.Add(new PlanningUitvoerderOptie { Id = bid, Naam = bedrijfNamen[bid], InProject = contractBedrijven.Contains(bid) });
         void ZetEffectief(PlanningRij rij, Knoop knoop)
         {
@@ -1513,6 +1514,10 @@ public class PlanningService : IPlanningService
         if (imp.Rijen.Any(r => string.IsNullOrWhiteSpace(r.Naam))) return "Een regel heeft geen naam.";
         if (imp.Rijen.Select(r => r.Uid).Distinct().Count() != imp.Rijen.Count) return "Het bestand bevat regels met hetzelfde nummer.";
         if (!imp.Rijen.Any(r => r.Soort != "fase")) return "Er staan geen taken in dit bestand.";
+
+        // Een resource mag enkel aan een bedrijf met een contract in dit project gekoppeld worden; andere koppelingen worden genegeerd.
+        var toegestaan = await _db.Contract.AsNoTracking().Where(k => k.ProjectId == d.Project.ProjectId).Select(k => k.CompanyId).Distinct().ToListAsync();
+        foreach (var sleutel in imp.Uitvoerders.Where(kv => !toegestaan.Contains(kv.Value)).Select(kv => kv.Key).ToList()) imp.Uitvoerders.Remove(sleutel);
 
         DateOnly? nieuweStart = null;
         if (imp.StartModus == "nieuw")

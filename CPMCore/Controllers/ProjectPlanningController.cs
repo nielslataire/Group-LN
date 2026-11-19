@@ -168,11 +168,11 @@ public class ProjectPlanningController : BaseController
         var uitkomst = ServiceCore.Planning.MsProjectXmlParser.Lees(stream, naam);
         if (uitkomst.Ok && uitkomst.Resources.Count > 0)
         {
-            // Bedrijven om resources aan te koppelen: eerst die met een contract in dit project, daarna alle andere.
+            // Bedrijven om resources aan te koppelen: enkel die met een contract in dit project.
             var inProject = await _db.Contract.AsNoTracking().Where(c => c.ProjectId == projectId).Select(c => c.CompanyId).Distinct().ToListAsync();
-            var bedrijven = await _db.CompanyInfo.AsNoTracking().Where(c => c.BedrijfsNaam != null && c.BedrijfsNaam != "")
+            var bedrijven = await _db.CompanyInfo.AsNoTracking().Where(c => inProject.Contains(c.CompanyId) && c.BedrijfsNaam != null && c.BedrijfsNaam != "")
                 .OrderBy(c => c.BedrijfsNaam).Select(c => new { c.CompanyId, c.BedrijfsNaam }).ToListAsync();
-            uitkomst.Bedrijven = bedrijven.Select(b => new FacadeCore.PlanningUitvoerderOptie { Id = b.CompanyId, Naam = b.BedrijfsNaam!, InProject = inProject.Contains(b.CompanyId) }).ToList();
+            uitkomst.Bedrijven = bedrijven.Select(b => new FacadeCore.PlanningUitvoerderOptie { Id = b.CompanyId, Naam = b.BedrijfsNaam!, InProject = true }).ToList();
         }
         return Json(uitkomst, JsonOpties);
     }

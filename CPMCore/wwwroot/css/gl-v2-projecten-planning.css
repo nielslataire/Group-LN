@@ -346,7 +346,8 @@ html.gl-v2-pl-fs { overflow: hidden; }
     .gl-v2-pl-imp-stappen { gap: 12px; padding: 10px 16px; }
 }
 
-.gl-v2-pl-imp-rth, .gl-v2-pl-imp-rtr { grid-template-columns: minmax(180px, 1.4fr) 70px minmax(220px, 1.6fr); }
+.gl-v2-pl-imp-rth, .gl-v2-pl-imp-rtr { grid-template-columns: minmax(180px, 1.4fr) 70px minmax(220px, 1.6fr); --gl-v2-field-h: 34px; }
+.gl-v2-pl-imp-rtr .gl-v2-combo { width: 100%; }
 .gl-v2-pl-imp-rsel { width: 100%; min-width: 0; padding: 5px 8px; border: 1px solid var(--gl-v2-line); border-radius: var(--gl-v2-radius-xs); font: 450 13px var(--gl-v2-font-sans); background: var(--gl-v2-surface, #fff); }
 
 /* Importmodal: breed genoeg voor de voorbeeldtabel (de standaardbreedte van een formulier-modal is smal) */
