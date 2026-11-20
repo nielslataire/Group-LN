@@ -1094,9 +1094,10 @@ namespace CPMCore.Controllers
             // UserCompanyAccess, d.w.z. geen externe aannemer-/leverancierslogin).
             // Vroeger beperkt tot wie een PermissionPerUser-rij had — dat sloot
             // geldige medewerkers (bv. verkoopverantwoordelijken) ten onrechte uit.
+            var externeIds = CPMCore.Services.ExterneGebruikers.Ids(_db);
             var users = _db.Users
                 .AsNoTracking()
-                .Where(u => u.IsActive && !u.UserCompanyAccess.Any())
+                .Where(u => u.IsActive && !externeIds.Contains(u.Id))
                 .OrderBy(user => user.Familienaam)
                 .ThenBy(user => user.Voornaam)
                 .Select(user => new

@@ -156,6 +156,21 @@ Op een tablet is **Voorbeeld-PDF** bovenaan een knop met enkel een icoon, en ver
 De status toont hoeveel eigenaars al getekend hebben. Na de laatste handtekening voegt CPM het
 ondertekeningsblad toe als pagina 2. De wijzigingsopdracht komt dan in het facturatieplan.
 
+### Zien wat de klant met de link deed
+
+![De kaart Ondertekening met per eigenaar wat die al deed](/img/help/facturatie-wijzigingen/wijzigingsopdracht-opmaken/ondertekening-activiteit.png)
+
+In de kaart **Ondertekening** staat onder elke eigenaar wat die met de link gedaan heeft:
+
+- **Link nog niet geopend**, met het aantal dagen sinds het verzenden. Dat is het moment om te bellen of een herinnering te sturen.
+- **Link 3× geopend**, met het moment van de eerste en de laatste keer.
+- **Document bekeken** of **Document nog niet bekeken**: of de eigenaar de wijzigingsopdracht zelf geopend heeft.
+- **PDF 1× gedownload**: hoe vaak de eigenaar de PDF bewaarde.
+- In het rood **De mail kon niet verstuurd worden**: het e-mailadres klopt waarschijnlijk niet. Pas het adres aan en stuur opnieuw.
+
+Het aantal keer geopend telt elke keer dat de link gebruikt wordt. Sommige mailprogramma's openen een link om hem te controleren. Een enkele keer "geopend" zonder dat het document bekeken is, bewijst dus niet altijd dat de eigenaar zelf keek.
+CPM kan niet zien of de mail in de inbox of in de spam terechtkwam. Zie je na een paar dagen niets geopend, neem dan contact op.
+
 ## Let op
 
 Na de eerste handtekening kun je de wijzigingsopdracht niet meer aanpassen. Maak dan een nieuwe

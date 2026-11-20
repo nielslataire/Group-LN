@@ -15,6 +15,11 @@
     ViewData["PageIcon"] = "ph ph-chart-bar-horizontal";
     ViewData["GlV2FullHeightBody"] = true;
     ViewData["BackUrl"] = Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId });
+    // Gsm (64p): kicker "Project · planning" boven de projectnaam; de snelactiebalk heeft zijn eigen Meer-blad
+    ViewData["TitleMobile"] = Model.ProjectName;
+    ViewData["TopbarKicker"] = "Project · planning";
+    ViewData["BadgesDesktopOnly"] = true;
+    ViewData["QuickActionsMoreTitle"] = "planning";
 
     var menuVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · planning" };
     var menuPhoneVm = new GlV2ProjectMenuVm { ProjectId = Model.ProjectId, ProjectName = Model.ProjectName, ProjectSubtitle = "project · planning", Mode = GlV2ProjectMenuMode.Phone };
@@ -49,14 +54,38 @@
 }
 @section MobileQuickActions
 {
+    @* 65j "Planning" (64p/64r): Vandaag · Verletdag · Taak (hoofdactie) · Meer. Fase, Per aannemer, Basis, Importeren, Sjablonen en Instellen staan in Meer. *@
+    <button type="button" class="gl-v2-mobile-quickaction js-pl-q-vandaag" data-qa-key="vandaag"><i class="ph ph-clock" aria-hidden="true"></i>Vandaag</button>
+    <a href="@Url.Action("Weather", "Projecten")" class="gl-v2-mobile-quickaction" data-qa-key="verlet"><i class="ph ph-cloud-rain" aria-hidden="true"></i>Verletdag</a>
     @if (Model.CanWrite)
     {
-        <button type="button" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary js-pl-add-taak">
+        <button type="button" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-primary js-pl-add-taak" data-qa-key="taak">
             <i class="ph ph-plus" aria-hidden="true"></i>Taak
         </button>
-        <button type="button" class="gl-v2-mobile-quickaction js-pl-add-fase">
-            <i class="ph ph-stack-plus" aria-hidden="true"></i>Fase
+        <button type="button" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-extra js-pl-add-fase" data-subtitle="een groep taken, bv. Dakwerken">
+            <i class="ph ph-stack-plus" aria-hidden="true"></i>Fase toevoegen
         </button>
+    }
+    <button type="button" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-extra js-pl-q-aann" data-subtitle="planning gefilterd per leverancier">
+        <i class="ph ph-hard-hat" aria-hidden="true"></i>Per aannemer
+    </button>
+    @if (Model.CanWrite)
+    {
+        <button type="button" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-extra js-pl-q-basis" data-subtitle="om later te vergelijken met de werkelijkheid">
+            <i class="ph ph-bookmark-simple" aria-hidden="true"></i>Basis vastleggen
+        </button>
+        <button type="button" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-extra js-pl-q-import" data-subtitle="MS Project (XML)">
+            <i class="ph ph-upload-simple" aria-hidden="true"></i>Importeren
+        </button>
+        <button type="button" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-extra js-pl-q-sj" data-subtitle="sjabloon gebruiken of deze planning bewaren">
+            <i class="ph ph-copy" aria-hidden="true"></i>Sjablonen
+        </button>
+        <button type="button" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-extra js-pl-q-instel" data-subtitle="naam, woningen en startdatum, of verwijderen">
+            <i class="ph ph-gear-six" aria-hidden="true"></i>Instellen
+        </button>
+        <a href="@Url.Action("Edit", "Projecten", new { projectid = Model.ProjectId })" class="gl-v2-mobile-quickaction gl-v2-mobile-quickaction-extra" data-subtitle="weerstation, deadline en andere projectgegevens">
+            <i class="ph ph-sliders-horizontal" aria-hidden="true"></i>Projectgegevens
+        </a>
     }
 }
 @section ProjectMenu
@@ -111,6 +140,9 @@
             }
         </div>
     </div>
+
+    @* Gsm (64p–64r): Week · Lijst · Tijdlijn, gevuld door gl-v2-projecten-planning.js; op desktop en tablet onzichtbaar *@
+    <div class="gl-v2-pl-m gl-v2-m-only" id="gl-v2-pl-m" hidden></div>
 
     @* Lijst en Gantt *@
     @* Per aannemer: alle taken van één uitvoerder uit alle plannings (enkel lezen, gevuld door JS) *@
@@ -321,6 +353,10 @@
 </div>
 
 <div class="gl-v2-menu" id="gl-v2-pl-menu" role="menu" aria-label="Acties voor deze rij"></div>
+@* Gsm-bladen (64p/64r): planningkeuze, taak en sjablonen; gevuld en geopend door gl-v2-projecten-planning.js *@
+<div class="gl-v2-menu gl-v2-pl-m-blad" id="gl-v2-pl-m-pick" role="menu" aria-label="Planning kiezen"></div>
+<div class="gl-v2-menu gl-v2-pl-m-blad" id="gl-v2-pl-m-sj" role="menu" aria-label="Sjablonen"></div>
+<div class="gl-v2-menu gl-v2-pl-m-blad is-taak" id="gl-v2-pl-m-task" role="dialog" aria-label="Taak"></div>
 
     @* Projectsjabloon toepassen: planning, traject en schijven in één keer, aangepast aan het gebouw (TYPE 2 formulier-modal) *@
     <div class="modal fade gl-v2-modal-form gl-v2-pl-sj-modal" id="gl-v2-pl-pj" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-pl-pj-titel">
@@ -352,6 +388,7 @@
                         </div>
                         <label class="gl-v2-toggle-row" for="gl-v2-pl-pj-kelder"><input type="checkbox" id="gl-v2-pl-pj-kelder" class="gl-v2-toggle-switch" /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Met kelder</span><span class="gl-v2-toggle-desc">een kelder of ondergrondse verdieping</span></span></label>
                         <label class="gl-v2-toggle-row" for="gl-v2-pl-pj-een"><input type="checkbox" id="gl-v2-pl-pj-een" class="gl-v2-toggle-switch" /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Eén planning voor alle eenheden</span><span class="gl-v2-toggle-desc">voor een gebouw met appartementen. Uit = een planning per woning</span></span></label>
+                        <label class="gl-v2-toggle-row" for="gl-v2-pl-pj-hoofd" id="gl-v2-pl-pj-hoofd-rij" hidden><input type="checkbox" id="gl-v2-pl-pj-hoofd" class="gl-v2-toggle-switch" checked /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">In de hoofdplanning zetten</span><span class="gl-v2-toggle-desc">enkel als de hoofdplanning nog leeg is. Uit of niet leeg = een aparte planning naast de hoofdplanning</span></span></label>
                         <div class="gl-v2-pl-pj-voorbeeld" id="gl-v2-pl-pj-voorbeeld" aria-live="polite">
                             <b class="gl-v2-pl-pj-kop">Wat er gebeurt</b>
                             <ul id="gl-v2-pl-pj-stappen"></ul>
@@ -514,6 +551,8 @@
         "projectId": @Model.ProjectId,
         "commandoUrl": "@Url.Action("Commando", "ProjectPlanning", new { projectId = Model.ProjectId })",
         "staatUrl": "@Url.Action("Staat", "ProjectPlanning", new { projectId = Model.ProjectId })",
+        "projectEditUrl": "@Url.Action("Edit", "Projecten", new { projectid = Model.ProjectId })",
+        "puntenUrl": "@Url.Action("Index", "ProjectsIssues", new { projectId = Model.ProjectId })",
         "importControleUrl": "@Url.Action("ImportControle", "ProjectPlanning", new { projectId = Model.ProjectId })",
         "koppelUrl": "@Url.Action("Koppeling", "ProjectPlanning", new { projectId = Model.ProjectId })",
         "schijfKoppelUrl": "@Url.Action("SchijfKoppeling", "ProjectPlanning", new { projectId = Model.ProjectId })",

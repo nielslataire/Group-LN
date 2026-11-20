@@ -1,0 +1,28 @@
+@using FacadeCore
+@model string
+@inject IProjectSjabloonService ProjectSjablonen
+@inject IPlanningSjabloonService PlanningSjablonen
+@inject ISchijfSjabloonService SchijfSjablonen
+@inject ITrajectSjabloonService TrajectSjablonen
+@*
+    Instellingen › Sjablonen: de vier lijsten van de sjablonen als tabs met een teller (design-handoff 66a/66c). Model = de actieve tab: "project", "planning", "traject" of "schijven".
+    Het zijn gewone links naar de vier pagina's (elke tab is een eigen pagina met eigen rechten), geen JS-tabs. De uitlegzin rechts is de korte versie; de pagina zelf legt de rest uit.
+    CSS: gl-v2-instellingen-sjabloontabs.css (door elke pagina met deze partial in PageStyle te laden).
+*@
+@{
+    var tabs = new[]
+    {
+        (Sleutel: "project", Naam: "Projectsjablonen", Controller: "ProjectSjabloonAdmin", Icoon: "ph-buildings", Aantal: (await ProjectSjablonen.BeheerLijst()).Count),
+        (Sleutel: "planning", Naam: "Planning", Controller: "PlanningSjabloonAdmin", Icoon: "ph-calendar-check", Aantal: (await PlanningSjablonen.BeheerLijst()).Count),
+        (Sleutel: "traject", Naam: "Traject", Controller: "TrajectSjabloonAdmin", Icoon: "ph-git-branch", Aantal: (await TrajectSjablonen.GetAll(includeInactive: true)).Count),
+        (Sleutel: "schijven", Naam: "Schijven", Controller: "SchijfSjabloonAdmin", Icoon: "ph-list-checks", Aantal: (await SchijfSjablonen.BeheerLijst()).Count),
+    };
+}
+<nav class="gl-v2-sjtabs" role="tablist" aria-label="Sjablonen">
+    @foreach (var t in tabs)
+    {
+        var actief = t.Sleutel == Model;
+        <a role="tab" aria-selected="@(actief ? "true" : "false")" class="gl-v2-sjtab @(actief ? "is-on" : "")" href="@Url.Action("Index", t.Controller)"@(actief ? " aria-current=page" : "")><i class="ph @t.Icoon" aria-hidden="true"></i>@t.Naam<em>@t.Aantal</em></a>
+    }
+    <span class="gl-v2-sjtabs-note">Een projectsjabloon bundelt een planning-, traject- en schijvensjabloon.</span>
+</nav>

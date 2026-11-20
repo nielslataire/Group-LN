@@ -7,7 +7,7 @@ minutes: 6
 updated: 2026-11-20
 newsTag: Nieuw
 screens: instellingen-schijvensjablonen, instellingen-schijvensjablonen-bewerken, projecten-betalingsgroep-bewerken
-related: betalingsgroep-instellen, planning-schijven-koppelen, planning-sjablonen, projectsjabloon-toepassen
+related: betalingsgroep-instellen, planning-schijven-koppelen, planning-sjablonen, projectsjabloon-toepassen, projectsjablonen-beheren
 synonyms: schijvensjabloon, sjabloon, betalingsschijven, percentage, gewicht, vast percentage, minimum, per verdieping, eindafrekening, voorlopige oplevering, code, standaardschijven
 description: een vaste lijst betalingsschijven bewaren en met één handeling op een betalingsgroep toepassen
 intro: |
@@ -22,41 +22,69 @@ faq:
     a: Dat is de gewoonte voor de eindafrekening bij de voorlopige oplevering. Je kan dit in het sjabloon wijzigen.
   - q: Wat doet het minimum per schijf?
     a: Komt een schijf na het uitrekenen onder dit percentage, dan krijg je een waarschuwing. Je kan toch doorgaan.
+  - q: Wat is het verschil met de oude kolommen Vast % en Gewicht?
+    a: Je kiest nu per schijf één soort, **Gewicht** of **Vast %**, met één waarde. Zo staat er nooit een grijs veld dat niet meetelt.
   - q: Wat doet de code?
     a: De code verwijst naar een taak of fase in je planningssjabloon, bijvoorbeeld VLOERPLAAT. Zodra de planning er is, hangt de schijf er vanzelf aan. Je hoeft ze niet meer met de hand te koppelen.
   - q: Wat als de code in de planning niet voorkomt?
     a: Dan blijft de schijf los. Koppel ze met de hand in het taak- of fasepaneel van de planning.
   - q: Wat gebeurt er met groepen die het sjabloon al gebruikten als ik het wijzig of verwijder?
     a: Niets. Een betalingsgroep krijgt haar eigen schijven en blijft ze houden.
+  - q: Waarom kan ik een sjabloon niet verwijderen?
+    a: Een projectsjabloon gebruikt het (kolom **Gebruikt in**). Kies in dat projectsjabloon eerst een ander schijvensjabloon, of zet dit sjabloon op inactief.
 ---
+## De lijst
+
+Onder **Instellingen › Sjablonen › Schijven** staan alle schijvensjablonen. Bovenaan wissel je met de tabs naar de projectsjablonen, de planningssjablonen en de trajectsjablonen.
+
+![De lijst met schijvensjablonen](/img/help/instellingen/schijvensjablonen-beheren/2-lijst.png)
+
+Per sjabloon zie je het aantal schijven, welke schijven vast zijn, welke enkel bij een kelder of dak gelden, in welk projectsjabloon het zit, wie het laatst wijzigde en de status. Via **⋯** kan je het bewerken, dupliceren, inactief zetten of verwijderen. Verwijderen kan enkel als geen projectsjabloon het gebruikt.
+
 ## Een sjabloon maken
 
-1. Open **Instellingen › Schijvensjablonen** en kies **Nieuw sjabloon**.
+1. Kies **Nieuw sjabloon**.
 2. Geef het sjabloon een naam, bijvoorbeeld "Woning met twee verdiepingen".
 3. Voeg de schijven toe in de volgorde waarin je ze factureert. De laatste schijf is de eindafrekening.
 4. Geef elke schijf een **omschrijving**. Dat is de tekst op de factuur.
-5. Kies per schijf: een **vast percentage**, of laat het leeg en geef een **gewicht**.
+5. Kies per schijf de **soort**: **Gewicht** of **Vast %**, en vul de waarde in.
 6. Klik op **Sjabloon opslaan**.
 
-![De editor van een schijvensjabloon met schijven, vaste percentages en gewichten](/img/help/instellingen/schijvensjablonen-beheren/1-editor.png)
+![De editor van een schijvensjabloon met schijven, voorbeeld en controle](/img/help/instellingen/schijvensjablonen-beheren/1-editor.png)
 
-Boven de schijven zie je hoeveel er vast is en hoeveel naar gewicht verdeeld wordt. Staan er geen gewichten in, dan moeten de vaste percentages samen 100 % zijn.
+Boven de schijven staat één regel die het uitrekent, bijvoorbeeld "vast 5 %, 95 % verdeeld over gewicht 7 = 13,57 % per gewicht". Staan er geen gewichten in, dan moeten de vaste percentages samen 100 % zijn.
+
+### Het voorbeeld rechts
+
+Kies rechts het aantal verdiepingen, of er een kelder is, welk dak en een constructiewaarde. Je ziet meteen alle schijven met hun percentage en bedrag. Een schijf per verdieping staat er per verdieping uitgeschreven ("1ste verdieping", "2de verdieping"). Een schijf die niet bij dat gebouw past, staat er niet. In de tabel toont de kolom **Voorbeeld** hetzelfde per schijf. Die kolom zie je enkel op brede schermen.
+
+### De volgorde en verwijderen
+
+Sleep een schijf aan het handvat links om ze te verplaatsen, of kies **⋯ › Omhoog** of **Omlaag**. Verwijderen en dupliceren van een schijf zit ook onder **⋯**.
 
 ## Schijven per verdieping
 
-Vink **Per verdieping** aan bij een schijf die voor elke verdieping terugkomt, bijvoorbeeld het gieten van de vloerplaat. Het percentage of het gewicht van die schijf wordt gelijk verdeeld over de verdiepingen.
+Zet **Per verd.** aan bij een schijf die voor elke verdieping terugkomt, bijvoorbeeld het gieten van de vloerplaat. Het percentage of het gewicht van die schijf wordt gelijk verdeeld over de verdiepingen.
 
 Schrijf **{verdieping}** in de omschrijving om te bepalen waar "1ste verdieping" komt te staan. Zonder dat woord komt het achteraan.
 
 ## Schijven voor een kelder of een soort dak
 
-Kies bij **Geldt voor** wanneer een schijf meetelt: altijd, met kelder, zonder kelder, hellend dak of plat dak. Een schijf die niet bij het gebouw past, valt weg. De overige percentages worden dan opnieuw verdeeld, dus het totaal blijft 100 %.
+Kies bij **Enkel bij** wanneer een schijf meetelt: altijd, met kelder, zonder kelder, hellend dak of plat dak. Een schijf die niet bij het gebouw past, valt weg. De overige percentages worden dan opnieuw verdeeld, dus het totaal blijft 100 %.
 
 CPM controleert bij het opslaan elke combinatie van kelder en dak. Komt er in één combinatie geen 100 % uit, dan krijg je een melding en wordt het sjabloon niet bewaard.
 
 ## Een schijf aan de planning hangen
 
 Vul bij **Code in planning** de code in van de taak of fase uit je planningssjabloon. Wordt de planning uit dat sjabloon opgebouwd, of bewaar je de betalingsgroep, dan hangt CPM de schijf aan de juiste taak. Bij een schijf per verdieping hangt de eerste verdieping aan de eerste taak met die code, de tweede aan de tweede, enzovoort.
+
+CPM controleert de code meteen onder het veld, tegen de actieve planningssjablonen:
+
+- **Gevonden**: de naam van de taak of het blok staat eronder.
+- **Niet gevonden** in het rood: er is geen taak met die code. CPM stelt een code voor die erop lijkt.
+- **Niet leesbaar** in het goud: de taak bestaat, maar heeft een code als NIEUWE_TAAK_3. Geef ze in het planningssjabloon een leesbare code.
+
+Rechts in het paneel **Controle** staan de aandachtspunten samen. Een rode of gouden code houdt het opslaan niet tegen, maar de schijf hangt dan niet aan de planning.
 
 ## Een sjabloon toepassen
 

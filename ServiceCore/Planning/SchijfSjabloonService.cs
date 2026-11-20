@@ -13,11 +13,69 @@ public sealed class SchijfSjabloonService : ISchijfSjabloonService
     public async Task<List<SchijfSjabloonBeheerRij>> BeheerLijst()
     {
         var lijst = await _db.SchijfSjabloon.AsNoTracking().Include(s => s.Schijven).OrderBy(s => s.Naam).ToListAsync();
-        return lijst.Select(s => new SchijfSjabloonBeheerRij
+        var gebruikt = (await _db.ProjectSjabloon.AsNoTracking().Where(p => p.SchijfSjabloonId != null).Select(p => new { Id = p.SchijfSjabloonId!.Value, p.Naam }).ToListAsync())
+            .GroupBy(x => x.Id).ToDictionary(g => g.Key, g => g.Select(x => x.Naam).OrderBy(n => n).ToList());
+        var gebruikerIds = lijst.Select(s => s.ModifiedByUserId ?? s.CreatedByUserId).Where(i => !string.IsNullOrEmpty(i)).Distinct().ToList();
+        var namen = gebruikerIds.Count == 0 ? new Dictionary<string, string>()
+            : (await _db.AspNetUsers1.AsNoTracking().Where(u => gebruikerIds.Contains(u.Id)).Select(u => new { u.Id, u.Forename, u.Name }).ToListAsync())
+                .ToDictionary(u => u.Id, u => string.IsNullOrWhiteSpace(u.Forename) ? (u.Name ?? "") : u.Forename);
+        return lijst.Select(s =>
         {
-            Id = s.Id, Naam = s.Naam, Beschrijving = s.Beschrijving, AantalSchijven = s.Schijven.Count,
-            HeeftVerdiepingen = s.Schijven.Any(x => x.PerVerdieping), IsActief = s.IsActief, GewijzigdOp = s.ModifiedDate ?? s.CreatedDate,
+            var schijven = s.Schijven.OrderBy(x => x.Volgorde).ThenBy(x => x.Id).ToList();
+            var door = s.ModifiedByUserId ?? s.CreatedByUserId;
+            gebruikt.TryGetValue(s.Id, out var in_);
+            return new SchijfSjabloonBeheerRij
+            {
+                Id = s.Id, Naam = s.Naam, Beschrijving = s.Beschrijving, AantalSchijven = schijven.Count,
+                HeeftVerdiepingen = schijven.Any(x => x.PerVerdieping), AantalPerVerdieping = schijven.Count(x => x.PerVerdieping),
+                VastSamenvatting = VastTekst(schijven), EnkelBij = EnkelBijTekst(schijven),
+                IsActief = s.IsActief, GewijzigdOp = s.ModifiedDate ?? s.CreatedDate,
+                GewijzigdDoor = door != null && namen.TryGetValue(door, out var naam) ? naam : null,
+                GebruiktIn = in_ ?? new List<string>(),
+            };
         }).ToList();
+    }
+
+    /// <summary>"oplevering vast 5 %": de vaste percentages, met de laatste schijf als eindafrekening of oplevering benoemd.</summary>
+    private static string VastTekst(List<SchijfSjabloonSchijf> schijven)
+    {
+        var delen = new List<string>();
+        for (var i = 0; i < schijven.Count; i++)
+        {
+            var x = schijven[i];
+            if (x.VastPercentage is not decimal v) continue;
+            var label = (x.Naam ?? "").Contains("oplevering", StringComparison.OrdinalIgnoreCase) ? "oplevering"
+                      : (x.Naam ?? "").Contains("akte", StringComparison.OrdinalIgnoreCase) ? "akte"
+                      : i == schijven.Count - 1 ? "eindafrekening" : "schijf " + (i + 1);
+            delen.Add($"{label} vast {v.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("nl-BE"))} %");
+        }
+        return string.Join(", ", delen);
+    }
+
+    /// <summary>"plat dak (1), kelder (1)": welke schijven enkel bij een bepaald gebouw gelden.</summary>
+    private static string EnkelBijTekst(List<SchijfSjabloonSchijf> schijven)
+    {
+        string Label(SchijfSjabloonSchijf x)
+        {
+            var v = (x.VoorwaardeVariabele ?? "").ToLowerInvariant(); var w = (x.VoorwaardeWaarde ?? "").ToLowerInvariant();
+            return v == "kelder" ? (w == "ja" ? "kelder" : "zonder kelder") : v == "dak" ? (w == "plat" ? "plat dak" : "hellend dak") : "";
+        }
+        var groepen = schijven.Where(x => !string.IsNullOrWhiteSpace(x.VoorwaardeVariabele)).GroupBy(Label).Where(g => g.Key.Length > 0).ToList();
+        return string.Join(", ", groepen.Select(g => $"{g.Key} ({g.Count()}{(g.Count() == 1 ? "" : " schijven")})"));
+    }
+
+    public async Task<List<PlanningCodeInfo>> PlanningCodes()
+    {
+        var sjablonen = await _db.PlanningSjabloon.AsNoTracking().Where(p => p.IsActief).Include(p => p.Blokken).ThenInclude(b => b.Taken).OrderBy(p => p.Naam).ToListAsync();
+        var uit = new List<PlanningCodeInfo>();
+        foreach (var p in sjablonen)
+            foreach (var b in p.Blokken)
+            {
+                if (!string.IsNullOrWhiteSpace(b.Code)) uit.Add(new PlanningCodeInfo { Code = b.Code!, Naam = b.Naam ?? "", Sjabloon = p.Naam });
+                foreach (var t in b.Taken)
+                    if (!string.IsNullOrWhiteSpace(t.Code)) uit.Add(new PlanningCodeInfo { Code = t.Code!, Naam = t.Naam ?? "", Sjabloon = p.Naam });
+            }
+        return uit;
     }
 
     public async Task<List<SchijfSjabloonKeuze>> Keuzes()
@@ -130,6 +188,8 @@ public sealed class SchijfSjabloonService : ISchijfSjabloonService
     {
         var s = await _db.SchijfSjabloon.FirstOrDefaultAsync(x => x.Id == id);
         if (s == null) return "Het sjabloon bestaat niet meer.";
+        var inProjectsjabloon = await _db.ProjectSjabloon.Where(p => p.SchijfSjabloonId == id).Select(p => p.Naam).ToListAsync();
+        if (inProjectsjabloon.Count > 0) return $"Het sjabloon wordt gebruikt in {(inProjectsjabloon.Count == 1 ? "projectsjabloon" : "projectsjablonen")} “{string.Join("”, “", inProjectsjabloon)}”. Zet het op inactief of kies eerst een ander schijvensjabloon.";
         _db.SchijfSjabloon.Remove(s);      // de schijven gaan mee (cascade); betalingsgroepen die het gebruikten houden hun eigen schijven
         await _db.SaveChangesAsync();
         return null;

@@ -5,7 +5,7 @@
 @*
     gl-v2 — Instellingen › Planningssjablonen: de lijst (design-handoff "CRM Planningssjablonen" 63a). Een sjabloon is een standaardplanning: blokken worden fases, taken krijgen een duur
     en voorgangers. Kolommen: naam, blokken, taken, duur (in werkdagen, van één woning), reageert op, gebruikt in, gewijzigd, status. Het ⋯-menu (gedeeld .gl-v2-menu, gevuld door
-    gl-v2-instellingen-planningsjabloon-lijst.js) dupliceert, zet (in)actief of verwijdert; verwijderen kan enkel als het nergens gebruikt is en vraagt altijd eerst de bevestigingsmodal.
+    gl-v2-instellingen-sjablonen-lijst.js) dupliceert, zet (in)actief of verwijdert; verwijderen kan enkel als het nergens gebruikt is en vraagt altijd eerst de bevestigingsmodal.
 *@
 @{
     ViewData["Title"] = "Planningssjablonen";
@@ -19,6 +19,7 @@
 @section PageStyle
 {
     <link rel="stylesheet" href="~/css/gl-v2-instellingen-automatisatie.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-sjabloontabs.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-instellingen-planningsjabloon.css" asp-append-version="true" />
 }
 @section PageActions
@@ -30,6 +31,8 @@
 }
 
 <div class="gl-v2-auto gl-v2-pls-lijst">
+    @await Html.PartialAsync("GlV2/_SjabloonTabs", "planning")
+
     <div class="gl-v2-notice gl-v2-notice-compact">
         <i class="ph ph-info" aria-hidden="true"></i>
         <span>Een sjabloon is een standaardplanning: blokken worden fases, taken krijgen een duur in werkdagen en voorgangers. Toepassen doe je in <b>Projecten › Planning › Sjabloon</b>, daarna pas je de planning per project aan zonder het sjabloon te wijzigen.</span>
@@ -61,7 +64,7 @@
                     <span class="gl-v2-auto-acts"><span class="gl-v2-rowact">
                         <i class="ph ph-caret-right gl-v2-rowact-chev" aria-hidden="true"></i>
                         <span class="gl-v2-rowact-btns">
-                            <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="pls-lijst-menu" aria-label="Acties voor @s.Naam" title="Meer acties"><i class="ph ph-dots-three" aria-hidden="true"></i></button>
+                            <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="sj-lijst-menu" aria-label="Acties voor @s.Naam" title="Meer acties"><i class="ph ph-dots-three" aria-hidden="true"></i></button>
                         </span>
                     </span></span>
                     @* Formulieren voor de menu-acties; het menu stuurt ze door met requestSubmit() zodat de bevestigingsmodal (data-bv-*) werkt. *@
@@ -81,12 +84,12 @@
     </section>
 </div>
 
-<div class="gl-v2-menu" id="pls-lijst-menu" role="menu" aria-label="Acties voor dit sjabloon"></div>
+<div class="gl-v2-menu" id="sj-lijst-menu" role="menu" aria-label="Acties voor dit sjabloon"></div>
 
 @await Html.PartialAsync("GlV2/_BevestigModal")
 
 @section PageScripts
 {
-    <script>window.PlsLijst = { canWrite: @(canWrite ? "true" : "false"), canDelete: @(canDelete ? "true" : "false") };</script>
-    <script src="~/js/gl-v2-instellingen-planningsjabloon-lijst.js" asp-append-version="true"></script>
+    <script>window.SjLijst = { canWrite: @(canWrite ? "true" : "false"), canDelete: @(canDelete ? "true" : "false") };</script>
+    <script src="~/js/gl-v2-instellingen-sjablonen-lijst.js" asp-append-version="true"></script>
 }

@@ -25,16 +25,129 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
     public async Task<List<ProjectSjabloonBeheerRij>> BeheerLijst()
     {
         var lijst = await _db.ProjectSjabloon.AsNoTracking().OrderBy(s => s.Naam).ToListAsync();
-        var planning = await _db.PlanningSjabloon.AsNoTracking().ToDictionaryAsync(s => s.Id, s => s.Naam);
-        var traject = await _db.TrajectSjabloon.AsNoTracking().ToDictionaryAsync(s => s.Id, s => s.Naam);
-        var schijven = await _db.SchijfSjabloon.AsNoTracking().ToDictionaryAsync(s => s.Id, s => s.Naam);
-        return lijst.Select(s => new ProjectSjabloonBeheerRij
+        var planningen = await _db.PlanningSjabloon.AsNoTracking().Include(s => s.Blokken).ThenInclude(b => b.Taken).ToDictionaryAsync(s => s.Id);
+        var trajecten = await _db.TrajectSjabloon.AsNoTracking().Include(s => s.Fases).ThenInclude(f => f.Mijlpalen).ToDictionaryAsync(s => s.Id);
+        var schijven = await _db.SchijfSjabloon.AsNoTracking().Include(s => s.Schijven).ToDictionaryAsync(s => s.Id);
+        var gebruikerIds = lijst.Select(s => s.ModifiedByUserId ?? s.CreatedByUserId).Where(i => !string.IsNullOrEmpty(i)).Distinct().ToList();
+        var namen = gebruikerIds.Count == 0 ? new Dictionary<string, string>()
+            : (await _db.AspNetUsers1.AsNoTracking().Where(u => gebruikerIds.Contains(u.Id)).Select(u => new { u.Id, u.Forename, u.Name }).ToListAsync())
+                .ToDictionary(u => u.Id, u => string.IsNullOrWhiteSpace(u.Forename) ? (u.Name ?? "") : u.Forename);
+        return lijst.Select(s =>
         {
-            Id = s.Id, Naam = s.Naam, Beschrijving = s.Beschrijving, IsActief = s.IsActief, GewijzigdOp = s.ModifiedDate ?? s.CreatedDate,
-            PlanningNaam = s.PlanningSjabloonId is int p && planning.TryGetValue(p, out var pn) ? pn : null,
-            TrajectNaam = s.TrajectSjabloonId is int t && traject.TryGetValue(t, out var tn) ? tn : null,
-            SchijvenNaam = s.SchijfSjabloonId is int c && schijven.TryGetValue(c, out var cn) ? cn : null,
+            var r = new ProjectSjabloonBeheerRij
+            {
+                Id = s.Id, Naam = s.Naam, Beschrijving = s.Beschrijving, IsActief = s.IsActief, GewijzigdOp = s.ModifiedDate ?? s.CreatedDate,
+                StandaardGebouw = GebouwTekst(s.StandaardVerdiepingen, s.StandaardKelder, s.StandaardDak),
+            };
+            var door = s.ModifiedByUserId ?? s.CreatedByUserId;
+            if (door != null && namen.TryGetValue(door, out var dn)) r.GewijzigdDoor = dn;
+            if (s.PlanningSjabloonId is int p && planningen.TryGetValue(p, out var pl))
+            {
+                r.PlanningId = p; r.PlanningNaam = pl.Naam;
+                var wd = 0; try { wd = PlanningSjabloonProef.Rekenen(pl, 1, Math.Max(1, s.StandaardVerdiepingen)).Werkdagen; } catch { /* een kapot sjabloon blijft in de lijst staan */ }
+                r.PlanningKern = $"{pl.Blokken.Count} {(pl.Blokken.Count == 1 ? "blok" : "blokken")}{(wd > 0 ? " · " + wd + " wd" : "")}";
+            }
+            if (s.TrajectSjabloonId is int t && trajecten.TryGetValue(t, out var tr))
+            {
+                r.TrajectId = t; r.TrajectNaam = tr.Naam;
+                var n = tr.Fases.Sum(f => f.Mijlpalen.Count);
+                r.TrajectKern = $"{n} {(n == 1 ? "mijlpaal" : "mijlpalen")}";
+            }
+            if (s.SchijfSjabloonId is int c && schijven.TryGetValue(c, out var sc))
+            {
+                r.SchijvenId = c; r.SchijvenNaam = sc.Naam;
+                r.SchijvenKern = $"{sc.Schijven.Count} {(sc.Schijven.Count == 1 ? "schijf" : "schijven")}";
+            }
+            return r;
         }).ToList();
+    }
+
+    /// <summary>"2 verd. · hellend dak · kelder": het standaardgebouw in woorden.</summary>
+    private static string GebouwTekst(int verdiepingen, bool kelder, string? dak)
+    {
+        var delen = new List<string> { $"{Math.Max(1, verdiepingen)} verd." };
+        if (dak == "hellend") delen.Add("hellend dak"); else if (dak == "plat") delen.Add("plat dak");
+        if (kelder) delen.Add("kelder");
+        return string.Join(" · ", delen);
+    }
+
+    public async Task<ProjectSjabloonOverzicht> Overzicht(int? planningId, int? trajectId, int? schijfId, int verdiepingen, bool kelder, string? dak)
+    {
+        verdiepingen = Math.Max(1, Math.Min(verdiepingen, 20));
+        var uit = new ProjectSjabloonOverzicht();
+        var codes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (planningId is int pid)
+        {
+            var pl = await _db.PlanningSjabloon.AsNoTracking().Include(x => x.Blokken).ThenInclude(b => b.Taken).FirstOrDefaultAsync(x => x.Id == pid);
+            if (pl != null)
+            {
+                var proef = PlanningSjabloonProef.Rekenen(pl, 1, verdiepingen);
+                // Blokken die niet voor dit gebouw gelden, vallen weg
+                bool Geldt(PlanningSjabloonBlok b)
+                {
+                    var v = (b.VoorwaardeVariabele ?? "").ToLowerInvariant(); var w = (b.VoorwaardeWaarde ?? "").ToLowerInvariant();
+                    if (v == "kelder") return kelder == (w == "ja");
+                    if (v == "dak") return dak == null || dak == w;
+                    return true;
+                }
+                var blokken = pl.Blokken.Where(Geldt).ToList();
+                foreach (var b in pl.Blokken)
+                {
+                    if (!string.IsNullOrWhiteSpace(b.Code)) codes.Add(b.Code!);
+                    foreach (var t in b.Taken) if (!string.IsNullOrWhiteSpace(t.Code)) codes.Add(t.Code!);
+                }
+                var verloop = string.Join(" · ", proef.Blokken.Where(x => blokken.Any(b => string.Equals(b.Code, x.Code, StringComparison.OrdinalIgnoreCase))).Select(x => $"{x.Naam} {x.Duur} wd"));
+                uit.Planning = new ProjectSjabloonOverzichtPlanning
+                {
+                    Naam = pl.Naam, Blokken = pl.Blokken.Count, Taken = pl.Blokken.Sum(b => b.Taken.Count), Werkdagen = proef.Werkdagen,
+                    PerVerdieping = pl.Blokken.Any(b => b.Herhaling == 1), Fases = blokken.Count, Verloop = verloop,
+                };
+            }
+        }
+        if (trajectId is int tid)
+        {
+            var tr = await _db.TrajectSjabloon.AsNoTracking().Include(x => x.Fases).ThenInclude(f => f.Mijlpalen).FirstOrDefaultAsync(x => x.Id == tid);
+            if (tr != null)
+            {
+                var mijl = tr.Fases.SelectMany(f => f.Mijlpalen).ToList();
+                uit.Traject = new ProjectSjabloonOverzichtTraject
+                {
+                    Naam = tr.Naam, Mijlpalen = mijl.Count, Omschrijving = tr.Omschrijving,
+                    Koppelingen = mijl.Count(m => !string.IsNullOrWhiteSpace(m.Code) && codes.Contains(m.Code)),
+                };
+            }
+        }
+        if (schijfId is int sid)
+        {
+            var sc = await _db.SchijfSjabloon.AsNoTracking().Include(x => x.Schijven).FirstOrDefaultAsync(x => x.Id == sid);
+            if (sc != null)
+            {
+                var voorbeeld = await _schijven.Voorbeeld(sid, verdiepingen, kelder, dak);
+                var rij = sc.Schijven.OrderBy(x => x.Volgorde).ThenBy(x => x.Id).ToList();
+                var nietIn = uit.Planning == null ? new List<string>()
+                    : rij.Select(x => (x.PlanningCode ?? "").Trim()).Where(c => c.Length > 0 && !codes.Contains(c)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                var perVerd = rij.Count(x => x.PerVerdieping);
+                var metVoorwaarde = rij.Count(x => !string.IsNullOrWhiteSpace(x.VoorwaardeVariabele));
+                uit.Schijven = new ProjectSjabloonOverzichtSchijven
+                {
+                    Naam = sc.Naam, Aantal = rij.Count, Vast = VastKort(rij),
+                    Toelichting = string.Join(", ", new[] { perVerd > 0 ? $"{perVerd} per verdieping" : "", metVoorwaarde > 0 ? $"{metVoorwaarde} enkel met kelder of dak" : "" }.Where(x => x.Length > 0)),
+                    CodesNietInPlanning = nietIn, Voorstel = voorbeeld?.Schijven ?? new List<SchijfVoorstel>(), Totaal = voorbeeld?.Totaal ?? 0m,
+                };
+                if (nietIn.Count > 0)
+                    uit.Meldingen.Add($"{string.Join(" en ", nietIn)} uit {sc.Naam} {(nietIn.Count == 1 ? "vindt" : "vinden")} geen taak in {uit.Planning!.Naam}: die schijven komen er zonder koppeling aan de planning.");
+            }
+        }
+        return uit;
+    }
+
+    private static string VastKort(List<SchijfSjabloonSchijf> rij)
+    {
+        var vast = rij.Where(x => x.VastPercentage != null).ToList();
+        if (vast.Count == 0) return "";
+        var som = vast.Sum(x => x.VastPercentage!.Value);
+        var laatste = rij.Count > 0 && rij[^1].VastPercentage != null;
+        return $"vast {som.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("nl-BE"))} %{(laatste ? " oplevering" : "")}";
     }
 
     public async Task<List<ProjectSjabloonKeuze>> Keuzes()
@@ -121,6 +234,7 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
         {
             Verdiepingen = Math.Max(1, Math.Min(a?.Verdiepingen ?? 1, 20)), Kelder = a?.Kelder ?? false,
             Dak = dak is "hellend" or "plat" ? dak : null, EenPlanningVoorAlles = a?.EenPlanningVoorAlles ?? false,
+            InHoofdplanning = a?.InHoofdplanning ?? false,
         };
     }
 
@@ -156,10 +270,22 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
             else if (eenheden.Count == 0) res.Opmerkingen.Add("Er zijn geen eenheden zonder planning (of er zijn nog geen eenheden): er komt geen nieuwe planning.");
             else
             {
-                var rijen = a.EenPlanningVoorAlles
+                // In de hoofdplanning kan enkel als die nog leeg is (geen fasen); anders een aparte planning.
+                if (a.EenPlanningVoorAlles && a.InHoofdplanning) await _planning.Laad(projectId, 0);   // zorgt dat de hoofdplanning bestaat
+                var hoofd = a.EenPlanningVoorAlles && a.InHoofdplanning
+                    ? await _db.BouwPlanning.AsNoTracking().Where(b => b.ProjectId == projectId && b.IsHoofd && b.IsActief).Select(b => new { b.Id }).FirstOrDefaultAsync()
+                    : null;
+                var hoofdLeeg = hoofd != null && !await _db.PlanningSectie.AnyAsync(s => s.ProjectId == projectId && (s.BouwPlanningId == hoofd.Id || s.BouwPlanningId == null));
+                var inHoofd = hoofd != null && hoofdLeeg;
+                if (a.EenPlanningVoorAlles && a.InHoofdplanning && !inHoofd)
+                    res.Opmerkingen.Add("De hoofdplanning heeft al fasen of taken: de planning komt in een aparte planning.");
+                var rijen = inHoofd
+                    ? new List<PlanningToepassingPlanning> { new() { PlanningId = hoofd!.Id, Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak } }
+                    : a.EenPlanningVoorAlles
                     ? new List<PlanningToepassingPlanning> { new() { EenheidIds = eenheden.Select(u => u.Id).ToList(), Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak } }
                     : eenheden.Select(u => new PlanningToepassingPlanning { EenheidIds = new List<int> { u.Id }, Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak }).ToList();
-                var tekst = a.EenPlanningVoorAlles ? $"één planning voor {eenheden.Count} {(eenheden.Count == 1 ? "eenheid" : "eenheden")} ({Lijstje(eenheden.Select(u => u.Name ?? ""))})"
+                var tekst = inHoofd ? $"in de hoofdplanning, voor {eenheden.Count} {(eenheden.Count == 1 ? "eenheid" : "eenheden")} ({Lijstje(eenheden.Select(u => u.Name ?? ""))})"
+                          : a.EenPlanningVoorAlles ? $"één planning voor {eenheden.Count} {(eenheden.Count == 1 ? "eenheid" : "eenheden")} ({Lijstje(eenheden.Select(u => u.Name ?? ""))})"
                                                    : $"een planning voor elk van de {eenheden.Count} {(eenheden.Count == 1 ? "eenheid" : "eenheden")} zonder planning ({Lijstje(eenheden.Select(u => u.Name ?? ""))})";
                 if (!uitvoeren) res.Stappen.Add($"Planning “{planningNaam}”: {tekst}.");
                 else

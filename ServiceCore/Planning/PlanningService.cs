@@ -907,6 +907,18 @@ public class PlanningService : IPlanningService
 
         // Aanmaken wat nog ontbreekt
         var planningNaam = d.Planningen.FirstOrDefault(p => p.Id == actief)?.Naam ?? "Hoofdplanning";
+
+        // Project.AspNetUserId is de login-id (Users.UserId); Mijn taken zoekt op het nummer (Users.Id) van de gebruiker.
+        string? beheerder = null;
+        if (!string.IsNullOrWhiteSpace(d.Project.AspNetUserId))
+        {
+            var uid = await _db.Users.AsNoTracking().Where(u => u.UserId == d.Project.AspNetUserId).Select(u => (int?)u.Id).FirstOrDefaultAsync();
+            if (uid != null) beheerder = uid.Value.ToString();
+        }
+        // Eerder aangemaakte taken die op de login-id staan, herstellen
+        foreach (var t in bestaand.Where(t => Loopt(t) && t.ToegewezenAanUserId != beheerder && t.ToegewezenAanUserId == d.Project.AspNetUserId))
+        { t.ToegewezenAanUserId = beheerder; t.ToegewezenAanRol = beheerder == null ? (int)BOCore.InterneRol.Projectleider : null; wijzigingen = true; }
+
         foreach (var (stage, rij, link) in koppelingen.Where(k => k.Link.KlaarOmTeMarkeren))
         {
             var sleutel = prefix + stage.Id;
@@ -921,8 +933,8 @@ public class PlanningService : IPlanningService
                 Titel = titel.Length > 200 ? titel[..200] : titel,
                 Omschrijving = $"{rij.Wbs} {rij.Naam} is klaar in {planningNaam}. Open de planning of Betalingsschijven en zet schijf \"{link.Naam}\" ({link.Percentage.ToString("0.##", Nl)} %) klaar voor {link.TeMarkeren} " + (link.TeMarkeren == 1 ? "eenheid." : "eenheden."),
                 Status = open, Prioriteit = (int)BOCore.TaakPrioriteit.Normaal,
-                ToegewezenAanUserId = string.IsNullOrWhiteSpace(d.Project.AspNetUserId) ? null : d.Project.AspNetUserId,
-                ToegewezenAanRol = string.IsNullOrWhiteSpace(d.Project.AspNetUserId) ? (int)BOCore.InterneRol.Projectleider : null,
+                ToegewezenAanUserId = beheerder,
+                ToegewezenAanRol = beheerder == null ? (int)BOCore.InterneRol.Projectleider : null,
                 Vervaldatum = DateOnly.FromDateTime(DateTime.Today),
                 Herkomst = (int)BOCore.TaakHerkomst.Systeem, CreatedByUserId = SchijfTaakBeheerder, CreatedDate = nu,
             });
@@ -1635,7 +1647,9 @@ public class PlanningService : IPlanningService
             {
                 var bestaand = d.Planningen.FirstOrDefault(p => p.Id == pid);
                 if (bestaand == null) return "Een gekozen planning bestaat niet meer.";
-                if (bestaand.IsHoofd) return "De hoofdplanning kan niet door een sjabloon vervangen worden.";
+                // De hoofdplanning mag enkel gevuld worden als ze nog leeg is; een bestaande planning vervangen kan niet.
+                if (bestaand.IsHoofd && d.Taken.Any(x => d.Secties.Any(s => s.Id == x.PlanningSectieId && d.PlanningVan(s) == bestaand.Id)))
+                    return "De hoofdplanning heeft al taken en kan niet door een sjabloon vervangen worden.";
                 if (!bestaandeIds.Add(pid)) return $"{bestaand.Naam} staat twee keer in de lijst.";
                 if (!b.Vervang && d.Taken.Any(x => d.Secties.Any(s => s.Id == x.PlanningSectieId && d.PlanningVan(s) == bestaand.Id)))
                     return $"{bestaand.Naam} heeft al taken. Bevestig dat het sjabloon die mag vervangen.";

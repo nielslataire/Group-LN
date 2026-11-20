@@ -294,6 +294,16 @@
     host.addEventListener("change", function (e) {
         if (!canWrite) return;
         var f = e.target.getAttribute("data-f"); if (!f) return;
+        if (f === "t-naam" || f === "b-naam") {
+            // Een nog automatische standaardcode (NIEUWE_TAAK, NIEUW_BLOK, met nummer) volgt de naam; een andere code blijft altijd staan.
+            var isB = f === "b-naam", item = isB ? blokVan(e.target) : taakVan(e.target), oud = item.code;
+            if (!new RegExp("^" + (isB ? "NIEUW_BLOK" : "NIEUWE_TAAK") + "(_\\d+)?$").test(String(oud || "").toUpperCase()) || !String(item.naam || "").trim()) return;
+            var nieuw = geefCode(item.naam);
+            if (nieuw.toUpperCase() === String(oud).toUpperCase()) return;
+            item.code = nieuw;
+            doc.blokken.forEach(function (bl) { bl.taken.forEach(function (tk) { (tk.voorg || []).forEach(function (v) { if (String(v.code).toUpperCase() === String(oud).toUpperCase()) v.code = nieuw; }); }); });
+            markDirty(); render(); return;
+        }
         if (f === "b-voorwaarde") blokVan(e.target).voorwaarde = e.target.value;
         else if (f === "b-herhaling") { var b = blokVan(e.target); b.herhaling = e.target.checked ? 1 : 0; if (!b.herhaling) b.volgt = false; render(); }
         else if (f === "b-volgt") blokVan(e.target).volgt = e.target.checked;

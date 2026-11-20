@@ -1,59 +1,191 @@
-/* gl-v2 — Instellingen › Schijvensjablonen (lijst en editor). Laadt vóór shell.css: regels staan onder .gl-v2 voor voldoende specificiteit. */
+/* gl-v2 — Instellingen › Sjablonen › Schijven en Projectsjablonen: lijsten (66a/66c) en editors (66b/66d), design-handoff "CRM Schijven- en projectsjablonen".
+   Laadt vóór shell.css: regels staan onder .gl-v2 voor voldoende specificiteit. Eigen namespace gl-v2-sjs-* (gedeeld door beide) en gl-v2-pjs-* (enkel projectsjabloon). Tabs: gl-v2-instellingen-sjabloontabs.css. */
 
-/* Lijst */
-.gl-v2 .gl-v2-sjs-kop, .gl-v2 .gl-v2-sjs-rij-lijst, .gl-v2 .gl-v2-sjs-lijst .gl-v2-sjs-rij { display: grid; grid-template-columns: minmax(180px, 3fr) 140px 110px 100px 150px; gap: 12px; align-items: center; padding: 10px 16px; }
-.gl-v2 .gl-v2-sjs-kop { font: 600 11px var(--gl-v2-font-sans); letter-spacing: .04em; text-transform: uppercase; color: var(--gl-v2-muted); border-bottom: 1px solid var(--gl-v2-line); }
-.gl-v2 .gl-v2-sjs-lijst .gl-v2-sjs-rij { border-bottom: 1px solid var(--gl-v2-line); }
-.gl-v2 .gl-v2-sjs-lijst .gl-v2-sjs-rij.is-muted-row { opacity: .6; }
-.gl-v2 .gl-v2-sjs-kop .r, .gl-v2 .gl-v2-sjs-lijst .gl-v2-sjs-rij > .r { text-align: right; }
-.gl-v2 .gl-v2-sjs-wie { display: flex; flex-direction: column; gap: 2px; color: inherit; text-decoration: none; min-width: 0; }
-.gl-v2 .gl-v2-sjs-wie .t { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
-.gl-v2 .gl-v2-sjs-wie .o { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* ── Lijsten ── */
+.gl-v2 .gl-v2-auto-grid--sjs { grid-template-columns: minmax(0, 2fr) 128px minmax(0, 1.1fr) minmax(0, 1.2fr) minmax(0, 1.2fr) 140px 84px 56px; }
+.gl-v2 .gl-v2-auto-grid--pjs { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.3fr) minmax(0, 1.3fr) minmax(0, 1.1fr) minmax(0, 1fr) 140px 84px 56px; }
+.gl-v2 .gl-v2-sjs-lijst .gl-v2-sjs-wie { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-width: 0; color: inherit; text-decoration: none; }
+.gl-v2 .gl-v2-sjs-lijst .gl-v2-sjs-wie .t { font: 600 14px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2 .gl-v2-sjs-lijst .gl-v2-sjs-wie .o { font: 400 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.gl-v2 .gl-v2-sjs-lijst .gl-v2-sjs-wie .o.is-leeg { font-style: italic; color: var(--gl-v2-muted-light, #9aa898); }
 .gl-v2 .gl-v2-sjs-verd { color: var(--gl-v2-muted); }
-.gl-v2 .gl-v2-sjs-acts { display: flex; justify-content: flex-end; gap: 4px; }
-.gl-v2 .gl-v2-sjs-vorm { display: inline-flex; margin: 0; }
-@media (max-width: 767px) {
-    .gl-v2 .gl-v2-sjs-kop { display: none; }
-    .gl-v2 .gl-v2-sjs-lijst .gl-v2-sjs-rij { grid-template-columns: 1fr auto; }
-    .gl-v2 .gl-v2-sjs-lijst .gl-v2-sjs-rij > .r, .gl-v2 .gl-v2-sjs-lijst .gl-v2-sjs-rij > .is-muted { display: none; }
+.gl-v2 .gl-v2-sjs-lijst .gl-v2-sjs-meer { white-space: normal; line-height: 1.35; font-size: 12px; }
+.gl-v2 .gl-v2-sjs-lijst .gl-v2-sjs-vorm { display: none; }
+.gl-v2 .gl-v2-sjs-lijst [hidden] { display: none !important; }
+.gl-v2 .gl-v2-sjs-lk { display: inline-flex; align-items: flex-start; gap: 7px; padding: 5px 8px; border-radius: var(--gl-v2-radius-md, 8px); background: var(--gl-v2-hover-tint); text-decoration: none; justify-self: start; max-width: 100%; min-width: 0; }
+.gl-v2 .gl-v2-sjs-lk:hover { background: var(--gl-v2-primary-tint); }
+.gl-v2 .gl-v2-sjs-lk > i { color: var(--gl-v2-primary); margin-top: 2px; flex: none; }
+.gl-v2 .gl-v2-sjs-lk > span { display: flex; flex-direction: column; min-width: 0; }
+.gl-v2 .gl-v2-sjs-lk b { font: 600 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-v2 .gl-v2-sjs-lk small { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2 .gl-v2-sjs-geen { font: 450 12px var(--gl-v2-font-sans); font-style: italic; color: var(--gl-v2-muted-light, #9aa898); }
+@media (max-width: 1280px) {
+    .gl-v2 .gl-v2-auto-grid--sjs { grid-template-columns: minmax(0, 2fr) 128px minmax(0, 1.1fr) minmax(0, 1.2fr) 130px 84px 56px; }
+    .gl-v2 .gl-v2-auto-grid--sjs > :nth-child(5) { display: none; }
+    .gl-v2 .gl-v2-auto-grid--pjs { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.3fr) minmax(0, 1.3fr) minmax(0, 1.1fr) 84px 56px; }
+    .gl-v2 .gl-v2-auto-grid--pjs > :nth-child(5), .gl-v2 .gl-v2-auto-grid--pjs > :nth-child(6) { display: none; }
+}
+@media (max-width: 767.98px) {
+    .gl-v2 .gl-v2-auto-grid--sjs, .gl-v2 .gl-v2-auto-grid--pjs { grid-template-columns: minmax(0, 1fr) auto 44px; }
+    .gl-v2 .gl-v2-auto-grid--sjs > :nth-child(n+2):nth-child(-n+6), .gl-v2 .gl-v2-auto-grid--pjs > :nth-child(n+2):nth-child(-n+6) { display: none; }
+    .gl-v2 .gl-v2-auto-grid--pjs > :nth-child(2) { display: none; }
+    .gl-v2 .gl-v2-auto-grid--sjs > :nth-child(2) { display: block; grid-column: 1; grid-row: 2; font-size: 12px; }
+    .gl-v2 .gl-v2-auto-grid--sjs.gl-v2-auto-head, .gl-v2 .gl-v2-auto-grid--pjs.gl-v2-auto-head { display: none; }
 }
 
-/* Editor */
-.gl-v2 .gl-v2-sjs { display: flex; flex-direction: column; gap: 16px; max-width: 1100px; }
-.gl-v2 .gl-v2-sjs-kopkaart { display: grid; grid-template-columns: 2fr 3fr 1fr auto; gap: 16px; align-items: start; padding: 16px; }
-.gl-v2 .gl-v2-sjs-schijven { padding: 16px; }
-.gl-v2 .gl-v2-sjs-schijven-kop { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
-.gl-v2 .gl-v2-sjs-som { margin-left: auto; font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
-.gl-v2 .gl-v2-sjs-som[data-state="ok"] { color: var(--gl-v2-success, #2f7d4f); }
-.gl-v2 .gl-v2-sjs-som[data-state="fout"] { color: var(--gl-v2-danger, #b3261e); }
-.gl-v2 .gl-v2-sjs-uitleg, .gl-v2 .gl-v2-sjs-hint { font: 450 12.5px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted); margin: 4px 0 12px; }
-.gl-v2 .gl-v2-sjs-hint { margin-top: 12px; }
-.gl-v2 .gl-v2-sjs-uitleg code, .gl-v2 .gl-v2-sjs-hint code { font-size: 12px; }
-.gl-v2 .gl-v2-sjs-tabelkop, .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij { display: grid; grid-template-columns: 64px minmax(200px, 4fr) minmax(110px, 1.5fr) 100px 90px 90px 150px 40px; gap: 10px; align-items: center; }
-.gl-v2 .gl-v2-sjs-tabelkop { font: 600 11px var(--gl-v2-font-sans); letter-spacing: .04em; text-transform: uppercase; color: var(--gl-v2-muted); padding: 0 0 6px; border-bottom: 1px solid var(--gl-v2-line); }
-.gl-v2 .gl-v2-sjs-rijen { list-style: none; margin: 0; padding: 0; }
-.gl-v2 .gl-v2-sjs .gl-v2-sjs-rij { padding: 8px 0; border-bottom: 1px solid var(--gl-v2-line); }
-.gl-v2 .gl-v2-sjs .gl-v2-sjs-rij.is-eind { background: color-mix(in srgb, var(--gl-v2-primary) 5%, transparent); }
-.gl-v2 .gl-v2-sjs-volgorde { display: flex; gap: 2px; }
-.gl-v2 .gl-v2-sjs-check { display: flex; justify-content: center; }
-.gl-v2 .gl-v2-sjs-check input { accent-color: var(--gl-v2-primary); width: 16px; height: 16px; }
-.gl-v2 .gl-v2-sjs-wis { display: flex; justify-content: flex-end; }
-.gl-v2 .gl-v2-sjs .gl-v2-field-box.is-uit { opacity: .5; }
-.gl-v2 .gl-v2-sjs-toevoegbalk { padding-top: 12px; }
+/* ── Editor: indeling (zoals de planningseditor: links de inhoud, rechts voorbeeld en controle) ── */
+.gl-v2 .gl-v2-sjs { display: flex; flex-direction: column; gap: 12px; }
+.gl-v2 .gl-v2-sjs-grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; align-items: start; }
+.gl-v2 .gl-v2-sjs-links { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.gl-v2 .gl-v2-sjs-rechts { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 12px; min-width: 0; }
 .gl-v2 .gl-v2-sjs-fouten[hidden] { display: none; }
+.gl-v2 .gl-v2-sjs-foutlijst { margin: 4px 0 0; padding-left: 18px; }
+@media (max-width: 1500px) {
+    .gl-v2 .gl-v2-sjs-grid { grid-template-columns: minmax(0, 1fr); }
+    .gl-v2 .gl-v2-sjs-rechts { position: static; }
+}
+.gl-v2 .gl-v2-sjs-kopkaart, .gl-v2 .gl-v2-pjs-kop { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) 150px auto; gap: 14px; padding: 14px 16px; align-items: start; }
+.gl-v2 .gl-v2-pjs-kop { grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) auto; }
+.gl-v2 .gl-v2-sjs-actief { align-self: center; margin-top: 16px; }
+.gl-v2 .gl-v2-sjs-schijven, .gl-v2 .gl-v2-pjs-kaart { padding: 0 0 14px; }
+.gl-v2 .gl-v2-pjs-kaart { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+.gl-v2 .gl-v2-sjs-schijven-kop { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; padding: 14px 16px 0; }
+.gl-v2 .gl-v2-pjs-kaart .gl-v2-sjs-schijven-kop { padding: 0; }
+.gl-v2 .gl-v2-sjs-sub { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2 .gl-v2-sjs-leeg { margin: 0; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+@media (max-width: 900px) { .gl-v2 .gl-v2-sjs-kopkaart, .gl-v2 .gl-v2-pjs-kop { grid-template-columns: minmax(0, 1fr); } .gl-v2 .gl-v2-sjs-actief { margin-top: 0; } }
+
+/* De regel die het uitrekent */
+.gl-v2 .gl-v2-sjs-regel { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 12px 16px 10px; padding: 8px 10px; border-radius: var(--gl-v2-radius-md, 8px); background: var(--gl-v2-hover-tint); font: 450 12px/1.45 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2 .gl-v2-sjs-regel[data-state="fout"] { background: var(--gl-v2-danger-tint); color: var(--gl-v2-danger); }
+.gl-v2 .gl-v2-sjs-rb { font: 700 11px var(--gl-v2-font-sans); padding: 3px 8px; border-radius: 5px; }
+.gl-v2 .gl-v2-sjs-rb.is-vast { background: var(--gl-v2-gold-tint); color: var(--gl-v2-warning); }
+.gl-v2 .gl-v2-sjs-rb.is-gewicht { background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary-deep); }
+.gl-v2 .gl-v2-sjs-regel code { font: 500 11px var(--gl-v2-font-mono); }
+
+/* Tabel met schijven */
+.gl-v2 .gl-v2-sjs-tabelkop, .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij { display: grid; grid-template-columns: 16px 18px minmax(160px, 1fr) 150px 112px 84px 52px 108px 84px 28px; gap: 8px; align-items: start; padding: 0 14px 0 10px; }
+.gl-v2 .gl-v2-sjs-tabelkop { height: 30px; align-items: center; background: var(--gl-v2-hover-tint); font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .09em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gl-v2 .gl-v2-sjs-tabelkop .r { text-align: right; }
+.gl-v2 .gl-v2-sjs-rijen { list-style: none; margin: 0; padding: 0; }
+.gl-v2 .gl-v2-sjs .gl-v2-sjs-rij { padding-top: 8px; padding-bottom: 8px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2 .gl-v2-sjs .gl-v2-sjs-rij:hover { background: var(--gl-v2-hover-tint); }
+.gl-v2 .gl-v2-sjs .gl-v2-sjs-rij.is-sleep { opacity: .45; }
+.gl-v2 .gl-v2-sjs .gl-v2-sjs-rij.is-doel { box-shadow: inset 0 2px 0 var(--gl-v2-primary); }
+.gl-v2 .gl-v2-sjs-grip { padding-top: 9px; cursor: grab; color: var(--gl-v2-muted); opacity: .5; font-size: 16px; line-height: 1; }
+.gl-v2 .gl-v2-sjs-rij:hover .gl-v2-sjs-grip { opacity: 1; }
+.gl-v2 .gl-v2-sjs-nr { padding-top: 9px; font: 600 11.5px var(--gl-v2-font-mono); color: var(--gl-v2-muted-light, #9aa898); }
+.gl-v2 .gl-v2-sjs-om, .gl-v2 .gl-v2-sjs-cw { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.gl-v2 .gl-v2-sjs-omsub { display: flex; gap: 6px; flex-wrap: wrap; }
+.gl-v2 .gl-v2-sjs-omsub:empty { display: none; }
+.gl-v2 .gl-v2-sjs-omsub em { font-style: normal; }
+.gl-v2 .gl-v2-sjs-tok { font: 500 11px var(--gl-v2-font-mono); color: #7A4E8C; background: #F3ECF6; padding: 0 4px; border-radius: 3px; }
+.gl-v2 .gl-v2-sjs-tokwarn { font: 500 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-warning); }
+.gl-v2 .gl-v2-sjs-eind { font: 700 9.5px var(--gl-v2-font-sans); letter-spacing: .06em; text-transform: uppercase; color: var(--gl-v2-warning); background: var(--gl-v2-gold-tint); padding: 2px 6px; border-radius: 4px; }
+.gl-v2 .gl-v2-sjs-cw .gl-v2-field-input { font: 500 11.5px var(--gl-v2-font-mono); }
+.gl-v2 .gl-v2-sjs-codestatus { display: flex; gap: 4px; align-items: flex-start; font: 450 10.5px/1.35 var(--gl-v2-font-sans); }
+.gl-v2 .gl-v2-sjs-codestatus:empty { display: none; }
+.gl-v2 .gl-v2-sjs-codestatus i { flex: none; margin-top: 1px; }
+.gl-v2 .gl-v2-sjs-codestatus.is-ok { color: var(--gl-v2-primary-deep); }
+.gl-v2 .gl-v2-sjs-codestatus.is-bad { color: var(--gl-v2-danger); }
+.gl-v2 .gl-v2-sjs-codestatus.is-gold { color: var(--gl-v2-warning); }
+.gl-v2 .gl-v2-sjs-soort, .gl-v2 .gl-v2-sjs-seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 8px; background: #EDEFEB; align-self: start; }
+.gl-v2 .gl-v2-sjs-soort { height: 34px; }
+.gl-v2 .gl-v2-sjs-soort button, .gl-v2 .gl-v2-sjs-seg button { border: 0; background: none; border-radius: 6px; padding: 0 8px; font: 500 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); cursor: pointer; white-space: nowrap; }
+.gl-v2 .gl-v2-sjs-soort button.is-on, .gl-v2 .gl-v2-sjs-seg button.is-on { background: var(--gl-v2-surface, #fff); color: var(--gl-v2-primary); font-weight: 700; box-shadow: 0 1px 2px rgba(44, 59, 42, .18); }
+.gl-v2 .gl-v2-sjs-seg button { padding: 0 10px; min-height: 26px; }
+.gl-v2 .gl-v2-sjs-seg.is-groot { height: 40px; }
+.gl-v2 .gl-v2-sjs-seg.is-groot button { padding: 0 14px; font-size: 12.5px; }
+.gl-v2 .gl-v2-sjs-waarde .gl-v2-field-input { text-align: right; }
+.gl-v2 .gl-v2-sjs-waarde.is-fout { box-shadow: 0 0 0 1px var(--gl-v2-danger); }
+.gl-v2 .gl-v2-sjs-check { display: flex; justify-content: center; padding-top: 9px; }
+.gl-v2 .gl-v2-sjs-check input { accent-color: var(--gl-v2-primary); width: 16px; height: 16px; }
+.gl-v2 .gl-v2-sjs-gv select { font-size: 12.5px; }
+.gl-v2 .gl-v2-sjs-res { padding-top: 9px; text-align: right; font: 600 12px var(--gl-v2-font-sans); font-variant-numeric: tabular-nums; color: var(--gl-v2-ink); white-space: nowrap; }
+.gl-v2 .gl-v2-sjs-res.is-uit { color: var(--gl-v2-muted-light, #9aa898); font-weight: 450; }
+.gl-v2 .gl-v2-sjs-menucel { display: flex; justify-content: flex-end; }
+.gl-v2 .gl-v2-sjs-toevoegbalk { display: flex; align-items: center; gap: 14px; padding: 8px 12px 0 40px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2 .gl-v2-sjs-tip { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2 .gl-v2-sjs-tip code { font-size: 11.5px; }
+@media (max-width: 1700px) { /* de kolom Voorbeeld verdwijnt: het voorbeeldpaneel toont dezelfde cijfers */
+    .gl-v2 .gl-v2-sjs-tabelkop, .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij { grid-template-columns: 16px 18px minmax(160px, 1fr) 150px 112px 84px 52px 108px 28px; }
+    .gl-v2 .gl-v2-sjs-tabelkop > :nth-child(9), .gl-v2 .gl-v2-sjs-res { display: none; }
+}
 @media (max-width: 900px) {
-    .gl-v2 .gl-v2-sjs-kopkaart { grid-template-columns: 1fr; }
     .gl-v2 .gl-v2-sjs-tabelkop { display: none; }
-    .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij { grid-template-columns: 1fr 1fr; }
-    .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij > .gl-v2-field-box:nth-child(2) { grid-column: 1 / -1; }
+    .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij { grid-template-columns: 16px 1fr 1fr 28px; padding: 12px 12px; row-gap: 8px; }
+    .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij > .gl-v2-sjs-grip, .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij > .gl-v2-sjs-nr { display: none; }
+    .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij > .gl-v2-sjs-om { grid-column: 1 / 4; }
+    .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij > .gl-v2-sjs-cw { grid-column: 1 / 4; }
+    .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij > .gl-v2-sjs-menucel { grid-column: 4; grid-row: 1; }
+    .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij > .gl-v2-sjs-soort { grid-column: 1 / 3; justify-self: start; }
+    .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij > .gl-v2-sjs-waarde { grid-column: 3 / 5; }
+    .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij > .gl-v2-sjs-check { grid-column: 1 / 2; justify-content: flex-start; }
+    .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij > .gl-v2-sjs-gv { grid-column: 2 / 5; }
+    .gl-v2 .gl-v2-sjs-toevoegbalk { padding-left: 12px; flex-wrap: wrap; }
 }
 
-/* Projectsjablonen (lijst en formulier) */
-.gl-v2 .gl-v2-sjs-lijst.is-project .gl-v2-sjs-kop, .gl-v2 .gl-v2-sjs-lijst.is-project .gl-v2-sjs-rij { grid-template-columns: minmax(180px, 3fr) 1.4fr 1.4fr 1.4fr 100px 150px; }
-@media (max-width: 767px) {
-    .gl-v2 .gl-v2-sjs-lijst.is-project .gl-v2-sjs-rij { grid-template-columns: 1fr auto; }
-    .gl-v2 .gl-v2-sjs-lijst.is-project .gl-v2-sjs-rij > .is-muted { display: none; }
+/* Voorbeeldpaneel, controle, gebruikt in */
+.gl-v2 .gl-v2-sjs-paneel { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.gl-v2 .gl-v2-sjs-paneelkop { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.gl-v2 .gl-v2-sjs-vragen { display: flex; flex-direction: column; gap: 8px; }
+.gl-v2 .gl-v2-sjs-vraag { display: flex; align-items: center; justify-content: space-between; gap: 10px; font: 500 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2 .gl-v2-sjs-euro { width: 140px; }
+.gl-v2 .gl-v2-sjs-euro .gl-v2-field-input { text-align: right; }
+.gl-v2 .gl-v2-sjs-uitrol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.gl-v2 .gl-v2-sjs-uitrol li { display: grid; grid-template-columns: 18px minmax(0, 1fr) 64px 78px; gap: 8px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--gl-v2-hairline-soft); font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2 .gl-v2-sjs-uitrol .nr { font: 600 10.5px var(--gl-v2-font-mono); color: var(--gl-v2-muted-light, #9aa898); }
+.gl-v2 .gl-v2-sjs-uitrol b { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.gl-v2 .gl-v2-sjs-uitrol .e, .gl-v2 .gl-v2-sjs-totaal .e { text-align: right; color: var(--gl-v2-muted); font-variant-numeric: tabular-nums; }
+.gl-v2 .gl-v2-sjs-totaal { display: grid; grid-template-columns: minmax(0, 1fr) 64px 78px; gap: 8px; padding-top: 8px; border-top: 1.5px solid var(--gl-v2-hairline); font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2 .gl-v2-sjs-totaal b { text-align: right; font-variant-numeric: tabular-nums; }
+.gl-v2 .gl-v2-sjs-totaal.is-fout b { color: var(--gl-v2-danger); }
+.gl-v2 .gl-v2-sjs-controle { display: flex; flex-direction: column; gap: 8px; }
+.gl-v2 .gl-v2-sjs-iss { display: flex; flex-direction: column; gap: 1px; padding: 8px 10px; border-radius: var(--gl-v2-radius-md, 8px); font: 450 11.5px/1.45 var(--gl-v2-font-sans); }
+.gl-v2 .gl-v2-sjs-iss b { font-weight: 600; font-size: 12px; }
+.gl-v2 .gl-v2-sjs-iss.is-bad { background: var(--gl-v2-danger-tint); color: var(--gl-v2-danger); }
+.gl-v2 .gl-v2-sjs-iss.is-gold { background: var(--gl-v2-gold-tint); color: var(--gl-v2-warning); }
+.gl-v2 .gl-v2-sjs-ok { display: flex; gap: 6px; align-items: center; font: 500 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary-deep); background: var(--gl-v2-primary-tint); padding: 8px 10px; border-radius: var(--gl-v2-radius-md, 8px); }
+.gl-v2 .gl-v2-sjs-gebruik { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2 .gl-v2-sjs-gebruik li { display: flex; gap: 7px; align-items: center; padding: 8px 10px; border-radius: var(--gl-v2-radius-md, 8px); background: var(--gl-v2-hover-tint); }
+
+/* ── Projectsjabloon (66d) ── */
+.gl-v2 .gl-v2-pjs-delen { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.gl-v2 .gl-v2-pjs-deel { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 10px; box-shadow: inset 0 0 0 1px var(--gl-v2-hairline); min-width: 0; }
+.gl-v2 .gl-v2-pjs-deelkop { display: flex; align-items: center; gap: 8px; }
+.gl-v2 .gl-v2-pjs-deelkop i { width: 26px; height: 26px; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary); font-size: 15px; }
+.gl-v2 .gl-v2-pjs-deelkop b { font: 700 13px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2 .gl-v2-pjs-open { margin-left: auto; font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-primary); text-decoration: none; }
+.gl-v2 .gl-v2-pjs-open:hover { text-decoration: underline; }
+.gl-v2 .gl-v2-pjs-feiten { margin: 0; padding-left: 16px; font: 450 12px/1.6 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+.gl-v2 .gl-v2-pjs-feiten b { color: var(--gl-v2-ink); font-weight: 600; }
+.gl-v2 .gl-v2-pjs-feiten .is-leeg { color: var(--gl-v2-muted-light, #9aa898); font-style: italic; list-style: none; margin-left: -16px; }
+.gl-v2 .gl-v2-pjs-feiten .is-goud { color: var(--gl-v2-warning); }
+.gl-v2 .gl-v2-pjs-mismatch[hidden] { display: none; }
+.gl-v2 .gl-v2-pjs-geb { display: grid; grid-template-columns: auto auto auto; gap: 24px; align-items: end; justify-content: start; }
+.gl-v2 .gl-v2-pjs-vraag { display: flex; flex-direction: column; gap: 6px; }
+.gl-v2 .gl-v2-pjs-stap { display: inline-flex; align-items: center; height: 40px; border-radius: 8px; border: 1px solid var(--gl-v2-hairline); overflow: hidden; align-self: flex-start; }
+.gl-v2 .gl-v2-pjs-stap button { width: 40px; height: 100%; border: 0; background: var(--gl-v2-hover-tint); font: 600 16px var(--gl-v2-font-sans); color: var(--gl-v2-primary); cursor: pointer; }
+.gl-v2 .gl-v2-pjs-stap button:disabled { opacity: .5; cursor: default; }
+.gl-v2 .gl-v2-pjs-stap b { width: 56px; text-align: center; font: 600 15px var(--gl-v2-font-sans); }
+.gl-v2 .gl-v2-pjs-ai { display: flex; gap: 8px; align-items: flex-start; padding: 9px 11px; border-radius: var(--gl-v2-radius-md, 8px); background: color-mix(in srgb, var(--gl-v2-info, #2F4F7A) 10%, transparent); font: 450 12px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-info, #22385A); }
+.gl-v2 .gl-v2-pjs-ai i { flex: none; margin-top: 2px; }
+.gl-v2 .gl-v2-pjs-uitkomst { display: flex; flex-direction: column; gap: 10px; }
+.gl-v2 .gl-v2-pjs-uit { display: flex; flex-direction: column; gap: 3px; padding-top: 10px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2 .gl-v2-pjs-uit:first-child { border-top: 0; padding-top: 0; }
+.gl-v2 .gl-v2-pjs-uit-kop { display: flex; align-items: center; gap: 7px; }
+.gl-v2 .gl-v2-pjs-uit-kop b { font: 700 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2 .gl-v2-pjs-uit p { margin: 0; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2 .gl-v2-pjs-uit p.sub { color: var(--gl-v2-muted); font-size: 11.5px; }
+.gl-v2 .gl-v2-pjs-uit p.is-fout { color: var(--gl-v2-danger); }
+.gl-v2 .gl-v2-pjs-lijst { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; }
+.gl-v2 .gl-v2-pjs-lijst li { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2 .gl-v2-pjs-lijst b { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gl-v2 .gl-v2-pjs-voet { margin: 0; padding-top: 8px; border-top: 1px solid var(--gl-v2-hairline-soft); font: 450 11.5px/1.5 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+@media (max-width: 1100px) { .gl-v2 .gl-v2-pjs-delen { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 767.98px) {
+    .gl-v2 .gl-v2-pjs-geb { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    .gl-v2 .gl-v2-sjs-seg.is-groot { height: 48px; width: 100%; }
+    .gl-v2 .gl-v2-sjs-seg.is-groot button { flex: 1; }
+    .gl-v2 .gl-v2-sjs-vraag { flex-wrap: wrap; }
 }
-.gl-v2 .gl-v2-pjs-kaart { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-.gl-v2 .gl-v2-pjs-velden { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
-@media (max-width: 900px) { .gl-v2 .gl-v2-pjs-velden { grid-template-columns: 1fr; } }

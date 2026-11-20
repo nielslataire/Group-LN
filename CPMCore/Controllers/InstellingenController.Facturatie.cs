@@ -227,7 +227,8 @@ ViewData["HelpScreenId"] = "instellingen-bedrijven-bewerken";
         vm.UserRates ??= new List<IssuerUserRateVM>();
         using var scope = HttpContext.RequestServices.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<DALCore.Models.cpmRunningContext>();
-        vm.AvailableUsers = db.Users.AsNoTracking().Where(u => u.IsActive && !u.UserCompanyAccess.Any())
+        var externeIds = CPMCore.Services.ExterneGebruikers.Ids(db);
+        vm.AvailableUsers = db.Users.AsNoTracking().Where(u => u.IsActive && !externeIds.Contains(u.Id))
             .OrderBy(u => u.Familienaam).ThenBy(u => u.Voornaam)
             .Select(u => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem { Value = u.UserId, Text = (u.Voornaam + " " + u.Familienaam).Trim() })
             .ToList();
@@ -489,9 +490,10 @@ ViewData["HelpScreenId"] = "instellingen-bedrijven-bewerken";
         // Beschikbare gebruikers voor de dropdown (via _projectService context)
         using var scope = HttpContext.RequestServices.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<DALCore.Models.cpmRunningContext>();
+        var externeIds = CPMCore.Services.ExterneGebruikers.Ids(db);
         vm.AvailableUsers = db.Users
             .AsNoTracking()
-            .Where(u => u.IsActive && !u.UserCompanyAccess.Any())
+            .Where(u => u.IsActive && !externeIds.Contains(u.Id))
             .OrderBy(u => u.Familienaam).ThenBy(u => u.Voornaam)
             .Select(u => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
             {
@@ -606,7 +608,8 @@ ViewData["HelpScreenId"] = "instellingen-bedrijven-bewerken";
                 if (existingBo != null) { vm.LogoBytes ??= existingBo.LogoBytes; vm.LogoPath ??= existingBo.LogoPath; }
                 using var errScope = HttpContext.RequestServices.CreateScope();
                 var errDb = errScope.ServiceProvider.GetRequiredService<DALCore.Models.cpmRunningContext>();
-                vm.AvailableUsers = errDb.Users.AsNoTracking().Where(u => u.IsActive && !u.UserCompanyAccess.Any())
+                var externeIds = CPMCore.Services.ExterneGebruikers.Ids(errDb);
+                vm.AvailableUsers = errDb.Users.AsNoTracking().Where(u => u.IsActive && !externeIds.Contains(u.Id))
                     .OrderBy(u => u.Familienaam).ThenBy(u => u.Voornaam)
                     .Select(u => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem { Value = u.UserId, Text = (u.Voornaam + " " + u.Familienaam).Trim() }).ToList();
                 ViewBag.LastInvoiceId = errDb.Invoices.AsNoTracking().Where(i => i.IssuerCompanyId == id).OrderByDescending(i => i.Id).Select(i => (int?)i.Id).FirstOrDefault();

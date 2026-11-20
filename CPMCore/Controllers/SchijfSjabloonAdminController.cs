@@ -35,7 +35,7 @@ public class SchijfSjabloonAdminController : BaseController
 
     [HttpGet("Nieuw")]
     [CPMCore.Filters.PermissionWrite(PermissionCodes.SettingsPlanningSjablonen)]
-    public IActionResult Nieuw()
+    public async Task<IActionResult> Nieuw()
     {
         SetBreadcrumbs("Nieuw sjabloon");
         SetPageHeader("bx bx-list-check", "Nieuw schijvensjabloon", "Instellingen");
@@ -48,6 +48,7 @@ public class SchijfSjabloonAdminController : BaseController
                 new SchijfSjabloonSchijfBewerk { Naam = "Bij de voorlopige oplevering (ontvangst van de sleutels)", VastPercentage = 5 },
             },
         };
+        await ViewHelpers();
         return View("EditV2", model);
     }
 
@@ -58,6 +59,7 @@ public class SchijfSjabloonAdminController : BaseController
         if (sjabloon == null) return NotFound();
         SetBreadcrumbs(sjabloon.Naam);
         SetPageHeader("bx bx-list-check", $"Sjabloon — {sjabloon.Naam}", "Instellingen");
+        await ViewHelpers(id);
         return View("EditV2", sjabloon);
     }
 
@@ -106,11 +108,19 @@ public class SchijfSjabloonAdminController : BaseController
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>De codes van de planningssjablonen (voor de controle van "Code in planning") en de projectsjablonen die dit sjabloon gebruiken.</summary>
+    private async Task ViewHelpers(int? id = null)
+    {
+        ViewData["PlanningCodes"] = await _service.PlanningCodes();
+        ViewData["GebruiktIn"] = id == null ? new List<string>() : (await _service.BeheerLijst()).FirstOrDefault(r => r.Id == id)?.GebruiktIn ?? new List<string>();
+    }
+
     private void SetBreadcrumbs(string? leaf = null)
     {
         var dashboard = new MvcBreadcrumbNode("Index", "Home", "Dashboard");
         var instellingen = new MvcBreadcrumbNode("Index", "Instellingen", "Instellingen") { Parent = dashboard };
-        var lijst = new MvcBreadcrumbNode("Index", "SchijfSjabloonAdmin", "Schijvensjablonen") { Parent = instellingen };
+        var sjablonen = new MvcBreadcrumbNode("Index", "ProjectSjabloonAdmin", "Sjablonen") { Parent = instellingen };
+        var lijst = new MvcBreadcrumbNode("Index", "SchijfSjabloonAdmin", "Schijven") { Parent = sjablonen };
         ViewData["BreadcrumbNode"] = leaf == null
             ? lijst
             : new MvcBreadcrumbNode("Bewerken", "SchijfSjabloonAdmin", leaf) { Parent = lijst };

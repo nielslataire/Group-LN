@@ -30,8 +30,8 @@
     var firstRender = true;
 
     var UI_KEY = "gl-v2-pl-ui-" + cfg.projectId;
-    var ui = { scale: "week", kritiek: false, basis: false, collapsed: {}, listW: 0, noticesOpen: false };
-    try { var raw = window.localStorage.getItem(UI_KEY); if (raw) { var p = JSON.parse(raw); ui.scale = p.scale || ui.scale; ui.kritiek = !!p.kritiek; ui.basis = !!p.basis; ui.collapsed = p.collapsed || {}; ui.listW = +p.listW || 0; ui.noticesOpen = !!p.noticesOpen; } } catch (e) { /* geen opslag: gewoon de standaard */ }
+    var ui = { scale: "week", kritiek: false, basis: false, collapsed: {}, listW: 0, noticesOpen: false, mview: "week", mopen: {} };
+    try { var raw = window.localStorage.getItem(UI_KEY); if (raw) { var p = JSON.parse(raw); ui.scale = p.scale || ui.scale; ui.kritiek = !!p.kritiek; ui.basis = !!p.basis; ui.collapsed = p.collapsed || {}; ui.listW = +p.listW || 0; ui.noticesOpen = !!p.noticesOpen; ui.mview = p.mview === "lijst" || p.mview === "tijdlijn" ? p.mview : "week"; ui.mopen = p.mopen || {}; } } catch (e) { /* geen opslag: gewoon de standaard */ }
     function saveUi() { try { window.localStorage.setItem(UI_KEY, JSON.stringify(ui)); } catch (e) { /* idem */ } }
 
     function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c]; }); }
@@ -236,7 +236,7 @@
                 "<div class=\"gl-v2-notice-body\"><span class=\"gl-v2-notice-title\">" + esc(m.titel) + "</span>" + (m.tekst ? "<span class=\"gl-v2-notice-text\">" + esc(m.tekst) + "</span>" : "") + "</div></div>";
         });
         if (klaar.length && canWrite) {
-            html += "<div class=\"gl-v2-notice gl-v2-notice-expanded is-success\" role=\"status\"><span class=\"gl-v2-notice-expanded-icon\"><i class=\"ph ph-seal-check\" aria-hidden=\"true\"></i></span><div class=\"gl-v2-notice-body\"><span class=\"gl-v2-notice-title\">" + (klaar.length === 1 ? "Een schijf is bereikt" : klaar.length + " schijven zijn bereikt") + "</span><ul class=\"gl-v2-pl-notice-list\">" +
+            html += "<div class=\"gl-v2-notice gl-v2-notice-expanded is-success gl-v2-pl-notice-schijf\" role=\"status\"><span class=\"gl-v2-notice-expanded-icon\"><i class=\"ph ph-seal-check\" aria-hidden=\"true\"></i></span><div class=\"gl-v2-notice-body\"><span class=\"gl-v2-notice-title\">" + (klaar.length === 1 ? "Een schijf is bereikt" : klaar.length + " schijven zijn bereikt") + "</span><ul class=\"gl-v2-pl-notice-list\">" +
                 klaar.map(function (k) { return "<li><b>" + esc(k.s.groepNaam) + " · " + esc(k.s.naam) + "</b><span>" + esc(k.r.wbs + " " + k.r.naam) + " is klaar. Markeren voor " + k.s.teMarkeren + (k.s.teMarkeren === 1 ? " eenheid" : " eenheden") + (k.s.overgeslagen ? " (" + k.s.overgeslagen + " overgeslagen: niet verkocht of akte nog niet verleden)" : "") + ".</span><button type=\"button\" data-schijf-markeer=\"" + k.s.stageId + "\">Markeren</button></li>"; }).join("") + "</ul></div></div>";
         }
         if (perRow.length) {
@@ -261,11 +261,16 @@
         else naam += "<span class=\"gl-v2-pl-spacer\"></span>";
         if (canWrite) naam = "<span class=\"gl-v2-pl-grip\" data-grip title=\"Sleep om de rij te verplaatsen\" aria-hidden=\"true\"><i class=\"ph ph-dots-six-vertical\"></i></span>" + naam;
         naam += "<span class=\"gl-v2-pl-name-text\" " + (canWrite ? "data-edit=\"naam\" title=\"Klik om de naam te wijzigen\"" : "") + ">" + esc(r.naam) + "</span>";
-        (r.schijven || []).forEach(function (s) {
-            // Compact label (de naamkolom is smal): enkel het schijfnummer; de volledige naam staat in de tooltip
-            var tekst = "Schijf " + s.nummer + (s.aantalEenheden ? " · " + s.aantalBereikt + "/" + s.aantalEenheden : "");
-            if (s.klaarOmTeMarkeren && canWrite) naam += "<button type=\"button\" class=\"gl-v2-pl-schijf is-klaar\" data-act=\"schijf-markeer\" data-stage=\"" + s.stageId + "\" title=\"" + esc(s.groepNaam + " · " + s.naam) + ": markeer als bereikt voor " + s.teMarkeren + " eenheden\"><i class=\"ph ph-seal-check\" aria-hidden=\"true\"></i>Schijf " + s.nummer + " bereikt?</button>";
-            else naam += "<span class=\"gl-v2-pl-schijf" + (s.allesBereikt ? " is-bereikt" : "") + "\" title=\"Betalingsschijf " + esc(s.groepNaam) + " · " + esc(s.naam) + " (" + s.percentage + " %)\"><i class=\"ph " + (s.allesBereikt ? "ph-seal-check" : "ph-coins") + "\" aria-hidden=\"true\"></i>" + tekst + "</span>";
+        // Eén label per schijfnummer (dezelfde schijf in meerdere betalingsgroepen telt samen): de naamkolom is smal, de taaknaam moet leesbaar blijven.
+        var perNummer = {}, volgorde = [];
+        (r.schijven || []).forEach(function (s) { if (!perNummer[s.nummer]) { perNummer[s.nummer] = []; volgorde.push(s.nummer); } perNummer[s.nummer].push(s); });
+        volgorde.forEach(function (nr) {
+            var l = perNummer[nr], eenh = 0, bereikt = 0, klaar = [], teMarkeren = 0;
+            l.forEach(function (s) { eenh += s.aantalEenheden || 0; bereikt += s.aantalBereikt || 0; if (s.klaarOmTeMarkeren) { klaar.push(s.stageId); teMarkeren += s.teMarkeren; } });
+            var alles = l.every(function (s) { return s.allesBereikt; });
+            var tip = l.map(function (s) { return s.groepNaam + " · " + s.naam + " (" + s.percentage + " %)"; }).join("\n");
+            if (klaar.length && canWrite) naam += "<button type=\"button\" class=\"gl-v2-pl-schijf is-klaar\" data-act=\"schijf-markeer\" data-stage=\"" + klaar.join(",") + "\" title=\"" + esc(tip) + "\nMarkeer als bereikt voor " + teMarkeren + (teMarkeren === 1 ? " eenheid" : " eenheden") + "\"><i class=\"ph ph-seal-check\" aria-hidden=\"true\"></i>Schijf " + nr + "?</button>";
+            else naam += "<span class=\"gl-v2-pl-schijf" + (alles ? " is-bereikt" : "") + "\" title=\"" + esc(tip) + "\"><i class=\"ph " + (alles ? "ph-seal-check" : "ph-coins") + "\" aria-hidden=\"true\"></i>" + nr + (eenh ? " · " + bereikt + "/" + eenh : "") + "</span>";
         });
         if (ui.kritiek && r.kritiek) naam += "<span class=\"gl-v2-pl-badge\" title=\"Kritiek pad: " + (fase ? "bevat kritieke taken" : "geen speling") + "\">K</span>";
         if (shifted[r.sleutel]) naam += "<span class=\"gl-v2-pl-badge is-gold\">verschoven</span>";
@@ -345,7 +350,8 @@
     }
 
     // ── Alles tekenen ──
-    function render() {
+    function render() { renderMain(); renderMobile(); }
+    function renderMain() {
         canWrite = canWriteBasis && state.actiefPlanningId !== GLOBAAL;
         var heeft = !!state.heeftPlanning && state.rijen.length > 0;
         renderTabs();
@@ -487,7 +493,7 @@
         var caret = e.target.closest("[data-act=caret]");
         if (caret) { ui.collapsed[key] = !ui.collapsed[key]; saveUi(); render(); return; }
         var sm = e.target.closest("[data-act=schijf-markeer]");
-        if (sm && canWrite) { schijfMarkeer(parseInt(sm.getAttribute("data-stage"), 10), false); return; }
+        if (sm && canWrite) { schijfMarkeerLijst(String(sm.getAttribute("data-stage")).split(",").map(function (x) { return parseInt(x, 10); }).filter(function (x) { return x > 0; })); return; }
         var tick = e.target.closest("[data-act=tick]");
         if (tick && canWrite) { send({ type: "wijzig", soort: "taak", id: r.id, velden: { voortgang: r.afgerond ? 0 : 100 } }); return; }
         var add = e.target.closest("[data-act=add-in]");
@@ -1093,9 +1099,11 @@
         return {
             verdiepingen: Math.max(1, Math.min(20, parseInt($("gl-v2-pl-pj-verd").value, 10) || 1)),
             kelder: $("gl-v2-pl-pj-kelder").checked, dak: $("gl-v2-pl-pj-dak").value || null,
-            eenPlanningVoorAlles: $("gl-v2-pl-pj-een").checked
+            eenPlanningVoorAlles: $("gl-v2-pl-pj-een").checked,
+            inHoofdplanning: $("gl-v2-pl-pj-een").checked && $("gl-v2-pl-pj-hoofd").checked
         };
     }
+    function pjHoofdRij() { $("gl-v2-pl-pj-hoofd-rij").hidden = !$("gl-v2-pl-pj-een").checked; }
     function pjFout(t) { var el = $("gl-v2-pl-pj-fout"); el.textContent = t || ""; el.hidden = !t; }
     function pjToon(res) {
         var st = $("gl-v2-pl-pj-stappen"), op = $("gl-v2-pl-pj-opm"), sc = $("gl-v2-pl-pj-schijven");
@@ -1122,7 +1130,7 @@
         $("gl-v2-pl-pj-verd").value = k.verdiepingen || 1;
         $("gl-v2-pl-pj-kelder").checked = !!k.kelder;
         $("gl-v2-pl-pj-dak").value = k.dak || "";
-        $("gl-v2-pl-pj-een").checked = false;
+        $("gl-v2-pl-pj-een").checked = false; $("gl-v2-pl-pj-hoofd").checked = true; pjHoofdRij();
         $("gl-v2-pl-pj-ai-uitleg").textContent = "";
         $("gl-v2-pl-pj-rest").hidden = false;
         pjVoorbeeld();
@@ -1148,6 +1156,7 @@
     }
     $("gl-v2-pl-pj").addEventListener("change", function (e) {
         if (e.target.name === "gl-v2-pl-pj-keuze") { var id = parseInt(e.target.value, 10); var k = pj.keuzes.filter(function (x) { return x.id === id; })[0]; if (k) pjKies(k); return; }
+        if (e.target.id === "gl-v2-pl-pj-een") pjHoofdRij();
         if (e.target.closest("#gl-v2-pl-pj-rest")) pjPlanVoorbeeld();
     });
     $("gl-v2-pl-pj-verd").addEventListener("input", pjPlanVoorbeeld);
@@ -1160,7 +1169,7 @@
             if (!res.ok) { uitleg.textContent = res.fout || "De AI kon geen voorstel doen."; return; }
             var a = res.antwoorden;
             $("gl-v2-pl-pj-verd").value = a.verdiepingen; $("gl-v2-pl-pj-kelder").checked = !!a.kelder;
-            $("gl-v2-pl-pj-dak").value = a.dak || ""; $("gl-v2-pl-pj-een").checked = !!a.eenPlanningVoorAlles;
+            $("gl-v2-pl-pj-dak").value = a.dak || ""; $("gl-v2-pl-pj-een").checked = !!a.eenPlanningVoorAlles; pjHoofdRij();
             uitleg.textContent = "Voorstel van de AI, kijk het na: " + (res.toelichting || "ingevuld.");
             pjVoorbeeld();
         }).catch(function (e) { knop.disabled = false; uitleg.textContent = e.message || "De AI kon niet bereikt worden."; });
@@ -1720,6 +1729,21 @@
             if (daarna) daarna();
         });
     }
+    // Dezelfde schijf in meerdere betalingsgroepen: één voor één markeren (elke aanroep levert een nieuwe staat op).
+    function schijfMarkeerLijst(ids) {
+        if (!ids.length) return;
+        if (ids.length === 1) { schijfMarkeer(ids[0], false); return; }
+        var totaal = 0;
+        state.rijen.forEach(function (r) { (r.schijven || []).forEach(function (s) { if (ids.indexOf(s.stageId) >= 0) totaal += s.teMarkeren; }); });
+        var rest = ids.slice();
+        (function volgende() {
+            var id = rest.shift();
+            schijfPost(cfg.schijfMarkeerUrl, { stageId: id, terugzetten: false }, function () {
+                if (rest.length) volgende();
+                else toast("success", "Schijf bereikt", "Gemarkeerd voor " + totaal + (totaal === 1 ? " eenheid" : " eenheden") + ". De schijf is nu factureerbaar.");
+            });
+        })();
+    }
     function schijfMarkeer(stageId, terugzetten) {
         var link = null;
         state.rijen.forEach(function (r) { (r.schijven || []).forEach(function (s) { if (s.stageId === stageId) link = s; }); });
@@ -2028,6 +2052,414 @@
     document.addEventListener("click", function (e) {
         if (e.target.closest(".js-pl-add-taak")) { e.preventDefault(); openNieuwTaak({}); }
         else if (e.target.closest(".js-pl-add-fase")) { e.preventDefault(); openNieuwFase({}); }
+    });
+
+    // ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // Gsm (design-handoff "CRM Mobiel" 64p–64r). Op een gsm geen Gantt maar drie weergaven uit dezelfde staat: Week (standaard), Lijst
+    // en Tijdlijn; planningskeuze als één regel (blad), taakblad bij een tik, Meer-acties in de snelactiebalk. Het desktopdeel
+    // (#gl-v2-pl-tabs/-kop/-card) blijft in de DOM maar is op gsm verborgen (CSS); alle wijzigingen lopen via dezelfde send().
+    // ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+    var M_DAG = ["zo", "ma", "di", "wo", "do", "vr", "za"];
+    var M_DAGL = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
+    var M_MND = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+    var M_MNDL = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
+    var mTlInit = false, mShift = 0, mTaskKey = null;
+
+    function mDate(iso) { var p = iso.split("-"); return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])); }
+    function mDag(iso) { return M_DAG[mDate(iso).getUTCDay()]; }
+    function mDM(iso) { if (!iso) return "—"; var p = iso.split("-"); return p[2] + "/" + p[1]; }
+    function mDMY(iso) { if (!iso) return "—"; var p = iso.split("-"); return p[2] + "/" + p[1] + "/" + p[0].slice(2); }
+    function mNr(n, een, meer) { return n + " " + (n === 1 ? een : meer); }
+    function mFaseVan(r) {
+        if (!r.ouderFaseId) return null;
+        for (var i = 0; i < state.rijen.length; i++) if (state.rijen[i].soort === "fase" && state.rijen[i].id === r.ouderFaseId) return state.rijen[i];
+        return null;
+    }
+    function mVoorgangers(r) {
+        var out = [];
+        (r.voorgangerLinks || []).forEach(function (l) { var v = rowByKey("t" + l.taakId); if (v) out.push(v); });
+        return out;
+    }
+    function mOpvolgers(r) {
+        return state.rijen.filter(function (x) { return (x.voorgangerLinks || []).some(function (l) { return l.taakId === r.id && r.soort === "taak"; }); });
+    }
+    // Taken die nog open staan, in volgorde van start
+    function mOpenTaken() {
+        return state.rijen.filter(function (r) { return r.soort === "taak" && !r.afgerond && r.start && r.einde; })
+            .sort(function (a, b) { return a.start < b.start ? -1 : a.start > b.start ? 1 : (a.wbs < b.wbs ? -1 : 1); });
+    }
+    function mTeLaat(r, today) { return !r.afgerond && r.einde && r.einde < today; }
+    function mLaatDagen(r, today) { return werkdagenTot(isoN(r.einde) + 1, isoN(today)); }
+    // Wie houdt deze taak tegen: de voorganger die nog niet klaar is en al loopt of te laat is (de laatst eindigende)
+    function mBlokkeert(r, today) {
+        var best = null;
+        mVoorgangers(r).forEach(function (v) { if (!v.afgerond && v.start && v.start <= today && (!best || v.einde > best.einde)) best = v; });
+        return best;
+    }
+
+    function mMetaHtml(r, today, soort) {
+        var dur = r.isMijlpaal ? "mijlpaal" : r.duur + " d", delen = [];
+        if (soort === "late") {
+            var n = mLaatDagen(r, today);
+            delen.push("<em class=\"is-red\">" + (n > 0 ? mNr(n, "werkdag", "werkdagen") + " te laat" : "te laat") + "</em>");
+            delen.push(dur + " · " + mDM(r.start) + " → " + mDM(r.einde));
+        } else if (soort === "today") {
+            if (r.einde === today) delen.push("laatste dag · " + dur);
+            else if (r.start === today) delen.push("start vandaag · " + dur);
+            else delen.push(dur + " · tot " + mDM(r.einde));
+        } else {
+            var bl = mBlokkeert(r, today);
+            if (bl) delen.push(dur + " · start na " + esc(bl.naam));
+            else delen.push(!r.isMijlpaal && r.duur > 5 ? dur + " · tot " + mDM(r.einde) : dur);
+        }
+        return delen.join(" · ");
+    }
+
+    function mTaakRij(r, today, soort, metCheck) {
+        var fase = mFaseVan(r), late = soort === "late";
+        var datum = late ? "<small>" + mDag(r.einde) + "</small><b>" + mDM(r.einde) + "</b>" : "<small>" + mDag(r.start) + "</small><b>" + r.start.slice(8, 10) + "</b>";
+        var meta = mMetaHtml(r, today, soort);
+        return "<div class=\"gl-v2-pl-m-t is-" + soort + "\">" +
+            "<button type=\"button\" class=\"gl-v2-pl-m-tmain js-gl-v2-menu-trigger\" data-pl-open=\"" + esc(r.sleutel) + "\" aria-haspopup=\"dialog\" aria-expanded=\"false\" aria-controls=\"gl-v2-pl-m-task\">" +
+            "<span class=\"gl-v2-pl-m-d\">" + datum + "</span>" +
+            "<span class=\"gl-v2-m-rt\"><b>" + esc(r.naam) + "</b>" + (fase ? "<small>" + esc(fase.naam) + "</small>" : "") + "<span class=\"gl-v2-pl-m-meta\">" + meta + "</span></span></button>" +
+            (metCheck && canWrite ? "<button type=\"button\" class=\"gl-v2-pl-m-ck\" data-pl-tick=\"" + esc(r.sleutel) + "\" aria-label=\"Klaar markeren: " + esc(r.naam) + "\"><i></i></button>" : "") +
+            "</div>";
+    }
+    function mGroep(cls, label, aantal, inhoud, attr) {
+        return "<section class=\"gl-v2-m-card gl-v2-pl-m-list\"" + (attr || "") + "><div class=\"gl-v2-pl-m-g " + cls + "\"><span>" + label + "</span>" + (aantal != null ? "<i>" + aantal + "</i>" : "") + "</div>" + inhoud + "</section>";
+    }
+
+    // ── Week: kopkaart, bereikte schijven, dan te laat · vandaag · volgende week · daarna ──
+    function mSomHtml() {
+        var k = state.kop || {}, today = todayIso(), totaal = k.duurWerkdagen || 0, klaar = 0;
+        if (k.start && totaal) {
+            var s = isoN(k.start), t = isoN(today), e = k.einde ? isoN(k.einde) : t;
+            klaar = t < s ? 0 : Math.min(totaal, werkdagenTot(s, Math.min(t, e)));
+        }
+        var pct = totaal > 0 ? Math.min(100, Math.round(klaar / totaal * 1000) / 10) : 0;
+        var verlet = k.verletMeetellen === false ? "verlet uitgezet" : mNr(k.verletDagen || 0, "verletdag", "verletdagen");
+        var regels = "";
+        if (k.deadline) regels += "<span class=\"" + (k.marge != null && k.marge < 0 ? "is-red" : "") + "\">Deadline " + fmtFull(k.deadline) + (k.marge != null ? " · " + (k.marge < 0 ? dagen(-k.marge) + " te laat" : dagen(k.marge) + " marge") : "") + "</span>";
+        if (k.basisOp) regels += "<span>Basisplanning " + esc(k.basisOp) + (k.basisAfwijking ? " · " + (k.basisAfwijking > 0 ? "+" : "−") + Math.abs(k.basisAfwijking) + " d" : "") + "</span>";
+        var ontbreekt = "";
+        if (canWriteBasis && cfg.projectEditUrl) {
+            var vlag = "<i class=\"ph ph-flag-banner\" aria-hidden=\"true\"></i>";
+            if (k.geenStartdatum) ontbreekt += "<a href=\"" + esc(cfg.projectEditUrl) + "\">" + vlag + "Aanvangsdatum instellen</a>";
+            else if (!k.deadline) ontbreekt += "<a href=\"" + esc(cfg.projectEditUrl) + "\">" + vlag + "Deadline oplevering instellen</a>";
+            if (k.geenWeerstation) ontbreekt += "<a href=\"" + esc(cfg.projectEditUrl) + "\"><i class=\"ph ph-cloud-rain\" aria-hidden=\"true\"></i>Weerstation kiezen</a>";
+        }
+        return "<section class=\"gl-v2-m-card gl-v2-pl-m-sum\"><div class=\"gl-v2-pl-m-sh\"><b>Bouwplanning</b><span>" + fmtFull(k.start) + " → " + fmtFull(k.einde) + "</span></div>" +
+            "<div><span class=\"gl-v2-pl-m-bar\" role=\"img\" aria-label=\"" + klaar + " van " + totaal + " werkdagen voorbij\"><i style=\"width:" + pct + "%\"></i><b style=\"left:" + pct + "%\"></b></span>" +
+            "<div class=\"gl-v2-pl-m-pl\"><span><b>" + klaar + "</b> van " + totaal + " werkdagen</span><span>nog <b>" + Math.max(0, totaal - klaar) + "</b> · " + verlet + "</span></div></div>" +
+            (regels ? "<div class=\"gl-v2-pl-m-regels\">" + regels + "</div>" : "") +
+            (ontbreekt ? "<div class=\"gl-v2-pl-m-miss\">" + ontbreekt + "</div>" : "") + "</section>";
+    }
+    function mSchijvenHtml() {
+        if (!canWrite) return "";
+        var h = "";
+        state.rijen.forEach(function (r) {
+            (r.schijven || []).forEach(function (s) {
+                if (!s.klaarOmTeMarkeren) return;
+                h += "<section class=\"gl-v2-m-card gl-v2-pl-m-schijf\"><span class=\"gl-v2-pl-m-si\"><i class=\"ph ph-seal-check\" aria-hidden=\"true\"></i></span>" +
+                    "<span class=\"gl-v2-m-rt\"><span class=\"gl-v2-pl-m-sk\">SCHIJF BEREIKT</span><b>" + esc(s.naam) + (s.percentage ? " " + s.percentage + " %" : "") + "</b>" +
+                    "<span class=\"gl-v2-pl-m-st\">" + esc(r.naam) + " is klaar · " + mNr(s.teMarkeren, "eenheid", "eenheden") + " te markeren" + (s.overgeslagen ? ", " + s.overgeslagen + " overgeslagen (niet verkocht of akte nog niet verleden)" : "") + "</span></span>" +
+                    "<button type=\"button\" class=\"gl-v2-pl-m-mk\" data-pl-markeer=\"" + s.stageId + "\">Markeren</button></section>";
+            });
+        });
+        return h;
+    }
+    function mWeekHtml() {
+        var today = todayIso(), tN = isoN(today), dow = (new Date(tN * DAG).getUTCDay() + 6) % 7;
+        var weekEinde = tN + (6 - dow), volgStart = weekEinde + 1, volgEinde = volgStart + 4, volgZo = weekEinde + 7;
+        var taken = mOpenTaken(), laat = [], vandaag = [], dezeWeek = [], volgende = [], daarna = [];
+        taken.forEach(function (r) {
+            var s = isoN(r.start);
+            if (mTeLaat(r, today)) laat.push(r);
+            else if (r.start <= today) vandaag.push(r);
+            else if (s <= weekEinde) dezeWeek.push(r);
+            else if (s <= volgZo) volgende.push(r);
+            else daarna.push(r);
+        });
+        var h = mSomHtml() + mSchijvenHtml();
+        var rij = function (soort, check) { return function (r) { return mTaakRij(r, today, soort, check); }; };
+        if (laat.length) h += mGroep("is-red", "TE LAAT", laat.length, laat.map(rij("late", true)).join(""));
+        if (vandaag.length) h += mGroep("is-gold", "VANDAAG · " + M_DAGL[new Date(tN * DAG).getUTCDay()] + " " + mDate(today).getUTCDate() + " " + M_MNDL[mDate(today).getUTCMonth()], null, vandaag.map(rij("today", true)).join(""), " data-pl-today");
+        if (dezeWeek.length) h += mGroep("", "REST VAN DEZE WEEK", dezeWeek.length, dezeWeek.map(rij("next", true)).join(""));
+        if (volgende.length) {
+            var a = mDate(nIso(volgStart)), b = mDate(nIso(volgEinde));
+            var lbl = a.getUTCMonth() === b.getUTCMonth() ? a.getUTCDate() + " – " + b.getUTCDate() + " " + M_MND[a.getUTCMonth()] : a.getUTCDate() + " " + M_MND[a.getUTCMonth()] + " – " + b.getUTCDate() + " " + M_MND[b.getUTCMonth()];
+            h += mGroep("", "VOLGENDE WEEK · " + lbl, volgende.length, volgende.map(rij("next", true)).join(""));
+        }
+        if (daarna.length) {
+            var toon = daarna.slice(0, 5);
+            h += mGroep("", "DAARNA", null, toon.map(rij("fut", false)).join("") +
+                "<button type=\"button\" class=\"gl-v2-m-all\" data-pl-view=\"lijst\">Volledige lijst<i class=\"ph ph-caret-right\" aria-hidden=\"true\"></i></button>");
+        } else if (!laat.length && !vandaag.length && !dezeWeek.length && !volgende.length) {
+            h += "<section class=\"gl-v2-m-card gl-v2-pl-m-leeg\"><i class=\"ph ph-check-circle\" aria-hidden=\"true\"></i><b>Alle taken zijn klaar</b><span>Er staat niets meer open in deze planning.</span></section>";
+        }
+        return h;
+    }
+
+    // ── Lijst: fases openklappen ──
+    function mDefaultOpen() {
+        var today = todayIso(), open = {}, eerste = null;
+        state.rijen.forEach(function (r) {
+            if (r.soort === "fase" && eerste === null) eerste = r.sleutel;
+            if (r.soort !== "taak" || r.afgerond || !r.einde) return;
+            var f = mFaseVan(r);
+            if (f && (mTeLaat(r, today) || (r.start <= today && r.einde >= today))) open[f.sleutel] = true;
+        });
+        if (!Object.keys(open).length && eerste) open[eerste] = true;
+        return open;
+    }
+    function mIsOpen(sleutel, def) { return Object.prototype.hasOwnProperty.call(ui.mopen, sleutel) ? !!ui.mopen[sleutel] : !!def[sleutel]; }
+    function mListHtml() {
+        var today = todayIso(), def = mDefaultOpen(), fases = state.rijen.filter(function (r) { return r.soort === "fase"; });
+        var kinderen = {}, aantalTaken = 0;
+        state.rijen.forEach(function (r) { if (r.soort === "taak") { aantalTaken++; (kinderen[r.ouderFaseId] = kinderen[r.ouderFaseId] || []).push(r); } });
+        var anyOpen = fases.some(function (f) { return mIsOpen(f.sleutel, def); });
+        var h = "<div class=\"gl-v2-m-countline\"><span>" + mNr(fases.length, "fase", "fases") + " · " + mNr(aantalTaken, "taak", "taken") + "</span><button type=\"button\" class=\"gl-v2-m-link\" data-pl-allopen=\"" + (anyOpen ? "0" : "1") + "\">" + (anyOpen ? "Alles inklappen" : "Alles uitklappen") + "</button></div>";
+        h += "<section class=\"gl-v2-m-card gl-v2-pl-m-fl\">" + fases.map(function (f) {
+            var open = mIsOpen(f.sleutel, def), pct = Math.round(f.voortgang || 0), sub = "";
+            if (open) {
+                var lijst = kinderen[f.id] || [];
+                sub = "<div class=\"gl-v2-pl-m-sub\">" + (lijst.length ? lijst.map(function (r) {
+                    var soort = r.afgerond ? "ok" : mTeLaat(r, today) ? "late" : (r.start <= today && r.einde >= today ? "tod" : "");
+                    var chip = !r.afgerond && soort === "late" ? "<i class=\"gl-v2-m-chip is-red\">te laat</i>" : (!r.afgerond && soort === "tod" ? "<i class=\"gl-v2-m-chip is-gold\">vandaag</i>" : "");
+                    return "<button type=\"button\" class=\"gl-v2-pl-m-sr is-" + (soort || "open") + " js-gl-v2-menu-trigger\" data-pl-open=\"" + esc(r.sleutel) + "\" aria-haspopup=\"dialog\" aria-expanded=\"false\" aria-controls=\"gl-v2-pl-m-task\">" +
+                        "<span class=\"gl-v2-pl-m-sc\">" + (r.afgerond ? "<i class=\"ph ph-check\" aria-hidden=\"true\"></i>" : "") + "</span><span class=\"gl-v2-pl-m-sn\">" + esc(r.wbs) + "</span>" +
+                        "<span class=\"gl-v2-m-rt\"><b>" + esc(r.naam) + "</b><small>" + (r.isMijlpaal ? mDM(r.start) + " · mijlpaal" : mDM(r.start) + " → " + mDM(r.einde)) + "</small></span>" + chip + "</button>";
+                }).join("") : "<p class=\"gl-v2-pl-m-geen\">Nog geen taken in deze fase.</p>") +
+                    (canWrite ? "<button type=\"button\" class=\"gl-v2-m-link gl-v2-pl-m-addin\" data-pl-addin=\"" + f.id + "\"><i class=\"ph ph-plus\" aria-hidden=\"true\"></i>Taak in deze fase</button>" : "") + "</div>";
+            }
+            return "<button type=\"button\" class=\"gl-v2-pl-m-ph" + (open ? " is-open" : "") + "\" data-pl-fase=\"" + esc(f.sleutel) + "\" aria-expanded=\"" + (open ? "true" : "false") + "\">" +
+                "<span class=\"gl-v2-pl-m-pn\">" + esc(f.wbs) + "</span><span class=\"gl-v2-m-rt\"><b>" + esc(f.naam) + "</b><small>" + mDMY(f.start) + " → " + mDMY(f.einde) + "</small></span>" +
+                "<span class=\"gl-v2-pl-m-pp\"><b>" + pct + " %</b><span class=\"gl-v2-pl-m-mini\"><i style=\"width:" + pct + "%\"></i></span></span><i class=\"ph ph-caret-" + (open ? "up" : "down") + "\" aria-hidden=\"true\"></i></button>" + sub;
+        }).join("") + "</section>";
+        return h;
+    }
+
+    // ── Tijdlijn: één balk per fase, maanden van 34 px, veegbaar; de naam blijft links staan ──
+    function mTimelineHtml() {
+        var MW = 34, today = todayIso(), fases = state.rijen.filter(function (r) { return r.soort === "fase" && r.start && r.einde; });
+        if (!fases.length) return "<section class=\"gl-v2-m-card gl-v2-pl-m-leeg\"><b>Geen fases met een datum</b></section>";
+        var min = fases.reduce(function (m, f) { return f.start < m ? f.start : m; }, fases[0].start);
+        var max = fases.reduce(function (m, f) { return f.einde > m ? f.einde : m; }, fases[0].einde);
+        var a = mDate(min), b = mDate(max), y0 = a.getUTCFullYear(), m0 = a.getUTCMonth();
+        var aantal = (b.getUTCFullYear() - y0) * 12 + b.getUTCMonth() - m0 + 1;
+        function pos(iso) { var d = mDate(iso), mi = (d.getUTCFullYear() - y0) * 12 + d.getUTCMonth() - m0, dim = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate(); return (mi + (d.getUTCDate() - 1) / dim) * MW; }
+        var breedte = aantal * MW + 16, kop = "";
+        for (var i = 0; i < aantal; i++) { var mm = (m0 + i) % 12, jj = y0 + Math.floor((m0 + i) / 12); kop += "<span style=\"width:" + MW + "px\"" + (mm === 0 ? " class=\"is-y\"" : "") + " title=\"" + M_MNDL[mm] + " " + jj + "\">" + M_MND[mm] + "</span>"; }
+        var rijen = fases.map(function (f) {
+            var l = pos(f.start), w = Math.max(6, pos(nIso(isoN(f.einde) + 1)) - l), pct = Math.round(f.voortgang || 0);
+            return "<button type=\"button\" class=\"gl-v2-pl-m-tr\" data-pl-tl=\"" + esc(f.sleutel) + "\" aria-label=\"" + esc(f.naam) + ", " + mDMY(f.start) + " tot " + mDMY(f.einde) + ", " + pct + " procent klaar\">" +
+                "<span class=\"gl-v2-pl-m-tn\">" + esc(f.naam.replace(/^\s*\d+(\.\d+)*\s*[-–.]?\s*/, "")) + "</span><span class=\"gl-v2-pl-m-tb\" style=\"left:" + l.toFixed(1) + "px;width:" + w.toFixed(1) + "px\"><i style=\"width:" + pct + "%\"></i></span></button>";
+        }).join("");
+        var tx = today >= min && today <= max ? pos(today) : null;
+        return "<section class=\"gl-v2-m-card gl-v2-pl-m-tl\"><div class=\"gl-v2-pl-m-tlsc\"><div class=\"gl-v2-pl-m-tlin\" style=\"width:" + breedte + "px\"><div class=\"gl-v2-pl-m-tlh\">" + kop + "</div>" +
+            "<div class=\"gl-v2-pl-m-tlrows\">" + rijen + (tx != null ? "<span class=\"gl-v2-pl-m-today\" style=\"left:" + tx.toFixed(1) + "px\"><b>vandaag</b></span>" : "") + "</div></div></div>" +
+            "<div class=\"gl-v2-pl-m-tlg\"><span><i class=\"a\"></i>klaar</span><span><i class=\"b\"></i>gepland</span><span><i class=\"t\"></i>vandaag</span><span class=\"is-hint\"><i class=\"ph ph-hand-swipe-left\" aria-hidden=\"true\"></i>veeg voor de rest</span></div></section>" +
+            "<div class=\"gl-v2-m-info\"><i class=\"ph ph-info\" aria-hidden=\"true\"></i><span>Fases slepen, verbinden en de basisplanning vastleggen doe je op tablet of computer. Op gsm: kijken, klaar markeren en verschuiven.</span></div>";
+    }
+
+    // ── Planningskeuze (blad), Sjablonen (blad) ──
+    function mPickBlad() {
+        var el = $("gl-v2-pl-m-pick"); if (!el) return;
+        var lijst = state.planningen || [], h = "<div class=\"gl-v2-menu-sheet-title\">Planning kiezen</div>";
+        function item(attr, icoon, label, sub, aan) {
+            return "<button type=\"button\" class=\"gl-v2-menu-item\" role=\"menuitem\" " + attr + "><i class=\"ph " + icoon + "\" aria-hidden=\"true\"></i><span class=\"gl-v2-menu-item-text\"><span class=\"gl-v2-menu-item-label\">" + esc(label) + "</span>" +
+                (sub ? "<span class=\"gl-v2-menu-item-sub\">" + esc(sub) + "</span>" : "") + "</span>" + (aan ? "<i class=\"ph ph-check gl-v2-pl-m-aan\" aria-hidden=\"true\"></i>" : "") + "</button>";
+        }
+        lijst.forEach(function (p) {
+            h += item("data-pl-pick=\"" + p.id + "\"", p.isHoofd ? "ph-house-line" : "ph-buildings", p.naam, mNr(p.aantalTaken || 0, "taak", "taken") + (p.eenhedenTekst ? " · voor " + p.eenhedenTekst : (p.isHoofd ? " · hele project" : "")), p.id === state.actiefPlanningId && !aannActief);
+        });
+        if (lijst.length > 1) h += item("data-pl-pick=\"" + GLOBAAL + "\"", "ph-stack", "Globaal overzicht", "alle plannings samen · enkel lezen", state.actiefPlanningId === GLOBAAL && !aannActief);
+        if (state.heeftPlanning) h += item("data-pl-pick=\"" + AANN + "\"", "ph-hard-hat", "Per aannemer", "planning gefilterd per leverancier", aannActief);
+        if (canWriteBasis) h += "<div class=\"gl-v2-menu-divider\"></div>" + item("data-pl-pick=\"nieuw\"", "ph-plus", "Planning toevoegen", "voor een woning of gebouw", false);
+        el.innerHTML = h;
+    }
+    function mSjBlad() {
+        var el = $("gl-v2-pl-m-sj"); if (!el) return;
+        var act = actief(), h = "<div class=\"gl-v2-menu-sheet-title\">Sjablonen</div>";
+        h += "<button type=\"button\" class=\"gl-v2-menu-item\" role=\"menuitem\" data-pl-sj=\"toepas\"><i class=\"ph ph-copy\" aria-hidden=\"true\"></i><span class=\"gl-v2-menu-item-text\"><span class=\"gl-v2-menu-item-label\">Sjabloon toepassen</span><span class=\"gl-v2-menu-item-sub\">op woningen of gebouwen</span></span></button>";
+        h += "<button type=\"button\" class=\"gl-v2-menu-item\" role=\"menuitem\" data-pl-sj=\"project\"><i class=\"ph ph-buildings\" aria-hidden=\"true\"></i><span class=\"gl-v2-menu-item-text\"><span class=\"gl-v2-menu-item-label\">Projectsjabloon toepassen</span><span class=\"gl-v2-menu-item-sub\">planning, traject en schijven in één keer</span></span></button>";
+        if (canSjabloon && act && act.aantalTaken && state.actiefPlanningId !== GLOBAAL) h += "<button type=\"button\" class=\"gl-v2-menu-item\" role=\"menuitem\" data-pl-sj=\"bewaar\"><i class=\"ph ph-floppy-disk\" aria-hidden=\"true\"></i><span class=\"gl-v2-menu-item-text\"><span class=\"gl-v2-menu-item-label\">Deze planning bewaren</span><span class=\"gl-v2-menu-item-sub\">als sjabloon voor een volgend project</span></span></button>";
+        el.innerHTML = h;
+    }
+
+    function renderMobile() {
+        var host = $("gl-v2-pl-m"); if (!host) return;
+        var lijst = state.planningen || [];
+        if (!lijst.length && !state.heeftPlanning) { host.hidden = true; host.innerHTML = ""; return; }
+        host.hidden = false;
+        var heeft = !!state.heeftPlanning && state.rijen.length > 0, pl = actief();
+        var oudTl = host.querySelector(".gl-v2-pl-m-tlsc"), oudLinks = oudTl ? oudTl.scrollLeft : null;
+        var naam = aannActief ? "Per aannemer" : (pl ? (pl.global ? "Globaal overzicht" : pl.naam) : "Planning");
+        var aantal = aannActief ? ((aannData && aannData.rijen) || []).filter(function (r) { return r.soort === "taak"; }).length : (pl ? (pl.aantalTaken || 0) : 0);
+        var sub = mNr(aantal, "taak", "taken") + " · " + (aannActief || !canWrite ? "alleen lezen" : "bewaart meteen");
+        var h = "<div class=\"gl-v2-m-tool gl-v2-pl-m-tool\"><button type=\"button\" class=\"gl-v2-pl-m-pick js-gl-v2-menu-trigger\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-controls=\"gl-v2-pl-m-pick\">" +
+            "<i class=\"ph ph-stack\" aria-hidden=\"true\"></i><span><b>" + esc(naam) + "</b><small>" + sub + "</small></span><i class=\"ph ph-caret-down\" aria-hidden=\"true\"></i></button>";
+        if (heeft && !aannActief) {
+            h += "<div class=\"gl-v2-pl-m-seg\" role=\"group\" aria-label=\"Weergave\">" + [["week", "Week"], ["lijst", "Lijst"], ["tijdlijn", "Tijdlijn"]].map(function (v) {
+                return "<button type=\"button\" data-pl-view=\"" + v[0] + "\" class=\"" + (ui.mview === v[0] ? "is-on" : "") + "\" aria-pressed=\"" + (ui.mview === v[0] ? "true" : "false") + "\">" + v[1] + "</button>";
+            }).join("") + "</div>";
+        }
+        h += "</div>";
+        if (heeft && !aannActief) h += "<div class=\"gl-v2-m-stack\">" + (ui.mview === "lijst" ? mListHtml() : ui.mview === "tijdlijn" ? mTimelineHtml() : mWeekHtml()) + "</div>";
+        host.innerHTML = h;
+        mPickBlad(); mSjBlad();
+        var tl = host.querySelector(".gl-v2-pl-m-tlsc");
+        if (tl) {
+            var tdag = host.querySelector(".gl-v2-pl-m-today");
+            if (oudLinks != null && mTlInit) tl.scrollLeft = oudLinks;
+            else { tl.scrollLeft = tdag ? Math.max(0, tdag.offsetLeft - 90) : 0; mTlInit = true; }
+        } else mTlInit = false;
+    }
+
+    // ── Taakblad (64r) ──
+    function mTaakBlad(key) {
+        var el = $("gl-v2-pl-m-task"), r = rowByKey(key);
+        if (!el || !r) return false;
+        mTaskKey = key;
+        var today = todayIso(), fase = mFaseVan(r), late = mTeLaat(r, today), laatsteDag = !r.afgerond && r.einde === today;
+        var chip = r.afgerond ? "<i class=\"gl-v2-m-chip is-ok\">Klaar</i>" : late ? "<i class=\"gl-v2-m-chip is-red\">Te laat</i>" : laatsteDag ? "<i class=\"gl-v2-m-chip is-gold\">Laatste dag</i>" : (r.isMijlpaal ? "<i class=\"gl-v2-m-chip\">Mijlpaal</i>" : (r.start <= today && r.einde >= today ? "<i class=\"gl-v2-m-chip is-ok\">Loopt</i>" : ""));
+        var vo = mVoorgangers(r), op = mOpvolgers(r), dep = [];
+        if (vo.length) dep.push("Na <b>" + esc(vo[0].naam) + "</b>" + (vo.length > 1 ? " en " + (vo.length - 1) + " andere" : ""));
+        if (op.length) dep.push("daarna <b>" + esc(op[0].naam) + "</b>" + (op.length > 1 ? " en " + (op.length - 1) + " andere" : ""));
+        var h = "<div class=\"gl-v2-pl-m-tsh\"><span class=\"gl-v2-m-rt\"><small>" + esc((fase ? fase.naam + " · " : "") + r.wbs) + "</small><b>" + esc(r.naam) + "</b></span>" + chip + "</div>" +
+            "<dl class=\"gl-v2-pl-m-tdl\"><div><dt>Start</dt><dd>" + mDag(r.start) + " " + mDM(r.start) + "</dd></div><div><dt>Einde</dt><dd>" + mDag(r.einde) + " " + mDM(r.einde) + "</dd></div>" +
+            "<div><dt>Duur</dt><dd>" + (r.isMijlpaal ? "mijlpaal" : dagen(r.duur)) + "</dd></div><div><dt>Aannemer</dt><dd>" + (r.uitvoerderNaam ? esc(r.uitvoerderNaam) : "—") + "</dd></div></dl>";
+        if (dep.length) h += "<div class=\"gl-v2-pl-m-dep\"><i class=\"ph ph-arrows-left-right\" aria-hidden=\"true\"></i><span>" + dep.join(" · ") + "</span></div>";
+        if (canWrite) {
+            h += "<button type=\"button\" class=\"gl-v2-m-lv-pri\" data-pl-sa=\"klaar\"><i class=\"ph " + (r.afgerond ? "ph-arrow-counter-clockwise" : "ph-check-circle") + "\" aria-hidden=\"true\"></i>" + (r.afgerond ? "Niet meer voltooid" : "Klaar markeren") + "</button>";
+            if (!r.afgerond) h += "<div class=\"gl-v2-pl-m-shift\"><span class=\"gl-v2-m-rt\"><b>Verschuiven</b><small>volgende taken schuiven mee</small></span>" +
+                "<button type=\"button\" class=\"gl-v2-m-roundbtn\" data-pl-sa=\"min\" aria-label=\"1 werkdag vroeger\"><i class=\"ph ph-minus\" aria-hidden=\"true\"></i></button><b class=\"gl-v2-pl-m-sv\">" + (mShift > 0 ? "+" : mShift < 0 ? "−" : "") + Math.abs(mShift) + " d</b>" +
+                "<button type=\"button\" class=\"gl-v2-m-roundbtn\" data-pl-sa=\"plus\" aria-label=\"1 werkdag later\"><i class=\"ph ph-plus\" aria-hidden=\"true\"></i></button></div>";
+            var rij = function (a, icoon, titel, sub) { return "<button type=\"button\" class=\"gl-v2-menu-item\" role=\"menuitem\" data-pl-sa=\"" + a + "\"><i class=\"ph " + icoon + "\" aria-hidden=\"true\"></i><span class=\"gl-v2-menu-item-text\"><span class=\"gl-v2-menu-item-label\">" + titel + "</span>" + (sub ? "<span class=\"gl-v2-menu-item-sub\">" + sub + "</span>" : "") + "</span></button>"; };
+            h += rij("wstart", "ph-calendar-check", "Werkelijke start invullen", r.werkelijkStart ? "gestart op " + fmtFull(r.werkelijkStart) : "gestart op een andere dag dan gepland");
+            if (cfg.puntenUrl) h += "<a href=\"" + esc(cfg.puntenUrl) + "\" class=\"gl-v2-menu-item\" role=\"menuitem\"><i class=\"ph ph-list-checks\" aria-hidden=\"true\"></i><span class=\"gl-v2-menu-item-text\"><span class=\"gl-v2-menu-item-label\">Werfpunt aanmaken</span><span class=\"gl-v2-menu-item-sub\">opent de punten van dit project</span></span></a>";
+            h += rij("edit", "ph-pencil-simple", "Taak bewerken", "naam, duur, aannemer, beperkingen");
+        }
+        el.setAttribute("role", "dialog"); el.setAttribute("aria-label", r.naam);
+        el.innerHTML = h;
+        return true;
+    }
+
+    // ── Bladen openen/sluiten ──
+    function mSluit() { if (window.GlV2Menu) window.GlV2Menu.closeAll(); }
+    function mOpenBlad(el) {
+        if (!el || !window.GlV2Menu) return;
+        window.GlV2Menu.closeAll();
+        if (!el.querySelector(".gl-v2-menu-cancel")) {
+            var c = document.createElement("button"); c.type = "button"; c.className = "gl-v2-menu-cancel"; c.textContent = "Annuleren";
+            c.addEventListener("click", mSluit); el.appendChild(c);
+        }
+        el.classList.add("is-open");
+        var bd = document.getElementById("gl-v2-menu-backdrop"); if (bd) bd.classList.add("is-open");
+        el.style.top = ""; el.style.left = "";
+    }
+    function mTikKlaar(r, na) {
+        send({ type: "wijzig", soort: "taak", id: r.id, velden: { voortgang: r.afgerond ? 0 : 100 } }, { after: function () { toast("success", r.afgerond ? "Weer open gezet" : "Klaar gemarkeerd", r.naam); if (na) na(); } });
+    }
+
+    var mHost = $("gl-v2-pl-m");
+    if (mHost) mHost.addEventListener("click", function (e) {
+        var t;
+        if ((t = e.target.closest("[data-pl-view]"))) { ui.mview = t.getAttribute("data-pl-view"); saveUi(); mTlInit = false; renderMobile(); window.scrollTo({ top: 0 }); return; }
+        if ((t = e.target.closest("[data-pl-tick]"))) { var rt = rowByKey(t.getAttribute("data-pl-tick")); if (rt && canWrite) mTikKlaar(rt); return; }
+        if ((t = e.target.closest("[data-pl-markeer]"))) { schijfMarkeer(parseInt(t.getAttribute("data-pl-markeer"), 10), false); return; }
+        if ((t = e.target.closest("[data-pl-open]"))) { mShift = 0; mTaakBlad(t.getAttribute("data-pl-open")); return; }   // de schaduwknop-klasse opent het blad (shell)
+        if ((t = e.target.closest("[data-pl-fase]"))) {
+            var def = mDefaultOpen(), k = t.getAttribute("data-pl-fase");
+            ui.mopen[k] = !mIsOpen(k, def); saveUi(); renderMobile(); return;
+        }
+        if ((t = e.target.closest("[data-pl-allopen]"))) {
+            var aan = t.getAttribute("data-pl-allopen") === "1";
+            state.rijen.forEach(function (r) { if (r.soort === "fase") ui.mopen[r.sleutel] = aan; });
+            saveUi(); renderMobile(); return;
+        }
+        if ((t = e.target.closest("[data-pl-addin]"))) { if (canWrite) openNieuwTaak({ sectieId: parseInt(t.getAttribute("data-pl-addin"), 10) }); return; }
+        if ((t = e.target.closest("[data-pl-tl]"))) {
+            // een fase op de tijdlijn aantikken springt naar die fase in de lijst
+            var fk = t.getAttribute("data-pl-tl");
+            ui.mview = "lijst"; ui.mopen[fk] = true; saveUi(); renderMobile();
+            var el = mHost.querySelector("[data-pl-fase=\"" + fk + "\"]");
+            if (el) el.scrollIntoView({ block: "center" });
+        }
+    });
+
+    var mPick = $("gl-v2-pl-m-pick");
+    if (mPick) mPick.addEventListener("click", function (e) {
+        var b = e.target.closest("[data-pl-pick]"); if (!b) return;
+        var v = b.getAttribute("data-pl-pick");
+        mSluit();
+        if (v === "nieuw") openPlanning(false);
+        else switchPlanning(parseInt(v, 10));
+    });
+    var mSj = $("gl-v2-pl-m-sj");
+    if (mSj) mSj.addEventListener("click", function (e) {
+        var b = e.target.closest("[data-pl-sj]"); if (!b) return;
+        var v = b.getAttribute("data-pl-sj"); mSluit();
+        if (v === "toepas") openSjToepas(); else if (v === "project") openPj(); else if (v === "bewaar") openSjBewaar();
+    });
+    var mTask = $("gl-v2-pl-m-task");
+    if (mTask) mTask.addEventListener("click", function (e) {
+        var b = e.target.closest("[data-pl-sa]"); if (!b) return;
+        var r = rowByKey(mTaskKey); if (!r) { mSluit(); return; }
+        var a = b.getAttribute("data-pl-sa");
+        if (a === "klaar") { mSluit(); mTikKlaar(r); }
+        else if (a === "edit") { mSluit(); openEdit(r.sleutel); }
+        else if (a === "wstart") {
+            mSluit(); openEdit(r.sleutel);
+            window.setTimeout(function () { var f = fieldOf("gl-v2-pl-f-wstart"); if (f) f.scrollIntoView({ block: "center" }); }, 350);
+        } else if (a === "min" || a === "plus") {
+            var dir = a === "plus" ? 1 : -1, nieuw = nIso(verschuifWerkdagen(isoN(r.start), dir));
+            send({ type: "wijzig", soort: "taak", id: r.id, velden: { beperking: r.beperking === 1 ? 1 : 2, beperkingDatum: nieuw } }, {
+                after: function () {
+                    var nu = rowByKey(r.sleutel);
+                    if (nu && nu.start !== nieuw) toast("info", "De taak start op " + fmtFull(nu.start), "Een voorganger of een andere beperking bepaalt de start.");
+                    else mShift += dir;
+                    if (nu) { mTaakBlad(r.sleutel); } else mSluit();
+                }
+            });
+        }
+    });
+
+    // Snelactiebalk (65j): Vandaag · Verletdag · Taak · Meer
+    function mVandaag() {
+        var host = $("gl-v2-pl-m");
+        if (!host || host.hidden || aannActief || !state.heeftPlanning) { toast("info", "Geen planning om naar vandaag te springen"); return; }
+        if (ui.mview === "tijdlijn") {
+            var sc = host.querySelector(".gl-v2-pl-m-tlsc"), td = host.querySelector(".gl-v2-pl-m-today");
+            if (sc && td) sc.scrollTo({ left: Math.max(0, td.offsetLeft - 90), behavior: "smooth" }); else toast("info", "Vandaag valt buiten de planning");
+            return;
+        }
+        if (ui.mview === "lijst") {
+            var today = todayIso();
+            state.rijen.forEach(function (r) {
+                if (r.soort === "taak" && !r.afgerond && r.start <= today && r.einde >= today) { var f = mFaseVan(r); if (f) ui.mopen[f.sleutel] = true; }
+            });
+            saveUi(); renderMobile();
+            var el = host.querySelector(".gl-v2-pl-m-sr.is-tod");
+            if (el) el.scrollIntoView({ behavior: "smooth", block: "center" }); else toast("info", "Vandaag loopt er geen taak");
+            return;
+        }
+        var doel = host.querySelector("[data-pl-today]");
+        if (doel) doel.scrollIntoView({ behavior: "smooth", block: "center" }); else toast("info", "Vandaag loopt er geen taak");
+    }
+    document.addEventListener("click", function (e) {
+        var q = e.target.closest(".js-pl-q-vandaag, .js-pl-q-aann, .js-pl-q-basis, .js-pl-q-import, .js-pl-q-sj");
+        if (!q) return;
+        e.preventDefault();
+        if (q.classList.contains("js-pl-q-vandaag")) mVandaag();
+        else if (q.classList.contains("js-pl-q-aann")) openAann();
+        else if (q.classList.contains("js-pl-q-basis")) { if (basisBtn) basisBtn.click(); }
+        else if (q.classList.contains("js-pl-q-import")) openImport();
+        else if (q.classList.contains("js-pl-q-sj")) window.setTimeout(function () { mOpenBlad($("gl-v2-pl-m-sj")); }, 0);
+    });
+    document.addEventListener("click", function (e) {
+        if (e.target.closest(".js-pl-q-instel")) { e.preventDefault(); if (actief() && state.actiefPlanningId !== GLOBAAL) openPlanning(true); }
     });
 
     render();

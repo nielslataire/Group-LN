@@ -456,7 +456,8 @@ namespace CPMCore.Controllers
         public async Task<IActionResult> RecurringUsersLookup(string? term, CancellationToken ct = default)
         {
             var t = (term ?? "").Trim().ToLowerInvariant();
-            var users = await _db.Users.AsNoTracking().Where(u => u.IsActive && u.Email != null && u.Email != "" && !u.UserCompanyAccess.Any())
+            var externeIds = CPMCore.Services.ExterneGebruikers.Ids(_db);
+            var users = await _db.Users.AsNoTracking().Where(u => u.IsActive && u.Email != null && u.Email != "" && !externeIds.Contains(u.Id))
                 .Select(u => new { u.Voornaam, u.Familienaam, u.Email }).ToListAsync(ct);
             var list = users.Select(u => new { Naam = $"{u.Voornaam} {u.Familienaam}".Trim(), u.Email })
                 .Where(u => t.Length == 0 || u.Naam.ToLowerInvariant().Contains(t) || u.Email!.ToLowerInvariant().Contains(t))

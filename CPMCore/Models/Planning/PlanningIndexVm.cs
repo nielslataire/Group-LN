@@ -5,6 +5,7 @@ public class PlanningIndexVm
 {
     public int ProjectId { get; set; }
     public string ProjectName { get; set; } = "";
+    public string? ProjectCode { get; set; }
     public bool CanWrite { get; set; }
     public bool CanDelete { get; set; }
 

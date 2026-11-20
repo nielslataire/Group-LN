@@ -42,6 +42,23 @@ public sealed class SchijfSjabloonBeheerRij
     public bool HeeftVerdiepingen { get; set; }
     public bool IsActief { get; set; }
     public DateTime? GewijzigdOp { get; set; }
+    public string? GewijzigdDoor { get; set; }
+    /// <summary>Het aantal schijven dat per verdieping herhaald wordt.</summary>
+    public int AantalPerVerdieping { get; set; }
+    /// <summary>Samenvatting van de vaste percentages, bv. "oplevering vast 5 %"; leeg als er geen zijn.</summary>
+    public string VastSamenvatting { get; set; } = "";
+    /// <summary>De schijven met een voorwaarde, bv. "plat dak (1), kelder (1)"; leeg als alle schijven altijd gelden.</summary>
+    public string EnkelBij { get; set; } = "";
+    /// <summary>De projectsjablonen die dit sjabloon gebruiken.</summary>
+    public List<string> GebruiktIn { get; set; } = new();
+}
+
+/// <summary>Een code uit een planningssjabloon, om de code van een schijf tegen te controleren.</summary>
+public sealed class PlanningCodeInfo
+{
+    public string Code { get; set; } = "";
+    public string Naam { get; set; } = "";
+    public string Sjabloon { get; set; } = "";
 }
 
 /// <summary>Een sjabloon in de keuzelijst van het scherm van een betalingsgroep.</summary>
@@ -76,6 +93,9 @@ public sealed class SchijfVoorbeeld
 public interface ISchijfSjabloonService
 {
     Task<List<SchijfSjabloonBeheerRij>> BeheerLijst();
+
+    /// <summary>Alle codes van blokken en taken in de actieve planningssjablonen, voor de controle van "Code in planning".</summary>
+    Task<List<PlanningCodeInfo>> PlanningCodes();
 
     /// <summary>De actieve sjablonen om uit te kiezen.</summary>
     Task<List<SchijfSjabloonKeuze>> Keuzes();

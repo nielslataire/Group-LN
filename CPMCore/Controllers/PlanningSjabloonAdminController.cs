@@ -112,7 +112,8 @@ public class PlanningSjabloonAdminController : BaseController
     {
         var dashboard = new MvcBreadcrumbNode("Index", "Home", "Dashboard");
         var instellingen = new MvcBreadcrumbNode("Index", "Instellingen", "Instellingen") { Parent = dashboard };
-        var lijst = new MvcBreadcrumbNode("Index", "PlanningSjabloonAdmin", "Planningssjablonen") { Parent = instellingen };
+        var sjablonen = new MvcBreadcrumbNode("Index", "ProjectSjabloonAdmin", "Sjablonen") { Parent = instellingen };
+        var lijst = new MvcBreadcrumbNode("Index", "PlanningSjabloonAdmin", "Planning") { Parent = sjablonen };
         ViewData["BreadcrumbNode"] = leaf == null
             ? lijst
             : new MvcBreadcrumbNode("Bewerken", "PlanningSjabloonAdmin", leaf) { Parent = lijst };

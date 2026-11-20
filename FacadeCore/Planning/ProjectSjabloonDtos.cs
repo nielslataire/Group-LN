@@ -31,8 +31,61 @@ public sealed class ProjectSjabloonBeheerRij
     public string? PlanningNaam { get; set; }
     public string? TrajectNaam { get; set; }
     public string? SchijvenNaam { get; set; }
+    public int? PlanningId { get; set; }
+    public int? TrajectId { get; set; }
+    public int? SchijvenId { get; set; }
+    /// <summary>Kerncijfers per onderdeel voor in de lijst, bv. "2 blokken · 25 wd", "9 mijlpalen", "6 schijven".</summary>
+    public string? PlanningKern { get; set; }
+    public string? TrajectKern { get; set; }
+    public string? SchijvenKern { get; set; }
+    /// <summary>Het standaardgebouw in woorden, bv. "2 verd. · hellend dak · kelder".</summary>
+    public string StandaardGebouw { get; set; } = "";
     public bool IsActief { get; set; }
     public DateTime? GewijzigdOp { get; set; }
+    public string? GewijzigdDoor { get; set; }
+}
+
+/// <summary>Wat het projectsjabloon met deze keuzes zou doen, voor de editor (kaarten met kerncijfers en "Zo wordt het toegepast").</summary>
+public sealed class ProjectSjabloonOverzicht
+{
+    public ProjectSjabloonOverzichtPlanning? Planning { get; set; }
+    public ProjectSjabloonOverzichtTraject? Traject { get; set; }
+    public ProjectSjabloonOverzichtSchijven? Schijven { get; set; }
+    /// <summary>Gouden meldingen, bv. schijven die geen taak in de planning vinden.</summary>
+    public List<string> Meldingen { get; set; } = new();
+}
+
+public sealed class ProjectSjabloonOverzichtPlanning
+{
+    public string Naam { get; set; } = "";
+    public int Blokken { get; set; }
+    public int Taken { get; set; }
+    public int Werkdagen { get; set; }
+    public bool PerVerdieping { get; set; }
+    /// <summary>"Ruwbouw 25 wd · Afwerkingen 3 wd" voor het gekozen gebouw.</summary>
+    public string Verloop { get; set; } = "";
+    public int Fases { get; set; }
+}
+
+public sealed class ProjectSjabloonOverzichtTraject
+{
+    public string Naam { get; set; } = "";
+    public int Mijlpalen { get; set; }
+    public string? Omschrijving { get; set; }
+    /// <summary>Mijlpalen waarvan de code in de planning voorkomt: die volgen de planning.</summary>
+    public int Koppelingen { get; set; }
+}
+
+public sealed class ProjectSjabloonOverzichtSchijven
+{
+    public string Naam { get; set; } = "";
+    public int Aantal { get; set; }
+    public string Vast { get; set; } = "";
+    public string Toelichting { get; set; } = "";
+    /// <summary>Codes uit het schijvensjabloon die niet in het gekozen planningssjabloon staan.</summary>
+    public List<string> CodesNietInPlanning { get; set; } = new();
+    public List<SchijfVoorstel> Voorstel { get; set; } = new();
+    public decimal Totaal { get; set; }
 }
 
 /// <summary>Een keuze uit een lijst sjablonen (voor de selectievelden van de editor).</summary>
@@ -69,6 +122,8 @@ public sealed class ProjectSjabloonAntwoorden
     public string? Dak { get; set; }
     /// <summary>Eén planning voor alle eenheden zonder planning (een gebouw); anders een planning per eenheid (woningen).</summary>
     public bool EenPlanningVoorAlles { get; set; }
+    /// <summary>Samen met <see cref="EenPlanningVoorAlles"/>: de planning komt in de hoofdplanning (enkel als die nog leeg is); anders een aparte planning.</summary>
+    public bool InHoofdplanning { get; set; }
 }
 
 /// <summary>Wat het toepassen zou doen (voorbeeld) of gedaan heeft (uitkomst), per onderdeel in gewone taal.</summary>
@@ -97,6 +152,9 @@ public interface IProjectSjabloonService
     Task<List<ProjectSjabloonBeheerRij>> BeheerLijst();
     Task<List<ProjectSjabloonKeuze>> Keuzes();
     Task<ProjectSjabloonOpties> Opties();
+
+    /// <summary>Kerncijfers van de gekozen onderdelen en het voorbeeld voor dit gebouw. Bewaart niets.</summary>
+    Task<ProjectSjabloonOverzicht> Overzicht(int? planningId, int? trajectId, int? schijfId, int verdiepingen, bool kelder, string? dak);
     Task<ProjectSjabloonBewerk?> Haal(int id);
     Task<ProjectSjabloonBewerkUitkomst> Bewaar(ProjectSjabloonBewerk sjabloon, string? userId);
     Task<string?> Verwijder(int id);

@@ -49,9 +49,10 @@ public class ProjectPlanningController : BaseController
     [Breadcrumb("Planning")]
     public async Task<IActionResult> Index(int projectId, int? planningId = null)
     {
-        var projectName = await _db.Project.AsNoTracking()
-            .Where(p => p.ProjectId == projectId).Select(p => p.ProjectName).FirstOrDefaultAsync();
-        if (projectName == null) return NotFound();
+        var projectInfo = await _db.Project.AsNoTracking()
+            .Where(p => p.ProjectId == projectId).Select(p => new { p.ProjectName, p.ProjectCode }).FirstOrDefaultAsync();
+        if (projectInfo == null) return NotFound();
+        var projectName = projectInfo.ProjectName;
 
         // De kruimel stopt bij de projectnaam; "Planning" is al de paginatitel (zoals Traject).
         ViewData["BreadcrumbNode"] = new MvcBreadcrumbNode("Detail", "Projecten", projectName)
@@ -68,6 +69,7 @@ public class ProjectPlanningController : BaseController
         {
             ProjectId = projectId,
             ProjectName = projectName,
+            ProjectCode = projectInfo.ProjectCode,
             CanWrite = ps.HasWrite(PermissionCodes.ProjectsPlanning),
             CanDelete = ps.HasDelete(PermissionCodes.ProjectsPlanning),
             CanLinkTraject = ps.HasWrite(PermissionCodes.ProjectsTraject),

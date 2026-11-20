@@ -19,6 +19,7 @@
 @section PageStyle
 {
     <link rel="stylesheet" href="~/css/gl-v2-instellingen-automatisatie.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-sjabloontabs.css" asp-append-version="true" />
 }
 @section PageActions
 {
@@ -29,6 +30,8 @@
 }
 
 <div class="gl-v2-auto">
+    @await Html.PartialAsync("GlV2/_SjabloonTabs", "traject")
+
     <section class="gl-v2-section-card">
         @if (Model.Sjablonen.Count == 0)
         {

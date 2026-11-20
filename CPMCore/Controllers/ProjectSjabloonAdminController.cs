@@ -1,3 +1,4 @@
+using System.Text.Json;
 using BOCore;
 using CPMCore.Helpers;
 using FacadeCore;
@@ -14,6 +15,7 @@ namespace CPMCore.Controllers;
 public class ProjectSjabloonAdminController : BaseController
 {
     private readonly IProjectSjabloonService _service;
+    private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
 
     public ProjectSjabloonAdminController(IProjectSjabloonService service)
     {
@@ -50,6 +52,11 @@ public class ProjectSjabloonAdminController : BaseController
         ViewData["Opties"] = await _service.Opties();
         return View("EditV2", sjabloon);
     }
+
+    /// <summary>Kerncijfers van de gekozen onderdelen en het voorbeeld voor dit gebouw (voor de editor). Bewaart niets.</summary>
+    [HttpGet("Overzicht")]
+    public async Task<IActionResult> Overzicht(int? planningId, int? trajectId, int? schijfId, int verdiepingen = 1, bool kelder = false, string? dak = null)
+        => Json(await _service.Overzicht(planningId, trajectId, schijfId, verdiepingen, kelder, string.IsNullOrWhiteSpace(dak) ? null : dak.Trim().ToLowerInvariant()), JsonOpts);
 
     /// <summary>Bewaart het formulier. Bij fouten komt dezelfde pagina terug met de melding(en) en de ingevulde waarden.</summary>
     [HttpPost("Opslaan")]
@@ -96,7 +103,8 @@ public class ProjectSjabloonAdminController : BaseController
     {
         var dashboard = new MvcBreadcrumbNode("Index", "Home", "Dashboard");
         var instellingen = new MvcBreadcrumbNode("Index", "Instellingen", "Instellingen") { Parent = dashboard };
-        var lijst = new MvcBreadcrumbNode("Index", "ProjectSjabloonAdmin", "Projectsjablonen") { Parent = instellingen };
+        var sjablonen = new MvcBreadcrumbNode("Index", "ProjectSjabloonAdmin", "Sjablonen") { Parent = instellingen };
+        var lijst = new MvcBreadcrumbNode("Index", "ProjectSjabloonAdmin", "Projectsjablonen") { Parent = sjablonen };
         ViewData["BreadcrumbNode"] = leaf == null
             ? lijst
             : new MvcBreadcrumbNode("Bewerken", "ProjectSjabloonAdmin", leaf) { Parent = lijst };

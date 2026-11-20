@@ -9,7 +9,7 @@ minutes: 4
 updated: 2026-11-15
 newsTag: Nieuw
 screens: planning-index
-related: planning-handleiding, planning-lezen-en-opvolgen, planning-opbouwen
+related: planning-handleiding, planning-lezen-en-opvolgen, planning-opbouwen, planning-op-je-gsm
 synonyms: scrollen, zoomen, overzicht, schaal, dag week maand, alles, volledig scherm, lijst breder maken, kolommen, inklappen, vandaag, begin, verschuiven, slepen, tablet, gsm
 description: scrollen, zoomen, de lijst verbreden, fases inklappen en volledig scherm gebruiken
 intro: |
@@ -25,7 +25,7 @@ faq:
   - q: Onthoudt CPM mijn keuzes?
     a: Ja, per project en per browser. Je onthoudt de schaal, de breedte van de lijst, het kritieke pad, de basisplanning en welke fases ingeklapt zijn. Een collega ziet zijn eigen keuzes.
   - q: Kan ik de planning op gsm bekijken?
-    a: Ja, maar je ziet enkel de lijst met de start en het einde van elke rij. De grafiek en de werkbalk met schalen zijn er niet.
+    a: Ja. Op een gsm zie je geen grafiek maar de Week, de Lijst en de Tijdlijn, met een vinkje om een taak klaar te zetten. Lees het artikel over de planning op je gsm.
   - q: Kan ik de balken slepen om data te wijzigen?
     a: Nog niet. Je wijzigt een taak via haar paneel of in de lijst. Het slepen van balken volgt later.
 ---

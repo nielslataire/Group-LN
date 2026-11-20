@@ -759,6 +759,14 @@
                                 {
                                     <span class="gl-v2-co-signer-status @s.Tone">@s.StatusText</span>
                                 }
+                                @foreach (var a in s.Activity)
+                                {
+                                    <span class="gl-v2-co-signer-activity">@a</span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(s.Warning))
+                                {
+                                    <span class="gl-v2-co-signer-status is-rood">@s.Warning</span>
+                                }
                             </span>
                             @if (s.CanRemind && canSign)
                             {

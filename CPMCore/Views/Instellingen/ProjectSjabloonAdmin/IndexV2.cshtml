@@ -3,9 +3,9 @@
 @model List<ProjectSjabloonBeheerRij>
 @inject IPermissionService PermissionService
 @*
-    gl-v2 — Instellingen › Projectsjablonen: de lijst. Een projectsjabloon bundelt een planningssjabloon, een trajectsjabloon en een schijvensjabloon met standaardantwoorden
-    (verdiepingen, kelder, dak). Toepassen doe je op Projecten › Planning › Projectsjabloon; het sjabloon past zich daar aan het gebouw aan. (De)activeren en verwijderen zijn gewone
-    formulieren; verwijderen vraagt altijd eerst de bevestigingsmodal (data-bv-*, GlV2/_BevestigModal).
+    gl-v2 — Instellingen › Sjablonen › Projectsjablonen: de lijst (design-handoff 66c). Een projectsjabloon bundelt een planningssjabloon, een trajectsjabloon en een schijvensjabloon met standaardantwoorden
+    (verdiepingen, kelder, dak). Planning, traject en schijven zijn klikbare koppelingen (.gl-v2-sjs-lk) met een kerncijfer. Toepassen doe je op Projecten › Planning › Projectsjabloon.
+    Het ⋯-menu is het gedeelde .gl-v2-menu#sj-lijst-menu (gl-v2-instellingen-sjablonen-lijst.js); (de)activeren en verwijderen zijn verborgen formulieren, verwijderen met de bevestigingsmodal (data-bv-*).
 *@
 @{
     ViewData["Title"] = "Projectsjablonen";
@@ -19,6 +19,7 @@
 @section PageStyle
 {
     <link rel="stylesheet" href="~/css/gl-v2-instellingen-automatisatie.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-sjabloontabs.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-instellingen-schijvensjabloon.css" asp-append-version="true" />
 }
 @section PageActions
@@ -30,9 +31,11 @@
 }
 
 <div class="gl-v2-auto gl-v2-sjs-lijst is-project">
+    @await Html.PartialAsync("GlV2/_SjabloonTabs", "project")
+
     <div class="gl-v2-notice gl-v2-notice-compact">
         <i class="ph ph-info" aria-hidden="true"></i>
-        <span>Een projectsjabloon bundelt de planning, het traject en de schijven voor een soort project. Je past het toe in <b>Projecten › Planning › Projectsjabloon</b>. Het sjabloon past zich daar aan het gebouw aan (verdiepingen, kelder, dak) en vult enkel aan wat nog leeg is.</span>
+        <span>Een projectsjabloon bundelt de planning, het traject en de schijven voor een soort project. Je past het toe in <b>Projecten › Planning › Projectsjabloon</b>. Het sjabloon past zich aan het gebouw aan (verdiepingen, kelder, dak) en vult enkel wat nog leeg is.</span>
     </div>
 
     <section class="gl-v2-section-card">
@@ -45,31 +48,44 @@
         }
         else
         {
-            <div class="gl-v2-sjs-kop"><span>Naam</span><span>Planning</span><span>Traject</span><span>Schijven</span><span>Status</span><span></span></div>
+            <div class="gl-v2-auto-head gl-v2-auto-grid--pjs"><span>Naam</span><span>Planning</span><span>Traject</span><span>Schijven</span><span>Standaard gebouw</span><span>Gewijzigd</span><span>Status</span><span></span></div>
             @foreach (var s in Model)
             {
-                <div class="gl-v2-sjs-rij @(s.IsActief ? "" : "is-muted-row")">
-                    <a class="gl-v2-sjs-wie" href="@Url.Action("Bewerken", new { id = s.Id })"><span class="t">@s.Naam</span>@if (!string.IsNullOrWhiteSpace(s.Beschrijving)) { <span class="o">@s.Beschrijving</span> }</a>
-                    <span class="is-muted">@(s.PlanningNaam ?? "—")</span>
-                    <span class="is-muted">@(s.TrajectNaam ?? "—")</span>
-                    <span class="is-muted">@(s.SchijvenNaam ?? "—")</span>
+                <div class="gl-v2-auto-row gl-v2-auto-grid--pjs gl-v2-listrow @(s.IsActief ? "" : "is-muted-row")" data-row-href="@Url.Action("Bewerken", new { id = s.Id })" data-id="@s.Id" data-naam="@s.Naam" data-actief="@(s.IsActief ? "1" : "0")" data-gebruikt="0">
+                    <a class="gl-v2-auto-who gl-v2-sjs-wie" href="@Url.Action("Bewerken", new { id = s.Id })"><span class="t">@s.Naam</span>@if (!string.IsNullOrWhiteSpace(s.Beschrijving)) { <span class="o">@s.Beschrijving</span> } else { <span class="o is-leeg">geen omschrijving</span> }</a>
+                    @if (s.PlanningId != null) { <a class="gl-v2-sjs-lk" href="@Url.Action("Bewerken", "PlanningSjabloonAdmin", new { id = s.PlanningId })"><i class="ph ph-calendar-check" aria-hidden="true"></i><span><b>@s.PlanningNaam</b><small>@s.PlanningKern</small></span></a> } else { <span class="gl-v2-sjs-geen">— overgeslagen</span> }
+                    @if (s.TrajectId != null) { <a class="gl-v2-sjs-lk" href="@Url.Action("Bewerken", "TrajectSjabloonAdmin", new { id = s.TrajectId })"><i class="ph ph-git-branch" aria-hidden="true"></i><span><b>@s.TrajectNaam</b><small>@s.TrajectKern</small></span></a> } else { <span class="gl-v2-sjs-geen">— overgeslagen</span> }
+                    @if (s.SchijvenId != null) { <a class="gl-v2-sjs-lk" href="@Url.Action("Bewerken", "SchijfSjabloonAdmin", new { id = s.SchijvenId })"><i class="ph ph-list-checks" aria-hidden="true"></i><span><b>@s.SchijvenNaam</b><small>@s.SchijvenKern</small></span></a> } else { <span class="gl-v2-sjs-geen">— overgeslagen</span> }
+                    <span class="gl-v2-auto-cell is-muted gl-v2-sjs-meer">@s.StandaardGebouw</span>
+                    <span class="gl-v2-auto-cell is-muted">@(s.GewijzigdOp?.ToLocalTime().ToString("dd/MM/yyyy", nl))@(string.IsNullOrEmpty(s.GewijzigdDoor) ? "" : " · " + s.GewijzigdDoor)</span>
                     <span><span class="gl-v2-badge @(s.IsActief ? "is-positive" : "is-inactive")">@(s.IsActief ? "Actief" : "Inactief")</span></span>
-                    <span class="gl-v2-sjs-acts">
-                        <a class="gl-v2-icon-btn" href="@Url.Action("Bewerken", new { id = s.Id })" title="Bewerken" aria-label="Sjabloon @s.Naam bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></a>
-                        @if (canWrite)
-                        {
-                            <form method="post" action="@Url.Action("Actief", new { id = s.Id, actief = !s.IsActief })" class="gl-v2-sjs-vorm">@Html.AntiForgeryToken()<button type="submit" class="gl-v2-icon-btn" title="@(s.IsActief ? "Inactief zetten" : "Activeren")" aria-label="@(s.IsActief ? "Sjabloon inactief zetten" : "Sjabloon activeren")"><i class="ph @(s.IsActief ? "ph-eye-slash" : "ph-eye")" aria-hidden="true"></i></button></form>
-                        }
-                        @if (canDelete)
-                        {
-                            <form method="post" action="@Url.Action("Verwijderen", new { id = s.Id })" class="gl-v2-sjs-vorm" data-bv-titel="Sjabloon verwijderen?" data-bv-tekst="Projectsjabloon “@s.Naam” verwijderen? De planning-, traject- en schijvensjablonen zelf blijven bestaan. Dit kan je niet ongedaan maken." data-bv-ok="Verwijderen" data-bv-tone="danger" data-bv-icon="ph-trash">@Html.AntiForgeryToken()<button type="submit" class="gl-v2-icon-btn is-danger" title="Verwijderen" aria-label="Sjabloon @s.Naam verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button></form>
-                        }
-                    </span>
+                    <span class="gl-v2-auto-acts"><span class="gl-v2-rowact">
+                        <i class="ph ph-caret-right gl-v2-rowact-chev" aria-hidden="true"></i>
+                        <span class="gl-v2-rowact-btns">
+                            <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="sj-lijst-menu" aria-label="Acties voor @s.Naam" title="Meer acties"><i class="ph ph-dots-three" aria-hidden="true"></i></button>
+                        </span>
+                    </span></span>
+                    @if (canWrite)
+                    {
+                        <form method="post" action="@Url.Action("Actief", new { id = s.Id, actief = !s.IsActief })" class="gl-v2-sjs-vorm" data-actie="actief">@Html.AntiForgeryToken()</form>
+                    }
+                    @if (canDelete)
+                    {
+                        <form method="post" action="@Url.Action("Verwijderen", new { id = s.Id })" class="gl-v2-sjs-vorm" data-actie="verwijder" data-bv-titel="Sjabloon verwijderen?" data-bv-tekst="Projectsjabloon “@s.Naam” verwijderen? De planning-, traject- en schijvensjablonen zelf blijven bestaan. Dit kan je niet ongedaan maken." data-bv-ok="Verwijderen" data-bv-tone="danger" data-bv-icon="ph-trash">@Html.AntiForgeryToken()</form>
+                    }
                 </div>
             }
-            <div class="gl-v2-auto-foot">@Model.Count @(Model.Count == 1 ? "sjabloon" : "sjablonen")</div>
+            <div class="gl-v2-auto-foot">@Model.Count @(Model.Count == 1 ? "sjabloon" : "sjablonen") · klik op een onderdeel om dat sjabloon te openen</div>
         }
     </section>
 </div>
 
+<div class="gl-v2-menu" id="sj-lijst-menu" role="menu" aria-label="Acties voor dit sjabloon"></div>
+
 @await Html.PartialAsync("GlV2/_BevestigModal")
+
+@section PageScripts
+{
+    <script>window.SjLijst = { canWrite: @(canWrite ? "true" : "false"), canDelete: @(canDelete ? "true" : "false") };</script>
+    <script src="~/js/gl-v2-instellingen-sjablonen-lijst.js" asp-append-version="true"></script>
+}

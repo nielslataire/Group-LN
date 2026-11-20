@@ -262,6 +262,7 @@ a.gl-v2-co-quote-preview:hover { border-color: var(--gl-v2-primary); color: var(
 .gl-v2-co-signer-status.is-goud { color: var(--gl-v2-warning); }
 .gl-v2-co-signer-status.is-groen { color: var(--gl-v2-primary); }
 .gl-v2-co-signer-status.is-rood { color: var(--gl-v2-danger); }
+.gl-v2-co-signer-activity { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted); font-variant-numeric: tabular-nums; }
 .gl-v2-co-meta { margin: 0; padding-top: 10px; border-top: 1px solid var(--gl-v2-hairline-soft); display: flex; flex-direction: column; gap: 5px; }
 .gl-v2-co-meta > div { display: flex; justify-content: space-between; gap: 10px; }
 .gl-v2-co-meta dt { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }

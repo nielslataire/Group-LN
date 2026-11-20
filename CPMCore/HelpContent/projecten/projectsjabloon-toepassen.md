@@ -16,7 +16,7 @@ intro: |
   Een projectsjabloon bundelt de planning, het traject en de betalingsschijven voor een soort project. Je beantwoordt een paar vragen over het gebouw, en het sjabloon past zich aan.
   Een appartementsgebouw met een plat dak en een kelder krijgt dus andere taken en schijven dan een rijwoning met een hellend dak.
 before: |
-  Je hebt schrijfrecht op de planning en op de facturatie van projecten. Het project heeft eenheden, en minstens een betalingsgroep. Een beheerder heeft het projectsjabloon al gemaakt onder Instellingen › Projectsjablonen.
+  Je hebt schrijfrecht op de planning en op de facturatie van projecten. Het project heeft eenheden, en minstens een betalingsgroep. Een beheerder heeft het projectsjabloon al gemaakt onder Instellingen › Sjablonen › Projectsjablonen.
 faq:
   - q: Wat als er al een planning is?
     a: Dan blijft die staan. Een eenheid die al een planning heeft, krijgt er geen nieuwe. Enkel eenheden zonder planning krijgen er een.
@@ -40,6 +40,7 @@ faq:
    - of er een **kelder** is
    - of het **dak** hellend of plat is
    - of het **één planning voor alle eenheden** is (een gebouw met appartementen) of een planning per woning
+   - bij één planning: of ze **in de hoofdplanning** komt. Dat kan enkel als de hoofdplanning nog leeg is. Is ze niet leeg, of zet je dit uit, dan komt er een aparte planning naast de hoofdplanning
 4. Lees onder **Wat er gebeurt** wat CPM gaat doen. Daar staan ook de schijven met hun percentages.
 5. Klik op **Toepassen**.
 

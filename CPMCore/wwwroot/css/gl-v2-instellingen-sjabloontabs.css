@@ -1,0 +1,16 @@
+/* gl-v2 — Instellingen › Sjablonen: tabstrook met tellers boven de vier sjabloonlijsten (design-handoff 66a/66c, .sx-tabs). Laadt vóór shell.css: regels onder .gl-v2. */
+.gl-v2 .gl-v2-sjtabs { display: flex; align-items: center; gap: 4px; border-bottom: 1px solid var(--gl-v2-line); margin: 0 0 16px; overflow-x: auto; scrollbar-width: none; }
+.gl-v2 .gl-v2-sjtabs::-webkit-scrollbar { display: none; }
+.gl-v2 .gl-v2-sjtab { display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; font: 500 13px var(--gl-v2-font-sans); color: var(--gl-v2-muted); border-bottom: 2.5px solid transparent; margin-bottom: -1px; text-decoration: none; white-space: nowrap; }
+.gl-v2 .gl-v2-sjtab:hover { color: var(--gl-v2-ink); }
+.gl-v2 .gl-v2-sjtab.is-on { color: var(--gl-v2-ink); font-weight: 700; border-bottom-color: var(--gl-v2-gold, #C9A96E); }
+.gl-v2 .gl-v2-sjtab i { font-size: 15px; }
+.gl-v2 .gl-v2-sjtab em { font-style: normal; font: 600 10.5px var(--gl-v2-font-sans); background: #EDEFEB; border-radius: 8px; padding: 1px 6px; color: #4A5B48; }
+.gl-v2 .gl-v2-sjtabs-note { margin-left: auto; padding-left: 16px; font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); white-space: nowrap; }
+@media (max-width: 1100px) { .gl-v2 .gl-v2-sjtabs-note { display: none; } }
+/* Gsm (65c): 48 hoog, actieve tab 600 met gouden lijn 3 px, scrollt horizontaal en plakt onder de topbar */
+@media (max-width: 767.98px) {
+    .gl-v2 .gl-v2-sjtabs { position: sticky; top: var(--gl-v2-m-topbar-live, 0px); z-index: 5; background: var(--gl-v2-bg, #fff); margin: 0 -4px 12px; padding: 0 4px; }
+    .gl-v2 .gl-v2-sjtab { height: 48px; padding: 0 14px; font-size: 14px; border-bottom-width: 3px; }
+    .gl-v2 .gl-v2-sjtab.is-on { font-weight: 600; }
+}

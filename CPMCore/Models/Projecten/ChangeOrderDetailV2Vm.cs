@@ -174,6 +174,10 @@ public class ChangeOrderSignerV2
     /// <summary>is-grijs | is-goud | is-groen | is-rood.</summary>
     public string Tone { get; set; } = "is-grijs";
     public bool CanRemind { get; set; }
+    /// <summary>Wat de klant met de link deed (geopend, hoe vaak, document bekeken/gedownload), uit de audit trail.</summary>
+    public List<string> Activity { get; set; } = new();
+    /// <summary>Bv. "Mail kon niet verstuurd worden"; leeg als alles goed ging.</summary>
+    public string? Warning { get; set; }
 }
 
 public class ChangeOrderInvoiceV2

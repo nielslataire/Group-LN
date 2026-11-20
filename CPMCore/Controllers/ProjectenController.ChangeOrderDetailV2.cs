@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using ServiceCore.Helpers;
+using ServiceCore.Signing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -561,8 +562,39 @@ namespace CPMCore.Controllers
             var showCase = latestCase != null && !isDraftPhase;
             if (showCase)
             {
+                // Wat deed elke ondertekenaar met de link? Uit de audit trail (SigningEvent), enkel gebeurtenissen van de klantkant.
+                var partyIds = parties.Select(p => p.PartyId).ToList();
+                var wantedEvents = new[] { SigningEventTypes.LinkOpened, SigningEventTypes.DocumentServed, SigningEventTypes.DocumentViewed, SigningEventTypes.DocumentDownloaded, SigningEventTypes.NotificationFailed, SigningEventTypes.InvitationSent, SigningEventTypes.ReminderSent };
+                var partyEvents = (_db.SigningEvent.AsNoTracking()
+                        .Where(e => e.SigningCaseId == latestCase.CaseId && e.SigningPartyId != null && partyIds.Contains(e.SigningPartyId.Value) && wantedEvents.Contains(e.EventType))
+                        .Select(e => new { PartyId = e.SigningPartyId!.Value, e.EventType, e.OccurredAtUtc })
+                        .ToList())
+                    .GroupBy(e => e.PartyId).ToDictionary(g => g.Key, g => g.ToList());
                 foreach (var p in parties.OrderBy(p => p.SortOrder))
                 {
+                    var activity = new List<string>();
+                    string? warning = null;
+                    partyEvents.TryGetValue(p.PartyId, out var evs);
+                    evs ??= new();
+                    var opens = evs.Where(e => e.EventType == SigningEventTypes.LinkOpened).OrderBy(e => e.OccurredAtUtc).ToList();
+                    var invitedAt = p.InvitedAt ?? evs.Where(e => e.EventType == SigningEventTypes.InvitationSent).Select(e => (DateTime?)e.OccurredAtUtc).Min();
+                    if (opens.Count > 0)
+                    {
+                        activity.Add($"Link {opens.Count}× geopend · eerst {opens[0].OccurredAtUtc.ToLocalTime():dd/MM HH:mm}" + (opens.Count > 1 ? $" · laatst {opens[^1].OccurredAtUtc.ToLocalTime():dd/MM HH:mm}" : ""));
+                    }
+                    else if (p.Status is (int)SigningPartyStatus.Invited && invitedAt.HasValue)
+                    {
+                        var dagen = (int)(DateTime.UtcNow - invitedAt.Value).TotalDays;
+                        activity.Add("Link nog niet geopend" + (dagen >= 1 ? $" · {dagen} dag{(dagen == 1 ? "" : "en")} na verzending" : ""));
+                    }
+                    var served = evs.Count(e => e.EventType == SigningEventTypes.DocumentServed);
+                    var viewed = evs.Any(e => e.EventType == SigningEventTypes.DocumentViewed);
+                    if (served > 0 || viewed) activity.Add("Document bekeken");
+                    else if (opens.Count > 0 && p.Status is (int)SigningPartyStatus.Invited or (int)SigningPartyStatus.Opened or (int)SigningPartyStatus.Verified) activity.Add("Document nog niet bekeken");
+                    var downloads = evs.Count(e => e.EventType == SigningEventTypes.DocumentDownloaded);
+                    if (downloads > 0) activity.Add($"PDF {downloads}× gedownload");
+                    if (evs.Any(e => e.EventType == SigningEventTypes.NotificationFailed)) warning = "De mail kon niet verstuurd worden — controleer het e-mailadres en stuur opnieuw.";
+
                     var (text, tone) = p.Status switch
                     {
                         (int)SigningPartyStatus.Signed => ("getekend" + (p.SignedAt.HasValue ? $" op {p.SignedAt.Value.ToLocalTime():dd/MM · HH:mm}" : ""), "is-groen"),
@@ -581,6 +613,8 @@ namespace CPMCore.Controllers
                         StatusText = text,
                         Tone = tone,
                         CanRemind = vm.ActiveSigningCase != null && p.Status is (int)SigningPartyStatus.Invited or (int)SigningPartyStatus.Opened or (int)SigningPartyStatus.Verified,
+                        Activity = activity,
+                        Warning = warning,
                     });
                 }
                 var sentAt = latestCase.OpenedAt ?? latestCase.CreatedAt;

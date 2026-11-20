@@ -23,7 +23,7 @@ faq:
   - q: Wat neemt een sjabloon mee van mijn planning?
     a: De fases, de taken met hun duur en notitie, en de voorgangers binnen die planning. Voorgangers uit de hoofdplanning of een andere woning gaan niet mee. Voortgang, werkelijke data en de basisplanning ook niet.
   - q: Waar pas ik een sjabloon aan?
-    a: Onder Instellingen › Planningssjablonen. Daar maak je een sjabloon, wijzig je blokken en taken, en verwijder je het. Je hebt daarvoor het recht Planningssjablonen nodig.
+    a: Onder Instellingen › Sjablonen › Planning. Daar maak je een sjabloon, wijzig je blokken en taken, en verwijder je het. Je hebt daarvoor het recht Planningssjablonen nodig.
   - q: Waarom kan ik een sjabloon niet verwijderen?
     a: Het is al gebruikt in een project (kolom **Gebruikt in**). Zet het dan op inactief: het blijft staan, maar wordt niet meer aangeboden bij het toepassen.
   - q: Wat doet "Reageert op"?
@@ -63,7 +63,7 @@ Een sjabloon kan blokken bevatten die alleen bij een kelder of een bepaald dak h
 
 ## De lijst met sjablonen
 
-Onder **Instellingen › Planningssjablonen** zie je alle sjablonen met het aantal blokken en taken, de duur in werkdagen (van één woning), waarop het sjabloon reageert, waar het gebruikt is, wie het laatst wijzigde en de status. Bij sjablonen met verdiepingen staat de duur bij twee verdiepingen.
+Onder **Instellingen › Sjablonen › Planning** zie je alle sjablonen met het aantal blokken en taken, de duur in werkdagen (van één woning), waarop het sjabloon reageert, waar het gebruikt is, wie het laatst wijzigde en de status. Bij sjablonen met verdiepingen staat de duur bij twee verdiepingen.
 ![Lijst met sjablonen](/img/help/projecten/planning-sjablonen/2-lijst.png)
 
 Via **⋯** op een rij kun je het sjabloon **dupliceren** (een kopie met dezelfde blokken en codes), **inactief zetten** of **verwijderen**. Verwijderen kan enkel als het nergens gebruikt is en vraagt eerst om bevestiging.
@@ -96,7 +96,7 @@ Rechts naast de blokken zie je meteen wat je sjabloon oplevert. Bij elke taak st
 
 ## Een sjabloon verwijderen
 
-Kies het sjabloon bij **Sjabloon** op de planningpagina en klik op **Sjabloon verwijderen**, of gebruik **⋯** in Instellingen › Planningssjablonen. CPM vraagt eerst om bevestiging. Een sjabloon dat al in een project gebruikt is, kan niet verwijderd worden. Zet het dan op inactief.
+Kies het sjabloon bij **Sjabloon** op de planningpagina en klik op **Sjabloon verwijderen**, of gebruik **⋯** in Instellingen › Sjablonen › Planning. CPM vraagt eerst om bevestiging. Een sjabloon dat al in een project gebruikt is, kan niet verwijderd worden. Zet het dan op inactief.
 
 ## Let op
 
