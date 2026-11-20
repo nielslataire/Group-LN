@@ -30,6 +30,8 @@ faq:
     a: Het legt vast wanneer CPM het sjabloon later automatisch voorstelt, bijvoorbeeld bij het starten van de werken. Voorlopig bewaart CPM enkel je keuze. Je past het sjabloon nog altijd zelf toe.
   - q: Ik krijg een fout dat een voorganger niet bestaat. Wat nu?
     a: De code van de voorganger staat niet in dit sjabloon, bijvoorbeeld omdat je de taak of het blok verwijderd hebt. Kies de voorganger opnieuw in de lijst onder Voorgangers.
+  - q: Hoe hangt een mijlpaal in het traject aan een taak uit het sjabloon?
+    a: Geef de taak (of het blok) in het sjabloon een code, bijvoorbeeld DAK_KLAAR, en geef de mijlpaal in het traject dezelfde code. CPM koppelt ze dan vanzelf, ook als je het traject pas later aanmaakt. De mijlpaal volgt daarna het einde van die taak. Komt dezelfde code op meer dan één plaats voor (bijvoorbeeld in twee woningen), dan laat CPM de mijlpaal met rust, want het is dan niet te zeggen welke taak bedoeld is. Koppel die handmatig in het taakpaneel.
   - q: Kan ik de toepassing ongedaan maken?
     a: Niet met Ongedaan maken. Verwijder de gemaakte plannings met **Instellen** naast de tabs.
   - q: Een woning heeft een andere planning nodig dan de rest. Kan dat?

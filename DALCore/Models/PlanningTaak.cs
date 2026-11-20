@@ -9,6 +9,9 @@ public partial class PlanningTaak
 {
     public int Id { get; set; }
 
+    /// <summary>Code uit het planningssjabloon (migratie 154); trajectmijlpalen met dezelfde code hangen eraan.</summary>
+    public string Code { get; set; }
+
     public int PlanningSectieId { get; set; }
 
     /// <summary>De uitvoerder (aannemer, <see cref="CompanyInfo.CompanyId"/>) van deze taak (migratie 150); leeg = die van de fase.</summary>

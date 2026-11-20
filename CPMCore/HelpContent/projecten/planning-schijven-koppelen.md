@@ -26,7 +26,11 @@ faq:
   - q: Kan ik een gemarkeerde schijf terugzetten?
     a: Ja, via het menu van de rij (⋯ of rechtsklik): **Schijf terugzetten**. Eenheden waarvoor al gefactureerd is, blijven bereikt.
   - q: Markeert CPM de schijf vanzelf?
-    a: Nee. Jij bevestigt met één klik. Later kan dat automatisch gemaakt worden.
+    a: Nee. Jij bevestigt met één klik. Wel krijgt de projectleider automatisch een taak in Mijn taken zodra een schijf bereikt is (zie "De taak in Mijn taken").
+  - q: Ik heb de taak in Mijn taken zelf afgevinkt, maar de schijf staat nog niet klaar. Komt hij terug?
+    a: Nee. Zolang de situatie dezelfde blijft, maakt CPM geen nieuwe taak. Gaat de taak in de planning weer open en wordt ze daarna opnieuw klaar, dan krijg je wel opnieuw een taak.
+  - q: Wie krijgt de taak in Mijn taken?
+    a: De projectleider van het project. Is er geen projectleider ingevuld, dan staat de taak op de rol Projectleider.
 ---
 ## Een schijf koppelen
 
@@ -34,6 +38,14 @@ faq:
 2. Klik op **Opslaan**. De schijf staat nu als label bij de taak of fase, met hoeveel eenheden ze al bereikt hebben.
 
 ![De koppeling met een schijf in het taakpaneel](/img/help/projecten/planning-schijven-koppelen/1-koppeling.png)
+
+## De taak in Mijn taken
+
+Zodra een taak of fase met een schijf klaar is, maakt CPM voor de projectleider **één taak** in Mijn taken: "Schijf 3 is bereikt: klaarzetten voor facturatie?". In de omschrijving staat welke taak klaar is, in welke planning en voor hoeveel eenheden de schijf klaargezet kan worden.
+
+- De taak verdwijnt vanzelf zodra de schijf klaarstaat. Of je dat via de planning doet of via Betalingsschijven maakt niet uit. De taak wordt dan bijgewerkt de eerstvolgende keer dat je de planning opent.
+- Gaat de taak in de planning weer open (je zet de voortgang terug), dan vervalt de taak ook.
+- Er hoeft niets ingesteld te worden en je hebt er geen mijlpaal in het traject voor nodig.
 
 ## Een schijf markeren
 

@@ -848,6 +848,7 @@ public class PlanningService : IPlanningService
         var volgnr = stages.GroupBy(s => s.GroupId).SelectMany(g => g.Select((s, i) => (s.Id, Nr: i + 1))).ToDictionary(x => x.Id, x => x.Nr);
         string Tekst(InvoicingPaymentStages s) => groepen[s.GroupId] + " · " + volgnr[s.Id] + ". " + s.Name + " (" + s.Percentage.ToString("0.##", Nl) + " %)";
 
+        var gekoppeld = new List<(InvoicingPaymentStages Stage, PlanningRij Rij, PlanningSchijfLink Link)>();
         foreach (var s in stages)
         {
             var optie = new PlanningSchijfOptie { StageId = s.Id, Tekst = Tekst(s) };
@@ -861,16 +862,73 @@ public class PlanningService : IPlanningService
                 var gedaan = leden.Count(Klaar);
                 var kandidaten = leden.Where(e => !Klaar(e)).ToList();
                 var markeerbaar = kandidaten.Count(e => e.Verkocht && e.HeeftWaarde);
-                rij.Schijven.Add(new PlanningSchijfLink
+                var link = new PlanningSchijfLink
                 {
                     StageId = s.Id, Nummer = volgnr[s.Id], Naam = s.Name ?? "", Percentage = s.Percentage, GroepNaam = groepen[s.GroupId],
                     AantalEenheden = leden.Count, AantalBereikt = gedaan, TeMarkeren = markeerbaar, Overgeslagen = kandidaten.Count - markeerbaar,
                     KlaarOmTeMarkeren = rij.Afgerond && markeerbaar > 0,
                     AllesBereikt = leden.Count > 0 && gedaan == leden.Count,
-                });
+                };
+                rij.Schijven.Add(link);
+                gekoppeld.Add((s, rij, link));
             }
             staat.SchijfOpties.Add(optie);
         }
+        await SynchroniseerSchijfTaken(d, actief, gekoppeld);
+    }
+
+    private const string SchijfTaakBeheerder = "planning";
+
+    /// <summary>
+    /// Houdt de taken in Mijn taken gelijk met de planning: is een taak of fase met een schijf klaar en staat de schijf nog niet klaar voor facturatie,
+    /// dan krijgt de projectleider één taak "Schijf X is bereikt". Staat de schijf klaar of is de taak weer open, dan verdwijnt die taak.
+    /// Een taak die de projectleider zelf afvinkt komt niet terug zolang de situatie dezelfde blijft.
+    /// </summary>
+    private async Task SynchroniseerSchijfTaken(Data d, int actief, List<(InvoicingPaymentStages Stage, PlanningRij Rij, PlanningSchijfLink Link)> koppelingen)
+    {
+        var prefix = $"schijf:{actief}:";
+        var projectId = d.Project.ProjectId;
+        var bestaand = await _db.ProjectTaak.Where(t => t.ProjectId == projectId && t.BronSleutel != null && t.BronSleutel.StartsWith(prefix)).ToListAsync();
+        int open = (int)BOCore.TaakStatus.Open, bezig = (int)BOCore.TaakStatus.Bezig, wacht = (int)BOCore.TaakStatus.Wachtend;
+        int afgerond = (int)BOCore.TaakStatus.Afgerond, geannuleerd = (int)BOCore.TaakStatus.Geannuleerd;
+        bool Loopt(ProjectTaak t) => t.Status == open || t.Status == bezig || t.Status == wacht;
+        var nu = DateTime.UtcNow;
+        var wijzigingen = false;
+
+        // Sluiten wat niet meer nodig is
+        foreach (var t in bestaand.Where(Loopt))
+        {
+            var k = koppelingen.FirstOrDefault(x => prefix + x.Stage.Id == t.BronSleutel);
+            if (k.Link != null && k.Link.KlaarOmTeMarkeren) continue;
+            t.Status = k.Link != null && k.Link.AllesBereikt ? afgerond : geannuleerd;
+            t.AfgewerktOp = nu; t.ModifiedDate = nu; t.ModifiedByUserId = SchijfTaakBeheerder;
+            wijzigingen = true;
+        }
+
+        // Aanmaken wat nog ontbreekt
+        var planningNaam = d.Planningen.FirstOrDefault(p => p.Id == actief)?.Naam ?? "Hoofdplanning";
+        foreach (var (stage, rij, link) in koppelingen.Where(k => k.Link.KlaarOmTeMarkeren))
+        {
+            var sleutel = prefix + stage.Id;
+            var eerdere = bestaand.Where(t => t.BronSleutel == sleutel).ToList();
+            if (eerdere.Any(Loopt)) continue;
+            // Zelf afgevinkt door de projectleider: niet opnieuw aanmaken
+            if (eerdere.Any(t => t.Status == afgerond && t.ModifiedByUserId != SchijfTaakBeheerder)) continue;
+            var titel = $"Schijf {link.Nummer} is bereikt: klaarzetten voor facturatie? ({link.GroepNaam})";
+            _db.ProjectTaak.Add(new ProjectTaak
+            {
+                ProjectId = projectId, BronSleutel = sleutel,
+                Titel = titel.Length > 200 ? titel[..200] : titel,
+                Omschrijving = $"{rij.Wbs} {rij.Naam} is klaar in {planningNaam}. Open de planning of Betalingsschijven en zet schijf \"{link.Naam}\" ({link.Percentage.ToString("0.##", Nl)} %) klaar voor {link.TeMarkeren} " + (link.TeMarkeren == 1 ? "eenheid." : "eenheden."),
+                Status = open, Prioriteit = (int)BOCore.TaakPrioriteit.Normaal,
+                ToegewezenAanUserId = string.IsNullOrWhiteSpace(d.Project.AspNetUserId) ? null : d.Project.AspNetUserId,
+                ToegewezenAanRol = string.IsNullOrWhiteSpace(d.Project.AspNetUserId) ? (int)BOCore.InterneRol.Projectleider : null,
+                Vervaldatum = DateOnly.FromDateTime(DateTime.Today),
+                Herkomst = (int)BOCore.TaakHerkomst.Systeem, CreatedByUserId = SchijfTaakBeheerder, CreatedDate = nu,
+            });
+            wijzigingen = true;
+        }
+        if (wijzigingen) await _db.SaveChangesAsync();
     }
 
     public async Task<PlanningUitkomst> KoppelSchijf(int projectId, PlanningSchijfKoppelCommando c, string? userId)
@@ -1643,7 +1701,7 @@ public class PlanningService : IPlanningService
             var faseVolgorde = 10;
             foreach (var f in uit.Fases)
             {
-                var sectie = new PlanningSectie { ProjectId = d.Project.ProjectId, Naam = f.Naam, Volgorde = faseVolgorde, IsActief = true, BouwPlanningId = bp.Id };
+                var sectie = new PlanningSectie { ProjectId = d.Project.ProjectId, Naam = f.Naam, Code = f.Code, Volgorde = faseVolgorde, IsActief = true, BouwPlanningId = bp.Id };
                 faseVolgorde += 10;
                 _db.PlanningSectie.Add(sectie);
                 await _db.SaveChangesAsync();
@@ -1651,7 +1709,7 @@ public class PlanningService : IPlanningService
                 var tv = 10;
                 foreach (var ut in f.Taken)
                 {
-                    var taak = new PlanningTaak { PlanningSectieId = sectie.Id, Naam = ut.Naam, Beschrijving = ut.Beschrijving, Duur = ut.Duur, Volgorde = tv };
+                    var taak = new PlanningTaak { PlanningSectieId = sectie.Id, Naam = ut.Naam, Code = string.IsNullOrWhiteSpace(ut.Code) ? null : ut.Code.Trim(), Beschrijving = ut.Beschrijving, Duur = ut.Duur, Volgorde = tv };
                     tv += 10;
                     _db.PlanningTaak.Add(taak);
                     uitTaken.Add((ut, taak));
@@ -1672,6 +1730,9 @@ public class PlanningService : IPlanningService
             await _db.SaveChangesAsync();
             vorigeTaken = taakIdPerSleutel;
         }
+        // Trajectmijlpalen met dezelfde code hangen nu aan de nieuwe taken en fases
+        var gekoppeld = await PlanningTrajectKoppeling.KoppelOpCode(_db, d.Project.ProjectId);
+        if (gekoppeld > 0) waarschuwingen.Add($"{gekoppeld} trajectmijlpaal{(gekoppeld == 1 ? "" : "en")} met dezelfde code zijn aan de planning gekoppeld.");
         return null;
     }
 

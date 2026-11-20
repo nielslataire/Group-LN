@@ -138,6 +138,49 @@ public class PlanningSchijfTests
     }
 
     [Fact]
+    public async Task Is_de_taak_klaar_dan_krijgt_de_projectleider_een_taak_en_die_verdwijnt_zodra_de_schijf_klaarstaat()
+    {
+        var (svc, db, s, pid, taakId) = await Maak();
+        db.Project.First(p => p.ProjectId == ProjectId).AspNetUserId = "projectleider-1";
+        db.SaveChanges();
+        await svc.KoppelSchijf(ProjectId, new PlanningSchijfKoppelCommando { Soort = "taak", Id = taakId, PlanningId = pid, StageId = Stage1 }, "u1");
+        Assert.Empty(db.ProjectTaak);                       // taak nog niet klaar: geen melding
+
+        s = await Doe(svc, s, new PlanningCommando { Type = "wijzig", PlanningId = pid, Soort = "taak", Id = taakId, Velden = V(("voortgang", 100)) });
+        var taak = Assert.Single(db.ProjectTaak);
+        Assert.Equal($"schijf:{pid}:{Stage1}", taak.BronSleutel);
+        Assert.Equal("projectleider-1", taak.ToegewezenAanUserId);
+        Assert.Contains("Schijf 1", taak.Titel);
+        Assert.Equal((int)BOCore.TaakStatus.Open, taak.Status);
+
+        await svc.Laad(ProjectId, pid);                     // opnieuw openen maakt geen tweede taak
+        Assert.Single(db.ProjectTaak);
+
+        await svc.MarkeerSchijf(ProjectId, new PlanningSchijfMarkeerCommando { PlanningId = pid, StageId = Stage1 }, "u1");
+        Assert.Equal((int)BOCore.TaakStatus.Afgerond, db.ProjectTaak.Single().Status);
+    }
+
+    [Fact]
+    public async Task Een_taak_die_weer_open_gaat_of_zelf_afgevinkt_werd_geeft_geen_nieuwe_of_dubbele_taak()
+    {
+        var (svc, db, s, pid, taakId) = await Maak();
+        await svc.KoppelSchijf(ProjectId, new PlanningSchijfKoppelCommando { Soort = "taak", Id = taakId, PlanningId = pid, StageId = Stage1 }, "u1");
+        s = await Doe(svc, s, new PlanningCommando { Type = "wijzig", PlanningId = pid, Soort = "taak", Id = taakId, Velden = V(("voortgang", 100)) });
+        Assert.Null(db.ProjectTaak.Single().ToegewezenAanUserId);                    // geen projectleider ingevuld: dan de rol
+        Assert.Equal((int)BOCore.InterneRol.Projectleider, db.ProjectTaak.Single().ToegewezenAanRol);
+
+        s = await Doe(svc, s, new PlanningCommando { Type = "wijzig", PlanningId = pid, Soort = "taak", Id = taakId, Velden = V(("voortgang", 50)) });
+        Assert.Equal((int)BOCore.TaakStatus.Geannuleerd, db.ProjectTaak.Single().Status);   // niet meer klaar: melding vervalt
+
+        s = await Doe(svc, s, new PlanningCommando { Type = "wijzig", PlanningId = pid, Soort = "taak", Id = taakId, Velden = V(("voortgang", 100)) });
+        Assert.Equal(2, db.ProjectTaak.Count());                                     // opnieuw klaar: opnieuw een melding
+        var nieuw = db.ProjectTaak.Single(t => t.Status == (int)BOCore.TaakStatus.Open);
+        nieuw.Status = (int)BOCore.TaakStatus.Afgerond; nieuw.ModifiedByUserId = "7"; db.SaveChanges();   // projectleider vinkt zelf af
+        await svc.Laad(ProjectId, pid);
+        Assert.Equal(2, db.ProjectTaak.Count());                                     // en die komt niet terug
+    }
+
+    [Fact]
     public async Task De_hoofdplanning_kan_eigen_eenheden_hebben_en_de_groep_komt_uit_de_constructiewaarde()
     {
         var db = new TestDb(Guid.NewGuid().ToString());

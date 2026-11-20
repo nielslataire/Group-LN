@@ -80,6 +80,9 @@ public partial class ProjectTaak
 
     public DateTime? WachtOpDatum { get; set; }
 
+    /// <summary>Wie of wat deze taak automatisch aangemaakt heeft, bv. "schijf:12:345" (planning 12, betalingsschijf 345); voorkomt dubbele taken (migratie 153).</summary>
+    public string BronSleutel { get; set; }
+
     public virtual Project Project { get; set; }
 
     public virtual Units Unit { get; set; }

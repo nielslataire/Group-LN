@@ -31,6 +31,8 @@ public partial class cpmRunningContext
             entity.Property(e => e.Context).HasMaxLength(50);
             entity.Property(e => e.InboxBron).HasMaxLength(30);
             entity.Property(e => e.InboxMeta).HasMaxLength(200);
+            entity.Property(e => e.BronSleutel).HasMaxLength(100);
+            entity.HasIndex(e => e.BronSleutel);
             entity.Property(e => e.WachtOp).HasMaxLength(200);
             entity.Property(e => e.WachtOpDatum).HasColumnType("date");
             entity.Property(e => e.CreatedDate).HasDefaultValueSql("(sysutcdatetime())");

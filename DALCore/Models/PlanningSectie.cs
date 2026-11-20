@@ -9,6 +9,9 @@ public partial class PlanningSectie
 {
     public int Id { get; set; }
 
+    /// <summary>Code uit het planningssjabloon (migratie 154); trajectmijlpalen met dezelfde code hangen eraan.</summary>
+    public string Code { get; set; }
+
     public int ProjectId { get; set; }
 
     public int? ActivityGroupId { get; set; }

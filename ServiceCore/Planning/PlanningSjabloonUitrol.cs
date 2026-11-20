@@ -21,6 +21,8 @@ public sealed class UitgerolTaak
 public sealed class UitgerolFase
 {
     public string Naam { get; init; } = "";
+    /// <summary>Code van het blok in het sjabloon; bij een blok dat per verdieping herhaald wordt is ze niet uniek en dus onbruikbaar om aan te koppelen.</summary>
+    public string? Code { get; init; }
     public List<UitgerolTaak> Taken { get; } = new();
 }
 
@@ -92,7 +94,7 @@ public static class PlanningSjabloonUitrol
         {
             var naam = inst.Blok.Naam;
             if (inst.Blok.Herhaling == 1 && Math.Max(1, v.Verdiepingen) > 1) naam += " verdieping " + inst.Index;
-            var fase = new UitgerolFase { Naam = naam };
+            var fase = new UitgerolFase { Naam = naam, Code = inst.Blok.Herhaling == 1 && Math.Max(1, v.Verdiepingen) > 1 ? null : (string.IsNullOrWhiteSpace(inst.Blok.Code) ? null : inst.Blok.Code.Trim()) };
 
             foreach (var t in inst.Taken)
             {

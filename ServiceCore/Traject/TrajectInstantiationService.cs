@@ -20,6 +20,7 @@ public class TrajectInstantiationService : ITrajectInstantiationService
         _dossiers = dossiers;
     }
 
+    // (zie ook PlanningTrajectKoppeling: mijlpalen met dezelfde code als een planningstaak worden na het aanmaken gekoppeld)
     public async Task<Projecttraject> Instantiate(TrajectInstantiatieBO dto, string? userId)
     {
         if (await _db.Projecttraject.AnyAsync(t => t.ProjectId == dto.ProjectId))
@@ -108,6 +109,9 @@ public class TrajectInstantiationService : ITrajectInstantiationService
             });
         }
         await _db.SaveChangesAsync();
+
+        // Heeft het project al een planning uit een sjabloon, dan hangen mijlpalen met dezelfde code meteen aan de taken en fases.
+        await ServiceCore.Planning.PlanningTrajectKoppeling.KoppelOpCode(_db, dto.ProjectId);
 
         return traject;
     }
