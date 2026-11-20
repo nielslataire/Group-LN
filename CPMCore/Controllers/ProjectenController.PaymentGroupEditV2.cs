@@ -79,6 +79,7 @@ namespace CPMCore.Controllers
                 vm.VatTypeId = vm.VatOptions.FirstOrDefault()?.Id;
 
             vm.OtherGroups = LoadPaymentGroupSources(projectid, groupid);
+            vm.Sjablonen = HttpContext.RequestServices.GetRequiredService<FacadeCore.ISchijfSjabloonService>().Keuzes().GetAwaiter().GetResult();
             if (groupid > 0 && _ps.HasDelete(PermissionCodes.ProjectsInvoicing))
             {
                 vm.CanDelete = true;
@@ -180,6 +181,8 @@ namespace CPMCore.Controllers
                     Name = rowName,
                     Percentage = pct ?? 0m,
                     Invoicable = i < post.StageInvoicable.Count && post.StageInvoicable[i],
+                    PlanningCode = i < post.StagePlanningCodes.Count && !string.IsNullOrWhiteSpace(post.StagePlanningCodes[i]) ? post.StagePlanningCodes[i]!.Trim() : null,
+                    PlanningVolgnr = i < post.StagePlanningVolgnrs.Count && int.TryParse(post.StagePlanningVolgnrs[i], NumberStyles.Integer, CultureInfo.InvariantCulture, out var volgnr) && volgnr > 0 ? volgnr : null,
                     IsLocked = id > 0 && lockedIds.Contains(id),
                 });
                 if (rowName.Length == 0) errors.Add(($"Stages[{i}]", $"Schijf {i + 1}: vul de omschrijving in."));
@@ -234,6 +237,7 @@ namespace CPMCore.Controllers
                 vm.Units = allUnits.Where(u => posted.Contains(u.UnitId)).ToList();
                 vm.OtherUnits = allUnits.Where(u => !posted.Contains(u.UnitId)).ToList();
                 vm.OtherGroups = LoadPaymentGroupSources(post.ProjectId, post.GroupId);
+                vm.Sjablonen = HttpContext.RequestServices.GetRequiredService<FacadeCore.ISchijfSjabloonService>().Keuzes().GetAwaiter().GetResult();
                 SetPaymentGroupEditBreadcrumb(vm);
                 ViewData["HelpScreenId"] = "projecten-betalingsgroep-bewerken";
                 return View("Invoicing/PaymentGroupEditV2", vm);
@@ -249,7 +253,7 @@ namespace CPMCore.Controllers
             if (isNew)
             {
                 foreach (var r in rows)
-                    group.InvoicingPaymentStages.Add(new InvoicingPaymentStages { Name = r.Name, Percentage = r.Percentage, Invoicable = false });
+                    group.InvoicingPaymentStages.Add(new InvoicingPaymentStages { Name = r.Name, Percentage = r.Percentage, Invoicable = false, PlanningCode = r.PlanningCode, PlanningVolgnr = r.PlanningVolgnr });
             }
             else
             {
@@ -264,12 +268,14 @@ namespace CPMCore.Controllers
                         if (r.Id != slotId && !r.IsLocked) entity.DocId = null;
                         entity.Name = r.Name;
                         entity.Percentage = r.Percentage;
+                        entity.PlanningCode = r.PlanningCode;
+                        entity.PlanningVolgnr = r.PlanningVolgnr;
                         if (!r.IsLocked) entity.Invoicable = r.Invoicable;
                         used.Add(slotId);
                     }
                     else
                     {
-                        group.InvoicingPaymentStages.Add(new InvoicingPaymentStages { Name = r.Name, Percentage = r.Percentage, Invoicable = false });
+                        group.InvoicingPaymentStages.Add(new InvoicingPaymentStages { Name = r.Name, Percentage = r.Percentage, Invoicable = false, PlanningCode = r.PlanningCode, PlanningVolgnr = r.PlanningVolgnr });
                     }
                 }
                 foreach (var stale in byId.Values.Where(s => !used.Contains(s.Id)).ToList())
@@ -289,8 +295,24 @@ namespace CPMCore.Controllers
                 return RedirectToAction(nameof(PaymentGroupEditV2), new { projectid = post.ProjectId, groupid = post.GroupId });
             }
 
+            // Schijven uit een sjabloon hangen automatisch aan de taak of fase met dezelfde code in de planning (nooit een reden om het opslaan te laten mislukken).
+            try { ServiceCore.Planning.PlanningSchijfAutoKoppeling.KoppelOpCode(_db, post.ProjectId).GetAwaiter().GetResult(); }
+            catch (Exception ex) { _logger.LogWarning(ex, "Schijven koppelen aan de planning mislukt voor project {ProjectId}", post.ProjectId); }
+
             AddMessage("success", $"Betalingsgroep “{group.Name}” opgeslagen.", "Geslaagd!");
             return RedirectToAction(nameof(PaymentStagesV2), new { projectid = post.ProjectId });
+        }
+
+        /// <summary>"Sjabloon toepassen": rekent een schijvensjabloon uit voor dit aantal verdiepingen (JSON). Bewaart niets; de gebruiker past het voorstel in het formulier nog aan.</summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SchijfSjabloonVoorbeeldV2(int projectId, int sjabloonId, int verdiepingen = 1)
+        {
+            var ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            if (!ps.HasWrite(PermissionCodes.ProjectsInvoicing)) return Forbid();
+            var voorbeeld = await HttpContext.RequestServices.GetRequiredService<FacadeCore.ISchijfSjabloonService>().Voorbeeld(sjabloonId, verdiepingen);
+            if (voorbeeld == null) return NotFound();
+            return Json(voorbeeld, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
         }
 
         /// <summary>26a — "Nieuwe betalingsgroep": inhoud van de modal (AJAX), ook geopend vanuit
@@ -406,6 +428,8 @@ namespace CPMCore.Controllers
                 Percentage = s.Percentage,
                 Invoicable = s.Invoicable,
                 IsLocked = locked.Contains(s.Id),
+                PlanningCode = s.PlanningCode,
+                PlanningVolgnr = s.PlanningVolgnr,
             }).ToList();
 
             var all = LoadProjectUnits(vm.ProjectId, vm.GroupId);

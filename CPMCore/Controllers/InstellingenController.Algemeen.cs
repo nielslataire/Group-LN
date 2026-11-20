@@ -295,6 +295,13 @@ public partial class InstellingenController
                     Description = "Beheer de standaardplanningen met blokken, taken, voorgangers en estafette die je met één handeling op woningen en gebouwen toepast.",
                     Href = Url.Action("Index", "PlanningSjabloonAdmin") ?? "#"
                 });
+                automatisatie.Items.Add(new SettingsItemVm
+                {
+                    Icon = "ph-list-checks",
+                    Title = "Schijvensjablonen",
+                    Description = "Beheer de standaardlijsten betalingsschijven met een vast percentage of een gewicht, die je met één handeling op een betalingsgroep toepast.",
+                    Href = Url.Action("Index", "SchijfSjabloonAdmin") ?? "#"
+                });
             }
             if (automatisatie.Items.Count > 0) vm.Groups.Add(automatisatie);
 

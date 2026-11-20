@@ -1,3 +1,14 @@
+/* Sjabloon toepassen: voorbeeld van het voorstel */
+.gl-v2 .gl-v2-pg-voorbeeld { margin-top: 12px; border: 1px solid var(--gl-v2-line); border-radius: var(--gl-v2-radius-sm); padding: 8px 12px; }
+.gl-v2 .gl-v2-pg-voorbeeld[hidden] { display: none; }
+.gl-v2 .gl-v2-pg-voorbeeld-lijst { list-style: decimal inside; margin: 0; padding: 0; font: 450 13px var(--gl-v2-font-sans); }
+.gl-v2 .gl-v2-pg-voorbeeld-lijst li { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-bottom: 1px solid var(--gl-v2-line); }
+.gl-v2 .gl-v2-pg-voorbeeld-lijst li:last-child { border-bottom: 0; }
+.gl-v2 .gl-v2-pg-voorbeeld-lijst .is-pct { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--gl-v2-muted); }
+.gl-v2 .gl-v2-pg-voorbeeld-totaal { text-align: right; font: 600 12.5px var(--gl-v2-font-sans); padding-top: 6px; }
+.gl-v2 .gl-v2-pg-voorbeeld-waarschuwing { margin: 6px 0 0; padding-left: 18px; font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-warning, #8a5a00); }
+.gl-v2 #gl-v2-pg-sjabloon-verd[hidden] { display: none; }
+
 /* gl-v2 — Betalingsgroep bewerken / Nieuwe betalingsgroep (design-handoff punt 26a-d). Eigen klassen-
    namespace gl-v2-pg-* (bewerkpagina) en gl-v2-npg-* (26a-modal). Deze stylesheet laadt VÓÓR
    gl-v2-shell.css: waar een shell-regel dezelfde specificiteit heeft wint de shell, dus overrides van

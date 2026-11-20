@@ -43,6 +43,7 @@ namespace DALCore.Models
             ConfigureCrmContactEntities(modelBuilder);
             ConfigureDocumentenEntities(modelBuilder);
             ConfigureTaakEntities(modelBuilder);
+            ConfigureSchijfSjabloonEntities(modelBuilder);
             ConfigureMeldingSnoozeEntities(modelBuilder);
             ConfigureCookieConsentEventEntities(modelBuilder);
             ConfigureSigningEntities(modelBuilder);

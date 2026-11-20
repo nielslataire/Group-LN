@@ -1733,6 +1733,8 @@ public class PlanningService : IPlanningService
         // Trajectmijlpalen met dezelfde code hangen nu aan de nieuwe taken en fases
         var gekoppeld = await PlanningTrajectKoppeling.KoppelOpCode(_db, d.Project.ProjectId);
         if (gekoppeld > 0) waarschuwingen.Add($"{gekoppeld} trajectmijlpaal{(gekoppeld == 1 ? "" : "en")} met dezelfde code zijn aan de planning gekoppeld.");
+        var schijven = await PlanningSchijfAutoKoppeling.KoppelOpCode(_db, d.Project.ProjectId);
+        if (schijven > 0) waarschuwingen.Add($"{schijven} betalingsschijf{(schijven == 1 ? "" : "ven")} met dezelfde code {(schijven == 1 ? "is" : "zijn")} aan de planning gekoppeld.");
         return null;
     }
 

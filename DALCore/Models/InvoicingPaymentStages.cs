@@ -21,6 +21,12 @@ public partial class InvoicingPaymentStages
 
     public decimal VatPercentage { get; set; }
 
+    /// <summary>Code van de taak of fase in het planningssjabloon waaraan deze schijf hangt (migratie 155); zo koppelt de planning ze automatisch.</summary>
+    public string PlanningCode { get; set; }
+
+    /// <summary>Bij een herhaling per verdieping: de verdieping (1, 2, ...) waarvoor deze schijf geldt (migratie 155).</summary>
+    public int? PlanningVolgnr { get; set; }
+
     public virtual ProjectDocs Doc { get; set; }
 
     public virtual InvoicingPaymentGroup Group { get; set; }

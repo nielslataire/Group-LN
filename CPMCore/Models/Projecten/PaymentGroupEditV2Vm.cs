@@ -17,6 +17,8 @@ public class PaymentGroupEditV2Vm
     public List<PaymentGroupEditUnitV2> Units { get; set; } = new();
     /// <summary>Alle andere eenheden van het project (keuzelijst achter "+ eenheid").</summary>
     public List<PaymentGroupEditUnitV2> OtherUnits { get; set; } = new();
+    /// <summary>Actieve schijvensjablonen voor "Sjabloon toepassen" (migratie 155).</summary>
+    public List<FacadeCore.SchijfSjabloonKeuze> Sjablonen { get; set; } = new();
     /// <summary>Andere groepen van dit project, voor "Schijven overnemen uit andere groep".</summary>
     public List<PaymentGroupSourceV2> OtherGroups { get; set; } = new();
     public bool IsNew => GroupId == 0;
@@ -47,6 +49,10 @@ public class PaymentGroupEditStageV2
     public string Name { get; set; } = "";
     public decimal Percentage { get; set; }
     public bool Invoicable { get; set; }
+    /// <summary>Code in het planningssjabloon waaraan de schijf hangt (uit een schijvensjabloon; migratie 155).</summary>
+    public string? PlanningCode { get; set; }
+    /// <summary>Bij een herhaling per verdieping: de verdieping.</summary>
+    public int? PlanningVolgnr { get; set; }
     /// <summary>Gefactureerd of per eenheid bereikt: vast (niet verwijderen, niet verplaatsen, % niet verlagen).</summary>
     public bool IsLocked { get; set; }
     /// <summary>Gemarkeerd als kopie tot de gebruiker ze aanpast (26d).</summary>
@@ -99,5 +105,7 @@ public class PaymentGroupEditV2Post
     public List<string?> StageNames { get; set; } = new();
     public List<string?> StagePercentages { get; set; } = new();
     public List<bool> StageInvoicable { get; set; } = new();
+    public List<string?> StagePlanningCodes { get; set; } = new();
+    public List<string?> StagePlanningVolgnrs { get; set; } = new();
     public List<int> UnitIds { get; set; } = new();
 }

@@ -268,10 +268,14 @@
 
     function changed() { renumber(); refreshState(); refreshSelection(); markDirty(); }
 
-    function newRow(name, pct, isCopy) {
+    function newRow(name, pct, isCopy, code, volgnr) {
         var frag = rowTpl.content.cloneNode(true);
         var li = frag.firstElementChild;
         nameOf(li).value = name || "";
+        // Uit een schijvensjabloon: aan welke code (en verdieping) in de planning de schijf hangt
+        var codeEl = li.querySelector('input[name="StagePlanningCodes"]'), volgEl = li.querySelector('input[name="StagePlanningVolgnrs"]');
+        if (codeEl) codeEl.value = code || "";
+        if (volgEl) volgEl.value = volgnr ? String(volgnr) : "";
         pctInput(li).value = pct == null || isNaN(pct) ? "" : fmtPct(pct);
         if (isCopy) { li.classList.add("is-copy"); var note = $(".is-copy-note", li); if (note) note.hidden = false; }
         return li;
@@ -423,6 +427,64 @@
             // Allemaal vóór dezelfde eindafrekening → blijven in de brongroep-volgorde staan.
             stages.forEach(function (s) { insertBeforeFinal(newRow(s.n, s.p, true)); });
             bsModal(importModal).hide();
+            changed();
+        });
+    }
+
+    // ── sjabloon toepassen (schijvensjabloon) ────────────────────────────────────────────────
+    var sjBtn = document.getElementById("gl-v2-pg-sjabloon");
+    var sjModal = document.getElementById("gl-v2-pg-sjabloon-modal");
+    if (sjBtn && sjModal) {
+        var sjConfirm = document.getElementById("gl-v2-pg-sjabloon-confirm");
+        var sjVerdWrap = document.getElementById("gl-v2-pg-sjabloon-verd"), sjVerd = document.getElementById("gl-v2-pg-sjabloon-verd-input");
+        var sjVoorbeeld = document.getElementById("gl-v2-pg-sjabloon-voorbeeld");
+        var sjVoorstel = null, sjAanvraag = 0;
+        var cfgEl = document.getElementById("gl-v2-pg-config"), cfg = {};
+        try { cfg = JSON.parse(cfgEl.textContent || "{}"); } catch (e) { }
+        function sjKeuze() { var r = $$('input[name="gl-v2-pg-sjabloon-keuze"]', sjModal).filter(function (x) { return x.checked; })[0]; return r || null; }
+        function fmtNl(n) { return String(Math.round(n * 100) / 100).replace(".", ","); }
+        function sjToon(v) {
+            sjVoorstel = v; sjConfirm.disabled = !v;
+            sjVoorbeeld.hidden = !v;
+            if (!v) return;
+            var ol = document.getElementById("gl-v2-pg-sjabloon-schijven"); ol.innerHTML = "";
+            v.schijven.forEach(function (s, i) {
+                var li = document.createElement("li");
+                var a = document.createElement("span"); a.textContent = s.naam;
+                var b = document.createElement("span"); b.className = "is-pct"; b.textContent = fmtNl(s.percentage) + " %" + (i === v.schijven.length - 1 ? " · eindafrekening" : "");
+                li.appendChild(a); li.appendChild(b); ol.appendChild(li);
+            });
+            document.getElementById("gl-v2-pg-sjabloon-totaal").textContent = "Totaal " + fmtNl(v.totaal) + " %";
+            var ul = document.getElementById("gl-v2-pg-sjabloon-waarschuwingen"); ul.innerHTML = "";
+            v.waarschuwingen.forEach(function (w) { var li = document.createElement("li"); li.textContent = w; ul.appendChild(li); });
+        }
+        function sjLaad() {
+            var k = sjKeuze(); if (!k) { sjToon(null); return; }
+            var token = (form.querySelector("input[name=__RequestVerificationToken]") || {}).value || "";
+            var body = new URLSearchParams({ projectId: cfg.projectId, sjabloonId: k.value, verdiepingen: sjVerd.value || "1", __RequestVerificationToken: token });
+            var nr = ++sjAanvraag;
+            fetch(cfg.sjabloonVoorbeeldUrl, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/x-www-form-urlencoded", "X-Requested-With": "XMLHttpRequest" }, body: body.toString() })
+                .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+                .then(function (v) { if (nr === sjAanvraag) sjToon(v); })
+                .catch(function () { if (nr === sjAanvraag) sjToon(null); });
+        }
+        sjBtn.addEventListener("click", function () {
+            $$('input[name="gl-v2-pg-sjabloon-keuze"]', sjModal).forEach(function (r) { r.checked = false; });
+            sjVerd.value = "1"; sjVerdWrap.hidden = true; sjToon(null);
+            bsModal(sjModal).show();
+        });
+        sjModal.addEventListener("change", function (e) {
+            if (e.target.name !== "gl-v2-pg-sjabloon-keuze") return;
+            sjVerdWrap.hidden = e.target.closest("label").getAttribute("data-verdiepingen") !== "1";
+            sjLaad();
+        });
+        sjVerd.addEventListener("input", sjLaad);
+        sjConfirm.addEventListener("click", function () {
+            if (!sjVoorstel) return;
+            // Alle (niet-vaste) schijven worden vervangen; de volgorde van het voorstel is de volgorde van de schijven, de laatste is de eindafrekening.
+            rows().filter(function (r) { return !isLocked(r); }).forEach(function (r) { r.remove(); });
+            sjVoorstel.schijven.forEach(function (s) { rowsEl.appendChild(newRow(s.naam, s.percentage, false, s.planningCode, s.planningVolgnr)); });
+            bsModal(sjModal).hide();
             changed();
         });
     }

@@ -316,6 +316,7 @@ builder.Services.AddScoped<FacadeCore.IMijlpaalBindingResolver, ServiceCore.Traj
 builder.Services.AddScoped<FacadeCore.ITrajectRecalculationService, ServiceCore.Traject.TrajectRecalculationService>();
 builder.Services.AddScoped<FacadeCore.IPlanningService, ServiceCore.Planning.PlanningService>();
 builder.Services.AddScoped<FacadeCore.IPlanningSjabloonService, ServiceCore.Planning.PlanningSjabloonService>();
+builder.Services.AddScoped<FacadeCore.ISchijfSjabloonService, ServiceCore.Planning.SchijfSjabloonService>();
 builder.Services.AddScoped<FacadeCore.ITrajectTriggerDispatcher, ServiceCore.Traject.TrajectTriggerDispatcher>();
 builder.Services.AddScoped<FacadeCore.ITrajectTriggerAction, ServiceCore.Traject.TriggerActions.VerwittigRolAction>();
 builder.Services.AddScoped<FacadeCore.ITrajectTriggerAction, ServiceCore.Traject.TriggerActions.VerwittigGebruikerAction>();

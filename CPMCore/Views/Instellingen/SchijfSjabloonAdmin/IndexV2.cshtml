@@ -1,0 +1,76 @@
+@using BOCore
+@using FacadeCore
+@model List<SchijfSjabloonBeheerRij>
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen › Schijvensjablonen: de lijst. Een sjabloon is een standaardlijst betalingsschijven (naam, vast percentage of gewicht, eventueel per verdieping).
+    Toepassen doe je in het scherm van een betalingsgroep (Projecten › Betalingsschijven › Groep bewerken › Sjabloon toepassen). Dupliceren, (de)activeren en verwijderen
+    zijn gewone formulieren; verwijderen vraagt altijd eerst de bevestigingsmodal (data-bv-*, afgehandeld door GlV2/_BevestigModal).
+*@
+@{
+    ViewData["Title"] = "Schijvensjablonen";
+    ViewData["PageIcon"] = "ph ph-list-checks";
+    ViewData["HelpScreenId"] = "instellingen-schijvensjablonen";
+    ViewData["BackUrl"] = Url.Action("Index", "Instellingen");
+    var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsPlanningSjablonen);
+    var canDelete = PermissionService.HasDelete(PermissionCodes.SettingsPlanningSjablonen);
+    var nl = new System.Globalization.CultureInfo("nl-BE");
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-automatisatie.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-schijvensjabloon.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @if (canWrite)
+    {
+        <a href="@Url.Action("Nieuw")" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-plus" aria-hidden="true"></i>Nieuw sjabloon</a>
+    }
+}
+
+<div class="gl-v2-auto gl-v2-sjs-lijst">
+    <div class="gl-v2-notice gl-v2-notice-compact">
+        <i class="ph ph-info" aria-hidden="true"></i>
+        <span>Een schijvensjabloon is een standaardlijst betalingsschijven. Je past het toe in <b>Projecten › Betalingsschijven › Groep bewerken › Sjabloon toepassen</b>. Daar zie je eerst het voorstel en kan je elk percentage nog aanpassen.</span>
+    </div>
+
+    <section class="gl-v2-section-card">
+        @if (Model.Count == 0)
+        {
+            <div class="gl-v2-blank gl-v2-auto-none is-big">
+                <i class="ph ph-list-checks" aria-hidden="true"></i><b>Nog geen schijvensjablonen</b>
+                <span>Bouw je telkens dezelfde woning, maak dan een sjabloon met de schijven die je gewoon bent.</span>
+            </div>
+        }
+        else
+        {
+            <div class="gl-v2-sjs-kop"><span>Naam</span><span class="r">Schijven</span><span>Gewijzigd</span><span>Status</span><span></span></div>
+            @foreach (var s in Model)
+            {
+                <div class="gl-v2-sjs-rij @(s.IsActief ? "" : "is-muted-row")">
+                    <a class="gl-v2-sjs-wie" href="@Url.Action("Bewerken", new { id = s.Id })"><span class="t">@s.Naam</span>@if (!string.IsNullOrWhiteSpace(s.Beschrijving)) { <span class="o">@s.Beschrijving</span> }</a>
+                    <span class="r">@s.AantalSchijven@if (s.HeeftVerdiepingen) { <span class="gl-v2-sjs-verd"> · per verdieping</span> }</span>
+                    <span class="is-muted">@(s.GewijzigdOp?.ToLocalTime().ToString("dd/MM/yyyy", nl))</span>
+                    <span><span class="gl-v2-badge @(s.IsActief ? "is-positive" : "is-inactive")">@(s.IsActief ? "Actief" : "Inactief")</span></span>
+                    <span class="gl-v2-sjs-acts">
+                        <a class="gl-v2-icon-btn" href="@Url.Action("Bewerken", new { id = s.Id })" title="Bewerken" aria-label="Sjabloon @s.Naam bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></a>
+                        @if (canWrite)
+                        {
+                            <form method="post" action="@Url.Action("Dupliceren", new { id = s.Id })" class="gl-v2-sjs-vorm">@Html.AntiForgeryToken()<button type="submit" class="gl-v2-icon-btn" title="Dupliceren" aria-label="Sjabloon @s.Naam dupliceren"><i class="ph ph-copy" aria-hidden="true"></i></button></form>
+                            <form method="post" action="@Url.Action("Actief", new { id = s.Id, actief = !s.IsActief })" class="gl-v2-sjs-vorm">@Html.AntiForgeryToken()<button type="submit" class="gl-v2-icon-btn" title="@(s.IsActief ? "Inactief zetten" : "Activeren")" aria-label="@(s.IsActief ? "Sjabloon inactief zetten" : "Sjabloon activeren")"><i class="ph @(s.IsActief ? "ph-eye-slash" : "ph-eye")" aria-hidden="true"></i></button></form>
+                        }
+                        @if (canDelete)
+                        {
+                            <form method="post" action="@Url.Action("Verwijderen", new { id = s.Id })" class="gl-v2-sjs-vorm" data-bv-titel="Sjabloon verwijderen?" data-bv-tekst="Sjabloon “@s.Naam” verwijderen? Betalingsgroepen die het al gebruikten houden hun schijven. Dit kan je niet ongedaan maken." data-bv-ok="Verwijderen" data-bv-tone="danger" data-bv-icon="ph-trash">@Html.AntiForgeryToken()<button type="submit" class="gl-v2-icon-btn is-danger" title="Verwijderen" aria-label="Sjabloon @s.Naam verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button></form>
+                        }
+                    </span>
+                </div>
+            }
+            <div class="gl-v2-auto-foot">@Model.Count @(Model.Count == 1 ? "sjabloon" : "sjablonen")</div>
+        }
+    </section>
+</div>
+
+@* De bevestigingsmodal handelt formulieren met data-bv-* zelf af; er is geen eigen script voor de lijst. *@
+@await Html.PartialAsync("GlV2/_BevestigModal")

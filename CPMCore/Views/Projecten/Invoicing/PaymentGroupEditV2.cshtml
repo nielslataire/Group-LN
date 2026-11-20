@@ -184,6 +184,8 @@
                     <li class="gl-v2-pg-row@(s.IsLocked ? " is-locked" : "")" data-locked="@(s.IsLocked ? "1" : "0")" data-min-pct="@(s.IsLocked ? s.Percentage.ToString("0.##", CultureInfo.InvariantCulture) : "0")">
                         <input type="hidden" name="StageIds" value="@s.Id" />
                         <input type="hidden" name="StageInvoicable" value="@(s.Invoicable ? "true" : "false")" />
+                        <input type="hidden" name="StagePlanningCodes" value="@s.PlanningCode" />
+                        <input type="hidden" name="StagePlanningVolgnrs" value="@(s.PlanningVolgnr?.ToString())" />
                         <span class="gl-v2-pg-col-handle">
                             @if (s.IsLocked)
                             {
@@ -223,6 +225,11 @@
 
             <div class="gl-v2-pg-addbar">
                 <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-pg-add-stage"@(Model.GroupInvoiced ? " hidden" : "")><i class="ph ph-plus" aria-hidden="true"></i>Schijf toevoegen</button>
+                @if (Model.Sjablonen.Count > 0 && !Model.GroupInvoiced)
+                {
+                    var heeftVasteSchijf = Model.Stages.Any(s => s.IsLocked);
+                    <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-pg-sjabloon"@(heeftVasteSchijf ? " disabled title=\"Een schijf van deze groep is al bereikt en ligt vast: een sjabloon kan de schijven niet meer vervangen.\"" : "")><i class="ph ph-list-checks" aria-hidden="true"></i>Sjabloon toepassen</button>
+                }
                 @if (Model.OtherGroups.Count > 0)
                 {
                     <button type="button" class="gl-v2-btn gl-v2-btn-text" id="gl-v2-pg-import"><i class="ph ph-arrow-line-down" aria-hidden="true"></i>Schijven overnemen uit andere groep</button>
@@ -275,6 +282,8 @@
     <li class="gl-v2-pg-row" data-locked="0" data-min-pct="0">
         <input type="hidden" name="StageIds" value="0" />
         <input type="hidden" name="StageInvoicable" value="false" />
+        <input type="hidden" name="StagePlanningCodes" value="" />
+        <input type="hidden" name="StagePlanningVolgnrs" value="" />
         <span class="gl-v2-pg-col-handle"><span class="gl-v2-pg-handle" draggable="true" role="button" tabindex="0" aria-label="Sleep om te herschikken"><i class="ph ph-dots-six-vertical" aria-hidden="true"></i></span></span>
         <span class="gl-v2-pg-col-check"><input type="checkbox" class="gl-v2-pg-sel" aria-label="Schijf selecteren" /></span>
         <span class="gl-v2-pg-col-num"><span class="gl-v2-pg-num">0</span></span>
@@ -388,6 +397,47 @@
     </div>
 </div>
 
+@* "Sjabloon toepassen" — vervangt de schijven door het voorstel van een schijvensjabloon; daarna pas je nog alles aan en sla je gewoon op. *@
+@if (Model.Sjablonen.Count > 0)
+{
+    <div class="modal fade gl-v2-modal-form" id="gl-v2-pg-sjabloon-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-pg-sjabloon-title">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="gl-v2-pg-sjabloon-title">Sjabloon toepassen</h2>
+                    <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+                </div>
+                <div class="modal-body">
+                    <p class="gl-v2-pg-modal-lead">Kies een sjabloon. De huidige schijven worden vervangen door het voorstel; je ziet het eerst en past daarna nog elk percentage aan voor je opslaat.</p>
+                    <div class="gl-v2-npg-list" id="gl-v2-pg-sjabloon-list" role="radiogroup" aria-label="Schijvensjabloon">
+                        @foreach (var sj in Model.Sjablonen)
+                        {
+                            <label class="gl-v2-pg-pick-item" data-verdiepingen="@(sj.HeeftVerdiepingen ? "1" : "0")">
+                                <input type="radio" name="gl-v2-pg-sjabloon-keuze" value="@sj.Id" />
+                                <span class="gl-v2-pg-pick-text"><span class="gl-v2-pg-pick-name">@sj.Naam</span>@if (!string.IsNullOrWhiteSpace(sj.Beschrijving)) { <small>@sj.Beschrijving</small> }</span>
+                            </label>
+                        }
+                    </div>
+                    <div class="gl-v2-field" id="gl-v2-pg-sjabloon-verd" hidden>
+                        <label class="gl-v2-field-label" for="gl-v2-pg-sjabloon-verd-input">Aantal verdiepingen</label>
+                        <div class="gl-v2-field-box"><input type="number" id="gl-v2-pg-sjabloon-verd-input" class="gl-v2-field-input is-tabular" min="1" max="20" value="1" inputmode="numeric" /></div>
+                        <span class="gl-v2-field-help">Dit sjabloon heeft schijven per verdieping. Het percentage ervan wordt gelijk verdeeld.</span>
+                    </div>
+                    <div class="gl-v2-pg-voorbeeld" id="gl-v2-pg-sjabloon-voorbeeld" hidden>
+                        <ol class="gl-v2-pg-voorbeeld-lijst" id="gl-v2-pg-sjabloon-schijven"></ol>
+                        <div class="gl-v2-pg-voorbeeld-totaal" id="gl-v2-pg-sjabloon-totaal"></div>
+                        <ul class="gl-v2-pg-voorbeeld-waarschuwing" id="gl-v2-pg-sjabloon-waarschuwingen"></ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                    <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-pg-sjabloon-confirm" disabled>Schijven overnemen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @* Zelfde "wijzigingen niet opslaan?"-bevestiging als de andere gl-v2-formulieren. *@
 <div class="modal fade gl-v2-modal-confirm" id="gl-v2-pg-discard-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-pg-discard-title">
     <div class="modal-dialog modal-dialog-centered">
@@ -417,7 +467,8 @@
         "projectId": @Model.ProjectId,
         "groupId": @Model.GroupId,
         "newGroupModalUrl": "@Url.Action("NewPaymentGroupModal")",
-        "editUrl": "@Url.Action("PaymentGroupEditV2")"
+        "editUrl": "@Url.Action("PaymentGroupEditV2")",
+        "sjabloonVoorbeeldUrl": "@Url.Action("SchijfSjabloonVoorbeeldV2")"
     }
     </script>
     <script src="~/js/gl-v2-project-inner-menu.js" asp-append-version="true"></script>

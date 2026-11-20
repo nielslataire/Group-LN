@@ -7,7 +7,7 @@ minutes: 6
 updated: 2026-11-19
 newsTag: Nieuw
 screens: projecten-betalingsgroep-bewerken
-related: betalingsschijven-volgen, project-factureren, planning-schijven-koppelen
+related: betalingsschijven-volgen, project-factureren, planning-schijven-koppelen, schijvensjablonen-beheren
 synonyms: betalingsgroep, schijven, percentages, eenheden koppelen, eindafrekening, dupliceren, schijf toevoegen, schijf verwijderen, btw-type, totaal 100
 description: de schijven en percentages bepalen waarmee je een eenheid factureert
 intro: |
@@ -60,6 +60,10 @@ Onder **Betalingsschijven** geef je per rij de **Omschrijving op factuur** en he
 - **Schijven overnemen uit andere groep** zet de schijven van een andere groep vóór de eindafrekening.
 
 De laatste rij is altijd de eindafrekening. Rechts boven de rijen toont CPM het totaal. Pas de percentages aan tot het 100 % is.
+
+## Een sjabloon toepassen
+
+Heb je een schijvensjabloon gemaakt, dan kies je onder de schijven **Sjabloon toepassen**. CPM toont eerst het voorstel met de percentages. Na **Schijven overnemen** pas je nog alles aan en sla je gewoon op. Hoe je een sjabloon maakt, staat in "Een schijvensjabloon maken en toepassen".
 
 ## Vergrendelde schijven respecteren
 

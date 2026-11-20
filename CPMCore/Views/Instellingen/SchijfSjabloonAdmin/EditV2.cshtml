@@ -1,0 +1,107 @@
+@using System.Text.Json
+@using BOCore
+@using FacadeCore
+@model SchijfSjabloonBewerk
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen › Schijvensjablonen › bewerken. De kop (naam, omschrijving, minimum, actief) en de schijven als rijen: omschrijving (mag {verdieping} bevatten), code in het
+    planningssjabloon, vast percentage OF gewicht, per verdieping herhalen. De volgorde van de rijen is de volgorde van de schijven; de laatste is de eindafrekening.
+    Het document gaat als één JSON naar Opslaan (SchijfSjabloonService.Bewaar valideert). Logica: wwwroot/js/gl-v2-instellingen-schijvensjabloon.js.
+*@
+@{
+    var isNieuw = Model.Id == 0;
+    ViewData["Title"] = isNieuw ? "Nieuw sjabloon" : Model.Naam;
+    ViewData["PageIcon"] = "ph ph-list-checks";
+    ViewData["HelpScreenId"] = "instellingen-schijvensjablonen-bewerken";
+    ViewData["BackUrl"] = Url.Action("Index");
+    var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsPlanningSjablonen);
+    var data = new
+    {
+        id = Model.Id, naam = Model.Naam, beschrijving = Model.Beschrijving ?? "", minimum = Model.MinimumPercentage, isActief = isNieuw ? true : Model.IsActief,
+        schijven = Model.Schijven.Select(s => new { naam = s.Naam, code = s.PlanningCode ?? "", vast = s.VastPercentage, gewicht = s.Gewicht, perVerdieping = s.PerVerdieping }),
+    };
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-automatisatie.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-schijvensjabloon.css" asp-append-version="true" />
+}
+@section PageTitleBadges
+{
+    <span class="gl-v2-badge is-attention" id="sjs-dirty" hidden>NIET-OPGESLAGEN WIJZIGINGEN</span>
+}
+@section PageActions
+{
+    <a href="@Url.Action("Index")" class="gl-v2-btn gl-v2-btn-text" id="sjs-annuleren">Annuleren</a>
+    @if (canWrite)
+    {
+        <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="sjs-opslaan"><i class="ph ph-floppy-disk" aria-hidden="true"></i>Sjabloon opslaan</button>
+    }
+}
+
+@Html.AntiForgeryToken()
+<div class="gl-v2-sjs" id="sjs-root" data-can-write="@(canWrite ? "1" : "0")" data-opslaan-url="@Url.Action("Opslaan")" data-lijst-url="@Url.Action("Index")">
+    <div class="gl-v2-inline-error gl-v2-sjs-fouten" id="sjs-fouten" role="alert" hidden>
+        <span class="gl-v2-inline-error-icon"><i class="ph ph-warning-circle" aria-hidden="true"></i></span>
+        <div class="gl-v2-inline-error-text">
+            <div class="gl-v2-inline-error-title">Het sjabloon is nog niet bewaard</div>
+            <ul class="gl-v2-inline-error-desc gl-v2-sjs-foutlijst" id="sjs-fouten-lijst"></ul>
+        </div>
+        <button type="button" class="gl-v2-inline-error-close" id="sjs-fouten-close" aria-label="Melding sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
+    </div>
+
+    <section class="gl-v2-section-card gl-v2-sjs-kopkaart">
+        <div class="gl-v2-field">
+            <label class="gl-v2-field-label" for="sjs-naam">Naam <span class="gl-v2-field-req" aria-hidden="true">*</span></label>
+            <div class="gl-v2-field-box"><input type="text" id="sjs-naam" class="gl-v2-field-input" maxlength="200" /></div>
+        </div>
+        <div class="gl-v2-field">
+            <label class="gl-v2-field-label" for="sjs-beschrijving">Korte omschrijving</label>
+            <div class="gl-v2-field-box"><input type="text" id="sjs-beschrijving" class="gl-v2-field-input" maxlength="1000" /></div>
+        </div>
+        <div class="gl-v2-field">
+            <label class="gl-v2-field-label" for="sjs-minimum">Minimum per schijf</label>
+            <div class="gl-v2-field-box"><input type="text" id="sjs-minimum" class="gl-v2-field-input is-tabular" inputmode="decimal" autocomplete="off" /><span class="gl-v2-field-suffix">%</span></div>
+            <span class="gl-v2-field-help">Zakt een schijf eronder, dan krijg je een waarschuwing bij het toepassen. Geen blokkade.</span>
+        </div>
+        <label class="gl-v2-toggle-row" for="sjs-actief"><input type="checkbox" id="sjs-actief" class="gl-v2-toggle-switch" /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Actief</span><span class="gl-v2-toggle-desc">enkel actieve sjablonen kan je toepassen</span></span></label>
+    </section>
+
+    <section class="gl-v2-section-card gl-v2-sjs-schijven">
+        <header class="gl-v2-sjs-schijven-kop">
+            <h2 class="gl-v2-section-card-title">Schijven</h2>
+            <span class="gl-v2-sjs-som" id="sjs-som" role="status" aria-live="polite"></span>
+        </header>
+        <p class="gl-v2-sjs-uitleg">Geef een schijf een <b>vast percentage</b> (komt eerst van de 100 % af) of een <b>gewicht</b>: wat overblijft wordt naar verhouding verdeeld, en de afronding komt op de laatste schijf met een gewicht. De laatste schijf is de eindafrekening, normaal vast 5 %. Een schijf <b>per verdieping</b> wordt gelijk verdeeld over de verdiepingen; schrijf <code>{verdieping}</code> in de omschrijving om de plaats van “1ste verdieping” te bepalen.</p>
+
+        <div class="gl-v2-sjs-tabelkop" aria-hidden="true">
+            <span></span><span>Omschrijving op factuur</span><span>Code in planning</span><span>Vast %</span><span>Gewicht</span><span>Per verdieping</span><span></span>
+        </div>
+        <ol class="gl-v2-sjs-rijen" id="sjs-rijen"></ol>
+        <div class="gl-v2-sjs-toevoegbalk">
+            <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="sjs-toevoegen"><i class="ph ph-plus" aria-hidden="true"></i>Schijf toevoegen</button>
+        </div>
+        <p class="gl-v2-sjs-hint">De code verwijst naar een taak of fase in het planningssjabloon (bv. <code>VLOERPLAAT</code>). Wordt de planning uit dat sjabloon opgebouwd, dan hangt de schijf er automatisch aan. Laat het leeg als de schijf aan niets in de planning hangt.</p>
+    </section>
+</div>
+
+<template id="sjs-rij-template">
+    <li class="gl-v2-sjs-rij">
+        <span class="gl-v2-sjs-volgorde">
+            <button type="button" class="gl-v2-icon-btn js-omhoog" aria-label="Schijf omhoog"><i class="ph ph-arrow-up" aria-hidden="true"></i></button>
+            <button type="button" class="gl-v2-icon-btn js-omlaag" aria-label="Schijf omlaag"><i class="ph ph-arrow-down" aria-hidden="true"></i></button>
+        </span>
+        <span class="gl-v2-field-box"><input type="text" class="gl-v2-field-input js-naam" maxlength="250" autocomplete="off" aria-label="Omschrijving op factuur" /></span>
+        <span class="gl-v2-field-box"><input type="text" class="gl-v2-field-input js-code" maxlength="100" autocomplete="off" aria-label="Code in de planning" placeholder="optioneel" /></span>
+        <span class="gl-v2-field-box"><input type="text" class="gl-v2-field-input is-tabular js-vast" inputmode="decimal" autocomplete="off" aria-label="Vast percentage" placeholder="—" /><span class="gl-v2-field-suffix">%</span></span>
+        <span class="gl-v2-field-box"><input type="text" class="gl-v2-field-input is-tabular js-gewicht" inputmode="decimal" autocomplete="off" aria-label="Gewicht" /></span>
+        <span class="gl-v2-sjs-check"><input type="checkbox" class="js-verd" aria-label="Per verdieping herhalen" /></span>
+        <span class="gl-v2-sjs-wis"><button type="button" class="gl-v2-icon-btn is-danger js-wis" aria-label="Schijf verwijderen" title="Schijf verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button></span>
+    </li>
+</template>
+
+@section PageScripts
+{
+    <script id="sjs-data" type="application/json">@Html.Raw(JsonSerializer.Serialize(data, new JsonSerializerOptions(JsonSerializerDefaults.Web)))</script>
+    <script src="~/js/gl-v2-instellingen-schijvensjabloon.js" asp-append-version="true"></script>
+}
