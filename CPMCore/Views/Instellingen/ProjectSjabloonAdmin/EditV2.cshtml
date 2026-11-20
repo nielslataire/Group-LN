@@ -1,0 +1,103 @@
+@using BOCore
+@using FacadeCore
+@model ProjectSjabloonBewerk
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen › Projectsjablonen › bewerken. Een gewoon formulier (POST Opslaan): naam, omschrijving, de drie sjablonen die samen horen, de standaardantwoorden over het gebouw
+    (verdiepingen, kelder, dak) en actief. Bij een fout komt dezelfde pagina terug met de ingevulde waarden (ViewData["Fouten"]).
+*@
+@{
+    var isNieuw = Model.Id == 0;
+    ViewData["Title"] = isNieuw ? "Nieuw sjabloon" : Model.Naam;
+    ViewData["PageIcon"] = "ph ph-buildings";
+    ViewData["HelpScreenId"] = "instellingen-projectsjablonen-bewerken";
+    ViewData["BackUrl"] = Url.Action("Index");
+    var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsPlanningSjablonen);
+    var opties = (ProjectSjabloonOpties)ViewData["Opties"]!;
+    var fouten = ViewData["Fouten"] as List<string>;
+    string Sel(int? gekozen, int id) => gekozen == id ? " selected" : "";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-automatisatie.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-schijvensjabloon.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    <a href="@Url.Action("Index")" class="gl-v2-btn gl-v2-btn-text">Annuleren</a>
+    @if (canWrite)
+    {
+        <button type="submit" form="pjs-vorm" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-floppy-disk" aria-hidden="true"></i>Sjabloon opslaan</button>
+    }
+}
+
+<form method="post" action="@Url.Action("Opslaan")" id="pjs-vorm" class="gl-v2-sjs" novalidate>
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="Id" value="@Model.Id" />
+
+    @if (fouten != null && fouten.Count > 0)
+    {
+        <div class="gl-v2-inline-error gl-v2-sjs-fouten" role="alert">
+            <span class="gl-v2-inline-error-icon"><i class="ph ph-warning-circle" aria-hidden="true"></i></span>
+            <div class="gl-v2-inline-error-text">
+                <div class="gl-v2-inline-error-title">Het sjabloon is nog niet bewaard</div>
+                <ul class="gl-v2-inline-error-desc gl-v2-sjs-foutlijst">@foreach (var f in fouten) { <li>@f</li> }</ul>
+            </div>
+        </div>
+    }
+
+    <section class="gl-v2-section-card gl-v2-pjs-kaart">
+        <div class="gl-v2-field">
+            <label class="gl-v2-field-label" for="pjs-naam">Naam <span class="gl-v2-field-req" aria-hidden="true">*</span></label>
+            <div class="gl-v2-field-box"><input type="text" id="pjs-naam" name="Naam" class="gl-v2-field-input" maxlength="200" value="@Model.Naam" @(canWrite ? "" : "disabled") /></div>
+        </div>
+        <div class="gl-v2-field">
+            <label class="gl-v2-field-label" for="pjs-beschrijving">Korte omschrijving</label>
+            <div class="gl-v2-field-box"><input type="text" id="pjs-beschrijving" name="Beschrijving" class="gl-v2-field-input" maxlength="1000" value="@Model.Beschrijving" @(canWrite ? "" : "disabled") /></div>
+            <span class="gl-v2-field-help">Bijvoorbeeld: "Appartementsgebouw", "Rijwoning" of "Verkaveling met losse woningen".</span>
+        </div>
+    </section>
+
+    <section class="gl-v2-section-card gl-v2-pjs-kaart">
+        <header class="gl-v2-sjs-schijven-kop"><h2 class="gl-v2-section-card-title">Welke sjablonen horen erbij?</h2></header>
+        <p class="gl-v2-sjs-uitleg">Kies minstens één. Een onderdeel dat je leeg laat, wordt bij het toepassen overgeslagen.</p>
+        <div class="gl-v2-pjs-velden">
+            <div class="gl-v2-field">
+                <label class="gl-v2-field-label" for="pjs-planning">Planningssjabloon</label>
+                <div class="gl-v2-field-box"><select id="pjs-planning" name="PlanningSjabloonId" class="gl-v2-field-input" @(canWrite ? "" : "disabled")><option value="">Geen</option>@foreach (var o in opties.Planning) { <option value="@o.Id" selected="@(Model.PlanningSjabloonId == o.Id)">@o.Naam</option> }</select></div>
+            </div>
+            <div class="gl-v2-field">
+                <label class="gl-v2-field-label" for="pjs-traject">Trajectsjabloon</label>
+                <div class="gl-v2-field-box"><select id="pjs-traject" name="TrajectSjabloonId" class="gl-v2-field-input" @(canWrite ? "" : "disabled")><option value="">Geen</option>@foreach (var o in opties.Traject) { <option value="@o.Id" selected="@(Model.TrajectSjabloonId == o.Id)">@o.Naam</option> }</select></div>
+            </div>
+            <div class="gl-v2-field">
+                <label class="gl-v2-field-label" for="pjs-schijven">Schijvensjabloon</label>
+                <div class="gl-v2-field-box"><select id="pjs-schijven" name="SchijfSjabloonId" class="gl-v2-field-input" @(canWrite ? "" : "disabled")><option value="">Geen</option>@foreach (var o in opties.Schijven) { <option value="@o.Id" selected="@(Model.SchijfSjabloonId == o.Id)">@o.Naam</option> }</select></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="gl-v2-section-card gl-v2-pjs-kaart">
+        <header class="gl-v2-sjs-schijven-kop"><h2 class="gl-v2-section-card-title">Standaardantwoorden over het gebouw</h2></header>
+        <p class="gl-v2-sjs-uitleg">Dit zijn de waarden die vooraf ingevuld staan bij het toepassen. De projectleider past ze aan of laat de AI ze invullen uit een beschrijving van het gebouw.</p>
+        <div class="gl-v2-pjs-velden">
+            <div class="gl-v2-field">
+                <label class="gl-v2-field-label" for="pjs-verd">Aantal verdiepingen</label>
+                <div class="gl-v2-field-box"><input type="number" id="pjs-verd" name="StandaardVerdiepingen" class="gl-v2-field-input is-tabular" min="1" max="20" value="@Model.StandaardVerdiepingen" @(canWrite ? "" : "disabled") /></div>
+            </div>
+            <div class="gl-v2-field">
+                <label class="gl-v2-field-label" for="pjs-dak">Dak</label>
+                <div class="gl-v2-field-box"><select id="pjs-dak" name="StandaardDak" class="gl-v2-field-input" @(canWrite ? "" : "disabled")><option value="">Geen keuze</option><option value="hellend" selected="@(Model.StandaardDak == "hellend")">Hellend dak</option><option value="plat" selected="@(Model.StandaardDak == "plat")">Plat dak</option></select></div>
+            </div>
+            <div class="gl-v2-field">
+                <label class="gl-v2-toggle-row" for="pjs-kelder"><input type="checkbox" id="pjs-kelder" name="StandaardKelder" value="true" class="gl-v2-toggle-switch" checked="@Model.StandaardKelder" @(canWrite ? "" : "disabled") /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Met kelder</span></span></label>
+                <input type="hidden" name="StandaardKelder" value="false" />
+            </div>
+        </div>
+    </section>
+
+    <section class="gl-v2-section-card gl-v2-pjs-kaart">
+        <label class="gl-v2-toggle-row" for="pjs-actief"><input type="checkbox" id="pjs-actief" name="IsActief" value="true" class="gl-v2-toggle-switch" checked="@(isNieuw ? true : Model.IsActief)" @(canWrite ? "" : "disabled") /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Actief</span><span class="gl-v2-toggle-desc">enkel actieve sjablonen kan je toepassen</span></span></label>
+        <input type="hidden" name="IsActief" value="false" />
+    </section>
+</form>

@@ -61,6 +61,7 @@ public class PermissionResolver : IPermissionResolver
         if (string.Equals(controller, "TrajectSjabloonAdmin", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.SettingsTrajectSjablonen;
         if (string.Equals(controller, "PlanningSjabloonAdmin", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.SettingsPlanningSjablonen;
         if (string.Equals(controller, "SchijfSjabloonAdmin", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.SettingsPlanningSjablonen;
+        if (string.Equals(controller, "ProjectSjabloonAdmin", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.SettingsPlanningSjablonen;
 
         if (string.Equals(controller, "IssueNotificationAdmin", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.SettingsIssueNotifications;
         // Elektronisch ondertekenen: het interne beheer (overzicht, instellingen). De publieke

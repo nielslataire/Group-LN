@@ -26,6 +26,7 @@
         li.querySelector(".js-vast").value = s.vast == null ? "" : fmt(s.vast);
         li.querySelector(".js-gewicht").value = fmt(s.gewicht == null ? 1 : s.gewicht);
         li.querySelector(".js-verd").checked = !!s.perVerdieping;
+        li.querySelector(".js-voorwaarde").value = s.voorwaarde || "";
         pasToe(li);
         if (!canWrite) li.querySelectorAll("input,button").forEach(function (x) { x.disabled = true; });
         return li;
@@ -123,7 +124,9 @@
                     planningCode: li.querySelector(".js-code").value.trim(),
                     vastPercentage: vast == null || isNaN(vast) ? null : vast,
                     gewicht: gew == null || isNaN(gew) ? 1 : gew,
-                    perVerdieping: li.querySelector(".js-verd").checked
+                    perVerdieping: li.querySelector(".js-verd").checked,
+                    voorwaardeVariabele: (li.querySelector(".js-voorwaarde").value.split(":")[0] || null),
+                    voorwaardeWaarde: (li.querySelector(".js-voorwaarde").value.split(":")[1] || null)
                 };
             })
         };

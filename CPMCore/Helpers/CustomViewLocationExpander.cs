@@ -46,6 +46,7 @@ namespace CPMCore.Helpers
             ["TrajectSjabloonAdmin"]   = "Instellingen/TrajectSjabloonAdmin",
             ["PlanningSjabloonAdmin"]  = "Instellingen/PlanningSjabloonAdmin",
             ["SchijfSjabloonAdmin"]    = "Instellingen/SchijfSjabloonAdmin",
+            ["ProjectSjabloonAdmin"]   = "Instellingen/ProjectSjabloonAdmin",
             // Projecten-satellieten
             ["ProjectDossiers"]        = "Projecten/Dossiers",
             ["ProjectTraject"]         = "Projecten/Traject",

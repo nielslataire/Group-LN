@@ -18,7 +18,7 @@
     var data = new
     {
         id = Model.Id, naam = Model.Naam, beschrijving = Model.Beschrijving ?? "", minimum = Model.MinimumPercentage, isActief = isNieuw ? true : Model.IsActief,
-        schijven = Model.Schijven.Select(s => new { naam = s.Naam, code = s.PlanningCode ?? "", vast = s.VastPercentage, gewicht = s.Gewicht, perVerdieping = s.PerVerdieping }),
+        schijven = Model.Schijven.Select(s => new { naam = s.Naam, code = s.PlanningCode ?? "", vast = s.VastPercentage, gewicht = s.Gewicht, perVerdieping = s.PerVerdieping, voorwaarde = string.IsNullOrWhiteSpace(s.VoorwaardeVariabele) ? "" : s.VoorwaardeVariabele + ":" + s.VoorwaardeWaarde }),
     };
 }
 @section PageStyle
@@ -75,13 +75,13 @@
         <p class="gl-v2-sjs-uitleg">Geef een schijf een <b>vast percentage</b> (komt eerst van de 100 % af) of een <b>gewicht</b>: wat overblijft wordt naar verhouding verdeeld, en de afronding komt op de laatste schijf met een gewicht. De laatste schijf is de eindafrekening, normaal vast 5 %. Een schijf <b>per verdieping</b> wordt gelijk verdeeld over de verdiepingen; schrijf <code>{verdieping}</code> in de omschrijving om de plaats van “1ste verdieping” te bepalen.</p>
 
         <div class="gl-v2-sjs-tabelkop" aria-hidden="true">
-            <span></span><span>Omschrijving op factuur</span><span>Code in planning</span><span>Vast %</span><span>Gewicht</span><span>Per verdieping</span><span></span>
+            <span></span><span>Omschrijving op factuur</span><span>Code in planning</span><span>Vast %</span><span>Gewicht</span><span>Per verdieping</span><span>Geldt voor</span><span></span>
         </div>
         <ol class="gl-v2-sjs-rijen" id="sjs-rijen"></ol>
         <div class="gl-v2-sjs-toevoegbalk">
             <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="sjs-toevoegen"><i class="ph ph-plus" aria-hidden="true"></i>Schijf toevoegen</button>
         </div>
-        <p class="gl-v2-sjs-hint">De code verwijst naar een taak of fase in het planningssjabloon (bv. <code>VLOERPLAAT</code>). Wordt de planning uit dat sjabloon opgebouwd, dan hangt de schijf er automatisch aan. Laat het leeg als de schijf aan niets in de planning hangt.</p>
+        <p class="gl-v2-sjs-hint">De code verwijst naar een taak of fase in het planningssjabloon (bv. <code>VLOERPLAAT</code>). Wordt de planning uit dat sjabloon opgebouwd, dan hangt de schijf er automatisch aan. Laat het leeg als de schijf aan niets in de planning hangt. Met <b>Geldt voor</b> neem je een schijf enkel op bij een gebouw met kelder, zonder kelder, met hellend dak of met plat dak.</p>
     </section>
 </div>
 
@@ -96,6 +96,7 @@
         <span class="gl-v2-field-box"><input type="text" class="gl-v2-field-input is-tabular js-vast" inputmode="decimal" autocomplete="off" aria-label="Vast percentage" placeholder="—" /><span class="gl-v2-field-suffix">%</span></span>
         <span class="gl-v2-field-box"><input type="text" class="gl-v2-field-input is-tabular js-gewicht" inputmode="decimal" autocomplete="off" aria-label="Gewicht" /></span>
         <span class="gl-v2-sjs-check"><input type="checkbox" class="js-verd" aria-label="Per verdieping herhalen" /></span>
+        <span class="gl-v2-field-box"><select class="gl-v2-field-input js-voorwaarde" aria-label="Geldt voor"><option value="">Altijd</option><option value="kelder:ja">Met kelder</option><option value="kelder:nee">Zonder kelder</option><option value="dak:hellend">Hellend dak</option><option value="dak:plat">Plat dak</option></select></span>
         <span class="gl-v2-sjs-wis"><button type="button" class="gl-v2-icon-btn is-danger js-wis" aria-label="Schijf verwijderen" title="Schijf verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button></span>
     </li>
 </template>

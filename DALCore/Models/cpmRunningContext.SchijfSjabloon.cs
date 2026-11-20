@@ -28,6 +28,8 @@ public partial class cpmRunningContext
             entity.Property(e => e.PlanningCode).HasMaxLength(100);
             entity.Property(e => e.VastPercentage).HasColumnType("decimal(9, 4)");
             entity.Property(e => e.Gewicht).HasColumnType("decimal(9, 4)");
+            entity.Property(e => e.VoorwaardeVariabele).HasMaxLength(20);
+            entity.Property(e => e.VoorwaardeWaarde).HasMaxLength(20);
             entity.HasIndex(e => e.SjabloonId, "IX_SchijfSjabloonSchijf_Sjabloon");
             entity.HasOne(d => d.Sjabloon).WithMany(p => p.Schijven).HasForeignKey(d => d.SjabloonId)
                 .OnDelete(DeleteBehavior.Cascade).HasConstraintName("FK_SchijfSjabloonSchijf_Sjabloon");

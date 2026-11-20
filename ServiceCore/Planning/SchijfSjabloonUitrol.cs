@@ -4,7 +4,7 @@ using FacadeCore;
 namespace ServiceCore.Planning;
 
 /// <summary>Eén schijf zoals ze in het sjabloon staat (invoer voor het uitrekenen).</summary>
-public sealed record SchijfInvoer(string Naam, string? PlanningCode, decimal? Vast, decimal Gewicht, bool PerVerdieping);
+public sealed record SchijfInvoer(string Naam, string? PlanningCode, decimal? Vast, decimal Gewicht, bool PerVerdieping, string? VoorwaardeVariabele = null, string? VoorwaardeWaarde = null);
 
 /// <summary>
 /// Rekent een schijvensjabloon uit tot een lijst schijven met percentages die samen 100 % zijn:
@@ -38,13 +38,26 @@ public static class SchijfSjabloonUitrol
         return System.Text.RegularExpressions.Regex.Replace(tekst, @"\s{2,}", " ").Trim();
     }
 
-    public static SchijfVoorbeeld Rol(decimal minimum, IReadOnlyList<SchijfInvoer> schijven, int verdiepingen)
+    /// <summary>Zelfde regels als bij de blokken van een planningssjabloon: kelder ja/nee, dak hellend/plat. Geen voorwaarde = altijd.</summary>
+    public static bool VoorwaardeKlopt(SchijfInvoer s, bool kelder, string? dak)
+    {
+        if (string.IsNullOrWhiteSpace(s.VoorwaardeVariabele)) return true;
+        var waarde = (s.VoorwaardeWaarde ?? "").Trim().ToLowerInvariant();
+        return s.VoorwaardeVariabele.Trim().ToLowerInvariant() switch
+        {
+            "kelder" => waarde is "ja" or "true" ? kelder : (waarde is "nee" or "false" ? !kelder : kelder),
+            "dak" => string.Equals(dak ?? "", waarde, StringComparison.OrdinalIgnoreCase),
+            _ => true,
+        };
+    }
+
+    public static SchijfVoorbeeld Rol(decimal minimum, IReadOnlyList<SchijfInvoer> schijven, int verdiepingen, bool kelder = false, string? dak = null)
     {
         var uit = new SchijfVoorbeeld();
         var n = Math.Max(1, verdiepingen);
         var items = new List<Item>();
 
-        foreach (var s in schijven)
+        foreach (var s in schijven.Where(x => VoorwaardeKlopt(x, kelder, dak)))
         {
             var gewicht = s.Gewicht > 0 ? s.Gewicht : 1m;
             if (s.PerVerdieping && n > 1)

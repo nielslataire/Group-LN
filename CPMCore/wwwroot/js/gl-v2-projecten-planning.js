@@ -82,6 +82,7 @@
             html += "<button type=\"button\" class=\"gl-v2-pl-tab-add js-pl-add-planning\"><i class=\"ph ph-plus\" aria-hidden=\"true\"></i>Planning</button>";
             html += "<button type=\"button\" class=\"gl-v2-pl-tab-add js-pl-import\" title=\"Een planning importeren uit MS Project (XML)\"><i class=\"ph ph-upload-simple\" aria-hidden=\"true\"></i>Importeren</button>";
             html += "<button type=\"button\" class=\"gl-v2-pl-tab-add js-pl-sj-toepas\" title=\"Een sjabloon toepassen op woningen of gebouwen\"><i class=\"ph ph-copy\" aria-hidden=\"true\"></i>Sjabloon</button>";
+            html += "<button type=\"button\" class=\"gl-v2-pl-tab-add js-pl-pj\" title=\"Planning, traject en schijven in één keer toepassen, aangepast aan het gebouw\"><i class=\"ph ph-buildings\" aria-hidden=\"true\"></i>Projectsjabloon</button>";
             var act = actief();
             if (state.actiefPlanningId === GLOBAAL || aannActief) { host.innerHTML = html; return; }
             if (canSjabloon && act && act.aantalTaken) html += "<button type=\"button\" class=\"gl-v2-pl-tab-add js-pl-sj-bewaar\" title=\"Deze planning bewaren als sjabloon\"><i class=\"ph ph-floppy-disk\" aria-hidden=\"true\"></i>Als sjabloon</button>";
@@ -1086,6 +1087,97 @@
         return fetch(cfg.staatUrl + (cfg.staatUrl.indexOf("?") < 0 ? "?" : "&") + "planningId=" + (state.actiefPlanningId || 0), { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
             .then(function (r) { return r.json(); }).then(function (s) { state = s; render(); });
     }
+    // ── Projectsjabloon: planning, traject en schijven in één keer, aangepast aan het gebouw ──
+    var pj = { keuzes: [], gekozen: null, aanvraag: 0, timer: null, bezig: false };
+    function pjAntwoorden() {
+        return {
+            verdiepingen: Math.max(1, Math.min(20, parseInt($("gl-v2-pl-pj-verd").value, 10) || 1)),
+            kelder: $("gl-v2-pl-pj-kelder").checked, dak: $("gl-v2-pl-pj-dak").value || null,
+            eenPlanningVoorAlles: $("gl-v2-pl-pj-een").checked
+        };
+    }
+    function pjFout(t) { var el = $("gl-v2-pl-pj-fout"); el.textContent = t || ""; el.hidden = !t; }
+    function pjToon(res) {
+        var st = $("gl-v2-pl-pj-stappen"), op = $("gl-v2-pl-pj-opm"), sc = $("gl-v2-pl-pj-schijven");
+        st.innerHTML = ""; op.innerHTML = ""; sc.innerHTML = "";
+        var vul = function (ul, lijst) { (lijst || []).forEach(function (t) { var li = document.createElement("li"); li.textContent = t; ul.appendChild(li); }); };
+        if (res.fout) { pjFout(res.fout); $("gl-v2-pl-pj-ok").disabled = true; return; }
+        pjFout("");
+        vul(st, res.stappen); vul(op, res.opmerkingen);
+        (res.schijven || []).forEach(function (s) {
+            var li = document.createElement("li"); li.textContent = s.naam + " · " + String(Math.round(s.percentage * 100) / 100).replace(".", ",") + " %"; sc.appendChild(li);
+        });
+        $("gl-v2-pl-pj-ok").disabled = !(res.stappen && res.stappen.length) || pj.bezig;
+    }
+    function pjVoorbeeld() {
+        if (!pj.gekozen) return;
+        var nr = ++pj.aanvraag;
+        postJson(cfg.projectSjabloonVoorbeeldUrl, { sjabloonId: pj.gekozen.id, antwoorden: pjAntwoorden() })
+            .then(function (res) { if (nr === pj.aanvraag) pjToon(res); })
+            .catch(function (e) { if (nr === pj.aanvraag) pjFout(e.message || "Het voorbeeld kon niet geladen worden."); });
+    }
+    function pjPlanVoorbeeld() { window.clearTimeout(pj.timer); pj.timer = window.setTimeout(pjVoorbeeld, 300); }
+    function pjKies(k) {
+        pj.gekozen = k;
+        $("gl-v2-pl-pj-verd").value = k.verdiepingen || 1;
+        $("gl-v2-pl-pj-kelder").checked = !!k.kelder;
+        $("gl-v2-pl-pj-dak").value = k.dak || "";
+        $("gl-v2-pl-pj-een").checked = false;
+        $("gl-v2-pl-pj-ai-uitleg").textContent = "";
+        $("gl-v2-pl-pj-rest").hidden = false;
+        pjVoorbeeld();
+    }
+    function openPj() {
+        if (!canWriteBasis) return;
+        pj.gekozen = null; pjFout("");
+        $("gl-v2-pl-pj-rest").hidden = true; $("gl-v2-pl-pj-ok").disabled = true; $("gl-v2-pl-pj-beschrijving").value = "";
+        var lijst = $("gl-v2-pl-pj-lijst"); lijst.innerHTML = "<span class=\"gl-v2-field-help\" style=\"padding:8px 12px\">Laden…</span>";
+        $("gl-v2-pl-pj-info").textContent = "";
+        var m = modal("gl-v2-pl-pj"); if (m) m.show();
+        fetch(cfg.projectSjablonenUrl, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
+            .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+            .then(function (l) {
+                pj.keuzes = l || [];
+                if (!pj.keuzes.length) { lijst.innerHTML = ""; $("gl-v2-pl-pj-info").textContent = "Er zijn nog geen projectsjablonen. Iemand met het recht Planningssjablonen maakt ze aan onder Instellingen › Projectsjablonen."; return; }
+                lijst.innerHTML = pj.keuzes.map(function (k) {
+                    return "<label class=\"gl-v2-pl-een\"><input type=\"radio\" name=\"gl-v2-pl-pj-keuze\" value=\"" + k.id + "\" /><span>" + esc(k.naam) + "</span>" + (k.beschrijving ? "<small>" + esc(k.beschrijving) + "</small>" : "") + "</label>";
+                }).join("");
+                if (pj.keuzes.length === 1) { var r = lijst.querySelector("input"); r.checked = true; pjKies(pj.keuzes[0]); }
+            })
+            .catch(function () { lijst.innerHTML = ""; $("gl-v2-pl-pj-info").textContent = "De projectsjablonen konden niet geladen worden. Probeer het zo opnieuw."; });
+    }
+    $("gl-v2-pl-pj").addEventListener("change", function (e) {
+        if (e.target.name === "gl-v2-pl-pj-keuze") { var id = parseInt(e.target.value, 10); var k = pj.keuzes.filter(function (x) { return x.id === id; })[0]; if (k) pjKies(k); return; }
+        if (e.target.closest("#gl-v2-pl-pj-rest")) pjPlanVoorbeeld();
+    });
+    $("gl-v2-pl-pj-verd").addEventListener("input", pjPlanVoorbeeld);
+    $("gl-v2-pl-pj-ai").addEventListener("click", function () {
+        var tekst = $("gl-v2-pl-pj-beschrijving").value.trim(), uitleg = $("gl-v2-pl-pj-ai-uitleg");
+        if (!tekst) { uitleg.textContent = "Beschrijf eerst het gebouw."; return; }
+        var knop = $("gl-v2-pl-pj-ai"); knop.disabled = true; uitleg.textContent = "De AI denkt na…";
+        postJson(cfg.projectSjabloonAiUrl, { beschrijving: tekst }).then(function (res) {
+            knop.disabled = false;
+            if (!res.ok) { uitleg.textContent = res.fout || "De AI kon geen voorstel doen."; return; }
+            var a = res.antwoorden;
+            $("gl-v2-pl-pj-verd").value = a.verdiepingen; $("gl-v2-pl-pj-kelder").checked = !!a.kelder;
+            $("gl-v2-pl-pj-dak").value = a.dak || ""; $("gl-v2-pl-pj-een").checked = !!a.eenPlanningVoorAlles;
+            uitleg.textContent = "Voorstel van de AI, kijk het na: " + (res.toelichting || "ingevuld.");
+            pjVoorbeeld();
+        }).catch(function (e) { knop.disabled = false; uitleg.textContent = e.message || "De AI kon niet bereikt worden."; });
+    });
+    $("gl-v2-pl-pj").querySelector("form").addEventListener("submit", function (e) {
+        e.preventDefault();
+        if (!pj.gekozen || pj.bezig) return;
+        pj.bezig = true; $("gl-v2-pl-pj-ok").disabled = true; pjFout("");
+        postJson(cfg.projectSjabloonToepassenUrl, { sjabloonId: pj.gekozen.id, antwoorden: pjAntwoorden() }).then(function (res) {
+            pj.bezig = false;
+            if (res.fout) { pjFout(res.fout); $("gl-v2-pl-pj-ok").disabled = false; return; }
+            var m = modal("gl-v2-pl-pj"); if (m) m.hide();
+            herlaadStaat();
+            toast("success", "Projectsjabloon toegepast", (res.stappen || []).join(" ") + ((res.opmerkingen || []).length ? " Let op: " + res.opmerkingen.join(" ") : ""));
+        }).catch(function (err) { pj.bezig = false; $("gl-v2-pl-pj-ok").disabled = false; pjFout(err.message || "Toepassen mislukt. Probeer het zo opnieuw."); });
+    });
+
     function sjabloonGekozen() {
         var id = parseInt($("gl-v2-pl-sj-kies").value, 10);
         return (state.sjablonen || []).filter(function (s) { return s.id === id; })[0] || null;
@@ -1490,6 +1582,7 @@
     });
     $("gl-v2-pl-tabs").addEventListener("click", function (e) {
         if (e.target.closest(".js-pl-sj-toepas")) openSjToepas();
+        if (e.target.closest(".js-pl-pj")) openPj();
         else if (e.target.closest(".js-pl-sj-bewaar")) openSjBewaar();
     });
 

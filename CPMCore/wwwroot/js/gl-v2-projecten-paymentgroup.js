@@ -461,7 +461,7 @@
         function sjLaad() {
             var k = sjKeuze(); if (!k) { sjToon(null); return; }
             var token = (form.querySelector("input[name=__RequestVerificationToken]") || {}).value || "";
-            var body = new URLSearchParams({ projectId: cfg.projectId, sjabloonId: k.value, verdiepingen: sjVerd.value || "1", __RequestVerificationToken: token });
+            var body = new URLSearchParams({ projectId: cfg.projectId, sjabloonId: k.value, verdiepingen: sjVerd.value || "1", kelder: document.getElementById("gl-v2-pg-sjabloon-kelder-input").checked ? "true" : "false", dak: document.getElementById("gl-v2-pg-sjabloon-dak-input").value, __RequestVerificationToken: token });
             var nr = ++sjAanvraag;
             fetch(cfg.sjabloonVoorbeeldUrl, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/x-www-form-urlencoded", "X-Requested-With": "XMLHttpRequest" }, body: body.toString() })
                 .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
@@ -471,14 +471,21 @@
         sjBtn.addEventListener("click", function () {
             $$('input[name="gl-v2-pg-sjabloon-keuze"]', sjModal).forEach(function (r) { r.checked = false; });
             sjVerd.value = "1"; sjVerdWrap.hidden = true; sjToon(null);
+            document.getElementById("gl-v2-pg-sjabloon-kelder").hidden = true; document.getElementById("gl-v2-pg-sjabloon-dak").hidden = true;
+            document.getElementById("gl-v2-pg-sjabloon-kelder-input").checked = false; document.getElementById("gl-v2-pg-sjabloon-dak-input").value = "";
             bsModal(sjModal).show();
         });
         sjModal.addEventListener("change", function (e) {
             if (e.target.name !== "gl-v2-pg-sjabloon-keuze") return;
-            sjVerdWrap.hidden = e.target.closest("label").getAttribute("data-verdiepingen") !== "1";
+            var lbl = e.target.closest("label");
+            sjVerdWrap.hidden = lbl.getAttribute("data-verdiepingen") !== "1";
+            document.getElementById("gl-v2-pg-sjabloon-kelder").hidden = lbl.getAttribute("data-kelder") !== "1";
+            document.getElementById("gl-v2-pg-sjabloon-dak").hidden = lbl.getAttribute("data-dak") !== "1";
             sjLaad();
         });
         sjVerd.addEventListener("input", sjLaad);
+        document.getElementById("gl-v2-pg-sjabloon-kelder-input").addEventListener("change", sjLaad);
+        document.getElementById("gl-v2-pg-sjabloon-dak-input").addEventListener("change", sjLaad);
         sjConfirm.addEventListener("click", function () {
             if (!sjVoorstel) return;
             // Alle (niet-vaste) schijven worden vervangen; de volgorde van het voorstel is de volgorde van de schijven, de laatste is de eindafrekening.

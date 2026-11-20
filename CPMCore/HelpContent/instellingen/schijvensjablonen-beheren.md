@@ -7,7 +7,7 @@ minutes: 6
 updated: 2026-11-20
 newsTag: Nieuw
 screens: instellingen-schijvensjablonen, instellingen-schijvensjablonen-bewerken, projecten-betalingsgroep-bewerken
-related: betalingsgroep-instellen, planning-schijven-koppelen, planning-sjablonen
+related: betalingsgroep-instellen, planning-schijven-koppelen, planning-sjablonen, projectsjabloon-toepassen
 synonyms: schijvensjabloon, sjabloon, betalingsschijven, percentage, gewicht, vast percentage, minimum, per verdieping, eindafrekening, voorlopige oplevering, code, standaardschijven
 description: een vaste lijst betalingsschijven bewaren en met één handeling op een betalingsgroep toepassen
 intro: |
@@ -47,6 +47,12 @@ Boven de schijven zie je hoeveel er vast is en hoeveel naar gewicht verdeeld wor
 Vink **Per verdieping** aan bij een schijf die voor elke verdieping terugkomt, bijvoorbeeld het gieten van de vloerplaat. Het percentage of het gewicht van die schijf wordt gelijk verdeeld over de verdiepingen.
 
 Schrijf **{verdieping}** in de omschrijving om te bepalen waar "1ste verdieping" komt te staan. Zonder dat woord komt het achteraan.
+
+## Schijven voor een kelder of een soort dak
+
+Kies bij **Geldt voor** wanneer een schijf meetelt: altijd, met kelder, zonder kelder, hellend dak of plat dak. Een schijf die niet bij het gebouw past, valt weg. De overige percentages worden dan opnieuw verdeeld, dus het totaal blijft 100 %.
+
+CPM controleert bij het opslaan elke combinatie van kelder en dak. Komt er in één combinatie geen 100 % uit, dan krijg je een melding en wordt het sjabloon niet bewaard.
 
 ## Een schijf aan de planning hangen
 

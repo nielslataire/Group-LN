@@ -10,6 +10,9 @@ public sealed class SchijfSjabloonSchijfBewerk
     public decimal? VastPercentage { get; set; }
     public decimal Gewicht { get; set; } = 1m;
     public bool PerVerdieping { get; set; }
+    /// <summary>"kelder" of "dak"; samen met <see cref="VoorwaardeWaarde"/> ("ja", "nee", "hellend", "plat"). Leeg = altijd.</summary>
+    public string? VoorwaardeVariabele { get; set; }
+    public string? VoorwaardeWaarde { get; set; }
 }
 
 /// <summary>Een schijvensjabloon in de editor (Id 0 = nieuw).</summary>
@@ -48,6 +51,8 @@ public sealed class SchijfSjabloonKeuze
     public string Naam { get; set; } = "";
     public string? Beschrijving { get; set; }
     public bool HeeftVerdiepingen { get; set; }
+    public bool HeeftKelder { get; set; }
+    public bool HeeftDak { get; set; }
 }
 
 /// <summary>Eén schijf uit het uitgerekende voorstel.</summary>
@@ -82,5 +87,5 @@ public interface ISchijfSjabloonService
     Task<string?> ZetActief(int id, bool actief, string? userId);
 
     /// <summary>Rekent het sjabloon uit voor dit aantal verdiepingen. Bewaart niets.</summary>
-    Task<SchijfVoorbeeld?> Voorbeeld(int id, int verdiepingen);
+    Task<SchijfVoorbeeld?> Voorbeeld(int id, int verdiepingen, bool kelder = false, string? dak = null);
 }

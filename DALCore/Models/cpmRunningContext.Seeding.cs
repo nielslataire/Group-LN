@@ -44,6 +44,7 @@ namespace DALCore.Models
             ConfigureDocumentenEntities(modelBuilder);
             ConfigureTaakEntities(modelBuilder);
             ConfigureSchijfSjabloonEntities(modelBuilder);
+            ConfigureProjectSjabloonEntities(modelBuilder);
             ConfigureMeldingSnoozeEntities(modelBuilder);
             ConfigureCookieConsentEventEntities(modelBuilder);
             ConfigureSigningEntities(modelBuilder);

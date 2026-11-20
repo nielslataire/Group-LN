@@ -41,5 +41,9 @@ public partial class SchijfSjabloonSchijf
     public decimal Gewicht { get; set; } = 1m;
     public bool PerVerdieping { get; set; }
 
+    /// <summary>"kelder" of "dak" (migratie 156); samen met <see cref="VoorwaardeWaarde"/> ("ja", "nee", "hellend", "plat"). Beide leeg = altijd.</summary>
+    public string VoorwaardeVariabele { get; set; }
+    public string VoorwaardeWaarde { get; set; }
+
     public virtual SchijfSjabloon Sjabloon { get; set; }
 }

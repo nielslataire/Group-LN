@@ -412,7 +412,7 @@
                     <div class="gl-v2-npg-list" id="gl-v2-pg-sjabloon-list" role="radiogroup" aria-label="Schijvensjabloon">
                         @foreach (var sj in Model.Sjablonen)
                         {
-                            <label class="gl-v2-pg-pick-item" data-verdiepingen="@(sj.HeeftVerdiepingen ? "1" : "0")">
+                            <label class="gl-v2-pg-pick-item" data-verdiepingen="@(sj.HeeftVerdiepingen ? "1" : "0")" data-kelder="@(sj.HeeftKelder ? "1" : "0")" data-dak="@(sj.HeeftDak ? "1" : "0")">
                                 <input type="radio" name="gl-v2-pg-sjabloon-keuze" value="@sj.Id" />
                                 <span class="gl-v2-pg-pick-text"><span class="gl-v2-pg-pick-name">@sj.Naam</span>@if (!string.IsNullOrWhiteSpace(sj.Beschrijving)) { <small>@sj.Beschrijving</small> }</span>
                             </label>
@@ -422,6 +422,13 @@
                         <label class="gl-v2-field-label" for="gl-v2-pg-sjabloon-verd-input">Aantal verdiepingen</label>
                         <div class="gl-v2-field-box"><input type="number" id="gl-v2-pg-sjabloon-verd-input" class="gl-v2-field-input is-tabular" min="1" max="20" value="1" inputmode="numeric" /></div>
                         <span class="gl-v2-field-help">Dit sjabloon heeft schijven per verdieping. Het percentage ervan wordt gelijk verdeeld.</span>
+                    </div>
+                    <div class="gl-v2-field" id="gl-v2-pg-sjabloon-kelder" hidden>
+                        <label class="gl-v2-toggle-row" for="gl-v2-pg-sjabloon-kelder-input"><input type="checkbox" id="gl-v2-pg-sjabloon-kelder-input" class="gl-v2-toggle-switch" /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Met kelder</span><span class="gl-v2-toggle-desc">sommige schijven gelden enkel bij een kelder</span></span></label>
+                    </div>
+                    <div class="gl-v2-field" id="gl-v2-pg-sjabloon-dak" hidden>
+                        <label class="gl-v2-field-label" for="gl-v2-pg-sjabloon-dak-input">Dak</label>
+                        <div class="gl-v2-field-box"><select id="gl-v2-pg-sjabloon-dak-input" class="gl-v2-field-input"><option value="">Geen keuze</option><option value="hellend">Hellend dak</option><option value="plat">Plat dak</option></select></div>
                     </div>
                     <div class="gl-v2-pg-voorbeeld" id="gl-v2-pg-sjabloon-voorbeeld" hidden>
                         <ol class="gl-v2-pg-voorbeeld-lijst" id="gl-v2-pg-sjabloon-schijven"></ol>

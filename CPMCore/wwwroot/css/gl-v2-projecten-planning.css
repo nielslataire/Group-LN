@@ -76,6 +76,13 @@
 .gl-v2-pl-sj-rij.is-uit { opacity: .5; }
 .gl-v2-pl-eenheden { display: flex; flex-direction: column; max-height: 240px; overflow-y: auto; border: 1px solid var(--gl-v2-line); border-radius: var(--gl-v2-radius-sm); padding: 4px 0; }
 .gl-v2-pl-een { display: flex; align-items: center; gap: 10px; padding: 6px 12px; font: 450 13px var(--gl-v2-font-sans); cursor: pointer; }
+/* Projectsjabloon toepassen */
+.gl-v2-pl-pj-aibalk { display: flex; align-items: center; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
+.gl-v2-pl-pj-voorbeeld { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--gl-v2-line); border-radius: var(--gl-v2-radius-sm); font: 450 13px/1.5 var(--gl-v2-font-sans); }
+.gl-v2-pl-pj-voorbeeld ul, .gl-v2-pl-pj-voorbeeld ol { margin: 6px 0 0; padding-left: 18px; }
+.gl-v2-pl-pj-voorbeeld ul.is-opm { color: var(--gl-v2-muted); }
+.gl-v2-pl-pj-voorbeeld ol.is-schijven { color: var(--gl-v2-muted); font-variant-numeric: tabular-nums; }
+.gl-v2-pl-pj-voorbeeld .gl-v2-pl-pj-kop { font: 600 12px var(--gl-v2-font-sans); letter-spacing: .04em; text-transform: uppercase; color: var(--gl-v2-muted); }
 .gl-v2-pl-een[hidden], #gl-v2-pl-wrap-schijf[hidden], #gl-v2-pl-wrap-schijff[hidden] { display: none; }
 .gl-v2-pl-een:hover { background: var(--gl-v2-surface-hover, rgba(0, 0, 0, 0.03)); }
 .gl-v2-pl-een.is-uit { opacity: 0.55; cursor: not-allowed; }

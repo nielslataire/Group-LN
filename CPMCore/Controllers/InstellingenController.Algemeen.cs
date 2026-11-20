@@ -302,6 +302,13 @@ public partial class InstellingenController
                     Description = "Beheer de standaardlijsten betalingsschijven met een vast percentage of een gewicht, die je met één handeling op een betalingsgroep toepast.",
                     Href = Url.Action("Index", "SchijfSjabloonAdmin") ?? "#"
                 });
+                automatisatie.Items.Add(new SettingsItemVm
+                {
+                    Icon = "ph-buildings",
+                    Title = "Projectsjablonen",
+                    Description = "Bundel een planning, een traject en schijven tot één sjabloon voor een soort project. Het past zich bij het toepassen aan het gebouw aan.",
+                    Href = Url.Action("Index", "ProjectSjabloonAdmin") ?? "#"
+                });
             }
             if (automatisatie.Items.Count > 0) vm.Groups.Add(automatisatie);
 

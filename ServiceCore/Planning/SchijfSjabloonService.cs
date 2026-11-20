@@ -23,7 +23,9 @@ public sealed class SchijfSjabloonService : ISchijfSjabloonService
     public async Task<List<SchijfSjabloonKeuze>> Keuzes()
     {
         var lijst = await _db.SchijfSjabloon.AsNoTracking().Include(s => s.Schijven).Where(s => s.IsActief && s.Schijven.Any()).OrderBy(s => s.Naam).ToListAsync();
-        return lijst.Select(s => new SchijfSjabloonKeuze { Id = s.Id, Naam = s.Naam, Beschrijving = s.Beschrijving, HeeftVerdiepingen = s.Schijven.Any(x => x.PerVerdieping) }).ToList();
+        return lijst.Select(s => new SchijfSjabloonKeuze { Id = s.Id, Naam = s.Naam, Beschrijving = s.Beschrijving, HeeftVerdiepingen = s.Schijven.Any(x => x.PerVerdieping),
+            HeeftKelder = s.Schijven.Any(x => string.Equals(x.VoorwaardeVariabele, "kelder", StringComparison.OrdinalIgnoreCase)),
+            HeeftDak = s.Schijven.Any(x => string.Equals(x.VoorwaardeVariabele, "dak", StringComparison.OrdinalIgnoreCase)) }).ToList();
     }
 
     public async Task<SchijfSjabloonBewerk?> Haal(int id)
@@ -36,6 +38,7 @@ public sealed class SchijfSjabloonService : ISchijfSjabloonService
             Schijven = s.Schijven.OrderBy(x => x.Volgorde).ThenBy(x => x.Id).Select(x => new SchijfSjabloonSchijfBewerk
             {
                 Naam = x.Naam, PlanningCode = x.PlanningCode, VastPercentage = x.VastPercentage, Gewicht = x.Gewicht, PerVerdieping = x.PerVerdieping,
+                VoorwaardeVariabele = x.VoorwaardeVariabele, VoorwaardeWaarde = x.VoorwaardeWaarde,
             }).ToList(),
         };
     }
@@ -55,13 +58,28 @@ public sealed class SchijfSjabloonService : ISchijfSjabloonService
             if (x.VastPercentage is decimal v && (v <= 0m || v > 100m)) fouten.Add(nr + "een vast percentage ligt tussen 0 en 100.");
             if (x.VastPercentage == null && x.Gewicht <= 0m) fouten.Add(nr + "het gewicht moet groter dan 0 zijn.");
             if (!string.IsNullOrWhiteSpace(x.PlanningCode) && x.PlanningCode.Trim().Length > 100) fouten.Add(nr + "de code is te lang.");
+            if (!string.IsNullOrWhiteSpace(x.VoorwaardeVariabele))
+            {
+                var vw = (x.VoorwaardeVariabele ?? "").Trim().ToLowerInvariant();
+                var waarde = (x.VoorwaardeWaarde ?? "").Trim().ToLowerInvariant();
+                var geldig = vw == "kelder" ? waarde is "ja" or "nee" : vw == "dak" && waarde is "hellend" or "plat";
+                if (!geldig) fouten.Add(nr + "de voorwaarde is niet geldig (kelder ja of nee, dak hellend of plat).");
+            }
         }
         if (fouten.Count == 0)
         {
-            var vast = s.Schijven.Where(x => x.VastPercentage != null).Sum(x => x.VastPercentage!.Value);
-            var gewogen = s.Schijven.Count(x => x.VastPercentage == null);
-            if (gewogen == 0 && Math.Abs(vast - 100m) > 0.005m) fouten.Add($"Zonder schijven met een gewicht moeten de vaste percentages samen 100 % zijn (nu {vast:0.##} %).");
-            if (gewogen > 0 && vast >= 100m) fouten.Add("De vaste percentages zijn samen minstens 100 %: er blijft niets over voor de schijven met een gewicht.");
+            // Schijven met een voorwaarde (kelder, dak) vallen soms weg: controleer dus elke combinatie waarmee het sjabloon uitgerold kan worden.
+            foreach (var (kelder, dak) in new (bool, string?)[] { (false, null), (true, null), (false, "hellend"), (false, "plat"), (true, "hellend"), (true, "plat") })
+            {
+                var actief = s.Schijven.Where(x => SchijfSjabloonUitrol.VoorwaardeKlopt(
+                    new SchijfInvoer(x.Naam, x.PlanningCode, x.VastPercentage, x.Gewicht, x.PerVerdieping, x.VoorwaardeVariabele, x.VoorwaardeWaarde), kelder, dak)).ToList();
+                if (actief.Count == 0) { fouten.Add($"Met {(kelder ? "kelder" : "zonder kelder")}{(dak == null ? "" : ", " + dak + " dak")} blijft er geen enkele schijf over."); break; }
+                var vast = actief.Where(x => x.VastPercentage != null).Sum(x => x.VastPercentage!.Value);
+                var gewogen = actief.Count(x => x.VastPercentage == null);
+                var wanneer = $" (met {(kelder ? "kelder" : "zonder kelder")}{(dak == null ? "" : ", " + dak + " dak")})";
+                if (gewogen == 0 && Math.Abs(vast - 100m) > 0.005m) { fouten.Add($"Zonder schijven met een gewicht moeten de vaste percentages samen 100 % zijn (nu {vast:0.##} %){wanneer}."); break; }
+                if (gewogen > 0 && vast >= 100m) { fouten.Add($"De vaste percentages zijn samen minstens 100 %: er blijft niets over voor de schijven met een gewicht{wanneer}."); break; }
+            }
         }
         return fouten;
     }
@@ -99,6 +117,8 @@ public sealed class SchijfSjabloonService : ISchijfSjabloonService
             {
                 Volgorde = volgorde, Naam = x.Naam.Trim(), PlanningCode = string.IsNullOrWhiteSpace(x.PlanningCode) ? null : x.PlanningCode.Trim(),
                 VastPercentage = x.VastPercentage, Gewicht = x.Gewicht > 0 ? x.Gewicht : 1m, PerVerdieping = x.PerVerdieping,
+                VoorwaardeVariabele = string.IsNullOrWhiteSpace(x.VoorwaardeVariabele) ? null : x.VoorwaardeVariabele.Trim().ToLowerInvariant(),
+                VoorwaardeWaarde = string.IsNullOrWhiteSpace(x.VoorwaardeVariabele) ? null : (x.VoorwaardeWaarde ?? "").Trim().ToLowerInvariant(),
             });
             volgorde += 10;
         }
@@ -136,12 +156,12 @@ public sealed class SchijfSjabloonService : ISchijfSjabloonService
         return null;
     }
 
-    public async Task<SchijfVoorbeeld?> Voorbeeld(int id, int verdiepingen)
+    public async Task<SchijfVoorbeeld?> Voorbeeld(int id, int verdiepingen, bool kelder = false, string? dak = null)
     {
         var s = await _db.SchijfSjabloon.AsNoTracking().Include(x => x.Schijven).FirstOrDefaultAsync(x => x.Id == id && x.IsActief);
         if (s == null || s.Schijven.Count == 0) return null;
         var invoer = s.Schijven.OrderBy(x => x.Volgorde).ThenBy(x => x.Id)
-            .Select(x => new SchijfInvoer(x.Naam, x.PlanningCode, x.VastPercentage, x.Gewicht, x.PerVerdieping)).ToList();
-        return SchijfSjabloonUitrol.Rol(s.MinimumPercentage, invoer, Math.Max(1, Math.Min(verdiepingen, 20)));
+            .Select(x => new SchijfInvoer(x.Naam, x.PlanningCode, x.VastPercentage, x.Gewicht, x.PerVerdieping, x.VoorwaardeVariabele, x.VoorwaardeWaarde)).ToList();
+        return SchijfSjabloonUitrol.Rol(s.MinimumPercentage, invoer, Math.Max(1, Math.Min(verdiepingen, 20)), kelder, dak);
     }
 }

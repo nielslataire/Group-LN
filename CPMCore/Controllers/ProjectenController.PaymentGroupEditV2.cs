@@ -306,11 +306,11 @@ namespace CPMCore.Controllers
         /// <summary>"Sjabloon toepassen": rekent een schijvensjabloon uit voor dit aantal verdiepingen (JSON). Bewaart niets; de gebruiker past het voorstel in het formulier nog aan.</summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SchijfSjabloonVoorbeeldV2(int projectId, int sjabloonId, int verdiepingen = 1)
+        public async Task<IActionResult> SchijfSjabloonVoorbeeldV2(int projectId, int sjabloonId, int verdiepingen = 1, bool kelder = false, string? dak = null)
         {
             var ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
             if (!ps.HasWrite(PermissionCodes.ProjectsInvoicing)) return Forbid();
-            var voorbeeld = await HttpContext.RequestServices.GetRequiredService<FacadeCore.ISchijfSjabloonService>().Voorbeeld(sjabloonId, verdiepingen);
+            var voorbeeld = await HttpContext.RequestServices.GetRequiredService<FacadeCore.ISchijfSjabloonService>().Voorbeeld(sjabloonId, verdiepingen, kelder, string.IsNullOrWhiteSpace(dak) ? null : dak);
             if (voorbeeld == null) return NotFound();
             return Json(voorbeeld, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
         }

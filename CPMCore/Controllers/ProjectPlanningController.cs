@@ -145,6 +145,56 @@ public class ProjectPlanningController : BaseController
         public int Id { get; set; }
     }
 
+    // ── Projectsjabloon: planning, traject en schijven in één keer, aangepast aan het gebouw (migratie 156) ──
+
+    public sealed class ProjectSjabloonVerzoek
+    {
+        public int SjabloonId { get; set; }
+        public ProjectSjabloonAntwoorden Antwoorden { get; set; } = new();
+    }
+
+    public sealed class ProjectSjabloonAiVerzoek
+    {
+        public string Beschrijving { get; set; } = "";
+    }
+
+    [HttpGet("ProjectSjablonen")]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsPlanning)]
+    public async Task<IActionResult> ProjectSjablonen(int projectId)
+        => Json(await HttpContext.RequestServices.GetRequiredService<IProjectSjabloonService>().Keuzes(), JsonOpties);
+
+    /// <summary>Wat het projectsjabloon met deze antwoorden zou doen. Bewaart niets.</summary>
+    [HttpPost("ProjectSjabloonVoorbeeld")]
+    [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsPlanning)]
+    public async Task<IActionResult> ProjectSjabloonVoorbeeld(int projectId, [FromBody] ProjectSjabloonVerzoek verzoek)
+    {
+        if (verzoek == null) return BadRequest();
+        return Json(await HttpContext.RequestServices.GetRequiredService<IProjectSjabloonService>().Voorbeeld(projectId, verzoek.SjabloonId, verzoek.Antwoorden ?? new()), JsonOpties);
+    }
+
+    /// <summary>Past het projectsjabloon toe. Naast schrijfrecht op de planning is schrijfrecht op facturatie nodig, want de schijven komen in de betalingsgroepen.</summary>
+    [HttpPost("ProjectSjabloonToepassen")]
+    [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsPlanning)]
+    public async Task<IActionResult> ProjectSjabloonToepassen(int projectId, [FromBody] ProjectSjabloonVerzoek verzoek)
+    {
+        if (verzoek == null) return BadRequest();
+        if (!HttpContext.RequestServices.GetRequiredService<IPermissionService>().HasWrite(PermissionCodes.ProjectsInvoicing))
+            return Json(new ProjectSjabloonResultaat { Fout = "Voor een projectsjabloon heb je ook schrijfrecht op de facturatie nodig, want de schijven komen in de betalingsgroepen." }, JsonOpties);
+        return Json(await HttpContext.RequestServices.GetRequiredService<IProjectSjabloonService>().Toepassen(projectId, verzoek.SjabloonId, verzoek.Antwoorden ?? new(), UserId), JsonOpties);
+    }
+
+    /// <summary>De AI vult de antwoorden in uit een beschrijving van het gebouw. Enkel een voorstel: er wordt niets bewaard of toegepast.</summary>
+    [HttpPost("ProjectSjabloonAi")]
+    [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsPlanning)]
+    public async Task<IActionResult> ProjectSjabloonAi(int projectId, [FromBody] ProjectSjabloonAiVerzoek verzoek, CancellationToken ct)
+    {
+        if (verzoek == null) return BadRequest();
+        return Json(await HttpContext.RequestServices.GetRequiredService<IProjectSjabloonAiService>().Voorstel(verzoek.Beschrijving, ct), JsonOpties);
+    }
+
     /// <summary>Bewaart de getoonde planning als sjabloon. Vraagt naast schrijfrecht op de planning het recht op planningssjablonen.</summary>
     [HttpPost("SjabloonBewaren")]
     [ValidateAntiForgeryToken]

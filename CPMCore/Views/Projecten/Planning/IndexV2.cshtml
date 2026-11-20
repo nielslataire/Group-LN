@@ -322,6 +322,53 @@
 
 <div class="gl-v2-menu" id="gl-v2-pl-menu" role="menu" aria-label="Acties voor deze rij"></div>
 
+    @* Projectsjabloon toepassen: planning, traject en schijven in één keer, aangepast aan het gebouw (TYPE 2 formulier-modal) *@
+    <div class="modal fade gl-v2-modal-form gl-v2-pl-sj-modal" id="gl-v2-pl-pj" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-pl-pj-titel">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-fullscreen-md-down">
+            <form class="modal-content" novalidate autocomplete="off">
+                <div class="modal-header"><h2 class="modal-title" id="gl-v2-pl-pj-titel">Projectsjabloon toepassen</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body">
+                    <p class="gl-v2-field-help gl-v2-field-full">Een projectsjabloon past zich aan het gebouw aan. Beantwoord de vragen of beschrijf het gebouw. Je ziet eerst wat er gebeurt. Wat al bestaat, blijft ongemoeid: een eenheid met een planning, een bestaand traject en betalingsgroepen met schijven.</p>
+                    <div class="gl-v2-field gl-v2-field-full">
+                        <span class="gl-v2-field-label" id="gl-v2-pl-pj-lijst-label">Projectsjabloon</span>
+                        <div class="gl-v2-pl-eenheden" id="gl-v2-pl-pj-lijst" role="radiogroup" aria-labelledby="gl-v2-pl-pj-lijst-label"></div>
+                        <span class="gl-v2-field-help" id="gl-v2-pl-pj-info"></span>
+                    </div>
+                    <div id="gl-v2-pl-pj-rest" hidden>
+                        <div class="gl-v2-field gl-v2-field-full">
+                            <label class="gl-v2-field-label" for="gl-v2-pl-pj-beschrijving">Beschrijf het gebouw (optioneel)</label>
+                            <div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea class="gl-v2-field-input" id="gl-v2-pl-pj-beschrijving" rows="3" maxlength="2000" placeholder="Bijvoorbeeld: appartementsgebouw met vier verdiepingen, ondergrondse parking en een plat dak"></textarea></div>
+                            <div class="gl-v2-pl-pj-aibalk"><button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-pl-pj-ai"><i class="ph ph-sparkle" aria-hidden="true"></i>Laat de AI de vragen invullen</button><span class="gl-v2-field-help" id="gl-v2-pl-pj-ai-uitleg" role="status"></span></div>
+                        </div>
+                        <div class="gl-v2-pl-row2">
+                            <div class="gl-v2-field">
+                                <label class="gl-v2-field-label" for="gl-v2-pl-pj-verd">Aantal verdiepingen</label>
+                                <div class="gl-v2-field-box"><input type="number" class="gl-v2-field-input is-tabular" id="gl-v2-pl-pj-verd" min="1" max="20" value="1" inputmode="numeric" /></div>
+                            </div>
+                            <div class="gl-v2-field">
+                                <label class="gl-v2-field-label" for="gl-v2-pl-pj-dak">Dak</label>
+                                <div class="gl-v2-field-box"><select class="gl-v2-field-input" id="gl-v2-pl-pj-dak"><option value="">Geen keuze</option><option value="hellend">Hellend dak</option><option value="plat">Plat dak</option></select></div>
+                            </div>
+                        </div>
+                        <label class="gl-v2-toggle-row" for="gl-v2-pl-pj-kelder"><input type="checkbox" id="gl-v2-pl-pj-kelder" class="gl-v2-toggle-switch" /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Met kelder</span><span class="gl-v2-toggle-desc">een kelder of ondergrondse verdieping</span></span></label>
+                        <label class="gl-v2-toggle-row" for="gl-v2-pl-pj-een"><input type="checkbox" id="gl-v2-pl-pj-een" class="gl-v2-toggle-switch" /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Eén planning voor alle eenheden</span><span class="gl-v2-toggle-desc">voor een gebouw met appartementen. Uit = een planning per woning</span></span></label>
+                        <div class="gl-v2-pl-pj-voorbeeld" id="gl-v2-pl-pj-voorbeeld" aria-live="polite">
+                            <b class="gl-v2-pl-pj-kop">Wat er gebeurt</b>
+                            <ul id="gl-v2-pl-pj-stappen"></ul>
+                            <ul class="is-opm" id="gl-v2-pl-pj-opm"></ul>
+                            <ol class="is-schijven" id="gl-v2-pl-pj-schijven"></ol>
+                        </div>
+                    </div>
+                    <span class="gl-v2-field-help gl-v2-field-full gl-v2-pl-sj-fout" id="gl-v2-pl-pj-fout" role="alert" hidden></span>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-pl-pj-ok" disabled>Toepassen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     @* Sjabloon toepassen op woningen of gebouwen (TYPE 2 formulier-modal) *@
     <div class="modal fade gl-v2-modal-form gl-v2-pl-sj-modal" id="gl-v2-pl-sj-toepas" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-pl-sj-toepas-titel">
         <div class="modal-dialog modal-dialog-centered modal-lg modal-fullscreen-md-down">
@@ -470,6 +517,10 @@
         "importControleUrl": "@Url.Action("ImportControle", "ProjectPlanning", new { projectId = Model.ProjectId })",
         "koppelUrl": "@Url.Action("Koppeling", "ProjectPlanning", new { projectId = Model.ProjectId })",
         "schijfKoppelUrl": "@Url.Action("SchijfKoppeling", "ProjectPlanning", new { projectId = Model.ProjectId })",
+        "projectSjablonenUrl": "@Url.Action("ProjectSjablonen", "ProjectPlanning", new { projectId = Model.ProjectId })",
+        "projectSjabloonVoorbeeldUrl": "@Url.Action("ProjectSjabloonVoorbeeld", "ProjectPlanning", new { projectId = Model.ProjectId })",
+        "projectSjabloonToepassenUrl": "@Url.Action("ProjectSjabloonToepassen", "ProjectPlanning", new { projectId = Model.ProjectId })",
+        "projectSjabloonAiUrl": "@Url.Action("ProjectSjabloonAi", "ProjectPlanning", new { projectId = Model.ProjectId })",
         "schijfMarkeerUrl": "@Url.Action("SchijfMarkeren", "ProjectPlanning", new { projectId = Model.ProjectId })",
         "sjabloonBewaarUrl": "@Url.Action("SjabloonBewaren", "ProjectPlanning", new { projectId = Model.ProjectId })",
         "sjabloonVerwijderUrl": "@Url.Action("SjabloonVerwijderen", "ProjectPlanning", new { projectId = Model.ProjectId })",
