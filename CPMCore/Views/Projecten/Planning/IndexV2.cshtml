@@ -366,19 +366,25 @@
                 <div class="modal-body">
                     <p class="gl-v2-field-help gl-v2-field-full">Een projectsjabloon past zich aan het gebouw aan. Beantwoord de vragen of beschrijf het gebouw. Je ziet eerst wat er gebeurt. Wat al bestaat, blijft ongemoeid: een eenheid met een planning, een bestaand traject en betalingsgroepen met schijven.</p>
                     <div class="gl-v2-field gl-v2-field-full">
+                        <label class="gl-v2-field-label" for="gl-v2-pl-pj-beschrijving">Beschrijf het gebouw (optioneel)</label>
+                        <div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea class="gl-v2-field-input" id="gl-v2-pl-pj-beschrijving" rows="3" maxlength="2000" placeholder="Bijvoorbeeld: appartementsgebouw met gelijkvloers en drie verdiepingen, ondergrondse parking, een plat dak en terrassen op de 1ste en 2de verdieping"></textarea></div>
+                        <span class="gl-v2-field-help">Vermeld geen namen, adressen, telefoonnummers of bedragen: die gaan niet naar de AI. De AI kiest een projectsjabloon en vult de vragen in; jij kijkt het na.</span>
+                        <div class="gl-v2-pl-pj-aibalk"><button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-pl-pj-ai"><i class="ph ph-sparkle" aria-hidden="true"></i>Laat de AI een voorstel doen</button><span class="gl-v2-field-help" id="gl-v2-pl-pj-ai-uitleg" role="status"></span></div>
+                        <div class="gl-v2-pl-pj-aidetails" id="gl-v2-pl-pj-ai-details" aria-live="polite" hidden>
+                            <b class="gl-v2-pl-pj-kop">Aannames van de AI</b><ul id="gl-v2-pl-pj-ai-aannames"></ul>
+                            <b class="gl-v2-pl-pj-kop" id="gl-v2-pl-pj-ai-vragen-kop">Vragen</b><ul id="gl-v2-pl-pj-ai-vragen"></ul>
+                            <b class="gl-v2-pl-pj-kop">Doorgerekend</b><p id="gl-v2-pl-pj-ai-controle"></p>
+                        </div>
+                    </div>
+                    <div class="gl-v2-field gl-v2-field-full">
                         <span class="gl-v2-field-label" id="gl-v2-pl-pj-lijst-label">Projectsjabloon</span>
                         <div class="gl-v2-pl-eenheden" id="gl-v2-pl-pj-lijst" role="radiogroup" aria-labelledby="gl-v2-pl-pj-lijst-label"></div>
                         <span class="gl-v2-field-help" id="gl-v2-pl-pj-info"></span>
                     </div>
                     <div id="gl-v2-pl-pj-rest" hidden>
-                        <div class="gl-v2-field gl-v2-field-full">
-                            <label class="gl-v2-field-label" for="gl-v2-pl-pj-beschrijving">Beschrijf het gebouw (optioneel)</label>
-                            <div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea class="gl-v2-field-input" id="gl-v2-pl-pj-beschrijving" rows="3" maxlength="2000" placeholder="Bijvoorbeeld: appartementsgebouw met vier verdiepingen, ondergrondse parking en een plat dak"></textarea></div>
-                            <div class="gl-v2-pl-pj-aibalk"><button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-pl-pj-ai"><i class="ph ph-sparkle" aria-hidden="true"></i>Laat de AI de vragen invullen</button><span class="gl-v2-field-help" id="gl-v2-pl-pj-ai-uitleg" role="status"></span></div>
-                        </div>
                         <div class="gl-v2-pl-row2">
                             <div class="gl-v2-field">
-                                <label class="gl-v2-field-label" for="gl-v2-pl-pj-verd">Aantal verdiepingen</label>
+                                <label class="gl-v2-field-label" for="gl-v2-pl-pj-verd">Bouwlagen (gelijkvloers + verdiepingen)</label>
                                 <div class="gl-v2-field-box"><input type="number" class="gl-v2-field-input is-tabular" id="gl-v2-pl-pj-verd" min="1" max="20" value="1" inputmode="numeric" /></div>
                             </div>
                             <div class="gl-v2-field">
@@ -387,6 +393,11 @@
                             </div>
                         </div>
                         <label class="gl-v2-toggle-row" for="gl-v2-pl-pj-kelder"><input type="checkbox" id="gl-v2-pl-pj-kelder" class="gl-v2-toggle-switch" /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Met kelder</span><span class="gl-v2-toggle-desc">een kelder of ondergrondse verdieping</span></span></label>
+                        <div class="gl-v2-field gl-v2-field-full" id="gl-v2-pl-pj-lagen-veld">
+                            <span class="gl-v2-field-label" id="gl-v2-pl-pj-lagen-label">Terrassen of luifels bij de afdek van</span>
+                            <div class="gl-v2-pl-lagen" id="gl-v2-pl-pj-lagen" role="group" aria-labelledby="gl-v2-pl-pj-lagen-label"></div>
+                            <span class="gl-v2-field-help">Optioneel. Kies de bouwlagen waarvan de afdek (de vloerplaat van de volgende verdieping) terrassen of luifels krijgt. Leeg = geen.</span>
+                        </div>
                         <label class="gl-v2-toggle-row" for="gl-v2-pl-pj-een"><input type="checkbox" id="gl-v2-pl-pj-een" class="gl-v2-toggle-switch" /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Eén planning voor alle eenheden</span><span class="gl-v2-toggle-desc">voor een gebouw met appartementen. Uit = een planning per woning</span></span></label>
                         <label class="gl-v2-toggle-row" for="gl-v2-pl-pj-hoofd" id="gl-v2-pl-pj-hoofd-rij" hidden><input type="checkbox" id="gl-v2-pl-pj-hoofd" class="gl-v2-toggle-switch" checked /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">In de hoofdplanning zetten</span><span class="gl-v2-toggle-desc">enkel als de hoofdplanning nog leeg is. Uit of niet leeg = een aparte planning naast de hoofdplanning</span></span></label>
                         <div class="gl-v2-pl-pj-voorbeeld" id="gl-v2-pl-pj-voorbeeld" aria-live="polite">

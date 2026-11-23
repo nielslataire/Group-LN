@@ -173,3 +173,7 @@
 .gl-v2-pls-po.is-on { background: var(--gl-v2-primary-tint); font-weight: 600; color: var(--gl-v2-primary); }
 .gl-v2-pls-po.is-blk span { font-style: italic; color: var(--gl-v2-muted-soft); }
 .gl-v2-pls-pick-uitleg { flex: 1 1 220px; font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
+
+/* Voorwaarde per taak ("Komt voor"): compacte keuzelijst onder de code van de taak */
+.gl-v2-pls-tw { --gl-v2-field-h: 30px; margin-top: 3px; max-width: 280px; }
+.gl-v2-pls-tw .gl-v2-select-trigger { font-size: 12px; }

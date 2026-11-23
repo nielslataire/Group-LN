@@ -27,7 +27,7 @@ public sealed partial class PlanningSjabloonService
 
         return sjablonen.Select(s =>
         {
-            var heeftVerdiepingen = s.Blokken.Any(b => b.Herhaling == 1);
+            var heeftVerdiepingen = s.Blokken.Any(b => b.Herhaling >= 1);
             var verdiepingen = heeftVerdiepingen ? 2 : 0;
             var duur = 0;
             try { duur = PlanningSjabloonProef.Rekenen(s, 1, Math.Max(1, verdiepingen)).Werkdagen; } catch { /* een kapot sjabloon blijft in de lijst staan */ }
@@ -38,8 +38,9 @@ public sealed partial class PlanningSjabloonService
                 Id = s.Id, Naam = s.Naam, Beschrijving = s.Beschrijving, IsActief = s.IsActief,
                 AantalBlokken = s.Blokken.Count, AantalTaken = s.Blokken.Sum(b => b.Taken.Count),
                 HeeftVerdiepingen = heeftVerdiepingen,
-                HeeftKelder = s.Blokken.Any(b => string.Equals(b.VoorwaardeVariabele, "kelder", StringComparison.OrdinalIgnoreCase)),
-                HeeftDak = s.Blokken.Any(b => string.Equals(b.VoorwaardeVariabele, "dak", StringComparison.OrdinalIgnoreCase)),
+                HeeftKelder = PlanningSjabloonUitrol.GebruiktVariabele(s, "kelder"),
+                HeeftDak = PlanningSjabloonUitrol.GebruiktVariabele(s, "dak"),
+                HeeftTerras = PlanningSjabloonUitrol.GebruiktVariabele(s, "terras"),
                 HeeftEstafette = s.Blokken.Any(b => b.Taken.Any(t => t.Estafette)),
                 Duur = duur, Verdiepingen = verdiepingen,
                 ReageertOp = s.ReageertOp, ReageertOpTekst = PlanningSjabloonReageertOp.Tekst(s.ReageertOp),
@@ -79,6 +80,7 @@ public sealed partial class PlanningSjabloonService
                     Duur = t.Duur,
                     Estafette = t.Estafette,
                     EstafetteWacht = t.EstafetteWacht,
+                    Voorwaarde = string.IsNullOrWhiteSpace(t.Voorwaarde) ? null : t.Voorwaarde,
                     Voorgangers = t.Voorgangers.OrderBy(v => v.Id).Select(v => new PlanningSjabloonBewerkVoorganger
                     {
                         Code = v.VoorgangerCode ?? "",
@@ -124,7 +126,7 @@ public sealed partial class PlanningSjabloonService
             if (bnaam.Length > 200) bnaam = bnaam[..200];
             var bcode = Maak(b.Code, bnaam);
 
-            var herhaling = b.Herhaling == 1 ? (byte)1 : (byte)0;
+            var herhaling = b.Herhaling == 1 ? (byte)1 : (b.Herhaling == PlanningSjabloonUitrol.PerBouwlaagEenFase ? PlanningSjabloonUitrol.PerBouwlaagEenFase : (byte)0);
             string? variabele = null, waarde = null;
             var vv = (b.VoorwaardeVariabele ?? "").Trim().ToLowerInvariant();
             var vw = (b.VoorwaardeWaarde ?? "").Trim().ToLowerInvariant();
@@ -132,7 +134,8 @@ public sealed partial class PlanningSjabloonService
             {
                 if (vv == "kelder" && vw == "ja") { variabele = vv; waarde = vw; }
                 else if (vv == "dak" && (vw == "hellend" || vw == "plat")) { variabele = vv; waarde = vw; }
-                else fouten.Add($"Blok “{bnaam}”: de voorwaarde is ongeldig (kies kelder, hellend dak of plat dak).");
+                else if (vv == "terras" && vw == "ja") { variabele = vv; waarde = vw; }
+                else fouten.Add($"Blok “{bnaam}”: de voorwaarde is ongeldig (kies kelder, hellend dak, plat dak of terrassen of luifels).");
             }
 
             var blok = new PlanningSjabloonBlok
@@ -153,8 +156,10 @@ public sealed partial class PlanningSjabloonService
                 if (t.Duur < 0 || t.Duur > 3650) fouten.Add($"Taak “{tnaam}”: de duur moet tussen 0 en 3650 werkdagen liggen.");
                 if (t.EstafetteWacht < 0 || t.EstafetteWacht > 3650) fouten.Add($"Taak “{tnaam}”: de wachttijd van de estafette moet 0 of meer dagen zijn.");
                 var tcode = Maak(t.Code, tnaam);
+                var tvoorwaarde = SchoneTaakVoorwaarde(t.Voorwaarde, tnaam, fouten);
                 blok.Taken.Add(new PlanningSjabloonTaak
                 {
+                    Voorwaarde = tvoorwaarde,
                     Id = tijdelijkeIds ? ++nummer : 0,
                     Code = tcode, Naam = tnaam,
                     Beschrijving = string.IsNullOrWhiteSpace(t.Beschrijving) ? null : t.Beschrijving.Trim(),
@@ -183,11 +188,25 @@ public sealed partial class PlanningSjabloonService
                 {
                     var vc = (v.Code ?? "").Trim();
                     if (vc.Length == 0) continue;
+                    // "VORIGE:CODE" = dezelfde taak in de vorige bouwlaag; enkel voor een taak in een blok dat per bouwlaag herhaald wordt.
+                    var vorigeBouwlaag = vc.StartsWith("vorige:", StringComparison.OrdinalIgnoreCase);
+                    if (vorigeBouwlaag) vc = vc["vorige:".Length..].Trim();
                     vc = Slug(vc);
                     var type = (v.Type ?? "FS").Trim().ToUpperInvariant();
                     var typeIndex = Array.IndexOf(Types, type);
                     if (typeIndex < 0) { fouten.Add($"Taak “{taak.Naam}”: het type {type} bestaat niet (kies FS, SS, FF of SF)."); continue; }
                     if (!codeNaarTaken.TryGetValue(vc, out var doel)) { fouten.Add($"Taak “{taak.Naam}”: voorganger {vc} bestaat niet in dit sjabloon."); continue; }
+                    if (vorigeBouwlaag)
+                    {
+                        var doelBlok = sjabloon.Blokken.FirstOrDefault(b => b.Taken.Any(x => string.Equals(x.Code, vc, StringComparison.OrdinalIgnoreCase)));
+                        if (doelBlok == null || doelBlok.Herhaling < 1 || blok.Herhaling < 1)
+                        { fouten.Add($"Taak “{taak.Naam}”: “vorige bouwlaag” kan enkel verwijzen naar een taak in een blok dat per bouwlaag terugkomt."); continue; }
+                        if (!gezien.Add("vorige:" + vc)) continue;
+                        if (v.WachtDagen < -3650 || v.WachtDagen > 3650) { fouten.Add($"Taak “{taak.Naam}”: de wachttijd bij {vc} is te groot."); continue; }
+                        // Niet in de kringcontrole: een verwijzing naar de vorige bouwlaag kan nooit een kring in dezelfde bouwlaag vormen.
+                        taak.Voorgangers.Add(new PlanningSjabloonVoorganger { VoorgangerCode = "VORIGE:" + vc, Type = (byte)typeIndex, WachtDagen = v.WachtDagen });
+                        continue;
+                    }
                     if (string.Equals(vc, taak.Code, StringComparison.OrdinalIgnoreCase) || string.Equals(vc, blok.Code, StringComparison.OrdinalIgnoreCase))
                     { fouten.Add($"Taak “{taak.Naam}” kan niet op zichzelf of op haar eigen blok wachten."); continue; }
                     if (!gezien.Add(vc)) continue;
@@ -219,6 +238,29 @@ public sealed partial class PlanningSjabloonService
             fouten.Add($"De voorgangers vormen een kring bij “{naamKring}”: taken wachten op elkaar en kunnen nooit starten.");
         }
         return sjabloon;
+    }
+
+    private static readonly Dictionary<string, string[]> TaakVoorwaardeWaarden = new()
+    {
+        ["kelder"] = new[] { "ja", "nee" }, ["dak"] = new[] { "hellend", "plat" }, ["terras"] = new[] { "ja", "nee" }, ["laag"] = new[] { "eerste", "laatste", "boven", "eenmalig" }, ["grond"] = new[] { "ja", "nee" },
+    };
+
+    /// <summary>Controleert de voorwaarde van een taak ("laag:eerste,kelder:nee"): enkel bekende variabelen en waarden. Een ongeldige voorwaarde is een fout, geen stille "altijd".</summary>
+    private static string? SchoneTaakVoorwaarde(string? voorwaarde, string taaknaam, List<string> fouten)
+    {
+        if (string.IsNullOrWhiteSpace(voorwaarde)) return null;
+        var delen = new List<string>();
+        foreach (var (naam, waarde) in PlanningSjabloonUitrol.TaakVoorwaarden(voorwaarde))
+        {
+            if (!TaakVoorwaardeWaarden.TryGetValue(naam, out var geldig) || !geldig.Contains(waarde))
+            {
+                fouten.Add($"Taak “{taaknaam}”: de voorwaarde “{naam}:{waarde}” is ongeldig.");
+                continue;
+            }
+            var deel = naam + ":" + waarde;
+            if (!delen.Contains(deel)) delen.Add(deel);
+        }
+        return delen.Count == 0 ? null : string.Join(",", delen);
     }
 
     public async Task<PlanningSjabloonBewerkUitkomst> Bewaar(PlanningSjabloonBewerk dto, string? userId)
@@ -302,7 +344,7 @@ public sealed partial class PlanningSjabloonService
             var nb = new PlanningSjabloonBlok { Code = b.Code, Naam = b.Naam, Volgorde = b.Volgorde, Herhaling = b.Herhaling, VolgtVorigeVerdieping = b.VolgtVorigeVerdieping, VoorwaardeVariabele = b.VoorwaardeVariabele, VoorwaardeWaarde = b.VoorwaardeWaarde };
             foreach (var t in b.Taken.OrderBy(x => x.Volgorde))
             {
-                var nt = new PlanningSjabloonTaak { Code = t.Code, Naam = t.Naam, Beschrijving = t.Beschrijving, Duur = t.Duur, Volgorde = t.Volgorde, Estafette = t.Estafette, EstafetteWacht = t.EstafetteWacht };
+                var nt = new PlanningSjabloonTaak { Code = t.Code, Naam = t.Naam, Beschrijving = t.Beschrijving, Duur = t.Duur, Volgorde = t.Volgorde, Estafette = t.Estafette, EstafetteWacht = t.EstafetteWacht, Voorwaarde = t.Voorwaarde };
                 foreach (var v in t.Voorgangers) nt.Voorgangers.Add(new PlanningSjabloonVoorganger { VoorgangerCode = v.VoorgangerCode, Type = v.Type, WachtDagen = v.WachtDagen });
                 nb.Taken.Add(nt);
             }

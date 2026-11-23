@@ -324,4 +324,42 @@ public class PlanningMeerderePlanningsTests
         Assert.True(staat.Keuzes[0].IsEigen);
         Assert.Equal("Hoofdplanning", staat.Keuzes.First(k => !k.IsEigen).Planning);
     }
+
+    [Fact]
+    public async Task Een_mijlpaal_per_woning_staat_in_de_lijst_van_die_woning_en_koppelt_enkel_aan_haar_eigen_planning()
+    {
+        var (svc, db, s, hoofdId, woning1) = await MetHoofdEnWoning();
+        s = await Doe(svc, s, Taak(woning1, "Ruwbouw", 10));
+        var u2 = await svc.Voer(ProjectId, new PlanningCommando { Type = "planningToevoegen", Versie = s.Versie, Velden = NieuwePlanning("Woning 2", 12).Velden }, "u1");
+        Assert.True(u2.Ok, u2.Fout);
+        var woning2 = u2.NieuwePlanningId!.Value;
+        s = await Doe(svc, u2.Staat, Taak(woning2, "Ruwbouw", 10));
+
+        var traject = new Projecttraject { ProjectId = ProjectId, Naam = "Traject", Status = 0 };
+        db.Projecttraject.Add(traject);
+        await db.SaveChangesAsync();
+        var m1 = new Mijlpaal { ProjecttrajectId = traject.Id, UnitId = 11, Code = "RUWBOUW_KLAAR", Naam = "Ruwbouw klaar", Status = 0 };
+        var m2 = new Mijlpaal { ProjecttrajectId = traject.Id, UnitId = 12, Code = "RUWBOUW_KLAAR", Naam = "Ruwbouw klaar", Status = 0 };
+        db.Mijlpaal.AddRange(m1, m2);
+        await db.SaveChangesAsync();
+
+        var taak1 = await db.PlanningTaak.SingleAsync(t => t.Naam == "Ruwbouw" && t.PlanningSectie.BouwPlanningId == woning1);
+        var taak2 = await db.PlanningTaak.SingleAsync(t => t.Naam == "Ruwbouw" && t.PlanningSectie.BouwPlanningId == woning2);
+
+        // De lijst van Woning 1 toont enkel de mijlpaal van Woning 1, met de naam van de woning; de hoofdplanning toont er geen.
+        var lijst1 = (await svc.Laad(ProjectId, woning1)).TrajectMijlpalen;
+        var optie = Assert.Single(lijst1);
+        Assert.Equal(m1.Id, optie.Id);
+        Assert.Equal("Woning 1", optie.EenheidNaam);
+        Assert.Empty((await svc.Laad(ProjectId, hoofdId)).TrajectMijlpalen);
+
+        // Een taak van een andere woning wordt geweigerd; de eigen taak lukt.
+        var fout = await svc.Koppel(ProjectId, new PlanningKoppelCommando { PlanningId = woning1, Soort = "taak", Id = taak2.Id, MijlpaalId = m1.Id }, "u1");
+        Assert.False(fout.Ok);
+        Assert.Null((await db.Mijlpaal.AsNoTracking().SingleAsync(x => x.Id == m1.Id)).BronBinding);
+        var ok = await svc.Koppel(ProjectId, new PlanningKoppelCommando { PlanningId = woning1, Soort = "taak", Id = taak1.Id, MijlpaalId = m1.Id }, "u1");
+        Assert.True(ok.Ok, ok.Fout);
+        var vast = await db.Mijlpaal.AsNoTracking().SingleAsync(x => x.Id == m1.Id);
+        Assert.Equal((4, taak1.Id), (vast.BronBinding, vast.BronRefId));
+    }
 }

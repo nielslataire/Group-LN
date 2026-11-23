@@ -59,7 +59,7 @@ public class PlanningSjabloonTests
         Assert.Equal(new[] { "Fundering", "Ruwbouw" }, zonder.Fases.Select(f => f.Naam));   // geen kelder, geen hellend dak, 1 verdieping = geen suffix
 
         var met = PlanningSjabloonUitrol.Rol(Voorbeeld(), new SjabloonVariabelen(2, true, "hellend"));
-        Assert.Equal(new[] { "Fundering", "Kelder", "Ruwbouw verdieping 1", "Ruwbouw verdieping 2", "Dak" }, met.Fases.Select(f => f.Naam));
+        Assert.Equal(new[] { "Fundering", "Kelder", "Ruwbouw gelijkvloers", "Ruwbouw 1ste verdieping", "Dak" }, met.Fases.Select(f => f.Naam));
 
         var plat = PlanningSjabloonUitrol.Rol(Voorbeeld(), new SjabloonVariabelen(1, false, "plat"));
         Assert.DoesNotContain(plat.Fases, f => f.Naam == "Dak");
@@ -69,8 +69,8 @@ public class PlanningSjabloonTests
     public void Voorgangers_via_codes_wijzen_naar_de_juiste_verdieping_en_de_volgende_verdieping_volgt_de_vorige()
     {
         var uit = PlanningSjabloonUitrol.Rol(Voorbeeld(), new SjabloonVariabelen(2, true, "hellend"));
-        var v1 = uit.Fases.Single(f => f.Naam == "Ruwbouw verdieping 1");
-        var v2 = uit.Fases.Single(f => f.Naam == "Ruwbouw verdieping 2");
+        var v1 = uit.Fases.Single(f => f.Naam == "Ruwbouw gelijkvloers");
+        var v2 = uit.Fases.Single(f => f.Naam == "Ruwbouw 1ste verdieping");
 
         // Vloer volgt metselwerk van dezelfde verdieping.
         Assert.Equal("4#1", Assert.Single(v1.Taken[1].Voorgangers).Sleutel);
@@ -164,7 +164,7 @@ public class PlanningSjabloonTests
         // Woning 2 heeft een kelder en twee verdiepingen, de anderen niet.
         var w2 = await svc.Laad(ProjectId, (await db.BouwPlanning.SingleAsync(p => p.Naam == "Woning 2")).Id);
         Assert.Contains(w2.Rijen, r => r.Soort == "fase" && r.Naam == "Kelder");
-        Assert.Contains(w2.Rijen, r => r.Soort == "fase" && r.Naam == "Ruwbouw verdieping 2");
+        Assert.Contains(w2.Rijen, r => r.Soort == "fase" && r.Naam == "Ruwbouw 1ste verdieping");
         var w1 = await svc.Laad(ProjectId, (await db.BouwPlanning.SingleAsync(p => p.Naam == "Woning 1")).Id);
         Assert.DoesNotContain(w1.Rijen, r => r.Soort == "fase" && r.Naam == "Kelder");
 
@@ -423,5 +423,280 @@ public class PlanningSjabloonTests
         var fout = Editor("Andere");
         fout.ReageertOp = "iets-anders";
         Assert.False((await sjab.Bewaar(fout, "u")).Ok);
+    }
+
+    /// <summary>
+    /// Appartementsgebouw zoals Niels het ziet: alles van de ruwbouw zit in één blok per bouwlaag (gelijkvloers, 1ste verdieping, ...), met voorwaarden per taak.
+    /// De afdek van een bouwlaag is de vloerplaat van de volgende; met een kelder is de afdek van de kelder de vloerplaat van het gelijkvloers.
+    /// </summary>
+    private static PlanningSjabloon Gebouw()
+    {
+        var s = new PlanningSjabloon { Id = 1, Naam = "Gebouw", IsActief = true };
+        PlanningSjabloonTaak T(int id, int blok, string code, string naam, int duur, int volgorde, string? voorwaarde = null, params (string Code, byte Type, int Wacht)[] voorgangers)
+        {
+            var t = new PlanningSjabloonTaak { Id = id, BlokId = blok, Code = code, Naam = naam, Duur = duur, Volgorde = volgorde, Voorwaarde = voorwaarde };
+            foreach (var v in voorgangers) t.Voorgangers.Add(new PlanningSjabloonVoorganger { VoorgangerCode = v.Code, Type = v.Type, WachtDagen = v.Wacht });
+            return t;
+        }
+        var voor = new PlanningSjabloonBlok { Id = 1, Code = "B_VOORBEREIDING", Naam = "Voorbereiding", Volgorde = 1 };
+        voor.Taken.Add(T(1, 1, "WERF_UITZETTEN", "Werf uitzetten", 3, 1));
+        var kelder = new PlanningSjabloonBlok { Id = 2, Code = "B_KELDER", Naam = "Ruwbouw kelder", Volgorde = 2, VoorwaardeVariabele = "kelder", VoorwaardeWaarde = "ja" };
+        kelder.Taken.Add(T(2, 2, "AFDEK_KELDER", "Afdek kelder (= vloerplaat gelijkvloers)", 15, 1, null, ("WERF_UITZETTEN", 0, 0)));
+        var ruw = new PlanningSjabloonBlok { Id = 3, Code = "B_RUWBOUW", Naam = "Ruwbouw", Volgorde = 3, Herhaling = 1 };
+        ruw.Taken.Add(T(3, 3, "VLOERPLAAT_GLVL", "Gieten vloerplaat gelijkvloers", 2, 1, "laag:eerste,kelder:nee", ("WERF_UITZETTEN", 0, 0)));
+        ruw.Taken.Add(T(4, 3, "METSELWERK_RUWBOUW", "Metselwerk", 15, 2, null, ("VLOERPLAAT_GLVL", 0, 0), ("AFDEK_KELDER", 0, 0), ("VORIGE:AFDEK", 0, 0)));
+        ruw.Taken.Add(T(5, 3, "AFDEK", "Afdek (= vloerplaat volgende verdieping)", 10, 3, null, ("METSELWERK_RUWBOUW", 0, 0)));
+        ruw.Taken.Add(T(6, 3, "TERRAS_LUIFEL", "Terrassen en luifels", 5, 4, "terras:ja", ("AFDEK", 0, 0)));
+        ruw.Taken.Add(T(7, 3, "GEVELMETSELWERK", "Gevelmetselwerk", 40, 5, "laag:laatste"));   // één taak, hangt aan niets
+        var dak = new PlanningSjabloonBlok { Id = 4, Code = "B_DAK", Naam = "Dak", Volgorde = 4 };
+        dak.Taken.Add(T(8, 4, "DAKBEDEKKING", "Dakbedekking", 15, 1, null, ("AFDEK", 0, 0)));
+        foreach (var b in new[] { voor, kelder, ruw, dak }) s.Blokken.Add(b);
+        return s;
+    }
+
+    private static UitgerolTaak Taak(SjabloonUitrolling uit, string fase, string naamBegin)
+        => uit.Fases.Single(f => f.Naam == fase).Taken.Single(t => t.Naam.StartsWith(naamBegin));
+
+    /// <summary>
+    /// Zoals Niels het wil: kelder = fase "Ruwbouw - Onderbouw", en één fase "Ruwbouw - Bovenbouw" met per bouwlaag predallen, opstort en metselwerk.
+    /// Zonder kelder is het gelijkvloers gewoon een vloerplaat; bij een plat dak komen er predallen en opstort van het dak bij; het gevelmetselwerk is één taak.
+    /// </summary>
+    private static PlanningSjabloon Bovenbouw()
+    {
+        var s = new PlanningSjabloon { Id = 1, Naam = "Bovenbouw", IsActief = true };
+        PlanningSjabloonTaak T(int id, int blok, string code, string naam, int duur, int volgorde, string? voorwaarde = null, params (string Code, byte Type, int Wacht)[] voorgangers)
+        {
+            var t = new PlanningSjabloonTaak { Id = id, BlokId = blok, Code = code, Naam = naam, Duur = duur, Volgorde = volgorde, Voorwaarde = voorwaarde };
+            foreach (var v in voorgangers) t.Voorgangers.Add(new PlanningSjabloonVoorganger { VoorgangerCode = v.Code, Type = v.Type, WachtDagen = v.Wacht });
+            return t;
+        }
+        var voor = new PlanningSjabloonBlok { Id = 1, Code = "B_VOORBEREIDING", Naam = "Voorbereiding", Volgorde = 1 };
+        voor.Taken.Add(T(1, 1, "WERF_UITZETTEN", "Werf uitzetten", 3, 1));
+        var onder = new PlanningSjabloonBlok { Id = 2, Code = "B_KELDER", Naam = "Ruwbouw - Onderbouw", Volgorde = 2, VoorwaardeVariabele = "kelder", VoorwaardeWaarde = "ja" };
+        onder.Taken.Add(T(2, 2, "WANDEN_KELDER", "Wanden kelder", 25, 1, null, ("WERF_UITZETTEN", 0, 0)));
+        var boven = new PlanningSjabloonBlok { Id = 3, Code = "B_BOVENBOUW", Naam = "Ruwbouw - Bovenbouw", Volgorde = 3, Herhaling = PlanningSjabloonUitrol.PerBouwlaagEenFase };
+        boven.Taken.Add(T(3, 3, "VLOERPLAAT_GLVL", "Vloerplaat", 2, 1, "grond:ja", ("WERF_UITZETTEN", 0, 0)));
+        boven.Taken.Add(T(4, 3, "PREDALLEN", "Predallen", 3, 2, "grond:nee", ("VORIGE:METSELWERK_RUWBOUW", 0, 0), ("WANDEN_KELDER", 0, 0)));
+        boven.Taken.Add(T(5, 3, "OPSTORT", "Opstort", 2, 3, "grond:nee", ("PREDALLEN", 0, 0)));
+        boven.Taken.Add(T(6, 3, "METSELWERK_RUWBOUW", "Metselwerk", 15, 4, null, ("VLOERPLAAT_GLVL", 0, 0), ("OPSTORT", 0, 0)));
+        boven.Taken.Add(T(7, 3, "TERRAS_LUIFEL", "Terrassen en luifels", 5, 5, "terras:ja", ("METSELWERK_RUWBOUW", 0, 0)));
+        boven.Taken.Add(T(8, 3, "PREDALLEN_DAK", "Predallen dak", 3, 6, "laag:eenmalig,dak:plat", ("VORIGE:METSELWERK_RUWBOUW", 0, 0)));
+        boven.Taken.Add(T(9, 3, "OPSTORT_DAK", "Opstort dak", 2, 7, "laag:eenmalig,dak:plat", ("PREDALLEN_DAK", 0, 0)));
+        boven.Taken.Add(T(10, 3, "GEVELMETSELWERK", "Gevelmetselwerk", 40, 8, "laag:eenmalig"));
+        var dak = new PlanningSjabloonBlok { Id = 4, Code = "B_DAK", Naam = "Dak", Volgorde = 4 };
+        dak.Taken.Add(T(11, 4, "DAKBEDEKKING", "Dakbedekking", 15, 1, null, ("METSELWERK_RUWBOUW", 0, 0), ("OPSTORT_DAK", 0, 0)));
+        foreach (var b in new[] { voor, onder, boven, dak }) s.Blokken.Add(b);
+        return s;
+    }
+
+    [Fact]
+    public async Task Bovenbouw_toepassen_maakt_een_deelfase_per_bouwlaag_en_het_gevelmetselwerk_rechtstreeks_in_de_fase()
+    {
+        var (svc, _, db) = Maak();
+        db.PlanningSjabloon.Add(Bovenbouw());
+        await db.SaveChangesAsync();
+        var u = await svc.Voer(ProjectId, new PlanningCommando
+        {
+            Type = "sjabloonToepassen", Versie = 0,
+            Toepassing = new PlanningSjabloonToepassing { SjabloonId = 1, Planningen = new List<PlanningToepassingPlanning> { new() { EenheidIds = { 11 }, Verdiepingen = 3, Kelder = true, Dak = "hellend" } } },
+        }, "u");
+        Assert.True(u.Ok, u.Fout);
+
+        var secties = await db.PlanningSectie.ToListAsync();
+        var boven = secties.Single(s => s.Naam == "Ruwbouw - Bovenbouw");
+        var delen = secties.Where(s => s.ParentSectieId == boven.Id).OrderBy(s => s.Volgorde).ToList();
+        Assert.Equal(new[] { "Gelijkvloers", "1ste verdieping", "2de verdieping" }, delen.Select(s => s.Naam));
+        var taken = await db.PlanningTaak.ToListAsync();
+        Assert.Equal(new[] { "Predallen gelijkvloers", "Opstort gelijkvloers", "Metselwerk gelijkvloers" }, taken.Where(t => t.PlanningSectieId == delen[0].Id).OrderBy(t => t.Volgorde).Select(t => t.Naam));
+        Assert.Equal(new[] { "Gevelmetselwerk" }, taken.Where(t => t.PlanningSectieId == boven.Id).Select(t => t.Naam));
+        // De volgorde in de fase: eerst de deelfases per bouwlaag, daarna het gevelmetselwerk.
+        Assert.True(delen.All(s => s.Volgorde < taken.Single(t => t.Naam == "Gevelmetselwerk").Volgorde));
+    }
+
+    [Fact]
+    public void Bij_meerdere_bouwlagen_staan_de_taken_per_bouwlaag_in_een_deelfase_en_de_eenmalige_taken_rechtstreeks_in_de_fase()
+    {
+        var uit = PlanningSjabloonUitrol.Rol(Bovenbouw(), new SjabloonVariabelen(2, true, "plat"));
+        var taken = uit.Fases.Single(f => f.Naam == "Ruwbouw - Bovenbouw").Taken;
+        Assert.Equal(new string?[] { "Gelijkvloers", "Gelijkvloers", "Gelijkvloers", "1ste verdieping", "1ste verdieping", "1ste verdieping", null, null, null }, taken.Select(t => t.Subfase));
+        Assert.All(PlanningSjabloonUitrol.Rol(Bovenbouw(), new SjabloonVariabelen(1, false, "hellend")).Fases.SelectMany(f => f.Taken), t => Assert.Null(t.Subfase));   // één bouwlaag: geen tussenniveau
+    }
+
+    [Fact]
+    public void Bovenbouw_is_een_fase_met_per_bouwlaag_predallen_opstort_en_metselwerk()
+    {
+        var uit = PlanningSjabloonUitrol.Rol(Bovenbouw(), new SjabloonVariabelen(3, true, "hellend"));
+        Assert.Empty(uit.Waarschuwingen);
+        Assert.Equal(new[] { "Voorbereiding", "Ruwbouw - Onderbouw", "Ruwbouw - Bovenbouw", "Dak" }, uit.Fases.Select(f => f.Naam));
+        Assert.Equal(new[]
+        {
+            "Predallen gelijkvloers", "Opstort gelijkvloers", "Metselwerk gelijkvloers",
+            "Predallen 1ste verdieping", "Opstort 1ste verdieping", "Metselwerk 1ste verdieping",
+            "Predallen 2de verdieping", "Opstort 2de verdieping", "Metselwerk 2de verdieping",
+            "Gevelmetselwerk",
+        }, uit.Fases.Single(f => f.Naam == "Ruwbouw - Bovenbouw").Taken.Select(t => t.Naam));
+        Assert.Equal("B_BOVENBOUW", uit.Fases.Single(f => f.Naam == "Ruwbouw - Bovenbouw").Code);
+    }
+
+    [Fact]
+    public void Predallen_wachten_op_het_metselwerk_van_de_vorige_bouwlaag_en_de_kelder_en_geen_afdek_nodig()
+    {
+        var uit = PlanningSjabloonUitrol.Rol(Bovenbouw(), new SjabloonVariabelen(3, true, "hellend"));
+        string Sleutel(string naam) => uit.Fases.SelectMany(f => f.Taken).Single(t => t.Naam == naam).Sleutel;
+        UitgerolTaak T(string naam) => uit.Fases.SelectMany(f => f.Taken).Single(t => t.Naam == naam);
+        // Gelijkvloers wacht op de wanden van de kelder, hoger op het metselwerk eronder.
+        Assert.Equal(new[] { T("Wanden kelder").Sleutel }, T("Predallen gelijkvloers").Voorgangers.Select(v => v.Sleutel));
+        Assert.Contains(Sleutel("Metselwerk gelijkvloers"), T("Predallen 1ste verdieping").Voorgangers.Select(v => v.Sleutel));   // (wacht ook op de kelder: overbodig maar onschadelijk)
+        Assert.Equal(new[] { Sleutel("Opstort 2de verdieping") }, T("Metselwerk 2de verdieping").Voorgangers.Select(v => v.Sleutel));
+        Assert.Equal(new[] { Sleutel("Predallen 2de verdieping") }, T("Opstort 2de verdieping").Voorgangers.Select(v => v.Sleutel));
+        // Het gevelmetselwerk hangt aan niets.
+        Assert.Empty(T("Gevelmetselwerk").Voorgangers);
+        // Het dak wacht op het metselwerk van de bovenste bouwlaag.
+        Assert.Equal(new[] { Sleutel("Metselwerk 2de verdieping") }, T("Dakbedekking").Voorgangers.Select(v => v.Sleutel));
+    }
+
+    [Fact]
+    public void Zonder_kelder_is_het_gelijkvloers_gewoon_een_vloerplaat()
+    {
+        var uit = PlanningSjabloonUitrol.Rol(Bovenbouw(), new SjabloonVariabelen(2, false, "hellend"));
+        Assert.DoesNotContain(uit.Fases, f => f.Naam == "Ruwbouw - Onderbouw");
+        var boven = uit.Fases.Single(f => f.Naam == "Ruwbouw - Bovenbouw").Taken.Select(t => t.Naam).ToList();
+        Assert.Equal(new[] { "Vloerplaat gelijkvloers", "Metselwerk gelijkvloers", "Predallen 1ste verdieping", "Opstort 1ste verdieping", "Metselwerk 1ste verdieping", "Gevelmetselwerk" }, boven);
+        var vloerplaat = uit.Fases.SelectMany(f => f.Taken).Single(t => t.Naam == "Vloerplaat gelijkvloers");
+        Assert.Equal(vloerplaat.Sleutel, Assert.Single(uit.Fases.SelectMany(f => f.Taken).Single(t => t.Naam == "Metselwerk gelijkvloers").Voorgangers).Sleutel);
+    }
+
+    [Fact]
+    public void Bij_een_plat_dak_komen_predallen_en_opstort_van_het_dak_na_de_bovenste_bouwlaag()
+    {
+        var plat = PlanningSjabloonUitrol.Rol(Bovenbouw(), new SjabloonVariabelen(2, true, "plat"));
+        var taken = plat.Fases.Single(f => f.Naam == "Ruwbouw - Bovenbouw").Taken;
+        Assert.Equal(new[] { "Predallen dak", "Opstort dak", "Gevelmetselwerk" }, taken.Skip(6).Select(t => t.Naam));
+        var metselBoven = taken.Single(t => t.Naam == "Metselwerk 1ste verdieping");
+        Assert.Equal(metselBoven.Sleutel, Assert.Single(taken.Single(t => t.Naam == "Predallen dak").Voorgangers).Sleutel);
+        // De dakbedekking wacht op de opstort van het dak.
+        Assert.Contains(plat.Fases.Single(f => f.Naam == "Dak").Taken[0].Voorgangers, v => v.Sleutel == taken.Single(t => t.Naam == "Opstort dak").Sleutel);
+        Assert.DoesNotContain(PlanningSjabloonUitrol.Rol(Bovenbouw(), new SjabloonVariabelen(2, true, "hellend")).Fases.SelectMany(f => f.Taken), t => t.Naam.EndsWith(" dak") && t.Naam != "Dakbedekking");
+    }
+
+    [Fact]
+    public void Terrassen_zitten_in_de_fase_bovenbouw_bij_de_gekozen_bouwlagen()
+    {
+        var uit = PlanningSjabloonUitrol.Rol(Bovenbouw(), new SjabloonVariabelen(3, true, "hellend", new[] { 1, 3 }));
+        var terrassen = uit.Fases.Single(f => f.Naam == "Ruwbouw - Bovenbouw").Taken.Where(t => t.Naam.StartsWith("Terrassen")).Select(t => t.Naam);
+        Assert.Equal(new[] { "Terrassen en luifels gelijkvloers", "Terrassen en luifels 2de verdieping" }, terrassen);
+    }
+
+    [Fact]
+    public void Een_bouwlaag_geeft_geen_toevoeging_aan_de_naam_van_de_taken()
+    {
+        var uit = PlanningSjabloonUitrol.Rol(Bovenbouw(), new SjabloonVariabelen(1, false, "hellend"));
+        Assert.Equal(new[] { "Vloerplaat", "Metselwerk", "Gevelmetselwerk" }, uit.Fases.Single(f => f.Naam == "Ruwbouw - Bovenbouw").Taken.Select(t => t.Naam));
+    }
+
+    [Fact]
+    public void Bouwlagen_heten_gelijkvloers_en_dan_1ste_2de_verdieping()
+    {
+        Assert.Equal("gelijkvloers", PlanningSjabloonUitrol.BouwlaagNaam(1));
+        Assert.Equal("1ste verdieping", PlanningSjabloonUitrol.BouwlaagNaam(2));
+        Assert.Equal("2de verdieping", PlanningSjabloonUitrol.BouwlaagNaam(3));
+        Assert.Equal("8ste verdieping", PlanningSjabloonUitrol.BouwlaagNaam(9));
+    }
+
+    [Fact]
+    public void Alles_van_de_ruwbouw_zit_in_een_fase_per_bouwlaag_en_taken_met_een_voorwaarde_komen_enkel_waar_ze_horen()
+    {
+        // Met kelder, 3 bouwlagen, terrassen bij de afdek van het gelijkvloers en de 2de verdieping.
+        var uit = PlanningSjabloonUitrol.Rol(Gebouw(), new SjabloonVariabelen(3, true, null, new[] { 1, 3 }));
+        Assert.Empty(uit.Waarschuwingen);
+        Assert.Equal(new[] { "Voorbereiding", "Ruwbouw kelder", "Ruwbouw gelijkvloers", "Ruwbouw 1ste verdieping", "Ruwbouw 2de verdieping", "Dak" }, uit.Fases.Select(f => f.Naam));
+        // Geen aparte fase voor de vloerplaat gelijkvloers of de terrassen. Met een kelder is de afdek van de kelder de vloerplaat: geen eigen taak.
+        Assert.Equal(new[] { "Metselwerk", "Afdek (= vloerplaat volgende verdieping)", "Terrassen en luifels" }, uit.Fases.Single(f => f.Naam == "Ruwbouw gelijkvloers").Taken.Select(t => t.Naam));
+        Assert.Equal(new[] { "Metselwerk", "Afdek (= vloerplaat volgende verdieping)" }, uit.Fases.Single(f => f.Naam == "Ruwbouw 1ste verdieping").Taken.Select(t => t.Naam));
+        // Gevelmetselwerk: één taak, enkel in de bovenste bouwlaag, zonder voorgangers.
+        var gevel = uit.Fases.SelectMany(f => f.Taken).Where(t => t.Naam == "Gevelmetselwerk").ToList();
+        Assert.Single(gevel);
+        Assert.Empty(gevel[0].Voorgangers);
+        Assert.Contains(gevel[0], uit.Fases.Single(f => f.Naam == "Ruwbouw 2de verdieping").Taken);
+    }
+
+    [Fact]
+    public void Met_een_kelder_is_de_afdek_van_de_kelder_de_vloerplaat_van_het_gelijkvloers_en_zonder_kelder_komt_er_een_eigen_vloerplaat()
+    {
+        var met = PlanningSjabloonUitrol.Rol(Gebouw(), new SjabloonVariabelen(2, true, null));
+        var metsel = Taak(met, "Ruwbouw gelijkvloers", "Metselwerk");
+        Assert.Equal("2", Assert.Single(metsel.Voorgangers).Sleutel);                   // de afdek van de kelder
+        Assert.DoesNotContain(met.Fases.SelectMany(f => f.Taken), t => t.Naam.StartsWith("Gieten vloerplaat"));
+
+        var zonder = PlanningSjabloonUitrol.Rol(Gebouw(), new SjabloonVariabelen(2, false, null));
+        Assert.DoesNotContain(zonder.Fases, f => f.Naam == "Ruwbouw kelder");
+        var vloerplaat = Taak(zonder, "Ruwbouw gelijkvloers", "Gieten vloerplaat gelijkvloers");
+        Assert.Equal("1", Assert.Single(vloerplaat.Voorgangers).Sleutel);                // de werf
+        Assert.Equal(vloerplaat.Sleutel, Assert.Single(Taak(zonder, "Ruwbouw gelijkvloers", "Metselwerk").Voorgangers).Sleutel);
+        Assert.Empty(zonder.Waarschuwingen);
+    }
+
+    [Fact]
+    public void De_afdek_van_een_bouwlaag_is_de_vloerplaat_van_de_volgende_en_een_terras_houdt_de_volgende_bouwlaag_niet_op()
+    {
+        var uit = PlanningSjabloonUitrol.Rol(Gebouw(), new SjabloonVariabelen(3, true, null, new[] { 1 }));
+        var afdekGl = Taak(uit, "Ruwbouw gelijkvloers", "Afdek");
+        var terrasGl = Taak(uit, "Ruwbouw gelijkvloers", "Terrassen");
+        var metsel1 = Taak(uit, "Ruwbouw 1ste verdieping", "Metselwerk");
+        // Het metselwerk van de 1ste verdieping wacht op de afdek van het gelijkvloers (de vloerplaat) en niet op het terras.
+        Assert.Contains(metsel1.Voorgangers, v => v.Sleutel == afdekGl.Sleutel);
+        Assert.DoesNotContain(metsel1.Voorgangers, v => v.Sleutel == terrasGl.Sleutel);
+        // Het terras hangt aan de afdek van zijn eigen bouwlaag.
+        Assert.Equal(afdekGl.Sleutel, Assert.Single(terrasGl.Voorgangers).Sleutel);
+        // Het dak wacht op de afdek van de bovenste bouwlaag.
+        var afdekBoven = Taak(uit, "Ruwbouw 2de verdieping", "Afdek");
+        Assert.Equal(afdekBoven.Sleutel, Assert.Single(uit.Fases.Single(f => f.Naam == "Dak").Taken[0].Voorgangers).Sleutel);
+    }
+
+    [Fact]
+    public void Terrassen_komen_enkel_bij_de_gekozen_bouwlagen_en_zonder_keuze_valt_de_taak_weg()
+    {
+        var geen = PlanningSjabloonUitrol.Rol(Gebouw(), new SjabloonVariabelen(3, false, null));
+        Assert.DoesNotContain(geen.Fases.SelectMany(f => f.Taken), t => t.Naam.StartsWith("Terrassen"));
+
+        var enkel = PlanningSjabloonUitrol.Rol(Gebouw(), new SjabloonVariabelen(3, false, null, new[] { 3, 9 }));
+        var terrassen = enkel.Fases.Where(f => f.Taken.Any(t => t.Naam.StartsWith("Terrassen"))).Select(f => f.Naam).ToList();
+        Assert.Equal(new[] { "Ruwbouw 2de verdieping" }, terrassen);   // bouwlaag 9 bestaat niet en doet niet mee
+    }
+
+    [Fact]
+    public void Bij_een_gebouw_met_een_bouwlaag_is_die_laag_zowel_eerste_als_laatste()
+    {
+        var uit = PlanningSjabloonUitrol.Rol(Gebouw(), new SjabloonVariabelen(1, false, null));
+        var ruw = uit.Fases.Single(f => f.Naam == "Ruwbouw");   // geen toevoeging bij één bouwlaag
+        Assert.Contains(ruw.Taken, t => t.Naam.StartsWith("Gieten vloerplaat gelijkvloers"));
+        Assert.Contains(ruw.Taken, t => t.Naam == "Gevelmetselwerk");
+    }
+
+    [Fact]
+    public async Task Een_voorwaarde_per_taak_wordt_gecontroleerd_bij_het_bewaren_en_blijft_bewaard()
+    {
+        var (_, sjab, _) = Maak();
+        PlanningSjabloonBewerk Doc(string voorwaarde) => new()
+        {
+            Naam = "Met voorwaarden",
+            Blokken =
+            {
+                new PlanningSjabloonBewerkBlok { Naam = "Ruwbouw", Code = "RUW", Herhaling = 1, Taken =
+                {
+                    new PlanningSjabloonBewerkTaak { Naam = "Vloerplaat", Code = "VLOER", Duur = 2, Voorwaarde = voorwaarde },
+                    new PlanningSjabloonBewerkTaak { Naam = "Metselwerk", Code = "METSEL", Duur = 5, Voorgangers = { new PlanningSjabloonBewerkVoorganger { Code = "VORIGE:METSEL" } } },
+                } },
+            },
+        };
+        var goed = await sjab.Bewaar(Doc("laag:eerste,kelder:nee"), "u");
+        Assert.True(goed.Ok, string.Join(" ", goed.Fouten));
+        var terug = (await sjab.Haal(goed.SjabloonId))!;
+        Assert.Equal("laag:eerste,kelder:nee", terug.Blokken[0].Taken[0].Voorwaarde);
+        Assert.Equal("VORIGE:METSEL", terug.Blokken[0].Taken[1].Voorgangers[0].Code);
+
+        var fout = await sjab.Bewaar(Doc("laag:ergens"), "u");
+        Assert.False(fout.Ok);
+        Assert.Contains(fout.Fouten, f => f.Contains("laag:ergens"));
     }
 }

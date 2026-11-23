@@ -194,7 +194,18 @@ public class ProjectPlanningController : BaseController
     public async Task<IActionResult> ProjectSjabloonAi(int projectId, [FromBody] ProjectSjabloonAiVerzoek verzoek, CancellationToken ct)
     {
         if (verzoek == null) return BadRequest();
-        return Json(await HttpContext.RequestServices.GetRequiredService<IProjectSjabloonAiService>().Voorstel(verzoek.Beschrijving, ct), JsonOpties);
+
+        // Privacy: niets wat persoonlijk kan zijn gaat naar de externe AI. Namen van mensen kunnen we niet herkennen; daarom staat dat ook in de uitleg bij het veld.
+        var persoonlijk = ServiceCore.Planning.ProjectSjabloonAiVerwerker.ControleerPrivacy(verzoek.Beschrijving);
+        if (persoonlijk.Count > 0)
+            return Json(new ProjectSjabloonAiVoorstel { Fout = "In de beschrijving lijkt " + string.Join(", ", persoonlijk) + " te staan. Haal dat weg: er gaan geen persoonsgegevens, adressen of bedragen naar de AI." }, JsonOpties);
+
+        var sjablonen = HttpContext.RequestServices.GetRequiredService<IProjectSjabloonService>();
+        var context = await sjablonen.AiContext(projectId);
+        var voorstel = await HttpContext.RequestServices.GetRequiredService<IProjectSjabloonAiService>().Voorstel(verzoek.Beschrijving, context, ct);
+        // De duur komt uit de planning, niet van de AI.
+        if (voorstel.Ok && voorstel.SjabloonId is int gekozen) voorstel.Controle = await sjablonen.Controle(projectId, gekozen, voorstel.Antwoorden);
+        return Json(voorstel, JsonOpties);
     }
 
     /// <summary>Bewaart de getoonde planning als sjabloon. Vraagt naast schrijfrecht op de planning het recht op planningssjablonen.</summary>

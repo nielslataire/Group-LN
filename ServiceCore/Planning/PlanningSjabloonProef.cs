@@ -16,7 +16,9 @@ internal static class PlanningSjabloonProef
     internal static SjabloonVariabelen Voorbeeldvariabelen(PlanningSjabloon s, int verdiepingen)
     {
         var dak = s.Blokken.Where(b => string.Equals(b.VoorwaardeVariabele, "dak", StringComparison.OrdinalIgnoreCase)).Select(b => b.VoorwaardeWaarde).FirstOrDefault(w => !string.IsNullOrEmpty(w));
-        return new SjabloonVariabelen(Math.Max(1, verdiepingen), true, dak);
+        var lagen = Math.Max(1, verdiepingen);
+        // Terrassen of luifels: in het voorbeeld bij elke bouwlaag, zodat het langste verloop te zien is.
+        return new SjabloonVariabelen(lagen, true, dak, Enumerable.Range(1, lagen).ToArray());
     }
 
     private static int Nr(DateOnly d)
@@ -52,10 +54,14 @@ internal static class PlanningSjabloonProef
 
     /// <summary>Doorrekenen van een sjabloon (met tijdelijke of echte id's) voor <paramref name="woningen"/> woningen van <paramref name="verdiepingen"/> verdiepingen.</summary>
     internal static PlanningSjabloonProefUitkomst Rekenen(PlanningSjabloon s, int woningen, int verdiepingen)
+        => Rekenen(s, woningen, Voorbeeldvariabelen(s, verdiepingen));
+
+    /// <summary>Doorrekenen met de echte keuzes van een gebouw (kelder, dak, terrassen) in plaats van het langste voorbeeld.</summary>
+    internal static PlanningSjabloonProefUitkomst Rekenen(PlanningSjabloon s, int woningen, SjabloonVariabelen variabelen)
     {
         woningen = Math.Clamp(woningen, 1, 20);
         var uit = new PlanningSjabloonProefUitkomst();
-        var rol = PlanningSjabloonUitrol.Rol(s, Voorbeeldvariabelen(s, verdiepingen));
+        var rol = PlanningSjabloonUitrol.Rol(s, variabelen);
         if (rol.Fases.Sum(f => f.Taken.Count) == 0) return uit;
 
         var codeNaarBlok = s.Blokken.SelectMany(b => b.Taken.Select(t => (Code: (t.Code ?? "").ToUpperInvariant(), Blok: b))).Where(x => x.Code.Length > 0)

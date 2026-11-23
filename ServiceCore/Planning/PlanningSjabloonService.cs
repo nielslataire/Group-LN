@@ -25,9 +25,10 @@ public sealed partial class PlanningSjabloonService : IPlanningSjabloonService
             Beschrijving = s.Beschrijving,
             AantalBlokken = s.Blokken.Count,
             AantalTaken = s.Blokken.Sum(b => b.Taken.Count),
-            HeeftVerdiepingen = s.Blokken.Any(b => b.Herhaling == 1),
-            HeeftKelder = s.Blokken.Any(b => string.Equals(b.VoorwaardeVariabele, "kelder", StringComparison.OrdinalIgnoreCase)),
-            HeeftDak = s.Blokken.Any(b => string.Equals(b.VoorwaardeVariabele, "dak", StringComparison.OrdinalIgnoreCase)),
+            HeeftVerdiepingen = s.Blokken.Any(b => b.Herhaling >= 1),
+            HeeftKelder = PlanningSjabloonUitrol.GebruiktVariabele(s, "kelder"),
+            HeeftDak = PlanningSjabloonUitrol.GebruiktVariabele(s, "dak"),
+            HeeftTerras = PlanningSjabloonUitrol.GebruiktVariabele(s, "terras"),
             HeeftEstafette = s.Blokken.Any(b => b.Taken.Any(t => t.Estafette)),
         }).ToList();
     }

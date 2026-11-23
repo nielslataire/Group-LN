@@ -26,12 +26,28 @@ public static class PlanningTrajectKoppeling
         var sectieIds = await db.PlanningSectie.AsNoTracking().Where(s => s.ProjectId == projectId && s.IsActief).Select(s => s.Id).ToListAsync();
         var taken = await db.PlanningTaak.AsNoTracking().Where(t => sectieIds.Contains(t.PlanningSectieId) && t.Code != null && t.Code != "").Select(t => new { t.Id, t.Code }).ToListAsync();
 
+        // Een mijlpaal van één eenheid (woning, appartement) zoekt enkel in de planning waartoe die eenheid hoort: daar is de code wel uniek,
+        // ook al staat dezelfde code in de planning van elke andere woning. Hoort de eenheid in geen enkele planning, dan geldt de regel voor het hele project.
+        var eenheidPlanning = await db.BouwPlanningEenheid.AsNoTracking()
+            .Where(e => db.BouwPlanning.Any(p => p.Id == e.BouwPlanningId && p.ProjectId == projectId && p.IsActief))
+            .Select(e => new { e.UnitId, e.BouwPlanningId }).ToListAsync();
+        var planningVanEenheid = eenheidPlanning.GroupBy(e => e.UnitId).ToDictionary(g => g.Key, g => g.First().BouwPlanningId);
+        var sectiePlanning = await db.PlanningSectie.AsNoTracking().Where(s => s.ProjectId == projectId && s.IsActief).Select(s => new { s.Id, s.BouwPlanningId }).ToDictionaryAsync(s => s.Id, s => s.BouwPlanningId);
+        var taakSectie = await db.PlanningTaak.AsNoTracking().Where(t => sectieIds.Contains(t.PlanningSectieId)).Select(t => new { t.Id, t.PlanningSectieId }).ToDictionaryAsync(t => t.Id, t => t.PlanningSectieId);
+
         var aantal = 0;
         foreach (var m in mijlpalen)
         {
             var code = m.Code.Trim();
-            var t = taken.Where(x => string.Equals(x.Code.Trim(), code, StringComparison.OrdinalIgnoreCase)).ToList();
-            var f = secties.Where(x => string.Equals(x.Code.Trim(), code, StringComparison.OrdinalIgnoreCase)).ToList();
+            var tAlle = taken;
+            var sAlle = secties;
+            if (m.UnitId is int uid && planningVanEenheid.TryGetValue(uid, out var pid))
+            {
+                tAlle = taken.Where(x => taakSectie.TryGetValue(x.Id, out var sid) && sectiePlanning.TryGetValue(sid, out var bp) && bp == pid).ToList();
+                sAlle = secties.Where(x => sectiePlanning.TryGetValue(x.Id, out var bp) && bp == pid).ToList();
+            }
+            var t = tAlle.Where(x => string.Equals(x.Code.Trim(), code, StringComparison.OrdinalIgnoreCase)).ToList();
+            var f = sAlle.Where(x => string.Equals(x.Code.Trim(), code, StringComparison.OrdinalIgnoreCase)).ToList();
             if (t.Count == 1 && f.Count == 0) { m.BronBinding = BindingTaak; m.BronRefId = t[0].Id; aantal++; }
             else if (f.Count == 1 && t.Count == 0) { m.BronBinding = BindingFase; m.BronRefId = f[0].Id; aantal++; }
         }

@@ -60,6 +60,9 @@ public partial class PlanningSjabloonTaak
     public bool Estafette { get; set; }
     public int EstafetteWacht { get; set; }
 
+    /// <summary>Voorwaarde van de taak, bv. "laag:eerste,kelder:nee" (zie PlanningSjabloonUitrol.TaakVoorwaarden); leeg = altijd.</summary>
+    public string Voorwaarde { get; set; }
+
     public virtual PlanningSjabloonBlok Blok { get; set; }
     public virtual ICollection<PlanningSjabloonVoorganger> Voorgangers { get; set; } = new List<PlanningSjabloonVoorganger>();
 }

@@ -470,15 +470,17 @@ public class PlanningService : IPlanningService
         // Een mijlpaal die automatisch uit iets anders volgt (document, dossier, factuur …) blijft buiten de lijst: koppelen zou die bron overschrijven.
         var sectieTekst = Plat(boom).Where(k => k.IsFase).ToDictionary(k => k.Sectie!.Id, k => k.Wbs + " " + k.Sectie!.Naam);
         var taakTekst = Plat(boom).Where(k => !k.IsFase).ToDictionary(k => k.Taak!.Id, k => k.Wbs + " " + k.Taak!.Naam);
+        // Mijlpalen van één woning of appartement staan in de lijst van de planning waartoe die eenheid hoort.
+        var eenhedenActief = d.Eenheden.Where(e => e.BouwPlanningId == actief).Select(e => e.UnitId).ToList();
         var trajectMijlpalen = await _db.Mijlpaal.AsNoTracking()
-            .Where(m => m.Projecttraject.ProjectId == d.Project.ProjectId && m.UnitId == null && m.Status != 3
+            .Where(m => m.Projecttraject.ProjectId == d.Project.ProjectId && (m.UnitId == null || eenhedenActief.Contains(m.UnitId.Value)) && m.Status != 3
                         && (m.BronBinding == null || m.BronBinding == 0 || m.BronBinding == 4 || m.BronBinding == 5))
             .OrderBy(m => m.Volgorde)
-            .Select(m => new { m.Id, m.Naam, m.BronBinding, m.BronRefId, m.BronParam, FaseNaam = m.ProjecttrajectFase != null ? m.ProjecttrajectFase.Naam : null })
+            .Select(m => new { m.Id, m.Naam, m.UnitId, m.BronBinding, m.BronRefId, m.BronParam, FaseNaam = m.ProjecttrajectFase != null ? m.ProjecttrajectFase.Naam : null })
             .ToListAsync();
         foreach (var m in trajectMijlpalen)
         {
-            var optie = new PlanningMijlpaalOptie { Id = m.Id, Naam = m.Naam ?? "", FaseNaam = m.FaseNaam };
+            var optie = new PlanningMijlpaalOptie { Id = m.Id, Naam = m.Naam ?? "", FaseNaam = m.FaseNaam, EenheidNaam = m.UnitId is int mu && eenheidNaam.TryGetValue(mu, out var mn) ? mn : null };
             var verwijst = m.BronRefId ?? (int.TryParse((m.BronParam ?? "").Trim(), out var px) ? px : (int?)null);
             if (m.BronBinding == 4 && verwijst is int tid && taakTekst.TryGetValue(tid, out var tt)) { optie.GekoppeldAanSleutel = "t" + tid; optie.GekoppeldAanTekst = tt; }
             else if (m.BronBinding == 5 && verwijst is int sid && sectieTekst.TryGetValue(sid, out var st)) { optie.GekoppeldAanSleutel = "f" + sid; optie.GekoppeldAanTekst = st; }
@@ -775,7 +777,21 @@ public class PlanningService : IPlanningService
         {
             var m = mijlpalen.FirstOrDefault(x => x.Id == nid);
             if (m == null) return new PlanningUitkomst { Fout = "Deze mijlpaal hoort niet bij het Traject van dit project." };
-            if (m.UnitId != null) return new PlanningUitkomst { Fout = "Enkel een mijlpaal van het hele project kan aan de planning gekoppeld worden, niet een van één eenheid." };
+            if (m.UnitId is int mUnit)
+            {
+                // Een mijlpaal van één woning mag enkel aan een taak of fase in de planning van die woning hangen (hoort ze in geen enkele planning, dan overal).
+                var unitPlanning = await _db.BouwPlanningEenheid.AsNoTracking()
+                    .Where(e => e.UnitId == mUnit && _db.BouwPlanning.Any(p => p.Id == e.BouwPlanningId && p.ProjectId == projectId && p.IsActief))
+                    .Select(e => (int?)e.BouwPlanningId).FirstOrDefaultAsync();
+                if (unitPlanning != null)
+                {
+                    var doelPlanning = isFase
+                        ? await _db.PlanningSectie.Where(s => s.Id == c.Id).Select(s => s.BouwPlanningId).FirstOrDefaultAsync()
+                        : await _db.PlanningTaak.Where(t => t.Id == c.Id).Select(t => t.PlanningSectie.BouwPlanningId).FirstOrDefaultAsync();
+                    if (doelPlanning != unitPlanning)
+                        return new PlanningUitkomst { Fout = "Deze mijlpaal hoort bij één woning of appartement. Kies een taak of fase in de planning van die eenheid." };
+                }
+            }
             var vrij = m.BronBinding == null || m.BronBinding == 0 || m.BronBinding == 4 || m.BronBinding == 5;
             if (!vrij)
                 return new PlanningUitkomst { Fout = "Deze mijlpaal volgt al automatisch iets anders, bijvoorbeeld een document of een dossier. Haal die koppeling eerst weg in het Traject." };
@@ -1707,7 +1723,7 @@ public class PlanningService : IPlanningService
             }
             if (eersteNieuw) { bewerkt.Add("p" + bp.Id); eersteNieuw = false; }
 
-            var uit = PlanningSjabloonUitrol.Rol(sjabloon, new SjabloonVariabelen(Math.Max(1, b.Verdiepingen), b.Kelder, b.Dak));
+            var uit = PlanningSjabloonUitrol.Rol(sjabloon, new SjabloonVariabelen(Math.Max(1, b.Verdiepingen), b.Kelder, b.Dak, b.Terrassen));
             foreach (var w in uit.Waarschuwingen) waarschuwingen.Add($"{naam}: {w}");
 
             var taakIdPerSleutel = new Dictionary<string, int>();
@@ -1721,15 +1737,32 @@ public class PlanningService : IPlanningService
                 await _db.SaveChangesAsync();
                 d.Secties.Add(sectie);
                 var tv = 10;
+                var faseTaken = new List<(UitgerolTaak Uit, PlanningTaak Taak)>();
+                // Een tussenniveau (bv. per bouwlaag in "Ruwbouw - Bovenbouw"): de taken met dezelfde subfase komen samen in een deelfase van de fase.
+                PlanningSectie? sub = null; string? subNaam = null; var stv = 10;
                 foreach (var ut in f.Taken)
                 {
-                    var taak = new PlanningTaak { PlanningSectieId = sectie.Id, Naam = ut.Naam, Code = string.IsNullOrWhiteSpace(ut.Code) ? null : ut.Code.Trim(), Beschrijving = ut.Beschrijving, Duur = ut.Duur, Volgorde = tv };
-                    tv += 10;
+                    var doel = sectie; int taakVolgorde;
+                    if (ut.Subfase != null)
+                    {
+                        if (sub == null || subNaam != ut.Subfase)
+                        {
+                            sub = new PlanningSectie { ProjectId = d.Project.ProjectId, Naam = ut.Subfase, ParentSectieId = sectie.Id, Volgorde = tv, IsActief = true, BouwPlanningId = bp.Id };
+                            tv += 10; subNaam = ut.Subfase; stv = 10;
+                            _db.PlanningSectie.Add(sub);
+                            await _db.SaveChangesAsync();
+                            d.Secties.Add(sub);
+                        }
+                        doel = sub; taakVolgorde = stv; stv += 10;
+                    }
+                    else { sub = null; subNaam = null; taakVolgorde = tv; tv += 10; }
+                    var taak = new PlanningTaak { PlanningSectieId = doel.Id, Naam = ut.Naam, Code = string.IsNullOrWhiteSpace(ut.Code) ? null : ut.Code.Trim(), Beschrijving = ut.Beschrijving, Duur = ut.Duur, Volgorde = taakVolgorde };
                     _db.PlanningTaak.Add(taak);
                     uitTaken.Add((ut, taak));
+                    faseTaken.Add((ut, taak));
                 }
                 await _db.SaveChangesAsync();
-                foreach (var (ut, taak) in uitTaken.Where(x => x.Taak.PlanningSectieId == sectie.Id)) { taakIdPerSleutel[ut.Sleutel] = taak.Id; d.Taken.Add(taak); }
+                foreach (var (ut, taak) in faseTaken) { taakIdPerSleutel[ut.Sleutel] = taak.Id; d.Taken.Add(taak); }
             }
 
             foreach (var (ut, taak) in uitTaken)

@@ -116,10 +116,13 @@ public sealed class ProjectSjabloonKeuze
 /// <summary>De antwoorden over het gebouw waaraan het sjabloon zich aanpast.</summary>
 public sealed class ProjectSjabloonAntwoorden
 {
+    /// <summary>Het aantal bouwlagen boven de grond, het gelijkvloers meegeteld (gelijkvloers + 2 verdiepingen = 3).</summary>
     public int Verdiepingen { get; set; } = 1;
     public bool Kelder { get; set; }
     /// <summary>"hellend", "plat" of leeg.</summary>
     public string? Dak { get; set; }
+    /// <summary>De bouwlagen (1 = gelijkvloers, 2 = 1ste verdieping, ...) met terrassen of luifels bij de afdek. Leeg = geen.</summary>
+    public List<int> Terrassen { get; set; } = new();
     /// <summary>Eén planning voor alle eenheden zonder planning (een gebouw); anders een planning per eenheid (woningen).</summary>
     public bool EenPlanningVoorAlles { get; set; }
     /// <summary>Samen met <see cref="EenPlanningVoorAlles"/>: de planning komt in de hoofdplanning (enkel als die nog leeg is); anders een aparte planning.</summary>
@@ -145,6 +148,51 @@ public sealed class ProjectSjabloonAiVoorstel
     public ProjectSjabloonAntwoorden Antwoorden { get; set; } = new();
     /// <summary>Wat de AI begrepen heeft of niet kon afleiden.</summary>
     public string? Toelichting { get; set; }
+
+    /// <summary>Het projectsjabloon dat de AI het best vindt passen (enkel uit de actieve sjablonen); leeg als er geen past.</summary>
+    public int? SjabloonId { get; set; }
+    /// <summary>Waarom dit sjabloon (of waarom geen).</summary>
+    public string? SjabloonReden { get; set; }
+    /// <summary>Wat de AI heeft aangenomen omdat het er niet stond (bv. "Geen kelder vermeld: geen kelder aangenomen").</summary>
+    public List<string> Aannames { get; set; } = new();
+    /// <summary>Vragen die het plan sterk zouden veranderen en die de beschrijving niet beantwoordt.</summary>
+    public List<string> Vragen { get; set; } = new();
+    /// <summary>Doorgerekend door de planning, niet door de AI: de duur van het voorstel tegenover de uitvoeringstermijn.</summary>
+    public string? Controle { get; set; }
+}
+
+/// <summary>
+/// Wat de AI over het project en de sjablonen mag zien. Bewust anoniem: aantallen en sjabloonstructuur, geen namen van klanten, aannemers of eenheden,
+/// geen adressen en geen bedragen.
+/// </summary>
+public sealed class ProjectSjabloonAiContext
+{
+    public List<ProjectSjabloonAiKeuze> Keuzes { get; set; } = new();
+    public int AantalEenheden { get; set; }
+    /// <summary>De uitvoeringstermijn van het project in werkdagen (<c>Project.ExecutionDays</c>); leeg = niet ingevuld.</summary>
+    public int? MaxWerkdagen { get; set; }
+    public bool HeeftPlanning { get; set; }
+    public bool HeeftTraject { get; set; }
+    public bool HeeftSchijven { get; set; }
+}
+
+public sealed class ProjectSjabloonAiKeuze
+{
+    public int Id { get; set; }
+    public string Naam { get; set; } = "";
+    public string? Beschrijving { get; set; }
+    public int Bouwlagen { get; set; } = 1;
+    public bool Kelder { get; set; }
+    public string? Dak { get; set; }
+    /// <summary>Wat het planningssjabloon kent: per bouwlaag herhaald, kelder, dak, terrassen of luifels.</summary>
+    public bool HeeftBouwlagen { get; set; }
+    public bool HeeftKelder { get; set; }
+    public bool HeeftDak { get; set; }
+    public bool HeeftTerras { get; set; }
+    /// <summary>Korte samenvatting, bv. "11 blokken, 38 taken" en de namen van de blokken.</summary>
+    public string? Planning { get; set; }
+    public string? Traject { get; set; }
+    public string? Schijven { get; set; }
 }
 
 public interface IProjectSjabloonService
@@ -165,10 +213,19 @@ public interface IProjectSjabloonService
 
     /// <summary>Past het sjabloon toe en vult aan wat nog leeg is: traject, planningen voor eenheden zonder planning, schijven in betalingsgroepen zonder (gebruikte) schijven.</summary>
     Task<ProjectSjabloonResultaat> Toepassen(int projectId, int sjabloonId, ProjectSjabloonAntwoorden antwoorden, string? userId);
+
+    /// <summary>De anonieme context voor de AI: de actieve projectsjablonen met hun structuur en enkele aantallen van het project.</summary>
+    Task<ProjectSjabloonAiContext> AiContext(int projectId);
+
+    /// <summary>Rekent het voorstel door met de planning (niet de AI): de duur van één bouwdeel tegenover de uitvoeringstermijn. Bewaart niets.</summary>
+    Task<string?> Controle(int projectId, int sjabloonId, ProjectSjabloonAntwoorden antwoorden);
 }
 
 public interface IProjectSjabloonAiService
 {
-    /// <summary>Haalt uit een vrije beschrijving van het gebouw de antwoorden die het sjabloon nodig heeft. Doet enkel een voorstel, bewaart niets.</summary>
-    Task<ProjectSjabloonAiVoorstel> Voorstel(string beschrijving, CancellationToken ct = default);
+    /// <summary>
+    /// Kiest uit een vrije beschrijving het projectsjabloon dat past en haalt de antwoorden eruit die het sjabloon nodig heeft.
+    /// Doet enkel een voorstel, bewaart niets. Zonder context vult de AI enkel de antwoorden in.
+    /// </summary>
+    Task<ProjectSjabloonAiVoorstel> Voorstel(string beschrijving, ProjectSjabloonAiContext? context = null, CancellationToken ct = default);
 }

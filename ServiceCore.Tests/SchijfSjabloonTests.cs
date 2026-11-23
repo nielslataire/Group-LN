@@ -12,6 +12,26 @@ public class SchijfSjabloonTests
     private static SchijfInvoer S(string naam, decimal? vast = null, decimal gewicht = 1m, bool perVerdieping = false, string? code = null)
         => new(naam, code, vast, gewicht, perVerdieping);
 
+    [Theory]
+    [InlineData(true, new[] { "Opstort gelijkvloers", "Opstort 1ste verdieping", "Opstort 2de verdieping" }, new[] { 1, 2, 3 })]
+    [InlineData(false, new[] { "Gieten vloerplaat gelijkvloers", "Opstort 1ste verdieping", "Opstort 2de verdieping" }, new int[] { 1, 1, 2 })]
+    public void Een_schijf_op_de_opstort_van_elke_bouwlaag_en_zonder_kelder_op_de_vloerplaat_gelijkvloers(bool kelder, string[] namen, int[] volgnrs)
+    {
+        var uit = SchijfSjabloonUitrol.Rol(5m, new SchijfInvoer[]
+        {
+            new("Opstort gelijkvloers", "OPSTORT", null, 1, false, "kelder", "ja"),
+            new("Gieten vloerplaat gelijkvloers", "VLOERPLAAT_GLVL", null, 1, false, "kelder", "nee"),
+            new("Opstort {verdieping}", "OPSTORT", null, 1, true, "laag", "boven"),
+        }, 3, kelder);
+        Assert.Equal(namen, uit.Schijven.Select(x => x.Naam));
+        // Het volgnummer is de plaats van de code in de planning: met kelder staat de opstort ook op het gelijkvloers, zonder kelder niet.
+        Assert.Equal(volgnrs, uit.Schijven.Select(x => x.PlanningVolgnr ?? 1));
+        Assert.Equal(100m, uit.Totaal);
+        // Bij één bouwlaag is er geen schijf boven het gelijkvloers.
+        var een = SchijfSjabloonUitrol.Rol(5m, new SchijfInvoer[] { new("Opstort {verdieping}", "OPSTORT", null, 1, true, "laag", "boven"), new("Eind", null, null, 1, false) }, 1);
+        Assert.DoesNotContain(een.Schijven, x => x.Naam.StartsWith("Opstort"));
+    }
+
     [Fact]
     public void De_laatste_schijf_is_vast_5_procent_en_de_rest_gaat_naar_gewicht()
     {
@@ -19,7 +39,8 @@ public class SchijfSjabloonTests
         {
             S("Uitzetten", gewicht: 1), S("Vloerplaat", gewicht: 4), S("Ruwbouw", gewicht: 5), S("Voorlopige oplevering", vast: 5),
         }, 1);
-        Assert.Equal(new[] { 9.5m, 38m, 47.5m, 5m }, uit.Schijven.Select(x => x.Percentage).ToArray());
+        // 95 % naar gewicht 1 : 4 : 5 in stappen van 5 %: 10 / 40 / 45
+        Assert.Equal(new[] { 10m, 40m, 45m, 5m }, uit.Schijven.Select(x => x.Percentage).ToArray());
         Assert.Equal(100m, uit.Totaal);
         Assert.Empty(uit.Waarschuwingen);
         Assert.True(uit.Schijven[3].IsVast);
@@ -31,9 +52,10 @@ public class SchijfSjabloonTests
     {
         var uit = SchijfSjabloonUitrol.Rol(5m, new[] { S("A"), S("B"), S("C"), S("Oplevering", vast: 5) }, 1);
         Assert.Equal(100m, uit.Totaal);
-        Assert.Equal(31.67m, uit.Schijven[0].Percentage);
-        Assert.Equal(31.67m, uit.Schijven[1].Percentage);
-        Assert.Equal(31.66m, uit.Schijven[2].Percentage);     // de rest
+        // 95 % in stappen van 5 % over drie gelijke schijven: 19 stappen = 7 + 6 + 6 (de grootste afrondingsrest eerst)
+        Assert.Equal(35m, uit.Schijven[0].Percentage);
+        Assert.Equal(30m, uit.Schijven[1].Percentage);
+        Assert.Equal(30m, uit.Schijven[2].Percentage);
         Assert.Equal(5m, uit.Schijven[3].Percentage);
     }
 
@@ -48,8 +70,8 @@ public class SchijfSjabloonTests
         var vloer = uit.Schijven.Where(x => x.PlanningCode == "VLOERPLAAT").ToList();
         Assert.Equal(3, vloer.Count);
         Assert.Equal(new[] { 6.67m, 6.67m, 6.66m }, vloer.Select(x => x.Percentage).ToArray());
-        Assert.Equal("Bij het gieten van de vloerplaat 1ste verdieping", vloer[0].Naam);
-        Assert.Equal("Bij het gieten van de vloerplaat 2de verdieping", vloer[1].Naam);
+        Assert.Equal("Bij het gieten van de vloerplaat gelijkvloers", vloer[0].Naam);
+        Assert.Equal("Bij het gieten van de vloerplaat 1ste verdieping", vloer[1].Naam);
         Assert.Equal(new int?[] { 1, 2, 3 }, vloer.Select(x => x.PlanningVolgnr).ToArray());
         Assert.Equal(100m, uit.Totaal);
     }
@@ -58,10 +80,10 @@ public class SchijfSjabloonTests
     public void Een_gewicht_per_verdieping_wordt_over_de_verdiepingen_verdeeld_en_zonder_plaatshouder_komt_de_verdieping_erachter()
     {
         var uit = SchijfSjabloonUitrol.Rol(5m, new[] { S("Afdekken", gewicht: 2, perVerdieping: true), S("Rest", gewicht: 2), S("Oplevering", vast: 5) }, 2);
-        Assert.Equal("Afdekken 1ste verdieping", uit.Schijven[0].Naam);
-        Assert.Equal("Afdekken 2de verdieping", uit.Schijven[1].Naam);
-        // gewichten 1 + 1 + 2 over 95 %: 23,75 / 23,75 / 47,5
-        Assert.Equal(new[] { 23.75m, 23.75m, 47.5m, 5m }, uit.Schijven.Select(x => x.Percentage).ToArray());
+        Assert.Equal("Afdekken gelijkvloers", uit.Schijven[0].Naam);
+        Assert.Equal("Afdekken 1ste verdieping", uit.Schijven[1].Naam);
+        // gewichten 1 + 1 + 2 over 95 % in stappen van 5 %: 25 / 25 / 45
+        Assert.Equal(new[] { 25m, 25m, 45m, 5m }, uit.Schijven.Select(x => x.Percentage).ToArray());
     }
 
     [Fact]
@@ -73,13 +95,22 @@ public class SchijfSjabloonTests
     }
 
     [Fact]
-    public void Onder_het_minimum_geeft_een_waarschuwing_geen_blokkade()
+    public void Een_kleine_schijf_krijgt_toch_minstens_5_procent_en_alle_percentages_zijn_veelvouden_van_5()
     {
         var uit = SchijfSjabloonUitrol.Rol(5m, new[] { S("Klein", gewicht: 1), S("Groot", gewicht: 30), S("Oplevering", vast: 5) }, 1);
+        Assert.Equal(new[] { 5m, 90m, 5m }, uit.Schijven.Select(x => x.Percentage).ToArray());
         Assert.Equal(100m, uit.Totaal);
-        var w = Assert.Single(uit.Waarschuwingen);
-        Assert.Contains("Klein", w);
-        Assert.Contains("minimum", w);
+        Assert.Empty(uit.Waarschuwingen);
+    }
+
+    [Fact]
+    public void Onder_het_minimum_geeft_een_waarschuwing_geen_blokkade()
+    {
+        // 20 schijven met een gewicht passen niet in 95 % met stappen van 5 %: één schijf krijgt niets en dat wordt gemeld.
+        var invoer = Enumerable.Range(1, 20).Select(i => S("Schijf " + i, gewicht: 1)).Append(S("Oplevering", vast: 5)).ToArray();
+        var uit = SchijfSjabloonUitrol.Rol(5m, invoer, 1);
+        Assert.Equal(100m, uit.Totaal);
+        Assert.Contains(uit.Waarschuwingen, w => w.Contains("minimum"));
     }
 
     [Fact]

@@ -85,11 +85,13 @@
 #gl-v2-pl-pj-rest .gl-v2-toggle-desc { font: 450 12px/1.35 var(--gl-v2-font-sans); color: var(--gl-v2-muted, #6b6b63); }
 #gl-v2-pl-pj-lijst .gl-v2-pl-een { flex-wrap: wrap; }
 .gl-v2-pl-pj-aibalk { display: flex; align-items: center; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
-.gl-v2-pl-pj-voorbeeld { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--gl-v2-line); border-radius: var(--gl-v2-radius-sm); font: 450 13px/1.5 var(--gl-v2-font-sans); }
-.gl-v2-pl-pj-voorbeeld ul, .gl-v2-pl-pj-voorbeeld ol { margin: 6px 0 0; padding-left: 18px; }
+.gl-v2-pl-pj-voorbeeld, .gl-v2-pl-pj-aidetails { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--gl-v2-line); border-radius: var(--gl-v2-radius-sm); font: 450 13px/1.5 var(--gl-v2-font-sans); }
+.gl-v2-pl-pj-voorbeeld ul, .gl-v2-pl-pj-voorbeeld ol, .gl-v2-pl-pj-aidetails ul { margin: 6px 0 0; padding-left: 18px; }
+.gl-v2-pl-pj-aidetails p { margin: 4px 0 8px; }
+.gl-v2-pl-pj-aidetails .gl-v2-pl-pj-kop { display: block; margin-top: 6px; }
 .gl-v2-pl-pj-voorbeeld ul.is-opm { color: var(--gl-v2-muted); }
 .gl-v2-pl-pj-voorbeeld ol.is-schijven { color: var(--gl-v2-muted); font-variant-numeric: tabular-nums; }
-.gl-v2-pl-pj-voorbeeld .gl-v2-pl-pj-kop { font: 600 12px var(--gl-v2-font-sans); letter-spacing: .04em; text-transform: uppercase; color: var(--gl-v2-muted); }
+.gl-v2-pl-pj-voorbeeld .gl-v2-pl-pj-kop, .gl-v2-pl-pj-aidetails .gl-v2-pl-pj-kop { font: 600 12px var(--gl-v2-font-sans); letter-spacing: .04em; text-transform: uppercase; color: var(--gl-v2-muted); }
 .gl-v2-pl-een[hidden], #gl-v2-pl-wrap-schijf[hidden], #gl-v2-pl-wrap-schijff[hidden] { display: none; }
 .gl-v2-pl-een:hover { background: var(--gl-v2-surface-hover, rgba(0, 0, 0, 0.03)); }
 .gl-v2-pl-een.is-uit { opacity: 0.55; cursor: not-allowed; }
@@ -549,3 +551,10 @@ body.gl-v2-pl-is-dragging[data-pl-drag="voortgang"], body.gl-v2-pl-is-dragging[d
 .gl-v2-pl-r:hover .gl-v2-pl-grip, .gl-v2-pl-grip:focus-visible { opacity: 1; }
 .gl-v2-pl-r.is-dropinto { outline: 2px solid var(--gl-v2-accent, #2f5d50); outline-offset: -2px; background: var(--gl-v2-hover, rgba(47, 93, 80, .08)); }
 .gl-v2-pl-dropline { position: fixed; z-index: 1200; height: 0; border-top: 2px solid var(--gl-v2-accent, #2f5d50); pointer-events: none; }
+
+/* Terrassen of luifels per bouwlaag: knoppen GV · 1 · 2 … (zelfde taal als .gl-v2-pl-toggle) */
+.gl-v2 .gl-v2-pl-lagen { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.gl-v2 .gl-v2-pl-laag { min-width: 30px; padding: 4px 8px; border: 1px solid var(--gl-v2-line); border-radius: var(--gl-v2-radius-xs); background: var(--gl-v2-surface, #fff); font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); cursor: pointer; }
+.gl-v2 .gl-v2-pl-laag:hover { border-color: var(--gl-v2-accent-sage); }
+.gl-v2 .gl-v2-pl-laag[aria-pressed="true"] { background: var(--gl-v2-primary-tint); border-color: var(--gl-v2-accent-sage); color: var(--gl-v2-primary); }
+.gl-v2 .gl-v2-pl-laag:focus-visible { outline: 2.5px solid var(--gl-v2-gold, #C9A24B); outline-offset: 2px; }

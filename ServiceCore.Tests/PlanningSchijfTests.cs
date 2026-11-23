@@ -141,6 +141,8 @@ public class PlanningSchijfTests
     public async Task Is_de_taak_klaar_dan_krijgt_de_projectleider_een_taak_en_die_verdwijnt_zodra_de_schijf_klaarstaat()
     {
         var (svc, db, s, pid, taakId) = await Maak();
+        // Project.AspNetUserId is de login-id; Mijn taken werkt met het nummer van de gebruiker (Users.Id).
+        db.Users.Add(new Users { Id = 7, UserId = "projectleider-1" });
         db.Project.First(p => p.ProjectId == ProjectId).AspNetUserId = "projectleider-1";
         db.SaveChanges();
         await svc.KoppelSchijf(ProjectId, new PlanningSchijfKoppelCommando { Soort = "taak", Id = taakId, PlanningId = pid, StageId = Stage1 }, "u1");
@@ -149,7 +151,7 @@ public class PlanningSchijfTests
         s = await Doe(svc, s, new PlanningCommando { Type = "wijzig", PlanningId = pid, Soort = "taak", Id = taakId, Velden = V(("voortgang", 100)) });
         var taak = Assert.Single(db.ProjectTaak);
         Assert.Equal($"schijf:{pid}:{Stage1}", taak.BronSleutel);
-        Assert.Equal("projectleider-1", taak.ToegewezenAanUserId);
+        Assert.Equal("7", taak.ToegewezenAanUserId);
         Assert.Contains("Schijf 1", taak.Titel);
         Assert.Equal((int)BOCore.TaakStatus.Open, taak.Status);
 

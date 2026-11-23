@@ -1,15 +1,17 @@
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json.Nodes;
 using CPMCore.Services.PuntenSpraak;
 using FacadeCore;
 using Microsoft.Extensions.Options;
+using ServiceCore.Planning;
 
 namespace CPMCore.Services.ProjectSjabloon
 {
     /// <summary>
-    /// Haalt uit een vrije beschrijving van een gebouw de antwoorden die een projectsjabloon nodig heeft (verdiepingen, kelder, dak, één planning of per woning).
-    /// De AI doet enkel een voorstel: de uitkomst wordt gecontroleerd (grenzen, enkel bekende waarden) en de projectleider bevestigt voor er iets gebeurt.
+    /// Kiest uit een vrije beschrijving van een gebouw het projectsjabloon dat past en haalt de antwoorden eruit die dat sjabloon nodig heeft
+    /// (bouwlagen, kelder, dak, terrassen of luifels, één planning of per woning), met de aannames en vragen erbij.
+    /// De AI doet enkel een voorstel: wat hij kan zien (<see cref="ProjectSjabloonAiContext"/>) is anoniem, en zijn antwoord wordt door
+    /// <see cref="ProjectSjabloonAiVerwerker"/> gecontroleerd (enkel sjablonen uit de lijst, grenzen, bekende waarden). De projectleider bevestigt voor er iets gebeurt.
     /// Hergebruikt de Anthropic-sleutel en het model van "Punten inspreken" (sectie PuntenSpraak), die op haar beurt op de sleutel van "Offerte inlezen" terugvalt.
     /// </summary>
     public class ProjectSjabloonAiService : IProjectSjabloonAiService
@@ -27,17 +29,7 @@ namespace CPMCore.Services.ProjectSjabloon
             _http = http; _log = log;
         }
 
-        private const string SystemPrompt =
-            "Je helpt een projectleider bij een bouwbedrijf in Vlaanderen. Hij beschrijft een gebouw in gewone taal en jij haalt eruit wat een planningssjabloon nodig heeft om zich aan dat gebouw aan te passen.\n" +
-            "Regels:\n" +
-            "- verdiepingen: het aantal bouwlagen waarvoor ruwbouw per verdieping herhaald wordt, een geheel getal van 1 tot 20. Het gelijkvloers telt mee als verdieping. Een woning met gelijkvloers en een verdieping is 2. Staat er niets over, gebruik dan 1.\n" +
-            "- kelder: true bij een kelder of ondergrondse verdieping of parking, false als er duidelijk geen is, null als het niet gezegd wordt.\n" +
-            "- dak: \"hellend\" (zadeldak, schilddak, lessenaarsdak met helling) of \"plat\" (platte of groendaken), null als het niet gezegd wordt of als er geen dak vermeld wordt.\n" +
-            "- eenPlanningVoorAlles: true als het één gebouw met meerdere eenheden is (appartementsgebouw, residentie), false bij losse woningen (rijwoningen, een verkaveling).\n" +
-            "- toelichting: één of twee korte zinnen in het Nederlands: wat je begrepen hebt en wat je niet kon afleiden. Verzin niets.\n" +
-            "Geef je antwoord altijd door de tool \"antwoorden\" aan te roepen.";
-
-        public async Task<ProjectSjabloonAiVoorstel> Voorstel(string beschrijving, CancellationToken ct = default)
+        public async Task<ProjectSjabloonAiVoorstel> Voorstel(string beschrijving, ProjectSjabloonAiContext? context = null, CancellationToken ct = default)
         {
             var res = new ProjectSjabloonAiVoorstel();
             if (string.IsNullOrWhiteSpace(beschrijving)) { res.Fout = "Beschrijf eerst het gebouw."; return res; }
@@ -48,27 +40,19 @@ namespace CPMCore.Services.ProjectSjabloon
                 return res;
             }
 
-            var schema = JsonNode.Parse("""
-            {"type":"object","properties":{
-              "verdiepingen":{"type":"integer"},
-              "kelder":{"type":["boolean","null"]},
-              "dak":{"type":["string","null"],"enum":["hellend","plat",null]},
-              "eenPlanningVoorAlles":{"type":"boolean"},
-              "toelichting":{"type":"string"}},"required":["verdiepingen","eenPlanningVoorAlles","toelichting"]}
-            """);
             var request = new JsonObject
             {
                 ["model"] = _o.AnthropicModel,
-                ["max_tokens"] = 600,
-                ["system"] = SystemPrompt,
-                ["tools"] = new JsonArray(new JsonObject { ["name"] = "antwoorden", ["description"] = "De antwoorden over het gebouw.", ["input_schema"] = schema }),
-                ["tool_choice"] = new JsonObject { ["type"] = "auto" },
-                ["messages"] = new JsonArray(new JsonObject { ["role"] = "user", ["content"] = "Beschrijving van het gebouw:\n" + beschrijving.Trim() }),
+                ["max_tokens"] = 1500,
+                ["system"] = ProjectSjabloonAiVerwerker.Systeemprompt,
+                ["tools"] = new JsonArray(new JsonObject { ["name"] = "antwoorden", ["description"] = "Het gekozen sjabloon en de antwoorden over het gebouw.", ["input_schema"] = JsonNode.Parse(ProjectSjabloonAiVerwerker.Schema) }),
+                ["tool_choice"] = new JsonObject { ["type"] = "tool", ["name"] = "antwoorden" },
+                ["messages"] = new JsonArray(new JsonObject { ["role"] = "user", ["content"] = ProjectSjabloonAiVerwerker.BouwBericht(beschrijving, context) }),
             };
             try
             {
                 using var client = _http.CreateClient(PuntenSpraakService.HttpClientName);
-                client.Timeout = TimeSpan.FromSeconds(Math.Min(_o.TimeoutSeconds, 60));
+                client.Timeout = TimeSpan.FromSeconds(Math.Min(_o.TimeoutSeconds, 90));
                 using var req = new HttpRequestMessage(HttpMethod.Post, MessagesUrl) { Content = new StringContent(request.ToJsonString(), Encoding.UTF8, "application/json") };
                 req.Headers.Add("x-api-key", _o.AnthropicApiKey);
                 req.Headers.Add("anthropic-version", "2023-06-01");
@@ -92,25 +76,9 @@ namespace CPMCore.Services.ProjectSjabloon
                 }
                 if (input == null) { res.Fout = "De AI gaf geen bruikbaar antwoord. Vul de antwoorden zelf in."; return res; }
 
-                // Controleren en begrenzen: de AI is een voorstel, geen waarheid.
-                int verd = 1;
-                if (input["verdiepingen"] is JsonValue vv)
-                {
-                    if (vv.TryGetValue<int>(out var vi)) verd = vi;
-                    else if (vv.TryGetValue<double>(out var vd)) verd = (int)Math.Round(vd);
-                }
-                var dak = input["dak"] is JsonValue dv && dv.TryGetValue<string>(out var ds) ? ds?.Trim().ToLowerInvariant() : null;
-                res.Antwoorden = new ProjectSjabloonAntwoorden
-                {
-                    Verdiepingen = Math.Clamp(verd, 1, 20),
-                    Kelder = input["kelder"] is JsonValue kv && kv.TryGetValue<bool>(out var kb) && kb,
-                    Dak = dak is "hellend" or "plat" ? dak : null,
-                    EenPlanningVoorAlles = input["eenPlanningVoorAlles"] is JsonValue pv && pv.TryGetValue<bool>(out var pb) && pb,
-                };
-                var toelichting = input["toelichting"]?.GetValue<string>()?.Trim();
-                res.Toelichting = string.IsNullOrWhiteSpace(toelichting) ? null : (toelichting.Length > 400 ? toelichting[..400] : toelichting);
-                res.Ok = true;
-                _log.LogInformation("Projectsjabloon AI: {Verd} verdiepingen, kelder {Kelder}, dak {Dak}, model {Model}.", res.Antwoorden.Verdiepingen, res.Antwoorden.Kelder, res.Antwoorden.Dak, _o.AnthropicModel);
+                res = ProjectSjabloonAiVerwerker.Verwerk(input, context);
+                _log.LogInformation("Projectsjabloon AI: sjabloon {Sjabloon}, {Verd} bouwlagen, kelder {Kelder}, dak {Dak}, {Terrassen} terrassen, model {Model}.",
+                    res.SjabloonId, res.Antwoorden.Verdiepingen, res.Antwoorden.Kelder, res.Antwoorden.Dak, res.Antwoorden.Terrassen.Count, _o.AnthropicModel);
             }
             catch (TaskCanceledException) { res.Fout = "De AI deed er te lang over. Probeer het opnieuw of vul de antwoorden zelf in."; }
             catch (Exception ex)

@@ -39,9 +39,10 @@
         if (d[0] === "dak") return (dak || "") === w;
         return true;
     }
+    function laagNaam(b) { return b <= 1 ? "gelijkvloers" : rang(b - 1) + " verdieping"; }   // 1 = gelijkvloers, 2 = 1ste verdieping, ...
     function naamUit(naam, verd) {
         var t = verd == null ? String(naam).replace(/\{verdieping\}/gi, "")
-            : /\{verdieping\}/i.test(naam) ? String(naam).replace(/\{verdieping\}/gi, rang(verd) + " verdieping") : naam + " " + rang(verd) + " verdieping";
+            : /\{verdieping\}/i.test(naam) ? String(naam).replace(/\{verdieping\}/gi, laagNaam(verd)) : naam + " " + laagNaam(verd);
         return t.replace(/\s{2,}/g, " ").trim();
     }
     function rol(n, kelder, dak) {
@@ -50,7 +51,9 @@
             if (!voorwaardeKlopt(s.voorw, kelder, dak)) return;
             var w = parse(s.waarde), vast = s.soort === "vast", gewicht = vast ? 1 : (w == null || isNaN(w) || w <= 0 ? 1 : w);
             if (isNaN(w) || (vast && w == null)) ongeldig = true;
-            if (s.perVerd && n > 1) {
+            if (s.voorw === "laag:boven") {
+                for (var b = 2; b <= n; b++) items.push({ rij: idx, naam: naamUit(s.naam, b), vast: vast ? w : null, gewicht: gewicht });
+            } else if (s.perVerd && n > 1) {
                 var deel = vast && w != null ? r2(w / n) : null;
                 for (var i = 1; i <= n; i++) {
                     var v = vast ? (i === n ? r2(w - deel * (n - 1)) : deel) : null;
@@ -64,8 +67,15 @@
         items.forEach(function (i) { i.p = i.vast != null && !isNaN(i.vast) ? i.vast : 0; });
         var rest = 100 - vasteSom;
         if (gewogen.length && rest > 0) {
+            // Spiegel van SchijfSjabloonUitrol: in stappen van 5 %, minstens één stap per schijf, de grootste afrondingsrest eerst.
+            var STAP = 5, stappen = Math.floor(rest / STAP + 1e-9);
+            var ideaal = gewogen.map(function (i) { return rest * i.gewicht / totGew / STAP; });
+            var aantal = ideaal.map(function (x) { return Math.floor(x + 1e-9); });
+            var nog = stappen - aantal.reduce(function (a, b) { return a + b; }, 0);
+            ideaal.map(function (x, k) { return k; }).sort(function (a, b) { return (ideaal[b] - aantal[b]) - (ideaal[a] - aantal[a]) || a - b; }).slice(0, Math.max(0, nog)).forEach(function (k) { aantal[k]++; });
+            for (var k0 = 0; k0 < aantal.length; k0++) { while (aantal[k0] < 1 && Math.max.apply(null, aantal) > 1) { aantal[aantal.indexOf(Math.max.apply(null, aantal))]--; aantal[k0]++; } }
             var verdeeld = 0;
-            gewogen.forEach(function (i, k) { var p = k === gewogen.length - 1 ? rest - verdeeld : r2(rest * i.gewicht / totGew); i.p = p; verdeeld += p; });
+            gewogen.forEach(function (i, k) { var p = k === gewogen.length - 1 ? r2(rest - verdeeld) : aantal[k] * STAP; i.p = p; verdeeld += p; });
         }
         var totaal = 0; items.forEach(function (i) { totaal += i.p; });
         return { items: items, totaal: totaal, vasteSom: vasteSom, gewogen: gewogen.length, totGew: totGew, rest: rest, ongeldig: ongeldig };
@@ -88,7 +98,7 @@
     }
 
     // ── rijen ──
-    var VOORW = [["", "Altijd"], ["kelder:ja", "Met kelder"], ["kelder:nee", "Zonder kelder"], ["dak:hellend", "Hellend dak"], ["dak:plat", "Plat dak"]];
+    var VOORW = [["", "Altijd"], ["kelder:ja", "Met kelder"], ["kelder:nee", "Zonder kelder"], ["dak:hellend", "Hellend dak"], ["dak:plat", "Plat dak"], ["laag:boven", "Elke bouwlaag boven het gelijkvloers"]];
     function rijHtml(s, i, laatste) {
         var vast = s.soort === "vast";
         var h = "<li class=\"gl-v2-sjs-rij" + (laatste ? " is-eind" : "") + "\" data-i=\"" + i + "\">" +

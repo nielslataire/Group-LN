@@ -375,6 +375,9 @@ public sealed class PlanningMijlpaalOptie
     /// <summary>De fase van het Traject waarin de mijlpaal staat (voor de weergave).</summary>
     public string? FaseNaam { get; set; }
 
+    /// <summary>De woning of het appartement waarvoor de mijlpaal geldt (een mijlpaal per eenheid); leeg bij een mijlpaal van het hele project.</summary>
+    public string? EenheidNaam { get; set; }
+
     /// <summary>Sleutel (t12 / f3) van de taak of fase waaraan de mijlpaal nu hangt; leeg = vrij.</summary>
     public string? GekoppeldAanSleutel { get; set; }
 
@@ -412,6 +415,7 @@ public sealed class PlanningSjabloonInfo
     public bool HeeftVerdiepingen { get; set; }
     public bool HeeftKelder { get; set; }
     public bool HeeftDak { get; set; }
+    public bool HeeftTerras { get; set; }
     public bool HeeftEstafette { get; set; }
 }
 
@@ -430,8 +434,12 @@ public sealed class PlanningToepassingPlanning
 
     /// <summary>Bij een nieuwe planning: de eenheden die erbij horen (nog zonder planning). De planning krijgt de naam van de eerste eenheid.</summary>
     public List<int> EenheidIds { get; set; } = new();
+    /// <summary>Het aantal bouwlagen boven de grond, het gelijkvloers meegeteld (gelijkvloers + 2 verdiepingen = 3).</summary>
     public int Verdiepingen { get; set; } = 1;
     public bool Kelder { get; set; }
+
+    /// <summary>De bouwlagen (1 = gelijkvloers, 2 = 1ste verdieping, ...) met terrassen of luifels bij de afdek.</summary>
+    public List<int> Terrassen { get; set; } = new();
 
     /// <summary>De bestaande planning (met taken) mag door het sjabloon vervangen worden.</summary>
     public bool Vervang { get; set; }

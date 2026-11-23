@@ -62,4 +62,80 @@ public class PlanningTrajectKoppelingTests
         Assert.Equal(0, await PlanningTrajectKoppeling.KoppelOpCode(db2, ProjectId));
         Assert.Null(db2.Mijlpaal.Single().BronBinding);
     }
+
+    // ── mijlpalen per eenheid: elke woning heeft een eigen planning met dezelfde codes ──
+
+    private static TestDb MaakVerkaveling()
+    {
+        var db = new TestDb(Guid.NewGuid().ToString());
+        db.Project.Add(new Project { ProjectId = ProjectId, ProjectName = "Verkaveling" });
+        db.Projecttraject.Add(new Projecttraject { Id = 1, ProjectId = ProjectId, Naam = "Traject" });
+        for (var w = 1; w <= 3; w++)
+        {
+            db.Units.Add(new Units { Id = w, ProjectId = ProjectId, Name = "Woning " + w });
+            db.BouwPlanning.Add(new BouwPlanning { Id = w, ProjectId = ProjectId, Naam = "Woning " + w, IsActief = true });
+            db.BouwPlanningEenheid.Add(new BouwPlanningEenheid { Id = w, BouwPlanningId = w, UnitId = w });
+            db.PlanningSectie.Add(new PlanningSectie { Id = 10 * w, ProjectId = ProjectId, Naam = "Ruwbouw " + w, IsActief = true, BouwPlanningId = w });
+            db.PlanningTaak.Add(new PlanningTaak { Id = 100 * w, PlanningSectieId = 10 * w, Naam = "Ruwbouw klaar", Code = "RUWBOUW_KLAAR" });
+            db.Mijlpaal.Add(new Mijlpaal { Id = 1000 + w, ProjecttrajectId = 1, UnitId = w, Code = "RUWBOUW_KLAAR", Naam = "Ruwbouw klaar woning " + w });
+        }
+        db.SaveChanges();
+        return db;
+    }
+
+    [Fact]
+    public async Task Een_mijlpaal_per_woning_hangt_aan_de_taak_in_de_planning_van_die_woning()
+    {
+        var db = MaakVerkaveling();
+        Assert.Equal(3, await PlanningTrajectKoppeling.KoppelOpCode(db, ProjectId));
+        for (var w = 1; w <= 3; w++)
+        {
+            var m = db.Mijlpaal.Single(x => x.Id == 1000 + w);
+            Assert.Equal(4, m.BronBinding);
+            Assert.Equal(100 * w, m.BronRefId);
+        }
+    }
+
+    [Fact]
+    public async Task Een_mijlpaal_van_het_hele_project_blijft_los_als_de_code_in_meerdere_woningen_staat()
+    {
+        var db = MaakVerkaveling();
+        db.Mijlpaal.Add(new Mijlpaal { Id = 2000, ProjecttrajectId = 1, UnitId = null, Code = "RUWBOUW_KLAAR", Naam = "Ruwbouw project" });
+        db.SaveChanges();
+        await PlanningTrajectKoppeling.KoppelOpCode(db, ProjectId);
+        Assert.Null(db.Mijlpaal.Single(x => x.Id == 2000).BronBinding);
+        Assert.Equal(3, db.Mijlpaal.Count(x => x.UnitId != null && x.BronBinding == 4));
+    }
+
+    [Fact]
+    public async Task Een_woning_zonder_planning_blijft_los_zolang_de_code_niet_eenduidig_is()
+    {
+        var db = MaakVerkaveling();
+        db.Units.Add(new Units { Id = 4, ProjectId = ProjectId, Name = "Woning 4" });
+        db.Mijlpaal.Add(new Mijlpaal { Id = 1004, ProjecttrajectId = 1, UnitId = 4, Code = "RUWBOUW_KLAAR", Naam = "Ruwbouw klaar woning 4" });
+        db.SaveChanges();
+        await PlanningTrajectKoppeling.KoppelOpCode(db, ProjectId);
+        Assert.Null(db.Mijlpaal.Single(x => x.Id == 1004).BronBinding);
+        Assert.Equal(300, db.Mijlpaal.Single(x => x.Id == 1003).BronRefId);
+    }
+
+    [Fact]
+    public async Task Alle_appartementen_van_een_gebouw_volgen_dezelfde_taak()
+    {
+        var db = new TestDb(Guid.NewGuid().ToString());
+        db.Project.Add(new Project { ProjectId = ProjectId, ProjectName = "Residentie" });
+        db.Projecttraject.Add(new Projecttraject { Id = 1, ProjectId = ProjectId, Naam = "Traject" });
+        db.BouwPlanning.Add(new BouwPlanning { Id = 1, ProjectId = ProjectId, Naam = "Gebouw A", IsActief = true });
+        db.PlanningSectie.Add(new PlanningSectie { Id = 10, ProjectId = ProjectId, Naam = "Ruwbouw", IsActief = true, BouwPlanningId = 1 });
+        db.PlanningTaak.Add(new PlanningTaak { Id = 100, PlanningSectieId = 10, Naam = "Ruwbouw klaar", Code = "RUWBOUW_KLAAR" });
+        for (var a = 1; a <= 4; a++)
+        {
+            db.Units.Add(new Units { Id = a, ProjectId = ProjectId, Name = "App " + a });
+            db.BouwPlanningEenheid.Add(new BouwPlanningEenheid { Id = a, BouwPlanningId = 1, UnitId = a });
+            db.Mijlpaal.Add(new Mijlpaal { Id = 1000 + a, ProjecttrajectId = 1, UnitId = a, Code = "RUWBOUW_KLAAR", Naam = "Ruwbouw app " + a });
+        }
+        db.SaveChanges();
+        Assert.Equal(4, await PlanningTrajectKoppeling.KoppelOpCode(db, ProjectId));
+        Assert.All(db.Mijlpaal.ToList(), m => Assert.Equal(100, m.BronRefId));
+    }
 }

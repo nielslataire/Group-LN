@@ -31,7 +31,7 @@ faq:
   - q: Ik krijg een fout dat een voorganger niet bestaat. Wat nu?
     a: De code van de voorganger staat niet in dit sjabloon, bijvoorbeeld omdat je de taak of het blok verwijderd hebt. Kies de voorganger opnieuw in de lijst onder Voorgangers.
   - q: Hoe hangt een mijlpaal in het traject aan een taak uit het sjabloon?
-    a: Geef de taak (of het blok) in het sjabloon een code, bijvoorbeeld DAK_KLAAR, en geef de mijlpaal in het traject dezelfde code. CPM koppelt ze dan vanzelf, ook als je het traject pas later aanmaakt. De mijlpaal volgt daarna het einde van die taak. Komt dezelfde code op meer dan één plaats voor (bijvoorbeeld in twee woningen), dan laat CPM de mijlpaal met rust, want het is dan niet te zeggen welke taak bedoeld is. Koppel die handmatig in het taakpaneel.
+    a: Geef de taak (of het blok) in het sjabloon een code, bijvoorbeeld DAK_KLAAR, en geef de mijlpaal in het traject dezelfde code. CPM koppelt ze dan vanzelf, ook als je het traject pas later aanmaakt. De mijlpaal volgt daarna het einde van die taak. Heeft de mijlpaal een eigen woning of appartement (een mijlpaal per eenheid), dan zoekt CPM de code enkel in de planning van die woning. Zo volgt elke woning haar eigen taak, ook al staat dezelfde code in de planning van elke woning. Alle appartementen van één gebouw volgen dezelfde taak. Een mijlpaal van het hele project met een code die op meer dan één plaats voorkomt (bijvoorbeeld in twee woningen) laat CPM met rust, want het is dan niet te zeggen welke taak bedoeld is. Hetzelfde geldt voor een woning die in geen enkele planning zit. Koppel die handmatig in het taakpaneel. Open daarvoor de planning van de woning: de mijlpalen van die woning staan in de lijst Koppeling met trajectmijlpaal, met de naam van de woning erachter. Een mijlpaal van een woning kan enkel aan een taak of fase in de planning van die woning.
   - q: Kan ik de toepassing ongedaan maken?
     a: Niet met Ongedaan maken. Verwijder de gemaakte plannings met **Instellen** naast de tabs.
   - q: Een woning heeft een andere planning nodig dan de rest. Kan dat?
@@ -52,14 +52,22 @@ CPM geeft elke fase en taak een vaste code, afgeleid van de naam, bijvoorbeeld R
 2. Kies het sjabloon.
 3. Zet een vinkje bij de woningen of plannings waarvoor je het sjabloon wilt gebruiken. Een woning zonder planning staat er als "nieuwe planning" bij en krijgt een eigen planning. Wil je meerdere woningen in één planning, maak die dan eerst met **Planning** aan en kies daar de eenheden. Heeft een planning al taken, dan staat er "vervangt de planning" bij. Kies je die, dan vraagt CPM eerst om bevestiging, en de bestaande fases en taken gaan verloren. Een lege planning vult het sjabloon gewoon.
 4. Bepaal de volgorde met de pijltjes. Die volgorde bepaalt de estafette.
-5. Vraagt het sjabloon naar verdiepingen, kelder of dak, vul dat dan in per woning. In de rij **Alle gekozen** vul je het één keer voor alle woningen in en pas je daarna enkele af.
+5. Vraagt het sjabloon naar bouwlagen, kelder, dak of terrassen en luifels, vul dat dan in per woning. In de rij **Alle gekozen** vul je het één keer voor alle woningen in en pas je daarna enkele af.
 6. Klik op **Toepassen**.
 
 Elke woning krijgt een planning met haar eigen naam (of houdt de planning die ze al had, nu met de taken van het sjabloon). De betalingsgroep speelt hierbij geen rol. Taken die in het sjabloon de estafettevlag hebben, wachten op dezelfde taak in de woning erboven in de lijst. CPM rekent alles samen door, dus het einde van de laatste woning is ook het einde van het project.
 
-## Verdiepingen, kelder en dak
+## Bouwlagen, kelder, dak en terrassen
 
-Een sjabloon kan blokken bevatten die alleen bij een kelder of een bepaald dak horen, en blokken die per verdieping terugkomen als "Ruwbouw verdieping 1", "Ruwbouw verdieping 2" enzovoort. Bij één verdieping blijft de naam zonder nummer.
+Wij tellen zoals in Vlaanderen: gelijkvloers, 1ste verdieping, 2de verdieping. Het gelijkvloers is geen verdieping, maar telt wel als bouwlaag. Gelijkvloers + 2 verdiepingen vul je dus in als **3 bouwlagen**.
+
+Een sjabloon kan blokken bevatten die alleen bij een kelder of een bepaald dak horen, en blokken die per bouwlaag terugkomen als "Ruwbouw gelijkvloers", "Ruwbouw 1ste verdieping", "Ruwbouw 2de verdieping" enzovoort. Bij één bouwlaag blijft de naam zonder toevoeging.
+
+De afdek van een bouwlaag is de vloerplaat van de volgende. In het sjabloon kies je bij het metselwerk als voorganger **Vorige bouwlaag: Afdek**: het metselwerk van een bouwlaag start dan pas na de afdek van de vorige, en niet na de hele vorige bouwlaag. Met een kelder is de afdek van de kelder de vloerplaat van het gelijkvloers, dus dan komt er geen aparte vloerplaat gelijkvloers.
+
+Een taak onder Ruwbouw zonder voorganger, zoals het gevelmetselwerk, start op de eerste dag van de planning. Geef ze zelf een voorganger als ze later moet beginnen, bijvoorbeeld "Start samen" met het metselwerk.
+
+Heeft het sjabloon een taak voor **terrassen of luifels**, dan kies je bij het toepassen met de knoppen (GV, 1, 2 …) bij de afdek van welke bouwlaag ze komen. Die taak staat in dezelfde fase Ruwbouw, enkel bij de gekozen bouwlagen. Een terras op de 1ste verdieping hoort bij de afdek van het gelijkvloers.
 
 ## De lijst met sjablonen
 
@@ -74,7 +82,8 @@ Via **⋯** op een rij kun je het sjabloon **dupliceren** (een kopie met dezelfd
 2. Geef het sjabloon een naam en eventueel een korte omschrijving. Zet **Actief** uit als je het niet meer wilt aanbieden bij het toepassen.
 3. Voeg blokken toe met **Blok toevoegen**. Een blok wordt een fase in de planning, bijvoorbeeld Fundering of Ruwbouw. Klap een blok in of uit met het pijltje, of alles tegelijk met **Alles inklappen** en **Alles uitklappen**.
 4. Kies per blok bij **Komt voor** wanneer het meedoet: altijd, alleen met kelder, of alleen bij een hellend of plat dak.
-5. Zet **Per verdieping** aan voor een blok dat per verdieping terugkomt. Onderaan het blok bepaal je of elke verdieping start na de vorige.
+5. Kies bij een blok onder **Herhaling per bouwlaag** hoe het per bouwlaag terugkomt: **Niet per bouwlaag**, **Een fase per bouwlaag** ("Ruwbouw gelijkvloers", "Ruwbouw 1ste verdieping" …) of **Eén fase, taken per bouwlaag**. Bij die laatste stand blijft het één fase, bijvoorbeeld **Ruwbouw - Bovenbouw**, met per bouwlaag een eigen deelfase ("Gelijkvloers", "1ste verdieping", "2de verdieping" …, enkel bij meer dan één bouwlaag) en de taken erin: "Predallen gelijkvloers", "Opstort gelijkvloers", "Metselwerk gelijkvloers", "Predallen 1ste verdieping" … Je zet de taken maar één keer in het sjabloon.
+6. Kies bij een taak onder haar naam **Komt voor** als ze niet op elke bouwlaag hoort: alleen op het gelijkvloers, gelijkvloers zonder kelder, alleen boven het gelijkvloers, alleen op de bovenste bouwlaag, gelijkvloers zonder kelder (op de grond), alleen bij terrassen of luifels, alleen met of zonder kelder, of een bepaald dak. In een blok "Eén fase, taken per bouwlaag" komt een taak met **Eén keer, na de bouwlagen** maar één keer voor, zonder bouwlaag in de naam: bijvoorbeeld het gevelmetselwerk, of de predallen en opstort van een plat dak (**Eén keer, enkel bij plat dak**). Onderaan het blok bepaal je of elke verdieping start na de vorige.
 6. Voeg taken toe met **Taak toevoegen** en vul de duur in werkdagen in. Herschik taken met het handvat links van de naam, of via **⋯**.
 7. Klik bij een taak op **+ voorganger** en kies een taak of een heel blok. Zoek eventueel op naam. Een blok als voorganger betekent al zijn taken.
 8. Klik op een voorganger om het soort afhankelijkheid en de wachttijd te kiezen. FS = na het einde, SS = samen starten, FF = samen eindigen, SF = start voor einde. De wachttijd mag negatief zijn. Een zin onderaan zegt wat het betekent, bijvoorbeeld “Start samen met Funderingen, 3 werkdagen later”.

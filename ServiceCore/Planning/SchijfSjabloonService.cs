@@ -58,7 +58,7 @@ public sealed class SchijfSjabloonService : ISchijfSjabloonService
         string Label(SchijfSjabloonSchijf x)
         {
             var v = (x.VoorwaardeVariabele ?? "").ToLowerInvariant(); var w = (x.VoorwaardeWaarde ?? "").ToLowerInvariant();
-            return v == "kelder" ? (w == "ja" ? "kelder" : "zonder kelder") : v == "dak" ? (w == "plat" ? "plat dak" : "hellend dak") : "";
+            return v == "kelder" ? (w == "ja" ? "kelder" : "zonder kelder") : v == "dak" ? (w == "plat" ? "plat dak" : "hellend dak") : v == "laag" ? "boven het gelijkvloers" : "";
         }
         var groepen = schijven.Where(x => !string.IsNullOrWhiteSpace(x.VoorwaardeVariabele)).GroupBy(Label).Where(g => g.Key.Length > 0).ToList();
         return string.Join(", ", groepen.Select(g => $"{g.Key} ({g.Count()}{(g.Count() == 1 ? "" : " schijven")})"));
@@ -120,8 +120,8 @@ public sealed class SchijfSjabloonService : ISchijfSjabloonService
             {
                 var vw = (x.VoorwaardeVariabele ?? "").Trim().ToLowerInvariant();
                 var waarde = (x.VoorwaardeWaarde ?? "").Trim().ToLowerInvariant();
-                var geldig = vw == "kelder" ? waarde is "ja" or "nee" : vw == "dak" && waarde is "hellend" or "plat";
-                if (!geldig) fouten.Add(nr + "de voorwaarde is niet geldig (kelder ja of nee, dak hellend of plat).");
+                var geldig = vw == "kelder" ? waarde is "ja" or "nee" : vw == "laag" ? waarde == "boven" : vw == "dak" && waarde is "hellend" or "plat";
+                if (!geldig) fouten.Add(nr + "de voorwaarde is niet geldig (kelder ja of nee, dak hellend of plat, of elke bouwlaag boven het gelijkvloers).");
             }
         }
         if (fouten.Count == 0)

@@ -15,6 +15,8 @@ public static class SchijfSjabloonUitrol
 {
     private static readonly CultureInfo Nl = CultureInfo.GetCultureInfo("nl-BE");
     public const string Plaatshouder = "{verdieping}";
+    /// <summary>Schijven met een gewicht krijgen een percentage in stappen van 5 %.</summary>
+    public const decimal Stap = 5m;
 
     private sealed class Item
     {
@@ -33,10 +35,14 @@ public static class SchijfSjabloonUitrol
         var tekst = verdieping == null
             ? naam.Replace(Plaatshouder, "", StringComparison.OrdinalIgnoreCase)
             : naam.Contains(Plaatshouder, StringComparison.OrdinalIgnoreCase)
-                ? naam.Replace(Plaatshouder, Rangtelwoord(verdieping.Value) + " verdieping", StringComparison.OrdinalIgnoreCase)
-                : naam + " " + Rangtelwoord(verdieping.Value) + " verdieping";
+                ? naam.Replace(Plaatshouder, PlanningSjabloonUitrol.BouwlaagNaam(verdieping.Value), StringComparison.OrdinalIgnoreCase)
+                : naam + " " + PlanningSjabloonUitrol.BouwlaagNaam(verdieping.Value);
         return System.Text.RegularExpressions.Regex.Replace(tekst, @"\s{2,}", " ").Trim();
     }
+
+    /// <summary>Voorwaarde "laag:boven": de schijf geldt voor elke bouwlaag boven het gelijkvloers (1ste verdieping, 2de verdieping, ...).</summary>
+    public static bool IsBovenGelijkvloers(SchijfInvoer s)
+        => string.Equals((s.VoorwaardeVariabele ?? "").Trim(), "laag", StringComparison.OrdinalIgnoreCase) && string.Equals((s.VoorwaardeWaarde ?? "").Trim(), "boven", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Zelfde regels als bij de blokken van een planningssjabloon: kelder ja/nee, dak hellend/plat. Geen voorwaarde = altijd.</summary>
     public static bool VoorwaardeKlopt(SchijfInvoer s, bool kelder, string? dak)
@@ -60,6 +66,14 @@ public static class SchijfSjabloonUitrol
         foreach (var s in schijven.Where(x => VoorwaardeKlopt(x, kelder, dak)))
         {
             var gewicht = s.Gewicht > 0 ? s.Gewicht : 1m;
+            if (IsBovenGelijkvloers(s))
+            {
+                // Eén schijf per bouwlaag boven het gelijkvloers (gewicht of vast percentage gelden per bouwlaag, niet verdeeld). Het volgnummer is de plaats
+                // van de taak met deze code in de planning: met een kelder staat die code ook op het gelijkvloers (eerste plaat boven de kelder), zonder kelder niet.
+                for (var i = 2; i <= n; i++)
+                    items.Add(new Item { Naam = Naam(s.Naam, i), Code = s.PlanningCode, Volgnr = kelder ? i : i - 1, Vast = s.Vast, Gewicht = gewicht });
+                continue;
+            }
             if (s.PerVerdieping && n > 1)
             {
                 // Het totaal van het blok wordt gelijk verdeeld; de afrondingsrest komt op de laatste verdieping.
@@ -90,11 +104,21 @@ public static class SchijfSjabloonUitrol
             }
             else
             {
+                // Per stap van 5 % (en minstens één stap per schijf): de rest wordt in stappen verdeeld naar gewicht, de grootste afrondingsrest eerst.
+                // Zijn de vaste percentages geen veelvoud van 5, dan komt wat overblijft op de laatste schijf met een gewicht.
                 var som = gewogen.Sum(i => i.Gewicht);
+                var stappen = (int)Math.Floor(rest / Stap);
+                var ideaal = gewogen.Select(i => (double)(rest * i.Gewicht / som / Stap)).ToList();
+                var aantal = ideaal.Select(x => (int)Math.Floor(x)).ToList();
+                var nog = stappen - aantal.Sum();
+                foreach (var k in Enumerable.Range(0, gewogen.Count).OrderByDescending(k => ideaal[k] - aantal[k]).ThenBy(k => k).Take(Math.Max(0, nog))) aantal[k]++;
+                // Elke schijf krijgt minstens één stap: die komt van de schijf met de meeste stappen.
+                for (var k = 0; k < gewogen.Count; k++)
+                    while (aantal[k] < 1 && aantal.Max() > 1) { aantal[aantal.IndexOf(aantal.Max())]--; aantal[k]++; }
                 decimal verdeeld = 0m;
                 for (var k = 0; k < gewogen.Count; k++)
                 {
-                    var p = k == gewogen.Count - 1 ? rest - verdeeld : Math.Round(rest * gewogen[k].Gewicht / som, 2);
+                    var p = k == gewogen.Count - 1 ? rest - verdeeld : aantal[k] * Stap;
                     percentages[gewogen[k]] = p;
                     verdeeld += p;
                 }

@@ -37,6 +37,8 @@ public sealed class PlanningSjabloonBewerkTaak
     public int Duur { get; set; } = 1;
     public bool Estafette { get; set; }
     public int EstafetteWacht { get; set; }
+    /// <summary>Bv. "laag:eerste,kelder:nee"; leeg = altijd. Zie <c>PlanningSjabloonUitrol.TaakVoorwaarden</c>.</summary>
+    public string? Voorwaarde { get; set; }
     public List<PlanningSjabloonBewerkVoorganger> Voorgangers { get; set; } = new();
 }
 
@@ -84,6 +86,7 @@ public sealed class PlanningSjabloonBeheerRij
     public bool HeeftVerdiepingen { get; set; }
     public bool HeeftKelder { get; set; }
     public bool HeeftDak { get; set; }
+    public bool HeeftTerras { get; set; }
     public bool HeeftEstafette { get; set; }
 }
 

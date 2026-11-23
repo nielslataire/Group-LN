@@ -18,8 +18,38 @@
         { v: "", t: "Altijd" },
         { v: "kelder:ja", t: "Alleen met kelder" },
         { v: "dak:hellend", t: "Alleen bij hellend dak" },
+        { v: "dak:plat", t: "Alleen bij plat dak" },
+        { v: "terras:ja", t: "Alleen bij terrassen of luifels (per bouwlaag)" }
+    ];
+    // Voorwaarde per taak: één blok per bouwlaag kan taken bevatten die enkel op het gelijkvloers, zonder kelder, bij terrassen ... voorkomen.
+    // Herhaling van een blok: niet herhaald, een fase per bouwlaag, of één fase met de taken per bouwlaag erin
+    var HERHALINGEN = [
+        { v: "0", t: "Niet per bouwlaag" },
+        { v: "1", t: "Een fase per bouwlaag" },
+        { v: "2", t: "Eén fase, taken per bouwlaag" }
+    ];
+    var TAAK_VOORWAARDEN = [
+        { v: "", t: "Altijd" },
+        { v: "laag:eerste", t: "Alleen op het gelijkvloers" },
+        { v: "laag:eerste,kelder:nee", t: "Gelijkvloers, enkel zonder kelder" },
+        { v: "laag:eerste,kelder:ja", t: "Gelijkvloers, enkel met kelder" },
+        { v: "laag:boven", t: "Alleen boven het gelijkvloers" },
+        { v: "laag:laatste", t: "Alleen op de bovenste bouwlaag" },
+        { v: "grond:ja", t: "Gelijkvloers zonder kelder (op de grond)" },
+        { v: "grond:nee", t: "Niet op de grond (met kelder, of een verdieping)" },
+        { v: "laag:eenmalig", t: "Eén keer, na de bouwlagen (geen bouwlaag in de naam)" },
+        { v: "laag:eenmalig,dak:plat", t: "Eén keer, enkel bij plat dak" },
+        { v: "terras:ja", t: "Alleen bij terrassen of luifels" },
+        { v: "kelder:ja", t: "Alleen met kelder" },
+        { v: "kelder:nee", t: "Alleen zonder kelder" },
+        { v: "dak:hellend", t: "Alleen bij hellend dak" },
         { v: "dak:plat", t: "Alleen bij plat dak" }
     ];
+    function taakVoorwaardeItems(huidig) {
+        var items = TAAK_VOORWAARDEN.slice();
+        if (huidig && !items.some(function (i) { return i.v === huidig; })) items.push({ v: huidig, t: "Aangepast: " + huidig });
+        return items;
+    }
     var TYPES = [["FS", "na einde"], ["SS", "samen starten"], ["FF", "samen eindigen"], ["SF", "start → einde"]];
 
     // ── Document ──
@@ -28,11 +58,11 @@
             id: r.id || 0, naam: r.naam || "", beschrijving: r.beschrijving || "", isActief: r.isActief !== false, reageertOp: r.reageertOp || "",
             blokken: (r.blokken || []).map(function (b) {
                 return {
-                    code: b.code || "", naam: b.naam || "", herhaling: b.herhaling === 1 ? 1 : 0, volgt: !!b.volgtVorigeVerdieping,
+                    code: b.code || "", naam: b.naam || "", herhaling: b.herhaling === 2 ? 2 : (b.herhaling === 1 ? 1 : 0), volgt: !!b.volgtVorigeVerdieping,
                     voorwaarde: b.voorwaardeVariabele ? b.voorwaardeVariabele + ":" + (b.voorwaardeWaarde || "") : "", open: true,
                     taken: (b.taken || []).map(function (t) {
                         return {
-                            code: t.code || "", naam: t.naam || "", beschrijving: t.beschrijving || "", duur: t.duur == null ? 1 : t.duur, estafette: !!t.estafette, wacht: t.estafetteWacht || 0,
+                            code: t.code || "", naam: t.naam || "", beschrijving: t.beschrijving || "", duur: t.duur == null ? 1 : t.duur, estafette: !!t.estafette, wacht: t.estafetteWacht || 0, voorwaarde: t.voorwaarde || "",
                             voorg: (t.voorgangers || []).map(function (v) { return { code: v.code, type: v.type || "FS", lag: v.wachtDagen || 0 }; })
                         };
                     })
@@ -67,7 +97,7 @@
         return c;
     }
     function zoekCode(code) {
-        var up = String(code || "").toUpperCase();
+        var up = String(code || "").toUpperCase().replace(/^VORIGE:/, "");
         for (var i = 0; i < doc.blokken.length; i++) {
             if ((doc.blokken[i].code || "").toUpperCase() === up) return { blok: doc.blokken[i], bi: i, taak: null };
             for (var j = 0; j < doc.blokken[i].taken.length; j++) if ((doc.blokken[i].taken[j].code || "").toUpperCase() === up) return { blok: doc.blokken[i], bi: i, taak: doc.blokken[i].taken[j], ti: j };
@@ -75,8 +105,9 @@
         return null;
     }
     function naamVan(code) {
-        var z = zoekCode(code);
+        var z = zoekCode(code), vorige = /^VORIGE:/i.test(String(code || ""));
         if (!z) return code;
+        if (vorige) return "Vorige bouwlaag: " + (z.taak ? (z.taak.naam || z.taak.code) : (z.blok.naam || z.blok.code));
         return z.taak ? (z.taak.naam || z.taak.code) : (z.blok.naam || z.blok.code) + " (hele blok)";
     }
     function relTekst(v) { return (v.type !== "FS" ? v.type : "") + (v.lag ? (v.lag > 0 ? "+" : "−") + Math.abs(v.lag) + "d" : ""); }
@@ -122,7 +153,8 @@
             (!t.voorg.length && !canWrite ? "<span class=\"gl-v2-pls-geen\">geen</span>" : "");
         return "<div class=\"gl-v2-pls-tr\" data-taak-rij " + id + ">" +
             "<span class=\"gl-v2-pls-grip\" data-grip title=\"Sleep om te herschikken\" aria-hidden=\"true\"><i class=\"ph ph-dots-six-vertical\"></i></span>" +
-            "<div class=\"gl-v2-pls-nm\"><div class=\"gl-v2-field-box\"><input type=\"text\" class=\"gl-v2-field-input\" data-f=\"t-naam\" " + id + " value=\"" + esc(t.naam) + "\" maxlength=\"200\" placeholder=\"Naam van de taak\" aria-label=\"Naam van de taak\"" + (canWrite ? "" : " disabled") + " /></div><small data-code-van=\"" + esc(t.code) + "\">" + esc(t.code) + "</small></div>" +
+            "<div class=\"gl-v2-pls-nm\"><div class=\"gl-v2-field-box\"><input type=\"text\" class=\"gl-v2-field-input\" data-f=\"t-naam\" " + id + " value=\"" + esc(t.naam) + "\" maxlength=\"200\" placeholder=\"Naam van de taak\" aria-label=\"Naam van de taak\"" + (canWrite ? "" : " disabled") + " /></div><small data-code-van=\"" + esc(t.code) + "\">" + esc(t.code) + "</small>" +
+            "<div class=\"gl-v2-pls-tw\">" + sel("data-f=\"t-voorwaarde\" " + id, taakVoorwaardeItems(t.voorwaarde), t.voorwaarde || "", "Altijd", "Komt voor", !canWrite) + "</div></div>" +
             "<div class=\"gl-v2-field-box gl-v2-pls-dur\"><input type=\"text\" inputmode=\"numeric\" maxlength=\"4\" autocomplete=\"off\" class=\"gl-v2-field-input\" data-f=\"t-duur\" " + id + " value=\"" + esc(t.duur) + "\" aria-label=\"Duur in werkdagen\"" + (canWrite ? "" : " disabled") + " /><span class=\"gl-v2-field-unit\">d</span></div>" +
             "<div class=\"gl-v2-pls-ps\">" + vgHtml + "</div>" +
             "<span class=\"gl-v2-pls-st\" data-start-van=\"" + esc(t.code) + "\"></span>" +
@@ -140,7 +172,7 @@
             "<span><code data-code-van=\"" + esc(b.code) + "\">" + esc(b.code) + "</code><span class=\"gl-v2-pls-meta\" data-meta=\"" + bi + "\">" + b.taken.length + (b.taken.length === 1 ? " taak" : " taken") + "</span></span></div>" +
             "<span class=\"gl-v2-pls-spacer\"></span>" +
             "<div class=\"gl-v2-pls-when\"><span class=\"gl-v2-pls-when-l\">Komt voor</span>" + sel("data-f=\"b-voorwaarde\" " + id, VOORWAARDEN, b.voorwaarde, "Altijd", "Komt voor", !canWrite) + "</div>" +
-            "<div class=\"gl-v2-pls-floor\">" + toggle("data-f=\"b-herhaling\" " + id, b.herhaling === 1, "Per verdieping") + "</div>" +
+            "<div class=\"gl-v2-pls-floor\">" + sel("data-f=\"b-herhaling\" " + id, HERHALINGEN, String(b.herhaling || 0), "Niet per bouwlaag", "Herhaling per bouwlaag", !canWrite) + "</div>" +
             (canWrite ? "<button type=\"button\" class=\"gl-v2-icon-btn gl-v2-pls-menubtn js-gl-v2-menu-trigger\" data-kind=\"b\" " + id + " aria-haspopup=\"true\" aria-expanded=\"false\" aria-controls=\"pls-menu\" aria-label=\"Acties voor blok " + esc(b.naam) + "\"><i class=\"ph ph-dots-three\" aria-hidden=\"true\"></i></button>" : "") +
             "</header>" +
             (b.open ? "<div class=\"gl-v2-pls-th\"><span></span><span>TAAK</span><span class=\"r\">DUUR</span><span>VOORGANGERS</span><span>START</span><span>ESTAF.</span><span></span></div>" +
@@ -178,7 +210,7 @@
                 return {
                     code: b.code, naam: b.naam, herhaling: b.herhaling, volgtVorigeVerdieping: b.herhaling === 1 && b.volgt, voorwaardeVariabele: v[0] || null, voorwaardeWaarde: v[1] || null,
                     taken: b.taken.map(function (t) {
-                        return { code: t.code, naam: t.naam, beschrijving: t.beschrijving, duur: t.duur, estafette: t.estafette, estafetteWacht: t.estafette ? t.wacht : 0,
+                        return { code: t.code, naam: t.naam, beschrijving: t.beschrijving, duur: t.duur, estafette: t.estafette, estafetteWacht: t.estafette ? t.wacht : 0, voorwaarde: t.voorwaarde || null,
                             voorgangers: t.voorg.map(function (v2) { return { code: v2.code, type: v2.type, wachtDagen: v2.lag }; }) };
                     })
                 };
@@ -215,7 +247,7 @@
             p.blokken.forEach(function (pb) {
                 var bi = doc.blokken.findIndex(function (b) { return b.code === pb.code; });
                 var el = bi >= 0 ? host.querySelector("[data-meta=\"" + bi + "\"]") : null;
-                if (el) { var b = doc.blokken[bi]; el.textContent = b.taken.length + (b.taken.length === 1 ? " taak · " : " taken · ") + pb.duur + " werkdagen" + (b.herhaling === 1 ? " per verdieping" : ""); }
+                if (el) { var b = doc.blokken[bi]; el.textContent = b.taken.length + (b.taken.length === 1 ? " taak · " : " taken · ") + pb.duur + " werkdagen" + (b.herhaling === 1 ? " per verdieping" : (b.herhaling === 2 ? " per bouwlaag" : "")); }
             });
         }
 
@@ -233,7 +265,7 @@
         var html = "";
         p.blokken.forEach(function (pb) {
             var b = doc.blokken.filter(function (x) { return x.code === pb.code; })[0] || {};
-            html += "<div class=\"gl-v2-pls-pr\"><span class=\"gl-v2-pls-pn\">" + esc(pb.naam) + (b.voorwaarde ? "<i>voorwaarde</i>" : "") + (b.herhaling === 1 ? "<i>× verd.</i>" : "") + "</span>" + balk(pb.start, pb.einde, p.werkdagen) + "<span class=\"gl-v2-pls-pd\">" + pb.duur + " d</span></div>";
+            html += "<div class=\"gl-v2-pls-pr\"><span class=\"gl-v2-pls-pn\">" + esc(pb.naam) + (b.voorwaarde ? "<i>voorwaarde</i>" : "") + (b.herhaling === 1 ? "<i>× verd.</i>" : (b.herhaling === 2 ? "<i>per laag</i>" : "")) + "</span>" + balk(pb.start, pb.einde, p.werkdagen) + "<span class=\"gl-v2-pls-pd\">" + pb.duur + " d</span></div>";
         });
         document.getElementById("pls-vb-blokken").innerHTML = html || "<div class=\"gl-v2-pls-geen\">Nog niets om te tonen.</div>";
         var crit = document.getElementById("pls-vb-crit");
@@ -305,7 +337,8 @@
             markDirty(); render(); return;
         }
         if (f === "b-voorwaarde") blokVan(e.target).voorwaarde = e.target.value;
-        else if (f === "b-herhaling") { var b = blokVan(e.target); b.herhaling = e.target.checked ? 1 : 0; if (!b.herhaling) b.volgt = false; render(); }
+        else if (f === "t-voorwaarde") { var tw = taakVan(e.target); if (tw) tw.voorwaarde = e.target.value; }
+        else if (f === "b-herhaling") { var b = blokVan(e.target); b.herhaling = parseInt(e.target.value, 10) || 0; if (b.herhaling !== 1) b.volgt = false; render(); }
         else if (f === "b-volgt") blokVan(e.target).volgt = e.target.checked;
         else return;
         markDirty();
@@ -360,6 +393,8 @@
             var items = [];
             if (bi !== pick.b && b.code) items.push({ code: b.code, n: "Hele blok " + b.naam, blk: true });
             b.taken.forEach(function (x) { if (x.code && x !== t) items.push({ code: x.code, n: x.naam || x.code }); });
+            // Een taak in een blok dat per verdieping terugkomt kan ook als "dezelfde taak in de vorige bouwlaag" voorganger zijn (bv. de afdek van de vorige bouwlaag).
+            if (b.herhaling >= 1 && eigen.herhaling >= 1) b.taken.forEach(function (x) { if (x.code) items.push({ code: "VORIGE:" + x.code, n: "Vorige bouwlaag: " + (x.naam || x.code) }); });
             items = items.filter(function (x) { return !gebruikt[x.code.toUpperCase()] && (!q || x.n.toLowerCase().indexOf(q) >= 0 || x.code.toLowerCase().indexOf(q) >= 0); });
             if (!items.length) return;
             html += "<div class=\"gl-v2-pls-pg\">" + esc(b.naam) + "</div>" + items.map(function (x) {

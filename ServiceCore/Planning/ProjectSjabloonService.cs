@@ -25,7 +25,7 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
     public async Task<List<ProjectSjabloonBeheerRij>> BeheerLijst()
     {
         var lijst = await _db.ProjectSjabloon.AsNoTracking().OrderBy(s => s.Naam).ToListAsync();
-        var planningen = await _db.PlanningSjabloon.AsNoTracking().Include(s => s.Blokken).ThenInclude(b => b.Taken).ToDictionaryAsync(s => s.Id);
+        var planningen = await _db.PlanningSjabloon.AsNoTracking().Include(s => s.Blokken).ThenInclude(b => b.Taken).ThenInclude(t => t.Voorgangers).ToDictionaryAsync(s => s.Id);
         var trajecten = await _db.TrajectSjabloon.AsNoTracking().Include(s => s.Fases).ThenInclude(f => f.Mijlpalen).ToDictionaryAsync(s => s.Id);
         var schijven = await _db.SchijfSjabloon.AsNoTracking().Include(s => s.Schijven).ToDictionaryAsync(s => s.Id);
         var gebruikerIds = lijst.Select(s => s.ModifiedByUserId ?? s.CreatedByUserId).Where(i => !string.IsNullOrEmpty(i)).Distinct().ToList();
@@ -78,7 +78,7 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
         var codes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (planningId is int pid)
         {
-            var pl = await _db.PlanningSjabloon.AsNoTracking().Include(x => x.Blokken).ThenInclude(b => b.Taken).FirstOrDefaultAsync(x => x.Id == pid);
+            var pl = await _db.PlanningSjabloon.AsNoTracking().Include(x => x.Blokken).ThenInclude(b => b.Taken).ThenInclude(t => t.Voorgangers).FirstOrDefaultAsync(x => x.Id == pid);
             if (pl != null)
             {
                 var proef = PlanningSjabloonProef.Rekenen(pl, 1, verdiepingen);
@@ -100,7 +100,7 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
                 uit.Planning = new ProjectSjabloonOverzichtPlanning
                 {
                     Naam = pl.Naam, Blokken = pl.Blokken.Count, Taken = pl.Blokken.Sum(b => b.Taken.Count), Werkdagen = proef.Werkdagen,
-                    PerVerdieping = pl.Blokken.Any(b => b.Herhaling == 1), Fases = blokken.Count, Verloop = verloop,
+                    PerVerdieping = pl.Blokken.Any(b => b.Herhaling >= 1), Fases = blokken.Count, Verloop = verloop,
                 };
             }
         }
@@ -225,6 +225,59 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
         return null;
     }
 
+    // ── AI: anonieme context en controle ──
+
+    public async Task<ProjectSjabloonAiContext> AiContext(int projectId)
+    {
+        var ctx = new ProjectSjabloonAiContext();
+        var project = await _db.Project.AsNoTracking().Where(p => p.ProjectId == projectId).Select(p => new { p.ExecutionDays }).FirstOrDefaultAsync();
+        ctx.MaxWerkdagen = project?.ExecutionDays is > 0 ? project.ExecutionDays : null;
+        ctx.AantalEenheden = await _db.Units.AsNoTracking().CountAsync(u => u.ProjectId == projectId);
+        ctx.HeeftPlanning = await _db.PlanningSectie.AsNoTracking().AnyAsync(s => s.ProjectId == projectId && s.IsActief);
+        ctx.HeeftTraject = await _db.Projecttraject.AsNoTracking().AnyAsync(t => t.ProjectId == projectId);
+        ctx.HeeftSchijven = await _db.InvoicingPaymentStages.AsNoTracking().AnyAsync(s => s.Group.ProjectId == projectId);
+
+        var rijen = await BeheerLijst();
+        var planningen = await _db.PlanningSjabloon.AsNoTracking().Include(s => s.Blokken).ThenInclude(b => b.Taken).ToDictionaryAsync(s => s.Id);
+        foreach (var r in rijen.Where(x => x.IsActief))
+        {
+            var k = new ProjectSjabloonAiKeuze { Id = r.Id, Naam = r.Naam, Beschrijving = r.Beschrijving, Planning = null, Traject = r.TrajectKern, Schijven = r.SchijvenKern };
+            var sj = await _db.ProjectSjabloon.AsNoTracking().FirstAsync(x => x.Id == r.Id);
+            k.Bouwlagen = Math.Max(1, sj.StandaardVerdiepingen); k.Kelder = sj.StandaardKelder; k.Dak = sj.StandaardDak;
+            if (sj.PlanningSjabloonId is int pid && planningen.TryGetValue(pid, out var pl))
+            {
+                bool Heeft(string v) => PlanningSjabloonUitrol.GebruiktVariabele(pl, v);
+                k.HeeftBouwlagen = pl.Blokken.Any(b => b.Herhaling >= 1);
+                k.HeeftKelder = Heeft("kelder"); k.HeeftDak = Heeft("dak"); k.HeeftTerras = Heeft("terras");
+                k.Planning = r.PlanningKern + ": " + string.Join(", ", pl.Blokken.OrderBy(b => b.Volgorde).Select(b => b.Naam));
+            }
+            ctx.Keuzes.Add(k);
+        }
+        return ctx;
+    }
+
+    public async Task<string?> Controle(int projectId, int sjabloonId, ProjectSjabloonAntwoorden antwoorden)
+    {
+        var sj = await _db.ProjectSjabloon.AsNoTracking().FirstOrDefaultAsync(x => x.Id == sjabloonId && x.IsActief);
+        if (sj?.PlanningSjabloonId is not int pid) return null;
+        var pl = await _db.PlanningSjabloon.AsNoTracking().Include(x => x.Blokken).ThenInclude(b => b.Taken).ThenInclude(t => t.Voorgangers).FirstOrDefaultAsync(x => x.Id == pid);
+        if (pl == null) return null;
+        var a = Schoon(antwoorden);
+        var eenheden = await _db.Units.AsNoTracking().CountAsync(u => u.ProjectId == projectId);
+        var woningen = a.EenPlanningVoorAlles ? 1 : Math.Clamp(Math.Max(1, eenheden), 1, 20);
+        var proef = PlanningSjabloonProef.Rekenen(pl, woningen, new SjabloonVariabelen(a.Verdiepingen, a.Kelder, a.Dak, a.Terrassen));
+        var wd = woningen > 1 ? proef.WerkdagenAlle : proef.Werkdagen;
+        if (wd <= 0) return null;
+        var max = await _db.Project.AsNoTracking().Where(p => p.ProjectId == projectId).Select(p => p.ExecutionDays).FirstOrDefaultAsync();
+        var tekst = woningen > 1 ? $"Alle {woningen} woningen samen, met de estafette, duren ongeveer {wd} werkdagen." : $"Dit bouwdeel duurt ongeveer {wd} werkdagen.";
+        if (max is > 0)
+            tekst += wd <= max
+                ? $" De uitvoeringstermijn van het project is {max} werkdagen: dat past, met {max - wd} werkdagen marge."
+                : $" De uitvoeringstermijn van het project is {max} werkdagen: dit plan zit er {wd - max} werkdagen boven.";
+        else tekst += " Het project heeft nog geen uitvoeringstermijn om tegen te vergelijken.";
+        return tekst + " (Berekend met de werkkalender, zonder weerverlet; de startdatum volgt later.)";
+    }
+
     // ── toepassen ──
 
     private static ProjectSjabloonAntwoorden Schoon(ProjectSjabloonAntwoorden a)
@@ -234,6 +287,7 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
         {
             Verdiepingen = Math.Max(1, Math.Min(a?.Verdiepingen ?? 1, 20)), Kelder = a?.Kelder ?? false,
             Dak = dak is "hellend" or "plat" ? dak : null, EenPlanningVoorAlles = a?.EenPlanningVoorAlles ?? false,
+            Terrassen = (a?.Terrassen ?? new List<int>()).Where(t => t >= 1).Distinct().OrderBy(t => t).Take(20).ToList(),
             InHoofdplanning = a?.InHoofdplanning ?? false,
         };
     }
@@ -280,10 +334,10 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
                 if (a.EenPlanningVoorAlles && a.InHoofdplanning && !inHoofd)
                     res.Opmerkingen.Add("De hoofdplanning heeft al fasen of taken: de planning komt in een aparte planning.");
                 var rijen = inHoofd
-                    ? new List<PlanningToepassingPlanning> { new() { PlanningId = hoofd!.Id, Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak } }
+                    ? new List<PlanningToepassingPlanning> { new() { PlanningId = hoofd!.Id, Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak, Terrassen = a.Terrassen } }
                     : a.EenPlanningVoorAlles
-                    ? new List<PlanningToepassingPlanning> { new() { EenheidIds = eenheden.Select(u => u.Id).ToList(), Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak } }
-                    : eenheden.Select(u => new PlanningToepassingPlanning { EenheidIds = new List<int> { u.Id }, Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak }).ToList();
+                    ? new List<PlanningToepassingPlanning> { new() { EenheidIds = eenheden.Select(u => u.Id).ToList(), Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak, Terrassen = a.Terrassen } }
+                    : eenheden.Select(u => new PlanningToepassingPlanning { EenheidIds = new List<int> { u.Id }, Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak, Terrassen = a.Terrassen }).ToList();
                 var tekst = inHoofd ? $"in de hoofdplanning, voor {eenheden.Count} {(eenheden.Count == 1 ? "eenheid" : "eenheden")} ({Lijstje(eenheden.Select(u => u.Name ?? ""))})"
                           : a.EenPlanningVoorAlles ? $"één planning voor {eenheden.Count} {(eenheden.Count == 1 ? "eenheid" : "eenheden")} ({Lijstje(eenheden.Select(u => u.Name ?? ""))})"
                                                    : $"een planning voor elk van de {eenheden.Count} {(eenheden.Count == 1 ? "eenheid" : "eenheden")} zonder planning ({Lijstje(eenheden.Select(u => u.Name ?? ""))})";

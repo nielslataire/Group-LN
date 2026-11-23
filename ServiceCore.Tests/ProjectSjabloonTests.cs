@@ -169,4 +169,48 @@ public class ProjectSjabloonTests
         Assert.Equal(new[] { "Ruwbouw", "Kelder gieten", "Dakstoel", "Oplevering" }, SchijfSjabloonUitrol.Rol(5m, invoer, 1, kelder: true, dak: "hellend").Schijven.Select(s => s.Naam).ToArray());
         Assert.Equal(new[] { "Ruwbouw", "Oplevering" }, SchijfSjabloonUitrol.Rol(5m, invoer, 1, kelder: false, dak: "plat").Schijven.Select(s => s.Naam).ToArray());
     }
+
+    [Fact]
+    public async Task De_context_voor_de_AI_bevat_sjablonen_en_aantallen_maar_geen_namen_van_eenheden()
+    {
+        var (svc, db, sjabloonId) = Maak();
+        db.Project.First(p => p.ProjectId == ProjectId).ExecutionDays = 300;
+        db.SaveChanges();
+        var ctx = await svc.AiContext(ProjectId);
+        Assert.Equal(2, ctx.AantalEenheden);
+        Assert.Equal(300, ctx.MaxWerkdagen);
+        var k = Assert.Single(ctx.Keuzes);
+        Assert.Equal(sjabloonId, k.Id);
+        var bericht = ServiceCore.Planning.ProjectSjabloonAiVerwerker.BouwBericht("Een woning.", ctx);
+        Assert.DoesNotContain("Woning 1", bericht);
+        Assert.DoesNotContain("Verkaveling", bericht);   // de projectnaam gaat niet mee
+    }
+
+    [Fact]
+    public async Task De_controle_rekent_de_duur_met_de_voorgangers_en_vergelijkt_met_de_uitvoeringstermijn()
+    {
+        var (svc, db, sjabloonId) = Maak();
+        // Twee blokken die op elkaar wachten: 3 + 5 werkdagen. Zonder voorgangers zou de duur 5 zijn.
+        var ps = db.PlanningSjabloon.Single();
+        var blok = ps.Blokken.Single();
+        var b = blok.Taken.Single();
+        var tweede = new DALCore.Models.PlanningSjabloonTaak { Naam = "Afdek", Code = "AFDEK", Duur = 5, Volgorde = 20 };
+        tweede.Voorgangers.Add(new DALCore.Models.PlanningSjabloonVoorganger { VoorgangerCode = "VLOER" });
+        blok.Taken.Add(tweede);
+        db.SaveChanges();
+
+        var tekst = await svc.Controle(ProjectId, sjabloonId, new ProjectSjabloonAntwoorden { Verdiepingen = 1, EenPlanningVoorAlles = true });
+        Assert.NotNull(tekst);
+        Assert.Contains("ongeveer 8 werkdagen", tekst);
+        Assert.Contains("nog geen uitvoeringstermijn", tekst);
+
+        db.Project.First(p => p.ProjectId == ProjectId).ExecutionDays = 6;
+        db.SaveChanges();
+        var boven = await svc.Controle(ProjectId, sjabloonId, new ProjectSjabloonAntwoorden { Verdiepingen = 1, EenPlanningVoorAlles = true });
+        Assert.Contains("2 werkdagen boven", boven);
+        db.Project.First(p => p.ProjectId == ProjectId).ExecutionDays = 10;
+        db.SaveChanges();
+        var onder = await svc.Controle(ProjectId, sjabloonId, new ProjectSjabloonAntwoorden { Verdiepingen = 1, EenPlanningVoorAlles = true });
+        Assert.Contains("2 werkdagen marge", onder);
+    }
 }

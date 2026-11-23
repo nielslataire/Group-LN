@@ -1093,12 +1093,33 @@
         return fetch(cfg.staatUrl + (cfg.staatUrl.indexOf("?") < 0 ? "?" : "&") + "planningId=" + (state.actiefPlanningId || 0), { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
             .then(function (r) { return r.json(); }).then(function (s) { state = s; render(); });
     }
+    // Bouwlagen zoals wij ze noemen: 1 = gelijkvloers, 2 = 1ste verdieping, 3 = 2de verdieping, ...
+    function laagNaam(n) { return n <= 1 ? "gelijkvloers" : (n - 1) + (n - 1 === 1 || n - 1 === 8 ? "ste" : "de") + " verdieping"; }
+    function laagKort(n) { return n <= 1 ? "GV" : String(n - 1); }
+    // Keuzeknoppen per bouwlaag (terrassen of luifels bij de afdek). data = attributen die de klik herkent.
+    function lagenHtml(aantal, gekozen, data) {
+        var html = "";
+        for (var n = 1; n <= Math.max(1, aantal); n++) {
+            var aan = (gekozen || []).indexOf(n) >= 0;
+            html += "<button type=\"button\" class=\"gl-v2-pl-laag\" " + data + " data-laag=\"" + n + "\" aria-pressed=\"" + aan + "\" title=\"Afdek " + laagNaam(n) + "\" aria-label=\"Afdek " + laagNaam(n) + "\">" + laagKort(n) + "</button>";
+        }
+        return html;
+    }
+    function schoonLagen(lijst, aantal) { return (lijst || []).filter(function (n, i, a) { return n >= 1 && n <= aantal && a.indexOf(n) === i; }).sort(function (a, b) { return a - b; }); }
+    function wisselLaag(lijst, n) { var i = lijst.indexOf(n); if (i >= 0) lijst.splice(i, 1); else lijst.push(n); return lijst; }
+
     // ── Projectsjabloon: planning, traject en schijven in één keer, aangepast aan het gebouw ──
-    var pj = { keuzes: [], gekozen: null, aanvraag: 0, timer: null, bezig: false };
+    var pj = { keuzes: [], gekozen: null, aanvraag: 0, timer: null, bezig: false, terrassen: [] };
+    function pjLagen() {
+        var aantal = Math.max(1, Math.min(20, parseInt($("gl-v2-pl-pj-verd").value, 10) || 1));
+        pj.terrassen = schoonLagen(pj.terrassen, aantal);
+        $("gl-v2-pl-pj-lagen").innerHTML = lagenHtml(aantal, pj.terrassen, "data-pj=\"1\"");
+    }
     function pjAntwoorden() {
         return {
             verdiepingen: Math.max(1, Math.min(20, parseInt($("gl-v2-pl-pj-verd").value, 10) || 1)),
             kelder: $("gl-v2-pl-pj-kelder").checked, dak: $("gl-v2-pl-pj-dak").value || null,
+            terrassen: schoonLagen(pj.terrassen, Math.max(1, Math.min(20, parseInt($("gl-v2-pl-pj-verd").value, 10) || 1))),
             eenPlanningVoorAlles: $("gl-v2-pl-pj-een").checked,
             inHoofdplanning: $("gl-v2-pl-pj-een").checked && $("gl-v2-pl-pj-hoofd").checked
         };
@@ -1124,12 +1145,22 @@
             .then(function (res) { if (nr === pj.aanvraag) pjToon(res); })
             .catch(function (e) { if (nr === pj.aanvraag) pjFout(e.message || "Het voorbeeld kon niet geladen worden."); });
     }
-    function pjPlanVoorbeeld() { window.clearTimeout(pj.timer); pj.timer = window.setTimeout(pjVoorbeeld, 300); }
+    function pjPlanVoorbeeld() { pjControleWis(); window.clearTimeout(pj.timer); pj.timer = window.setTimeout(pjVoorbeeld, 300); }
+    // Wat de AI aannam, vroeg en doorrekende: enkel tonen na een voorstel. De doorrekening vervalt zodra jij iets wijzigt.
+    function pjControleWis() { var c = $("gl-v2-pl-pj-ai-controle"); if (c) c.textContent = ""; }
+    function pjAiDetails(res) {
+        var vul = function (id, lijst) { var ul = $(id); ul.innerHTML = ""; (lijst || []).forEach(function (t) { var li = document.createElement("li"); li.textContent = t; ul.appendChild(li); }); };
+        vul("gl-v2-pl-pj-ai-aannames", res.aannames); vul("gl-v2-pl-pj-ai-vragen", res.vragen);
+        $("gl-v2-pl-pj-ai-vragen-kop").hidden = !(res.vragen && res.vragen.length);
+        $("gl-v2-pl-pj-ai-controle").textContent = res.controle || "";
+        $("gl-v2-pl-pj-ai-details").hidden = !((res.aannames && res.aannames.length) || (res.vragen && res.vragen.length) || res.controle);
+    }
     function pjKies(k) {
         pj.gekozen = k;
         $("gl-v2-pl-pj-verd").value = k.verdiepingen || 1;
         $("gl-v2-pl-pj-kelder").checked = !!k.kelder;
         $("gl-v2-pl-pj-dak").value = k.dak || "";
+        pj.terrassen = []; pjLagen();
         $("gl-v2-pl-pj-een").checked = false; $("gl-v2-pl-pj-hoofd").checked = true; pjHoofdRij();
         $("gl-v2-pl-pj-ai-uitleg").textContent = "";
         $("gl-v2-pl-pj-rest").hidden = false;
@@ -1139,6 +1170,7 @@
         if (!canWriteBasis) return;
         pj.gekozen = null; pjFout("");
         $("gl-v2-pl-pj-rest").hidden = true; $("gl-v2-pl-pj-ok").disabled = true; $("gl-v2-pl-pj-beschrijving").value = "";
+        $("gl-v2-pl-pj-ai-details").hidden = true; $("gl-v2-pl-pj-ai-uitleg").textContent = "";
         var lijst = $("gl-v2-pl-pj-lijst"); lijst.innerHTML = "<span class=\"gl-v2-field-help\" style=\"padding:8px 12px\">Laden…</span>";
         $("gl-v2-pl-pj-info").textContent = "";
         var m = modal("gl-v2-pl-pj"); if (m) m.show();
@@ -1159,7 +1191,11 @@
         if (e.target.id === "gl-v2-pl-pj-een") pjHoofdRij();
         if (e.target.closest("#gl-v2-pl-pj-rest")) pjPlanVoorbeeld();
     });
-    $("gl-v2-pl-pj-verd").addEventListener("input", pjPlanVoorbeeld);
+    $("gl-v2-pl-pj-verd").addEventListener("input", function () { pjLagen(); pjPlanVoorbeeld(); });
+    $("gl-v2-pl-pj-lagen").addEventListener("click", function (e) {
+        var b = e.target.closest("button[data-laag]"); if (!b) return;
+        wisselLaag(pj.terrassen, parseInt(b.getAttribute("data-laag"), 10)); pjLagen(); pjPlanVoorbeeld();
+    });
     $("gl-v2-pl-pj-ai").addEventListener("click", function () {
         var tekst = $("gl-v2-pl-pj-beschrijving").value.trim(), uitleg = $("gl-v2-pl-pj-ai-uitleg");
         if (!tekst) { uitleg.textContent = "Beschrijf eerst het gebouw."; return; }
@@ -1168,9 +1204,24 @@
             knop.disabled = false;
             if (!res.ok) { uitleg.textContent = res.fout || "De AI kon geen voorstel doen."; return; }
             var a = res.antwoorden;
+            // Eerst het sjabloon dat de AI koos (dat zet de standaardwaarden), daarna de antwoorden uit de beschrijving.
+            if (res.sjabloonId) {
+                var gekozen = pj.keuzes.filter(function (x) { return x.id === res.sjabloonId; })[0];
+                if (gekozen) {
+                    document.querySelectorAll("input[name=\"gl-v2-pl-pj-keuze\"]").forEach(function (r) { r.checked = parseInt(r.value, 10) === gekozen.id; });
+                    pjKies(gekozen);
+                }
+            } else if (!pj.gekozen) {
+                pjAiDetails(res);
+                uitleg.textContent = (res.sjabloonReden || "Geen projectsjabloon past.") + " Kies zelf een sjabloon.";
+                return;
+            }
             $("gl-v2-pl-pj-verd").value = a.verdiepingen; $("gl-v2-pl-pj-kelder").checked = !!a.kelder;
             $("gl-v2-pl-pj-dak").value = a.dak || ""; $("gl-v2-pl-pj-een").checked = !!a.eenPlanningVoorAlles; pjHoofdRij();
-            uitleg.textContent = "Voorstel van de AI, kijk het na: " + (res.toelichting || "ingevuld.");
+            pj.terrassen = (a.terrassen || []).slice(); pjLagen();
+            var gekozenNaam = res.sjabloonId && pj.gekozen ? pj.gekozen.naam : null;
+            uitleg.textContent = "Voorstel van de AI, kijk het na" + (gekozenNaam ? " (sjabloon “" + gekozenNaam + "”" + (res.sjabloonReden ? ": " + res.sjabloonReden : "") + ")" : "") + ". " + (res.toelichting || "");
+            pjAiDetails(res);
             pjVoorbeeld();
         }).catch(function (e) { knop.disabled = false; uitleg.textContent = e.message || "De AI kon niet bereikt worden."; });
     });
@@ -1191,9 +1242,9 @@
         var id = parseInt($("gl-v2-pl-sj-kies").value, 10);
         return (state.sjablonen || []).filter(function (s) { return s.id === id; })[0] || null;
     }
-    var sjRijen = [];   // { id, naam, aan, verdiepingen, kelder, dak } in de volgorde van de lijst
-    var sjAlle = { verdiepingen: 1, kelder: false, dak: "" };
-    function sjOpties(s) { return (s.heeftVerdiepingen ? 1 : 0) + (s.heeftKelder ? 1 : 0) + (s.heeftDak ? 1 : 0); }
+    var sjRijen = [];   // { id, naam, aan, verdiepingen, kelder, dak, terrassen } in de volgorde van de lijst
+    var sjAlle = { verdiepingen: 1, kelder: false, dak: "", terrassen: [] };
+    function sjOpties(s) { return (s.heeftVerdiepingen ? 1 : 0) + (s.heeftKelder ? 1 : 0) + (s.heeftDak ? 1 : 0) + (s.heeftTerras ? 1 : 0); }
     // Dak per rij: zelfde markup als GlV2/_SelectList (basisvariant); GlV2Select.init bedraadt ze na het tekenen.
     function dakKeuze(waarde, id) {
         var items = [{ v: "", t: "Geen" }, { v: "hellend", t: "Hellend" }, { v: "plat", t: "Plat" }];
@@ -1212,13 +1263,14 @@
             ? "Zet een vinkje bij de woningen of plannings waarvoor je het sjabloon wilt gebruiken. Een woning zonder planning krijgt een nieuwe planning; wil je meerdere woningen in één planning, maak die dan eerst met Planning toevoegen. De volgorde in de lijst bepaalt de estafette" + (s.heeftEstafette ? ": taken met de estafettevlag wachten op dezelfde taak in de woning erboven." : ".")
             : "Dit project heeft nog geen woningen of gebouwen. Maak ze eerst aan bij Facturatie.";
         // Enkel de kolommen die dit sjabloon gebruikt; de naam krijgt de rest van de breedte.
-        var cols = "style=\"grid-template-columns: 26px minmax(0, 1fr)" + (s.heeftVerdiepingen ? " 86px" : "") + (s.heeftKelder ? " 56px" : "") + (s.heeftDak ? " 112px" : "") + " 58px\"";
-        var kolommen = "<span></span><span>Naam</span>" + (s.heeftVerdiepingen ? "<span>Verdiepingen</span>" : "") + (s.heeftKelder ? "<span>Kelder</span>" : "") + (s.heeftDak ? "<span>Dak</span>" : "") + "<span></span>";
+        var cols = "style=\"grid-template-columns: 26px minmax(0, 1fr)" + (s.heeftVerdiepingen ? " 86px" : "") + (s.heeftKelder ? " 56px" : "") + (s.heeftDak ? " 112px" : "") + (s.heeftTerras ? " minmax(150px, 1.2fr)" : "") + " 58px\"";
+        var kolommen = "<span></span><span>Naam</span>" + (s.heeftVerdiepingen ? "<span>Bouwlagen</span>" : "") + (s.heeftKelder ? "<span>Kelder</span>" : "") + (s.heeftDak ? "<span>Dak</span>" : "") + (s.heeftTerras ? "<span>Terrassen of luifels bij afdek van</span>" : "") + "<span></span>";
         function velden(r, alle) {
             var id = alle ? "alle" : r.id;
-            return (s.heeftVerdiepingen ? "<span><input type=\"number\" min=\"1\" max=\"30\" value=\"" + r.verdiepingen + "\" data-veld=\"verdiepingen\" data-id=\"" + id + "\" aria-label=\"Verdiepingen\" /></span>" : "") +
+            return (s.heeftVerdiepingen ? "<span><input type=\"number\" min=\"1\" max=\"30\" value=\"" + r.verdiepingen + "\" data-veld=\"verdiepingen\" data-id=\"" + id + "\" aria-label=\"Bouwlagen (gelijkvloers + verdiepingen)\" /></span>" : "") +
                 (s.heeftKelder ? "<span><input type=\"checkbox\" " + (r.kelder ? "checked" : "") + " data-veld=\"kelder\" data-id=\"" + id + "\" aria-label=\"Kelder\" /></span>" : "") +
-                (s.heeftDak ? "<span>" + dakKeuze(r.dak, id) + "</span>" : "");
+                (s.heeftDak ? "<span>" + dakKeuze(r.dak, id) + "</span>" : "") +
+                (s.heeftTerras ? "<span class=\"gl-v2-pl-lagen\">" + lagenHtml(s.heeftVerdiepingen ? r.verdiepingen : 1, r.terrassen, "data-sj=\"" + id + "\"") + "</span>" : "");
         }
         var html = "<div class=\"gl-v2-pl-sj-rij is-kop\" " + cols + ">" + kolommen + "</div>";
         if (sjOpties(s) > 0 && sjRijen.length > 1)
@@ -1235,7 +1287,7 @@
     function sjInfo() {
         var s = sjabloonGekozen(), el = $("gl-v2-pl-sj-info");
         if (!s) { el.textContent = ""; $("gl-v2-pl-sj-ok").disabled = true; return; }
-        var v = []; if (s.heeftVerdiepingen) v.push("verdiepingen"); if (s.heeftKelder) v.push("kelder"); if (s.heeftDak) v.push("dak");
+        var v = []; if (s.heeftVerdiepingen) v.push("bouwlagen"); if (s.heeftKelder) v.push("kelder"); if (s.heeftDak) v.push("dak"); if (s.heeftTerras) v.push("terrassen of luifels");
         el.textContent = (s.beschrijving ? s.beschrijving + " · " : "") + s.aantalBlokken + (s.aantalBlokken === 1 ? " blok" : " blokken") + ", " + s.aantalTaken + (s.aantalTaken === 1 ? " taak" : " taken") + (v.length ? ". Vraagt naar: " + v.join(", ") + "." : ".");
         $("gl-v2-pl-sj-ok").disabled = false;
         $("gl-v2-pl-sj-verwijder").hidden = !canSjabloonDelete;
@@ -1245,12 +1297,12 @@
         var lijst = state.sjablonen || [];
         $("gl-v2-pl-sj-fout").hidden = true;
         setSelect("gl-v2-pl-sj-kies", lijst.map(function (s) { return { value: String(s.id), text: s.naam }; }), lijst.length ? String(lijst[0].id) : "");
-        sjAlle = { verdiepingen: 1, kelder: false, dak: "" };
+        sjAlle = { verdiepingen: 1, kelder: false, dak: "", terrassen: [] };
         // Rijen: de bestaande plannings van woningen (vullen of vervangen) en elke eenheid die nog in geen planning zit (nieuwe planning).
         sjRijen = (state.planningen || []).filter(function (p) { return !p.isHoofd; })
-            .map(function (p) { return { id: "p" + p.id, planningId: p.id, naam: p.naam, taken: p.aantalTaken || 0, aan: false, verdiepingen: 1, kelder: false, dak: "" }; })
+            .map(function (p) { return { id: "p" + p.id, planningId: p.id, naam: p.naam, taken: p.aantalTaken || 0, aan: false, verdiepingen: 1, kelder: false, dak: "", terrassen: [] }; })
             .concat((state.eenheden || []).filter(function (e) { return e.planningId == null; })
-                .map(function (e) { return { id: "e" + e.id, eenheidId: e.id, naam: e.naam, nieuw: true, taken: 0, aan: false, verdiepingen: 1, kelder: false, dak: "" }; }));
+                .map(function (e) { return { id: "e" + e.id, eenheidId: e.id, naam: e.naam, nieuw: true, taken: 0, aan: false, verdiepingen: 1, kelder: false, dak: "", terrassen: [] }; }));
         sjInfo(); renderSjTabel();
         if (!lijst.length) { $("gl-v2-pl-sj-info").textContent = canSjabloon ? "Bewaar eerst een bestaande planning als sjabloon (het diskette-icoon naast de tabs)." : "Er zijn nog geen sjablonen. Iemand met het recht Planningssjablonen kan er een bewaren."; $("gl-v2-pl-sj-ok").disabled = true; $("gl-v2-pl-sj-bouwdelen-wrap").hidden = true; }
         var m = modal("gl-v2-pl-sj-toepas"); if (m) m.show();
@@ -1261,9 +1313,17 @@
         var waarde = el.type === "checkbox" ? el.checked : (veld === "verdiepingen" ? Math.max(1, parseInt(el.value, 10) || 1) : el.value);
         if (id === "alle") { sjAlle[veld] = waarde; sjRijen.forEach(function (r) { if (veld !== "aan") r[veld] = waarde; }); }
         else { var r = sjRijen.filter(function (x) { return String(x.id) === id; })[0]; if (r) r[veld] = waarde; }
+        if (veld === "verdiepingen") { sjAlle.terrassen = schoonLagen(sjAlle.terrassen, sjAlle.verdiepingen); sjRijen.forEach(function (r) { r.terrassen = schoonLagen(r.terrassen, r.verdiepingen); }); }
         renderSjTabel();
     });
     $("gl-v2-pl-sj-tabel").addEventListener("click", function (e) {
+        var lb = e.target.closest("button[data-laag]");
+        if (lb) {
+            var lid = lb.getAttribute("data-sj"), ln = parseInt(lb.getAttribute("data-laag"), 10);
+            if (lid === "alle") { wisselLaag(sjAlle.terrassen, ln); sjRijen.forEach(function (r) { r.terrassen = sjAlle.terrassen.slice(); }); }
+            else { var lr = sjRijen.filter(function (x) { return String(x.id) === lid; })[0]; if (lr) wisselLaag(lr.terrassen, ln); }
+            renderSjTabel(); return;
+        }
         var b = e.target.closest("button[data-op]"); if (!b) return;
         var id = b.getAttribute("data-id"), op = parseInt(b.getAttribute("data-op"), 10);
         var n = sjRijen.findIndex(function (x) { return String(x.id) === id; }), m = n + op;
@@ -1277,7 +1337,7 @@
         var gekozen = sjRijen.filter(function (r) { return r.aan; });
         if (!gekozen.length) { fout.textContent = "Kies minstens één woning of gebouw."; fout.hidden = false; return; }
         var cmd = { type: "sjabloonToepassen", planningId: 0, toepassing: { sjabloonId: s.id, planningen: gekozen.map(function (r) {
-            return { planningId: r.planningId || null, eenheidIds: r.eenheidId ? [r.eenheidId] : [], verdiepingen: s.heeftVerdiepingen ? r.verdiepingen : 1, kelder: s.heeftKelder ? !!r.kelder : false, dak: s.heeftDak && r.dak ? r.dak : null, vervang: r.taken > 0 };
+            return { planningId: r.planningId || null, eenheidIds: r.eenheidId ? [r.eenheidId] : [], verdiepingen: s.heeftVerdiepingen ? r.verdiepingen : 1, kelder: s.heeftKelder ? !!r.kelder : false, dak: s.heeftDak && r.dak ? r.dak : null, terrassen: s.heeftTerras ? schoonLagen(r.terrassen, s.heeftVerdiepingen ? r.verdiepingen : 1) : [], vervang: r.taken > 0 };
         }) } };
         var vervangt = gekozen.filter(function (r) { return r.taken > 0; });
         var stuur = function () {
@@ -1606,7 +1666,7 @@
     // ── Koppeling met een trajectmijlpaal (optioneel; de mijlpaal in het Traject volgt dan de planning) ──
     function trajItems(sleutel) {
         return (state.trajectMijlpalen || []).map(function (m) {
-            var tekst = m.naam + (m.faseNaam ? " · " + m.faseNaam : "");
+            var tekst = m.naam + (m.eenheidNaam ? " · " + m.eenheidNaam : "") + (m.faseNaam ? " · " + m.faseNaam : "");
             if (m.gekoppeldAanSleutel && m.gekoppeldAanSleutel !== sleutel) tekst += " (nu aan " + m.gekoppeldAanTekst + ")";
             return { value: String(m.id), text: tekst };
         });
