@@ -1,6 +1,6 @@
 # Bouwplanning – stand van zaken 23/11/2026 (overdracht naar een andere pc)
 
-Lees dit eerst. Daarna `PLANNING_VOORTGANG.md` (logboek per dag, onderaan de sectie's van 22 en 23/11), `PLANNING_AI_ANALYSE.md` (hoe een echt AI-voorstel moet werken, met alle besluiten) en `CPMCore/DESIGN.md` (alinea "Bouwlagen, voorwaarden per taak en terrassen of luifels"). Dit bestand vervangt `PLANNING_STAND_19112026.md` als startpunt; dat blijft geldig voor alles van vóór 20/11.
+Lees dit eerst. Daarna `PLANNING_VOORTGANG.md` (logboek per dag, onderaan de sectie's van 22 en 23/11), `PLANNING_AI_ANALYSE.md` (hoe een echt AI-voorstel moet werken, met alle besluiten) en `CPMCore/DESIGN.md` (alinea "Bouwlagen, voorwaarden per taak en terrassen of luifels"). Dit bestand vervangt `docs/archive/PLANNING_STAND_19112026.md` als startpunt; dat blijft geldig voor alles van vóór 20/11.
 
 **Status:** alles hieronder is gebouwd, gebuild en getest (**153 planning-, sjabloon-, schijf- en trajecttests slagen**) en door Niels in de browser doorlopen met het testproject (project 79, "TEST Appartementsgebouw"). Niet in de browser getest: de echte AI-aanroep (er is een Anthropic-sleutel nodig). **Er is niets gecommit**: commit en push eerst op de oude pc (branch `layout-experiment`), anders staat het werk niet op de nieuwe. Pak niet blind alles mee: `skills-lock.json` en `.claude/skills/modern-web-guidance/` horen niet bij de planning.
 

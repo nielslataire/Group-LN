@@ -9,7 +9,7 @@ using QuestPDF.Infrastructure;
 namespace CPMCore.Documents
 {
     /// <summary>
-    /// Het auditrapport (fase 2, ONDERTEKENEN_VOORSTEL.md §5.3): alle events van de hash-ketting van
+    /// Het auditrapport (fase 2, docs/archive/ONDERTEKENEN_VOORSTEL.md §5.3): alle events van de hash-ketting van
     /// één dossier, het resultaat van de kettingverificatie en de akkoordtekst die de ondertekenaars
     /// zagen. Staat los van het ondertekende document — eigen PDF, geen samenvoeging nodig.
     /// </summary>

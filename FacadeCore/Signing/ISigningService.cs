@@ -1,7 +1,7 @@
 namespace FacadeCore.Signing;
 
 /// <summary>
-/// Aanmaken en beheren van ondertekeningsprocedures (ONDERTEKENEN_VOORSTEL.md §4.1) plus de
+/// Aanmaken en beheren van ondertekeningsprocedures (docs/archive/ONDERTEKENEN_VOORSTEL.md §4.1) plus de
 /// handelingen van de ondertekenaar zelf (§5.2). Kent geen HTTP: de controllers geven een
 /// <see cref="SigningRequestContext"/> mee. Alle statusovergangen lopen onder RowVersion-controle;
 /// elke overgang is een event in de audit trail.
@@ -64,7 +64,7 @@ public interface ISigningService
     /// <summary>Dossiers die regel-compleet zijn (alle vereiste handtekeningen staan er al) maar nooit
     /// voltooid raakten omdat een eerdere <c>TryFinalizeAsync</c> faalde — <c>ExpireOverdueCasesAsync</c>
     /// probeert dit ook, maar enkel voor dossiers waarvan de termijn al verstreken is; dit vangt de
-    /// rest (fase 3, ONDERTEKENEN_VOORTGANG.md).</summary>
+    /// rest (fase 3, docs/voortgang/ONDERTEKENEN_VOORTGANG.md).</summary>
     Task<int> RetryStuckFinalizationsAsync(CancellationToken ct = default);
 }
 

@@ -19,7 +19,7 @@ public partial class SigningEvent
 
     public int? SigningPartyId { get; set; }
 
-    /// <summary>Vaste sleutel, bv. "CaseOpened", "PartySigned" (zie ONDERTEKENEN_VOORSTEL.md §7).</summary>
+    /// <summary>Vaste sleutel, bv. "CaseOpened", "PartySigned" (zie docs/archive/ONDERTEKENEN_VOORSTEL.md §7).</summary>
     public string EventType { get; set; }
 
     public DateTime OccurredAtUtc { get; set; }

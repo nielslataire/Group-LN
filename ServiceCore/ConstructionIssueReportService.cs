@@ -846,7 +846,7 @@ public partial class ConstructionIssueReportService : IConstructionIssueReportSe
         }
     }
 
-    // Gedelegeerd naar de gedeelde IAssetStorageClient (ONDERTEKENEN_VOORSTEL.md §4.7) i.p.v. een eigen
+    // Gedelegeerd naar de gedeelde IAssetStorageClient (docs/archive/ONDERTEKENEN_VOORSTEL.md §4.7) i.p.v. een eigen
     // sign/download-implementatie — deze had de "map 'pictures' is rechtstreeks publiek, niet
     // ondertekenen"-uitzondering niet (zie AssetStorageClient.GetSignedUrlAsync), waardoor foto's van
     // punten (ConstructionIssueMedia, altijd in "pictures") hier via een /sign-aanroep liepen die voor

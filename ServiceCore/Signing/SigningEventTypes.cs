@@ -1,6 +1,6 @@
 namespace ServiceCore.Signing;
 
-/// <summary>Vaste sleutels van de audit trail (ONDERTEKENEN_VOORSTEL.md §7). Nooit hernoemen: ze zitten in de hash-ketting.</summary>
+/// <summary>Vaste sleutels van de audit trail (docs/archive/ONDERTEKENEN_VOORSTEL.md §7). Nooit hernoemen: ze zitten in de hash-ketting.</summary>
 public static class SigningEventTypes
 {
     public const string CaseCreated = "CaseCreated";

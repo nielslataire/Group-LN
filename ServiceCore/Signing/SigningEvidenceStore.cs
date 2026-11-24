@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace ServiceCore.Signing;
 
 /// <summary>
-/// De enige schrijver van <c>SigningEvent</c> (ONDERTEKENEN_VOORSTEL.md §4.6, §3.7). Elk event krijgt
+/// De enige schrijver van <c>SigningEvent</c> (docs/archive/ONDERTEKENEN_VOORSTEL.md §4.6, §3.7). Elk event krijgt
 /// <c>PrevEventHash</c> = hash van het vorige event van hetzelfde dossier en <c>EventHash</c> over de
 /// canonieke velden — ruwe IP/user-agent uitgesloten, hun hash wél meegenomen, zodat een
 /// retentiescrub de ketting niet breekt. Schrijft binnen de transactie van de aanroeper wanneer

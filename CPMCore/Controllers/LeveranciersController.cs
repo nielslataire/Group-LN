@@ -57,7 +57,7 @@ public partial class LeveranciersController : BaseController
     }
 
     // Alle acties zijn opgesplitst in partials LeveranciersController.<Groep>.cs met views in
-    // Views/Leveranciers/<Groep>/ (okt. 2026, structureren; zie STRUCTUREREN_VOORTGANG.md).
+    // Views/Leveranciers/<Groep>/ (okt. 2026, structureren; zie docs/archive/STRUCTUREREN_VOORTGANG.md).
     // Hier blijven enkel de velden en de constructor over.
     // ===== Core ===== LeveranciersController.Core.cs
     // ===== Portal ===== LeveranciersController.Portal.cs

@@ -160,7 +160,7 @@ namespace CPMCore.Controllers
         }
 
         // Alle acties zijn opgesplitst in partials ProjectenController.<Groep>.cs met views in
-        // Views/Projecten/<Groep>/ (okt. 2026, structureren; zie STRUCTUREREN_VOORTGANG.md).
+        // Views/Projecten/<Groep>/ (okt. 2026, structureren; zie docs/archive/STRUCTUREREN_VOORTGANG.md).
         // Hier blijven enkel de velden, de constructor en de gedeelde filter over.
         // ===== Core ===== ProjectenController.Core.cs
         // ===== Clients ===== ProjectenController.Clients.cs

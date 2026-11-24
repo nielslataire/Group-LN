@@ -13,7 +13,7 @@ public sealed record RuleOutcome(
     IReadOnlyList<int> PartiesToRevoke);
 
 /// <summary>
-/// De ondertekenregel (ONDERTEKENEN_VOORSTEL.md §5.2 stap 8): ALL, ANY, ORDERED. Pure functie over
+/// De ondertekenregel (docs/archive/ONDERTEKENEN_VOORSTEL.md §5.2 stap 8): ALL, ANY, ORDERED. Pure functie over
 /// de partijstatussen; wordt aangeroepen bij het openen van een dossier en na elke handtekening.
 /// </summary>
 public static class SigningRuleEvaluator

@@ -295,7 +295,7 @@ namespace ServiceCore
         /// beperking: <see cref="ClientService"/> heeft geen HttpContext/gebruiker beschikbaar
         /// (constructor neemt enkel <see cref="UnitOfWorkCore"/>), dus <c>ChangedByUserId</c> blijft
         /// hier null — dat threaden zou InsertUpdate's signatuur en alle call sites raken voor een
-        /// kleine winst (zie ONDERTEKENEN_VOORTGANG.md).</summary>
+        /// kleine winst (zie docs/voortgang/ONDERTEKENEN_VOORTGANG.md).</summary>
         private void LogContactChanges(ClientAccount entity, string oldEmail, string oldCellphone, Dictionary<int, (string Email, string Cellphone)> oldContacts)
         {
             var now = DateTime.UtcNow;

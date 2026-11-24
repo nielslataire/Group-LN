@@ -1,6 +1,6 @@
 namespace FacadeCore.Signing;
 
-// DTO's van de signingmodule (ONDERTEKENEN_VOORSTEL.md §4). Records, zoals ServiceCore.Invoicing:
+// DTO's van de signingmodule (docs/archive/ONDERTEKENEN_VOORSTEL.md §4). Records, zoals ServiceCore.Invoicing:
 // geen BOCore-klassen — de module heeft geen VB-tegenhanger nodig en deze types dragen nooit
 // geheimen (tokens/codes komen enkel als parameter voorbij en worden nergens bewaard).
 

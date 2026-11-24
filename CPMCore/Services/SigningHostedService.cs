@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 namespace CPMCore.Services;
 
 /// <summary>
-/// Achtergrondjob van de signingmodule (fase 3, ONDERTEKENEN_VOORSTEL.md/-VOORTGANG.md): sluit
+/// Achtergrondjob van de signingmodule (fase 3, docs/archive/ONDERTEKENEN_VOORSTEL.md/-VOORTGANG.md): sluit
 /// verlopen dossiers, verstuurt vervallen herinneringen, past de bewaarregel toe, en probeert
 /// dossiers die regel-compleet zijn maar door een eerdere fout nooit voltooid raakten opnieuw te
 /// finaliseren. Zelfde patroon als <see cref="IssueNotificationHostedService"/>: <c>ISigningService</c>

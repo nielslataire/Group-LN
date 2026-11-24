@@ -10,7 +10,7 @@ using QuestPDF.Infrastructure;
 namespace CPMCore.Documents
 {
     /// <summary>
-    /// De wijzigingsopdracht als QuestPDF-document (ONDERTEKENEN_VOORTGANG.md, fase 1). Inhoudelijk
+    /// De wijzigingsopdracht als QuestPDF-document (docs/voortgang/ONDERTEKENEN_VOORTGANG.md, fase 1). Inhoudelijk
     /// een getrouwe overzetting van Views/Projecten/ChangeOrderPDF.cshtml (de Rotativa/wkhtmltopdf-
     /// versie): titel, project, klant, eenheden, opdracht, de regeltabel met dezelfde prijsformule
     /// (EH-prijs = prijs + commissie%, totaal = EH-prijs × hoeveelheid), opmerkingen, totalen excl./btw/

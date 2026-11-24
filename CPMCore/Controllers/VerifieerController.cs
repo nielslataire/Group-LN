@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 namespace CPMCore.Controllers;
 
 /// <summary>
-/// Publieke verificatiepagina (fase 3, ONDERTEKENEN_VOORSTEL.md §9.4): wie een ondertekend document
+/// Publieke verificatiepagina (fase 3, docs/archive/ONDERTEKENEN_VOORSTEL.md §9.4): wie een ondertekend document
 /// (of de QR erop) in handen heeft, kan hier nagaan dat het dossier echt bestaat en voltooid is —
 /// zonder in te loggen, en zonder namen/IP's/interne id's te tonen (<see cref="PublicVerificationView"/>
 /// is daar al op ontworpen). Route <c>/verifieer/{id}</c> lag al gereserveerd in

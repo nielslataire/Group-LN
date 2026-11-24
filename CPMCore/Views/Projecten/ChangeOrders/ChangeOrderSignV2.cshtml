@@ -3,7 +3,7 @@
     Wijzigingsopdracht digitaal ter ondertekening sturen. De klant krijgt een persoonlijke link (geen CPM-login) en
     tekent op de publieke pagina Controllers/SigningController; hier stuurt en volgt de projectleider dat op.
     Wat de handtekening juridisch is (eenvoudig/elektronisch, link + e-mailcode) staat in
-    JURIDISCH_ELEKTRONISCH_ONDERTEKENEN.md en DESIGN.md "Projecten/ChangeOrderSignV2".
+    docs/archive/JURIDISCH_ELEKTRONISCH_ONDERTEKENEN.md en DESIGN.md "Projecten/ChangeOrderSignV2".
 *@
 @using System.Globalization
 @using FacadeCore
@@ -132,7 +132,7 @@
                         <em>"@Model.ConsentText"</em>
                         Naam, tijdstip, IP-adres, de akkoordtekst en een controlegetal (hash) van het verstuurde PDF worden vastgelegd; het ondertekende
                         PDF met handtekeningblok komt als nieuwe versie in de map Contracten.
-                        Dit is een <b>eenvoudige elektronische handtekening</b> (geen itsme) — zie <code>JURIDISCH_ELEKTRONISCH_ONDERTEKENEN.md</code>.
+                        Dit is een <b>eenvoudige elektronische handtekening</b> (geen itsme) — zie <code>docs/archive/JURIDISCH_ELEKTRONISCH_ONDERTEKENEN.md</code>.
                         @if (st != null) { <text>Opnieuw versturen maakt een nieuwe versie van het PDF en maakt de vorige links ongeldig.</text> }
                     </div>
                 </div>

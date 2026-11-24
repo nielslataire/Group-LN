@@ -1,7 +1,7 @@
 namespace FacadeCore.Signing;
 
 /// <summary>
-/// De daadwerkelijke ondertekenmethode (ONDERTEKENEN_VOORSTEL.md §4.3): v1 = interne SES; later
+/// De daadwerkelijke ondertekenmethode (docs/archive/ONDERTEKENEN_VOORSTEL.md §4.3): v1 = interne SES; later
 /// AES/QES via itsme, OK!Sign of een andere Europese provider. Meermaals geregistreerd in DI,
 /// gekozen op <see cref="Key"/> (= <c>SigningCase.SignatureMethod</c>). Provider-details blijven
 /// hierachter; de publieke pagina vraagt enkel <see cref="Capabilities"/> om te weten wat ze

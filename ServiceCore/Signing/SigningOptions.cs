@@ -1,7 +1,7 @@
 namespace ServiceCore.Signing;
 
 /// <summary>
-/// Configuratie van de signingmodule (ONDERTEKENEN_VOORSTEL.md §3.9), sectie <c>Signing</c> in
+/// Configuratie van de signingmodule (docs/archive/ONDERTEKENEN_VOORSTEL.md §3.9), sectie <c>Signing</c> in
 /// user-secrets/appsettings. <see cref="Validate"/> laat de applicatie bij het opstarten falen
 /// wanneer de HMAC-sleutel ontbreekt — bewust géén fallback-waarde (contrast:
 /// <c>ResendInviteUrlBuilder</c>), een signingmodule mag nooit met een ingebakken sleutel draaien.

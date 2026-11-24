@@ -22,7 +22,7 @@ namespace CPMCore.Services.Signing;
 ///
 /// <see cref="Render"/> kiest op <paramref name="useGlV2Layout"/> tussen de bestaande
 /// <see cref="ChangeOrderDocument"/> (ongewijzigd, legacy huisstijl — <see cref="ChangeOrderSigningSource"/>
-/// gebruikt enkel deze overload) en <see cref="ChangeOrderDocumentV2"/> (DOCUMENTLAYOUT_VOORTGANG.md,
+/// gebruikt enkel deze overload) en <see cref="ChangeOrderDocumentV2"/> (docs/voortgang/DOCUMENTLAYOUT_VOORTGANG.md,
 /// enkel voor gl-v2-sessies). Zo verandert er niets voor wie niet in gl-v2 zit. Het facturatiebedrijf op
 /// het gl-v2-document (<c>ChangeOrderPdfModel.IssuerCompany*</c>) volgt dezelfde regel als
 /// <c>ProjectenController.Coordinatie.EnsureSupplierIssuerLink</c>: eerst <c>Project.IssuerCompanyIdBuilder</c>

@@ -97,7 +97,7 @@ public partial class InstellingenController : BaseController
     }
 
     // Alle acties zijn opgesplitst in partials InstellingenController.<Groep>.cs met views in
-    // Views/Instellingen/<Groep>/ (okt. 2026, structureren; zie STRUCTUREREN_VOORTGANG.md).
+    // Views/Instellingen/<Groep>/ (okt. 2026, structureren; zie docs/archive/STRUCTUREREN_VOORTGANG.md).
     // Hier blijven enkel de velden en de constructor over.
     // ===== Algemeen ===== InstellingenController.Algemeen.cs
     // ===== Facturatie ===== InstellingenController.Facturatie.cs

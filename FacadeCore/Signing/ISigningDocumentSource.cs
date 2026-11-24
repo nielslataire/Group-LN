@@ -1,7 +1,7 @@
 namespace FacadeCore.Signing;
 
 /// <summary>
-/// Het document dat ondertekend wordt (ONDERTEKENEN_VOORSTEL.md §4.2). Eén implementatie per
+/// Het document dat ondertekend wordt (docs/archive/ONDERTEKENEN_VOORSTEL.md §4.2). Eén implementatie per
 /// documenttype — dit is de ENIGE plek waar de signingmodule iets over wijzigingsopdrachten,
 /// contracten of bestelbonnen weet. Meermaals geregistreerd in DI, gekozen op <see cref="DocumentType"/>.
 /// </summary>

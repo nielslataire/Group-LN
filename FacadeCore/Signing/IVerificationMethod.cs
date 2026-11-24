@@ -1,7 +1,7 @@
 namespace FacadeCore.Signing;
 
 /// <summary>
-/// Verificatie van de ondertekenaar vóór het definitief ondertekenen (ONDERTEKENEN_VOORSTEL.md
+/// Verificatie van de ondertekenaar vóór het definitief ondertekenen (docs/archive/ONDERTEKENEN_VOORSTEL.md
 /// §4.4): "EmailOtp" nu, "SmsOtp" later, eventueel sterkere methodes. CPM genereert en valideert
 /// de OTP zelf; het kanaal levert enkel af. Meermaals geregistreerd, gekozen op <see cref="Key"/>
 /// (= <c>SigningCase.VerificationMethod</c>). De methode kent de sessie- en partijbinding niet zelf;

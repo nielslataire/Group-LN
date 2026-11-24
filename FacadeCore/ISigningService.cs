@@ -4,7 +4,7 @@ namespace FacadeCore;
 /// Ondertekenen zonder CPM-login: elke ondertekenaar krijgt een persoonlijke link (token), bevestigt met een
 /// code die per e-mail komt, typt zijn naam en vinkt de akkoordverklaring aan. Het bewijsdossier (naam, tijdstip,
 /// IP, user-agent, exacte akkoordtekst, hash van het PDF, referentie) wordt op de handtekening bewaard.
-/// Dit is een GEWONE/eenvoudige elektronische handtekening — zie JURIDISCH_ELEKTRONISCH_ONDERTEKENEN.md.
+/// Dit is een GEWONE/eenvoudige elektronische handtekening — zie docs/archive/JURIDISCH_ELEKTRONISCH_ONDERTEKENEN.md.
 /// De methode-aanduiding is "email-otp"; een itsme-aanbieder kan later dezelfde velden vullen met "itsme".
 /// </summary>
 public interface ISigningService

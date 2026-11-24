@@ -4,7 +4,7 @@ using FacadeCore.Signing;
 namespace ServiceCore.Signing;
 
 /// <summary>
-/// De interne Simple Electronic Signature (ONDERTEKENEN_VOORSTEL.md §4.3, v1). Geen externe partij:
+/// De interne Simple Electronic Signature (docs/archive/ONDERTEKENEN_VOORSTEL.md §4.3, v1). Geen externe partij:
 /// het bewijs is wat CPM zelf server-side vaststelt — geverifieerde OTP van deze partij in deze
 /// sessie, expliciet aanvaarde akkoordtekst, SHA-256 van het aangeboden document, tijdstip, IP en
 /// user-agent — en de append-only audit trail eromheen. Het ondertekeningsblad en het auditrapport

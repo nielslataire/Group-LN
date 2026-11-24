@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 namespace ServiceCore.Signing;
 
 /// <summary>
-/// OTP-kanaal "email" over de bestaande <see cref="IEmailSender"/> (ONDERTEKENEN_VOORSTEL.md §4.5).
+/// OTP-kanaal "email" over de bestaande <see cref="IEmailSender"/> (docs/archive/ONDERTEKENEN_VOORSTEL.md §4.5).
 /// SMTP geeft geen message-id terug, dus <c>ProviderMessageId</c> blijft leeg en de status stopt bij
 /// "Accepted" (aanvaard door de SMTP-server). In testmodus (<c>Signing:TestRecipientOverride</c>)
 /// gaat het bericht naar het testadres, met de echte bestemming in het onderwerp.

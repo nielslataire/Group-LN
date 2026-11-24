@@ -9,8 +9,8 @@ using Microsoft.Extensions.Options;
 namespace CPMCore.Controllers;
 
 /// <summary>
-/// Publieke ondertekenpagina, fase 2 van de signingmodule (ONDERTEKENEN_VOORSTEL.md §5.2,
-/// ONDERTEKENEN_VOORTGANG.md "Fase 2"). Route <c>/tekenen</c> — bewust niet <c>/ondertekenen</c>,
+/// Publieke ondertekenpagina, fase 2 van de signingmodule (docs/archive/ONDERTEKENEN_VOORSTEL.md §5.2,
+/// docs/voortgang/ONDERTEKENEN_VOORTGANG.md "Fase 2"). Route <c>/tekenen</c> — bewust niet <c>/ondertekenen</c>,
 /// dat is nog de route van de andere, live ondertekenflow (<see cref="SigningController"/>) tot de
 /// cutover. Geen <c>BaseController</c> (geen ingelogde gebruiker), <c>[AllowAnonymous]</c> omdat de
 /// globale fallback-policy anders overal authenticatie eist. De sessie leeft server-side

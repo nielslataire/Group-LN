@@ -9,7 +9,7 @@ using ServiceCore.Invoicing.Pdf;
 namespace CPMCore.Services.Signing;
 
 /// <summary>
-/// De <see cref="ISigningDocumentRenderer"/> van fase 2 (ONDERTEKENEN_VOORSTEL.md §5.3): het
+/// De <see cref="ISigningDocumentRenderer"/> van fase 2 (docs/archive/ONDERTEKENEN_VOORSTEL.md §5.3): het
 /// ondertekende document = origineel + <see cref="SigningEvidenceDocument"/> samengevoegd met
 /// PdfSharpCore (zelfde mergepatroon als InvoicesController.MergePdfDocuments — origineel blijft
 /// byte-identiek aan wat de ondertekenaar zag, geen re-render); het auditrapport is een eigen PDF

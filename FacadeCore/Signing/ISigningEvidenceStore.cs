@@ -1,7 +1,7 @@
 namespace FacadeCore.Signing;
 
 /// <summary>
-/// Bewijs- en auditgegevens (ONDERTEKENEN_VOORSTEL.md §4.6). De enige weg naar <c>SigningEvent</c>:
+/// Bewijs- en auditgegevens (docs/archive/ONDERTEKENEN_VOORSTEL.md §4.6). De enige weg naar <c>SigningEvent</c>:
 /// berekent per event de hash-ketting (§3.7) en schrijft append-only. Niemand anders schrijft in
 /// die tabel, zodat de ketting nooit een gat krijgt.
 /// </summary>

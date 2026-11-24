@@ -8,7 +8,7 @@ using QuestPDF.Infrastructure;
 namespace CPMCore.Documents
 {
     /// <summary>
-    /// Het ondertekeningsblad (fase 2, ONDERTEKENEN_VOORSTEL.md §5.3): één QuestPDF-pagina die na het
+    /// Het ondertekeningsblad (fase 2, docs/archive/ONDERTEKENEN_VOORSTEL.md §5.3): één QuestPDF-pagina die na het
     /// origineel wordt samengevoegd (<see cref="Services.Signing.SignedDocumentComposer"/>, PdfSharpCore)
     /// — een kopie van de stijl van het origineel (zelfde <see cref="GroupLnPdfDocument"/>-kop/-voet),
     /// met per ondertekenaar een compacte stempel (naam, tijdstip, verificatie-ID, SHA-256 van het
@@ -85,7 +85,7 @@ namespace CPMCore.Documents
         /// als een ondertekende kopie van het origineel oogt: getekende handtekening (indien aanwezig)
         /// boven een korte identiteits-/bewijsregel, in hetzelfde vak-gevoel als
         /// ChangeOrderDocument.SignatureBlock ("Handtekening voor akkoord"), nu ingevuld. Het origineel
-        /// zelf blijft ongewijzigd (ONDERTEKENEN_VOORSTEL.md) — dit is een apart blad erna, geen wijziging
+        /// zelf blijft ongewijzigd (docs/archive/ONDERTEKENEN_VOORSTEL.md) — dit is een apart blad erna, geen wijziging
         /// van pagina 1.</summary>
         private void SignatureStamp(IContainer c, SignedPartyInfo s)
         {

@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 namespace ServiceCore.Signing;
 
 /// <summary>
-/// De ene client voor de externe Storage API (ONDERTEKENEN_VOORSTEL.md §4.7). Zelfde endpoints en
+/// De ene client voor de externe Storage API (docs/archive/ONDERTEKENEN_VOORSTEL.md §4.7). Zelfde endpoints en
 /// hetzelfde gedrag als de privé-helpers die tot nu toe in <c>ProjectenController</c> en
 /// <c>ProjectIssuesController</c> gedupliceerd stonden (die delegeren voortaan hierheen), inclusief
 /// de uitzondering dat de map "pictures" een rechtstreekse publieke URL heeft. Geregistreerd via

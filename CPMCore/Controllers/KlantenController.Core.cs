@@ -1324,7 +1324,7 @@ namespace CPMCore.Controllers
         /// <summary>ClientContactChangeLog vullen (fase 3, signingmodule §6.3 — e-mail/gsm zijn de
         /// OTP-bestemming bij het ondertekenen) — enkel gemaskeerde oude/nieuwe waarden, nooit de echte
         /// e-mail/gsm zelf. Nieuwe contacten (geen oude waarde om mee te vergelijken) en verwijderde
-        /// contacten worden niet gelogd — buiten scope, zie ONDERTEKENEN_VOORTGANG.md.</summary>
+        /// contacten worden niet gelogd — buiten scope, zie docs/voortgang/ONDERTEKENEN_VOORTGANG.md.</summary>
         private void LogContactChanges(ClientAccount client, string oldEmail, string oldCellphone, Dictionary<int, (string Email, string Cellphone)> oldContacts)
         {
             var userId = User.GetCpmUserId();

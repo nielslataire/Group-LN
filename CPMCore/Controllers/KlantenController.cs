@@ -85,7 +85,7 @@ namespace CPMCore.Controllers
         }
 
         // Alle acties zijn opgesplitst in partials KlantenController.<Groep>.cs met views in
-        // Views/Klanten/<Groep>/ (okt. 2026, structureren; zie STRUCTUREREN_VOORTGANG.md).
+        // Views/Klanten/<Groep>/ (okt. 2026, structureren; zie docs/archive/STRUCTUREREN_VOORTGANG.md).
         // Hier blijven enkel de velden en de constructor over.
         // ===== Core ===== KlantenController.Core.cs
         // ===== ClientAccount ===== KlantenController.ClientAccount.cs

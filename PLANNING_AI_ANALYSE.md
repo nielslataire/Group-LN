@@ -3,7 +3,7 @@
 > **Bijgewerkt op 22/11/2026:** zie hoofdstuk 14 voor de besluiten van Niels (aannemers vervallen, relatieve datums, voorstel per projectfase, privacy). Waar hoofdstuk 14 afwijkt van de tekst hierboven, geldt hoofdstuk 14.
 
 Datum: 22/11/2026. Opgesteld na de vaststelling dat het huidige AI-voorstel bij het projectsjabloon "niets zinnigs doet".
-Alles hieronder komt uit het lezen van de code en het logboek (`PLANNING_VOORTGANG.md`, `PLANNING_SJABLOON_OVERDRACHT.md`). Er is niets gebouwd of gewijzigd. Wat ik niet kon nagaan (de inhoud van de live database, of de AI-aanroep echt werkt) staat in hoofdstuk 11.
+Alles hieronder komt uit het lezen van de code en het logboek (`PLANNING_VOORTGANG.md`, `docs/archive/PLANNING_SJABLOON_OVERDRACHT.md`). Er is niets gebouwd of gewijzigd. Wat ik niet kon nagaan (de inhoud van de live database, of de AI-aanroep echt werkt) staat in hoofdstuk 11.
 
 ## 1. Conclusie in het kort
 

@@ -10,12 +10,12 @@ Bij **elke** nieuwe pagina of functie, en bij **elke** wijziging die zichtbaar g
 
 - Nieuwe pagina of functie: nieuw artikel op de juiste plek in de boom.
 - Gewijzigde pagina of functie: bestaand artikel bijwerken (stappen, uitleg, schermafbeelding-verwijzingen). Verwijderd gedrag haal je ook uit de help.
-- Lees vóór het schrijven altijd `HELP_SCHRIJFGIDS.md` (toon, vaste opbouw, woordenlijst, bedrijfslogica). Weet je iets niet zeker over bedrijfslogica, zet dan `[VRAAG: …]` in het artikel en noteer de vraag in `HELP_VRAGEN.md`; presenteer het niet als feit.
+- Lees vóór het schrijven altijd `HELP_SCHRIJFGIDS.md` (toon, vaste opbouw, woordenlijst, bedrijfslogica). Weet je iets niet zeker over bedrijfslogica, zet dan `[VRAAG: …]` in het artikel en noteer de vraag in `docs/archive/help/HELP_VRAGEN.md`; presenteer het niet als feit.
 
 ### Schermafbeeldingen: noteren, niet meteen nemen
 
 Neem tijdens het bouwen **geen** screenshots voor de help. Schrijf op welke er nog gemaakt moeten worden, zodat ze later in één batch met Playwright genomen worden volgens het recept "Schermafbeeldingen maken" in `DESIGN.md` (eigen profiel, cookie `gl_v2_preview=1`, uitsnijden, echte namen vervangen).
 
-- Voeg per gewenste afbeelding een rij toe aan `HELP_SCREENSHOTS.md`, met dezelfde kolommen als de bestaande tabel: artikel-slug, stap, pad (`CPMCore/wwwroot/img/help/<topic>/<slug>/<stap>-<naam>.png`), route/pagina, uitsnede, anonimiseren.
+- Voeg per gewenste afbeelding een rij toe aan `docs/archive/help/HELP_SCREENSHOTS.md`, met dezelfde kolommen als de bestaande tabel: artikel-slug, stap, pad (`CPMCore/wwwroot/img/help/<topic>/<slug>/<stap>-<naam>.png`), route/pagina, uitsnede, anonimiseren.
 - Zet de `![...]`-verwijzing wel al in het artikel (eerste regel van de stap), zodat de afbeelding na de batch meteen op zijn plek staat.
 - Wijzigt een pagina zo dat een bestaande afbeelding niet meer klopt, zet die dan opnieuw in de lijst met in de uitsnede-kolom "opnieuw nemen".

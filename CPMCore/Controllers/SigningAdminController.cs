@@ -14,7 +14,7 @@ using ServiceCore.Signing;
 namespace CPMCore.Controllers;
 
 /// <summary>
-/// Interne kant van het elektronisch ondertekenen (ONDERTEKENEN_VOORSTEL.md §5.1, §5.3): een document
+/// Interne kant van het elektronisch ondertekenen (docs/archive/ONDERTEKENEN_VOORSTEL.md §5.1, §5.3): een document
 /// aanbieden, het dossier opvolgen (status per ondertekenaar, herinnering, nieuwe link, annuleren,
 /// downloads, audit trail) en het overzicht per project. Generiek over <c>ISigningDocumentSource</c>:
 /// deze controller weet niet wat een wijzigingsopdracht is; hij kent enkel (documentType, sourceId).

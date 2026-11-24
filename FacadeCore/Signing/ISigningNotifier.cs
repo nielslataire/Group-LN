@@ -1,7 +1,7 @@
 namespace FacadeCore.Signing;
 
 /// <summary>
-/// Notificatiemails van de signingmodule (ONDERTEKENEN_VOORSTEL.md §5, "E-mails en berichten"):
+/// Notificatiemails van de signingmodule (docs/archive/ONDERTEKENEN_VOORSTEL.md §5, "E-mails en berichten"):
 /// uitnodiging, herinnering, nieuwe link, bevestiging na ondertekening, voltooiing (intern én
 /// naar de ondertekenaars), weigering (intern), annulering (naar de ondertekenaars). Bewust
 /// gescheiden van de OTP-aflevering (<see cref="IMessageChannel"/>). Templates zitten in code met

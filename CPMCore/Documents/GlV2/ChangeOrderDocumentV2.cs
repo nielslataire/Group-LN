@@ -11,13 +11,13 @@ namespace CPMCore.Documents.GlV2
     /// <summary>
     /// Offerte/wijzigingsopdracht in de nieuwe gl-v2-huisstijl (design-handoff punt 35c "Wijzigings-
     /// opdracht" / 35d "Offerte"). Eerste document van de gl-v2-documentlayout
-    /// (DOCUMENTLAYOUT_VOORTGANG.md); gebruikt hetzelfde datamodel (<see cref="ChangeOrderPdfModel"/>)
+    /// (docs/voortgang/DOCUMENTLAYOUT_VOORTGANG.md); gebruikt hetzelfde datamodel (<see cref="ChangeOrderPdfModel"/>)
     /// als de bestaande <see cref="ChangeOrderDocument"/>, enkel de opmaak is nieuw — zo blijft
     /// <c>ChangeOrderPdfBuilder.LoadAsync</c> gedeeld en verandert er niets aan wat een niet-gl-v2
     /// sessie te zien krijgt (<c>ChangeOrderPdfBuilder.Render</c> kiest op <c>UseGlV2Layout</c>).
     ///
     /// Twee bewuste afwijkingen van de ontwerptekst, door wat <see cref="ChangeOrderPdfModel"/>
-    /// vandaag draagt (zie DOCUMENTLAYOUT_VOORTGANG.md "Bekende afwijkingen"):
+    /// vandaag draagt (zie docs/voortgang/DOCUMENTLAYOUT_VOORTGANG.md "Bekende afwijkingen"):
     /// (1) de offerte-tabel heeft geen postnummer/groepscodes (35d) — de regels komen plat uit
     /// <c>ChangeOrderDetail</c>, zonder budget-activiteitcode of sectie-groepering, dus offerte en
     /// wijzigingsopdracht delen hier dezelfde kolomopbouw (35c);
@@ -59,7 +59,7 @@ namespace CPMCore.Documents.GlV2
             {
                 // "Body vult de ruimte op, blok hangt boven de voet" (35d): Extend().AlignBottom().ShowEntire()
                 // staat op het column-item dat de volledige Row bevat (niet op een item binnen de Row);
-                // binnen de Row staat Voorwaarden bovenaan, op dezelfde hoogte als "Voor akkoord" (zoals 35d). Zie DOCUMENTLAYOUT_VOORTGANG.md.
+                // binnen de Row staat Voorwaarden bovenaan, op dezelfde hoogte als "Voor akkoord" (zoals 35d). Zie docs/voortgang/DOCUMENTLAYOUT_VOORTGANG.md.
                 col.Item().Element(Body);
                 col.Item().Extend().AlignBottom().ShowEntire().Element(_m.IsQuote ? VoorwaardenEnAkkoord : VoorwaardenEnAkkoordWijziging);
             });

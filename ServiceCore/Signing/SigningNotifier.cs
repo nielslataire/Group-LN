@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 namespace ServiceCore.Signing;
 
 /// <summary>
-/// Notificatiemails van de signingmodule (ONDERTEKENEN_VOORSTEL.md §5). Templates in code met eigen
+/// Notificatiemails van de signingmodule (docs/archive/ONDERTEKENEN_VOORSTEL.md §5). Templates in code met eigen
 /// plaatshouders — bewust niet de vrij bewerkbare EmailTemplate-tabel (§1, e-mail). Testmodus
 /// (<c>Signing:TestRecipientOverride</c>): alles naar het testadres, echte ontvanger in het
 /// onderwerp. Eén fout in een notificatie mag een dossier nooit blokkeren: elke verzending logt

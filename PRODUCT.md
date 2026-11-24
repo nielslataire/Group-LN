@@ -145,7 +145,7 @@ itself is settled; gl-v2's design specifics belong in new-work/document, not her
 
 ## Evidence on Hand
 
-- A real, mature domain model and workflows in code; `DEVNOTES.md` records recent
+- A real, mature domain model and workflows in code; `docs/archive/DEVNOTES.md` records recent
   feature work (budget formula engine, per-tariff VAT calculation, index scrapers).
 - Brand assets: `CPMCore/wwwroot/Img/groupln-logo.png`,
   `CPMCore/wwwroot/Img/Logo-bco.png`.

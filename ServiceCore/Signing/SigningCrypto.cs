@@ -5,7 +5,7 @@ using System.Text;
 namespace ServiceCore.Signing;
 
 /// <summary>
-/// De enige plek in de module die ruwe tokens en OTP-codes aanraakt (ONDERTEKENEN_VOORSTEL.md §6).
+/// De enige plek in de module die ruwe tokens en OTP-codes aanraakt (docs/archive/ONDERTEKENEN_VOORSTEL.md §6).
 /// Uitsluitend .NET-primitieven: <see cref="RandomNumberGenerator"/>, <see cref="SHA256"/>,
 /// <see cref="HMACSHA256"/>, <see cref="CryptographicOperations.FixedTimeEquals"/>. Pure functies,
 /// geen state, geen logging — zo kan er nooit een geheim in een log belanden.

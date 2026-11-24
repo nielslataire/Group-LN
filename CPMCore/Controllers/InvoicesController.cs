@@ -132,7 +132,7 @@ namespace CPMCore.Controllers
         }
 
         // Alle acties zijn opgesplitst in partials InvoicesController.<Groep>.cs met views in
-        // Views/Invoices/<Groep>/ (okt. 2026, structureren; zie STRUCTUREREN_VOORTGANG.md).
+        // Views/Invoices/<Groep>/ (okt. 2026, structureren; zie docs/archive/STRUCTUREREN_VOORTGANG.md).
         // Hier blijven enkel de velden en de constructor over.
         // ===== Core ===== InvoicesController.Core.cs
         // ===== Send ===== InvoicesController.Send.cs

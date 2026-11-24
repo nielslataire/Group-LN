@@ -3,6 +3,7 @@
 @using FacadeCore
 @model SchijfSjabloonBewerk
 @inject IPermissionService PermissionService
+@inject IBouwstaatService Bouwstaten
 @*
     gl-v2 — Instellingen › Sjablonen › Schijven › bewerken (design-handoff 66b). Links: de kop (naam, omschrijving, minimum, actief) en de schijven als rijen met per schijf Gewicht of Vast % (soort),
     de waarde, per verdieping, enkel bij (kelder, dak) en een kolom Voorbeeld; bovenaan de regel die het uitrekent ("vast 5 % · 95 % over gewicht 7 = 13,57 % per gewicht").
@@ -19,11 +20,13 @@
     var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsPlanningSjablonen);
     var codes = (ViewData["PlanningCodes"] as List<PlanningCodeInfo>) ?? new List<PlanningCodeInfo>();
     var gebruiktIn = (ViewData["GebruiktIn"] as List<string>) ?? new List<string>();
+    var keuzes = await Bouwstaten.Keuzes();
     var data = new
     {
         id = Model.Id, naam = Model.Naam, beschrijving = Model.Beschrijving ?? "", minimum = Model.MinimumPercentage, isActief = isNieuw ? true : Model.IsActief,
-        schijven = Model.Schijven.Select(s => new { naam = s.Naam, code = s.PlanningCode ?? "", vast = s.VastPercentage, gewicht = s.Gewicht, perVerdieping = s.PerVerdieping, voorwaarde = string.IsNullOrWhiteSpace(s.VoorwaardeVariabele) ? "" : s.VoorwaardeVariabele + ":" + s.VoorwaardeWaarde }),
+        schijven = Model.Schijven.Select(s => new { naam = s.Naam, code = s.PlanningCode ?? "", vast = s.VastPercentage, gewicht = s.Gewicht, perVerdieping = s.PerVerdieping, bouwstaatId = s.BouwstaatId, bouwstaatRegel = s.BouwstaatRegel, voorwaarde = string.IsNullOrWhiteSpace(s.VoorwaardeVariabele) ? "" : s.VoorwaardeVariabele + ":" + s.VoorwaardeWaarde }),
         planningCodes = codes.Select(c => new { code = c.Code, naam = c.Naam, sjabloon = c.Sjabloon }),
+        bouwstaten = keuzes.Bouwstaten.Select(b => new { id = b.Id, naam = b.Naam, groep = b.Groep, isActief = b.IsActief }),
     };
 }
 @section PageStyle

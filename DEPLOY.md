@@ -155,11 +155,11 @@ satelliet-controllers (UserAdmin, ProjectsIssues, SigningAdmin, ContractorPortal
 map van hun module. Razor vindt dat via `Helpers/CustomViewLocationExpander.cs` (`FeatureFolders` en
 `ControllerFolders`); een nieuwe groeps- of satellietnaam hoort daar erbij. Absolute viewpaden
 (`~/Views/…`) omzeilen die expander en moeten de submap zelf noemen. Stand en patroon:
-`STRUCTUREREN_VOORTGANG.md`.
+`docs/archive/STRUCTUREREN_VOORTGANG.md`.
 
 ## Elektronisch ondertekenen (signingmodule)
 
-Ontwerp en fasering: `ONDERTEKENEN_VOORSTEL.md`. Uitrol gebeurt "donker": de code staat in de build,
+Ontwerp en fasering: `docs/archive/ONDERTEKENEN_VOORSTEL.md`. Uitrol gebeurt "donker": de code staat in de build,
 de module is onbereikbaar tot `Features:EnableSigning` op `true` staat.
 
 ### Configuratie
@@ -225,7 +225,7 @@ beheerder in SSMS. Wie een event wil corrigeren, kan dat niet: dat is de bedoeli
 
 ### Fase 2 (28/09/2026): publieke ondertekenpagina
 - **Route `/tekenen`**, niet `/ondertekenen`: die laatste is nog de route van de oudere,
-  live link-per-e-mail-flow (`SigningController`) tot de cutover — zie ONDERTEKENEN_VOORTGANG.md
+  live link-per-e-mail-flow (`SigningController`) tot de cutover — zie docs/voortgang/ONDERTEKENEN_VOORTGANG.md
   "Samenloop". `OndertekenenController` ([AllowAnonymous], sessiecookie `gl_tekenen_sid`).
 - **Handtekening verplicht**: de klant tekent op een canvas vóór "Ondertekenen" bruikbaar wordt; ook
   server-side afgedwongen (`OndertekenenController.Tekenen` weigert zonder `SignatureImagePng`).

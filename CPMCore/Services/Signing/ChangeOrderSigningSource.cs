@@ -9,7 +9,7 @@ using ServiceCore.Signing;
 namespace CPMCore.Services.Signing;
 
 /// <summary>
-/// De eerste <see cref="ISigningDocumentSource"/>: wijzigingsopdrachten (ONDERTEKENEN_VOORSTEL.md §4.2,
+/// De eerste <see cref="ISigningDocumentSource"/>: wijzigingsopdrachten (docs/archive/ONDERTEKENEN_VOORSTEL.md §4.2,
 /// §10 fase 1). Dit is de enige klasse in de signingmodule die iets over <c>ChangeOrder</c> weet.
 /// - Pakket: de QuestPDF via <see cref="ChangeOrderPdfBuilder"/>, titel/nummer/bedragen voor de
 ///   ondertekenpagina, en de voorgestelde ondertekenaars (§9.7: het klantaccount en de
@@ -160,7 +160,7 @@ public sealed class ChangeOrderSigningSource : ISigningDocumentSource
         await ArchiveSignedDocumentAsync(co, caseId, ct);
     }
 
-    /// <summary>Legt het ondertekende PDF vast als ProjectDocs-revisie (ONDERTEKENEN_VOORTGANG.md,
+    /// <summary>Legt het ondertekende PDF vast als ProjectDocs-revisie (docs/voortgang/ONDERTEKENEN_VOORTGANG.md,
     /// keuze 5) — best effort: mag de akkoorddatum hierboven nooit blokkeren of ongedaan maken.</summary>
     private async Task ArchiveSignedDocumentAsync(ChangeOrder co, int caseId, CancellationToken ct)
     {

@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace ServiceCore.Signing;
 
 /// <summary>
-/// Verificatiecode via e-mail (ONDERTEKENEN_VOORSTEL.md §4.4). De bestemming is het e-mailadres uit
+/// Verificatiecode via e-mail (docs/archive/ONDERTEKENEN_VOORSTEL.md §4.4). De bestemming is het e-mailadres uit
 /// de snapshot van de ondertekenaar (dat is ook waar de link naartoe ging — v1 bewijst dus
 /// controle over die mailbox op het ogenblik van ondertekenen, geen tweede factor; zie §6.9).
 /// Genereren/valideren van de code zit NIET hier maar in <see cref="SigningService"/>; deze klasse

@@ -918,7 +918,7 @@ public partial class ProjectsIssuesController : BaseController
 
     private async Task<string?> UploadAssetToStorageAsync(Stream fileStream, string originalFileName, string? contentType, string folder)
     {
-        // Gedelegeerd naar de gedeelde IAssetStorageClient (ONDERTEKENEN_VOORSTEL.md §4.7) — was een kopie van ProjectenController.
+        // Gedelegeerd naar de gedeelde IAssetStorageClient (docs/archive/ONDERTEKENEN_VOORSTEL.md §4.7) — was een kopie van ProjectenController.
         var storage = HttpContext.RequestServices.GetRequiredService<FacadeCore.Signing.IAssetStorageClient>();
         return await storage.UploadAsync(fileStream, originalFileName, contentType, folder);
     }

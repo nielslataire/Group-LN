@@ -1,7 +1,7 @@
 namespace FacadeCore.Signing;
 
 /// <summary>
-/// Rendert de definitieve documenten (ONDERTEKENEN_VOORSTEL.md §5.3): het ondertekende document
+/// Rendert de definitieve documenten (docs/archive/ONDERTEKENEN_VOORSTEL.md §5.3): het ondertekende document
 /// (origineel + ondertekeningsblad) en het auditrapport. Geïmplementeerd in CPMCore (fase 2) met
 /// QuestPDF op de <c>GroupLnPdfDocument</c>-basis + PdfSharpCore om samen te voegen — de service-
 /// laag blijft vrij van PDF-engines. In fase 0 is er een stub die duidelijk meldt dat rendering

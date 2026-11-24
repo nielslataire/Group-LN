@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 namespace DALCore.Models;
 
 /// <summary>
-/// Elektronisch ondertekenen (ONDERTEKENEN_VOORSTEL.md §3) — DbSets + fluent config, aangeroepen
+/// Elektronisch ondertekenen (docs/archive/ONDERTEKENEN_VOORSTEL.md §3) — DbSets + fluent config, aangeroepen
 /// vanuit <c>OnModelCreatingPartial</c> in <c>cpmRunningContext.Seeding.cs</c>, zelfde recept als
 /// Taak/Dossier/Traject. Tabellen: migratie <c>_migrations/055_Signing.sql</c>.
 /// </summary>

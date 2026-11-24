@@ -4,7 +4,7 @@ using System;
 namespace DALCore.Models;
 
 /// <summary>
-/// Beleid per documenttype voor elektronisch ondertekenen (ONDERTEKENEN_VOORSTEL.md §3.1): welke
+/// Beleid per documenttype voor elektronisch ondertekenen (docs/archive/ONDERTEKENEN_VOORSTEL.md §3.1): welke
 /// methode, welke regel, of OTP vereist is en via welk kanaal, geldigheden, herinneringen, de
 /// standaard-akkoordtekst en retentie. Een dossier kopieert dit beleid bij het aanmaken
 /// (snapshot) — een latere wijziging hier raakt lopende dossiers niet.

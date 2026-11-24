@@ -1,7 +1,7 @@
 namespace FacadeCore.Signing;
 
 /// <summary>
-/// Eén client voor de externe Storage API (ONDERTEKENEN_VOORSTEL.md §4.7) — vervangt de privé,
+/// Eén client voor de externe Storage API (docs/archive/ONDERTEKENEN_VOORSTEL.md §4.7) — vervangt de privé,
 /// gedupliceerde helpers in <c>ProjectenController</c>/<c>ProjectIssuesController</c>. Endpoints:
 /// <c>POST /api/assets/upload</c> (multipart: folder + file → { fileName }),
 /// <c>POST /api/assets/{folder}/{file}/sign</c> (→ { url }), <c>DELETE /api/assets/{folder}/{file}</c>.

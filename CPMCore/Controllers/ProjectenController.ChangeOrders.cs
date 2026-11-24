@@ -176,7 +176,7 @@ namespace CPMCore.Controllers
         }
 
         /// <summary>
-        /// Elektronisch ondertekenen (ONDERTEKENEN_VOORSTEL.md §9.2): zolang er een dossier Draft/Open is
+        /// Elektronisch ondertekenen (docs/archive/ONDERTEKENEN_VOORSTEL.md §9.2): zolang er een dossier Draft/Open is
         /// voor deze wijzigingsopdracht, is ze vergrendeld — bewerken en verwijderen weigeren, met
         /// verwijzing naar het dossier. Afgeleid van het actieve dossier, geen vlag op de ChangeOrder.
         /// Module uit = nooit vergrendeld (en geen query naar de signingtabellen).
@@ -630,7 +630,7 @@ namespace CPMCore.Controllers
         /// geladen door ChangeOrderPdfBuilder) i.p.v. de Rotativa-view ChangeOrderPDF.cshtml — hetzelfde
         /// bestand dat een klant elektronisch ondertekent, zodat papier en dossier nooit verschillen.
         /// De oude view blijft voorlopig staan als referentie; ze wordt nergens meer gerenderd.
-        /// Sinds de gl-v2-documentlayout (DOCUMENTLAYOUT_VOORTGANG.md) kiest <c>ChangeOrderPdfBuilder.Render</c>
+        /// Sinds de gl-v2-documentlayout (docs/voortgang/DOCUMENTLAYOUT_VOORTGANG.md) kiest <c>ChangeOrderPdfBuilder.Render</c>
         /// hier op <c>ViewData["UseGlV2Layout"]</c> tussen die legacy opmaak en <c>ChangeOrderDocumentV2</c>;
         /// de ondertekenflow (<c>ChangeOrderSigningSource</c>) blijft altijd de legacy opmaak gebruiken.
         /// </summary>

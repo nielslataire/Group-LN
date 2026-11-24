@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 namespace ServiceCore.Signing;
 
 /// <summary>
-/// De kern van de signingmodule (ONDERTEKENEN_VOORSTEL.md §4.1, §5): aanmaken, aanbieden, opvolgen
+/// De kern van de signingmodule (docs/archive/ONDERTEKENEN_VOORSTEL.md §4.1, §5): aanmaken, aanbieden, opvolgen
 /// en afsluiten van dossiers, plus alles wat de ondertekenaar via zijn sessie doet. Kent geen HTTP.
 /// Principes: bewijs is server-side (§2.2), alles is een snapshot (§2.3), elke overgang is een
 /// event (§2.4), geheimen komen hier alleen als parameter voorbij en worden nooit gelogd (§2.5),
@@ -1401,7 +1401,7 @@ public sealed class SigningService : ISigningService
     }
 
     // MERGE 28/09/2026: "/ondertekenen" is (nog) de route van SigningController (de link-per-e-mail-
-    // flow van de andere pc, ONDERTEKENEN_VOORTGANG.md "Samenloop"). Fase 2 van deze module gebruikt
+    // flow van de andere pc, docs/voortgang/ONDERTEKENEN_VOORTGANG.md "Samenloop"). Fase 2 van deze module gebruikt
     // voorlopig "/tekenen" om die niet te breken; de cutover (route overnemen, hun flow verwijderen)
     // is een latere, bewuste stap.
     private string SignUrl(string rawToken) => $"{_options.PublicBaseUrl!.TrimEnd('/')}/tekenen/{rawToken}";

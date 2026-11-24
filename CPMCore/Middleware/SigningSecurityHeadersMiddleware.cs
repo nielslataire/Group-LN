@@ -1,7 +1,7 @@
 namespace CPMCore.Middleware;
 
 /// <summary>
-/// Security headers voor de publieke signing-pagina's (ONDERTEKENEN_VOORSTEL.md §6.5): alles onder
+/// Security headers voor de publieke signing-pagina's (docs/archive/ONDERTEKENEN_VOORSTEL.md §6.5): alles onder
 /// <c>/ondertekenen</c> en <c>/verifieer</c>. Geen caching (de pagina's tonen persoonsgegevens en
 /// een sessiegebonden document), geen Referer (de eerste URL bevat het token), geen inbedding door
 /// derden, en een CSP zonder externe bronnen — dus géén CDN-fonts of -iconen op deze pagina's;
@@ -12,7 +12,7 @@ namespace CPMCore.Middleware;
 public sealed class SigningSecurityHeadersMiddleware
 {
     // MERGE 28/09/2026: "/ondertekenen" is nog altijd de route van SigningController (de
-    // link-per-e-mail-flow van de andere pc, ONDERTEKENEN_VOORTGANG.md "Samenloop") en blijft erbuiten
+    // link-per-e-mail-flow van de andere pc, docs/voortgang/ONDERTEKENEN_VOORTGANG.md "Samenloop") en blijft erbuiten
     // tot de cutover. Fase 2 van de signingmodule (OndertekenenController) gebruikt "/tekenen".
     private static readonly string[] Prefixes = { "/verifieer", "/tekenen" };
 

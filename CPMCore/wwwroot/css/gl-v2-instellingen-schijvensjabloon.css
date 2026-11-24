@@ -189,3 +189,4 @@
     .gl-v2 .gl-v2-sjs-seg.is-groot button { flex: 1; }
     .gl-v2 .gl-v2-sjs-vraag { flex-wrap: wrap; }
 }
+.gl-v2 .gl-v2-sjs-cw .gl-v2-sjs-bs .gl-v2-field-input { font-family: var(--gl-v2-font-sans); font-size: 12px; }

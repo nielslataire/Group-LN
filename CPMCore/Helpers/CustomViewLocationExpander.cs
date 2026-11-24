@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc.Razor;
 namespace CPMCore.Helpers
 {
     /// <summary>Mappenstructuur van Views/ (okt. 2026, "views/controllers/models structureren",
-    /// STRUCTUREREN_VOORTGANG.md). Twee regels, allebei zonder dat een controller zijn
+    /// docs/archive/STRUCTUREREN_VOORTGANG.md). Twee regels, allebei zonder dat een controller zijn
     /// <c>return View(model)</c> / <c>View("Naam")</c> hoeft aan te passen:
     /// <list type="number">
     /// <item><b>Functiemappen</b> (<see cref="FeatureFolders"/>): een paginaview mag in een submap per
@@ -54,7 +54,7 @@ namespace CPMCore.Helpers
             ["ProjectsIssues"]         = "Projecten/Issues",
             ["ProjectVerslagen"]       = "Projecten/Verslagen",
             ["Pdf"]                    = "Projecten/Contracts",
-            // Ondertekenen (twee implementaties, bewust apart gehouden — zie ONDERTEKENEN_VOORTGANG.md)
+            // Ondertekenen (twee implementaties, bewust apart gehouden — zie docs/voortgang/ONDERTEKENEN_VOORTGANG.md)
             ["Signing"]                = "Ondertekenen/Signing",
             ["Verifieer"]              = "Ondertekenen/Verifieer",
             ["SigningAdmin"]           = "Ondertekenen/SigningAdmin",

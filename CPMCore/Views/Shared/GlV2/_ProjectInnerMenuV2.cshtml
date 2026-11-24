@@ -60,7 +60,7 @@
     var canSeeForSale      = PermissionService.HasRead(PermissionCodes.ProjectsForSale);
     var canSeeSalesSettings = PermissionService.HasRead(PermissionCodes.ProjectsSalesSettings);
     var canSeeContacts     = PermissionService.HasRead(PermissionCodes.ProjectsContacts);
-    // Elektronisch ondertekenen (ONDERTEKENEN_VOORTGANG.md, fase 1): eigen permissiecode én de
+    // Elektronisch ondertekenen (docs/voortgang/ONDERTEKENEN_VOORTGANG.md, fase 1): eigen permissiecode én de
     // feature-vlag — de module blijft onzichtbaar tot Features:EnableSigning aanstaat.
 
     var showPhotos   = canSeePhotos   && !Model.IsCoordinationProject;

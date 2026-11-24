@@ -5,7 +5,7 @@ using System.Collections.Generic;
 namespace DALCore.Models;
 
 /// <summary>
-/// Ondertekeningsdossier — de aggregate root van de signingmodule (ONDERTEKENEN_VOORSTEL.md §3.2).
+/// Ondertekeningsdossier — de aggregate root van de signingmodule (docs/archive/ONDERTEKENEN_VOORSTEL.md §3.2).
 /// Kent het brondocument enkel als (<see cref="DocumentType"/>, <see cref="SourceEntityId"/>); de
 /// bron zelf (bv. <c>ChangeOrder</c>) heeft géén verwijzing terug. Beleid, akkoordtekst en de
 /// documentbytes zijn snapshots op het moment van aanbieden.

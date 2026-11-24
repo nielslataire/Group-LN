@@ -1,7 +1,7 @@
 namespace FacadeCore.Signing;
 
 /// <summary>
-/// Communicatiekanaal voor OTP-berichten (ONDERTEKENEN_VOORSTEL.md §4.5): "email" (over de
+/// Communicatiekanaal voor OTP-berichten (docs/archive/ONDERTEKENEN_VOORSTEL.md §4.5): "email" (over de
 /// bestaande <see cref="IEmailSender"/>) en "sms" (over de geconfigureerde <see cref="ISmsProvider"/>).
 /// Enkel afleveren; het kanaal genereert of bewaart nooit een code. Bewust een andere weg dan de
 /// notificatiemails (<see cref="ISigningNotifier"/>): een template-fout in een notificatie kan

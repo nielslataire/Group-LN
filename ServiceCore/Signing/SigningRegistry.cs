@@ -4,7 +4,7 @@ namespace ServiceCore.Signing;
 
 /// <summary>
 /// Kiest de juiste implementatie op sleutel uit de DI-multi-registraties (het
-/// <c>ITrajectTriggerAction</c>-recept, ONDERTEKENEN_VOORSTEL.md §4). Onbekende sleutel = duidelijke
+/// <c>ITrajectTriggerAction</c>-recept, docs/archive/ONDERTEKENEN_VOORSTEL.md §4). Onbekende sleutel = duidelijke
 /// fout, geen stille terugval — een dossier dat naar "itsme" verwijst mag nooit per ongeluk via
 /// SES lopen.
 /// </summary>

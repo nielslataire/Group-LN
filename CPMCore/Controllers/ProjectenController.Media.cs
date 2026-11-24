@@ -1030,7 +1030,7 @@ namespace CPMCore.Controllers
 
         private async Task<string?> UploadAssetToStorageAsync(Stream fileStream, string originalFileName, string? contentType, string folder)
         {
-            // Gedelegeerd naar de gedeelde IAssetStorageClient (ONDERTEKENEN_VOORSTEL.md §4.7): zelfde
+            // Gedelegeerd naar de gedeelde IAssetStorageClient (docs/archive/ONDERTEKENEN_VOORSTEL.md §4.7): zelfde
             // endpoint en gedrag als de vroegere inline HttpClient-code, maar nog maar één implementatie.
             var storage = HttpContext.RequestServices.GetRequiredService<FacadeCore.Signing.IAssetStorageClient>();
             return await storage.UploadAsync(fileStream, originalFileName, contentType, folder);
