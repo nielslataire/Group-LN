@@ -42,7 +42,7 @@ Zie je **Planning** niet in het menu, dan heb je het recht niet. Het recht heet 
 
 1. Kies **Bewerken** bij het project.
 2. Open het tabblad **Planning**.
-3. Vul de **Aanvangsdatum** in. Dat is de eerste werkdag van de bouw.
+3. Vul de **Aanvangsdatum bouwwerken** in. Dat is de eerste werkdag van de bouw. De **Startdatum project** is een andere datum: de start van het hele project, voor het traject.
 4. Vul de **Uitvoeringstermijn** in. Dat is het aantal werkdagen waarbinnen het project klaar moet zijn.
 5. Bewaar het project.
 

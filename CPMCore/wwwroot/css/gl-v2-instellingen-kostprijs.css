@@ -8,7 +8,6 @@
 .gl-v2-kp-panel.is-single { grid-template-columns: minmax(0, 1fr); }
 .gl-v2-kp-stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .gl-v2-kp-card { min-width: 0; }
-.gl-v2-kp-card-actions { margin-left: auto; display: flex; gap: 8px; }
 
 /* ── Groepen/loten als filter (links) ── */
 .gl-v2-kp-lots { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 8px; }

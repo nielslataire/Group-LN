@@ -4,7 +4,7 @@ using FacadeCore;
 namespace ServiceCore.Planning;
 
 /// <summary>Eén schijf zoals ze in het sjabloon staat (invoer voor het uitrekenen).</summary>
-public sealed record SchijfInvoer(string Naam, string? PlanningCode, decimal? Vast, decimal Gewicht, bool PerVerdieping, string? VoorwaardeVariabele = null, string? VoorwaardeWaarde = null);
+public sealed record SchijfInvoer(string Naam, string? PlanningCode, decimal? Vast, decimal Gewicht, bool PerVerdieping, string? VoorwaardeVariabele = null, string? VoorwaardeWaarde = null, int? BouwstaatId = null, byte BouwstaatRegel = 0);
 
 /// <summary>
 /// Rekent een schijvensjabloon uit tot een lijst schijven met percentages die samen 100 % zijn:
@@ -25,6 +25,8 @@ public static class SchijfSjabloonUitrol
         public int? Volgnr;
         public decimal? Vast;
         public decimal Gewicht;
+        public int? BouwstaatId;
+        public byte BouwstaatRegel;
     }
 
     /// <summary>1ste, 2de, 3de ... (8ste).</summary>
@@ -71,7 +73,7 @@ public static class SchijfSjabloonUitrol
                 // Eén schijf per bouwlaag boven het gelijkvloers (gewicht of vast percentage gelden per bouwlaag, niet verdeeld). Het volgnummer is de plaats
                 // van de taak met deze code in de planning: met een kelder staat die code ook op het gelijkvloers (eerste plaat boven de kelder), zonder kelder niet.
                 for (var i = 2; i <= n; i++)
-                    items.Add(new Item { Naam = Naam(s.Naam, i), Code = s.PlanningCode, Volgnr = kelder ? i : i - 1, Vast = s.Vast, Gewicht = gewicht });
+                    items.Add(new Item { Naam = Naam(s.Naam, i), Code = s.PlanningCode, Volgnr = kelder ? i : i - 1, Vast = s.Vast, Gewicht = gewicht, BouwstaatId = s.BouwstaatId, BouwstaatRegel = s.BouwstaatRegel });
                 continue;
             }
             if (s.PerVerdieping && n > 1)
@@ -82,11 +84,11 @@ public static class SchijfSjabloonUitrol
                 {
                     decimal? vast = vastDeel;
                     if (s.Vast != null && i == n) vast = Math.Round(s.Vast.Value - vastDeel!.Value * (n - 1), 2);
-                    items.Add(new Item { Naam = Naam(s.Naam, i), Code = s.PlanningCode, Volgnr = i, Vast = vast, Gewicht = gewicht / n });
+                    items.Add(new Item { Naam = Naam(s.Naam, i), Code = s.PlanningCode, Volgnr = i, Vast = vast, Gewicht = gewicht / n, BouwstaatId = s.BouwstaatId, BouwstaatRegel = s.BouwstaatRegel });
                 }
             }
             else
-                items.Add(new Item { Naam = Naam(s.Naam, null), Code = s.PlanningCode, Volgnr = s.PerVerdieping ? 1 : null, Vast = s.Vast, Gewicht = gewicht });
+                items.Add(new Item { Naam = Naam(s.Naam, null), Code = s.PlanningCode, Volgnr = s.PerVerdieping ? 1 : null, Vast = s.Vast, Gewicht = gewicht, BouwstaatId = s.BouwstaatId, BouwstaatRegel = s.BouwstaatRegel });
         }
 
         var vasteSom = items.Where(i => i.Vast != null).Sum(i => i.Vast!.Value);
@@ -128,7 +130,7 @@ public static class SchijfSjabloonUitrol
         foreach (var i in items)
         {
             var p = percentages[i];
-            uit.Schijven.Add(new SchijfVoorstel { Naam = i.Naam, Percentage = p, PlanningCode = i.Code, PlanningVolgnr = i.Volgnr, IsVast = i.Vast != null });
+            uit.Schijven.Add(new SchijfVoorstel { Naam = i.Naam, Percentage = p, PlanningCode = i.Code, PlanningVolgnr = i.Volgnr, IsVast = i.Vast != null, BouwstaatId = i.BouwstaatId, BouwstaatRegel = i.BouwstaatRegel });
             if (p < minimum) uit.Waarschuwingen.Add($"“{i.Naam}” krijgt {p.ToString("0.##", Nl)} %, onder het minimum van {minimum.ToString("0.##", Nl)} %.");
         }
         uit.Totaal = uit.Schijven.Sum(s => s.Percentage);

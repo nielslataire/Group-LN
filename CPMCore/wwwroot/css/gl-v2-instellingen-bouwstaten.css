@@ -1,0 +1,23 @@
+/* gl-v2 — Instellingen › Bouwstaten: lijst per groep en editor (migratie 158). Laadt vóór shell.css: regels staan onder .gl-v2 voor voldoende specificiteit.
+   Hergebruikt de lijstklassen .gl-v2-auto-* (gl-v2-instellingen-automatisatie.css); alleen de kolombreedtes en een paar details zijn hier. */
+
+.gl-v2 .gl-v2-auto-grid--bs { grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr) 100px 110px 80px 100px 76px; }
+.gl-v2 .gl-v2-bs-lijst .gl-v2-section-card + .gl-v2-section-card { margin-top: 14px; }
+.gl-v2 .gl-v2-bs-code { font-family: var(--gl-v2-font-mono, ui-monospace, monospace); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2 .gl-v2-bs-lijst .gl-v2-auto-acts { display: flex; justify-content: flex-end; gap: 4px; }
+.gl-v2 .gl-v2-bs-lijst .gl-v2-bs-vorm { margin: 0; display: inline-flex; }
+.gl-v2 .gl-v2-bs-lijst [hidden] { display: none !important; }
+
+/* Editor */
+.gl-v2 .gl-v2-bs-edit { max-width: 720px; }
+.gl-v2 .gl-v2-bs-edit .gl-v2-bs-schakelaars { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+.gl-v2 .gl-v2-bs-edit .gl-v2-bs-hint { font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-muted); margin: 6px 0 0; }
+
+@media (max-width: 1100px) {
+    .gl-v2 .gl-v2-auto-grid--bs { grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr) 90px 100px 76px; }
+    .gl-v2 .gl-v2-auto-grid--bs > :nth-child(4), .gl-v2 .gl-v2-auto-grid--bs > :nth-child(5) { display: none; }
+}
+@media (max-width: 767.98px) {
+    .gl-v2 .gl-v2-auto-grid--bs { grid-template-columns: minmax(0, 1fr) auto 76px; }
+    .gl-v2 .gl-v2-auto-grid--bs > :nth-child(2), .gl-v2 .gl-v2-auto-grid--bs > :nth-child(4), .gl-v2 .gl-v2-auto-grid--bs > :nth-child(5), .gl-v2 .gl-v2-auto-grid--bs > :nth-child(6) { display: none; }
+}

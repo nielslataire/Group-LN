@@ -175,5 +175,29 @@
 .gl-v2-pls-pick-uitleg { flex: 1 1 220px; font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 
 /* Voorwaarde per taak ("Komt voor"): compacte keuzelijst onder de code van de taak */
-.gl-v2-pls-tw { --gl-v2-field-h: 30px; margin-top: 3px; max-width: 280px; }
-.gl-v2-pls-tw .gl-v2-select-trigger { font-size: 12px; }
+/* Per taak (63b): Komt voor, Bouwstaat en Activiteit naast elkaar op een eigen regel onder naam en voorgangers (migratie 158).
+   Elk veld is een compacte doos met een klein label; groen als "Komt voor" niet "Altijd" is, gouden stippellijn als bouwstaat of activiteit leeg is. */
+.gl-v2-pls-tr .gl-v2-pls-tags { grid-column: 2 / 6; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 1.25fr); gap: 8px; margin-top: 2px; }
+.gl-v2-pls-tr .gl-v2-pls-tw { display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 8px; min-width: 0; border: 1px solid var(--gl-v2-hairline); border-radius: var(--gl-v2-radius-s); background: var(--gl-v2-surface); }
+.gl-v2-pls-tr .gl-v2-pls-tw:focus-within { border-color: var(--gl-v2-primary); box-shadow: 0 0 0 3px var(--gl-v2-primary-tint); }
+.gl-v2-pls-tr .gl-v2-pls-tw .gl-v2-select { flex: 1 1 auto; min-width: 0; width: 100%; }
+.gl-v2-pls-tr .gl-v2-pls-tw .gl-v2-select-trigger { width: 100%; min-width: 0; height: 28px; min-height: 0; padding: 0; border: 0; background: transparent; box-shadow: none; font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
+.gl-v2-pls-tr .gl-v2-pls-tw .gl-v2-select-trigger-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-v2-pls-s2l { flex: none; font: 600 8.5px var(--gl-v2-font-sans); letter-spacing: .08em; color: var(--gl-v2-muted-light); }
+.gl-v2-pls-tr .gl-v2-pls-tw.is-cond { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-accent-sage); }
+.gl-v2-pls-tr .gl-v2-pls-tw.is-cond .gl-v2-select-trigger { color: var(--gl-v2-primary-deep); font-weight: 600; }
+.gl-v2-pls-tr .gl-v2-pls-tw.is-none { border-style: dashed; border-color: var(--gl-v2-gold); background: var(--gl-v2-gold-tint); }
+.gl-v2-pls-tr .gl-v2-pls-tw.is-none .gl-v2-select-trigger { color: var(--gl-v2-warning); font-style: italic; }
+.gl-v2-pls-tr.is-off { opacity: .55; }
+@media (max-width: 900px) { .gl-v2-pls-tr .gl-v2-pls-tags { grid-column: 2 / -1; grid-template-columns: 1fr; } }
+
+/* Voorganger "Vorige/Eerste bouwlaag": blauw, zodat ze niet verward worden met een gewone voorganger */
+.gl-v2-pls-chip.is-laag { background: #E3EAF3; color: #2F4F7A; }
+
+/* Gouden balk boven de blokken: taken zonder bouwstaat of activiteit, met namen */
+.gl-v2-pls-warn b { font-weight: 700; }
+.gl-v2-pls-warn em { font-style: normal; font-weight: 600; }
+
+/* Voorbeeld: per bouwlaag (deelfase) ingesprongen onder het blok */
+.gl-v2-pls-pr.is-deel .gl-v2-pls-pn { padding-left: 14px; font-weight: 450; font-size: 11.5px; color: var(--gl-v2-muted); }
+.gl-v2-pls-pr.is-deel .gl-v2-pls-pd { color: var(--gl-v2-muted); }

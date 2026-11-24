@@ -31,6 +31,10 @@ public partial class Project
 
     public DateOnly? DeliveryDateDef { get; set; }
 
+    /// <summary>Start van het hele project (de grondoptie, de vergunning): het begin van het traject. Verschilt van de aanvangsdatum van de bouwwerken (StartDateConstruction). Migratie 159.</summary>
+    public DateOnly? ProjectStartDate { get; set; }
+
+    /// <summary>Aanvangsdatum van de bouwwerken.</summary>
     public DateOnly? StartDateConstruction { get; set; }
 
     /// <summary>Tienjarige aansprakelijkheid voor het hele project (migratie 112): null per aannemer afgeleid, 1 via projectpolis.</summary>

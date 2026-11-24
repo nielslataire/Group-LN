@@ -183,6 +183,8 @@ namespace CPMCore.Controllers
                     Invoicable = i < post.StageInvoicable.Count && post.StageInvoicable[i],
                     PlanningCode = i < post.StagePlanningCodes.Count && !string.IsNullOrWhiteSpace(post.StagePlanningCodes[i]) ? post.StagePlanningCodes[i]!.Trim() : null,
                     PlanningVolgnr = i < post.StagePlanningVolgnrs.Count && int.TryParse(post.StagePlanningVolgnrs[i], NumberStyles.Integer, CultureInfo.InvariantCulture, out var volgnr) && volgnr > 0 ? volgnr : null,
+                    BouwstaatId = i < post.StageBouwstaatIds.Count && int.TryParse(post.StageBouwstaatIds[i], NumberStyles.Integer, CultureInfo.InvariantCulture, out var bsId) && bsId > 0 ? bsId : null,
+                    BouwstaatRegel = (byte)(i < post.StageBouwstaatRegels.Count && post.StageBouwstaatRegels[i] == "1" ? 1 : 0),
                     IsLocked = id > 0 && lockedIds.Contains(id),
                 });
                 if (rowName.Length == 0) errors.Add(($"Stages[{i}]", $"Schijf {i + 1}: vul de omschrijving in."));
@@ -253,7 +255,7 @@ namespace CPMCore.Controllers
             if (isNew)
             {
                 foreach (var r in rows)
-                    group.InvoicingPaymentStages.Add(new InvoicingPaymentStages { Name = r.Name, Percentage = r.Percentage, Invoicable = false, PlanningCode = r.PlanningCode, PlanningVolgnr = r.PlanningVolgnr });
+                    group.InvoicingPaymentStages.Add(new InvoicingPaymentStages { Name = r.Name, Percentage = r.Percentage, Invoicable = false, PlanningCode = r.PlanningCode, PlanningVolgnr = r.PlanningVolgnr, BouwstaatId = r.BouwstaatId, BouwstaatRegel = r.BouwstaatRegel });
             }
             else
             {
@@ -270,12 +272,14 @@ namespace CPMCore.Controllers
                         entity.Percentage = r.Percentage;
                         entity.PlanningCode = r.PlanningCode;
                         entity.PlanningVolgnr = r.PlanningVolgnr;
+                        entity.BouwstaatId = r.BouwstaatId;
+                        entity.BouwstaatRegel = r.BouwstaatRegel;
                         if (!r.IsLocked) entity.Invoicable = r.Invoicable;
                         used.Add(slotId);
                     }
                     else
                     {
-                        group.InvoicingPaymentStages.Add(new InvoicingPaymentStages { Name = r.Name, Percentage = r.Percentage, Invoicable = false, PlanningCode = r.PlanningCode, PlanningVolgnr = r.PlanningVolgnr });
+                        group.InvoicingPaymentStages.Add(new InvoicingPaymentStages { Name = r.Name, Percentage = r.Percentage, Invoicable = false, PlanningCode = r.PlanningCode, PlanningVolgnr = r.PlanningVolgnr, BouwstaatId = r.BouwstaatId, BouwstaatRegel = r.BouwstaatRegel });
                     }
                 }
                 foreach (var stale in byId.Values.Where(s => !used.Contains(s.Id)).ToList())
@@ -430,6 +434,8 @@ namespace CPMCore.Controllers
                 IsLocked = locked.Contains(s.Id),
                 PlanningCode = s.PlanningCode,
                 PlanningVolgnr = s.PlanningVolgnr,
+                BouwstaatId = s.BouwstaatId,
+                BouwstaatRegel = s.BouwstaatRegel,
             }).ToList();
 
             var all = LoadProjectUnits(vm.ProjectId, vm.GroupId);

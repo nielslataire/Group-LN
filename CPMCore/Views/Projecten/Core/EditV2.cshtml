@@ -32,7 +32,7 @@
     {
         ("algemeen",    new[] { "Project.Name", "Project.ProjectCode", "Project.Street", "Project.HouseNumber", "Project.AspNetUserID", "SelectedCountry", "SelectedPostalcode", "Project.Postalcode", "Project.Werfmelding", "Project.Developer", "Project.Builder", "Project.IssuerCompanyIdBuilder", "Project.IssuerCompanyIdLandOwner" }),
         ("status",      new[] { "SelectedStatus", "Project.Status", "Project.ProjectType", "Project.TotalLandShare", "Project.IsPublished", "Project.StandardFotoName", "StandardFotoUpload" }),
-        ("planning",    new[] { "Project.StartDateConstruction", "Project.ExecutionDays", "Project.DeliveryDate", "Project.DeliveryDateDef", "Project.WheaterStation" }),
+        ("planning",    new[] { "Project.ProjectStartDate", "Project.StartDateConstruction", "Project.ExecutionDays", "Project.DeliveryDate", "Project.DeliveryDateDef", "Project.WheaterStation" }),
         ("partners",    new[] { "Project.Architect", "Project.Engineer", "Project.SecurityCoordinator", "Project.EpbReporter", "Project.Notary", "Project.SalesResponsibleUserID" }),
         ("documenten",  new[] { "Project.Doc" }),
         ("seo",         new[] { "Project.Seo", "Project.CommercialTitleNL", "Project.CommercialTextNL", "Website" }),
@@ -285,7 +285,8 @@
                     <span class="gl-v2-section-card-desc">Uitvoering en oplevering.</span>
                 </div>
                 <div class="gl-v2-section-grid">
-                    <div class="gl-v2-col-4">@Html.EditorFor(m => m.Project.StartDateConstruction, "GlV2Date", new { Label = "Aanvangsdatum" })</div>
+                    <div class="gl-v2-col-4">@Html.EditorFor(m => m.Project.ProjectStartDate, "GlV2Date", new { Label = "Startdatum project" })</div>
+                    <div class="gl-v2-col-4">@Html.EditorFor(m => m.Project.StartDateConstruction, "GlV2Date", new { Label = "Aanvangsdatum bouwwerken" })</div>
                     <div class="gl-v2-col-4">
                         <div class="gl-v2-field@(ErrorFor("Project.ExecutionDays") != null ? " is-error" : "")">
                             <label class="gl-v2-field-label" for="Project_ExecutionDays">Uitvoeringstermijn</label>
@@ -307,12 +308,12 @@
                         })
                     </div>
                     <div class="gl-v2-col-4">
-                        @Html.EditorFor(m => m.Project.DeliveryDate, "GlV2Date", new { Label = "Opleveringsdatum" })
-                        <span class="gl-v2-field-help gl-v2-pf-inline-help">leeg laten = berekend uit aanvang + termijn + weerverletdagen</span>
+                        @Html.EditorFor(m => m.Project.DeliveryDate, "GlV2Date", new { Label = "Voorlopige oplevering (werkelijke datum)" })
+                        <span class="gl-v2-field-help gl-v2-pf-inline-help">pas invullen als de oplevering gebeurd is. De uiterlijke termijn volgt uit aanvang + uitvoeringstermijn</span>
                     </div>
                     <div class="gl-v2-col-4">
-                        @Html.EditorFor(m => m.Project.DeliveryDateDef, "GlV2Date", new { Label = "Definitieve opleveringsdatum" })
-                        <span class="gl-v2-field-help gl-v2-pf-inline-help">meestal één jaar na de voorlopige oplevering</span>
+                        @Html.EditorFor(m => m.Project.DeliveryDateDef, "GlV2Date", new { Label = "Definitieve oplevering (werkelijke datum)" })
+                        <span class="gl-v2-field-help gl-v2-pf-inline-help">pas invullen als de definitieve oplevering gebeurd is</span>
                     </div>
                 </div>
             </div>

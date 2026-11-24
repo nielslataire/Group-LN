@@ -44,10 +44,11 @@ Zonder foto toont de projectenlijst een lege groene placeholder.
 ## De planning invullen
 
 1. Kies het tabblad **Planning**.
-2. Vul de **Aanvangsdatum** en de **Uitvoeringstermijn** in. De uitvoeringstermijn geef je in kalenderdagen.
-3. Vul de **Opleveringsdatum** en de **Definitieve opleveringsdatum** in.
-4. Kies het **Weerstation** voor dit project.
-5. Klik op **Wijzigingen opslaan**.
+2. Vul de **Startdatum project** in: de start van het hele project, bijvoorbeeld de grondoptie. Het traject rekent zijn streefdatums vanaf die datum.
+3. Vul de **Aanvangsdatum bouwwerken** en de **Uitvoeringstermijn** in. De uitvoeringstermijn geef je in werkdagen. De planning rekent vanaf de aanvangsdatum van de bouwwerken, en de uiterlijke einddatum is die aanvangsdatum plus de uitvoeringstermijn.
+4. Laat **Voorlopige oplevering** en **Definitieve oplevering** leeg tot ze echt gebeurd zijn. Dit zijn de werkelijke datums. Zodra je ze invult, wordt de bijhorende mijlpaal in het traject bereikt.
+5. Kies het **Weerstation** voor dit project.
+6. Klik op **Wijzigingen opslaan**.
 
 ![Aanvangsdatum, uitvoeringstermijn, weerstation en opleveringsdatums](/img/help/projecten/project-status-planning/2-planning.png)
 

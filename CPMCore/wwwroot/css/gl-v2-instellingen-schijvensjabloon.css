@@ -47,6 +47,8 @@
 .gl-v2 .gl-v2-sjs-kopkaart, .gl-v2 .gl-v2-pjs-kop { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) 150px auto; gap: 14px; padding: 14px 16px; align-items: start; }
 .gl-v2 .gl-v2-pjs-kop { grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) auto; }
 .gl-v2 .gl-v2-sjs-actief { align-self: center; margin-top: 16px; }
+.gl-v2 .gl-v2-sjs-actief .gl-v2-toggle-label { font-size: 12.5px; font-weight: 600; }
+.gl-v2 .gl-v2-sjs-actief .gl-v2-toggle-desc { font: 450 11px/1.25 var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 .gl-v2 .gl-v2-sjs-schijven, .gl-v2 .gl-v2-pjs-kaart { padding: 0 0 14px; }
 .gl-v2 .gl-v2-pjs-kaart { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
 .gl-v2 .gl-v2-sjs-schijven-kop { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; padding: 14px 16px 0; }
@@ -64,43 +66,61 @@
 .gl-v2 .gl-v2-sjs-regel code { font: 500 11px var(--gl-v2-font-mono); }
 
 /* Tabel met schijven */
-.gl-v2 .gl-v2-sjs-tabelkop, .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij { display: grid; grid-template-columns: 16px 18px minmax(160px, 1fr) 150px 112px 84px 52px 108px 84px 28px; gap: 8px; align-items: start; padding: 0 14px 0 10px; }
+.gl-v2 .gl-v2-sjs-tabelkop, .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij { display: grid; grid-template-columns: 16px 18px minmax(0, 1fr) 128px 88px 48px 190px 92px 28px; gap: 10px; align-items: start; padding: 0 14px 0 10px; }
 .gl-v2 .gl-v2-sjs-tabelkop { height: 30px; align-items: center; background: var(--gl-v2-hover-tint); font: 600 9.5px var(--gl-v2-font-sans); letter-spacing: .09em; text-transform: uppercase; color: var(--gl-v2-muted); }
 .gl-v2 .gl-v2-sjs-tabelkop .r { text-align: right; }
 .gl-v2 .gl-v2-sjs-rijen { list-style: none; margin: 0; padding: 0; }
-.gl-v2 .gl-v2-sjs .gl-v2-sjs-rij { padding-top: 8px; padding-bottom: 8px; border-top: 1px solid var(--gl-v2-hairline-soft); }
+.gl-v2 .gl-v2-sjs .gl-v2-sjs-rij { padding-top: 8px; padding-bottom: 8px; border-top: 1px solid var(--gl-v2-hairline-soft); --gl-v2-field-h: 34px; }
 .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij:hover { background: var(--gl-v2-hover-tint); }
 .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij.is-sleep { opacity: .45; }
+.gl-v2 .gl-v2-sjs .gl-v2-sjs-rij.is-uit { opacity: .5; } /* komt niet voor bij het voorbeeldgebouw */
+.gl-v2 .gl-v2-sjs .gl-v2-sjs-rij.is-uit:hover { opacity: .85; }
 .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij.is-doel { box-shadow: inset 0 2px 0 var(--gl-v2-primary); }
 .gl-v2 .gl-v2-sjs-grip { padding-top: 9px; cursor: grab; color: var(--gl-v2-muted); opacity: .5; font-size: 16px; line-height: 1; }
 .gl-v2 .gl-v2-sjs-rij:hover .gl-v2-sjs-grip { opacity: 1; }
 .gl-v2 .gl-v2-sjs-nr { padding-top: 9px; font: 600 11.5px var(--gl-v2-font-mono); color: var(--gl-v2-muted-light, #9aa898); }
-.gl-v2 .gl-v2-sjs-om, .gl-v2 .gl-v2-sjs-cw { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.gl-v2 .gl-v2-sjs-om { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .gl-v2 .gl-v2-sjs-omsub { display: flex; gap: 6px; flex-wrap: wrap; }
 .gl-v2 .gl-v2-sjs-omsub:empty { display: none; }
 .gl-v2 .gl-v2-sjs-omsub em { font-style: normal; }
 .gl-v2 .gl-v2-sjs-tok { font: 500 11px var(--gl-v2-font-mono); color: #7A4E8C; background: #F3ECF6; padding: 0 4px; border-radius: 3px; }
+.gl-v2 .gl-v2-sjs-tokh { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light, #7a8a78); }
 .gl-v2 .gl-v2-sjs-tokwarn { font: 500 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-warning); }
 .gl-v2 .gl-v2-sjs-eind { font: 700 9.5px var(--gl-v2-font-sans); letter-spacing: .06em; text-transform: uppercase; color: var(--gl-v2-warning); background: var(--gl-v2-gold-tint); padding: 2px 6px; border-radius: 4px; }
-.gl-v2 .gl-v2-sjs-cw .gl-v2-field-input { font: 500 11.5px var(--gl-v2-font-mono); }
+/* Tweede regel van een schijf: waarop ze wacht (bouwstaat + gestart/voltooid), onder de kolommen Omschrijving t/m Enkel bij */
+.gl-v2 .gl-v2-sjs-wacht { grid-column: 3 / 8; display: flex; gap: 8px; min-width: 0; align-items: center; margin-top: -2px; --gl-v2-field-h: 30px; }
+.gl-v2 .gl-v2-sjs-wl { flex: none; width: 58px; font: 600 8.5px var(--gl-v2-font-sans); letter-spacing: .08em; color: var(--gl-v2-muted-light, #9aa898); }
+.gl-v2 .gl-v2-sjs-bssel { flex: 0 1 460px; min-width: 0; display: flex; }
+.gl-v2 .gl-v2-sjs-wacht .gl-v2-segmented { flex: none; }
+.gl-v2 .gl-v2-sjs-code { flex: 0 1 150px; min-width: 0; height: 30px; }
+.gl-v2 .gl-v2-sjs-code .gl-v2-field-input { font: 500 11.5px var(--gl-v2-font-mono); }
+.gl-v2 .gl-v2-sjs-wacht .gl-v2-sjs-codestatus { flex: 1 1 auto; min-width: 0; }
+/* Keuzelijsten in de rij: de gedeelde .gl-v2-select, enkel kleiner gemaakt (hoogte via --gl-v2-field-h) en vlak naast de andere velden */
+.gl-v2 .gl-v2-sjs-rij .gl-v2-select { width: 100%; }
+.gl-v2 .gl-v2-sjs-rij .gl-v2-select-trigger { padding: 0 10px; gap: 6px; font-size: 12.5px; }
+.gl-v2 .gl-v2-sjs-wacht .gl-v2-select-trigger { font-size: 12px; }
+.gl-v2 .gl-v2-sjs-rij .gl-v2-select-panel { min-width: 260px; }
+.gl-v2 .gl-v2-sjs-wacht .gl-v2-select-panel { min-width: 380px; }
+.gl-v2 .gl-v2-sjs-rij .gl-v2-select-trigger.is-warning .gl-v2-select-trigger-label { color: var(--gl-v2-warning); font-style: italic; font-weight: 450; } /* nog geen bouwstaat */
+.gl-v2 .gl-v2-sjs-rij .gl-v2-select-trigger.is-cond { background: var(--gl-v2-hover-tint); border-color: var(--gl-v2-accent-sage); } /* enkel bij: een voorwaarde */
+.gl-v2 .gl-v2-sjs-rij .gl-v2-select-trigger.is-cond .gl-v2-select-trigger-label { color: var(--gl-v2-primary-deep); font-weight: 600; }
 .gl-v2 .gl-v2-sjs-codestatus { display: flex; gap: 4px; align-items: flex-start; font: 450 10.5px/1.35 var(--gl-v2-font-sans); }
 .gl-v2 .gl-v2-sjs-codestatus:empty { display: none; }
 .gl-v2 .gl-v2-sjs-codestatus i { flex: none; margin-top: 1px; }
 .gl-v2 .gl-v2-sjs-codestatus.is-ok { color: var(--gl-v2-primary-deep); }
 .gl-v2 .gl-v2-sjs-codestatus.is-bad { color: var(--gl-v2-danger); }
 .gl-v2 .gl-v2-sjs-codestatus.is-gold { color: var(--gl-v2-warning); }
-.gl-v2 .gl-v2-sjs-soort, .gl-v2 .gl-v2-sjs-seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 8px; background: #EDEFEB; align-self: start; }
-.gl-v2 .gl-v2-sjs-soort { height: 34px; }
-.gl-v2 .gl-v2-sjs-soort button, .gl-v2 .gl-v2-sjs-seg button { border: 0; background: none; border-radius: 6px; padding: 0 8px; font: 500 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); cursor: pointer; white-space: nowrap; }
-.gl-v2 .gl-v2-sjs-soort button.is-on, .gl-v2 .gl-v2-sjs-seg button.is-on { background: var(--gl-v2-surface, #fff); color: var(--gl-v2-primary); font-weight: 700; box-shadow: 0 1px 2px rgba(44, 59, 42, .18); }
-.gl-v2 .gl-v2-sjs-seg button { padding: 0 10px; min-height: 26px; }
+/* Soort = het gedeelde .gl-v2-segmented (34px, is-compact is-fill) */
+.gl-v2 .gl-v2-sjs-soort { align-self: start; min-width: 0; }
+/* Het grote segmentje (Gebouw) van het projectsjabloon (66d) houdt zijn eigen tekening; de schijveneditor gebruikt .gl-v2-segmented */
+.gl-v2 .gl-v2-sjs-seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 8px; background: #EDEFEB; align-self: start; }
+.gl-v2 .gl-v2-sjs-seg button { border: 0; background: none; border-radius: 6px; padding: 0 10px; min-height: 26px; font: 500 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); cursor: pointer; white-space: nowrap; }
+.gl-v2 .gl-v2-sjs-seg button.is-on { background: var(--gl-v2-surface, #fff); color: var(--gl-v2-primary); font-weight: 700; box-shadow: 0 1px 2px rgba(44, 59, 42, .18); }
 .gl-v2 .gl-v2-sjs-seg.is-groot { height: 40px; }
 .gl-v2 .gl-v2-sjs-seg.is-groot button { padding: 0 14px; font-size: 12.5px; }
 .gl-v2 .gl-v2-sjs-waarde .gl-v2-field-input { text-align: right; }
 .gl-v2 .gl-v2-sjs-waarde.is-fout { box-shadow: 0 0 0 1px var(--gl-v2-danger); }
-.gl-v2 .gl-v2-sjs-check { display: flex; justify-content: center; padding-top: 9px; }
-.gl-v2 .gl-v2-sjs-check input { accent-color: var(--gl-v2-primary); width: 16px; height: 16px; }
-.gl-v2 .gl-v2-sjs-gv select { font-size: 12.5px; }
+.gl-v2 .gl-v2-sjs-check { display: flex; justify-content: center; padding-top: 6px; margin: 0; }
 .gl-v2 .gl-v2-sjs-res { padding-top: 9px; text-align: right; font: 600 12px var(--gl-v2-font-sans); font-variant-numeric: tabular-nums; color: var(--gl-v2-ink); white-space: nowrap; }
 .gl-v2 .gl-v2-sjs-res.is-uit { color: var(--gl-v2-muted-light, #9aa898); font-weight: 450; }
 .gl-v2 .gl-v2-sjs-menucel { display: flex; justify-content: flex-end; }
@@ -108,15 +128,15 @@
 .gl-v2 .gl-v2-sjs-tip { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); }
 .gl-v2 .gl-v2-sjs-tip code { font-size: 11.5px; }
 @media (max-width: 1700px) { /* de kolom Voorbeeld verdwijnt: het voorbeeldpaneel toont dezelfde cijfers */
-    .gl-v2 .gl-v2-sjs-tabelkop, .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij { grid-template-columns: 16px 18px minmax(160px, 1fr) 150px 112px 84px 52px 108px 28px; }
-    .gl-v2 .gl-v2-sjs-tabelkop > :nth-child(9), .gl-v2 .gl-v2-sjs-res { display: none; }
+    .gl-v2 .gl-v2-sjs-tabelkop, .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij { grid-template-columns: 16px 18px minmax(0, 1fr) 128px 88px 48px 190px 28px; }
+    .gl-v2 .gl-v2-sjs-tabelkop > :nth-child(8), .gl-v2 .gl-v2-sjs-res { display: none; }
 }
 @media (max-width: 900px) {
     .gl-v2 .gl-v2-sjs-tabelkop { display: none; }
     .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij { grid-template-columns: 16px 1fr 1fr 28px; padding: 12px 12px; row-gap: 8px; }
     .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij > .gl-v2-sjs-grip, .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij > .gl-v2-sjs-nr { display: none; }
     .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij > .gl-v2-sjs-om { grid-column: 1 / 4; }
-    .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij > .gl-v2-sjs-cw { grid-column: 1 / 4; }
+    .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij > .gl-v2-sjs-wacht { grid-column: 1 / 5; flex-wrap: wrap; }
     .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij > .gl-v2-sjs-menucel { grid-column: 4; grid-row: 1; }
     .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij > .gl-v2-sjs-soort { grid-column: 1 / 3; justify-self: start; }
     .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij > .gl-v2-sjs-waarde { grid-column: 3 / 5; }
@@ -189,4 +209,3 @@
     .gl-v2 .gl-v2-sjs-seg.is-groot button { flex: 1; }
     .gl-v2 .gl-v2-sjs-vraag { flex-wrap: wrap; }
 }
-.gl-v2 .gl-v2-sjs-cw .gl-v2-sjs-bs .gl-v2-field-input { font-family: var(--gl-v2-font-sans); font-size: 12px; }

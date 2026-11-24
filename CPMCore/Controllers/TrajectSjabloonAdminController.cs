@@ -47,7 +47,8 @@ public partial class TrajectSjabloonAdminController : BaseController
         var lijst = new TrajectSjabloonListVm
         {
             Sjablonen = sjablonen,
-            AantalTrajectenPerSjabloon = counts.ToDictionary(x => x.Key, x => x.Count)
+            AantalTrajectenPerSjabloon = counts.ToDictionary(x => x.Key, x => x.Count),
+            Info = IsV2 ? await BouwInfo(sjablonen) : new()
         };
         return IsV2 ? View("IndexV2", lijst) : View(lijst);
     }
@@ -169,6 +170,26 @@ public partial class TrajectSjabloonAdminController : BaseController
         return RedirectToAction(nameof(Bewerken), new { id = saved.Id });
     }
 
+    /// <summary>Zet een sjabloon actief of inactief (⋯-menu van de lijst). Een inactief sjabloon wordt niet meer voorgesteld bij een nieuw project.</summary>
+    [HttpPost("{id:int}/Actief")]
+    [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.SettingsTrajectSjablonen)]
+    public async Task<IActionResult> Actief(int id, bool actief)
+    {
+        var s = await _db.TrajectSjabloon.FirstOrDefaultAsync(x => x.Id == id);
+        if (s == null)
+        {
+            AddMessage("danger", "Sjabloon niet gevonden.", "Fout");
+            return RedirectToAction(nameof(Index));
+        }
+        s.IsActief = actief;
+        s.ModifiedDate = DateTime.UtcNow;
+        s.ModifiedByUserId = UserId;
+        await _db.SaveChangesAsync();
+        AddMessage("success", actief ? "Het sjabloon is weer actief." : "Het sjabloon is inactief en wordt niet meer voorgesteld.", actief ? "Geactiveerd" : "Inactief gezet");
+        return RedirectToAction(nameof(Index));
+    }
+
     [HttpPost("{id:int}/Verwijderen")]
     [ValidateAntiForgeryToken]
     [CPMCore.Filters.PermissionDelete(PermissionCodes.SettingsTrajectSjablonen)]
@@ -179,6 +200,49 @@ public partial class TrajectSjabloonAdminController : BaseController
             ok ? "Het sjabloon is verwijderd of gedeactiveerd." : "Sjabloon niet gevonden.",
             ok ? "Verwijderd" : "Fout");
         return RedirectToAction(nameof(Index));
+    }
+
+    private async Task<Dictionary<int, TrajectSjabloonInfo>> BouwInfo(List<TrajectSjabloon> sjablonen)
+    {
+        var gebruikt = (await _db.ProjectSjabloon.AsNoTracking().Where(p => p.TrajectSjabloonId != null).Select(p => new { Id = p.TrajectSjabloonId!.Value, p.Naam }).ToListAsync())
+            .GroupBy(x => x.Id).ToDictionary(g => g.Key, g => g.Select(x => x.Naam).OrderBy(n => n).ToList());
+        var ids = sjablonen.Select(s => s.ModifiedByUserId ?? s.CreatedByUserId).Where(i => !string.IsNullOrEmpty(i)).Distinct().ToList();
+        var namen = ids.Count == 0 ? new Dictionary<string, string>()
+            : (await _db.AspNetUsers1.AsNoTracking().Where(u => ids.Contains(u.Id)).Select(u => new { u.Id, u.Forename, u.Name }).ToListAsync())
+                .ToDictionary(u => u.Id, u => string.IsNullOrWhiteSpace(u.Forename) ? (u.Name ?? "") : u.Forename);
+        var uit = new Dictionary<int, TrajectSjabloonInfo>();
+        foreach (var s in sjablonen)
+        {
+            var mijlpalen = s.Fases.SelectMany(f => f.Mijlpalen).ToList();
+            var door = s.ModifiedByUserId ?? s.CreatedByUserId;
+            uit[s.Id] = new TrajectSjabloonInfo
+            {
+                AantalAutomatisch = mijlpalen.Count(m => (m.BronBinding ?? 0) != 0),
+                DuurDagen = DuurInDagen(mijlpalen),
+                GebruiktIn = gebruikt.TryGetValue(s.Id, out var g) ? g : new List<string>(),
+                GewijzigdOp = s.ModifiedDate ?? s.CreatedDate,
+                GewijzigdDoor = door != null && namen.TryGetValue(door, out var n) ? n : null,
+            };
+        }
+        return uit;
+    }
+
+    /// <summary>Langste keten van streefdatums: een mijlpaal telt vanaf zijn anker (+ dagen); zonder (geldig) anker vanaf de projectstart. Draait een keten rond, dan stopt die daar.</summary>
+    private static int DuurInDagen(List<TrajectSjabloonMijlpaal> mijlpalen)
+    {
+        var perCode = mijlpalen.Where(m => !string.IsNullOrEmpty(m.Code)).GroupBy(m => m.Code).ToDictionary(g => g.Key, g => g.First());
+        var memo = new Dictionary<string, int>();
+        int Dag(TrajectSjabloonMijlpaal m, HashSet<string> pad)
+        {
+            if (!string.IsNullOrEmpty(m.Code) && memo.TryGetValue(m.Code, out var bekend)) return bekend;
+            var basis = 0;
+            if (!string.IsNullOrEmpty(m.DoeldatumAnkerCode) && perCode.TryGetValue(m.DoeldatumAnkerCode, out var anker) && pad.Add(m.Code ?? ""))
+                basis = Dag(anker, pad);
+            var v = basis + (m.DoeldatumOffsetDagen ?? 0);
+            if (!string.IsNullOrEmpty(m.Code)) memo[m.Code] = v;
+            return v;
+        }
+        return mijlpalen.Count == 0 ? 0 : mijlpalen.Max(m => Dag(m, new HashSet<string>()));
     }
 
     private void SetBreadcrumbs(string? leaf = null)

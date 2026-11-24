@@ -5,9 +5,9 @@
 @inject IPermissionService PermissionService
 @inject IBouwstaatService Bouwstaten
 @*
-    gl-v2 — Instellingen › Sjablonen › Schijven › bewerken (design-handoff 66b). Links: de kop (naam, omschrijving, minimum, actief) en de schijven als rijen met per schijf Gewicht of Vast % (soort),
-    de waarde, per verdieping, enkel bij (kelder, dak) en een kolom Voorbeeld; bovenaan de regel die het uitrekent ("vast 5 % · 95 % over gewicht 7 = 13,57 % per gewicht").
-    Rechts: een voorbeeldpaneel (verdiepingen, kelder, constructiewaarde → alle schijven met % en €), de controle en waar het sjabloon gebruikt wordt. "Code in planning" wordt gecontroleerd
+    gl-v2 — Instellingen › Sjablonen › Schijven › bewerken (design-handoff 66b, herwerkt 24/11/2026 naar "jouw scherm, werkend"). Tabs Sjablonen bovenaan. Links: de kop (naam, omschrijving, minimum, actief) en de schijven als rijen met per schijf Gewicht of Vast % (soort),
+    de waarde, per verdieping, enkel bij (kelder, dak) en een kolom Voorbeeld; onder elke schijf een tweede regel "Wacht op" (bouwstaat + gestart/voltooid); bovenaan de regel die het uitrekent ("vast 5 % · 95 % over gewicht 7 = 13,57 % per gewicht").
+    Rechts: een voorbeeldpaneel (bouwlagen, kelder, constructiewaarde → alle schijven met % en €), de controle en waar het sjabloon gebruikt wordt. "Code in planning" wordt gecontroleerd
     tegen de codes van de actieve planningssjablonen (ViewData["PlanningCodes"]). Volgorde = sleepgreep of ⋯-menu; verwijderen zit in ⋯. De laatste schijf is de eindafrekening.
     Het document gaat als één JSON naar Opslaan (SchijfSjabloonService.Bewaar valideert). Logica en het uitrekenen (zelfde regels als SchijfSjabloonUitrol): wwwroot/js/gl-v2-instellingen-schijvensjabloon.js.
 *@
@@ -32,6 +32,7 @@
 @section PageStyle
 {
     <link rel="stylesheet" href="~/css/gl-v2-instellingen-automatisatie.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-sjabloontabs.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-instellingen-schijvensjabloon.css" asp-append-version="true" />
 }
 @section PageTitleBadges
@@ -58,6 +59,8 @@
         <button type="button" class="gl-v2-inline-error-close" id="sjs-fouten-close" aria-label="Melding sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
     </div>
 
+    @await Html.PartialAsync("GlV2/_SjabloonTabs", "schijven")
+
     <div class="gl-v2-sjs-grid">
         <div class="gl-v2-sjs-links">
             <section class="gl-v2-section-card gl-v2-sjs-kopkaart">
@@ -80,17 +83,17 @@
             <section class="gl-v2-section-card gl-v2-sjs-schijven">
                 <header class="gl-v2-sjs-schijven-kop">
                     <h2 class="gl-v2-section-card-title">Schijven</h2>
-                    <span class="gl-v2-sjs-sub">In volgorde van de werf. Elke schijf krijgt een vast percentage of een gewicht.</span>
+                    <span class="gl-v2-sjs-sub">In volgorde van de werf. Elke schijf krijgt een vast percentage of een gewicht en wacht op een bouwstaat uit de planning.</span>
                 </header>
                 <div class="gl-v2-sjs-regel" id="sjs-regel" role="status" aria-live="polite"></div>
 
                 <div class="gl-v2-sjs-tabelkop" aria-hidden="true">
-                    <span></span><span>#</span><span>Omschrijving op factuur</span><span>Code in planning</span><span>Soort</span><span class="r">Waarde</span><span>Per verd.</span><span>Enkel bij</span><span class="r">Voorbeeld</span><span></span>
+                    <span></span><span>#</span><span>Omschrijving op factuur · Wacht op (bouwstaat)</span><span>Soort</span><span class="r">Waarde</span><span>Per verd.</span><span>Enkel bij</span><span class="r">Voorbeeld</span><span></span>
                 </div>
                 <ol class="gl-v2-sjs-rijen" id="sjs-rijen"></ol>
                 <div class="gl-v2-sjs-toevoegbalk">
                     <button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="sjs-toevoegen"><i class="ph ph-plus" aria-hidden="true"></i>Schijf toevoegen</button>
-                    <span class="gl-v2-sjs-tip">Tip: typ <code>{verdieping}</code> in de omschrijving en zet “per verdieping” aan.</span>
+                    <span class="gl-v2-sjs-tip">Grijze rijen komen niet voor bij het voorbeeldgebouw rechts. Een variant (met/zonder kelder, plat/hellend dak) maak je met ⋯ › Dupliceren.</span>
                 </div>
             </section>
         </div>
@@ -99,9 +102,9 @@
             <section class="gl-v2-section-card gl-v2-sjs-paneel">
                 <header class="gl-v2-sjs-paneelkop"><h2 class="gl-v2-section-card-title">Voorbeeld</h2><span class="gl-v2-sjs-sub">zo ziet het eruit op een gebouw</span></header>
                 <div class="gl-v2-sjs-vragen">
-                    <div class="gl-v2-sjs-vraag"><span>Verdiepingen</span><div class="gl-v2-sjs-seg" id="sjs-verd" role="group" aria-label="Aantal verdiepingen"></div></div>
-                    <div class="gl-v2-sjs-vraag"><span>Kelder</span><div class="gl-v2-sjs-seg" id="sjs-kelder" role="group" aria-label="Kelder"><button type="button" data-v="ja">ja</button><button type="button" data-v="nee" class="is-on">nee</button></div></div>
-                    <div class="gl-v2-sjs-vraag"><span>Dak</span><div class="gl-v2-sjs-seg" id="sjs-dak" role="group" aria-label="Dak"><button type="button" data-v="" class="is-on">geen</button><button type="button" data-v="hellend">hellend</button><button type="button" data-v="plat">plat</button></div></div>
+                    <div class="gl-v2-sjs-vraag"><span>Bouwlagen</span><div class="gl-v2-segmented is-sm" id="sjs-verd" role="group" aria-label="Aantal bouwlagen"></div></div>
+                    <div class="gl-v2-sjs-vraag"><span>Kelder</span><div class="gl-v2-segmented is-sm" id="sjs-kelder" role="group" aria-label="Kelder"><button type="button" data-v="ja">ja</button><button type="button" data-v="nee" class="is-active">nee</button></div></div>
+                    <div class="gl-v2-sjs-vraag"><span>Dak</span><div class="gl-v2-segmented is-sm" id="sjs-dak" role="group" aria-label="Dak"><button type="button" data-v="" class="is-active">geen</button><button type="button" data-v="hellend">hellend</button><button type="button" data-v="plat">plat</button></div></div>
                     <div class="gl-v2-sjs-vraag"><span>Constructiewaarde</span><div class="gl-v2-field-box gl-v2-sjs-euro"><span class="gl-v2-field-prefix">€</span><input type="text" id="sjs-waarde" class="gl-v2-field-input is-tabular" inputmode="numeric" autocomplete="off" value="300.000" aria-label="Constructiewaarde in euro" /></div></div>
                 </div>
                 <ol class="gl-v2-sjs-uitrol" id="sjs-uitrol"></ol>

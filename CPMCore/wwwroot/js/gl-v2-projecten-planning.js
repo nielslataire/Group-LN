@@ -30,8 +30,8 @@
     var firstRender = true;
 
     var UI_KEY = "gl-v2-pl-ui-" + cfg.projectId;
-    var ui = { scale: "week", kritiek: false, basis: false, collapsed: {}, listW: 0, noticesOpen: false, mview: "week", mopen: {} };
-    try { var raw = window.localStorage.getItem(UI_KEY); if (raw) { var p = JSON.parse(raw); ui.scale = p.scale || ui.scale; ui.kritiek = !!p.kritiek; ui.basis = !!p.basis; ui.collapsed = p.collapsed || {}; ui.listW = +p.listW || 0; ui.noticesOpen = !!p.noticesOpen; ui.mview = p.mview === "lijst" || p.mview === "tijdlijn" ? p.mview : "week"; ui.mopen = p.mopen || {}; } } catch (e) { /* geen opslag: gewoon de standaard */ }
+    var ui = { scale: "week", kritiek: false, basis: false, collapsed: {}, listW: 0, noticesOpen: false, mview: "week", mopen: {}, inklapGedaan: {} };
+    try { var raw = window.localStorage.getItem(UI_KEY); if (raw) { var p = JSON.parse(raw); ui.inklapGedaan = p.inklapGedaan || {}; ui.scale = p.scale || ui.scale; ui.kritiek = !!p.kritiek; ui.basis = !!p.basis; ui.collapsed = p.collapsed || {}; ui.listW = +p.listW || 0; ui.noticesOpen = !!p.noticesOpen; ui.mview = p.mview === "lijst" || p.mview === "tijdlijn" ? p.mview : "week"; ui.mopen = p.mopen || {}; } } catch (e) { /* geen opslag: gewoon de standaard */ }
     function saveUi() { try { window.localStorage.setItem(UI_KEY, JSON.stringify(ui)); } catch (e) { /* idem */ } }
 
     function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c]; }); }
@@ -65,31 +65,45 @@
         var host = $("gl-v2-pl-tabs"), lijst = state.planningen || [];
         if (lijst.length <= 1 && !canWriteBasis) { host.hidden = true; return; }
         host.hidden = false;
-        var html = lijst.map(function (p) {
-            var on = p.id === state.actiefPlanningId && !aannActief;
-            return "<button type=\"button\" class=\"gl-v2-pl-tab\" role=\"tab\" aria-selected=\"" + (on ? "true" : "false") + "\" data-planning=\"" + p.id + "\" title=\"" + esc(p.eenhedenTekst ? "Voor: " + p.eenhedenTekst : (p.isHoofd ? "Geldt voor het hele project" : "Geen woningen gekoppeld")) + "\">" +
-                "<i class=\"ph " + (p.isHoofd ? "ph-house-line" : "ph-buildings") + "\" aria-hidden=\"true\"></i><span>" + esc(p.naam) + "</span>" +
-                (p.aantalTaken ? "<small>" + p.aantalTaken + "</small>" : "") + "</button>";
+        // Links de plannings als schakelaar (59i), rechts de acties: Importeren, Sjablonen ▾ en Instellen. De lege hoofdplanning van een project met een bouwdeel-planning krijgt geen knop (tenzij ze net open staat).
+        var seg = lijst.filter(function (p) { return !p.verborgen || p.id === state.actiefPlanningId; }).map(function (p) {
+            var on = p.id === state.actiefPlanningId && !aannActief, n = (p.eenheidIds || []).length;
+            return "<button type=\"button\" class=\"" + (on ? "is-active" : "") + "\" aria-pressed=\"" + (on ? "true" : "false") + "\" data-planning=\"" + p.id + "\" title=\"" + esc(p.eenhedenTekst ? "Voor: " + p.eenhedenTekst : (p.isHoofd ? "Geldt voor het hele project" : "Geen woningen gekoppeld")) + "\">" +
+                "<i class=\"ph " + (p.isHoofd ? "ph-house-line" : "ph-buildings") + "\" aria-hidden=\"true\"></i><span>" + esc(p.naam) + "</span>" + (n > 0 ? "<em>" + n + "</em>" : "") + "</button>";
         }).join("");
         if (lijst.length > 1) {
             var gOn = state.actiefPlanningId === GLOBAAL && !aannActief;
-            html += "<button type=\"button\" class=\"gl-v2-pl-tab is-globaal\" role=\"tab\" aria-selected=\"" + (gOn ? "true" : "false") + "\" data-planning=\"" + GLOBAAL + "\" title=\"Alle plannings samen in één overzicht (enkel lezen)\"><i class=\"ph ph-stack\" aria-hidden=\"true\"></i><span>Globaal</span></button>";
+            seg += "<button type=\"button\" class=\"" + (gOn ? "is-active" : "") + "\" aria-pressed=\"" + (gOn ? "true" : "false") + "\" data-planning=\"" + GLOBAAL + "\" title=\"Alle plannings samen in één overzicht (enkel lezen)\"><i class=\"ph ph-stack\" aria-hidden=\"true\"></i><span>Globaal</span></button>";
         }
         if (state.heeftPlanning) {
-            html += "<button type=\"button\" class=\"gl-v2-pl-tab is-globaal\" role=\"tab\" aria-selected=\"" + (aannActief ? "true" : "false") + "\" data-planning=\"" + AANN + "\" title=\"Welke taken moet welke aannemer wanneer uitvoeren (enkel lezen)\"><i class=\"ph ph-hard-hat\" aria-hidden=\"true\"></i><span>Per aannemer</span></button>";
+            seg += "<button type=\"button\" class=\"" + (aannActief ? "is-active" : "") + "\" aria-pressed=\"" + (aannActief ? "true" : "false") + "\" data-planning=\"" + AANN + "\" title=\"Welke taken moet welke aannemer wanneer uitvoeren (enkel lezen)\"><i class=\"ph ph-hard-hat\" aria-hidden=\"true\"></i><span>Per aannemer</span></button>";
         }
+        var html = "<div class=\"gl-v2-segmented gl-v2-pl-segpl\" role=\"group\" aria-label=\"Plannings van dit project\">" + seg + "</div>";
+        if (canWriteBasis) html += "<button type=\"button\" class=\"gl-v2-btn gl-v2-btn-secondary js-pl-add-planning\" title=\"Een nieuwe planning maken\"><i class=\"ph ph-plus\" aria-hidden=\"true\"></i>Planning</button>";
+        html += "<span class=\"gl-v2-pl-toolbar-spacer\"></span>";
         if (canWriteBasis) {
-            html += "<button type=\"button\" class=\"gl-v2-pl-tab-add js-pl-add-planning\"><i class=\"ph ph-plus\" aria-hidden=\"true\"></i>Planning</button>";
-            html += "<button type=\"button\" class=\"gl-v2-pl-tab-add js-pl-import\" title=\"Een planning importeren uit MS Project (XML)\"><i class=\"ph ph-upload-simple\" aria-hidden=\"true\"></i>Importeren</button>";
-            html += "<button type=\"button\" class=\"gl-v2-pl-tab-add js-pl-sj-toepas\" title=\"Een sjabloon toepassen op woningen of gebouwen\"><i class=\"ph ph-copy\" aria-hidden=\"true\"></i>Sjabloon</button>";
-            html += "<button type=\"button\" class=\"gl-v2-pl-tab-add js-pl-pj\" title=\"Planning, traject en schijven in één keer toepassen, aangepast aan het gebouw\"><i class=\"ph ph-buildings\" aria-hidden=\"true\"></i>Projectsjabloon</button>";
-            var act = actief();
-            if (state.actiefPlanningId === GLOBAAL || aannActief) { host.innerHTML = html; return; }
-            if (canSjabloon && act && act.aantalTaken) html += "<button type=\"button\" class=\"gl-v2-pl-tab-add js-pl-sj-bewaar\" title=\"Deze planning bewaren als sjabloon\"><i class=\"ph ph-floppy-disk\" aria-hidden=\"true\"></i>Als sjabloon</button>";
-            html += "<button type=\"button\" class=\"gl-v2-pl-tab-add js-pl-edit-planning\" title=\"Naam, woningen en startdatum wijzigen, of de planning verwijderen\"><i class=\"ph ph-gear-six\" aria-hidden=\"true\"></i>Instellen</button>";
+            html += "<button type=\"button\" class=\"gl-v2-btn gl-v2-btn-secondary js-pl-import\" title=\"Een planning importeren uit MS Project (XML)\"><i class=\"ph ph-upload-simple\" aria-hidden=\"true\"></i>Importeren</button>";
+            html += "<button type=\"button\" class=\"gl-v2-btn gl-v2-btn-secondary js-gl-v2-menu-trigger\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-controls=\"gl-v2-pl-sjmenu\" title=\"Een sjabloon toepassen of deze planning bewaren\"><i class=\"ph ph-copy\" aria-hidden=\"true\"></i>Sjablonen<i class=\"ph ph-caret-down\" aria-hidden=\"true\"></i></button>";
+            if (state.actiefPlanningId !== GLOBAAL && !aannActief) html += "<button type=\"button\" class=\"gl-v2-icon-btn js-pl-edit-planning\" title=\"Instellen: naam, woningen en startdatum wijzigen, of de planning verwijderen\" aria-label=\"Planning instellen\"><i class=\"ph ph-gear-six\" aria-hidden=\"true\"></i></button>";
         }
         host.innerHTML = html;
     }
+    // Menu "Sjablonen": Sjabloon, Projectsjabloon en Als sjabloon (gedeeld .gl-v2-menu; de shell opent het, wij vullen het eerst in de capture-fase)
+    function sjMenuItem(act, icon, label, sub) {
+        return "<button type=\"button\" class=\"gl-v2-menu-item\" role=\"menuitem\" data-menu=\"" + act + "\"><i class=\"ph " + icon + "\" aria-hidden=\"true\"></i><span class=\"gl-v2-menu-item-text\"><span class=\"gl-v2-menu-item-label\">" + label + "</span>" + (sub ? "<span class=\"gl-v2-menu-item-sub\">" + esc(sub) + "</span>" : "") + "</span></button>";
+    }
+    document.addEventListener("click", function (e) {
+        var tr = e.target.closest(".js-gl-v2-menu-trigger[aria-controls=\"gl-v2-pl-sjmenu\"]"); if (!tr) return;
+        var act = actief(), h = sjMenuItem("sj", "ph-copy", "Sjabloon", "Een planningssjabloon toepassen op woningen of gebouwen") + sjMenuItem("pj", "ph-buildings", "Projectsjabloon", "Planning, traject en schijven in één keer, aangepast aan het gebouw");
+        if (canSjabloon && act && act.aantalTaken && state.actiefPlanningId !== GLOBAAL && !aannActief) h += sjMenuItem("bewaar", "ph-floppy-disk", "Als sjabloon", "Deze planning bewaren als sjabloon");
+        $("gl-v2-pl-sjmenu").innerHTML = h;
+    }, true);
+    $("gl-v2-pl-sjmenu").addEventListener("click", function (e) {
+        var b = e.target.closest("[data-menu]"); if (!b) return;
+        var a = b.getAttribute("data-menu");
+        if (window.GlV2Menu) window.GlV2Menu.closeAll();
+        if (a === "sj") openSjToepas(); else if (a === "pj") openPj(); else if (a === "bewaar") openSjBewaar();
+    });
     function zetUrl() {
         try {
             var a = actief(), u = new URL(window.location.href);
@@ -131,12 +145,18 @@
     function openAann() {
         fetch(cfg.staatUrl + (cfg.staatUrl.indexOf("?") < 0 ? "?" : "&") + "planningId=" + GLOBAAL, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
             .then(function (r) { if (!r.ok) throw new Error("Het overzicht kon niet geladen worden."); return r.json(); })
-            .then(function (s) { aannData = s; aannActief = true; aannSel = ""; render(); })
+            .then(function (s) { aannData = s; aannActief = true; aannSel = ""; aann.sel = null; aann.open = false; aann.alle0 = false; render(); })
             .catch(function (e) { toast("danger", "Laden mislukt", e.message || "Controleer je verbinding en probeer opnieuw."); });
     }
+    // ── Per aannemer (59e/59f): dezelfde planning, gegroepeerd per uitvoerder, als Gantt ──
+    var aann = { sel: null, modus: "taak", schaal: "week", voorgaand: true, vanaf: false, zoek: "", open: false, andere: false, alle0: false };
+    var AANN_MAX0 = 8, MND = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+    function fmtDM(iso) { return iso ? iso.slice(8, 10) + "/" + iso.slice(5, 7) : "—"; }
+    function isoWeek(n) { var d = new Date(n * DAG), dag = (d.getUTCDay() + 6) % 7; d.setUTCDate(d.getUTCDate() - dag + 3); var j = new Date(Date.UTC(d.getUTCFullYear(), 0, 4)); return 1 + Math.round(((d - j) / DAG - 3 + ((j.getUTCDay() + 6) % 7)) / 7); }
     // Groepen per effectieve uitvoerder, taken (geen fases) op volgorde van start
     function aannGroepen() {
-        var rijen = (aannData && aannData.rijen) || [], planning = "", fases = [], groepen = {}, volgorde = [];
+        var rijen = (aannData && aannData.rijen) || [], planning = "", fases = [], groepen = {}, volgorde = [], byKey = {};
+        var plId = {}; (state.planningen || []).forEach(function (p) { plId[p.naam] = p.id; });
         rijen.forEach(function (r) {
             if (r.soort === "fase") {
                 fases.length = r.niveau; fases[r.niveau] = r.naam;
@@ -146,7 +166,8 @@
             var sl = r.uitvoerderEffectiefId == null ? "0" : String(r.uitvoerderEffectiefId);
             if (!groepen[sl]) { groepen[sl] = { id: sl, naam: r.uitvoerderNaam || "Geen uitvoerder", taken: [] }; volgorde.push(sl); }
             var fase = fases.length > 1 ? fases[fases.length - 1] : "";
-            groepen[sl].taken.push({ naam: r.naam, wbs: r.wbs, planning: planning, fase: fase === planning ? "" : fase, start: r.start, einde: r.einde, duur: r.duur, mijlpaal: r.isMijlpaal, voortgang: r.voortgang });
+            var t = { id: r.id, sleutel: r.sleutel, naam: r.naam, wbs: r.wbs, planning: planning, planningId: plId[planning], fase: fase === planning ? "" : fase, start: r.start, einde: r.einde, duur: r.duur, mijlpaal: r.isMijlpaal, voortgang: r.voortgang, afgerond: !!r.afgerond, links: r.voorgangerLinks || [], lot: r.lotNaam || "" };
+            groepen[sl].taken.push(t); byKey[r.sleutel] = { t: t, g: groepen[sl] };
         });
         var lijst = volgorde.map(function (k) {
             var g = groepen[k];
@@ -157,7 +178,22 @@
         });
         // zonder uitvoerder helemaal achteraan
         lijst.sort(function (a, b) { return (a.id === "0") - (b.id === "0") || a.naam.localeCompare(b.naam, "nl"); });
+        var k = 0; lijst.forEach(function (g) { g.k = g.id === "0" ? 0 : (k++ % 8) + 1; g.contract = contractVan(g.id); });
+        lijst.byKey = byKey;
         return lijst;
+    }
+    function contractVan(id) {
+        if (id === "0") return null;
+        var u = ((aannData && aannData.uitvoerders) || state.uitvoerders || []).filter(function (x) { return String(x.id) === String(id); })[0];
+        return u && u.inProject ? (u.contractStatus || "niet getekend") : "geen contract";
+    }
+    function contractChip(g) {
+        if (!g.contract) return "";
+        var c = g.contract === "getekend" ? "g" : g.contract === "geen contract" ? "red" : "gold";
+        return "<span class=\"gl-v2-pa-chip " + c + "\">" + (g.contract === "getekend" ? "contract getekend" : g.contract === "niet getekend" ? "niet getekend" : "geen contract") + "</span>";
+    }
+    function aannZichtbaar(groepen) {
+        var s = aann.sel; return groepen.filter(function (g) { return s ? s.indexOf(g.id) >= 0 : true; });
     }
     function aannTabel(g, meerPlannings) {
         return "<table class=\"gl-v2-pl-aann-tabel\"><thead><tr><th>Taak</th>" + (meerPlannings ? "<th>Planning</th>" : "") + "<th>Fase</th><th>Start</th><th>Einde</th><th class=\"is-num\">Duur</th></tr></thead><tbody>" +
@@ -165,61 +201,257 @@
                 return "<tr><td><span class=\"is-mono\">" + esc(t.wbs) + "</span> " + esc(t.naam) + "</td>" + (meerPlannings ? "<td>" + esc(t.planning) + "</td>" : "") + "<td>" + esc(t.fase) + "</td><td>" + fmtFull(t.start) + "</td><td>" + fmtFull(t.einde) + "</td><td class=\"is-num\">" + (t.mijlpaal ? "mijlpaal" : dagen(t.duur)) + "</td></tr>";
             }).join("") + "</tbody></table>";
     }
-    function renderAann() {
-        var host = $("gl-v2-pl-aann"), groepen = aannGroepen(), meer = (state.planningen || []).length > 1;
-        if (aannSel && !groepen.some(function (g) { return g.id === aannSel; })) aannSel = "";
-        var zichtbaar = groepen.filter(function (g) { return !aannSel || g.id === aannSel; });
-        var opties = "<option value=\"\">Alle aannemers</option>" + groepen.map(function (g) { return "<option value=\"" + esc(g.id) + "\"" + (g.id === aannSel ? " selected" : "") + ">" + esc(g.naam) + " (" + g.taken.length + ")</option>"; }).join("");
-        var heeftUitv = groepen.some(function (g) { return g.id !== "0"; });
-        host.innerHTML =
-            "<div class=\"gl-v2-pl-aann-kop\"><div><h2>Planning per aannemer</h2><p class=\"gl-v2-field-help\">Alle taken van elke uitvoerder, uit alle plannings, op volgorde van start. Enkel lezen.</p></div>" +
-            "<div class=\"gl-v2-pl-aann-acties\"><select class=\"gl-v2-pl-aann-sel\" id=\"gl-v2-pl-aann-sel\" aria-label=\"Aannemer\">" + opties + "</select>" +
-            "<button type=\"button\" class=\"gl-v2-btn gl-v2-btn-text gl-v2-pl-small\" id=\"gl-v2-pl-aann-print\"><i class=\"ph ph-printer\" aria-hidden=\"true\"></i>Afdrukken</button></div></div>" +
-            (heeftUitv ? "" : "<div class=\"gl-v2-notice gl-v2-notice-compact is-info\"><span class=\"gl-v2-notice-icon\"><i class=\"ph ph-info\" aria-hidden=\"true\"></i></span><span class=\"gl-v2-notice-text\">Nog geen taak heeft een uitvoerder. Kies een uitvoerder bij een fase of taak (of koppel resources bij het importeren), dan verschijnt hier de planning per aannemer.</span></div>") +
-            zichtbaar.map(function (g) {
-                return "<section class=\"gl-v2-pl-aann-groep\"><header><h3>" + esc(g.naam) + "</h3><span class=\"gl-v2-pl-aann-sub\">" + g.taken.length + (g.taken.length === 1 ? " taak" : " taken") + (g.start ? " · " + fmtFull(g.start) + " tot " + fmtFull(g.einde) : "") + "</span></header>" + aannTabel(g, meer) + "</section>";
-            }).join("");
+    function aannStatus(t, today) { return t.afgerond ? "done" : (t.start && t.start <= today && t.einde >= today ? "now" : "plan"); }
+    function aannTaakIcoon(st) { return "<span class=\"gl-v2-pa-st is-" + st + "\">" + (st === "done" ? "<i class=\"ph ph-check\" aria-hidden=\"true\"></i>" : "") + "</span>"; }
+    // Selectielijst onder het veld Aannemers: eerst wie taken heeft in deze planning, dan de andere leveranciers van het project
+    function aannDropdownHtml(groepen) {
+        var zoek = aann.zoek.trim().toLowerCase(), sel = aann.sel;
+        var met = groepen.filter(function (g) { return !zoek || g.naam.toLowerCase().indexOf(zoek) >= 0; });
+        var ids = groepen.map(function (g) { return g.id; });
+        var zonder = ((aannData && aannData.uitvoerders) || state.uitvoerders || []).filter(function (u) { return u.inProject && ids.indexOf(String(u.id)) < 0 && (!zoek || u.naam.toLowerCase().indexOf(zoek) >= 0); });
+        var alleZonder = ((aannData && aannData.uitvoerders) || state.uitvoerders || []).filter(function (u) { return u.inProject && ids.indexOf(String(u.id)) < 0; }).length;
+        var h = "<div class=\"gl-v2-pa-dg\">MET TAKEN IN DEZE PLANNING</div>";
+        met.forEach(function (g) {
+            var aan = !sel || sel.indexOf(g.id) >= 0;
+            h += "<div class=\"gl-v2-pa-do\"><span class=\"gl-v2-check\"><input type=\"checkbox\" id=\"gl-v2-aa-" + esc(g.id) + "\" data-aann-opt=\"" + esc(g.id) + "\"" + (aan ? " checked" : "") + " /><label for=\"gl-v2-aa-" + esc(g.id) + "\"></label></span><label class=\"gl-v2-pa-dl\" for=\"gl-v2-aa-" + esc(g.id) + "\"><span class=\"gl-v2-pa-sw c" + g.k + "\"></span><span class=\"gl-v2-pa-dn\"><b>" + esc(g.naam) + "</b><small>" + g.taken.length + (g.taken.length === 1 ? " taak" : " taken") + (g.start ? " · " + fmtDM(g.start) + " – " + fmtDM(g.einde) : "") + "</small></span></label></div>";
+        });
+        if (!met.length) h += "<div class=\"gl-v2-pa-leeg\">Geen aannemer gevonden.</div>";
+        if (zonder.length) {
+            h += "<div class=\"gl-v2-pa-dg\">ZONDER TAKEN · " + alleZonder + " LEVERANCIERS VAN DIT PROJECT</div>";
+            (aann.andere || zoek ? zonder : zonder.slice(0, 5)).forEach(function (u) {
+                h += "<div class=\"gl-v2-pa-do is-off\"><span class=\"gl-v2-pa-cb\"></span><span class=\"gl-v2-pa-dn\"><b>" + esc(u.naam) + "</b><small>0 taken · wijs taken toe in de planning</small></span></div>";
+            });
+            if (!aann.andere && !zoek && zonder.length > 5) h += "<button type=\"button\" class=\"gl-v2-pa-dg is-knop\" data-aann-andere>+ " + (zonder.length - 5) + " andere</button>";
+        }
+        return h;
     }
-    $("gl-v2-pl-aann").addEventListener("change", function (e) {
-        if (e.target.id === "gl-v2-pl-aann-sel") { aannSel = e.target.value; renderAann(); }
-    });
+    function aannPickerLabel(groepen, zichtbaar) {
+        if (zichtbaar.length === 1) return "<span class=\"gl-v2-pa-sw c" + zichtbaar[0].k + "\"></span><b>" + esc(zichtbaar[0].naam) + "</b>";
+        return "<b>" + zichtbaar.length + " van " + groepen.length + "</b><span class=\"gl-v2-pa-plus\">met taken</span>";
+    }
+    function renderAann() {
+        var host = $("gl-v2-pl-aann"), groepen = aannGroepen(), meer = (state.planningen || []).length > 1, today = todayIso();
+        if (aann.sel) aann.sel = aann.sel.filter(function (id) { return groepen.some(function (g) { return g.id === id; }); });
+        var zichtbaar = aannZichtbaar(groepen), lane = aann.modus === "rij";
+        if (lane) zichtbaar = zichtbaar.filter(function (g) { return g.id !== "0"; });
+        var act = actief(), nBouw = act && act.aantalTaken ? act.aantalTaken : 0;
+        var heeftUitv = groepen.some(function (g) { return g.id !== "0"; });
+        var schalen = lane ? [["week", "Week"], ["maand", "Maand"], ["alles", "Alles"]] : [["dag", "Dag"], ["week", "Week"], ["maand", "Maand"], ["alles", "Alles"]];
+        if (!schalen.some(function (s) { return s[0] === aann.schaal; })) aann.schaal = "alles";
+        var kop =
+            "<div class=\"gl-v2-pa-vw\"><div class=\"gl-v2-segmented\" role=\"group\" aria-label=\"Weergave\"><button type=\"button\" data-aann-terug>Bouwplanning" + (nBouw ? "<em>" + nBouw + "</em>" : "") + "</button><button type=\"button\" class=\"is-active\" aria-pressed=\"true\">Per aannemer</button></div>" +
+            "<span class=\"gl-v2-pa-vt\">Per aannemer is dezelfde planning, gegroepeerd per uitvoerder. Wijzigen kan hier ook: het past de bouwplanning aan.</span></div>";
+        var tool =
+            "<div class=\"gl-v2-pa-tool\"><div class=\"gl-v2-pa-pickw\"><button type=\"button\" class=\"gl-v2-pa-pick" + (aann.open ? " is-open" : "") + "\" data-aann-pick aria-haspopup=\"listbox\" aria-expanded=\"" + aann.open + "\"><span class=\"gl-v2-pa-pl\">Aannemers</span>" + aannPickerLabel(groepen, aannZichtbaar(groepen)) + "<i class=\"ph ph-caret-down\" aria-hidden=\"true\"></i></button>" +
+            (aann.open ? "<div class=\"gl-v2-pa-dd\" role=\"listbox\" aria-multiselectable=\"true\"><label class=\"gl-v2-pa-ds\"><i class=\"ph ph-magnifying-glass\" aria-hidden=\"true\"></i><input type=\"search\" data-aann-zoek value=\"" + esc(aann.zoek) + "\" placeholder=\"Zoek aannemer\" autocomplete=\"off\" aria-label=\"Zoek aannemer\" /></label><div id=\"gl-v2-pa-dd-lijst\">" + aannDropdownHtml(groepen) + "</div><div class=\"gl-v2-pa-df\"><button type=\"button\" class=\"gl-v2-pa-lnk\" data-aann-alles>Alles</button><button type=\"button\" class=\"gl-v2-pa-lnk\" data-aann-geen>Geen</button><span style=\"flex:1\"></span><button type=\"button\" class=\"gl-v2-btn gl-v2-btn-primary\" data-aann-klaar>Tonen (" + aannZichtbaar(groepen).length + ")</button></div></div>" : "") + "</div>" +
+            "<div class=\"gl-v2-segmented is-sm\" role=\"group\" aria-label=\"Weergave van de taken\"><button type=\"button\" data-aann-modus=\"taak\" class=\"" + (lane ? "" : "is-active") + "\">Per taak</button><button type=\"button\" data-aann-modus=\"rij\" class=\"" + (lane ? "is-active" : "") + "\">1 rij per aannemer</button></div>" +
+            "<div class=\"gl-v2-segmented is-sm\" role=\"group\" aria-label=\"Tijdschaal\">" + schalen.map(function (s) { return "<button type=\"button\" data-aann-schaal=\"" + s[0] + "\" class=\"" + (aann.schaal === s[0] ? "is-active" : "") + "\">" + s[1] + "</button>"; }).join("") + "</div>" +
+            (lane ? "" : "<label class=\"gl-v2-pa-tg\"><input type=\"checkbox\" class=\"gl-v2-toggle-switch\" data-aann-tg=\"voorgaand\"" + (aann.voorgaand ? " checked" : "") + " />Voorgaande taken van anderen tonen</label><label class=\"gl-v2-pa-tg\"><input type=\"checkbox\" class=\"gl-v2-toggle-switch\" data-aann-tg=\"vanaf\"" + (aann.vanaf ? " checked" : "") + " />Enkel vanaf vandaag</label>") +
+            "<span style=\"flex:1\"></span><button type=\"button\" class=\"gl-v2-btn gl-v2-btn-secondary\" id=\"gl-v2-pl-aann-print\"><i class=\"ph ph-printer\" aria-hidden=\"true\"></i>Afdrukken</button></div>";
+        var melding = heeftUitv ? "" : "<div class=\"gl-v2-notice gl-v2-notice-compact is-info\"><span class=\"gl-v2-notice-icon\"><i class=\"ph ph-info\" aria-hidden=\"true\"></i></span><span class=\"gl-v2-notice-text\">Nog geen taak heeft een uitvoerder. Kies een uitvoerder bij een fase of taak (of koppel resources bij het importeren), dan verschijnt hier de planning per aannemer.</span></div>";
+        host.innerHTML = kop + "<section class=\"gl-v2-card gl-v2-pa-card\">" + tool + melding + (zichtbaar.length ? aannChart(groepen, zichtbaar, lane, today, host) : "<p class=\"gl-v2-pa-leeg\">Kies minstens één aannemer.</p>") + "</section>";
+    }
+    // De grafiek: elke rij heeft links een vaste kolom en rechts de balken op een gemeenschappelijke tijdas
+    function aannChart(groepen, zichtbaar, lane, today, host) {
+        var DAYMS = DAG, tn = isoN(today);
+        var taken = []; zichtbaar.forEach(function (g) { g.taken.forEach(function (t) { if (t.start && t.einde) taken.push(t); }); });
+        if (!taken.length) return "<p class=\"gl-v2-pa-leeg\">De gekozen aannemers hebben nog geen taken met datums.</p>";
+        var minN = Math.min.apply(null, taken.map(function (t) { return isoN(t.start); })), maxN = Math.max.apply(null, taken.map(function (t) { return isoN(t.einde); }));
+        if (!lane && aann.voorgaand) { /* voorgaande taken van anderen vallen binnen de planning: de as blijft hetzelfde */ }
+        var labelW = lane ? 380 : 560, dagen_ = maxN - minN + 1;
+        var px = aann.schaal === "dag" ? 22 : aann.schaal === "week" ? 5 : aann.schaal === "maand" ? 1.6 : Math.max(0.8, (Math.max(520, host.clientWidth - labelW - 44)) / (dagen_ + 14));
+        var W = Math.round((dagen_ + 14) * px), x = function (n) { return (n - minN) * px; };
+        // as: maanden (en weken zolang ze leesbaar zijn)
+        var m1 = new Date(minN * DAYMS), y = m1.getUTCFullYear(), mo = m1.getUTCMonth(), maanden = "", weken = "";
+        for (var i = 0; i < 240; i++) {
+            var sN = Math.round(Date.UTC(y, mo, 1) / DAYMS), eN = Math.round(Date.UTC(y, mo + 1, 1) / DAYMS); if (sN > maxN + 14) break;
+            var l = Math.max(0, x(sN)), r = Math.min(W, x(eN));
+            if (r > l) maanden += "<span style=\"left:" + l.toFixed(1) + "px;width:" + (r - l).toFixed(1) + "px\">" + MND[mo % 12] + (mo === 0 || i === 0 ? " " + y : "") + "</span>";
+            mo++; if (mo > 11) { mo = 0; y++; }
+        }
+        if (px * 7 >= 22) for (var n = minN; n <= maxN + 14; n++) if ((new Date(n * DAYMS).getUTCDay() + 6) % 7 === 0) weken += "<i style=\"left:" + x(n).toFixed(1) + "px\"><b>w" + isoWeek(n) + "</b></i>";
+        var kopRij = "<div class=\"gl-v2-pa-r is-h\"><div class=\"gl-v2-pa-l\" style=\"width:" + labelW + "px\"><span class=\"gl-v2-pa-hn\">" + (lane ? "Aannemer" : "Taak") + "</span>" + (lane ? "" : "<span class=\"gl-v2-pa-f\">Fase</span><span class=\"gl-v2-pa-d\">Start</span><span class=\"gl-v2-pa-d\">Einde</span><span class=\"gl-v2-pa-du\">Duur</span>") + "</div><div class=\"gl-v2-pa-ax\" style=\"width:" + W + "px\"><div class=\"gl-v2-pa-mh\">" + maanden + "</div><div class=\"gl-v2-pa-wk\">" + weken + "</div></div></div>";
+        var rijen = "";
+        if (lane) {
+            var blokken = {};
+            zichtbaar.forEach(function (g) {
+                var bl = [];
+                g.taken.forEach(function (t) { var s = isoN(t.start), e = isoN(t.einde), laatste = bl[bl.length - 1]; if (laatste && s - laatste.e <= 5) { laatste.e = Math.max(laatste.e, e); laatste.t.push(t); } else bl.push({ s: s, e: e, t: [t] }); });
+                blokken[g.id] = bl;
+                var volgende = bl.filter(function (b) { return b.s >= tn; })[0], eerste = g.taken[0];
+                rijen += "<div class=\"gl-v2-pa-r is-lane\"><div class=\"gl-v2-pa-l\" style=\"width:" + labelW + "px\"><span class=\"gl-v2-pa-sw c" + g.k + "\"></span><span class=\"gl-v2-pa-ln\"><b>" + esc(g.naam) + "</b><small>" + esc((eerste && eerste.fase ? eerste.fase + " · " : "") + bl.length + (bl.length === 1 ? " blok" : " blokken") + (volgende ? " · volgende: " + fmtDM(nIso(volgende.s)) : " · afgerond")) + "</small></span>" + contractChip(g) + "</div><div class=\"gl-v2-pa-g\" style=\"width:" + W + "px\">" +
+                    bl.map(function (b) { return "<button type=\"button\" class=\"gl-v2-pa-bar c" + g.k + "\" style=\"left:" + x(b.s).toFixed(1) + "px;width:" + Math.max(5, (b.e - b.s + 1) * px).toFixed(1) + "px\" data-aann-blok=\"" + esc(g.id) + "\" title=\"" + esc(g.naam + ": " + b.t.length + (b.t.length === 1 ? " taak" : " taken") + " van " + fmtDM(nIso(b.s)) + " tot " + fmtDM(nIso(b.e))) + "\" aria-label=\"" + esc(g.naam + ", blok van " + fmtDM(nIso(b.s)) + " tot " + fmtDM(nIso(b.e))) + "\"></button>"; }).join("") + "</div></div>";
+            });
+            // Gouden zone: drie of meer aannemers tegelijk op de werf
+            var tel = {}; zichtbaar.forEach(function (g) { blokken[g.id].forEach(function (b) { for (var d = b.s; d <= b.e; d++) { tel[d] = tel[d] || {}; tel[d][g.id] = (tel[d][g.id] || []).concat(b.t.filter(function (t) { return isoN(t.start) <= d && isoN(t.einde) >= d; })); } }); });
+            var zones = [], cur = null;
+            for (var d2 = minN; d2 <= maxN + 1; d2++) {
+                var c = tel[d2] ? Object.keys(tel[d2]).length : 0;
+                if (c >= 3) { if (!cur) cur = { s: d2, e: d2, max: c, fases: {} }; cur.e = d2; cur.max = Math.max(cur.max, c); Object.keys(tel[d2]).forEach(function (id) { tel[d2][id].forEach(function (t) { if (t.fase) cur.fases[t.fase] = (cur.fases[t.fase] || 0) + 1; }); }); }
+                else if (cur) { if (cur.e - cur.s >= 4) zones.push(cur); cur = null; }
+            }
+            var zoneHtml = zones.map(function (zn) { var top = Object.keys(zn.fases).sort(function (p, q) { return zn.fases[q] - zn.fases[p]; })[0]; return "<span class=\"gl-v2-pa-ov\" style=\"left:" + (labelW + x(zn.s)).toFixed(1) + "px;width:" + Math.max(20, (zn.e - zn.s + 1) * px).toFixed(1) + "px\"><b>" + zn.max + " aannemers tegelijk" + (top ? " · " + esc(top.toLowerCase()) : "") + "</b></span>"; }).join("");
+            rijen = "<div class=\"gl-v2-pa-rows\">" + todayLijn(tn, labelW, x, minN, maxN) + zoneHtml + rijen + "</div>";
+        } else {
+            var uit = "";
+            zichtbaar.forEach(function (g) {
+                var sum = g.start ? "<span class=\"gl-v2-pa-sum c" + g.k + "\" style=\"left:" + x(isoN(g.start)).toFixed(1) + "px;width:" + Math.max(6, (isoN(g.einde) - isoN(g.start) + 1) * px).toFixed(1) + "px\"></span>" : "";
+                var wd = g.taken.reduce(function (s, t) { return s + (t.mijlpaal ? 0 : (t.duur || 0)); }, 0);
+                uit += "<div class=\"gl-v2-pa-r is-grp\"><div class=\"gl-v2-pa-l\" style=\"width:" + labelW + "px\"><span class=\"gl-v2-pa-sw c" + g.k + "\"></span><span class=\"gl-v2-pa-gn\"><b>" + esc(g.naam) + "</b><span class=\"gl-v2-pa-gs\">" + g.taken.length + (g.taken.length === 1 ? " taak" : " taken") + (g.start ? " · " + fmtDM(g.start) + " – " + fmtDM(g.einde) + " · " + wd + " werkdagen" : "") + "</span></span>" + contractChip(g) +
+                    (g.id === "0" && canWriteBasis ? "<button type=\"button\" class=\"gl-v2-btn gl-v2-btn-secondary gl-v2-pa-btn\" data-aann-toewijs>Toewijzen</button>" : "") + "</div><div class=\"gl-v2-pa-g\" style=\"width:" + W + "px\">" + sum + "</div></div>";
+                var lijst = g.taken.filter(function (t) { return t.start && t.einde && (!aann.vanaf || t.einde >= today); });
+                var verborgen = 0;
+                if (g.id === "0" && !aann.alle0 && lijst.length > AANN_MAX0) { verborgen = lijst.length - AANN_MAX0; lijst = lijst.slice(0, AANN_MAX0); }
+                var getoond = {};
+                lijst.forEach(function (t) {
+                    if (aann.voorgaand) t.links.forEach(function (l) {
+                        var v = groepen.byKey["t" + l.taakId]; if (!v || v.g.id === g.id || getoond[v.t.sleutel] || !v.t.start) return; getoond[v.t.sleutel] = true;
+                        var ve = isoN(v.t.einde);
+                        uit += "<div class=\"gl-v2-pa-r is-ctx\"><div class=\"gl-v2-pa-l\" style=\"width:" + labelW + "px\">" + "<span class=\"gl-v2-pa-st is-ctx\"><i class=\"ph ph-arrow-bend-down-right\" aria-hidden=\"true\"></i></span><code>" + esc(v.t.wbs) + "</code><span class=\"gl-v2-pa-tn\">" + esc(v.t.naam) + "</span><span class=\"gl-v2-pa-f\">vóór " + esc(t.wbs) + " · " + esc(v.g.naam) + "</span><span class=\"gl-v2-pa-d\">" + fmtDM(v.t.start) + "</span><span class=\"gl-v2-pa-d\">" + fmtDM(v.t.einde) + "</span><span class=\"gl-v2-pa-du\">" + (v.t.mijlpaal ? "◆" : (v.t.duur || 0) + " d") + "</span></div><div class=\"gl-v2-pa-g\" style=\"width:" + W + "px\"><span class=\"gl-v2-pa-bar is-ctx\" style=\"left:" + x(isoN(v.t.start)).toFixed(1) + "px;width:" + Math.max(5, (ve - isoN(v.t.start) + 1) * px).toFixed(1) + "px\"></span><span class=\"gl-v2-pa-arr\" style=\"left:" + (x(ve + 1)).toFixed(1) + "px\"></span></div></div>";
+                    });
+                    var st = aannStatus(t, today), s = isoN(t.start), e = isoN(t.einde);
+                    uit += "<div class=\"gl-v2-pa-r is-" + st + (g.id === "0" ? " is-grey" : "") + "\"><div class=\"gl-v2-pa-l\" style=\"width:" + labelW + "px\">" + aannTaakIcoon(st) + "<code>" + esc(t.wbs) + "</code><span class=\"gl-v2-pa-tn\">" + esc(t.naam) + "</span><span class=\"gl-v2-pa-f\" title=\"" + esc((t.fase || "") + (t.lot ? " · " + t.lot : "")) + "\">" + esc((t.fase || t.planning || "") + (t.lot ? " · " + t.lot : "")) + "</span><span class=\"gl-v2-pa-d\">" + fmtDM(t.start) + "</span><span class=\"gl-v2-pa-d" + (st === "plan" && t.einde < today ? " is-late" : "") + "\">" + fmtDM(t.einde) + "</span><span class=\"gl-v2-pa-du\">" + (t.mijlpaal ? "◆" : (t.duur || 0) + " d") + "</span>" +
+                        (g.id === "0" && canWriteBasis ? "<button type=\"button\" class=\"gl-v2-pa-asg js-gl-v2-menu-trigger\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-controls=\"gl-v2-pl-aannmenu\" data-aann-taak=\"" + esc(t.sleutel) + "\">Kiezen<i class=\"ph ph-caret-down\" aria-hidden=\"true\"></i></button>" : "") + "</div><div class=\"gl-v2-pa-g\" style=\"width:" + W + "px\"><span class=\"gl-v2-pa-bar is-" + st + " c" + g.k + "\" style=\"left:" + x(s).toFixed(1) + "px;width:" + Math.max(5, (e - s + 1) * px).toFixed(1) + "px;--vg:" + (t.voortgang || 0) + "%\">" + (g.id === "0" ? "" : "<em>" + esc(t.naam) + "</em>") + "</span></div></div>";
+                });
+                if (verborgen) uit += "<div class=\"gl-v2-pa-more\">nog " + verborgen + " taken zonder uitvoerder · <button type=\"button\" class=\"gl-v2-pa-lnk\" data-aann-alle0>alles tonen</button></div>";
+            });
+            rijen = "<div class=\"gl-v2-pa-rows\">" + todayLijn(tn, labelW, x, minN, maxN) + uit + "</div>";
+        }
+        var legende = lane ? "<span>Elk blok = aaneensluitende taken van die aannemer. Klik een blok: de taken staan dan in Per taak.</span>"
+            : "<span><i class=\"gl-v2-pa-lg is-done\"></i>klaar</span><span><i class=\"gl-v2-pa-lg is-now\"></i>bezig</span><span><i class=\"gl-v2-pa-lg is-plan\"></i>gepland</span><span><i class=\"gl-v2-pa-lg is-ctx\"></i>voorgaande taak van een ander</span><span><i class=\"gl-v2-pa-lg is-today\"></i>vandaag</span>";
+        return "<div class=\"gl-v2-pa-gantt\" id=\"gl-v2-pa-gantt\">" + kopRij + rijen + "</div><div class=\"gl-v2-pa-leg\">" + legende + "</div>";
+    }
+    function todayLijn(tn, labelW, x, minN, maxN) {
+        if (tn < minN || tn > maxN + 14) return "";
+        return "<span class=\"gl-v2-pa-tdy\" style=\"left:" + (labelW + x(tn)).toFixed(1) + "px\"><b>vandaag</b></span>";
+    }
+    function aannRefresh() { fetch(cfg.staatUrl + (cfg.staatUrl.indexOf("?") < 0 ? "?" : "&") + "planningId=" + GLOBAAL, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } }).then(function (r) { return r.json(); }).then(function (s) { aannData = s; render(); }); }
     $("gl-v2-pl-aann").addEventListener("click", function (e) {
-        if (!e.target.closest("#gl-v2-pl-aann-print")) return;
-        var groepen = aannGroepen().filter(function (g) { return !aannSel || g.id === aannSel; }), meer = (state.planningen || []).length > 1;
+        var t;
+        if (e.target.closest("[data-aann-terug]")) { aannActief = false; render(); return; }
+        if (e.target.closest("[data-aann-pick]")) { aann.open = !aann.open; renderAann(); if (aann.open) { var z = $("gl-v2-pl-aann").querySelector("[data-aann-zoek]"); if (z) z.focus(); } return; }
+        if (e.target.closest("[data-aann-klaar]")) { aann.open = false; renderAann(); return; }
+        if (e.target.closest("[data-aann-alles]")) { aann.sel = null; renderAann(); return; }
+        if (e.target.closest("[data-aann-geen]")) { aann.sel = []; renderAann(); return; }
+        if (e.target.closest("[data-aann-andere]")) { aann.andere = true; $("gl-v2-pa-dd-lijst").innerHTML = aannDropdownHtml(aannGroepen()); return; }
+        if (e.target.closest("[data-aann-alle0]")) { aann.alle0 = true; renderAann(); return; }
+        if ((t = e.target.closest("[data-aann-modus]"))) { aann.modus = t.getAttribute("data-aann-modus"); renderAann(); return; }
+        if ((t = e.target.closest("[data-aann-schaal]"))) { aann.schaal = t.getAttribute("data-aann-schaal"); renderAann(); return; }
+        if ((t = e.target.closest("[data-aann-blok]"))) { aann.sel = [t.getAttribute("data-aann-blok")]; aann.modus = "taak"; renderAann(); return; }
+        if (e.target.closest("[data-aann-toewijs]")) { openVraag("toewijzen"); return; }
+        if (e.target.closest("#gl-v2-pl-aann-print")) aannAfdrukken();
+    });
+    $("gl-v2-pl-aann").addEventListener("change", function (e) {
+        var t;
+        if ((t = e.target.closest("[data-aann-tg]"))) { aann[t.getAttribute("data-aann-tg")] = t.checked; renderAann(); return; }
+        if ((t = e.target.closest("[data-aann-opt]"))) {
+            var groepen = aannGroepen(), id = t.getAttribute("data-aann-opt"), sel = aann.sel ? aann.sel.slice() : groepen.map(function (g) { return g.id; });
+            var i = sel.indexOf(id); if (t.checked && i < 0) sel.push(id); else if (!t.checked && i >= 0) sel.splice(i, 1);
+            aann.sel = sel.length === groepen.length ? null : sel; renderAann();
+        }
+    });
+    $("gl-v2-pl-aann").addEventListener("input", function (e) {
+        if (!e.target.matches("[data-aann-zoek]")) return;
+        aann.zoek = e.target.value; $("gl-v2-pa-dd-lijst").innerHTML = aannDropdownHtml(aannGroepen());
+    });
+    document.addEventListener("click", function (e) { if (aann.open && aannActief && !e.target.closest(".gl-v2-pa-pickw")) { aann.open = false; renderAann(); } });
+    function aannAfdrukken() {
+        var groepen = aannGroepen(), zichtbaar = aannZichtbaar(groepen), meer = (state.planningen || []).length > 1;
         var w = window.open("", "_blank");
         if (!w) { toast("danger", "Afdrukken geblokkeerd", "Sta pop-ups toe voor deze site en probeer opnieuw."); return; }
         w.document.write("<!doctype html><html lang=\"nl\"><head><meta charset=\"utf-8\"><title>Planning per aannemer</title><style>body{font:13px/1.4 Arial,sans-serif;margin:24px;color:#111}h1{font-size:18px;margin:0 0 16px}h2{font-size:15px;margin:22px 0 2px}.s{color:#555;margin-bottom:6px}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:4px 8px;border-bottom:1px solid #ddd}th{background:#f3f3f3}section{break-inside:avoid-page}</style></head><body><h1>Planning per aannemer</h1>" +
-            groepen.map(function (g) { return "<section><h2>" + esc(g.naam) + "</h2><div class=\"s\">" + g.taken.length + " taken" + (g.start ? " · " + fmtFull(g.start) + " tot " + fmtFull(g.einde) : "") + "</div>" + aannTabel(g, meer) + "</section>"; }).join("") + "</body></html>");
+            zichtbaar.map(function (g) { return "<section><h2>" + esc(g.naam) + "</h2><div class=\"s\">" + g.taken.length + " taken" + (g.start ? " · " + fmtFull(g.start) + " tot " + fmtFull(g.einde) : "") + "</div>" + aannTabel(g, meer) + "</section>"; }).join("") + "</body></html>");
         w.document.close(); w.focus(); setTimeout(function () { w.print(); }, 300);
+    }
+    // Uitvoerder kiezen bij één taak (menu) of bij meerdere tegelijk (modal)
+    var aannTaak = null;
+    document.addEventListener("click", function (e) {
+        var tr = e.target.closest(".js-gl-v2-menu-trigger[aria-controls=\"gl-v2-pl-aannmenu\"]"); if (!tr) return;
+        aannTaak = tr.getAttribute("data-aann-taak");
+        var lijst = (state.uitvoerders || []).filter(function (u) { return u.inProject; });
+        $("gl-v2-pl-aannmenu").innerHTML = lijst.length ? lijst.map(function (u) { return "<button type=\"button\" class=\"gl-v2-menu-item\" role=\"menuitem\" data-menu=\"" + u.id + "\"><i class=\"ph ph-hard-hat\" aria-hidden=\"true\"></i><span class=\"gl-v2-menu-item-text\"><span class=\"gl-v2-menu-item-label\">" + esc(u.naam) + "</span></span></button>"; }).join("") : "<span class=\"gl-v2-menu-item\" aria-disabled=\"true\"><span class=\"gl-v2-menu-item-text\">Geen aannemers met een contract in dit project</span></span>";
+    }, true);
+    $("gl-v2-pl-aannmenu").addEventListener("click", function (e) {
+        var b = e.target.closest("[data-menu]"); if (!b || !aannTaak) return;
+        if (window.GlV2Menu) window.GlV2Menu.closeAll();
+        var v = aannGroepen().byKey[aannTaak]; if (!v) return;
+        aannWijsToe([v.t], parseInt(b.getAttribute("data-menu"), 10), function (ok) { if (ok) toast("success", "Uitvoerder gekozen", "De bouwplanning is aangepast."); });
     });
+    function aannWijsToe(taken, uitvoerderId, klaar) {
+        var keten = Promise.resolve(true);
+        taken.forEach(function (t) { keten = keten.then(function (ok) { return ok === false ? false : send({ type: "wijzig", soort: "taak", id: t.id, planningId: t.planningId, velden: { uitvoerder: uitvoerderId } }, { silent: true }); }); });
+        keten.then(function (ok) { aannRefresh(); if (klaar) klaar(ok !== false); });
+    }
 
-    // ── Kop ──
+    // ── Kop (59i): titel, "Geldt voor", kerncijfers op één lijn ──
+    var geldtOpen = false;
+    function mv(naam, n) { var l = String(naam || "").toLowerCase(); return n === 1 ? l : (/(en|s)$/.test(l) ? l : l + "en"); }
+    function geldtVoor(pl) {
+        var eenh = state.eenheden || [], lijst;
+        if (!pl || pl.global) lijst = eenh;
+        else if (pl.isHoofd) lijst = eenh.filter(function (e) { return e.planningId == null || e.planningId === pl.id; });
+        else lijst = eenh.filter(function (e) { return e.planningId === pl.id; });
+        if (!lijst.length) return "";
+        var perType = {}, volgorde = [];
+        lijst.forEach(function (e) { var n = e.typeNaam || "eenheid"; if (!perType[n]) { perType[n] = 0; volgorde.push(n); } perType[n]++; });
+        var h = "<span class=\"gl-v2-pl-k\">GELDT VOOR</span><b>" + lijst.length + (lijst.length === 1 ? " eenheid" : " eenheden") + "</b>";
+        if (volgorde.length > 1 || (volgorde.length === 1 && volgorde[0] !== "eenheid")) volgorde.forEach(function (n) { h += "<span class=\"gl-v2-pl-u\"><b>" + perType[n] + "</b> " + esc(mv(n, perType[n])) + "</span>"; });
+        h += "<button type=\"button\" class=\"gl-v2-pl-lnk\" data-geldt-alle aria-expanded=\"" + geldtOpen + "\">" + (geldtOpen ? "minder tonen" : "alle tonen") + "</button>";
+        return h + (geldtOpen ? "<div class=\"gl-v2-pl-geldt-lijst\">" + lijst.map(function (e) { return esc(e.naam); }).join(", ") + "</div>" : "");
+    }
     function renderKop() {
         var k = state.kop || {};
         var el = $("gl-v2-pl-kop");
         if (!state.heeftPlanning) { el.hidden = true; return; }
         el.hidden = false;
-        var deadline = k.deadline
-            ? "<dd class=\"" + (k.marge != null && k.marge < 0 ? "is-late" : "") + "\">" + fmtFull(k.deadline)
-              + (k.marge != null ? "<small>" + (k.marge < 0 ? dagen(-k.marge) + " te laat" : dagen(k.marge) + " marge") + "</small>" : "") + "</dd>"
-            : "<dd class=\"is-empty\">" + (k.geenStartdatum ? "geen aanvangsdatum" : "geen uitvoeringstermijn") + "</dd>";
-        var basis = k.basisOp
-            ? "<div><dt>Basisplanning</dt><dd>" + esc(k.basisOp) + (k.basisAfwijking ? "<small class=\"" + (k.basisAfwijking > 0 ? "is-late" : "") + "\">" + (k.basisAfwijking > 0 ? "+" : "−") + Math.abs(k.basisAfwijking) + " d</small>" : "") + "</dd></div>"
-            : "";
-        var pl = actief(), meerdere = (state.planningen || []).length > 1;
-        var plEenh = pl && !pl.isHoofd && !pl.global ? "<div class=\"gl-v2-pl-meta-eenheden\"><dt>Geldt voor</dt><dd>" + (pl.eenhedenTekst ? esc(pl.eenhedenTekst) : "<span class=\"is-empty\">geen woningen gekoppeld</span>") + "</dd></div>" : "";
-        var plStart = pl && pl.startDatum ? "<div><dt>Startdatum planning</dt><dd>" + fmtFull(pl.startDatum) + "</dd></div>" : "";
+        var pl = actief(), meerdere = (state.planningen || []).length > 1, today = todayIso();
+        var marge = k.marge != null
+            ? "<span class=\"gl-v2-pl-chip2 " + (k.marge < 0 ? "is-late" : "is-ok") + "\">" + (k.marge < 0 ? dagen(-k.marge) + " te laat" : dagen(k.marge) + " marge") + "</span>" : "";
+        var deadline = k.deadline ? "<b>" + fmtFull(k.deadline) + "</b>" + marge : "<b class=\"is-empty\">" + (k.geenStartdatum ? "geen aanvangsdatum" : "geen uitvoeringstermijn") + "</b>";
+        // Balk tot vandaag: hoever staat vandaag tussen start en einde van de planning
+        var pct = null;
+        if (k.start && k.einde && k.einde > k.start) { var a1 = isoN(k.start), b1 = isoN(k.einde), c1 = isoN(today); pct = Math.max(0, Math.min(100, Math.round((c1 - a1) / (b1 - a1) * 1000) / 10)); }
+        var duur = "<b>" + dagen(k.duurWerkdagen || 0) + "</b>" + (pct != null ? "<span class=\"gl-v2-pl-pb\"><i style=\"width:" + pct + "%\"></i></span><small>vandaag ± " + Math.round(pct) + " % van de doorlooptijd</small>" : "");
+        var verlet = k.verletMeetellen === false ? "uitgezet" : String(k.verletDagen || 0);
+        var weer = k.geenWeerstation
+            ? "<span class=\"gl-v2-pl-wx\"><i class=\"ph ph-cloud-slash\" aria-hidden=\"true\"></i>geen weerstation — " + (canWriteBasis ? "<a class=\"gl-v2-pl-lnk\" href=\"" + esc(cfg.projectEditUrl || "#") + "\">kiezen</a>" : "kiezen") + "</span><small>werkdagen en deadline rekenen zonder weerverlet</small>" : "";
+        var basis = k.basisOp ? "<div><span class=\"gl-v2-pl-k\">BASISPLANNING</span><b>" + esc(k.basisOp) + "</b>" + (k.basisAfwijking ? "<small class=\"" + (k.basisAfwijking > 0 ? "is-late" : "") + "\">" + (k.basisAfwijking > 0 ? "+" : "−") + Math.abs(k.basisAfwijking) + " d</small>" : "") + "</div>" : "";
+        var plStart = pl && pl.startDatum ? "<div><span class=\"gl-v2-pl-k\">STARTDATUM PLANNING</span><b>" + fmtFull(pl.startDatum) + "</b></div>" : "";
+        var geldt = geldtVoor(pl);
         el.innerHTML =
-            "<div class=\"gl-v2-pl-kop-title\"><h2>" + (pl && pl.global ? "Globaal overzicht" : (meerdere && pl ? "Bouwplanning · " + esc(pl.naam) : "Bouwplanning")) + "</h2><span class=\"gl-v2-pl-chip\"><i class=\"ph " + (canWrite ? "ph-floppy-disk" : "ph-lock-simple") + "\" aria-hidden=\"true\"></i>" +
-            (canWrite ? "Wijzigingen worden meteen bewaard" : "Alleen lezen") + "</span>" +
-            (canWrite && pl ? "<button type=\"button\" class=\"gl-v2-pl-tab-add js-pl-edit-planning\" title=\"Naam, woningen en startdatum wijzigen, of de planning verwijderen\"><i class=\"ph ph-pencil-simple\" aria-hidden=\"true\"></i>Naam wijzigen of verwijderen</button>" : "") + "</div>" +
-            "<dl class=\"gl-v2-pl-meta\">" +
-            plEenh + plStart + "<div><dt>Start</dt><dd>" + fmtFull(k.start) + "</dd></div>" +
-            "<div><dt>Einde</dt><dd class=\"" + (k.marge != null && k.marge < 0 ? "is-late" : "") + "\">" + fmtFull(k.einde) + "</dd></div>" +
-            "<div><dt>Duur</dt><dd>" + dagen(k.duurWerkdagen || 0) + "</dd></div>" +
-            "<div><dt>Deadline oplevering</dt>" + deadline + "</div>" +
-            "<div><dt>Verletdagen</dt><dd>" + (k.verletMeetellen === false ? "uitgezet" : (k.verletDagen || 0)) + (k.geenWeerstation ? "<small>geen weerstation</small>" : "") + "</dd></div>" +
-            basis + "</dl>";
+            "<div class=\"gl-v2-pl-kop-title\"><h2>" + (pl && pl.global ? "Globaal overzicht" : (meerdere && pl ? "Bouwplanning · " + esc(pl.naam) : "Bouwplanning")) + "</h2>" +
+            (canWrite && pl ? "<button type=\"button\" class=\"gl-v2-icon-btn js-pl-edit-planning\" title=\"Naam wijzigen of verwijderen\" aria-label=\"Naam wijzigen of verwijderen\"><i class=\"ph ph-dots-three\" aria-hidden=\"true\"></i></button>" : "") + "</div>" +
+            "<div class=\"gl-v2-pl-geldt\">" + geldt + "<span class=\"gl-v2-pl-saved" + (canWrite ? "" : " is-ro") + "\"><i class=\"ph " + (canWrite ? "ph-check-circle" : "ph-lock-simple") + "\" aria-hidden=\"true\"></i>" + (canWrite ? "wijzigingen worden meteen bewaard" : "alleen lezen") + "</span></div>" +
+            "<div class=\"gl-v2-pl-kpi\">" + plStart +
+            "<div><span class=\"gl-v2-pl-k\">START</span><b>" + fmtFull(k.start) + "</b></div>" +
+            "<div><span class=\"gl-v2-pl-k\">EINDE</span><b class=\"" + (k.marge != null && k.marge < 0 ? "is-late" : "") + "\">" + fmtFull(k.einde) + "</b></div>" +
+            "<div class=\"is-duur\"><span class=\"gl-v2-pl-k\">DUUR</span>" + duur + "</div>" +
+            "<div><span class=\"gl-v2-pl-k\">DEADLINE OPLEVERING</span>" + deadline + "</div>" +
+            "<div class=\"" + (k.geenWeerstation ? "is-gold" : "") + "\"><span class=\"gl-v2-pl-k\">VERLETDAGEN</span><b>" + verlet + "</b>" + weer + "</div>" +
+            basis + "</div>";
+    }
+    $("gl-v2-pl-kop").addEventListener("click", function (e) {
+        if (e.target.closest("[data-geldt-alle]")) { geldtOpen = !geldtOpen; renderKop(); }
+    });
+
+    // ── Vraagt actie (59i): wat volgens de planning gebeurd is maar in CPM nog niet staat ──
+    function achterstand() { var today = todayIso(); return state.rijen.filter(function (r) { return r.soort === "taak" && !r.afgerond && r.einde && r.einde < today; }); }
+    function klaarStages(klaar) {
+        var uniek = {}, lijst = [];
+        klaar.forEach(function (k) { if (!uniek[k.s.stageId]) { uniek[k.s.stageId] = true; lijst.push(k); } });
+        return lijst;
+    }
+    function vraagtActieHtml(klaar) {
+        if (state.actiefPlanningId === GLOBAAL) return "";
+        var late = achterstand(), stages = klaarStages(klaar);
+        if (!late.length && !stages.length) return "";
+        var klaarTaken = state.rijen.filter(function (r) { return r.soort === "taak" && r.afgerond; }).length;
+        var titel = late.length ? "Planning loopt achter op de werkelijkheid" : (stages.length === 1 ? "Een schijf is bereikt" : "Schijven zijn bereikt");
+        var sub = "Volgens de planning is vandaag " + fmtFull(todayIso()) + "; " + (klaarTaken ? klaarTaken + (klaarTaken === 1 ? " taak is" : " taken zijn") + " afgevinkt." : "niets is afgevinkt.");
+        var eenh = 0, bereikt = 0; stages.forEach(function (k) { eenh += k.s.aantalEenheden || 0; bereikt += k.s.aantalBereikt || 0; });
+        return "<section class=\"gl-v2-pl-va\" aria-label=\"Vraagt actie\"><span class=\"gl-v2-pl-va-i\"><i class=\"ph ph-warning\" aria-hidden=\"true\"></i></span><div class=\"gl-v2-pl-va-t\"><b>" + titel + "</b><small>" + esc(sub) + "</small></div>" +
+            (late.length ? "<div class=\"gl-v2-pl-va-x\"><span><b>" + late.length + (late.length === 1 ? " taak" : " taken") + "</b> voorbij hun einddatum, niet afgevinkt</span><button type=\"button\" class=\"gl-v2-btn gl-v2-btn-secondary\" data-vr=\"afvinken\">Afvinken tot vandaag…</button></div>" : "") +
+            (stages.length ? "<div class=\"gl-v2-pl-va-x\"><span><b>" + stages.length + (stages.length === 1 ? " schijf" : " schijven") + "</b> bereikt volgens de planning, " + bereikt + "/" + eenh + " eenheden gemarkeerd</span><button type=\"button\" class=\"gl-v2-btn gl-v2-btn-secondary\" data-vr=\"markeren\">Markeren…</button></div>" : "") + "</section>";
     }
 
     // ── Meldingen ──
@@ -230,15 +462,13 @@
         var top = [], perRow = [];
         var klaar = [];
         state.rijen.forEach(function (r) { (r.schijven || []).forEach(function (s) { if (s.klaarOmTeMarkeren) klaar.push({ r: r, s: s }); }); });
-        (state.meldingen || []).forEach(function (m) { (m.rijSleutel ? perRow : top).push(m); });
+        // "Geen weerstation" staat sinds 59i in het vak Verletdagen van de kop (met "kiezen"): geen tweede melding erboven
+        (state.meldingen || []).forEach(function (m) { if (m.titel === "Geen weerstation") return; (m.rijSleutel ? perRow : top).push(m); });
         top.forEach(function (m) {
             html += "<div class=\"gl-v2-notice gl-v2-notice-expanded is-" + esc(m.ernst) + "\" role=\"status\"><span class=\"gl-v2-notice-expanded-icon\"><i class=\"ph " + (ICON[m.ernst] || ICON.info) + "\" aria-hidden=\"true\"></i></span>" +
                 "<div class=\"gl-v2-notice-body\"><span class=\"gl-v2-notice-title\">" + esc(m.titel) + "</span>" + (m.tekst ? "<span class=\"gl-v2-notice-text\">" + esc(m.tekst) + "</span>" : "") + "</div></div>";
         });
-        if (klaar.length && canWrite) {
-            html += "<div class=\"gl-v2-notice gl-v2-notice-expanded is-success gl-v2-pl-notice-schijf\" role=\"status\"><span class=\"gl-v2-notice-expanded-icon\"><i class=\"ph ph-seal-check\" aria-hidden=\"true\"></i></span><div class=\"gl-v2-notice-body\"><span class=\"gl-v2-notice-title\">" + (klaar.length === 1 ? "Een schijf is bereikt" : klaar.length + " schijven zijn bereikt") + "</span><ul class=\"gl-v2-pl-notice-list\">" +
-                klaar.map(function (k) { return "<li><b>" + esc(k.s.groepNaam) + " · " + esc(k.s.naam) + "</b><span>" + esc(k.r.wbs + " " + k.r.naam) + " is klaar. Markeren voor " + k.s.teMarkeren + (k.s.teMarkeren === 1 ? " eenheid" : " eenheden") + (k.s.overgeslagen ? " (" + k.s.overgeslagen + " overgeslagen: niet verkocht of akte nog niet verleden)" : "") + ".</span><button type=\"button\" data-schijf-markeer=\"" + k.s.stageId + "\">Markeren</button></li>"; }).join("") + "</ul></div></div>";
-        }
+        if (canWrite) html = vraagtActieHtml(klaar) + html;
         if (perRow.length) {
             var ernst = perRow.some(function (m) { return m.ernst !== "info"; }) ? "warning" : "info";
             var lijst = perRow.slice(0, 6).map(function (m) {
@@ -252,12 +482,19 @@
     }
 
     // ── Lijst ──
+    // Hoeveel taken onder een fase voorbij hun einddatum zijn en niet afgevinkt (voor het goudkleurige label bij een ingeklapte fase)
+    function nietAfgevinkt(fase) {
+        var i = state.rijen.indexOf(fase), n = 0, vandaag = todayIso();
+        for (var j = i + 1; j < state.rijen.length && state.rijen[j].niveau > fase.niveau; j++) { var x = state.rijen[j]; if (x.soort === "taak" && !x.afgerond && x.einde && x.einde < vandaag) n++; }
+        return n;
+    }
     function rowHtml(r) {
         var fase = r.soort === "fase";
-        var cls = "gl-v2-pl-r" + (fase ? " is-fase" : "") + (r.afgerond ? " is-done" : "") + (shifted[r.sleutel] ? " is-shifted" : "") + (selected === r.sleutel ? " is-selected" : "");
+        var vandaag = todayIso(), laat = !fase && !r.afgerond && !!r.einde && r.einde < vandaag, loopt = !fase && !r.afgerond && !!r.start && r.start <= vandaag && r.einde >= vandaag;
+        var cls = "gl-v2-pl-r" + (fase ? " is-fase" : "") + (laat ? " is-late" : "") + (loopt ? " is-now" : "") + (r.afgerond ? " is-done" : "") + (shifted[r.sleutel] ? " is-shifted" : "") + (selected === r.sleutel ? " is-selected" : "");
         var naam = "";
         if (fase) naam += "<button type=\"button\" class=\"gl-v2-pl-caret\" data-act=\"caret\" aria-expanded=\"" + (ui.collapsed[r.sleutel] ? "false" : "true") + "\" aria-label=\"" + (ui.collapsed[r.sleutel] ? "Uitklappen" : "Inklappen") + "\"><i class=\"ph ph-caret-down\" aria-hidden=\"true\"></i></button>";
-        else if (canWrite) naam += "<button type=\"button\" class=\"gl-v2-pl-tick" + (r.afgerond ? " is-on" : "") + "\" data-act=\"tick\" role=\"checkbox\" aria-checked=\"" + (r.afgerond ? "true" : "false") + "\" aria-label=\"Voltooid\"><i class=\"ph " + (r.afgerond ? "ph-check-circle ph-fill" : "ph-circle") + "\" aria-hidden=\"true\"></i></button>";
+        else if (canWrite) naam += "<button type=\"button\" class=\"gl-v2-pl-tick" + (r.afgerond ? " is-on" : "") + (laat ? " is-late" : "") + (loopt ? " is-now" : "") + "\" data-act=\"tick\" role=\"checkbox\" aria-checked=\"" + (r.afgerond ? "true" : "false") + "\" aria-label=\"Voltooid\"><i class=\"ph " + (r.afgerond ? "ph-check-circle ph-fill" : "ph-circle") + "\" aria-hidden=\"true\"></i></button>";
         else naam += "<span class=\"gl-v2-pl-spacer\"></span>";
         if (canWrite) naam = "<span class=\"gl-v2-pl-grip\" data-grip title=\"Sleep om de rij te verplaatsen\" aria-hidden=\"true\"><i class=\"ph ph-dots-six-vertical\"></i></span>" + naam;
         naam += "<span class=\"gl-v2-pl-name-text\" " + (canWrite ? "data-edit=\"naam\" title=\"Klik om de naam te wijzigen\"" : "") + ">" + esc(r.naam) + "</span>";
@@ -269,12 +506,14 @@
             l.forEach(function (s) { eenh += s.aantalEenheden || 0; bereikt += s.aantalBereikt || 0; if (s.klaarOmTeMarkeren) { klaar.push(s.stageId); teMarkeren += s.teMarkeren; } });
             var alles = l.every(function (s) { return s.allesBereikt; });
             var tip = l.map(function (s) { return s.groepNaam + " · " + s.naam + " (" + s.percentage + " %)"; }).join("\n");
-            if (klaar.length && canWrite) naam += "<button type=\"button\" class=\"gl-v2-pl-schijf is-klaar\" data-act=\"schijf-markeer\" data-stage=\"" + klaar.join(",") + "\" title=\"" + esc(tip) + "\nMarkeer als bereikt voor " + teMarkeren + (teMarkeren === 1 ? " eenheid" : " eenheden") + "\"><i class=\"ph ph-seal-check\" aria-hidden=\"true\"></i>Schijf " + nr + "?</button>";
-            else naam += "<span class=\"gl-v2-pl-schijf" + (alles ? " is-bereikt" : "") + "\" title=\"" + esc(tip) + "\"><i class=\"ph " + (alles ? "ph-seal-check" : "ph-coins") + "\" aria-hidden=\"true\"></i>" + nr + (eenh ? " · " + bereikt + "/" + eenh : "") + "</span>";
+            var verschuldigd = !alles && (klaar.length > 0 || r.afgerond || laat);
+            if (klaar.length && canWrite) naam += "<button type=\"button\" class=\"gl-v2-pl-schijf is-klaar is-due\" data-act=\"schijf-markeer\" data-stage=\"" + klaar.join(",") + "\" title=\"" + esc(tip) + "\nMarkeer als bereikt voor " + teMarkeren + (teMarkeren === 1 ? " eenheid" : " eenheden") + "\"><i class=\"ph ph-coins\" aria-hidden=\"true\"></i>" + nr + (eenh ? " · " + bereikt + "/" + eenh : "") + "</button>";
+            else naam += "<span class=\"gl-v2-pl-schijf" + (alles ? " is-bereikt" : "") + (verschuldigd ? " is-due" : "") + "\" title=\"" + esc(tip) + "\"><i class=\"ph " + (alles ? "ph-seal-check" : "ph-coins") + "\" aria-hidden=\"true\"></i>" + nr + (eenh ? " · " + bereikt + "/" + eenh : "") + "</span>";
         });
         if (ui.kritiek && r.kritiek) naam += "<span class=\"gl-v2-pl-badge\" title=\"Kritiek pad: " + (fase ? "bevat kritieke taken" : "geen speling") + "\">K</span>";
         if (shifted[r.sleutel]) naam += "<span class=\"gl-v2-pl-badge is-gold\">verschoven</span>";
         if (r.beperking === 1 && !fase) naam += "<i class=\"ph ph-push-pin\" title=\"Moet beginnen op " + fmtFull(r.beperkingDatum) + "\" aria-label=\"vastgepind\"></i>";
+        if (fase && ui.collapsed[r.sleutel]) { var nv = nietAfgevinkt(r); if (nv) naam += "<span class=\"gl-v2-pl-badge is-gold\" title=\"Taken in deze fase die voorbij hun einddatum zijn en niet afgevinkt\">" + nv + " niet afgevinkt</span>"; }
         if (fase && canWrite) naam += "<button type=\"button\" class=\"gl-v2-pl-add-in-fase\" data-act=\"add-in\">+ Taak</button>";
 
         var afw = ui.basis && r.afwijking ? " <small class=\"gl-v2-pl-afw " + (r.afwijking > 0 ? "is-plus" : "is-min") + "\">" + (r.afwijking > 0 ? "+" : "−") + Math.abs(r.afwijking) + "</small>" : "";
@@ -284,7 +523,7 @@
             "<span class=\"gl-v2-pl-c\" role=\"cell\"><span class=\"gl-v2-pl-name\" style=\"--pl-level:" + r.niveau + "\">" + naam + "</span></span>" +
             "<span class=\"gl-v2-pl-c is-num c-dur" + (!fase && canWrite ? " is-edit" : " is-muted") + "\" role=\"cell\" " + (!fase && canWrite ? "data-edit=\"duur\"" : "") + ">" + duurTxt + "</span>" +
             "<span class=\"gl-v2-pl-c c-start\" role=\"cell\" data-act=\"open\">" + fmt(r.start) + "</span>" +
-            "<span class=\"gl-v2-pl-c c-einde\" role=\"cell\" data-act=\"open\">" + fmt(r.einde) + afw + "</span>" +
+            "<span class=\"gl-v2-pl-c c-einde" + (laat ? " is-late" : "") + "\" role=\"cell\" data-act=\"open\">" + fmt(r.einde) + afw + "</span>" +
             "<span class=\"gl-v2-pl-c c-vg" + (!fase && canWrite ? " is-edit" : "") + "\" role=\"cell\" " + (!fase && canWrite ? "data-edit=\"voorgangers\" title=\"Klik om de voorgangers te wijzigen\"" : "") + ">" + (fase ? "" : (r.voorgangers ? esc(r.voorgangers) : "<span style=\"color:var(--gl-v2-muted-light)\">—</span>")) + "</span>" +
             "<span class=\"gl-v2-pl-c is-num c-pct is-muted\" role=\"cell\">" + (r.voortgang > 0 || r.afgerond ? r.voortgang + "%" : "") + "</span>" +
             "<span class=\"gl-v2-pl-c\" role=\"cell\">" + (canWrite ? "<button type=\"button\" class=\"gl-v2-pl-rowmenu js-gl-v2-menu-trigger\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-controls=\"gl-v2-pl-menu\" aria-label=\"Acties voor " + esc(r.naam) + "\"><i class=\"ph ph-dots-three\" aria-hidden=\"true\"></i></button>" : "") + "</span>" +
@@ -306,6 +545,12 @@
         return s;
     }
 
+    // De schijf als genummerd muntje aan het einde van de balk (goud als ze volgens de planning bereikt zou moeten zijn)
+    function muntje(r) {
+        if (!(r.schijven || []).length) return null;
+        var nr = r.schijven[0].nummer, alles = r.schijven.every(function (s) { return s.allesBereikt; }), laat = !r.afgerond && !!r.einde && r.einde < todayIso();
+        return { nr: nr, due: !alles && (r.schijven.some(function (s) { return s.klaarOmTeMarkeren; }) || r.afgerond || laat), done: alles };
+    }
     function renderGantt(vis) {
         var scroller = $("gl-v2-pl-scroll");
         var anchor = gantt ? gantt.dateAt(scroller.scrollLeft) : null; // de datum die nu links in beeld staat, zodat zoomen/herladen niet wegspringt
@@ -314,6 +559,8 @@
                 key: r.sleutel, type: r.soort === "fase" ? "phase" : (r.isMijlpaal ? "milestone" : "task"),
                 start: r.start, end: r.einde, progress: r.voortgang, critical: r.kritiek, done: r.afgerond,
                 pinned: r.soort === "taak" && r.beperking === 1, shifted: !!shifted[r.sleutel], label: r.naam,
+                late: r.soort === "taak" && !r.afgerond && !!r.einde && r.einde < todayIso(), now: r.soort === "taak" && !r.afgerond && !!r.start && r.start <= todayIso() && r.einde >= todayIso(),
+                coin: muntje(r),
                 baseStart: r.basisStart, baseEnd: r.basisEinde, aria: ariaFor(r)
             };
         });
@@ -384,6 +631,7 @@
         });
         var anyOpen = state.rijen.some(function (r) { return r.soort === "fase" && !ui.collapsed[r.sleutel]; });
         $("gl-v2-pl-collapse").querySelector("span").textContent = anyOpen ? "Fases inklappen" : "Alles uitklappen";
+        standaardInklappen();
         var scr = $("gl-v2-pl-scroll"), keepTop = scr.scrollTop;
         ensureListW();
         var vis = visibleRows();
@@ -391,6 +639,16 @@
         renderList(vis);
         renderGantt(vis);
         scr.scrollTop = keepTop; // een herteken mag de verticale positie niet verspringen
+    }
+    // Bij het eerste openen van een planning: de hoofdfases zijn ingeklapt behalve wat nu loopt (59i). Loopt er vandaag niets, dan blijft alles zoals het was.
+    function standaardInklappen() {
+        var sleutel = String(state.actiefPlanningId || 0);
+        if (ui.inklapGedaan[sleutel] || aannActief) return;
+        var vandaag = todayIso(), top = state.rijen.filter(function (r) { return r.soort === "fase" && r.niveau === 0; });
+        var lopend = top.filter(function (r) { return r.start && r.start <= vandaag && r.einde >= vandaag; });
+        ui.inklapGedaan[sleutel] = true;
+        if (lopend.length && lopend.length < top.length) top.forEach(function (r) { if (lopend.indexOf(r) >= 0) delete ui.collapsed[r.sleutel]; else ui.collapsed[r.sleutel] = true; });
+        saveUi();
     }
     function setPressed(id, on) { var b = $(id); b.setAttribute("aria-pressed", on ? "true" : "false"); }
 
@@ -835,7 +1093,73 @@
         if (window.GlV2Bevestig) window.GlV2Bevestig({ title: "Basisplanning vastleggen?", desc: heeft ? "De bestaande basisplanning wordt overschreven met de huidige planning." : "De huidige planning wordt de basis waartegen afwijkingen gemeten worden.", ok: "Vastleggen", tone: "warning", icon: "ph-bookmark-simple" }).then(function (ok) { if (ok) run(); });
         else run();
     });
+    var vr = { soort: null, bezig: false };
+    function vrLijst(items) {
+        $("gl-v2-pl-vr-lijst").innerHTML = items.map(function (x, i) {
+            return "<div class=\"gl-v2-pl-vr-rij\"><span class=\"gl-v2-check\"><input type=\"checkbox\" id=\"gl-v2-pl-vr-" + i + "\" data-i=\"" + i + "\" checked /><label for=\"gl-v2-pl-vr-" + i + "\"></label></span><label class=\"gl-v2-pl-vr-tekst\" for=\"gl-v2-pl-vr-" + i + "\"><b>" + esc(x.titel) + "</b><small>" + esc(x.sub) + "</small></label></div>";
+        }).join("");
+        vr.items = items; vrTel();
+    }
+    function vrGekozen() { return Array.prototype.map.call(document.querySelectorAll("#gl-v2-pl-vr-lijst input:checked"), function (c) { return vr.items[parseInt(c.getAttribute("data-i"), 10)]; }); }
+    function vrTel() {
+        var n = vrGekozen().length, alle = $("gl-v2-pl-vr-alle");
+        alle.checked = n === vr.items.length; alle.indeterminate = n > 0 && n < vr.items.length;
+        $("gl-v2-pl-vr-ok").disabled = n === 0 || vr.bezig;
+        $("gl-v2-pl-vr-ok-t").textContent = (vr.soort === "afvinken" ? "Afvinken" : vr.soort === "toewijzen" ? "Toewijzen" : "Markeren") + " (" + n + ")";
+    }
+    function openVraag(soort) {
+        if (!canWrite) return;
+        vr.soort = soort; vr.bezig = false; $("gl-v2-pl-vr-fout").hidden = true;
+        var extra = $("gl-v2-pl-vr-extra"); extra.hidden = true; extra.innerHTML = "";
+        if (soort === "toewijzen") {
+            var g0 = aannGroepen().filter(function (g) { return g.id === "0"; })[0], zonder = g0 ? g0.taken : [];
+            $("gl-v2-pl-vr-titel").textContent = "Uitvoerder toewijzen";
+            $("gl-v2-pl-vr-uitleg").textContent = "Kies de aannemer en de taken die hij uitvoert. De bouwplanning wordt meteen aangepast.";
+            var opties = (state.uitvoerders || []).filter(function (u) { return u.inProject; });
+            extra.hidden = false;
+            extra.innerHTML = "<span class=\"gl-v2-field-label\">Aannemer</span><div class=\"gl-v2-select\" data-gl-v2-select data-placeholder=\"Kies een aannemer\"><input type=\"hidden\" id=\"gl-v2-pl-vr-uitv\" value=\"\" /><div class=\"gl-v2-select-trigger\" role=\"button\" tabindex=\"0\" aria-haspopup=\"listbox\" aria-expanded=\"false\" aria-label=\"Aannemer\"><span class=\"gl-v2-select-trigger-label\">Kies een aannemer</span><i class=\"ph ph-caret-down gl-v2-select-trigger-caret\" aria-hidden=\"true\"></i></div><div class=\"gl-v2-select-panel\" role=\"listbox\">" + opties.map(function (u) { return "<button type=\"button\" class=\"gl-v2-select-option\" role=\"option\" data-value=\"" + u.id + "\"><i class=\"ph ph-check\" aria-hidden=\"true\"></i><span>" + esc(u.naam) + "</span></button>"; }).join("") + "</div></div>";
+            if (window.GlV2Select && window.GlV2Select.init) window.GlV2Select.init(extra);
+            vrLijst(zonder.map(function (t) { return { titel: t.wbs + " " + t.naam, sub: (t.fase || t.planning || "") + " · " + fmt(t.start) + " – " + fmt(t.einde), t: t }; }));
+        } else if (soort === "afvinken") {
+            var late = achterstand();
+            $("gl-v2-pl-vr-titel").textContent = "Taken afvinken tot vandaag";
+            $("gl-v2-pl-vr-uitleg").textContent = "Deze taken zijn volgens de planning voorbij hun einddatum maar niet afgevinkt. Vink uit wat nog niet klaar is: enkel de gekozen taken worden op 100 % gezet.";
+            vrLijst(late.map(function (r) { return { titel: r.wbs + " " + r.naam, sub: "einde " + fmt(r.einde), r: r }; }));
+        } else {
+            var st = klaarStages(state.rijen.reduce(function (a, r) { (r.schijven || []).forEach(function (s) { if (s.klaarOmTeMarkeren) a.push({ r: r, s: s }); }); return a; }, []));
+            $("gl-v2-pl-vr-titel").textContent = "Schijven markeren als bereikt";
+            $("gl-v2-pl-vr-uitleg").textContent = "Deze schijven zijn volgens de planning bereikt. Vink uit wat nog niet klopt: enkel de gekozen schijven worden gemarkeerd (niet verkochte eenheden worden overgeslagen) en zijn dan factureerbaar.";
+            vrLijst(st.map(function (k) { return { titel: k.s.groepNaam + " · " + k.s.naam, sub: k.r.wbs + " " + k.r.naam + " is klaar · " + k.s.teMarkeren + (k.s.teMarkeren === 1 ? " eenheid te markeren" : " eenheden te markeren"), s: k.s }; }));
+        }
+        var m = modal("gl-v2-pl-vr"); if (m) m.show();
+    }
+    $("gl-v2-pl-vr-alle").addEventListener("change", function () { var aan = this.checked; document.querySelectorAll("#gl-v2-pl-vr-lijst input").forEach(function (c) { c.checked = aan; }); vrTel(); });
+    $("gl-v2-pl-vr-lijst").addEventListener("change", vrTel);
+    $("gl-v2-pl-vr").querySelector("form").addEventListener("submit", function (e) {
+        e.preventDefault();
+        var gekozen = vrGekozen(); if (!gekozen.length || vr.bezig) return;
+        vr.bezig = true; $("gl-v2-pl-vr-ok").disabled = true;
+        var klaar = function (titel, tekst) { vr.bezig = false; var m = modal("gl-v2-pl-vr"); if (m) m.hide(); toast("success", titel, tekst); };
+        if (vr.soort === "toewijzen") {
+            var uid = parseInt($("gl-v2-pl-vr-uitv").value, 10);
+            if (!uid) { vr.bezig = false; vrTel(); var f = $("gl-v2-pl-vr-fout"); f.textContent = "Kies eerst een aannemer."; f.hidden = false; return; }
+            aannWijsToe(gekozen.map(function (x) { return x.t; }), uid, function (ok) { if (ok) klaar("Uitvoerder toegewezen", gekozen.length + (gekozen.length === 1 ? " taak" : " taken") + " toegewezen. De bouwplanning is aangepast."); else { vr.bezig = false; vrTel(); } });
+        } else if (vr.soort === "afvinken") {
+            var keten = Promise.resolve(true);
+            gekozen.forEach(function (x) { keten = keten.then(function (ok) { return ok === false ? false : send({ type: "wijzig", soort: "taak", id: x.r.id, velden: { voortgang: 100 } }, { silent: true }); }); });
+            keten.then(function (ok) { if (ok === false) { vr.bezig = false; vrTel(); return; } klaar("Taken afgevinkt", gekozen.length + (gekozen.length === 1 ? " taak staat" : " taken staan") + " op 100 %. De planning is opnieuw berekend."); });
+        } else {
+            var rest = gekozen.slice(), totaal = 0; gekozen.forEach(function (x) { totaal += x.s.teMarkeren; });
+            (function volgende() {
+                var x = rest.shift();
+                schijfPost(cfg.schijfMarkeerUrl, { stageId: x.s.stageId, terugzetten: false }, function () {
+                    if (rest.length) volgende(); else klaar(gekozen.length === 1 ? "Schijf bereikt" : gekozen.length + " schijven bereikt", "Gemarkeerd voor " + totaal + (totaal === 1 ? " eenheid" : " eenheden") + ". De schijven zijn nu factureerbaar.");
+                });
+            })();
+        }
+    });
     $("gl-v2-pl-notices").addEventListener("click", function (e) {
+        var va = e.target.closest("[data-vr]"); if (va) { openVraag(va.getAttribute("data-vr")); return; }
         if (e.target.closest("[data-notices-toggle]")) { ui.noticesOpen = !ui.noticesOpen; saveUi(); renderNotices(); return; }
         var sb = e.target.closest("[data-schijf-markeer]"); if (sb) { schijfMarkeer(parseInt(sb.getAttribute("data-schijf-markeer"), 10), false); return; }
         var b = e.target.closest("[data-toon]"); if (!b) return;
@@ -1108,35 +1432,96 @@
     function schoonLagen(lijst, aantal) { return (lijst || []).filter(function (n, i, a) { return n >= 1 && n <= aantal && a.indexOf(n) === i; }).sort(function (a, b) { return a - b; }); }
     function wisselLaag(lijst, n) { var i = lijst.indexOf(n); if (i >= 0) lijst.splice(i, 1); else lijst.push(n); return lijst; }
 
-    // ── Projectsjabloon: planning, traject en schijven in één keer, aangepast aan het gebouw ──
-    var pj = { keuzes: [], gekozen: null, aanvraag: 0, timer: null, bezig: false, terrassen: [] };
+    // ── Projectsjabloon: planning, traject en schijven in één keer, aangepast aan het gebouw (design-handoff 59g/59h) ──
+    // Links de antwoorden (de verborgen velden hieronder zijn de bron van waarheid, de knoppen tonen ze), rechts "Wat er gebeurt" per onderdeel.
+    var pj = { keuzes: [], gekozen: null, aanvraag: 0, timer: null, bezig: false, terrassen: [], ai: {}, vorige: null };
+    var PJ_VELDEN = ["verd", "kelder", "dak", "lagen", "een"];
+    function pjAantal() { return Math.max(1, Math.min(20, parseInt($("gl-v2-pl-pj-verd").value, 10) || 1)); }
     function pjLagen() {
-        var aantal = Math.max(1, Math.min(20, parseInt($("gl-v2-pl-pj-verd").value, 10) || 1));
+        var aantal = pjAantal();
         pj.terrassen = schoonLagen(pj.terrassen, aantal);
         $("gl-v2-pl-pj-lagen").innerHTML = lagenHtml(aantal, pj.terrassen, "data-pj=\"1\"");
+        $("gl-v2-pl-pj-verd-t").textContent = aantal;
+        $("gl-v2-pl-pj-min").disabled = aantal <= 1; $("gl-v2-pl-pj-plus").disabled = aantal >= 20;
     }
     function pjAntwoorden() {
         return {
-            verdiepingen: Math.max(1, Math.min(20, parseInt($("gl-v2-pl-pj-verd").value, 10) || 1)),
+            verdiepingen: pjAantal(),
             kelder: $("gl-v2-pl-pj-kelder").checked, dak: $("gl-v2-pl-pj-dak").value || null,
-            terrassen: schoonLagen(pj.terrassen, Math.max(1, Math.min(20, parseInt($("gl-v2-pl-pj-verd").value, 10) || 1))),
+            terrassen: schoonLagen(pj.terrassen, pjAantal()),
             eenPlanningVoorAlles: $("gl-v2-pl-pj-een").checked,
             inHoofdplanning: $("gl-v2-pl-pj-een").checked && $("gl-v2-pl-pj-hoofd").checked
         };
     }
-    function pjHoofdRij() { $("gl-v2-pl-pj-hoofd-rij").hidden = !$("gl-v2-pl-pj-een").checked; }
-    function pjFout(t) { var el = $("gl-v2-pl-pj-fout"); el.textContent = t || ""; el.hidden = !t; }
-    function pjToon(res) {
-        var st = $("gl-v2-pl-pj-stappen"), op = $("gl-v2-pl-pj-opm"), sc = $("gl-v2-pl-pj-schijven");
-        st.innerHTML = ""; op.innerHTML = ""; sc.innerHTML = "";
-        var vul = function (ul, lijst) { (lijst || []).forEach(function (t) { var li = document.createElement("li"); li.textContent = t; ul.appendChild(li); }); };
-        if (res.fout) { pjFout(res.fout); $("gl-v2-pl-pj-ok").disabled = true; return; }
-        pjFout("");
-        vul(st, res.stappen); vul(op, res.opmerkingen);
-        (res.schijven || []).forEach(function (s) {
-            var li = document.createElement("li"); li.textContent = s.naam + " · " + String(Math.round(s.percentage * 100) / 100).replace(".", ",") + " %"; sc.appendChild(li);
+    // De knoppen (gl-v2-segmented) volgen de verborgen velden
+    function pjSegmenten() {
+        var kelder = $("gl-v2-pl-pj-kelder").checked, dak = $("gl-v2-pl-pj-dak").value || "", een = $("gl-v2-pl-pj-een").checked;
+        $("gl-v2-pl-pj-kelder-seg").querySelectorAll("button").forEach(function (b) { b.classList.toggle("is-active", (b.getAttribute("data-v") === "ja") === kelder); });
+        $("gl-v2-pl-pj-dak-seg").querySelectorAll("button").forEach(function (b) { b.classList.toggle("is-active", b.getAttribute("data-v") === dak); });
+        $("gl-v2-pl-pj-een-seg").querySelectorAll("button").forEach(function (b) { b.classList.toggle("is-active", (b.getAttribute("data-v") === "een") === een); });
+        $("gl-v2-pl-pj-hoofd-rij").hidden = !een;
+        var vrij = (state.eenheden || []).filter(function (e) { return e.planningId == null; }).length;
+        $("gl-v2-pl-pj-elk").textContent = "Per eenheid" + (vrij ? " (" + vrij + ")" : "");
+        $("gl-v2-pl-pj-een-help").textContent = "Bij een appartementsgebouw is één planning de standaard: de werf loopt per bouwlaag, niet per appartement. “Per eenheid” maakt " + (vrij ? vrij + " planningen" : "een planning per eenheid") + ".";
+    }
+    function pjHoofdRij() { pjSegmenten(); }
+    // Wat de AI invulde is blauw met een AI-label tot jij het zelf wijzigt
+    function pjAiMarks() {
+        var kaart = { verd: "gl-v2-pl-pj-q-verd", kelder: "gl-v2-pl-pj-q-kelder", dak: "gl-v2-pl-pj-q-dak", lagen: "gl-v2-pl-pj-q-lagen", een: "gl-v2-pl-pj-q-een" };
+        PJ_VELDEN.forEach(function (v) {
+            var el = $(kaart[v]), aan = !!pj.ai[v]; if (!el) return;
+            el.classList.toggle("is-ai", aan);
+            var lbl = el.querySelector(".gl-v2-pl-pj-aib"); if (lbl) lbl.hidden = !aan;
         });
-        $("gl-v2-pl-pj-ok").disabled = !(res.stappen && res.stappen.length) || pj.bezig;
+        $("gl-v2-pl-pj-lijst").classList.toggle("is-ai", !!pj.ai.sjabloon);
+        $("gl-v2-pl-pj-ta-box").classList.toggle("is-ai", false);
+    }
+    function pjAiUit(veld) { if (pj.ai[veld]) { pj.ai[veld] = false; pjAiMarks(); } }
+    function pjFout(tekst) { var el = $("gl-v2-pl-pj-fout"); el.textContent = tekst || ""; el.hidden = !tekst; }
+    function nl2(n) { return String(Math.round(n * 100) / 100).replace(".", ","); }
+    // "Wat er gebeurt": een kaart per onderdeel (planning, traject, schijven), wat ongemoeid blijft en een samenvatting onderaan
+    function pjToon(res) {
+        var host = $("gl-v2-pl-pj-voorbeeld"), fs = $("gl-v2-pl-pj-fs"), ok = $("gl-v2-pl-pj-ok");
+        if (res.fout) { pjFout(res.fout); ok.disabled = true; return; }
+        pjFout("");
+        var stappen = res.stappen || [], opm = res.opmerkingen || [], schijven = res.schijven || [];
+        var planning = stappen.filter(function (s) { return /^Planning /.test(s); })[0], traject = stappen.filter(function (s) { return /^Traject /.test(s); })[0];
+        var schijfStap = stappen.filter(function (s) { return /^Schijven: /.test(s); })[0];
+        var rest = stappen.filter(function (s) { return s !== planning && s !== traject && s !== schijfStap && !/hangen? nu aan/.test(s) && !/hangt nu aan/.test(s); });
+        var koppel = stappen.filter(function (s) { return /nu aan een taak of fase/.test(s); })[0];
+        var blijft = [], waarschuw = [];
+        opm.forEach(function (o) { (/blijft|blijven|bestaat al|al een|al schijven|ongewijzigd|ongemoeid|geen eenheden|geen betalingsgroep/i.test(o) ? blijft : waarschuw).push(o); });
+        var kaarten = "";
+        if (planning) {
+            var m = planning.match(/^Planning “(.*?)”(?: toegepast)?: (.*?)\.?$/);
+            kaarten += "<div class=\"gl-v2-pl-pj-kaart\"><div class=\"gl-v2-pl-pj-kk\"><i class=\"ph ph-calendar-check\" aria-hidden=\"true\"></i><b>Planning</b><span class=\"gl-v2-pl-pj-nieuw\">nieuw</span></div><p>" +
+                (m ? "<b>" + esc(m[1]) + "</b> · " + esc(m[2]) : esc(planning)) + "</p></div>";
+        }
+        if (traject) {
+            var mt = traject.match(/^Traject “(.*?)”/);
+            kaarten += "<div class=\"gl-v2-pl-pj-kaart\"><div class=\"gl-v2-pl-pj-kk\"><i class=\"ph ph-git-branch\" aria-hidden=\"true\"></i><b>Traject</b><span class=\"gl-v2-pl-pj-nieuw\">nieuw</span></div><p>" + (mt ? "“" + esc(mt[1]) + "”" : esc(traject)) + "</p></div>";
+        }
+        if (schijven.length) {
+            var groepen = schijfStap ? (schijfStap.match(/ in (.*?)\.?$/) || [])[1] : "";
+            var aantalGroepen = groepen ? groepen.split(/, | en /).length : 0;
+            kaarten += "<div class=\"gl-v2-pl-pj-kaart\"><div class=\"gl-v2-pl-pj-kk\"><i class=\"ph ph-list-checks\" aria-hidden=\"true\"></i><b>Schijven</b><span class=\"gl-v2-pl-pj-nieuw\">" + schijven.length + (aantalGroepen ? " · " + aantalGroepen + (aantalGroepen === 1 ? " groep" : " groepen") : "") + "</span></div>" +
+                (groepen ? "<p>in " + esc(groepen) + "</p>" : "") +
+                "<ol class=\"gl-v2-pl-pj-sl\">" + schijven.map(function (s) {
+                    var laag = waarschuw.some(function (w) { return w.indexOf(s.naam) >= 0 && /minimum|onder/i.test(w); });
+                    return "<li" + (laag ? " class=\"is-laag\"" : "") + "><span>" + esc(s.naam) + "</span><b>" + nl2(s.percentage) + " %</b></li>";
+                }).join("") + "</ol>" +
+                (koppel ? "<p class=\"gl-v2-pl-pj-sub2\">" + esc(koppel) + "</p>" : "") + "</div>";
+        }
+        rest.forEach(function (s) { kaarten += "<div class=\"gl-v2-pl-pj-kaart\"><p>" + esc(s) + "</p></div>"; });
+        if (waarschuw.length) kaarten += "<div class=\"gl-v2-notice gl-v2-notice-compact is-warning\"><i class=\"ph ph-warning\" aria-hidden=\"true\"></i><span>" + waarschuw.map(esc).join("<br>") + "</span></div>";
+        if (blijft.length) kaarten += "<div class=\"gl-v2-pl-pj-keep\"><i class=\"ph ph-lock-simple\" aria-hidden=\"true\"></i><span><b>Blijft ongemoeid:</b> " + blijft.map(esc).join(" ") + "</span></div>";
+        host.innerHTML = kaarten || "<p class=\"gl-v2-pl-pj-leeg\">Er valt niets toe te passen.</p>";
+        var delen = [];
+        if (planning) delen.push("<b>1 planning</b>");
+        if (traject) delen.push("<b>1 traject</b>");
+        if (schijven.length) delen.push("<b>" + schijven.length + " schijven</b>");
+        fs.innerHTML = delen.length ? "Maakt " + (delen.length > 1 ? delen.slice(0, -1).join(", ") + " en " + delen[delen.length - 1] : delen[0]) : "";
+        ok.disabled = !stappen.length || pj.bezig;
     }
     function pjVoorbeeld() {
         if (!pj.gekozen) return;
@@ -1149,29 +1534,37 @@
     // Wat de AI aannam, vroeg en doorrekende: enkel tonen na een voorstel. De doorrekening vervalt zodra jij iets wijzigt.
     function pjControleWis() { var c = $("gl-v2-pl-pj-ai-controle"); if (c) c.textContent = ""; }
     function pjAiDetails(res) {
-        var vul = function (id, lijst) { var ul = $(id); ul.innerHTML = ""; (lijst || []).forEach(function (t) { var li = document.createElement("li"); li.textContent = t; ul.appendChild(li); }); };
+        var vul = function (id, lijst) { var ul = $(id); ul.innerHTML = ""; (lijst || []).forEach(function (x) { var li = document.createElement("li"); li.textContent = x; ul.appendChild(li); }); };
         vul("gl-v2-pl-pj-ai-aannames", res.aannames); vul("gl-v2-pl-pj-ai-vragen", res.vragen);
         $("gl-v2-pl-pj-ai-vragen-kop").hidden = !(res.vragen && res.vragen.length);
         $("gl-v2-pl-pj-ai-controle").textContent = res.controle || "";
         $("gl-v2-pl-pj-ai-details").hidden = !((res.aannames && res.aannames.length) || (res.vragen && res.vragen.length) || res.controle);
     }
+    function pjZetAntwoorden(a) {
+        $("gl-v2-pl-pj-verd").value = a.verdiepingen || 1; $("gl-v2-pl-pj-kelder").checked = !!a.kelder; $("gl-v2-pl-pj-dak").value = a.dak || "";
+        $("gl-v2-pl-pj-een").checked = !!a.eenPlanningVoorAlles; pj.terrassen = (a.terrassen || []).slice(); pjLagen(); pjSegmenten();
+    }
+    function pjKaartRadio(id) { document.querySelectorAll("input[name=\"gl-v2-pl-pj-keuze\"]").forEach(function (r) { r.checked = parseInt(r.value, 10) === id; }); }
     function pjKies(k) {
-        pj.gekozen = k;
-        $("gl-v2-pl-pj-verd").value = k.verdiepingen || 1;
-        $("gl-v2-pl-pj-kelder").checked = !!k.kelder;
-        $("gl-v2-pl-pj-dak").value = k.dak || "";
-        pj.terrassen = []; pjLagen();
-        $("gl-v2-pl-pj-een").checked = false; $("gl-v2-pl-pj-hoofd").checked = true; pjHoofdRij();
-        $("gl-v2-pl-pj-ai-uitleg").textContent = "";
+        pj.gekozen = k; pj.ai = {};
+        pjZetAntwoorden({ verdiepingen: k.verdiepingen, kelder: k.kelder, dak: k.dak, terrassen: [], eenPlanningVoorAlles: false });
+        $("gl-v2-pl-pj-hoofd").checked = true; pjSegmenten();
+        $("gl-v2-pl-pj-ainote").hidden = true; pjAiMarks();
         $("gl-v2-pl-pj-rest").hidden = false;
+        $("gl-v2-pl-pj-leeg") && ($("gl-v2-pl-pj-leeg").textContent = "Even rekenen …");
         pjVoorbeeld();
     }
     function openPj() {
         if (!canWriteBasis) return;
-        pj.gekozen = null; pjFout("");
+        pj.gekozen = null; pj.ai = {}; pj.vorige = null; pjFout("");
         $("gl-v2-pl-pj-rest").hidden = true; $("gl-v2-pl-pj-ok").disabled = true; $("gl-v2-pl-pj-beschrijving").value = "";
-        $("gl-v2-pl-pj-ai-details").hidden = true; $("gl-v2-pl-pj-ai-uitleg").textContent = "";
-        var lijst = $("gl-v2-pl-pj-lijst"); lijst.innerHTML = "<span class=\"gl-v2-field-help\" style=\"padding:8px 12px\">Laden…</span>";
+        $("gl-v2-pl-pj-ai-details").hidden = true; $("gl-v2-pl-pj-ainote").hidden = true;
+        $("gl-v2-pl-pj-ai-uitleg").textContent = "Geen namen, adressen, telefoonnummers of bedragen: die gaan niet naar de AI.";
+        $("gl-v2-pl-pj-fs").textContent = ""; pjAiMarks();
+        $("gl-v2-pl-pj-voorbeeld").innerHTML = "<p class=\"gl-v2-pl-pj-leeg\" id=\"gl-v2-pl-pj-leeg\">Kies links een projectsjabloon om te zien wat er gebeurt.</p>";
+        var eenh = (state.eenheden || []).length;
+        $("gl-v2-pl-pj-sub").textContent = ($("gl-v2-pl-pj-sub").getAttribute("data-project") || "") + (eenh ? " · " + eenh + (eenh === 1 ? " eenheid" : " eenheden") : "") + " · je ziet eerst wat er gebeurt; wat al bestaat blijft ongemoeid";
+        var lijst = $("gl-v2-pl-pj-lijst"); lijst.innerHTML = "<span class=\"gl-v2-field-help\">Laden…</span>";
         $("gl-v2-pl-pj-info").textContent = "";
         var m = modal("gl-v2-pl-pj"); if (m) m.show();
         fetch(cfg.projectSjablonenUrl, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
@@ -1180,7 +1573,7 @@
                 pj.keuzes = l || [];
                 if (!pj.keuzes.length) { lijst.innerHTML = ""; $("gl-v2-pl-pj-info").textContent = "Er zijn nog geen projectsjablonen. Iemand met het recht Planningssjablonen maakt ze aan onder Instellingen › Projectsjablonen."; return; }
                 lijst.innerHTML = pj.keuzes.map(function (k) {
-                    return "<label class=\"gl-v2-pl-een\"><input type=\"radio\" name=\"gl-v2-pl-pj-keuze\" value=\"" + k.id + "\" /><span>" + esc(k.naam) + "</span>" + (k.beschrijving ? "<small>" + esc(k.beschrijving) + "</small>" : "") + "</label>";
+                    return "<label class=\"gl-v2-radio-card\"><input type=\"radio\" name=\"gl-v2-pl-pj-keuze\" value=\"" + k.id + "\" /><span><b>" + esc(k.naam) + "</b><small>" + esc(k.kern || k.beschrijving || "") + "</small></span></label>";
                 }).join("");
                 if (pj.keuzes.length === 1) { var r = lijst.querySelector("input"); r.checked = true; pjKies(pj.keuzes[0]); }
             })
@@ -1188,13 +1581,18 @@
     }
     $("gl-v2-pl-pj").addEventListener("change", function (e) {
         if (e.target.name === "gl-v2-pl-pj-keuze") { var id = parseInt(e.target.value, 10); var k = pj.keuzes.filter(function (x) { return x.id === id; })[0]; if (k) pjKies(k); return; }
-        if (e.target.id === "gl-v2-pl-pj-een") pjHoofdRij();
-        if (e.target.closest("#gl-v2-pl-pj-rest")) pjPlanVoorbeeld();
+        if (e.target.id === "gl-v2-pl-pj-hoofd") pjPlanVoorbeeld();
     });
-    $("gl-v2-pl-pj-verd").addEventListener("input", function () { pjLagen(); pjPlanVoorbeeld(); });
+    // Antwoorden: de knoppen zetten de verborgen velden, wissen het AI-label van die vraag en rekenen opnieuw
+    function pjWijzig(veld, zet) { zet(); pjAiUit(veld); pjSegmenten(); pjPlanVoorbeeld(); }
+    $("gl-v2-pl-pj-min").addEventListener("click", function () { pjWijzig("verd", function () { $("gl-v2-pl-pj-verd").value = Math.max(1, pjAantal() - 1); pjLagen(); }); });
+    $("gl-v2-pl-pj-plus").addEventListener("click", function () { pjWijzig("verd", function () { $("gl-v2-pl-pj-verd").value = Math.min(20, pjAantal() + 1); pjLagen(); }); });
+    $("gl-v2-pl-pj-kelder-seg").addEventListener("click", function (e) { var b = e.target.closest("button[data-v]"); if (!b) return; pjWijzig("kelder", function () { $("gl-v2-pl-pj-kelder").checked = b.getAttribute("data-v") === "ja"; }); });
+    $("gl-v2-pl-pj-dak-seg").addEventListener("click", function (e) { var b = e.target.closest("button[data-v]"); if (!b) return; pjWijzig("dak", function () { $("gl-v2-pl-pj-dak").value = b.getAttribute("data-v"); }); });
+    $("gl-v2-pl-pj-een-seg").addEventListener("click", function (e) { var b = e.target.closest("button[data-v]"); if (!b) return; pjWijzig("een", function () { $("gl-v2-pl-pj-een").checked = b.getAttribute("data-v") === "een"; }); });
     $("gl-v2-pl-pj-lagen").addEventListener("click", function (e) {
         var b = e.target.closest("button[data-laag]"); if (!b) return;
-        wisselLaag(pj.terrassen, parseInt(b.getAttribute("data-laag"), 10)); pjLagen(); pjPlanVoorbeeld();
+        pjWijzig("lagen", function () { wisselLaag(pj.terrassen, parseInt(b.getAttribute("data-laag"), 10)); pjLagen(); });
     });
     $("gl-v2-pl-pj-ai").addEventListener("click", function () {
         var tekst = $("gl-v2-pl-pj-beschrijving").value.trim(), uitleg = $("gl-v2-pl-pj-ai-uitleg");
@@ -1204,26 +1602,35 @@
             knop.disabled = false;
             if (!res.ok) { uitleg.textContent = res.fout || "De AI kon geen voorstel doen."; return; }
             var a = res.antwoorden;
+            // Voor "Ongedaan maken": de toestand van vóór het voorstel
+            var voor = { gekozen: pj.gekozen, antwoorden: pj.gekozen ? pjAntwoorden() : null, een: $("gl-v2-pl-pj-een").checked };
+            var vorigSjabloon = pj.gekozen ? pj.gekozen.id : null;
             // Eerst het sjabloon dat de AI koos (dat zet de standaardwaarden), daarna de antwoorden uit de beschrijving.
             if (res.sjabloonId) {
                 var gekozen = pj.keuzes.filter(function (x) { return x.id === res.sjabloonId; })[0];
-                if (gekozen) {
-                    document.querySelectorAll("input[name=\"gl-v2-pl-pj-keuze\"]").forEach(function (r) { r.checked = parseInt(r.value, 10) === gekozen.id; });
-                    pjKies(gekozen);
-                }
+                if (gekozen) { pjKaartRadio(gekozen.id); pjKies(gekozen); }
             } else if (!pj.gekozen) {
                 pjAiDetails(res);
                 uitleg.textContent = (res.sjabloonReden || "Geen projectsjabloon past.") + " Kies zelf een sjabloon.";
                 return;
             }
-            $("gl-v2-pl-pj-verd").value = a.verdiepingen; $("gl-v2-pl-pj-kelder").checked = !!a.kelder;
-            $("gl-v2-pl-pj-dak").value = a.dak || ""; $("gl-v2-pl-pj-een").checked = !!a.eenPlanningVoorAlles; pjHoofdRij();
-            pj.terrassen = (a.terrassen || []).slice(); pjLagen();
+            var basis = pjAntwoorden();
+            pjZetAntwoorden({ verdiepingen: a.verdiepingen, kelder: a.kelder, dak: a.dak, terrassen: a.terrassen, eenPlanningVoorAlles: a.eenPlanningVoorAlles });
+            // Wat de AI invulde (en wat afwijkt van de standaard van het sjabloon) wordt blauw
+            pj.ai = { sjabloon: !!res.sjabloonId && res.sjabloonId !== vorigSjabloon, verd: a.verdiepingen !== basis.verdiepingen, kelder: !!a.kelder !== !!basis.kelder, dak: (a.dak || "") !== (basis.dak || ""), lagen: (a.terrassen || []).length > 0, een: !!a.eenPlanningVoorAlles };
+            pj.vorige = voor;
+            var aantal = PJ_VELDEN.filter(function (v) { return pj.ai[v]; }).length + (pj.ai.sjabloon ? 1 : 0);
             var gekozenNaam = res.sjabloonId && pj.gekozen ? pj.gekozen.naam : null;
-            uitleg.textContent = "Voorstel van de AI, kijk het na" + (gekozenNaam ? " (sjabloon “" + gekozenNaam + "”" + (res.sjabloonReden ? ": " + res.sjabloonReden : "") + ")" : "") + ". " + (res.toelichting || "");
-            pjAiDetails(res);
-            pjVoorbeeld();
+            $("gl-v2-pl-pj-ainote-tekst").innerHTML = "<b>Voorstel van de AI</b> — " + (gekozenNaam ? "sjabloon “" + esc(gekozenNaam) + "”" + (res.sjabloonReden ? " (" + esc(res.sjabloonReden) + ")" : "") + " en " : "") + aantal + (aantal === 1 ? " antwoord" : " antwoorden") + " ingevuld (blauw gemarkeerd). Kijk ze na; je kan alles nog wijzigen." + (res.toelichting ? " " + esc(res.toelichting) : "");
+            $("gl-v2-pl-pj-ainote").hidden = false; uitleg.textContent = "";
+            pjAiMarks(); pjAiDetails(res); pjVoorbeeld();
         }).catch(function (e) { knop.disabled = false; uitleg.textContent = e.message || "De AI kon niet bereikt worden."; });
+    });
+    $("gl-v2-pl-pj-ongedaan").addEventListener("click", function () {
+        var v = pj.vorige; pj.ai = {}; $("gl-v2-pl-pj-ainote").hidden = true; $("gl-v2-pl-pj-ai-details").hidden = true; pj.vorige = null;
+        if (v && v.gekozen) { pjKaartRadio(v.gekozen.id); pjKies(v.gekozen); if (v.antwoorden) { pjZetAntwoorden(v.antwoorden); pjVoorbeeld(); } }
+        else { pj.gekozen = null; pjKaartRadio(-1); $("gl-v2-pl-pj-rest").hidden = true; $("gl-v2-pl-pj-ok").disabled = true; $("gl-v2-pl-pj-fs").textContent = ""; $("gl-v2-pl-pj-voorbeeld").innerHTML = "<p class=\"gl-v2-pl-pj-leeg\">Kies links een projectsjabloon om te zien wat er gebeurt.</p>"; }
+        pjAiMarks();
     });
     $("gl-v2-pl-pj").querySelector("form").addEventListener("submit", function (e) {
         e.preventDefault();

@@ -317,6 +317,7 @@ builder.Services.AddScoped<FacadeCore.ITrajectRecalculationService, ServiceCore.
 builder.Services.AddScoped<FacadeCore.IPlanningService, ServiceCore.Planning.PlanningService>();
 builder.Services.AddScoped<FacadeCore.IPlanningSjabloonService, ServiceCore.Planning.PlanningSjabloonService>();
 builder.Services.AddScoped<FacadeCore.ISchijfSjabloonService, ServiceCore.Planning.SchijfSjabloonService>();
+builder.Services.AddScoped<FacadeCore.IBouwstaatService, ServiceCore.Planning.BouwstaatService>();
 builder.Services.AddScoped<FacadeCore.IProjectSjabloonService, ServiceCore.Planning.ProjectSjabloonService>();
 builder.Services.AddScoped<FacadeCore.IProjectSjabloonAiService, CPMCore.Services.ProjectSjabloon.ProjectSjabloonAiService>();
 builder.Services.AddScoped<FacadeCore.ITrajectTriggerDispatcher, ServiceCore.Traject.TrajectTriggerDispatcher>();
@@ -382,7 +383,7 @@ builder.Services.AddScoped<IPortalInviteNotifier, PortalInviteNotifier>();
 builder.Services.AddSingleton<IResendInviteUrlBuilder, ResendInviteUrlBuilder>();
 builder.Services.AddScoped<ISecurityService, SecurityService>();
 
-// ── Elektronisch ondertekenen (ONDERTEKENEN_VOORSTEL.md, fase 0) ─────────────────────────────
+// ── Elektronisch ondertekenen (docs/archive/ONDERTEKENEN_VOORSTEL.md, fase 0) ─────────────────────────────
 // Storage-client: één HttpClient-gebaseerde client voor de externe Storage API, vervangt de privé
 // helpers in ProjectenController/ProjectIssuesController (die delegeren er nu naartoe).
 builder.Services.AddHttpClient<FacadeCore.Signing.IAssetStorageClient, ServiceCore.Signing.AssetStorageClient>();
@@ -765,7 +766,7 @@ var localizationOptions = new RequestLocalizationOptions
 app.UseRequestLocalization(localizationOptions);
 
 // Security headers voor de publieke signing-pagina's (/ondertekenen, /verifieer) — vóór routing,
-// raakt geen enkele andere route (ONDERTEKENEN_VOORSTEL.md §6.5).
+// raakt geen enkele andere route (docs/archive/ONDERTEKENEN_VOORSTEL.md §6.5).
 app.UseMiddleware<CPMCore.Middleware.SigningSecurityHeadersMiddleware>();
 app.UseRouting();
 // Na UseRouting (de limiter leest de endpoint-metadata [EnableRateLimiting]); enkel benoemde

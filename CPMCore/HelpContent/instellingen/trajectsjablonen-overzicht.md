@@ -4,31 +4,39 @@ topic: instellingen
 treeOrder: 32
 device: Desktop · tablet
 minutes: 3
-updated: 2026-10-25
+updated: 2026-11-24
 newsTag: Nieuw
 screens: instellingen-trajectsjablonen
-synonyms: trajectsjablonen, sjabloon, traject, fases, mijlpalen, projecttype, standaard, in gebruik
+synonyms: trajectsjablonen, sjabloon, traject, fases, mijlpalen, projecttype, standaard, in gebruik, automatisch, duur, gebruikt in, inactief
 description: de standaardtrajecten met fases en mijlpalen per projecttype
 related: trajectsjabloon-bewerken
 intro: |
-  Een **trajectsjabloon** legt de fases en mijlpalen vast die een nieuw project bij aanmaak meekrijgt. De lijst groepeert de sjablonen per projecttype.
+  Een **trajectsjabloon** legt de fases en mijlpalen vast die een nieuw project bij aanmaak meekrijgt. De lijst toont per sjabloon het projecttype, de fases en mijlpalen, de geschatte duur en waar het gebruikt wordt.
 before: |
   Je opent de pagina via **Instellingen** en dan **Trajectsjablonen**. Zonder schrijfrecht kun je kijken, maar niets aanpassen.
 faq:
+  - q: Wat betekent "7 automatisch" bij de mijlpalen?
+    a: Dat zijn de mijlpalen die CPM zelf afvinkt (bijvoorbeeld uit een document of een akte). De andere vink je met de hand af.
+  - q: Wat is de duur?
+    a: Een schatting van hoe lang een project met dit sjabloon loopt: de langste keten van streefdatums, uitgedrukt in maanden.
   - q: Wat betekent het label standaard?
     a: Dit sjabloon gebruikt CPM voor nieuwe projecten van dat type. Per type is er één standaard.
   - q: Wat betekent "nog geen" bij de mijlpalen?
     a: Het sjabloon heeft fases maar nog geen mijlpalen. Voeg ze toe voor je het gebruikt.
   - q: Wat betekent "niet gebruikt"?
-    a: Er hangt nog geen enkel traject aan dit sjabloon.
-  - q: Waarom verdwijnt een sjabloon niet als ik het verwijder?
-    a: Hangen er trajecten aan, dan zet CPM het op inactief in plaats van het te wissen. Zo blijven bestaande trajecten kloppen.
+    a: Geen projectsjabloon en geen project gebruikt dit sjabloon.
+  - q: Waarom kan ik een sjabloon niet verwijderen?
+    a: Een projectsjabloon of een project gebruikt het (kolom **Gebruikt in**). Zet het dan op inactief via **⋯**. Zo blijven bestaande trajecten kloppen.
   - q: Wat is het verschil tussen Actief en Inactief?
     a: Enkel een actief sjabloon is te kiezen voor nieuwe projecten.
 ---
 ## De lijst lezen
 
-Per sjabloon zie je het aantal fases, het aantal mijlpalen, het aantal trajecten dat het gebruikt en de status. De groepen volgen het projecttype: **Woonproject**, **Commercieel** en **Alle projecttypes**.
+Bovenaan wissel je met de tabs naar de projectsjablonen, de planningssjablonen en de schijvensjablonen.
+
+Per sjabloon zie je het projecttype, het aantal fases, het aantal mijlpalen (met hoeveel er automatisch gaan), de geschatte duur, of het standaard is, waar het gebruikt wordt, wie het laatst wijzigde en de status.
+
+![De lijst met trajectsjablonen](/img/help/instellingen/trajectsjablonen-overzicht/1-lijst.png)
 
 ## Een sjabloon openen
 
@@ -40,7 +48,7 @@ Klik op **Nieuw sjabloon**. Een duidelijke vertrekbasis is een bestaand sjabloon
 
 ## Een sjabloon verwijderen
 
-Klik op de prullenbak en bevestig. Een sjabloon in gebruik wordt gedeactiveerd.
+Open **⋯** bij het sjabloon en kies **Verwijderen**. Dat kan enkel als geen projectsjabloon en geen project het gebruikt; anders zet je het op inactief met **Inactief zetten**. Met **Dupliceren** maak je een kopie die niet standaard is.
 
 ## Let op
 

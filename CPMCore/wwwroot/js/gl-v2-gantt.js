@@ -11,7 +11,7 @@
    de variabele --gl-v2-gantt-stick = breedte van de vastgeplakte lijst, zodat labels niet onder de lijst verdwijnen.
 
    model = {
-     rows:  [{ key, type: "task"|"phase"|"milestone", start, end, progress (0-100), critical, done, pinned, shifted, label, aria,
+     rows:  [{ key, type: "task"|"phase"|"milestone", start, end, progress (0-100), critical, done, late, now, coin: {nr, due, done}, pinned, shifted, label, aria,
                baseStart, baseEnd }]                 // data als "yyyy-mm-dd"
      links: [{ from: key, to: key, type: "FS"|"SS"|"FF"|"SF", critical }],
      nonWorking: [{ date, kind: "verlof"|"verlet" }],   // weekends tekent de component zelf
@@ -152,6 +152,7 @@
             var cls = "gl-v2-gantt-bar is-" + (r.type || "task")
                 + (r.critical && model.showCritical ? " is-critical" : "")
                 + (r.done ? " is-done" : "")
+                + (r.late ? " is-late" : "") + (r.now ? " is-now" : "")
                 + (r.shifted ? " is-shifted" : "");
             var left = x(s), w = Math.max((e - s + 1) * px, 3);
             var aria = esc(r.aria || r.label || "");
@@ -166,7 +167,9 @@
                     + (r.progress > 0 ? "<span class=\"gl-v2-gantt-progress\" style=\"width:" + Math.min(100, r.progress) + "%\"></span>" : "")
                     + (r.pinned ? "<i class=\"ph ph-push-pin gl-v2-gantt-pin\" aria-hidden=\"true\"></i>" : "")
                     + "</button>";
-                labels += "<span class=\"gl-v2-gantt-label\" style=\"left:" + r1(left + w + 6) + "px;top:" + (t + (h - 16) / 2) + "px\">" + esc(r.label) + "</span>";
+                var muntLb = r.coin ? 20 : 0;
+                if (r.coin) bars += "<span class=\"gl-v2-gantt-coin" + (r.coin.due ? " is-due" : "") + (r.coin.done ? " is-done" : "") + "\" style=\"left:" + r1(left + w - 4) + "px;top:" + (t + (h - 16) / 2) + "px\" title=\"Schijf " + esc(r.coin.nr) + "\">" + esc(r.coin.nr) + "</span>";
+                labels += "<span class=\"gl-v2-gantt-label\" style=\"left:" + r1(left + w + 6 + muntLb) + "px;top:" + (t + (h - 16) / 2) + "px\">" + esc(r.label) + "</span>";
             }
             if (model.showBase && r.baseStart && r.baseEnd) {
                 var bs = toN(r.baseStart), be = toN(r.baseEnd);

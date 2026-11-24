@@ -146,7 +146,7 @@
 
     @* Lijst en Gantt *@
     @* Per aannemer: alle taken van één uitvoerder uit alle plannings (enkel lezen, gevuld door JS) *@
-    <div class="gl-v2-card gl-v2-pl-aann" id="gl-v2-pl-aann" hidden></div>
+    <div class="gl-v2-pl-aann" id="gl-v2-pl-aann" hidden></div>
 
     <div class="gl-v2-card gl-v2-pl-card" id="gl-v2-pl-card" hidden>
         <div class="gl-v2-pl-toolbar">
@@ -177,6 +177,11 @@
             <span><i class="lg lg-task"></i>taak</span>
             <span><i class="lg lg-phase"></i>fase</span>
             <span><i class="lg lg-ms"></i>mijlpaal</span>
+            <span><i class="lg lg-done"></i>afgevinkt</span>
+            <span><i class="lg lg-late"></i>voorbij einde, niet afgevinkt</span>
+            <span><i class="lg lg-now"></i>loopt vandaag</span>
+            <span><i class="lg lg-coin"></i>schijf (goud: verschuldigd)</span>
+            <span><i class="lg lg-today"></i>vandaag</span>
             <span><i class="lg lg-crit"></i>kritiek</span>
             <span><i class="lg lg-shift"></i>verschoven</span>
             <span><i class="lg lg-base"></i>basis</span>
@@ -353,65 +358,106 @@
 </div>
 
 <div class="gl-v2-menu" id="gl-v2-pl-menu" role="menu" aria-label="Acties voor deze rij"></div>
+<div class="gl-v2-menu" id="gl-v2-pl-sjmenu" role="menu" aria-label="Sjablonen"></div>
+<div class="gl-v2-menu" id="gl-v2-pl-aannmenu" role="menu" aria-label="Uitvoerder kiezen"></div>
 @* Gsm-bladen (64p/64r): planningkeuze, taak en sjablonen; gevuld en geopend door gl-v2-projecten-planning.js *@
 <div class="gl-v2-menu gl-v2-pl-m-blad" id="gl-v2-pl-m-pick" role="menu" aria-label="Planning kiezen"></div>
 <div class="gl-v2-menu gl-v2-pl-m-blad" id="gl-v2-pl-m-sj" role="menu" aria-label="Sjablonen"></div>
 <div class="gl-v2-menu gl-v2-pl-m-blad is-taak" id="gl-v2-pl-m-task" role="dialog" aria-label="Taak"></div>
 
-    @* Projectsjabloon toepassen: planning, traject en schijven in één keer, aangepast aan het gebouw (TYPE 2 formulier-modal) *@
-    <div class="modal fade gl-v2-modal-form gl-v2-pl-sj-modal" id="gl-v2-pl-pj" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-pl-pj-titel">
+    @* Projectsjabloon toepassen (design-handoff 59g/59h): links de vragen in vier stappen, rechts "Wat er gebeurt" dat live meeverandert; planning, traject en schijven in één keer (TYPE 2 formulier-modal) *@
+    <div class="modal fade gl-v2-modal-form gl-v2-pl-sj-modal gl-v2-pl-pj-modal" id="gl-v2-pl-pj" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-pl-pj-titel">
+        <div class="modal-dialog modal-dialog-centered modal-xl modal-fullscreen-lg-down">
+            <form class="modal-content" novalidate autocomplete="off">
+                <div class="modal-header gl-v2-pl-pj-kop-rij"><div><h2 class="modal-title" id="gl-v2-pl-pj-titel">Projectsjabloon toepassen</h2><span class="gl-v2-pl-pj-sub" id="gl-v2-pl-pj-sub" data-project="@Model.ProjectName">@Model.ProjectName · je ziet eerst wat er gebeurt; wat al bestaat blijft ongemoeid</span></div><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-body gl-v2-pl-pj-body">
+                    <div class="gl-v2-pl-pj-links">
+                        <section class="gl-v2-pl-pj-sec">
+                            <span class="gl-v2-pl-pj-k">1 · Beschrijf het gebouw <i>optioneel</i></span>
+                            <div class="gl-v2-field-box gl-v2-field-box-textarea" id="gl-v2-pl-pj-ta-box"><textarea class="gl-v2-field-input" id="gl-v2-pl-pj-beschrijving" rows="3" maxlength="2000" aria-label="Beschrijf het gebouw" placeholder="bv. appartementsgebouw met gelijkvloers en drie verdiepingen, ondergrondse parking, plat dak en terrassen op de 1ste en 2de verdieping"></textarea></div>
+                            <div class="gl-v2-pl-pj-aibalk" id="gl-v2-pl-pj-aibalk"><button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-pl-pj-ai"><i class="ph ph-sparkle" aria-hidden="true"></i>Laat de AI een voorstel doen</button><span class="gl-v2-field-help" id="gl-v2-pl-pj-ai-uitleg" role="status">Geen namen, adressen, telefoonnummers of bedragen: die gaan niet naar de AI.</span></div>
+                            <div class="gl-v2-notice gl-v2-notice-compact gl-v2-pl-pj-ainote" id="gl-v2-pl-pj-ainote" hidden>
+                                <i class="ph ph-sparkle" aria-hidden="true"></i>
+                                <span id="gl-v2-pl-pj-ainote-tekst"></span>
+                                <button type="button" class="gl-v2-btn gl-v2-btn-text" id="gl-v2-pl-pj-ongedaan">Ongedaan maken</button>
+                            </div>
+                            <div class="gl-v2-pl-pj-aidetails" id="gl-v2-pl-pj-ai-details" aria-live="polite" hidden>
+                                <b class="gl-v2-pl-pj-kop">Aannames van de AI</b><ul id="gl-v2-pl-pj-ai-aannames"></ul>
+                                <b class="gl-v2-pl-pj-kop" id="gl-v2-pl-pj-ai-vragen-kop">Vragen</b><ul id="gl-v2-pl-pj-ai-vragen"></ul>
+                                <b class="gl-v2-pl-pj-kop">Doorgerekend</b><p id="gl-v2-pl-pj-ai-controle"></p>
+                            </div>
+                        </section>
+                        <section class="gl-v2-pl-pj-sec">
+                            <span class="gl-v2-pl-pj-k" id="gl-v2-pl-pj-lijst-label">2 · Projectsjabloon</span>
+                            <div class="gl-v2-radio-cards gl-v2-pl-pj-kaarten" id="gl-v2-pl-pj-lijst" role="radiogroup" aria-labelledby="gl-v2-pl-pj-lijst-label"></div>
+                            <span class="gl-v2-field-help" id="gl-v2-pl-pj-info"></span>
+                        </section>
+                        <div id="gl-v2-pl-pj-rest" hidden>
+                            <section class="gl-v2-pl-pj-sec">
+                                <span class="gl-v2-pl-pj-k">3 · Het gebouw</span>
+                                <div class="gl-v2-pl-pj-q" id="gl-v2-pl-pj-q-verd">
+                                    <span class="gl-v2-pl-pj-qt"><b>Bouwlagen <span class="gl-v2-pl-pj-aib" hidden><i class="ph ph-sparkle" aria-hidden="true"></i>AI</span></b><small>gelijkvloers + verdiepingen</small></span>
+                                    <span class="gl-v2-pl-pj-stap" role="group" aria-label="Aantal bouwlagen"><button type="button" id="gl-v2-pl-pj-min" aria-label="Eén bouwlaag minder">−</button><b id="gl-v2-pl-pj-verd-t">1</b><button type="button" id="gl-v2-pl-pj-plus" aria-label="Eén bouwlaag meer">+</button></span>
+                                    <input type="hidden" id="gl-v2-pl-pj-verd" value="1" />
+                                </div>
+                                <div class="gl-v2-pl-pj-q" id="gl-v2-pl-pj-q-kelder">
+                                    <span class="gl-v2-pl-pj-qt"><b>Kelder <span class="gl-v2-pl-pj-aib" hidden><i class="ph ph-sparkle" aria-hidden="true"></i>AI</span></b><small>kelder of ondergrondse verdieping</small></span>
+                                    <div class="gl-v2-segmented is-sm" id="gl-v2-pl-pj-kelder-seg" role="group" aria-label="Kelder"><button type="button" data-v="ja">Met kelder</button><button type="button" data-v="nee" class="is-active">Zonder</button></div>
+                                    <input type="checkbox" id="gl-v2-pl-pj-kelder" hidden />
+                                </div>
+                                <div class="gl-v2-pl-pj-q" id="gl-v2-pl-pj-q-dak">
+                                    <span class="gl-v2-pl-pj-qt"><b>Dak <span class="gl-v2-pl-pj-aib" hidden><i class="ph ph-sparkle" aria-hidden="true"></i>AI</span></b></span>
+                                    <div class="gl-v2-segmented is-sm" id="gl-v2-pl-pj-dak-seg" role="group" aria-label="Dak"><button type="button" data-v="" class="is-active">Geen keuze</button><button type="button" data-v="plat">Plat</button><button type="button" data-v="hellend">Hellend</button></div>
+                                    <input type="hidden" id="gl-v2-pl-pj-dak" value="" />
+                                </div>
+                                <div class="gl-v2-pl-pj-q" id="gl-v2-pl-pj-q-lagen">
+                                    <span class="gl-v2-pl-pj-qt"><b>Terrassen of luifels <span class="gl-v2-pl-pj-aib" hidden><i class="ph ph-sparkle" aria-hidden="true"></i>AI</span></b><small>bij de afdek van bouwlaag (leeg = geen)</small></span>
+                                    <div class="gl-v2-pl-lagen" id="gl-v2-pl-pj-lagen" role="group" aria-label="Terrassen of luifels bij de afdek van"></div>
+                                </div>
+                            </section>
+                            <section class="gl-v2-pl-pj-sec" id="gl-v2-pl-pj-q-een">
+                                <span class="gl-v2-pl-pj-k">4 · Planning <span class="gl-v2-pl-pj-aib" hidden><i class="ph ph-sparkle" aria-hidden="true"></i>AI</span></span>
+                                <div class="gl-v2-segmented is-sm" id="gl-v2-pl-pj-een-seg" role="group" aria-label="Aantal planningen"><button type="button" data-v="een">Eén planning voor het gebouw</button><button type="button" data-v="elk" class="is-active" id="gl-v2-pl-pj-elk">Per eenheid</button></div>
+                                <input type="checkbox" id="gl-v2-pl-pj-een" hidden />
+                                <span class="gl-v2-field-help" id="gl-v2-pl-pj-een-help">Bij een appartementsgebouw is één planning de standaard: de werf loopt per bouwlaag, niet per appartement. “Per eenheid” maakt een planning per eenheid.</span>
+                                <label class="gl-v2-toggle-row" for="gl-v2-pl-pj-hoofd" id="gl-v2-pl-pj-hoofd-rij" hidden><input type="checkbox" id="gl-v2-pl-pj-hoofd" class="gl-v2-toggle-switch" checked /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">In de hoofdplanning zetten</span><span class="gl-v2-toggle-desc">enkel als de hoofdplanning nog leeg is. Uit of niet leeg = een aparte planning naast de hoofdplanning</span></span></label>
+                            </section>
+                        </div>
+                    </div>
+                    <aside class="gl-v2-pl-pj-rechts" aria-label="Wat er gebeurt">
+                        <div class="gl-v2-pl-pj-rh"><b>Wat er gebeurt</b><small>live voor de antwoorden links</small></div>
+                        <div id="gl-v2-pl-pj-voorbeeld" class="gl-v2-pl-pj-kaartlijst" aria-live="polite">
+                            <p class="gl-v2-pl-pj-leeg" id="gl-v2-pl-pj-leeg">Kies links een projectsjabloon om te zien wat er gebeurt.</p>
+                        </div>
+                    </aside>
+                </div>
+                <div class="modal-footer">
+                    <span class="gl-v2-pl-pj-fs" id="gl-v2-pl-pj-fs"></span>
+                    <span class="gl-v2-field-help gl-v2-pl-sj-fout" id="gl-v2-pl-pj-fout" role="alert" hidden></span>
+                    <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-pl-pj-ok" disabled><i class="ph ph-check" aria-hidden="true"></i>Toepassen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @* Vraagt actie (59i): kies eerst wat klopt, dan afvinken of schijven markeren (gevuld door gl-v2-projecten-planning.js) *@
+    <div class="modal fade gl-v2-modal-form gl-v2-pl-sj-modal gl-v2-pl-vr-modal" id="gl-v2-pl-vr" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-pl-vr-titel">
         <div class="modal-dialog modal-dialog-centered modal-lg modal-fullscreen-md-down">
             <form class="modal-content" novalidate autocomplete="off">
-                <div class="modal-header"><h2 class="modal-title" id="gl-v2-pl-pj-titel">Projectsjabloon toepassen</h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+                <div class="modal-header"><h2 class="modal-title" id="gl-v2-pl-vr-titel"></h2><button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button></div>
                 <div class="modal-body">
-                    <p class="gl-v2-field-help gl-v2-field-full">Een projectsjabloon past zich aan het gebouw aan. Beantwoord de vragen of beschrijf het gebouw. Je ziet eerst wat er gebeurt. Wat al bestaat, blijft ongemoeid: een eenheid met een planning, een bestaand traject en betalingsgroepen met schijven.</p>
-                    <div class="gl-v2-field gl-v2-field-full">
-                        <label class="gl-v2-field-label" for="gl-v2-pl-pj-beschrijving">Beschrijf het gebouw (optioneel)</label>
-                        <div class="gl-v2-field-box gl-v2-field-box-textarea"><textarea class="gl-v2-field-input" id="gl-v2-pl-pj-beschrijving" rows="3" maxlength="2000" placeholder="Bijvoorbeeld: appartementsgebouw met gelijkvloers en drie verdiepingen, ondergrondse parking, een plat dak en terrassen op de 1ste en 2de verdieping"></textarea></div>
-                        <span class="gl-v2-field-help">Vermeld geen namen, adressen, telefoonnummers of bedragen: die gaan niet naar de AI. De AI kiest een projectsjabloon en vult de vragen in; jij kijkt het na.</span>
-                        <div class="gl-v2-pl-pj-aibalk"><button type="button" class="gl-v2-btn gl-v2-btn-secondary" id="gl-v2-pl-pj-ai"><i class="ph ph-sparkle" aria-hidden="true"></i>Laat de AI een voorstel doen</button><span class="gl-v2-field-help" id="gl-v2-pl-pj-ai-uitleg" role="status"></span></div>
-                        <div class="gl-v2-pl-pj-aidetails" id="gl-v2-pl-pj-ai-details" aria-live="polite" hidden>
-                            <b class="gl-v2-pl-pj-kop">Aannames van de AI</b><ul id="gl-v2-pl-pj-ai-aannames"></ul>
-                            <b class="gl-v2-pl-pj-kop" id="gl-v2-pl-pj-ai-vragen-kop">Vragen</b><ul id="gl-v2-pl-pj-ai-vragen"></ul>
-                            <b class="gl-v2-pl-pj-kop">Doorgerekend</b><p id="gl-v2-pl-pj-ai-controle"></p>
-                        </div>
+                    <div class="gl-v2-pl-vr-body">
+                        <p class="gl-v2-field-help" id="gl-v2-pl-vr-uitleg"></p>
+                        <div class="gl-v2-field" id="gl-v2-pl-vr-extra" hidden></div>
+                        <div class="gl-v2-pl-vr-alle"><span class="gl-v2-check"><input type="checkbox" id="gl-v2-pl-vr-alle" checked /><label for="gl-v2-pl-vr-alle"></label></span><label for="gl-v2-pl-vr-alle" id="gl-v2-pl-vr-alle-t">Alles kiezen</label></div>
+                        <div class="gl-v2-pl-vr-lijst" id="gl-v2-pl-vr-lijst"></div>
+                        <span class="gl-v2-field-help gl-v2-pl-sj-fout" id="gl-v2-pl-vr-fout" role="alert" hidden></span>
                     </div>
-                    <div class="gl-v2-field gl-v2-field-full">
-                        <span class="gl-v2-field-label" id="gl-v2-pl-pj-lijst-label">Projectsjabloon</span>
-                        <div class="gl-v2-pl-eenheden" id="gl-v2-pl-pj-lijst" role="radiogroup" aria-labelledby="gl-v2-pl-pj-lijst-label"></div>
-                        <span class="gl-v2-field-help" id="gl-v2-pl-pj-info"></span>
-                    </div>
-                    <div id="gl-v2-pl-pj-rest" hidden>
-                        <div class="gl-v2-pl-row2">
-                            <div class="gl-v2-field">
-                                <label class="gl-v2-field-label" for="gl-v2-pl-pj-verd">Bouwlagen (gelijkvloers + verdiepingen)</label>
-                                <div class="gl-v2-field-box"><input type="number" class="gl-v2-field-input is-tabular" id="gl-v2-pl-pj-verd" min="1" max="20" value="1" inputmode="numeric" /></div>
-                            </div>
-                            <div class="gl-v2-field">
-                                <label class="gl-v2-field-label" for="gl-v2-pl-pj-dak">Dak</label>
-                                <div class="gl-v2-field-box"><select class="gl-v2-field-input" id="gl-v2-pl-pj-dak"><option value="">Geen keuze</option><option value="hellend">Hellend dak</option><option value="plat">Plat dak</option></select></div>
-                            </div>
-                        </div>
-                        <label class="gl-v2-toggle-row" for="gl-v2-pl-pj-kelder"><input type="checkbox" id="gl-v2-pl-pj-kelder" class="gl-v2-toggle-switch" /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Met kelder</span><span class="gl-v2-toggle-desc">een kelder of ondergrondse verdieping</span></span></label>
-                        <div class="gl-v2-field gl-v2-field-full" id="gl-v2-pl-pj-lagen-veld">
-                            <span class="gl-v2-field-label" id="gl-v2-pl-pj-lagen-label">Terrassen of luifels bij de afdek van</span>
-                            <div class="gl-v2-pl-lagen" id="gl-v2-pl-pj-lagen" role="group" aria-labelledby="gl-v2-pl-pj-lagen-label"></div>
-                            <span class="gl-v2-field-help">Optioneel. Kies de bouwlagen waarvan de afdek (de vloerplaat van de volgende verdieping) terrassen of luifels krijgt. Leeg = geen.</span>
-                        </div>
-                        <label class="gl-v2-toggle-row" for="gl-v2-pl-pj-een"><input type="checkbox" id="gl-v2-pl-pj-een" class="gl-v2-toggle-switch" /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Eén planning voor alle eenheden</span><span class="gl-v2-toggle-desc">voor een gebouw met appartementen. Uit = een planning per woning</span></span></label>
-                        <label class="gl-v2-toggle-row" for="gl-v2-pl-pj-hoofd" id="gl-v2-pl-pj-hoofd-rij" hidden><input type="checkbox" id="gl-v2-pl-pj-hoofd" class="gl-v2-toggle-switch" checked /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">In de hoofdplanning zetten</span><span class="gl-v2-toggle-desc">enkel als de hoofdplanning nog leeg is. Uit of niet leeg = een aparte planning naast de hoofdplanning</span></span></label>
-                        <div class="gl-v2-pl-pj-voorbeeld" id="gl-v2-pl-pj-voorbeeld" aria-live="polite">
-                            <b class="gl-v2-pl-pj-kop">Wat er gebeurt</b>
-                            <ul id="gl-v2-pl-pj-stappen"></ul>
-                            <ul class="is-opm" id="gl-v2-pl-pj-opm"></ul>
-                            <ol class="is-schijven" id="gl-v2-pl-pj-schijven"></ol>
-                        </div>
-                    </div>
-                    <span class="gl-v2-field-help gl-v2-field-full gl-v2-pl-sj-fout" id="gl-v2-pl-pj-fout" role="alert" hidden></span>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
-                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-pl-pj-ok" disabled>Toepassen</button>
+                    <button type="submit" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-pl-vr-ok"><i class="ph ph-check" aria-hidden="true"></i><span id="gl-v2-pl-vr-ok-t">Toepassen</span></button>
                 </div>
             </form>
         </div>

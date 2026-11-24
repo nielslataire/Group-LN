@@ -12,6 +12,12 @@ public partial class PlanningTaak
     /// <summary>Code uit het planningssjabloon (migratie 154); trajectmijlpalen met dezelfde code hangen eraan.</summary>
     public string Code { get; set; }
 
+    /// <summary>De bouwstaat die deze taak oplevert (migratie 158); een schijf of mijlpaal verwijst ernaar.</summary>
+    public int? BouwstaatId { get; set; }
+
+    /// <summary>De activiteit (discipline) van deze taak (migratie 158): bepaalt het lot en via de contracten de aannemer.</summary>
+    public int? ActivityId { get; set; }
+
     public int PlanningSectieId { get; set; }
 
     /// <summary>De uitvoerder (aannemer, <see cref="CompanyInfo.CompanyId"/>) van deze taak (migratie 150); leeg = die van de fase.</summary>

@@ -131,6 +131,8 @@ public sealed class PlanningInfo
     public int Id { get; set; }
     public string Naam { get; set; } = "";
     public bool IsHoofd { get; set; }
+    /// <summary>De lege hoofdplanning van een project dat al een planning voor een bouwdeel heeft: het scherm toont dit tabblad niet (tenzij het geopend is).</summary>
+    public bool Verborgen { get; set; }
     /// <summary>De eenheden (woningen/gebouw) waar deze planning voor geldt; leeg bij de hoofdplanning.</summary>
     public List<int> EenheidIds { get; set; } = new();
 
@@ -155,6 +157,9 @@ public sealed class PlanningEenheidOptie
 
     /// <summary>De planning waar de eenheid al in zit; leeg = vrij.</summary>
     public int? PlanningId { get; set; }
+
+    /// <summary>Het type van de eenheid ("Appartement", "Autostaanplaats", ...), voor de samenvatting "Geldt voor" in de kop.</summary>
+    public string? TypeNaam { get; set; }
 }
 
 public sealed class PlanningKop
@@ -285,6 +290,9 @@ public sealed class PlanningUitvoerderOptie
 
     /// <summary>Het bedrijf heeft een contract in dit project.</summary>
     public bool InProject { get; set; }
+
+    /// <summary>"getekend", "niet getekend" of "geen contract" (voor de chip in Per aannemer).</summary>
+    public string ContractStatus { get; set; } = "geen contract";
 }
 
 public sealed class PlanningGebruiker

@@ -74,6 +74,7 @@
                             (Sleutel: "planning", Titel: "Planning", Icoon: "ph-calendar-check", Naam: "PlanningSjabloonId", Gekozen: Model.PlanningSjabloonId, Lijst: opties.Planning, Geen: "geen planning"),
                             (Sleutel: "traject", Titel: "Traject", Icoon: "ph-git-branch", Naam: "TrajectSjabloonId", Gekozen: Model.TrajectSjabloonId, Lijst: opties.Traject, Geen: "geen traject"),
                             (Sleutel: "schijven", Titel: "Schijven", Icoon: "ph-list-checks", Naam: "SchijfSjabloonId", Gekozen: Model.SchijfSjabloonId, Lijst: opties.Schijven, Geen: "geen schijven"),
+                            (Sleutel: "bijgebouwen", Titel: "Schijven parkings en bergingen", Icoon: "ph-car", Naam: "SchijfSjabloonBijgebouwId", Gekozen: Model.SchijfSjabloonBijgebouwId, Lijst: opties.Schijven, Geen: "dezelfde schijven als hierboven"),
                         };
                     }
                     @foreach (var d in delen)
@@ -81,7 +82,7 @@
                         <div class="gl-v2-pjs-deel" data-deel="@d.Sleutel" data-geen="@d.Geen">
                             <div class="gl-v2-pjs-deelkop"><i class="ph @d.Icoon" aria-hidden="true"></i><b>@d.Titel</b><a href="#" class="gl-v2-pjs-open" hidden>Openen</a></div>
                             <div class="gl-v2-field-box"><select id="pjs-@d.Sleutel" name="@d.Naam" class="gl-v2-field-input js-pjs-sel" aria-label="@d.Titel" @dis><option value="">Geen</option>@foreach (var o in d.Lijst) { <option value="@o.Id" selected="@(d.Gekozen == o.Id)">@o.Naam</option> }</select></div>
-                            <ul class="gl-v2-pjs-feiten" data-feiten></ul>
+                            <ul class="gl-v2-pjs-feiten" data-feiten> (d.Sleutel == "bijgebouwen") { <li>Voor betalingsgroepen met enkel parkings en bergingen. Een berging of parking die aan een appartement hangt, zet je in de groep van dat appartement en volgt dan diens schijven.</li> }</ul>
                         </div>
                     }
                 </div>

@@ -1,0 +1,90 @@
+@using BOCore
+@using CPMCore.Models.GlV2
+@using FacadeCore
+@model BouwstaatBewerk
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen › Bouwstaten › Bewerken (migratie 158): één kaart met naam, code, groep, volgorde, bereik, per bouwlaag en actief. De code ligt vast na het aanmaken (taken, schijven
+    en trajectmijlpalen verwijzen ernaar) en wordt dan enkel getoond. Een gewoon form dat naar BouwstaatAdmin/Opslaan post; fouten komen als gl-v2-notice bovenaan.
+*@
+@{
+    var isNieuw = Model.Id == 0;
+    var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsPlanningSjablonen);
+    ViewData["Title"] = isNieuw ? "Nieuwe bouwstaat" : "Bouwstaat";
+    ViewData["PageIcon"] = "ph ph-target";
+    ViewData["HelpScreenId"] = "instellingen-bouwstaten";
+    ViewData["BackUrl"] = Url.Action("Index");
+    var fouten = ViewData.ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).Where(m => !string.IsNullOrWhiteSpace(m)).Distinct().ToList();
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-bouwstaten.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    <a href="@Url.Action("Index")" class="gl-v2-btn gl-v2-btn-text">Annuleren</a>
+    @if (canWrite)
+    {
+        <button type="submit" form="bs-form" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-floppy-disk" aria-hidden="true"></i>Opslaan</button>
+    }
+}
+
+<form method="post" action="@Url.Action("Opslaan")" id="bs-form" novalidate class="gl-v2-bs-edit">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+
+    @if (fouten.Any())
+    {
+        <div class="gl-v2-notice gl-v2-notice-expanded is-danger" role="alert">
+            <span class="gl-v2-notice-expanded-icon"><i class="ph ph-x-circle" aria-hidden="true"></i></span>
+            <div class="gl-v2-notice-body"><span class="gl-v2-notice-title">De bouwstaat is niet opgeslagen</span><span class="gl-v2-notice-text">@string.Join(" ", fouten)</span></div>
+        </div>
+    }
+
+    <section class="gl-v2-section-card">
+        <div class="gl-v2-section-card-header">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-target" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-section-card-title">Bouwstaat</h2>
+            <span class="gl-v2-field-divider"></span>
+            <span class="gl-v2-section-card-desc">Een toestand die een planning kan opleveren.</span>
+        </div>
+        <div class="gl-v2-section-grid">
+            <div class="gl-v2-col-12">@Html.EditorFor(m => m.Naam, "GlV2Text", new { Label = "Naam", Placeholder = "bv. Opstort gegoten", Required = true, MaxLength = 200 })</div>
+            <div class="gl-v2-col-6">
+                @if (isNieuw)
+                {
+                    @Html.EditorFor(m => m.Code, "GlV2Text", new { Label = "Code", Placeholder = "bv. OPSTORT_DAK", Required = true, MaxLength = 60, Mono = true, Help = "hoofdletters, cijfers en underscores; ligt vast na het aanmaken" })
+                }
+                else
+                {
+                    <input type="hidden" asp-for="Code" />
+                    <div class="gl-v2-field">
+                        <span class="gl-v2-field-label">Code</span>
+                        <div class="gl-v2-field-box"><input type="text" class="gl-v2-field-input is-mono" value="@Model.Code" readonly disabled aria-label="Code" /></div>
+                        <span class="gl-v2-bs-hint">ligt vast: taken, schijven en trajectmijlpalen verwijzen ernaar</span>
+                    </div>
+                }
+            </div>
+            <div class="gl-v2-col-6">@Html.EditorFor(m => m.Groep, "GlV2Text", new { Label = "Groep", Placeholder = "bv. Ruwbouw bovenbouw", MaxLength = 100, Help = "bepaalt de kop in de lijst" })</div>
+            <div class="gl-v2-col-6">
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                {
+                    Name = "Bereik", Id = "bs-bereik", Label = "Bereik", Value = Model.Bereik.ToString(),
+                    Help = "Gebouw: een schijf geldt voor alle eenheden tegelijk. Eenheid: per woning of appartement (bv. de afwerking).",
+                    Items = new List<GlV2SelectItem> { new() { Value = "0", Text = "Gebouw (alle eenheden)" }, new() { Value = "1", Text = "Eenheid (per woning of appartement)" } }
+                })
+            </div>
+            <div class="gl-v2-col-6">
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="bs-volgorde">Volgorde</label>
+                    <div class="gl-v2-field-box"><input type="number" class="gl-v2-field-input is-tabular" id="bs-volgorde" name="Volgorde" value="@Model.Volgorde" step="1" /></div>
+                    <span class="gl-v2-bs-hint">lagere nummers komen eerst in de lijst</span>
+                </div>
+            </div>
+            <div class="gl-v2-col-12 gl-v2-bs-schakelaars">
+                @Html.EditorFor(m => m.PerBouwlaag, "GlV2ToggleSwitch", new { Label = "Per bouwlaag", Hint = "de bouwstaat komt voor elke bouwlaag terug (gelijkvloers, 1ste verdieping, …), bv. opstort of metselwerk" })
+                @Html.EditorFor(m => m.IsActief, "GlV2ToggleSwitch", new { Label = "Actief", Hint = "inactieve bouwstaten worden niet meer aangeboden in de editors" })
+            </div>
+        </div>
+    </section>
+</form>

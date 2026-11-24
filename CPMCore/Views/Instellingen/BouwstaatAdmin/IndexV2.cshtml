@@ -1,0 +1,92 @@
+@using BOCore
+@using FacadeCore
+@model List<BouwstaatRij>
+@inject IPermissionService PermissionService
+@*
+    gl-v2 — Instellingen › Bouwstaten: de bedrijfsbrede standaardlijst (migratie 158), gegroepeerd per groep. Een bouwstaat is een toestand van een eenheid ("Opstort gegoten") die een planning kan opleveren
+    en waar schijven en traject naar verwijzen. Bereik: het hele gebouw (alle eenheden tegelijk) of per eenheid. Rij = link naar de editor; actief zetten en verwijderen via verborgen formulieren
+    (data-bv-* voor de bevestigingsmodal). Verwijderen kan enkel als niets ernaar verwijst. CSS: gl-v2-instellingen-bouwstaten.css (hergebruikt de lijstklassen .gl-v2-auto-*).
+*@
+@{
+    ViewData["Title"] = "Bouwstaten";
+    ViewData["PageIcon"] = "ph ph-target";
+    ViewData["HelpScreenId"] = "instellingen-bouwstaten";
+    ViewData["BackUrl"] = Url.Action("Index", "Instellingen");
+    var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsPlanningSjablonen);
+    var canDelete = PermissionService.HasDelete(PermissionCodes.SettingsPlanningSjablonen);
+    var groepen = Model.GroupBy(b => string.IsNullOrWhiteSpace(b.Groep) ? "Zonder groep" : b.Groep!).ToList();
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-automatisatie.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-bouwstaten.css" asp-append-version="true" />
+}
+@section PageActions
+{
+    @if (canWrite)
+    {
+        <a href="@Url.Action("Nieuw")" class="gl-v2-btn gl-v2-btn-primary"><i class="ph ph-plus" aria-hidden="true"></i>Nieuwe bouwstaat</a>
+    }
+}
+
+<div class="gl-v2-auto gl-v2-bs-lijst">
+    <div class="gl-v2-notice gl-v2-notice-compact">
+        <i class="ph ph-info" aria-hidden="true"></i>
+        <span>Een <b>bouwstaat</b> is een toestand die je bereikt, zoals “opstort gegoten”. Taken in een planning leveren een bouwstaat op, en een betalingsschijf of trajectmijlpaal wacht erop. <b>Gebouw</b> = geldt voor alle eenheden tegelijk, <b>Eenheid</b> = per woning of appartement. De code ligt vast na het aanmaken.</span>
+    </div>
+
+    @if (Model.Count == 0)
+    {
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-blank gl-v2-auto-none is-big">
+                <i class="ph ph-target" aria-hidden="true"></i><b>Nog geen bouwstaten</b>
+                <span>Draai eerst migratie 158; die vult de standaardlijst.</span>
+            </div>
+        </section>
+    }
+    else
+    {
+        @foreach (var g in groepen)
+        {
+            <section class="gl-v2-section-card">
+                <div class="gl-v2-section-card-header">
+                    <span class="gl-v2-section-card-icon"><i class="ph ph-target" aria-hidden="true"></i></span>
+                    <h2 class="gl-v2-section-card-title">@g.Key</h2>
+                    <span class="gl-v2-field-divider"></span>
+                    <span class="gl-v2-section-card-desc">@g.Count() @(g.Count() == 1 ? "bouwstaat" : "bouwstaten")</span>
+                </div>
+                <div class="gl-v2-auto-head gl-v2-auto-grid--bs"><span>Naam</span><span>Code</span><span>Bereik</span><span>Per bouwlaag</span><span>Gebruikt</span><span>Status</span><span></span></div>
+                @foreach (var b in g)
+                {
+                    <div class="gl-v2-auto-row gl-v2-auto-grid--bs gl-v2-listrow @(b.IsActief ? "" : "is-muted-row")" data-row-href="@Url.Action("Bewerken", new { id = b.Id })">
+                        <a class="gl-v2-auto-who" href="@Url.Action("Bewerken", new { id = b.Id })"><span class="t">@b.Naam</span></a>
+                        <span class="gl-v2-auto-cell is-muted gl-v2-bs-code">@b.Code</span>
+                        <span class="gl-v2-auto-cell">@(b.Bereik == 0 ? "Gebouw" : "Eenheid")</span>
+                        <span class="gl-v2-auto-cell is-muted">@(b.PerBouwlaag ? "ja" : "—")</span>
+                        <span class="gl-v2-auto-cell is-muted">@(b.GebruiktIn == 0 ? "—" : b.GebruiktIn + "×")</span>
+                        <span><span class="gl-v2-badge @(b.IsActief ? "is-positive" : "is-inactive")">@(b.IsActief ? "Actief" : "Inactief")</span></span>
+                        <span class="gl-v2-auto-acts">
+                            @if (canWrite)
+                            {
+                                <form method="post" action="@Url.Action("Actief", new { id = b.Id, actief = !b.IsActief })" class="gl-v2-bs-vorm">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="gl-v2-icon-btn" title="@(b.IsActief ? "Inactief zetten" : "Weer actief zetten")" aria-label="@(b.IsActief ? "Inactief zetten" : "Weer actief zetten")"><i class="ph @(b.IsActief ? "ph-eye-slash" : "ph-eye")" aria-hidden="true"></i></button>
+                                </form>
+                            }
+                            @if (canDelete && b.GebruiktIn == 0)
+                            {
+                                <form method="post" action="@Url.Action("Verwijderen", new { id = b.Id })" class="gl-v2-bs-vorm" data-bv-titel="Bouwstaat verwijderen?" data-bv-tekst="Bouwstaat “@b.Naam” verwijderen? Dit kan je niet ongedaan maken." data-bv-ok="Verwijderen" data-bv-tone="danger" data-bv-icon="ph-trash">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="gl-v2-icon-btn" title="Verwijderen" aria-label="Verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
+                                </form>
+                            }
+                        </span>
+                    </div>
+                }
+            </section>
+        }
+        <div class="gl-v2-auto-foot">@Model.Count @(Model.Count == 1 ? "bouwstaat" : "bouwstaten") · een bouwstaat die nog gebruikt wordt kan je enkel inactief zetten</div>
+    }
+</div>
+
+@await Html.PartialAsync("GlV2/_BevestigModal")

@@ -45,5 +45,11 @@ public partial class SchijfSjabloonSchijf
     public string VoorwaardeVariabele { get; set; }
     public string VoorwaardeWaarde { get; set; }
 
+    /// <summary>De bouwstaat waarop de schijf wacht (migratie 158); vervangt op termijn <see cref="PlanningCode"/>.</summary>
+    public int? BouwstaatId { get; set; }
+
+    /// <summary>0 = alle leverende taken voltooid, 1 = alle gestart (migratie 158).</summary>
+    public byte BouwstaatRegel { get; set; }
+
     public virtual SchijfSjabloon Sjabloon { get; set; }
 }

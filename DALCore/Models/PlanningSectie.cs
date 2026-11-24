@@ -12,6 +12,9 @@ public partial class PlanningSectie
     /// <summary>Code uit het planningssjabloon (migratie 154); trajectmijlpalen met dezelfde code hangen eraan.</summary>
     public string Code { get; set; }
 
+    /// <summary>De bouwstaat die deze fase oplevert (migratie 158).</summary>
+    public int? BouwstaatId { get; set; }
+
     public int ProjectId { get; set; }
 
     public int? ActivityGroupId { get; set; }

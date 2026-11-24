@@ -138,6 +138,7 @@ public class MijlpaalBindingResolver : IMijlpaalBindingResolver
         var p = ctx.Project;
         DateOnly? d = (m.BronParam ?? "").Trim() switch
         {
+            "ProjectStartDate" => p.ProjectStartDate,
             "StartDateConstruction" => p.StartDateConstruction,
             "DeliveryDate" => p.DeliveryDate,
             "DeliveryDateDef" => p.DeliveryDateDef,

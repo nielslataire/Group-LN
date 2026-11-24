@@ -304,6 +304,13 @@ public partial class InstellingenController
                 });
                 automatisatie.Items.Add(new SettingsItemVm
                 {
+                    Icon = "ph-target",
+                    Title = "Bouwstaten",
+                    Description = "Beheer de standaardlijst toestanden (bv. opstort gegoten) die taken opleveren en waar schijven en traject naar verwijzen.",
+                    Href = Url.Action("Index", "BouwstaatAdmin") ?? "#"
+                });
+                automatisatie.Items.Add(new SettingsItemVm
+                {
                     Icon = "ph-buildings",
                     Title = "Projectsjablonen",
                     Description = "Bundel een planning, een traject en schijven tot één sjabloon voor een soort project. Het past zich bij het toepassen aan het gebouw aan.",

@@ -5,7 +5,7 @@
 @model CPMCore.Models.Traject.TrajectSjabloonEditVm
 @inject IPermissionService PermissionService
 @*
-    gl-v2 — Instellingen › Trajectsjablonen › Sjabloon bewerken (design-handoff punt 56e): de fases links als boom, de mijlpaal rechts in vijf genummerde stappen ("wanneer bereikt" als twee
+    gl-v2 — Instellingen › Sjablonen › Traject › bewerken (design-handoff punt 56e, herwerkt naar 67b/67c op 24/11/2026): sjabloontabs bovenaan, samenvatting rechts van de tabs, de fases links als boom, de mijlpaal rechts in vijf genummerde stappen ("wanneer bereikt" als twee
     keuzekaarten, streefdatum met berekende datum). Drie tabs: Structuur, Tijdlijn & simulatie, Controle. Dezelfde opslag als de klassieke editor (payloadJson naar Opslaan) en dezelfde
     opties; de logica staat in wwwroot/js/gl-v2-instellingen-trajectsjabloon.js.
 *@
@@ -116,7 +116,8 @@
             .OrderBy(x => x.n).ToList(),
         [(int)ComputedBinding.ProjectDatum] = new[]
         {
-            new { v = "StartDateConstruction", n = "Startdatum bouw" },
+            new { v = "ProjectStartDate", n = "Startdatum project" },
+            new { v = "StartDateConstruction", n = "Aanvangsdatum bouwwerken" },
             new { v = "DeliveryDate", n = "Opleverdatum (voorlopig)" },
             new { v = "DeliveryDateDef", n = "Opleverdatum (definitief)" },
             new { v = "WerfmeldingDate", n = "Werfmelding — startdatum" },
@@ -175,6 +176,7 @@
 @section PageStyle
 {
     <link rel="stylesheet" href="~/css/gl-v2-instellingen-automatisatie.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-sjabloontabs.css" asp-append-version="true" />
 }
 @section PageTitleBadges
 {
@@ -203,10 +205,13 @@
 </form>
 
 <div class="gl-v2-auto gl-v2-tsa">
+    @await Html.PartialAsync("GlV2/_SjabloonTabs", "traject")
+
     <div class="gl-v2-tabbar" role="tablist" aria-label="Trajectsjabloon" id="tsaTabs">
         <button type="button" class="gl-v2-tabbar-tab is-active" role="tab" aria-selected="true" data-tab="structuur">Structuur</button>
         <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" tabindex="-1" data-tab="tijdlijn">Tijdlijn &amp; simulatie</button>
         <button type="button" class="gl-v2-tabbar-tab" role="tab" aria-selected="false" tabindex="-1" data-tab="controle">Controle <span class="gl-v2-tabbar-count" id="tsaControleBadge" hidden>0</span></button>
+        <span class="gl-v2-tsa-sum" id="tsaSummary" aria-live="polite"></span>
     </div>
 
     <div id="tab-structuur" role="tabpanel">
@@ -249,10 +254,12 @@
         <section class="gl-v2-section-card">
             <div class="gl-v2-tsa-tl-toolbar">
                 @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Name = "sim", Id = "tsaSimStart", Label = "Fictieve projectstart", IsoValue = DateTime.Today.ToString("yyyy-MM-dd"), DisplayValue = DateTime.Today.ToString("dd/MM/yyyy") })
-                <div class="gl-v2-field"><span class="gl-v2-field-label" id="tsaTlModeLabel">Weergave</span>
-                    <div class="gl-v2-segmented is-sm" id="tsaTlMode" role="group" aria-labelledby="tsaTlModeLabel"><button type="button" data-mode="dagen" aria-pressed="true" class="is-active">Dagen na start</button><button type="button" data-mode="datums" aria-pressed="false">Datums</button></div></div>
-                <p class="gl-v2-tsa-hint">De streefdatums worden berekend door de ankerketen te volgen. Een mijlpaal zonder geldig anker valt terug op de projectstart. Dit is enkel een voorbeeld; er wordt niets bewaard.</p>
+                <div class="gl-v2-field"><span class="gl-v2-field-label">Laatste mijlpaal</span><span class="gl-v2-tsa-tl-totaal" id="tsaTlTotaal">—</span></div>
+                <div class="gl-v2-field"><span class="gl-v2-field-label" id="tsaTlSchaalLabel">Schaal</span>
+                    <div class="gl-v2-segmented is-sm" id="tsaTlSchaal" role="group" aria-labelledby="tsaTlSchaalLabel"><button type="button" data-schaal="fit" aria-pressed="true" class="is-active">Passend</button><button type="button" data-schaal="real" aria-pressed="false">Ware schaal</button></div></div>
+                <p class="gl-v2-tsa-hint">Hoe het traject loopt voor een project dat je op de simulatiedatum aanmaakt. De streefdatums volgen de ankerketen; een mijlpaal zonder geldig anker valt terug op de projectstart. Het is enkel een voorbeeld: er wordt niets bewaard.</p>
             </div>
+            <div class="gl-v2-notice gl-v2-notice-compact gl-v2-tsa-tl-note" id="tsaTlNote" hidden><i class="ph ph-arrows-in-line-horizontal" aria-hidden="true"></i><span id="tsaTlNoteTekst"></span></div>
             <div id="tijdlijnContainer" class="gl-v2-tsa-tl-host"></div>
         </section>
     </div>

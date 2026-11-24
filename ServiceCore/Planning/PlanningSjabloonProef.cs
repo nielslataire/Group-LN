@@ -13,12 +13,14 @@ internal static class PlanningSjabloonProef
     private static readonly DateOnly Start = new(2026, 1, 5);
 
     /// <summary>Voor het voorbeeld doen voorwaardelijke blokken mee: kelder aan, en het eerste daktype dat het sjabloon kent.</summary>
-    internal static SjabloonVariabelen Voorbeeldvariabelen(PlanningSjabloon s, int verdiepingen)
+    internal static SjabloonVariabelen Voorbeeldvariabelen(PlanningSjabloon s, int verdiepingen, bool kelder = true)
     {
         var dak = s.Blokken.Where(b => string.Equals(b.VoorwaardeVariabele, "dak", StringComparison.OrdinalIgnoreCase)).Select(b => b.VoorwaardeWaarde).FirstOrDefault(w => !string.IsNullOrEmpty(w));
+        // Een daktype kan ook als voorwaarde op een taak staan (bv. "dak:plat"); anders ontbreekt het hele dak in het voorbeeld.
+        dak ??= s.Blokken.SelectMany(b => b.Taken).SelectMany(t => PlanningSjabloonUitrol.TaakVoorwaarden(t.Voorwaarde)).Where(v => v.Variabele == "dak").Select(v => v.Waarde).FirstOrDefault(w => !string.IsNullOrEmpty(w));
         var lagen = Math.Max(1, verdiepingen);
         // Terrassen of luifels: in het voorbeeld bij elke bouwlaag, zodat het langste verloop te zien is.
-        return new SjabloonVariabelen(lagen, true, dak, Enumerable.Range(1, lagen).ToArray());
+        return new SjabloonVariabelen(lagen, kelder, dak, Enumerable.Range(1, lagen).ToArray());
     }
 
     private static int Nr(DateOnly d)
@@ -53,8 +55,8 @@ internal static class PlanningSjabloonProef
     }
 
     /// <summary>Doorrekenen van een sjabloon (met tijdelijke of echte id's) voor <paramref name="woningen"/> woningen van <paramref name="verdiepingen"/> verdiepingen.</summary>
-    internal static PlanningSjabloonProefUitkomst Rekenen(PlanningSjabloon s, int woningen, int verdiepingen)
-        => Rekenen(s, woningen, Voorbeeldvariabelen(s, verdiepingen));
+    internal static PlanningSjabloonProefUitkomst Rekenen(PlanningSjabloon s, int woningen, int verdiepingen, bool kelder = true)
+        => Rekenen(s, woningen, Voorbeeldvariabelen(s, verdiepingen, kelder));
 
     /// <summary>Doorrekenen met de echte keuzes van een gebouw (kelder, dak, terrassen) in plaats van het langste voorbeeld.</summary>
     internal static PlanningSjabloonProefUitkomst Rekenen(PlanningSjabloon s, int woningen, SjabloonVariabelen variabelen)
@@ -79,7 +81,11 @@ internal static class PlanningSjabloonProef
             if (leden.Count == 0) continue;
             var s0 = leden.Min(StartVan);
             var e0 = leden.Max(EindeVan);
-            uit.Blokken.Add(new PlanningSjabloonProefBlok { Code = blok.Code ?? "", Naam = blok.Naam ?? "", Start = s0, Einde = e0, Duur = Math.Max(0, e0 - s0 + 1) });
+            var pb = new PlanningSjabloonProefBlok { Code = blok.Code ?? "", Naam = blok.Naam ?? "", Start = s0, Einde = e0, Duur = Math.Max(0, e0 - s0 + 1) };
+            if (leden.Any(r => r.Taak.Subfase != null))
+                foreach (var deel in leden.GroupBy(r => r.Taak.Subfase ?? "Eenmalig").Select(g => new { g.Key, Van = g.Min(StartVan), Tot = g.Max(EindeVan) }).OrderBy(d => d.Key == "Eenmalig" ? 1 : 0).ThenBy(d => d.Van))
+                    pb.Delen.Add(new PlanningSjabloonProefDeel { Naam = deel.Key, Start = deel.Van, Einde = deel.Tot, Duur = Math.Max(0, deel.Tot - deel.Van + 1) });
+            uit.Blokken.Add(pb);
         }
         foreach (var g in rijen1.GroupBy(r => r.Taak.Code ?? "").Where(g => g.Key.Length > 0))
             uit.Taken.Add(new PlanningSjabloonProefTaak

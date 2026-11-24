@@ -249,7 +249,7 @@ Het besluit van 16/11 blijft staan: **de AI bepaalt nooit zelf een deadline.** E
 Dit is het zwakste punt van elke AI-aanpak als je het niet bewust regelt. Drie bronnen, in volgorde van betrouwbaarheid:
 
 ### 8.1 Je eigen sjablonen en projecten (hoogste betrouwbaarheid)
-De sjablonen zijn al afgeleid van echte projecten (Koksijde, Erpe-Mere, RDR, Res. Moleken, zie `_migrations/TEST_project79_sjablonen.sql`). Dit is wat de AI als eerste moet gebruiken.
+De sjablonen zijn al afgeleid van echte projecten (Koksijde, Erpe-Mere, RDR, Res. Moleken, zie `_migrations/testdata/TEST_project79_sjablonen.sql`). Dit is wat de AI als eerste moet gebruiken.
 
 ### 8.2 Een vaste "ontwikkelaarsregels"-lijst (middelmatig, maar controleerbaar)
 Domeinkennis die niet in je sjablonen staat, hoort niet verstopt in de prompt maar in **een lijst die jij kan lezen en aanpassen**: wat bij een appartementsgebouw altijd hoort (liftkeuring, brandweeradvies, akoestiek), wat bij een kelder hoort (waterdichting, bemaling), welke externe stappen een lange doorlooptijd hebben. Een deel staat al in `VergunningChecklistDefaults` en `NutsChecklistDefaults`. Voordeel: je kan de regel corrigeren in plaats van de AI te vertrouwen. Dit past in het bestaande sjabloonbeheer als "aandachtspunten per projecttype".

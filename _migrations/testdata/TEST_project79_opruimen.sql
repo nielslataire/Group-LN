@@ -35,7 +35,7 @@ BEGIN
     DECLARE c CURSOR LOCAL FAST_FORWARD FOR
         SELECT fk.name,
                QUOTENAME(OBJECT_SCHEMA_NAME(fk.parent_object_id)) + N'.' + QUOTENAME(OBJECT_NAME(fk.parent_object_id)),
-               QUOTENAME(cc.name), QUOTENAME(pc.name), cc.is_nullable,
+               QUOTENAME(cc.name), QUOTENAME(pc.name), CASE WHEN cc.is_computed = 1 THEN CAST(0 AS BIT) ELSE cc.is_nullable END, -- een berekende kolom kan niet leeggemaakt worden: de rij hangt eraan en verdwijnt mee
                (SELECT COUNT(*) FROM sys.foreign_key_columns x WHERE x.constraint_object_id = fk.object_id)
         FROM sys.foreign_keys fk
         JOIN sys.foreign_key_columns fkc ON fkc.constraint_object_id = fk.object_id
@@ -48,6 +48,8 @@ BEGIN
     BEGIN
         IF @aantal > 1 THROW 50002, N'Een verwijzing met meerdere kolommen werd gevonden; het script stopt veilig.', 1;
         SET @sub = @ccol + N' IN (SELECT ' + @pcol + N' FROM ' + @tabel + N' WHERE ' + @where + N')';
+        -- staat de kolom in een CHECK-constraint van de kindtabel (bv. "een van deze eigenaars moet ingevuld zijn"), dan kan ze niet leeggemaakt worden: de rij hangt eraan en verdwijnt mee
+        IF @nullable = 1 AND EXISTS (SELECT 1 FROM sys.check_constraints k WHERE k.parent_object_id = OBJECT_ID(@child) AND CHARINDEX(@ccol, k.definition) > 0) SET @nullable = 0;
         IF @nullable = 1
         BEGIN
             SET @sql = N'UPDATE ' + @child + N' SET ' + @ccol + N' = NULL WHERE ' + @sub;

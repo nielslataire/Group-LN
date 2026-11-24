@@ -17,6 +17,8 @@ public class TrajectRecalculationService : ITrajectRecalculationService
     private static readonly int MpBereikt = (int)MijlpaalStatus.Bereikt;
     private static readonly int MpNvt = (int)MijlpaalStatus.NietVanToepassing;
     private const string AnkerProjectCreated = "PROJECT_CREATED";
+    /// <summary>Anker: de uiterlijke einddatum van de bouwwerken (aanvangsdatum + uitvoeringstermijn in werkdagen).</summary>
+    public const string AnkerUitvoeringDeadline = "UITVOERING_DEADLINE";
 
     public TrajectRecalculationService(cpmRunningContext db, IMijlpaalBindingResolver resolver)
     {
@@ -92,8 +94,9 @@ public class TrajectRecalculationService : ITrajectRecalculationService
         }
 
         // 2. streefdata herberekenen uit ankers (enkel waar geen handmatige Doeldatum staat)
+        var uitvoeringDeadline = await ServiceCore.Planning.PlanningService.UitvoeringsDeadline(_db, ctx.Project);
         changed += HerberekenDoeldatums(traject.Mijlpalen.ToList(), ankerBySjabloonId,
-            traject.GestartOp ?? vandaag, ctx.PlanningTaken, ctx.PlanningSecties);
+            ctx.Project.ProjectStartDate ?? traject.GestartOp ?? vandaag, ctx.PlanningTaken, ctx.PlanningSecties, uitvoeringDeadline);
 
         // 2b. relatieve streefdata (migratie 074): anker + N dagen, na de sjabloonankers zodat ketens kloppen
         changed += MijlpaalRelatief.Herbereken(traject.Mijlpalen.ToList());
@@ -210,7 +213,8 @@ public class TrajectRecalculationService : ITrajectRecalculationService
         Dictionary<int, (string? Anker, int? Offset)> ankerBySjabloonId,
         DateOnly anchorBase,
         List<PlanningTaak> planningTaken,
-        List<PlanningSectie> planningSecties)
+        List<PlanningSectie> planningSecties,
+        DateOnly? uitvoeringDeadline = null)
     {
         var byCode = mijlpalen.Where(m => !string.IsNullOrWhiteSpace(m.Code))
                               .ToLookup(m => m.Code!, StringComparer.OrdinalIgnoreCase);
@@ -247,6 +251,13 @@ public class TrajectRecalculationService : ITrajectRecalculationService
 
                 var (ankerCode, offset) = a;
                 int off = offset ?? 0;
+
+                // Uiterlijke termijn van de bouwwerken: aanvangsdatum + uitvoeringstermijn (zolang die ontbreken, blijft de mijlpaal zonder berekende datum)
+                if (ankerCode != null && ankerCode.Equals(AnkerUitvoeringDeadline, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (uitvoeringDeadline is DateOnly ud) { nieuw[m.Id] = ud.AddDays(off); changed = true; }
+                    continue;
+                }
 
                 if (string.IsNullOrWhiteSpace(ankerCode) || ankerCode.Equals(AnkerProjectCreated, StringComparison.OrdinalIgnoreCase))
                 {

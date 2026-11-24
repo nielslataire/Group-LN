@@ -15,6 +15,8 @@ public partial class ProjectSjabloon
     public int? PlanningSjabloonId { get; set; }
     public int? TrajectSjabloonId { get; set; }
     public int? SchijfSjabloonId { get; set; }
+    /// <summary>Schijvensjabloon voor betalingsgroepen met enkel parkings en bergingen (migratie 160). Leeg = die groepen krijgen het gewone schijvensjabloon.</summary>
+    public int? SchijfSjabloonBijgebouwId { get; set; }
 
     public int StandaardVerdiepingen { get; set; } = 1;
     public bool StandaardKelder { get; set; }

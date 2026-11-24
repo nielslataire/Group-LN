@@ -14,6 +14,7 @@
     var rijenEl = $("sjs-rijen"), dirty = false, bezig = false, menuIdx = -1;
     var rij = [];                       // { naam, code, soort: "gewicht"|"vast", waarde: "13,5", perVerd, voorw }
     var codes = data.planningCodes || [];
+    var bouwstaten = data.bouwstaten || [];   // { id, naam, groep, isActief } (migratie 158)
     var voorbeeld = { verd: 2, kelder: false, dak: "", waarde: 300000 };
 
     function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c]; }); }
@@ -28,6 +29,7 @@
     }
     function r2(n) { return Math.round(n * 100) / 100; }
     function rang(n) { return n + (n === 1 || n === 8 ? "ste" : "de"); }
+    function toast(titel, tekst) { if (window.GlV2Toast && window.GlV2Toast.notify) window.GlV2Toast.notify("success", titel, tekst); }
     function markeer() { dirty = true; $("sjs-dirty").hidden = false; }
     function slug(s) { return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, ""); }
 
@@ -99,25 +101,51 @@
 
     // ── rijen ──
     var VOORW = [["", "Altijd"], ["kelder:ja", "Met kelder"], ["kelder:nee", "Zonder kelder"], ["dak:hellend", "Hellend dak"], ["dak:plat", "Plat dak"], ["laag:boven", "Elke bouwlaag boven het gelijkvloers"]];
+    // GlV2-keuzelijst in JS-markup (zelfde structuur als GlV2/_SelectList, basisvariant); GlV2Select.init bedraadt ze na het tekenen
+    function sel(klasse, items, waarde, label, extraTrigger) {
+        var cur = items.filter(function (i) { return i.v === waarde; })[0] || items[0];
+        return "<div class=\"gl-v2-select\" data-gl-v2-select><input type=\"hidden\" class=\"" + klasse + "\" value=\"" + esc(cur.v) + "\" />" +
+            "<div class=\"gl-v2-select-trigger is-filled" + (extraTrigger || "") + "\" role=\"button\" tabindex=\"" + (canWrite ? 0 : -1) + "\" aria-haspopup=\"listbox\" aria-expanded=\"false\" aria-label=\"" + esc(label) + "\"" + (canWrite ? "" : " aria-disabled=\"true\"") + "><span class=\"gl-v2-select-trigger-label\">" + esc(cur.t) + "</span><i class=\"ph ph-caret-down gl-v2-select-trigger-caret\" aria-hidden=\"true\"></i></div>" +
+            "<div class=\"gl-v2-select-panel\" role=\"listbox\">" + items.map(function (i) {
+                return "<button type=\"button\" class=\"gl-v2-select-option" + (i.v === cur.v ? " is-selected" : "") + "\" role=\"option\" data-value=\"" + esc(i.v) + "\"><i class=\"ph ph-check\" aria-hidden=\"true\"></i><span>" + esc(i.t) + "</span></button>";
+            }).join("") + "</div></div>";
+    }
+    function bouwstaatItems(s) {
+        return [{ v: "", t: "Nog geen bouwstaat" }].concat(bouwstaten.filter(function (b) { return b.isActief || String(b.id) === String(s.bouwstaat); }).map(function (b) {
+            return { v: String(b.id), t: (b.groep ? b.groep + " · " : "") + b.naam };
+        }));
+    }
+    // De tweede regel van een schijf: waarop ze wacht (bouwstaat uit de planning, migratie 158) en of ze betaalbaar is als de leverende taken gestart of voltooid zijn.
+    function wachtHtml(s) {
+        var regel = String(s.bsRegel) === "1" ? 1 : 0, zonder = !s.bouwstaat;
+        return "<span class=\"gl-v2-sjs-wacht\"><span class=\"gl-v2-sjs-wl\">WACHT OP</span>" +
+            "<span class=\"gl-v2-sjs-bssel\">" + sel("js-bs", bouwstaatItems(s), s.bouwstaat || "", "Wacht op bouwstaat", zonder ? " is-warning" : "") + "</span>" +
+            "<span class=\"gl-v2-segmented is-sm is-compact\" role=\"group\" aria-label=\"Betaalbaar zodra de taken\">" +
+            "<button type=\"button\" data-bsregel=\"1\" class=\"" + (regel === 1 ? "is-active" : "") + "\"" + (zonder ? " disabled" : "") + ">gestart</button>" +
+            "<button type=\"button\" data-bsregel=\"0\" class=\"" + (regel === 0 ? "is-active" : "") + "\"" + (zonder ? " disabled" : "") + ">voltooid</button></span>" +
+            // De planningcode is enkel nog een terugvaloptie van vóór de bouwstaten: ze verschijnt alleen bij een schijf die er nog een heeft.
+            (s.code ? "<span class=\"gl-v2-field-box gl-v2-sjs-code\"><input type=\"text\" class=\"gl-v2-field-input js-code\" maxlength=\"100\" autocomplete=\"off\" aria-label=\"Oude code in de planning (vervangen door de bouwstaat)\" placeholder=\"oude code\" value=\"" + esc(s.code) + "\" /></span><small class=\"gl-v2-sjs-codestatus\"></small>" : "") +
+            "</span>";
+    }
     function rijHtml(s, i, laatste) {
         var vast = s.soort === "vast";
-        var h = "<li class=\"gl-v2-sjs-rij" + (laatste ? " is-eind" : "") + "\" data-i=\"" + i + "\">" +
+        return "<li class=\"gl-v2-sjs-rij" + (laatste ? " is-eind" : "") + "\" data-i=\"" + i + "\">" +
             "<span class=\"gl-v2-sjs-grip\" title=\"Sleep om de volgorde te wijzigen\"><i class=\"ph ph-dots-six-vertical\" aria-hidden=\"true\"></i></span>" +
             "<span class=\"gl-v2-sjs-nr\">" + (i + 1) + "</span>" +
             "<span class=\"gl-v2-sjs-om\"><span class=\"gl-v2-field-box\"><input type=\"text\" class=\"gl-v2-field-input js-naam\" maxlength=\"250\" autocomplete=\"off\" aria-label=\"Omschrijving op factuur\" value=\"" + esc(s.naam) + "\" /></span>" +
             "<span class=\"gl-v2-sjs-omsub\"></span></span>" +
-            "<span class=\"gl-v2-sjs-cw\"><span class=\"gl-v2-field-box\"><input type=\"text\" class=\"gl-v2-field-input js-code\" maxlength=\"100\" autocomplete=\"off\" aria-label=\"Code in de planning\" placeholder=\"optioneel\" value=\"" + esc(s.code) + "\" /></span><small class=\"gl-v2-sjs-codestatus\"></small></span>" +
-            "<span class=\"gl-v2-sjs-soort\" role=\"group\" aria-label=\"Soort\"><button type=\"button\" data-soort=\"gewicht\" class=\"" + (vast ? "" : "is-on") + "\">Gewicht</button><button type=\"button\" data-soort=\"vast\" class=\"" + (vast ? "is-on" : "") + "\">Vast %</button></span>" +
-            "<span class=\"gl-v2-field-box gl-v2-sjs-waarde\"><input type=\"text\" class=\"gl-v2-field-input is-tabular js-waarde\" inputmode=\"decimal\" autocomplete=\"off\" aria-label=\"" + (vast ? "Vast percentage" : "Gewicht") + "\" value=\"" + esc(s.waarde) + "\" />" + (vast ? "<span class=\"gl-v2-field-suffix\">%</span>" : "") + "</span>" +
-            "<span class=\"gl-v2-sjs-check\"><input type=\"checkbox\" class=\"js-verd\" aria-label=\"Per verdieping herhalen\"" + (s.perVerd ? " checked" : "") + " /></span>" +
-            "<span class=\"gl-v2-field-box gl-v2-sjs-gv\"><select class=\"gl-v2-field-input js-voorw\" aria-label=\"Enkel bij\">" + VOORW.map(function (o) { return "<option value=\"" + o[0] + "\"" + (o[0] === s.voorw ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select></span>" +
+            "<span class=\"gl-v2-segmented is-compact is-fill gl-v2-sjs-soort\" role=\"group\" aria-label=\"Soort\"><button type=\"button\" data-soort=\"gewicht\" class=\"" + (vast ? "" : "is-active") + "\">Gewicht</button><button type=\"button\" data-soort=\"vast\" class=\"" + (vast ? "is-active" : "") + "\">Vast %</button></span>" +
+            "<span class=\"gl-v2-field-box gl-v2-sjs-waarde\"><input type=\"text\" class=\"gl-v2-field-input is-tabular js-waarde\" inputmode=\"decimal\" autocomplete=\"off\" aria-label=\"" + (vast ? "Vast percentage" : "Gewicht") + "\" value=\"" + esc(s.waarde) + "\" /><span class=\"gl-v2-field-suffix\">" + (vast ? "%" : "×") + "</span></span>" +
+            "<label class=\"gl-v2-sjs-check\" title=\"Eén schijf per bouwlaag\"><input type=\"checkbox\" class=\"gl-v2-toggle-switch js-verd\" aria-label=\"Per verdieping herhalen\"" + (s.perVerd ? " checked" : "") + " /></label>" +
+            "<span class=\"gl-v2-sjs-gv\">" + sel("js-voorw", VOORW.map(function (o) { return { v: o[0], t: o[1] }; }), s.voorw || "", "Enkel bij", s.voorw ? " is-cond" : "") + "</span>" +
             "<span class=\"gl-v2-sjs-res\"></span>" +
-            "<span class=\"gl-v2-sjs-menucel\"><button type=\"button\" class=\"gl-v2-icon-btn js-gl-v2-menu-trigger\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-controls=\"sjs-rijmenu\" aria-label=\"Acties voor schijf " + (i + 1) + "\" title=\"Meer acties\"><i class=\"ph ph-dots-three\" aria-hidden=\"true\"></i></button></span></li>";
-        return h;
+            "<span class=\"gl-v2-sjs-menucel\"><button type=\"button\" class=\"gl-v2-icon-btn js-gl-v2-menu-trigger\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-controls=\"sjs-rijmenu\" aria-label=\"Acties voor schijf " + (i + 1) + "\" title=\"Meer acties\"><i class=\"ph ph-dots-three\" aria-hidden=\"true\"></i></button></span>" +
+            wachtHtml(s) + "</li>";
     }
     function renderRijen() {
         rijenEl.innerHTML = rij.map(function (s, i) { return rijHtml(s, i, i === rij.length - 1); }).join("");
-        if (!canWrite) rijenEl.querySelectorAll("input,select,button").forEach(function (x) { x.disabled = true; });
+        if (window.GlV2Select && window.GlV2Select.init) window.GlV2Select.init(rijenEl);
+        if (!canWrite) rijenEl.querySelectorAll("input,button").forEach(function (x) { x.disabled = true; });
         afgeleid();
     }
     function liVan(i) { return rijenEl.children[i]; }
@@ -131,13 +159,14 @@
             li.classList.toggle("is-eind", i === rij.length - 1);
             var sub = li.querySelector(".gl-v2-sjs-omsub"), tags = "";
             if (i === rij.length - 1) tags += "<em class=\"gl-v2-sjs-eind\">eindafrekening</em>";
-            if (/\{verdieping\}/i.test(s.naam)) tags += "<em class=\"gl-v2-sjs-tok\">{verdieping}</em>" + (s.perVerd ? "" : "<em class=\"gl-v2-sjs-tokwarn\">zet “per verdieping” aan</em>");
+            if (/\{verdieping\}/i.test(s.naam)) tags += "<em class=\"gl-v2-sjs-tok\">{verdieping}</em><em class=\"gl-v2-sjs-tokh\">→ “1ste verdieping”, “2de verdieping” …</em>" + (s.perVerd ? "" : "<em class=\"gl-v2-sjs-tokwarn\">zet “per verdieping” aan</em>");
             sub.innerHTML = tags;
             var cs = codeStatus(s), cl = li.querySelector(".gl-v2-sjs-codestatus");
-            cl.className = "gl-v2-sjs-codestatus" + (cs ? " is-" + cs.t : "");
-            cl.innerHTML = cs ? "<i class=\"ph " + (cs.t === "ok" ? "ph-check-circle" : cs.t === "bad" ? "ph-x-circle" : "ph-warning") + "\" aria-hidden=\"true\"></i><span>" + esc(cs.tekst) + "</span>" : "";
+            if (cl) { cl.className = "gl-v2-sjs-codestatus" + (cs ? " is-" + cs.t : "");
+            cl.innerHTML = cs ? "<i class=\"ph " + (cs.t === "ok" ? "ph-check-circle" : cs.t === "bad" ? "ph-x-circle" : "ph-warning") + "\" aria-hidden=\"true\"></i><span>" + esc(cs.tekst) + "</span>" : ""; }
             var mijn = uit.items.filter(function (x) { return x.rij === i; }), res = li.querySelector(".gl-v2-sjs-res");
-            if (!mijn.length) { res.textContent = "—"; res.title = "Geldt niet voor dit gebouw"; res.classList.add("is-uit"); }
+            li.classList.toggle("is-uit", !mijn.length);
+            if (!mijn.length) { res.textContent = "—"; res.title = "Komt niet voor bij dit voorbeeld"; res.classList.add("is-uit"); }
             else {
                 res.classList.remove("is-uit"); res.title = "";
                 var gelijk = mijn.every(function (x) { return Math.abs(x.p - mijn[0].p) < 0.006; });
@@ -149,7 +178,7 @@
         controle();
     }
     function regel() {
-        var u = rol(1, false, ""), el = $("sjs-regel");
+        var u = rol(voorbeeld.verd, voorbeeld.kelder, voorbeeld.dak), el = $("sjs-regel");
         var vast = 0, gewogen = 0, gew = 0, ongeldig = false;
         rij.forEach(function (s) {
             var w = parse(s.waarde);
@@ -165,9 +194,12 @@
         } else {
             var rest = 100 - vast, bad = rest <= 0;
             el.dataset.state = bad ? "fout" : "ok";
-            h = (vast > 0 ? "<b class=\"gl-v2-sjs-rb is-vast\">vast " + fmt(vast) + " %</b>" : "") +
-                "<b class=\"gl-v2-sjs-rb is-gewicht\">" + fmt(rest) + " % verdeeld over gewicht " + fmt(gew) + "</b>" +
-                (bad ? "<span>er blijft niets over voor de schijven met een gewicht</span>" : "<span>= " + fmt2(rest / gew) + " % per gewicht · afronding op de laatste schijf met gewicht · <code>{verdieping}</code> wordt “1ste verdieping”, “2de verdieping” …</span>");
+            // Cijfers voor het gebouw rechts: schijven die er niet bij horen tellen niet mee.
+            var vastG = u.vasteSom, restG = 100 - vastG, gewG = u.totGew;
+            var gebouw = voorbeeld.verd + (voorbeeld.verd === 1 ? " bouwlaag, " : " bouwlagen, ") + (voorbeeld.kelder ? "met" : "zonder") + " kelder, " + (voorbeeld.dak ? voorbeeld.dak + " dak" : "geen dak gekozen");
+            h = "<b class=\"gl-v2-sjs-rb is-vast\">vast " + fmt(vastG) + " %</b>" +
+                "<b class=\"gl-v2-sjs-rb is-gewicht\">" + fmt(restG) + " % over gewicht " + fmt(gewG) + "</b>" +
+                (bad || restG <= 0 || !gewG ? "<span>er blijft niets over voor de schijven met een gewicht</span>" : "<span>= " + fmt2(restG / gewG) + " % per gewicht voor het gebouw rechts (" + gebouw + ") · in stappen van 5 %, de rest op de laatste schijf met gewicht</span>");
         }
         el.innerHTML = h;
     }
@@ -187,6 +219,8 @@
             if (cs.t === "bad") punten.push({ t: "bad", titel: "Code " + s.code + " niet gevonden", tekst: "De schijf hangt niet aan de planning." + (cs.sug ? " In " + cs.sug.sjabloon + " heet de taak " + cs.sug.code + "." : "") });
             else punten.push({ t: "gold", titel: "Code " + s.code + " is niet leesbaar", tekst: "Geef “" + cs.naam + "” in het planningssjabloon een code zoals " + (slug(cs.naam) || "BINNENDEUREN") + "." });
         });
+        var zonderBs = rij.filter(function (s) { return !s.bouwstaat; });
+        if (zonderBs.length) punten.push({ t: "gold", titel: zonderBs.length + (zonderBs.length === 1 ? " schijf zonder bouwstaat" : " schijven zonder bouwstaat"), tekst: zonderBs.map(function (s) { return s.naam || "(zonder omschrijving)"; }).join(", ") + " — ze hangen niet vanzelf aan de planning." });
         var u = rol(1, false, "");
         if (u.ongeldig) punten.unshift({ t: "bad", titel: "Een percentage of gewicht is geen getal", tekst: "Pas het aan voor je bewaart." });
         else if (u.gewogen === 0 && Math.abs(u.vasteSom - 100) > 0.005) punten.unshift({ t: "bad", titel: "Vaste percentages samen " + fmt(u.vasteSom) + " %", tekst: "Zonder schijven met een gewicht moeten ze samen 100 % zijn." });
@@ -212,12 +246,12 @@
     $("sjs-actief").checked = data.isActief !== false;
     (data.schijven && data.schijven.length ? data.schijven : [{ naam: "", gewicht: 1 }]).forEach(function (s) {
         var vast = s.vast != null;
-        rij.push({ naam: s.naam || "", code: s.code || "", soort: vast ? "vast" : "gewicht", waarde: fmt(vast ? s.vast : (s.gewicht == null ? 1 : s.gewicht)), perVerd: !!s.perVerdieping, voorw: s.voorwaarde || "" });
+        rij.push({ naam: s.naam || "", code: s.code || "", soort: vast ? "vast" : "gewicht", waarde: fmt(vast ? s.vast : (s.gewicht == null ? 1 : s.gewicht)), perVerd: !!s.perVerdieping, voorw: s.voorwaarde || "", bouwstaat: s.bouwstaatId ? String(s.bouwstaatId) : "", bsRegel: s.bouwstaatRegel || 0 });
     });
     function segKnoppen() {
-        $("sjs-verd").innerHTML = [1, 2, 3, 4].map(function (n) { return "<button type=\"button\" data-v=\"" + n + "\" class=\"" + (voorbeeld.verd === n ? "is-on" : "") + "\">" + n + "</button>"; }).join("");
-        $("sjs-kelder").querySelectorAll("button").forEach(function (b) { b.classList.toggle("is-on", (b.getAttribute("data-v") === "ja") === voorbeeld.kelder); });
-        $("sjs-dak").querySelectorAll("button").forEach(function (b) { b.classList.toggle("is-on", b.getAttribute("data-v") === voorbeeld.dak); });
+        $("sjs-verd").innerHTML = [1, 2, 3, 4].map(function (n) { return "<button type=\"button\" data-v=\"" + n + "\" class=\"" + (voorbeeld.verd === n ? "is-active" : "") + "\">" + n + "</button>"; }).join("");
+        $("sjs-kelder").querySelectorAll("button").forEach(function (b) { b.classList.toggle("is-active", (b.getAttribute("data-v") === "ja") === voorbeeld.kelder); });
+        $("sjs-dak").querySelectorAll("button").forEach(function (b) { b.classList.toggle("is-active", b.getAttribute("data-v") === voorbeeld.dak); });
     }
     segKnoppen(); renderRijen();
     if (!canWrite) { ["sjs-naam", "sjs-beschrijving", "sjs-minimum", "sjs-actief", "sjs-toevoegen"].forEach(function (id) { $(id).disabled = true; }); }
@@ -240,10 +274,11 @@
     }
     $("sjs-toevoegen").addEventListener("click", function () {
         // Nieuwe schijf vóór de eindafrekening (de laatste rij)
-        var s = { naam: "", code: "", soort: "gewicht", waarde: "1", perVerd: false, voorw: "" };
+        var s = { naam: "", code: "", soort: "gewicht", waarde: "1", perVerd: false, voorw: "", bouwstaat: "", bsRegel: 0 };
         if (rij.length > 1) rij.splice(rij.length - 1, 0, s); else rij.unshift(s);
         renderRijen(); markeer();
         var li = liVan(rij.length > 1 ? rij.length - 2 : 0); if (li) li.querySelector(".js-naam").focus();
+        toast("Schijf toegevoegd", "De nieuwe schijf staat vóór de eindafrekening.");
     });
     rijenEl.addEventListener("input", function (e) {
         var li = e.target.closest("li"); if (!li || !canWrite) return;
@@ -258,11 +293,23 @@
         var li = e.target.closest("li"); if (!li || !canWrite) return;
         var s = rij[+li.getAttribute("data-i")];
         if (e.target.classList.contains("js-verd")) s.perVerd = e.target.checked;
-        else if (e.target.classList.contains("js-voorw")) s.voorw = e.target.value;
+        else if (e.target.classList.contains("js-voorw")) { s.voorw = e.target.value; var tv = e.target.parentNode.querySelector(".gl-v2-select-trigger"); if (tv) tv.classList.toggle("is-cond", !!s.voorw); }
+        else if (e.target.classList.contains("js-bs")) {
+            s.bouwstaat = e.target.value;
+            var tb = e.target.parentNode.querySelector(".gl-v2-select-trigger"); if (tb) tb.classList.toggle("is-warning", !s.bouwstaat);
+            li.querySelectorAll("[data-bsregel]").forEach(function (k) { k.disabled = !s.bouwstaat || !canWrite; });
+        }
         else return;
         markeer(); afgeleid();
     });
     rijenEl.addEventListener("click", function (e) {
+        var k = e.target.closest("[data-bsregel]");
+        if (k && canWrite && !k.disabled) {
+            var sr = rij[+k.closest("li").getAttribute("data-i")];
+            sr.bsRegel = parseInt(k.getAttribute("data-bsregel"), 10) || 0;
+            k.parentNode.querySelectorAll("[data-bsregel]").forEach(function (x) { x.classList.toggle("is-active", x === k); });
+            markeer(); return;
+        }
         var b = e.target.closest("[data-soort]"); if (!b || !canWrite) return;
         var li = b.closest("li"), s = rij[+li.getAttribute("data-i")], nieuw = b.getAttribute("data-soort");
         if (s.soort === nieuw) return;
@@ -300,10 +347,10 @@
         if (window.GlV2Menu) window.GlV2Menu.closeAll();
         if (act === "omhoog") verplaats(i, i - 1);
         else if (act === "omlaag") verplaats(i, i + 1);
-        else if (act === "dupliceer") { rij.splice(i + 1, 0, JSON.parse(JSON.stringify(rij[i]))); rij[i + 1].code = ""; renderRijen(); markeer(); }
+        else if (act === "dupliceer") { rij.splice(i + 1, 0, JSON.parse(JSON.stringify(rij[i]))); rij[i + 1].code = ""; renderRijen(); markeer(); toast("Schijf gedupliceerd", "Pas “Enkel bij” aan voor een variant."); }
         else if (act === "wis" && rij.length > 1) {
             var weg = rij.splice(i, 1)[0]; renderRijen(); markeer();
-            if (window.GlV2Toast && window.GlV2Toast.notify) window.GlV2Toast.notify("success", "Schijf verwijderd", "“" + (weg.naam || "Schijf " + (i + 1)) + "” verwijderd. Annuleren zet alles terug.");
+            toast("Schijf verwijderd", "“" + (weg.naam || "Schijf " + (i + 1)) + "” verwijderd. Annuleren zet alles terug.");
         }
     });
 
@@ -332,6 +379,8 @@
                     vastPercentage: vast ? (w == null || isNaN(w) ? null : w) : null,
                     gewicht: vast ? 1 : (w == null || isNaN(w) ? 1 : w),
                     perVerdieping: !!s.perVerd,
+                    bouwstaatId: s.bouwstaat ? parseInt(s.bouwstaat, 10) : null,
+                    bouwstaatRegel: s.bouwstaat ? (parseInt(s.bsRegel, 10) || 0) : 0,
                     voorwaardeVariabele: (s.voorw.split(":")[0] || null),
                     voorwaardeWaarde: (s.voorw.split(":")[1] || null)
                 };

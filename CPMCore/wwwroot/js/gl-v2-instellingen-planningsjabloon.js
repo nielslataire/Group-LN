@@ -12,6 +12,8 @@
     var toast = (window.GlV2Toast && window.GlV2Toast.notify) || function () {};
     var raw = {}, reageertOpties = [];
     try { raw = JSON.parse(document.getElementById("pls-data").textContent); } catch (e) { raw = {}; }
+    var keuzes = { bouwstaten: [], activiteiten: [] };
+    try { keuzes = JSON.parse(document.getElementById("pls-keuzes").textContent); } catch (e) { /* zonder keuzelijsten blijven de velden leeg */ }
     try { reageertOpties = JSON.parse(document.getElementById("pls-opties").textContent); } catch (e) { reageertOpties = [{ v: "", t: "Niets — handmatig toepassen" }]; }
 
     var VOORWAARDEN = [
@@ -45,6 +47,14 @@
         { v: "dak:hellend", t: "Alleen bij hellend dak" },
         { v: "dak:plat", t: "Alleen bij plat dak" }
     ];
+    // Bouwstaat en activiteit per taak (migratie 158): enkel actieve bouwstaten, plus de huidige als die inactief werd.
+    function bouwstaatItems(huidig) {
+        return (keuzes.bouwstaten || []).filter(function (b) { return b.isActief || String(b.id) === String(huidig); })
+            .map(function (b) { return { v: String(b.id), t: (b.groep ? b.groep + " · " : "") + b.naam }; });
+    }
+    function activiteitItems() {
+        return (keuzes.activiteiten || []).map(function (a) { return { v: String(a.id), t: (a.groep ? a.groep + " · " : "") + a.naam }; });
+    }
     function taakVoorwaardeItems(huidig) {
         var items = TAAK_VOORWAARDEN.slice();
         if (huidig && !items.some(function (i) { return i.v === huidig; })) items.push({ v: huidig, t: "Aangepast: " + huidig });
@@ -62,7 +72,7 @@
                     voorwaarde: b.voorwaardeVariabele ? b.voorwaardeVariabele + ":" + (b.voorwaardeWaarde || "") : "", open: true,
                     taken: (b.taken || []).map(function (t) {
                         return {
-                            code: t.code || "", naam: t.naam || "", beschrijving: t.beschrijving || "", duur: t.duur == null ? 1 : t.duur, estafette: !!t.estafette, wacht: t.estafetteWacht || 0, voorwaarde: t.voorwaarde || "",
+                            code: t.code || "", naam: t.naam || "", beschrijving: t.beschrijving || "", duur: t.duur == null ? 1 : t.duur, estafette: !!t.estafette, wacht: t.estafetteWacht || 0, voorwaarde: t.voorwaarde || "", bouwstaat: t.bouwstaatId ? String(t.bouwstaatId) : "", activiteit: t.activityId ? String(t.activityId) : "",
                             voorg: (t.voorgangers || []).map(function (v) { return { code: v.code, type: v.type || "FS", lag: v.wachtDagen || 0 }; })
                         };
                     })
@@ -72,7 +82,7 @@
     }
     var doc = leesDoc(raw);
     var dirty = false;
-    var proef = null, woningen = 1, verdiepingen = 2;
+    var proef = null, woningen = 1, verdiepingen = 2, kelder = 1;
     var pick = null; // { b, t, pi }
 
     function markDirty() { dirty = true; if (dirtyBadge) dirtyBadge.hidden = false; vraagProef(); }
@@ -97,7 +107,7 @@
         return c;
     }
     function zoekCode(code) {
-        var up = String(code || "").toUpperCase().replace(/^VORIGE:/, "");
+        var up = String(code || "").toUpperCase().replace(/^(VORIGE|EERSTE):/, "");
         for (var i = 0; i < doc.blokken.length; i++) {
             if ((doc.blokken[i].code || "").toUpperCase() === up) return { blok: doc.blokken[i], bi: i, taak: null };
             for (var j = 0; j < doc.blokken[i].taken.length; j++) if ((doc.blokken[i].taken[j].code || "").toUpperCase() === up) return { blok: doc.blokken[i], bi: i, taak: doc.blokken[i].taken[j], ti: j };
@@ -105,9 +115,10 @@
         return null;
     }
     function naamVan(code) {
-        var z = zoekCode(code), vorige = /^VORIGE:/i.test(String(code || ""));
+        var z = zoekCode(code), vorige = /^VORIGE:/i.test(String(code || "")), eerste = /^EERSTE:/i.test(String(code || ""));
         if (!z) return code;
         if (vorige) return "Vorige bouwlaag: " + (z.taak ? (z.taak.naam || z.taak.code) : (z.blok.naam || z.blok.code));
+        if (eerste) return "Eerste bouwlaag: " + (z.taak ? (z.taak.naam || z.taak.code) : (z.blok.naam || z.blok.code));
         return z.taak ? (z.taak.naam || z.taak.code) : (z.blok.naam || z.blok.code) + " (hele blok)";
     }
     function relTekst(v) { return (v.type !== "FS" ? v.type : "") + (v.lag ? (v.lag > 0 ? "+" : "−") + Math.abs(v.lag) + "d" : ""); }
@@ -142,7 +153,7 @@
     // ── Blokken tekenen ──
     function chipHtml(v, bi, ti, pi) {
         var z = zoekCode(v.code), slecht = !z, rel = relTekst(v);
-        return "<span class=\"gl-v2-pls-chip" + (slecht ? " is-bad" : "") + "\"><button type=\"button\" class=\"gl-v2-pls-cb\" data-act=\"v-bewerk\" data-b=\"" + bi + "\" data-t=\"" + ti + "\" data-p=\"" + pi + "\" data-code=\"" + esc(v.code) + "\" title=\"Code: " + esc(v.code) + (slecht ? " (bestaat niet)" : "") + "\"" + (canWrite ? "" : " disabled") + "><span class=\"gl-v2-pls-cl\">" + esc(slecht ? v.code : naamVan(v.code)) + "</span>" + (rel ? "<em>" + esc(rel) + "</em>" : "") + "</button>" +
+        return "<span class=\"gl-v2-pls-chip" + (slecht ? " is-bad" : (/^(VORIGE|EERSTE):/i.test(String(v.code || "")) ? " is-laag" : "")) + "\"><button type=\"button\" class=\"gl-v2-pls-cb\" data-act=\"v-bewerk\" data-b=\"" + bi + "\" data-t=\"" + ti + "\" data-p=\"" + pi + "\" data-code=\"" + esc(v.code) + "\" title=\"Code: " + esc(v.code) + (slecht ? " (bestaat niet)" : "") + "\"" + (canWrite ? "" : " disabled") + "><span class=\"gl-v2-pls-cl\">" + esc(slecht ? v.code : naamVan(v.code)) + "</span>" + (rel ? "<em>" + esc(rel) + "</em>" : "") + "</button>" +
             (canWrite ? "<button type=\"button\" class=\"gl-v2-pls-cx\" data-act=\"v-weg\" data-b=\"" + bi + "\" data-t=\"" + ti + "\" data-p=\"" + pi + "\" aria-label=\"" + esc(naamVan(v.code)) + " als voorganger weghalen\"><i class=\"ph ph-x\" aria-hidden=\"true\"></i></button>" : "") + "</span>";
     }
     function taakHtml(b, bi, t, ti) {
@@ -153,13 +164,17 @@
             (!t.voorg.length && !canWrite ? "<span class=\"gl-v2-pls-geen\">geen</span>" : "");
         return "<div class=\"gl-v2-pls-tr\" data-taak-rij " + id + ">" +
             "<span class=\"gl-v2-pls-grip\" data-grip title=\"Sleep om te herschikken\" aria-hidden=\"true\"><i class=\"ph ph-dots-six-vertical\"></i></span>" +
-            "<div class=\"gl-v2-pls-nm\"><div class=\"gl-v2-field-box\"><input type=\"text\" class=\"gl-v2-field-input\" data-f=\"t-naam\" " + id + " value=\"" + esc(t.naam) + "\" maxlength=\"200\" placeholder=\"Naam van de taak\" aria-label=\"Naam van de taak\"" + (canWrite ? "" : " disabled") + " /></div><small data-code-van=\"" + esc(t.code) + "\">" + esc(t.code) + "</small>" +
-            "<div class=\"gl-v2-pls-tw\">" + sel("data-f=\"t-voorwaarde\" " + id, taakVoorwaardeItems(t.voorwaarde), t.voorwaarde || "", "Altijd", "Komt voor", !canWrite) + "</div></div>" +
+            "<div class=\"gl-v2-pls-nm\"><div class=\"gl-v2-field-box\"><input type=\"text\" class=\"gl-v2-field-input\" data-f=\"t-naam\" " + id + " value=\"" + esc(t.naam) + "\" maxlength=\"200\" placeholder=\"Naam van de taak\" aria-label=\"Naam van de taak\"" + (canWrite ? "" : " disabled") + " /></div><small data-code-van=\"" + esc(t.code) + "\">" + esc(t.code) + "</small></div>" +
             "<div class=\"gl-v2-field-box gl-v2-pls-dur\"><input type=\"text\" inputmode=\"numeric\" maxlength=\"4\" autocomplete=\"off\" class=\"gl-v2-field-input\" data-f=\"t-duur\" " + id + " value=\"" + esc(t.duur) + "\" aria-label=\"Duur in werkdagen\"" + (canWrite ? "" : " disabled") + " /><span class=\"gl-v2-field-unit\">d</span></div>" +
             "<div class=\"gl-v2-pls-ps\">" + vgHtml + "</div>" +
             "<span class=\"gl-v2-pls-st\" data-start-van=\"" + esc(t.code) + "\"></span>" +
             "<button type=\"button\" class=\"gl-v2-pls-est" + (t.estafette ? " is-on" : "") + "\" data-act=\"t-est\" " + id + " aria-pressed=\"" + (t.estafette ? "true" : "false") + "\" title=\"" + esc(t.estafette ? "Wacht op de vorige woning" + (t.wacht ? " + " + t.wacht + " d" : "") : "Estafette uit") + "\"" + (canWrite ? "" : " disabled") + ">" + SVG_WONINGEN + "</button>" +
             (canWrite ? "<button type=\"button\" class=\"gl-v2-icon-btn gl-v2-pls-menubtn js-gl-v2-menu-trigger\" data-kind=\"t\" " + id + " aria-haspopup=\"true\" aria-expanded=\"false\" aria-controls=\"pls-menu\" aria-label=\"Acties voor " + esc(t.naam) + "\"><i class=\"ph ph-dots-three\" aria-hidden=\"true\"></i></button>" : "<span></span>") +
+            "<div class=\"gl-v2-pls-tags\">" +
+            "<div class=\"gl-v2-pls-tw" + (t.voorwaarde ? " is-cond" : "") + "\" title=\"Komt voor\">" + sel("data-f=\"t-voorwaarde\" " + id, taakVoorwaardeItems(t.voorwaarde), t.voorwaarde || "", "Altijd", "Komt voor", !canWrite) + "</div>" +
+            "<div class=\"gl-v2-pls-tw" + (t.bouwstaat ? "" : " is-none") + "\" title=\"Bouwstaat\"><span class=\"gl-v2-pls-s2l\">BOUWSTAAT</span>" + sel("data-f=\"t-bouwstaat\" " + id, bouwstaatItems(t.bouwstaat), t.bouwstaat || "", "Geen bouwstaat", "Bouwstaat die de taak oplevert", !canWrite) + "</div>" +
+            "<div class=\"gl-v2-pls-tw" + (t.activiteit ? "" : " is-none") + "\" title=\"Activiteit\"><span class=\"gl-v2-pls-s2l\">ACTIVITEIT</span>" + sel("data-f=\"t-activiteit\" " + id, activiteitItems(), t.activiteit || "", "Geen activiteit", "Activiteit (wie het uitvoert)", !canWrite) + "</div>" +
+            "</div>" +
             "</div>";
     }
     function blokHtml(b, bi) {
@@ -181,11 +196,28 @@
                 (b.herhaling === 1 ? toggle("data-f=\"b-volgt\" " + id, b.volgt, "Elke verdieping start na de vorige") : "") + "</div>" : "") +
             "</article>";
     }
+    // Kleur van het veld volgt de waarde: groen als "Komt voor" niet "Altijd" is, gouden stippellijn als bouwstaat of activiteit leeg is
+    function markeer(el, klasse, aan) { var w = el.closest ? el.closest(".gl-v2-pls-tw") : null; if (w) w.classList.toggle(klasse, aan); }
+    // Hoeveel taken nog geen bouwstaat of activiteit hebben (migratie 158), boven de blokken.
+    function koppelInfo() {
+        var el = document.getElementById("pls-koppel-info");
+        if (!el) return;
+        var zonderB = [], zonderA = [];
+        doc.blokken.forEach(function (b) { b.taken.forEach(function (t) { var n = t.naam || t.code; if (!t.bouwstaat) zonderB.push(n); if (!t.activiteit) zonderA.push(n); }); });
+        if (!zonderB.length && !zonderA.length) { el.hidden = true; return; }
+        el.hidden = false;
+        var titel = (zonderB.length ? zonderB.length + (zonderB.length === 1 ? " taak zonder bouwstaat" : " taken zonder bouwstaat") : "") + (zonderB.length && zonderA.length ? ", " : "") + (zonderA.length ? zonderA.length + (zonderA.length === 1 ? " taak zonder activiteit" : " taken zonder activiteit") : "") + ".";
+        var namen = zonderB.concat(zonderA.filter(function (n) { return zonderB.indexOf(n) < 0; }));
+        var lijst = namen.slice(0, 6).join(", ") + (namen.length > 6 ? " en " + (namen.length - 6) + " andere" : "");
+        el.querySelector("[data-tekst]").innerHTML = "<b>" + esc(titel) + "</b> Zonder bouwstaat kan geen schijf of mijlpaal automatisch aan de taak hangen; zonder activiteit volgt de uitvoerder niet uit het contract. <em>" + esc(lijst) + "</em>";
+        el.title = namen.join(", ");
+    }
     function render() {
         if (!doc.blokken.length) host.innerHTML = "<div class=\"gl-v2-section-card gl-v2-pls-leeg is-big\"><i class=\"ph ph-stack\" aria-hidden=\"true\"></i><b>Nog geen blokken</b><span>Een blok is een fase van de planning, bijvoorbeeld Fundering of Ruwbouw. Voeg er één toe en zet er taken in.</span></div>";
         else host.innerHTML = doc.blokken.map(blokHtml).join("");
         if (window.GlV2Select && window.GlV2Select.init) window.GlV2Select.init(host);
         toonProef();
+        koppelInfo();
     }
     // In-place verversen na een proefdraai of naamwijziging, zonder focus te verliezen
     function verversNamen() {
@@ -210,7 +242,7 @@
                 return {
                     code: b.code, naam: b.naam, herhaling: b.herhaling, volgtVorigeVerdieping: b.herhaling === 1 && b.volgt, voorwaardeVariabele: v[0] || null, voorwaardeWaarde: v[1] || null,
                     taken: b.taken.map(function (t) {
-                        return { code: t.code, naam: t.naam, beschrijving: t.beschrijving, duur: t.duur, estafette: t.estafette, estafetteWacht: t.estafette ? t.wacht : 0, voorwaarde: t.voorwaarde || null,
+                        return { code: t.code, naam: t.naam, beschrijving: t.beschrijving, duur: t.duur, estafette: t.estafette, estafetteWacht: t.estafette ? t.wacht : 0, voorwaarde: t.voorwaarde || null, bouwstaatId: t.bouwstaat ? parseInt(t.bouwstaat, 10) : null, activityId: t.activiteit ? parseInt(t.activiteit, 10) : null,
                             voorgangers: t.voorg.map(function (v2) { return { code: v2.code, type: v2.type, wachtDagen: v2.lag }; }) };
                     })
                 };
@@ -222,7 +254,7 @@
         fetch(root.getAttribute("data-proef-url"), {
             method: "POST", credentials: "same-origin",
             headers: { "Content-Type": "application/json", "RequestVerificationToken": token(), "X-Requested-With": "XMLHttpRequest" },
-            body: JSON.stringify({ sjabloon: payload(), woningen: woningen, verdiepingen: verdiepingen })
+            body: JSON.stringify({ sjabloon: payload(), woningen: woningen, verdiepingen: verdiepingen, kelder: kelder === 1 })
         }).then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
           .then(function (u) { if (nr !== volgnr) return; proef = u; toonProef(); })
           .catch(function () { if (nr === volgnr) { proef = null; toonProef(true); } });
@@ -240,7 +272,15 @@
         // Start per taak en meta per blok, in de lijst zelf
         host.querySelectorAll("[data-start-van]").forEach(function (el) { el.innerHTML = ""; });
         host.querySelectorAll("[data-meta]").forEach(function (el) { var bi = parseInt(el.getAttribute("data-meta"), 10), b = doc.blokken[bi]; el.textContent = b.taken.length + (b.taken.length === 1 ? " taak" : " taken"); });
+        host.querySelectorAll("[data-taak-rij]").forEach(function (r) { r.classList.remove("is-off"); });
         if (p) {
+            // Taken die in deze proef wegvallen (kelder, bouwlaag, daktype): grijs, start "—"
+            var inProef = {};
+            p.taken.forEach(function (t) { inProef[String(t.code).toUpperCase()] = 1; });
+            host.querySelectorAll("[data-taak-rij]").forEach(function (r) {
+                var st = r.querySelector("[data-start-van]"), c = st ? String(st.getAttribute("data-start-van")).toUpperCase() : "";
+                if (c && !inProef[c]) { r.classList.add("is-off"); st.textContent = "—"; st.title = "Valt weg in deze proef"; }
+            });
             p.taken.forEach(function (t) {
                 host.querySelectorAll("[data-start-van=\"" + t.code + "\"]").forEach(function (el) { el.innerHTML = "dag " + t.start + (t.kritiek ? " <b class=\"gl-v2-pls-k\" title=\"Op het kritieke pad\">K</b>" : ""); });
             });
@@ -266,6 +306,10 @@
         p.blokken.forEach(function (pb) {
             var b = doc.blokken.filter(function (x) { return x.code === pb.code; })[0] || {};
             html += "<div class=\"gl-v2-pls-pr\"><span class=\"gl-v2-pls-pn\">" + esc(pb.naam) + (b.voorwaarde ? "<i>voorwaarde</i>" : "") + (b.herhaling === 1 ? "<i>× verd.</i>" : (b.herhaling === 2 ? "<i>per laag</i>" : "")) + "</span>" + balk(pb.start, pb.einde, p.werkdagen) + "<span class=\"gl-v2-pls-pd\">" + pb.duur + " d</span></div>";
+            // Per bouwlaag (deelfase) en de eenmalige taken, ingesprongen onder het blok
+            (pb.delen || []).forEach(function (d) {
+                html += "<div class=\"gl-v2-pls-pr is-deel\"><span class=\"gl-v2-pls-pn\">" + esc(d.naam) + "</span>" + balk(d.start, d.einde, p.werkdagen) + "<span class=\"gl-v2-pls-pd\">" + d.duur + " d</span></div>";
+            });
         });
         document.getElementById("pls-vb-blokken").innerHTML = html || "<div class=\"gl-v2-pls-geen\">Nog niets om te tonen.</div>";
         var crit = document.getElementById("pls-vb-crit");
@@ -287,18 +331,19 @@
             tekst("pls-ct-sub", p.meldingen.length + (p.meldingen.length === 1 ? " aandachtspunt" : " aandachtspunten"));
         }
     }
-    function segment(hostId, waarden, huidig, zet) {
+    function segment(hostId, waarden, huidig, zet, labels) {
         var el = document.getElementById(hostId);
-        el.innerHTML = waarden.map(function (n) { return "<button type=\"button\" data-n=\"" + n + "\" aria-pressed=\"" + (n === huidig ? "true" : "false") + "\" class=\"" + (n === huidig ? "is-active" : "") + "\">" + n + "</button>"; }).join("");
+        el.innerHTML = waarden.map(function (n, i) { return "<button type=\"button\" data-n=\"" + n + "\" aria-pressed=\"" + (n === huidig ? "true" : "false") + "\" class=\"" + (n === huidig ? "is-active" : "") + "\">" + (labels ? labels[i] : n) + "</button>"; }).join("");
         el.onclick = function (e) {
             var b = e.target.closest("[data-n]"); if (!b) return;
             zet(parseInt(b.getAttribute("data-n"), 10));
-            segment(hostId, waarden, parseInt(b.getAttribute("data-n"), 10), zet);
+            segment(hostId, waarden, parseInt(b.getAttribute("data-n"), 10), zet, labels);
             doeProef();
         };
     }
     segment("pls-seg-woningen", [1, 2, 3, 4], woningen, function (n) { woningen = n; });
     segment("pls-seg-verdiepingen", [1, 2, 3], verdiepingen, function (n) { verdiepingen = n; });
+    segment("pls-seg-kelder", [1, 0], kelder, function (n) { kelder = n; }, ["Met", "Zonder"]);
     document.getElementById("pls-uitleg-kop").addEventListener("click", function () {
         var kop = document.getElementById("pls-uitleg-kop"), lijst = document.getElementById("pls-uitleg-lijst"), open = lijst.hidden;
         lijst.hidden = !open; kop.setAttribute("aria-expanded", open ? "true" : "false");
@@ -337,7 +382,9 @@
             markDirty(); render(); return;
         }
         if (f === "b-voorwaarde") blokVan(e.target).voorwaarde = e.target.value;
-        else if (f === "t-voorwaarde") { var tw = taakVan(e.target); if (tw) tw.voorwaarde = e.target.value; }
+        else if (f === "t-voorwaarde") { var tw = taakVan(e.target); if (tw) tw.voorwaarde = e.target.value; markeer(e.target, "is-cond", !!e.target.value); }
+        else if (f === "t-bouwstaat") { var tb = taakVan(e.target); if (tb) tb.bouwstaat = e.target.value; markeer(e.target, "is-none", !e.target.value); koppelInfo(); }
+        else if (f === "t-activiteit") { var ta = taakVan(e.target); if (ta) ta.activiteit = e.target.value; markeer(e.target, "is-none", !e.target.value); koppelInfo(); }
         else if (f === "b-herhaling") { var b = blokVan(e.target); b.herhaling = parseInt(e.target.value, 10) || 0; if (b.herhaling !== 1) b.volgt = false; render(); }
         else if (f === "b-volgt") blokVan(e.target).volgt = e.target.checked;
         else return;
@@ -395,6 +442,8 @@
             b.taken.forEach(function (x) { if (x.code && x !== t) items.push({ code: x.code, n: x.naam || x.code }); });
             // Een taak in een blok dat per verdieping terugkomt kan ook als "dezelfde taak in de vorige bouwlaag" voorganger zijn (bv. de afdek van de vorige bouwlaag).
             if (b.herhaling >= 1 && eigen.herhaling >= 1) b.taken.forEach(function (x) { if (x.code) items.push({ code: "VORIGE:" + x.code, n: "Vorige bouwlaag: " + (x.naam || x.code) }); });
+            // Dezelfde taak in de eerste bouwlaag, vanuit elke taak (bv. gevelmetselwerk start na het metselwerk van de eerste bouwlaag).
+            if (b.herhaling >= 1) b.taken.forEach(function (x) { if (x.code && x !== t) items.push({ code: "EERSTE:" + x.code, n: "Eerste bouwlaag: " + (x.naam || x.code) }); });
             items = items.filter(function (x) { return !gebruikt[x.code.toUpperCase()] && (!q || x.n.toLowerCase().indexOf(q) >= 0 || x.code.toLowerCase().indexOf(q) >= 0); });
             if (!items.length) return;
             html += "<div class=\"gl-v2-pls-pg\">" + esc(b.naam) + "</div>" + items.map(function (x) {

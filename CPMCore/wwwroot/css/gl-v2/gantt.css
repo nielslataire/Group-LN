@@ -63,6 +63,12 @@
 .gl-v2 .gl-v2-gantt-bar:focus-visible { outline: 2px solid var(--gl-v2-gold, #C9A96E); outline-offset: 2px; }
 .gl-v2 .gl-v2-gantt-progress { position: absolute; left: 0; top: 0; bottom: 0; background: var(--gl-v2-primary, #00532D); border-radius: 4px 0 0 4px; }
 .gl-v2 .gl-v2-gantt-bar.is-done { background: var(--gl-v2-primary, #00532D); }
+/* Status (59i): voorbij het einde en niet afgevinkt = goud gearceerd; loopt vandaag = donkergroen; de schijf is een genummerd muntje aan het einde van de balk */
+.gl-v2 .gl-v2-gantt-bar.is-late { background: repeating-linear-gradient(135deg, #E9D3A6 0 4px, #F6EEDC 4px 8px); box-shadow: inset 0 0 0 1px var(--gl-v2-gold, #C9A96E); }
+.gl-v2 .gl-v2-gantt-bar.is-now { background: var(--gl-v2-primary, #00532D); box-shadow: 0 0 0 2px rgba(0, 83, 45, .25); }
+.gl-v2 .gl-v2-gantt-coin { position: absolute; z-index: 3; width: 16px; height: 16px; border-radius: 8px; background: var(--gl-v2-surface, #fff); box-shadow: inset 0 0 0 1.5px var(--gl-v2-muted, #7a8a78); font: 700 8.5px/16px var(--gl-v2-font-sans); color: var(--gl-v2-muted-soft, #4A5B48); text-align: center; pointer-events: none; }
+.gl-v2 .gl-v2-gantt-coin.is-due { background: var(--gl-v2-gold, #C9A96E); box-shadow: none; color: #fff; }
+.gl-v2 .gl-v2-gantt-coin.is-done { background: var(--gl-v2-primary, #00532D); box-shadow: none; color: #fff; }
 .gl-v2 .gl-v2-gantt-bar.is-critical {
     background: repeating-linear-gradient(135deg, #B05252 0 5px, #C57272 5px 10px);
 }

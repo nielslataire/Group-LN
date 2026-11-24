@@ -3,9 +3,10 @@
 @model CPMCore.Models.Traject.TrajectSjabloonListVm
 @inject IPermissionService PermissionService
 @*
-    gl-v2 — Instellingen › Trajectsjablonen (design-handoff punt 56d): gegroepeerd per projecttype, het standaardsjabloon gemarkeerd, en sjablonen zonder mijlpalen of zonder gebruik
-    meteen zichtbaar ("nog geen", "niet gebruikt"). Dezelfde acties als de klassieke pagina (Nieuw, Bewerken, Verwijderen). Verwijderen van een sjabloon in gebruik deactiveert het
-    (zie TrajectSjabloonAdminController.Verwijderen); de tekst onderaan zegt dat.
+    gl-v2 — Instellingen › Sjablonen › Traject: de lijst (design-handoff 67a). Eén vlakke lijst met per sjabloon: projecttype, fases, mijlpalen ("15 · 7 automatisch"), geschatte duur
+    (de langste keten van streefdatums), standaard-label, waar het gebruikt wordt (projectsjablonen en projecten), wie het laatst wijzigde, status en ⋯.
+    Het ⋯-menu is het gedeelde .gl-v2-menu#sj-lijst-menu, gevuld door gl-v2-instellingen-sjablonen-lijst.js; de acties sturen verborgen formulieren door met requestSubmit() zodat de
+    bevestigingsmodal (data-bv-*) werkt. Verwijderen kan enkel als geen projectsjabloon en geen project het sjabloon gebruikt; anders zet je het op inactief.
 *@
 @{
     ViewData["Title"] = "Trajectsjablonen";
@@ -14,12 +15,14 @@
     ViewData["BackUrl"] = Url.Action("Index", "Instellingen");
     var canWrite = PermissionService.HasWrite(PermissionCodes.SettingsTrajectSjablonen);
     var canDelete = PermissionService.HasDelete(PermissionCodes.SettingsTrajectSjablonen);
-    var groepen = new[] { (Type: (int?)1, Naam: "Woonproject"), (Type: (int?)2, Naam: "Commercieel"), (Type: (int?)null, Naam: "Alle projecttypes") };
+    var nl = new System.Globalization.CultureInfo("nl-BE");
+    string TypeNaam(int? t) => t == 1 ? "Woonproject" : t == 2 ? "Commercieel" : "Alle types";
 }
 @section PageStyle
 {
     <link rel="stylesheet" href="~/css/gl-v2-instellingen-automatisatie.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-instellingen-sjabloontabs.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/gl-v2-instellingen-schijvensjabloon.css" asp-append-version="true" />
 }
 @section PageActions
 {
@@ -29,8 +32,13 @@
     }
 }
 
-<div class="gl-v2-auto">
+<div class="gl-v2-auto gl-v2-sjs-lijst">
     @await Html.PartialAsync("GlV2/_SjabloonTabs", "traject")
+
+    <div class="gl-v2-notice gl-v2-notice-compact">
+        <i class="ph ph-info" aria-hidden="true"></i>
+        <span>Een trajectsjabloon is de standaard reeks <b>fases en mijlpalen</b> van een project, van grondoptie tot nazorg. Mijlpalen vink je handmatig af of CPM detecteert ze zelf (planning, verkoop, documenten, aktes). Je past het toe bij een nieuw project of via een projectsjabloon.</span>
+    </div>
 
     <section class="gl-v2-section-card">
         @if (Model.Sjablonen.Count == 0)
@@ -42,42 +50,54 @@
         }
         else
         {
-            <div class="gl-v2-auto-head gl-v2-auto-grid--tsa"><span>Naam</span><span class="r">Fases</span><span class="r">Mijlpalen</span><span class="r">In gebruik</span><span>Status</span><span></span></div>
-            @foreach (var g in groepen)
+            <div class="gl-v2-auto-head gl-v2-auto-grid--tsa"><span>Naam</span><span>Projecttype</span><span>Fases</span><span>Mijlpalen</span><span>Duur</span><span>Standaard</span><span>Gebruikt in</span><span>Gewijzigd</span><span>Status</span><span></span></div>
+            @foreach (var s in Model.Sjablonen.OrderBy(x => x.ProjectType ?? 99).ThenByDescending(x => x.IsStandaard).ThenBy(x => x.Naam))
             {
-                var lijst = Model.Sjablonen.Where(s => s.ProjectType == g.Type).ToList();
-                if (!lijst.Any()) continue;
-                <div class="gl-v2-auto-group"><span>@g.Naam</span><span class="c">@lijst.Count</span></div>
-                @foreach (var s in lijst)
-                {
-                    var fases = s.Fases?.Count ?? 0;
-                    var mijlpalen = s.Fases?.Sum(f => f.Mijlpalen?.Count ?? 0) ?? 0;
-                    Model.AantalTrajectenPerSjabloon.TryGetValue(s.Id, out var gebruik);
-                    <div class="gl-v2-auto-row gl-v2-auto-grid--tsa gl-v2-listrow @(s.IsActief ? "" : "is-muted-row")" data-row-href="@Url.Action("Bewerken", new { id = s.Id })">
-                        <a class="gl-v2-auto-who" href="@Url.Action("Bewerken", new { id = s.Id })"><span class="t">@s.Naam</span>@if (s.IsStandaard) { <span class="gl-v2-badge is-info"><i class="ph ph-star-fill" aria-hidden="true"></i>standaard</span> }</a>
-                        <span class="gl-v2-auto-cell r">@fases</span>
-                        <span class="gl-v2-auto-cell r @(mijlpalen == 0 ? "is-warn" : "")">@(mijlpalen == 0 ? "nog geen" : mijlpalen.ToString())</span>
-                        <span class="gl-v2-auto-cell r @(gebruik == 0 ? "is-muted" : "")">@(gebruik == 0 ? "niet gebruikt" : gebruik.ToString())</span>
-                        <span><span class="gl-v2-badge @(s.IsActief ? "is-positive" : "is-inactive")">@(s.IsActief ? "Actief" : "Inactief")</span></span>
-                        <span class="gl-v2-auto-acts"><span class="gl-v2-rowact">
-                            <i class="ph ph-caret-right gl-v2-rowact-chev" aria-hidden="true"></i>
-                            <span class="gl-v2-rowact-btns">
-                                <a class="gl-v2-icon-btn" href="@Url.Action("Bewerken", new { id = s.Id })" title="Bewerken" aria-label="Sjabloon @s.Naam bewerken"><i class="ph ph-pencil-simple" aria-hidden="true"></i></a>
-                                @if (canDelete)
-                                {
-                                    <form method="post" action="@Url.Action("Verwijderen", new { id = s.Id })" data-bv-titel="Sjabloon verwijderen?" data-bv-tekst="Sjabloon “@s.Naam” verwijderen? Als er trajecten aan hangen, wordt het gedeactiveerd in plaats van verwijderd." data-bv-ok="Verwijderen" data-bv-tone="danger" data-bv-icon="ph-trash">
-                                        @Html.AntiForgeryToken()
-                                        <button type="submit" class="gl-v2-icon-btn is-danger" title="Verwijderen" aria-label="Sjabloon @s.Naam verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button>
-                                    </form>
-                                }
-                            </span>
-                        </span></span>
-                    </div>
-                }
+                var fases = s.Fases?.Count ?? 0;
+                var mijlpalen = s.Fases?.Sum(f => f.Mijlpalen?.Count ?? 0) ?? 0;
+                Model.AantalTrajectenPerSjabloon.TryGetValue(s.Id, out var projecten);
+                Model.Info.TryGetValue(s.Id, out var info);
+                var psj = info?.GebruiktIn ?? new List<string>();
+                var gebruikt = psj.Count + projecten;
+                var maanden = info == null || info.DuurDagen <= 0 ? 0 : (int)Math.Round(info.DuurDagen / 30.4);
+                <div class="gl-v2-auto-row gl-v2-auto-grid--tsa gl-v2-listrow @(s.IsActief ? "" : "is-muted-row")" data-row-href="@Url.Action("Bewerken", new { id = s.Id })" data-id="@s.Id" data-naam="@s.Naam" data-actief="@(s.IsActief ? "1" : "0")" data-gebruikt="@gebruikt">
+                    <a class="gl-v2-auto-who gl-v2-sjs-wie" href="@Url.Action("Bewerken", new { id = s.Id })"><span class="t">@s.Naam</span>@if (!string.IsNullOrWhiteSpace(s.Omschrijving)) { <span class="o">@s.Omschrijving</span> } else { <span class="o is-leeg">geen omschrijving</span> }</a>
+                    <span class="gl-v2-auto-cell is-muted">@TypeNaam(s.ProjectType)</span>
+                    <span class="gl-v2-auto-cell">@fases</span>
+                    <span class="gl-v2-auto-cell @(mijlpalen == 0 ? "is-warn" : "")">@if (mijlpalen == 0) { <text>nog geen</text> } else { <text>@mijlpalen</text><span class="gl-v2-sjs-verd"> · @(info?.AantalAutomatisch ?? 0) automatisch</span> }</span>
+                    <span class="gl-v2-auto-cell is-muted">@(maanden > 0 ? "± " + maanden + " mnd" : "—")</span>
+                    <span>@if (s.IsStandaard) { <span class="gl-v2-badge is-positive">standaard</span> } else { <span class="gl-v2-auto-cell is-muted">—</span> }</span>
+                    <span class="gl-v2-auto-cell is-muted gl-v2-sjs-meer">@if (gebruikt > 0) { <text>@(psj.Count > 0 ? "Projectsjabloon " + string.Join(", ", psj.Take(2)) + (psj.Count > 2 ? $" +{psj.Count - 2}" : "") : "")@(psj.Count > 0 && projecten > 0 ? " · " : "")@(projecten > 0 ? projecten + (projecten == 1 ? " project" : " projecten") : "")</text> } else { <text>niet gebruikt</text> }</span>
+                    <span class="gl-v2-auto-cell is-muted">@(info == null ? "—" : info.GewijzigdOp.ToLocalTime().ToString("dd/MM/yyyy", nl))@(string.IsNullOrEmpty(info?.GewijzigdDoor) ? "" : " · " + info!.GewijzigdDoor)</span>
+                    <span><span class="gl-v2-badge @(s.IsActief ? "is-positive" : "is-inactive")">@(s.IsActief ? "Actief" : "Inactief")</span></span>
+                    <span class="gl-v2-auto-acts"><span class="gl-v2-rowact">
+                        <i class="ph ph-caret-right gl-v2-rowact-chev" aria-hidden="true"></i>
+                        <span class="gl-v2-rowact-btns">
+                            <button type="button" class="gl-v2-icon-btn js-gl-v2-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="sj-lijst-menu" aria-label="Acties voor @s.Naam" title="Meer acties"><i class="ph ph-dots-three" aria-hidden="true"></i></button>
+                        </span>
+                    </span></span>
+                    @if (canWrite)
+                    {
+                        <form method="post" action="@Url.Action("Dupliceren", new { id = s.Id })" class="gl-v2-sjs-vorm" data-actie="dupliceer">@Html.AntiForgeryToken()</form>
+                        <form method="post" action="@Url.Action("Actief", new { id = s.Id, actief = !s.IsActief })" class="gl-v2-sjs-vorm" data-actie="actief">@Html.AntiForgeryToken()</form>
+                    }
+                    @if (canDelete && gebruikt == 0)
+                    {
+                        <form method="post" action="@Url.Action("Verwijderen", new { id = s.Id })" class="gl-v2-sjs-vorm" data-actie="verwijder" data-bv-titel="Sjabloon verwijderen?" data-bv-tekst="Sjabloon “@s.Naam” verwijderen? Projecten die het al gebruikten houden hun fases en mijlpalen. Dit kan je niet ongedaan maken." data-bv-ok="Verwijderen" data-bv-tone="danger" data-bv-icon="ph-trash">@Html.AntiForgeryToken()</form>
+                    }
+                </div>
             }
-            <div class="gl-v2-auto-foot">Een sjabloon in gebruik kan niet verwijderd worden; CPM zet het dan op inactief.</div>
+            <div class="gl-v2-auto-foot">@Model.Sjablonen.Count @(Model.Sjablonen.Count == 1 ? "sjabloon" : "sjablonen") · “standaard” = wordt voorgesteld bij een nieuw project van dat type · ⋯ = bewerken, dupliceren, inactief zetten of verwijderen (enkel als het nergens gebruikt is)</div>
         }
     </section>
 </div>
 
+<div class="gl-v2-menu" id="sj-lijst-menu" role="menu" aria-label="Acties voor dit sjabloon"></div>
+
 @await Html.PartialAsync("GlV2/_BevestigModal")
+
+@section PageScripts
+{
+    <script>window.SjLijst = { canWrite: @(canWrite ? "true" : "false"), canDelete: @(canDelete ? "true" : "false") };</script>
+    <script src="~/js/gl-v2-instellingen-sjablonen-lijst.js" asp-append-version="true"></script>
+}

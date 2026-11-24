@@ -53,6 +53,9 @@ public class PaymentGroupEditStageV2
     public string? PlanningCode { get; set; }
     /// <summary>Bij een herhaling per verdieping: de verdieping.</summary>
     public int? PlanningVolgnr { get; set; }
+    /// <summary>De bouwstaat waarop de schijf wacht en de regel (0 = voltooid, 1 = gestart); migratie 158.</summary>
+    public int? BouwstaatId { get; set; }
+    public byte BouwstaatRegel { get; set; }
     /// <summary>Gefactureerd of per eenheid bereikt: vast (niet verwijderen, niet verplaatsen, % niet verlagen).</summary>
     public bool IsLocked { get; set; }
     /// <summary>Gemarkeerd als kopie tot de gebruiker ze aanpast (26d).</summary>
@@ -107,5 +110,7 @@ public class PaymentGroupEditV2Post
     public List<bool> StageInvoicable { get; set; } = new();
     public List<string?> StagePlanningCodes { get; set; } = new();
     public List<string?> StagePlanningVolgnrs { get; set; } = new();
+    public List<string?> StageBouwstaatIds { get; set; } = new();
+    public List<string?> StageBouwstaatRegels { get; set; } = new();
     public List<int> UnitIds { get; set; } = new();
 }

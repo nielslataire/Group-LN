@@ -268,7 +268,7 @@
 
     function changed() { renumber(); refreshState(); refreshSelection(); markDirty(); }
 
-    function newRow(name, pct, isCopy, code, volgnr) {
+    function newRow(name, pct, isCopy, code, volgnr, bouwstaatId, bouwstaatRegel) {
         var frag = rowTpl.content.cloneNode(true);
         var li = frag.firstElementChild;
         nameOf(li).value = name || "";
@@ -276,6 +276,9 @@
         var codeEl = li.querySelector('input[name="StagePlanningCodes"]'), volgEl = li.querySelector('input[name="StagePlanningVolgnrs"]');
         if (codeEl) codeEl.value = code || "";
         if (volgEl) volgEl.value = volgnr ? String(volgnr) : "";
+        var bsEl = li.querySelector('input[name="StageBouwstaatIds"]'), rgEl = li.querySelector('input[name="StageBouwstaatRegels"]');
+        if (bsEl) bsEl.value = bouwstaatId ? String(bouwstaatId) : "";
+        if (rgEl) rgEl.value = bouwstaatRegel ? String(bouwstaatRegel) : "0";
         pctInput(li).value = pct == null || isNaN(pct) ? "" : fmtPct(pct);
         if (isCopy) { li.classList.add("is-copy"); var note = $(".is-copy-note", li); if (note) note.hidden = false; }
         return li;
@@ -490,7 +493,7 @@
             if (!sjVoorstel) return;
             // Alle (niet-vaste) schijven worden vervangen; de volgorde van het voorstel is de volgorde van de schijven, de laatste is de eindafrekening.
             rows().filter(function (r) { return !isLocked(r); }).forEach(function (r) { r.remove(); });
-            sjVoorstel.schijven.forEach(function (s) { rowsEl.appendChild(newRow(s.naam, s.percentage, false, s.planningCode, s.planningVolgnr)); });
+            sjVoorstel.schijven.forEach(function (s) { rowsEl.appendChild(newRow(s.naam, s.percentage, false, s.planningCode, s.planningVolgnr, s.bouwstaatId, s.bouwstaatRegel)); });
             bsModal(sjModal).hide();
             changed();
         });

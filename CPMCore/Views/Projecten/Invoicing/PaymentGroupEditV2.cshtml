@@ -186,6 +186,8 @@
                         <input type="hidden" name="StageInvoicable" value="@(s.Invoicable ? "true" : "false")" />
                         <input type="hidden" name="StagePlanningCodes" value="@s.PlanningCode" />
                         <input type="hidden" name="StagePlanningVolgnrs" value="@(s.PlanningVolgnr?.ToString())" />
+                        <input type="hidden" name="StageBouwstaatIds" value="@(s.BouwstaatId?.ToString())" />
+                        <input type="hidden" name="StageBouwstaatRegels" value="@s.BouwstaatRegel" />
                         <span class="gl-v2-pg-col-handle">
                             @if (s.IsLocked)
                             {
@@ -284,6 +286,8 @@
         <input type="hidden" name="StageInvoicable" value="false" />
         <input type="hidden" name="StagePlanningCodes" value="" />
         <input type="hidden" name="StagePlanningVolgnrs" value="" />
+        <input type="hidden" name="StageBouwstaatIds" value="" />
+        <input type="hidden" name="StageBouwstaatRegels" value="0" />
         <span class="gl-v2-pg-col-handle"><span class="gl-v2-pg-handle" draggable="true" role="button" tabindex="0" aria-label="Sleep om te herschikken"><i class="ph ph-dots-six-vertical" aria-hidden="true"></i></span></span>
         <span class="gl-v2-pg-col-check"><input type="checkbox" class="gl-v2-pg-sel" aria-label="Schijf selecteren" /></span>
         <span class="gl-v2-pg-col-num"><span class="gl-v2-pg-num">0</span></span>

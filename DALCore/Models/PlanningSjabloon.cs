@@ -63,6 +63,12 @@ public partial class PlanningSjabloonTaak
     /// <summary>Voorwaarde van de taak, bv. "laag:eerste,kelder:nee" (zie PlanningSjabloonUitrol.TaakVoorwaarden); leeg = altijd.</summary>
     public string Voorwaarde { get; set; }
 
+    /// <summary>De bouwstaat die de taak oplevert (migratie 158).</summary>
+    public int? BouwstaatId { get; set; }
+
+    /// <summary>De activiteit (discipline) van de taak (migratie 158).</summary>
+    public int? ActivityId { get; set; }
+
     public virtual PlanningSjabloonBlok Blok { get; set; }
     public virtual ICollection<PlanningSjabloonVoorganger> Voorgangers { get; set; } = new List<PlanningSjabloonVoorganger>();
 }

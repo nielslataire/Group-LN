@@ -40,7 +40,7 @@ public class TrajectInstantiationService : ITrajectInstantiationService
             .OrderBy(u => u.Name).Select(u => u.Id).ToListAsync();
 
         var anchorBase = dto.Startdatum
-                         ?? project.StartDateConstruction
+                         ?? project.ProjectStartDate
                          ?? DateOnly.FromDateTime(DateTime.Today);
 
         var traject = new Projecttraject
@@ -49,7 +49,7 @@ public class TrajectInstantiationService : ITrajectInstantiationService
             TrajectSjabloonId = sjabloon.Id,
             Naam = string.IsNullOrWhiteSpace(dto.Naam) ? (sjabloon.Naam ?? "Projecttraject") : dto.Naam!.Trim(),
             Status = (int)TrajectStatus.Lopend,
-            GestartOp = DateOnly.FromDateTime(DateTime.Today),
+            GestartOp = anchorBase,
             CreatedByUserId = userId,
             CreatedDate = DateTime.UtcNow
         };
@@ -91,7 +91,7 @@ public class TrajectInstantiationService : ITrajectInstantiationService
             }
         }
 
-        ResolveDoeldatums(traject.Mijlpalen.ToList(), alleSjabloonMijlpalen, anchorBase);
+        ResolveDoeldatums(traject.Mijlpalen.ToList(), alleSjabloonMijlpalen, anchorBase, await ServiceCore.Planning.PlanningService.UitvoeringsDeadline(_db, project));
         SetFasePlanning(traject);
 
         _db.Projecttraject.Add(traject);
@@ -162,7 +162,8 @@ public class TrajectInstantiationService : ITrajectInstantiationService
             traject.Mijlpalen.Where(m => m.UnitId != null && !string.IsNullOrWhiteSpace(m.Code))
                              .Select(m => (m.Code!.ToUpperInvariant(), m.UnitId!.Value)));
 
-        var anchorBase = traject.GestartOp ?? DateOnly.FromDateTime(DateTime.Today);
+        var project = await _db.Project.AsNoTracking().FirstAsync(p => p.ProjectId == traject.ProjectId);
+        var anchorBase = project.ProjectStartDate ?? traject.GestartOp ?? DateOnly.FromDateTime(DateTime.Today);
         var alleSjabloonMijlpalen = sjabloon.Fases.SelectMany(f => f.Mijlpalen).OrderBy(m => m.Volgorde).ToList();
         var sjabloonById = alleSjabloonMijlpalen.ToDictionary(x => x.Id);
         var sjabloonByCode = alleSjabloonMijlpalen
@@ -245,7 +246,7 @@ public class TrajectInstantiationService : ITrajectInstantiationService
             return bijgewerkt;
         }
 
-        ResolveDoeldatums(traject.Mijlpalen.ToList(), alleSjabloonMijlpalen, anchorBase);
+        ResolveDoeldatums(traject.Mijlpalen.ToList(), alleSjabloonMijlpalen, anchorBase, await ServiceCore.Planning.PlanningService.UitvoeringsDeadline(_db, project));
 
         await _db.SaveChangesAsync();
         foreach (var m in toegevoegd)
@@ -429,7 +430,10 @@ public class TrajectInstantiationService : ITrajectInstantiationService
         }
 
         if (toegevoegd.Count > 0)
-            ResolveDoeldatums(traject.Mijlpalen.ToList(), smAlle, traject.GestartOp ?? DateOnly.FromDateTime(DateTime.Today));
+        {
+            var syncProject = await _db.Project.AsNoTracking().FirstAsync(p => p.ProjectId == traject.ProjectId);
+            ResolveDoeldatums(traject.Mijlpalen.ToList(), smAlle, syncProject.ProjectStartDate ?? traject.GestartOp ?? DateOnly.FromDateTime(DateTime.Today), await ServiceCore.Planning.PlanningService.UitvoeringsDeadline(_db, syncProject));
+        }
         await _db.SaveChangesAsync();
         foreach (var m in toegevoegd)
             _db.MijlpaalHistoriek.Add(new MijlpaalHistoriek
@@ -496,7 +500,7 @@ public class TrajectInstantiationService : ITrajectInstantiationService
     /// mijlpalen wordt eerst de anker-mijlpaal van dezelfde eenheid gezocht, dan de projectniveau-versie.
     /// Meerdere passes lossen ketens op; niet-opgeloste ankers vallen terug op de basisdatum + offset.
     /// </summary>
-    private static void ResolveDoeldatums(List<Mijlpaal> mijlpalen, List<TrajectSjabloonMijlpaal> sjabloon, DateOnly anchorBase)
+    private static void ResolveDoeldatums(List<Mijlpaal> mijlpalen, List<TrajectSjabloonMijlpaal> sjabloon, DateOnly anchorBase, DateOnly? uitvoeringDeadline = null)
     {
         var ankerBySjabloonId = sjabloon.ToDictionary(s => s.Id, s => (s.DoeldatumAnkerCode, s.DoeldatumOffsetDagen));
         var byCode = mijlpalen.Where(m => !string.IsNullOrWhiteSpace(m.Code))
@@ -525,6 +529,12 @@ public class TrajectInstantiationService : ITrajectInstantiationService
 
                 var (ankerCode, offset) = anker;
                 int off = offset ?? 0;
+
+                if (ankerCode != null && ankerCode.Equals(TrajectRecalculationService.AnkerUitvoeringDeadline, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (uitvoeringDeadline is DateOnly ud) { m.DoeldatumBerekend = ud.AddDays(off); changed = true; }
+                    continue;
+                }
 
                 if (string.IsNullOrWhiteSpace(ankerCode) || ankerCode.Equals(AnkerProjectCreated, StringComparison.OrdinalIgnoreCase))
                 {

@@ -5,14 +5,14 @@ parent: trajectsjablonen-overzicht
 treeOrder: 1
 device: Desktop
 minutes: 8
-updated: 2026-10-25
+updated: 2026-11-24
 newsTag: Nieuw
 screens: instellingen-trajectsjablonen-bewerken
 synonyms: sjabloon, fase, mijlpaal, technische code, streefdatum, anker, actie, trigger, bron, handmatig, automatisch, tijdlijn, simulatie, controle
 description: fases en mijlpalen opbouwen, de streefdatum en acties instellen, en het sjabloon controleren
 related: trajectsjablonen-overzicht
 intro: |
-  In de editor bouw je het traject op. Links staan de fases met hun mijlpalen als boom. Rechts stel je de gekozen fase of mijlpaal in, in vijf genummerde stappen.
+  In de editor bouw je het traject op. Links staan de fases met hun mijlpalen als boom, per fase met het aantal mijlpalen. Rechts van de tabs staat een samenvatting: het aantal fases, mijlpalen en automatische mijlpalen. Rechts stel je de gekozen fase of mijlpaal in, in vijf genummerde stappen.
   Op de tabs **Tijdlijn & simulatie** en **Controle** zie je het resultaat en wat nog niet klopt.
 before: |
   Je hebt schrijfrecht op **Trajectsjablonen**. Je opent de pagina via **Instellingen**, **Trajectsjablonen** en dan **Nieuw sjabloon** of een bestaand sjabloon.
@@ -41,27 +41,27 @@ Bovenaan vul je de **naam**, het **projecttype** en een korte omschrijving in. Z
 ## Fases en mijlpalen
 
 Klik op **Fase toevoegen** voor een nieuwe fase en op **Mijlpaal** onder een fase voor een nieuwe mijlpaal. Klik op een rij om ze rechts in te stellen.
-Een fase heeft een naam, een code, een volgorde en een kleur. Het pijltje klapt een fase in of uit.
+Een fase heeft een naam, een code, een volgorde en een kleur. Het pijltje klapt een fase in of uit. Staat er een rood of goud bolletje bij een fase, dan vraagt iets in die fase aandacht (zie **Controle**). Een mijlpaal die per eenheid geldt, krijgt het label "per eenheid".
 
 ## De mijlpaal in vijf stappen
 
 1. **Wat is deze mijlpaal?** De naam, de technische code, de soort, de verantwoordelijke rol, of ze voor het hele project of per eenheid geldt, en of ze verplicht is vóór de fase kan worden afgerond.
-2. **Wanneer is ze bereikt?** Kies **Handmatig afvinken** of **Automatisch uit CPM**. Bij automatisch kies je de bron en de parameter, bijvoorbeeld het type document.
+2. **Wanneer is ze bereikt?** Kies **Handmatig afvinken** of **Automatisch uit CPM**. Bij automatisch kies je de bron en de parameter, bijvoorbeeld het type document. Eronder staat in een zin wat CPM precies detecteert. Zonder parameter weet CPM dat niet: de controle meldt dat als een rood punt.
 3. **Streefdatum.** Kies het anker en het aantal dagen. Rechts staat de berekende dag en datum voor een project dat vandaag is aangemaakt.
 4. **Acties bij deze mijlpaal.** Klik op **Actie** en kies de gebeurtenis en de actie, zoals een e-mail naar de rol of een taak. De velden verschillen per actie.
 5. **Toelichting.** Deze tekst staat als tooltip op het project.
 
 ## Tijdlijn en simulatie
 
-Kies een fictieve projectstart en bekijk alle mijlpalen op een tijdlijn per fase. Wissel tussen **Dagen na start** en **Datums**. Er wordt niets bewaard.
+Kies een fictieve projectstart (de simulatiedatum). Je ziet één rij per fase met de maanden bovenaan en elke mijlpaal als ruit: een gevulde ruit is automatisch, een witte ruit handmatig. Rechts bovenaan staat de laatste mijlpaal met de geschatte duur. Klik op een ruit om de mijlpaal in **Structuur** te openen. Er wordt niets bewaard.
 
 ## Controle
 
-Hier staan fouten (rood) en aandachtspunten (oker), bijvoorbeeld een mijlpaal zonder naam of code, een dubbele code, een onbekend anker of ankers die rondjes draaien. Klik op een punt om ernaartoe te gaan.
+Hier staan fouten (rood) en aandachtspunten (oker), bijvoorbeeld een mijlpaal zonder naam of code, een dubbele code, een automatische mijlpaal zonder parameter, een onbekend anker of ankers die rondjes draaien. Een mijlpaal die vóór het einde van de vorige fase valt, is een aandachtspunt: dat kan, maar de fases overlappen. Klik op een punt of op **Openen** om ernaartoe te gaan.
 
 ## Opslaan
 
-Klik op **Sjabloon opslaan**. Een fase of mijlpaal zonder naam wordt bij het opslaan weggelaten.
+Klik op **Sjabloon opslaan**. Staat er nog een rood punt in de controle, dan wordt er niets bewaard: je springt naar **Controle** om het op te lossen. Een fase of mijlpaal zonder naam wordt weggelaten, maar de controle meldt ze eerst.
 
 ## Let op
 

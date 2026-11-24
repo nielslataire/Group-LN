@@ -118,7 +118,7 @@
                     <span class="gl-v2-section-card-desc">lonen bouwsector@(sRows.Count > 0 ? $" · {sRows.Count} waarden sinds {sRows.Min(x => x.Jaar)}" : "")</span>
                     @if (canWrite)
                     {
-                        <span class="gl-v2-section-card-meta gl-v2-bwi-card-actions">
+                        <span class="gl-v2-card-acts is-wrap gl-v2-bwi-card-actions">
                             <button type="button" class="gl-v2-btn gl-v2-btn-secondary" data-bwi-add="S"><i class="ph ph-plus" aria-hidden="true"></i>Manueel toevoegen</button>
                             <button type="button" class="gl-v2-btn gl-v2-btn-primary" data-bwi-sync="S"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i>Nu synchroniseren</button>
                         </span>
@@ -228,7 +228,7 @@
                     <h2 class="gl-v2-section-card-title">Indexwaarden per maand</h2>
                     <span class="gl-v2-field-divider"></span>
                     <span class="gl-v2-section-card-desc">basis november 2020 = 100</span>
-                    <span class="gl-v2-section-card-meta gl-v2-bwi-card-actions">
+                    <span class="gl-v2-card-acts is-wrap gl-v2-bwi-card-actions">
                         @if (Model.IPlusIndexen.Any())
                         {
                             <span class="gl-v2-segmented is-sm" role="radiogroup" aria-label="Soort index" data-bwi-grid-switch>
@@ -358,7 +358,7 @@
                     <span class="gl-v2-section-card-desc">één waarde per jaar · @aRows.Count @(aRows.Count == 1 ? "jaar" : "jaren")</span>
                     @if (canWrite)
                     {
-                        <span class="gl-v2-section-card-meta gl-v2-bwi-card-actions">
+                        <span class="gl-v2-card-acts is-wrap gl-v2-bwi-card-actions">
                             <button type="button" class="gl-v2-btn gl-v2-btn-primary" data-bwi-abex-new><i class="ph ph-plus" aria-hidden="true"></i>Nieuw jaar toevoegen</button>
                         </span>
                     }

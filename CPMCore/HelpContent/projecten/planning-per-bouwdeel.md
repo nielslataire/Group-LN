@@ -19,7 +19,7 @@ before: |
   Je hebt schrijfrecht op de planning. Het project heeft woningen of gebouwen, zodat je ze kunt kiezen.
 faq:
   - q: Waar zie ik mijn plannings?
-    a: Bovenaan de pagina staat voor elke planning een tab. De eerste is de hoofdplanning. Klik op een tab om die planning te tonen.
+    a: Bovenaan de pagina staat voor elke planning een tab. De eerste is de hoofdplanning. Klik op een tab om die planning te tonen. Is de hoofdplanning leeg en heeft het project wel een planning voor een gebouw of woning, dan staat er geen tab voor de hoofdplanning. Voeg een planning toe zodra je werken hebt die voor het hele project gelden.
   - q: Kan ik de hoofdplanning verwijderen?
     a: Nee. De hoofdplanning hoort bij het hele project. Je kunt wel haar fases en taken verwijderen.
   - q: Kan een woning in twee plannings zitten?

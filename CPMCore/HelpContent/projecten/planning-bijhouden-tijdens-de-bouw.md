@@ -6,7 +6,7 @@ treeOrder: 6
 role: Projectleider
 device: Desktop · tablet
 minutes: 5
-updated: 2026-11-15
+updated: 2026-11-24
 newsTag: Nieuw
 screens: planning-index
 related: planning-handleiding, taak-datums-en-verantwoordelijke, planning-lezen-en-opvolgen, basisplanning-vastleggen, planning-voortgang-budget
@@ -35,6 +35,10 @@ Klik in de lijst op het rondje voor de naam van de taak. Of kies **Markeren als 
 
 CPM zet de voortgang op 100 % en vult het **Werkelijk einde** in met vandaag. Is er nog geen werkelijke start, dan wordt dat de geplande start. De balk wordt volledig donker en de taak valt uit het kritieke pad.
 Alle taken die op haar wachten rekenen voortaan vanaf dat werkelijk einde.
+
+## Veel taken tegelijk afvinken
+
+Loopt de planning achter op wat er al gebeurd is, kies dan in het gouden kader **Vraagt actie** voor **Afvinken tot vandaag…**. Je ziet de taken die voorbij hun einddatum zijn en nog niet afgevinkt, vinkt uit wat nog niet klaar is en bevestigt. De gekozen taken gaan op 100 %.
 
 ## Een deel van een taak als klaar aanduiden
 

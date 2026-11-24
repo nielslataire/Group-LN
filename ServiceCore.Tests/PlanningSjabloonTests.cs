@@ -263,6 +263,66 @@ public class PlanningSjabloonTests
     }
 
     [Fact]
+    public async Task Een_eenmalige_taak_kan_wachten_op_de_taak_van_de_eerste_bouwlaag()
+    {
+        var (_, sjab, db) = Maak();
+        var dto = new PlanningSjabloonBewerk { Naam = "Gebouw" };
+        var boven = new PlanningSjabloonBewerkBlok { Naam = "Bovenbouw", Herhaling = 2 };
+        boven.Taken.Add(new() { Code = "METSELWERK", Naam = "Metselwerk", Duur = 5, Voorgangers = { new() { Code = "VORIGE:METSELWERK" } } });
+        boven.Taken.Add(new() { Code = "GEVEL", Naam = "Gevelmetselwerk", Duur = 8, Voorwaarde = "laag:eenmalig", Voorgangers = { new() { Code = "EERSTE:METSELWERK" } } });
+        dto.Blokken.Add(boven);
+        var uit = await sjab.Bewaar(dto, "u");
+        Assert.True(uit.Ok, string.Join("; ", uit.Fouten));
+        var terug = (await sjab.Haal(uit.SjabloonId))!;
+        Assert.Equal("EERSTE:METSELWERK", terug.Blokken[0].Taken[1].Voorgangers.Single().Code);
+
+        var rol = PlanningSjabloonUitrol.Rol(db.PlanningSjabloon.Include(s => s.Blokken).ThenInclude(b => b.Taken).ThenInclude(t => t.Voorgangers).Single(s => s.Id == uit.SjabloonId), new SjabloonVariabelen(3, false, null));
+        var taken = rol.Fases.SelectMany(f => f.Taken).ToList();
+        var gevel = taken.Single(t => t.Naam == "Gevelmetselwerk");
+        var eerste = taken.Single(t => t.Naam == "Metselwerk gelijkvloers");
+        Assert.Equal(eerste.Sleutel, Assert.Single(gevel.Voorgangers).Sleutel);   // niet het metselwerk van de bovenste bouwlaag
+    }
+
+    [Fact]
+    public async Task Bouwstaat_en_activiteit_van_een_sjabloontaak_worden_bewaard_en_komen_op_de_planningtaak()
+    {
+        var (svc, sjab, db) = Maak();
+        var bouwstaat = new Bouwstaat { Code = "FUNDERING_KLAAR", Naam = "Fundering klaar" };
+        db.Bouwstaat.Add(bouwstaat);
+        db.Activity.Add(new Activity { ActivityId = 77, Omschrijving = "Ruwbouw", GroupId = 1 });
+        await db.SaveChangesAsync();
+
+        var dto = Editor();
+        dto.Blokken[0].Taken[0].BouwstaatId = bouwstaat.Id;
+        dto.Blokken[0].Taken[0].ActivityId = 77;
+        var uit = await sjab.Bewaar(dto, "u");
+        Assert.True(uit.Ok, string.Join("; ", uit.Fouten));
+
+        var terug = (await sjab.Haal(uit.SjabloonId))!;
+        Assert.Equal(bouwstaat.Id, terug.Blokken[0].Taken[0].BouwstaatId);
+        Assert.Equal(77, terug.Blokken[0].Taken[0].ActivityId);
+        Assert.Null(terug.Blokken[0].Taken[1].BouwstaatId);
+
+        var toegepast = await svc.Voer(ProjectId, new PlanningCommando { Type = "sjabloonToepassen", Versie = 0, Toepassing = new() { SjabloonId = uit.SjabloonId, Planningen = { new() { EenheidIds = { 11 }, Verdiepingen = 1 } } } }, "u");
+        Assert.True(toegepast.Ok, toegepast.Fout);
+        var taak = await db.PlanningTaak.SingleAsync(t => t.Code == "UITGRAVEN");
+        Assert.Equal(bouwstaat.Id, taak.BouwstaatId);
+        Assert.Equal(77, taak.ActivityId);
+        Assert.Null((await db.PlanningTaak.SingleAsync(t => t.Code == "BETONNEREN")).BouwstaatId);
+    }
+
+    [Fact]
+    public async Task Een_onbestaande_bouwstaat_wordt_geweigerd_bij_het_bewaren()
+    {
+        var (_, sjab, _) = Maak();
+        var dto = Editor();
+        dto.Blokken[0].Taken[0].BouwstaatId = 9999;
+        var uit = await sjab.Bewaar(dto, "u");
+        Assert.False(uit.Ok);
+        Assert.Contains(uit.Fouten, f => f.Contains("bouwstaat"));
+    }
+
+    [Fact]
     public async Task De_editor_bewaart_een_sjabloon_met_codes_en_leest_het_terug()
     {
         var (_, sjab, _) = Maak();

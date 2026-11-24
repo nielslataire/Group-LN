@@ -81,6 +81,8 @@ public sealed partial class PlanningSjabloonService
                     Estafette = t.Estafette,
                     EstafetteWacht = t.EstafetteWacht,
                     Voorwaarde = string.IsNullOrWhiteSpace(t.Voorwaarde) ? null : t.Voorwaarde,
+                    BouwstaatId = t.BouwstaatId,
+                    ActivityId = t.ActivityId,
                     Voorgangers = t.Voorgangers.OrderBy(v => v.Id).Select(v => new PlanningSjabloonBewerkVoorganger
                     {
                         Code = v.VoorgangerCode ?? "",
@@ -160,6 +162,7 @@ public sealed partial class PlanningSjabloonService
                 blok.Taken.Add(new PlanningSjabloonTaak
                 {
                     Voorwaarde = tvoorwaarde,
+                    BouwstaatId = t.BouwstaatId, ActivityId = t.ActivityId,
                     Id = tijdelijkeIds ? ++nummer : 0,
                     Code = tcode, Naam = tnaam,
                     Beschrijving = string.IsNullOrWhiteSpace(t.Beschrijving) ? null : t.Beschrijving.Trim(),
@@ -188,6 +191,22 @@ public sealed partial class PlanningSjabloonService
                 {
                     var vc = (v.Code ?? "").Trim();
                     if (vc.Length == 0) continue;
+                    // "EERSTE:CODE" = dezelfde taak in de eerste bouwlaag; de verwijzende taak mag overal staan, de doeltaak moet in een blok per bouwlaag zitten.
+                    if (vc.StartsWith("eerste:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var ec = Slug(vc["eerste:".Length..].Trim());
+                        var etype = (v.Type ?? "FS").Trim().ToUpperInvariant();
+                        var eIndex = Array.IndexOf(Types, etype);
+                        if (eIndex < 0) { fouten.Add($"Taak “{taak.Naam}”: het type {etype} bestaat niet (kies FS, SS, FF of SF)."); continue; }
+                        if (!codeNaarTaken.TryGetValue(ec, out var edoel)) { fouten.Add($"Taak “{taak.Naam}”: voorganger {ec} bestaat niet in dit sjabloon."); continue; }
+                        var eBlok = sjabloon.Blokken.FirstOrDefault(b => b.Taken.Any(x => string.Equals(x.Code, ec, StringComparison.OrdinalIgnoreCase)));
+                        if (eBlok == null || eBlok.Herhaling < 1)
+                        { fouten.Add($"Taak “{taak.Naam}”: “eerste bouwlaag” kan enkel verwijzen naar een taak in een blok dat per bouwlaag terugkomt."); continue; }
+                        if (!gezien.Add("eerste:" + ec)) continue;
+                        if (v.WachtDagen < -3650 || v.WachtDagen > 3650) { fouten.Add($"Taak “{taak.Naam}”: de wachttijd bij {ec} is te groot."); continue; }
+                        taak.Voorgangers.Add(new PlanningSjabloonVoorganger { VoorgangerCode = "EERSTE:" + ec, Type = (byte)eIndex, WachtDagen = v.WachtDagen });
+                        continue;
+                    }
                     // "VORIGE:CODE" = dezelfde taak in de vorige bouwlaag; enkel voor een taak in een blok dat per bouwlaag herhaald wordt.
                     var vorigeBouwlaag = vc.StartsWith("vorige:", StringComparison.OrdinalIgnoreCase);
                     if (vorigeBouwlaag) vc = vc["vorige:".Length..].Trim();
@@ -275,6 +294,7 @@ public sealed partial class PlanningSjabloonService
         if (!PlanningSjabloonReageertOp.Geldig(dto.ReageertOp)) fouten.Add("“Reageert op” heeft een onbekende waarde.");
 
         var nieuw = Bouw(dto, fouten);
+        await ControleerBouwstaatEnActiviteit(dto, fouten);
         if (fouten.Count > 0) return uit;
 
         PlanningSjabloon opslag;
@@ -316,7 +336,7 @@ public sealed partial class PlanningSjabloonService
         var s = Bouw(dto, fouten, tijdelijkeIds: true);
 
         PlanningSjabloonProefUitkomst uit;
-        try { uit = PlanningSjabloonProef.Rekenen(s, verzoek.Woningen, verzoek.Verdiepingen); }
+        try { uit = PlanningSjabloonProef.Rekenen(s, verzoek.Woningen, verzoek.Verdiepingen, verzoek.Kelder); }
         catch { uit = new PlanningSjabloonProefUitkomst(); }
 
         // Rood: wat het opslaan blokkeert. De naam en "reageert op" zijn geen zaak van de proefdraai.
@@ -344,7 +364,7 @@ public sealed partial class PlanningSjabloonService
             var nb = new PlanningSjabloonBlok { Code = b.Code, Naam = b.Naam, Volgorde = b.Volgorde, Herhaling = b.Herhaling, VolgtVorigeVerdieping = b.VolgtVorigeVerdieping, VoorwaardeVariabele = b.VoorwaardeVariabele, VoorwaardeWaarde = b.VoorwaardeWaarde };
             foreach (var t in b.Taken.OrderBy(x => x.Volgorde))
             {
-                var nt = new PlanningSjabloonTaak { Code = t.Code, Naam = t.Naam, Beschrijving = t.Beschrijving, Duur = t.Duur, Volgorde = t.Volgorde, Estafette = t.Estafette, EstafetteWacht = t.EstafetteWacht, Voorwaarde = t.Voorwaarde };
+                var nt = new PlanningSjabloonTaak { Code = t.Code, Naam = t.Naam, Beschrijving = t.Beschrijving, Duur = t.Duur, Volgorde = t.Volgorde, Estafette = t.Estafette, EstafetteWacht = t.EstafetteWacht, Voorwaarde = t.Voorwaarde, BouwstaatId = t.BouwstaatId, ActivityId = t.ActivityId };
                 foreach (var v in t.Voorgangers) nt.Voorgangers.Add(new PlanningSjabloonVoorganger { VoorgangerCode = v.VoorgangerCode, Type = v.Type, WachtDagen = v.WachtDagen });
                 nb.Taken.Add(nt);
             }
@@ -364,5 +384,26 @@ public sealed partial class PlanningSjabloonService
         s.ModifiedByUserId = userId;
         await _db.SaveChangesAsync();
         return null;
+    }
+}
+
+public sealed partial class PlanningSjabloonService
+{
+    /// <summary>Een gekozen bouwstaat of activiteit moet bestaan (migratie 158); een inactieve bouwstaat mag blijven staan waar ze al gekozen was, maar wordt niet nieuw aangeboden.</summary>
+    private async Task ControleerBouwstaatEnActiviteit(PlanningSjabloonBewerk dto, List<string> fouten)
+    {
+        var taken = dto.Blokken.SelectMany(b => b.Taken).ToList();
+        var bouwstaten = taken.Where(t => t.BouwstaatId.HasValue).Select(t => t.BouwstaatId!.Value).Distinct().ToList();
+        var activiteiten = taken.Where(t => t.ActivityId.HasValue).Select(t => t.ActivityId!.Value).Distinct().ToList();
+        if (bouwstaten.Count > 0)
+        {
+            var bestaand = await _db.Bouwstaat.Where(b => bouwstaten.Contains(b.Id)).Select(b => b.Id).ToListAsync();
+            if (bestaand.Count != bouwstaten.Count) fouten.Add("Een gekozen bouwstaat bestaat niet meer. Kies opnieuw.");
+        }
+        if (activiteiten.Count > 0)
+        {
+            var bestaand = await _db.Activity.Where(a => activiteiten.Contains(a.ActivityId)).Select(a => a.ActivityId).ToListAsync();
+            if (bestaand.Count != activiteiten.Count) fouten.Add("Een gekozen activiteit bestaat niet meer. Kies opnieuw.");
+        }
     }
 }

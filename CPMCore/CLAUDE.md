@@ -19,3 +19,16 @@ Neem tijdens het bouwen **geen** screenshots voor de help. Schrijf op welke er n
 - Voeg per gewenste afbeelding een rij toe aan `docs/archive/help/HELP_SCREENSHOTS.md`, met dezelfde kolommen als de bestaande tabel: artikel-slug, stap, pad (`CPMCore/wwwroot/img/help/<topic>/<slug>/<stap>-<naam>.png`), route/pagina, uitsnede, anonimiseren.
 - Zet de `![...]`-verwijzing wel al in het artikel (eerste regel van de stap), zodat de afbeelding na de batch meteen op zijn plek staat.
 - Wijzigt een pagina zo dat een bestaande afbeelding niet meer klopt, zet die dan opnieuw in de lijst met in de uitsnede-kolom "opnieuw nemen".
+
+## Een nieuwe controller toevoegen: registreer hem op vier plekken
+
+Een nieuwe MVC-controller met views in een submap (bv. `Views/Instellingen/BouwstaatAdmin/`) werkt pas als hij op **alle** onderstaande plekken staat. Vergeet je er één, dan krijg je "The view 'IndexV2' was not found" of een geblokkeerde pagina. Dit is al eens fout gelopen bij `BouwstaatAdmin` (24/11/2026); loop de lijst daarom altijd af voor je zegt dat een pagina klaar is.
+
+1. **Views vinden:** `Helpers/CustomViewLocationExpander.cs`, woordenboek `ControllerFolders`: `["NaamZonderController"] = "Map/Onder/Views"`. Zonder deze regel zoekt Razor enkel in `Views/<Controller>/` en de vaste functiemappen, niet in `Views/Instellingen/...`.
+2. **Recht:** `Services/Security/PermissionResolver.cs`: koppel de controllernaam aan een `PermissionCodes.*`. Zonder regel valt de controller op een standaardrecht of wordt de pagina voor niet-admins geblokkeerd. Heeft de pagina een eigen recht nodig, voeg het dan toe in `PermissionCodes`, `PermissionCatalog` en `PermissionResolver`.
+3. **Services:** een nieuwe `IXxxService` in `FacadeCore`, de implementatie in `ServiceCore` en de registratie in `Program.cs` (`builder.Services.AddScoped<...>`). Anders faalt de controller bij het aanmaken.
+4. **Toegang in de interface:** een kaart op de Instellingen-hub (`InstellingenController.Algemeen.cs`, `SettingsItemVm`) of een menu-item, met dezelfde permissiecontrole als de pagina zelf.
+
+Zet ook altijd mee: `ViewData["HelpScreenId"]`, een help-artikel (zie hierboven) en, bij een lijst of editor in een sjabloonfamilie, de tab in `Views/Shared/GlV2/_SjabloonTabs.cshtml` als de pagina daarbij hoort.
+
+Controle: bouw het project en **open de pagina daadwerkelijk** (of laat de gebruiker dat doen en vraag het expliciet). Compileren bewijst niet dat de view gevonden wordt.

@@ -6,7 +6,7 @@ treeOrder: 10
 role: Projectleider
 device: Desktop · tablet
 minutes: 6
-updated: 2026-11-18
+updated: 2026-11-24
 newsTag: Nieuw
 screens: planning-index, instellingen-planningssjablonen, instellingen-planningssjablonen-bewerken
 related: planning-per-bouwdeel, planning-opbouwen, voorgangers-en-wachttijd-invullen
@@ -19,7 +19,7 @@ before: |
   Je hebt schrijfrecht op de planning. Om een sjabloon te bewaren of te verwijderen heb je ook het recht Planningssjablonen nodig. De woningen of gebouwen bestaan al bij Facturatie en hebben nog geen planning.
 faq:
   - q: Waarom staat er geen sjabloon in de lijst?
-    a: Er is nog geen sjabloon bewaard. Iemand met het recht Planningssjablonen bewaart eerst een bestaande planning als sjabloon met de knop **Als sjabloon** naast de tabs.
+    a: Er is nog geen sjabloon bewaard. Iemand met het recht Planningssjablonen bewaart eerst een bestaande planning als sjabloon via **Sjablonen › Als sjabloon**.
   - q: Wat neemt een sjabloon mee van mijn planning?
     a: De fases, de taken met hun duur en notitie, en de voorgangers binnen die planning. Voorgangers uit de hoofdplanning of een andere woning gaan niet mee. Voortgang, werkelijke data en de basisplanning ook niet.
   - q: Waar pas ik een sjabloon aan?
@@ -33,14 +33,14 @@ faq:
   - q: Hoe hangt een mijlpaal in het traject aan een taak uit het sjabloon?
     a: Geef de taak (of het blok) in het sjabloon een code, bijvoorbeeld DAK_KLAAR, en geef de mijlpaal in het traject dezelfde code. CPM koppelt ze dan vanzelf, ook als je het traject pas later aanmaakt. De mijlpaal volgt daarna het einde van die taak. Heeft de mijlpaal een eigen woning of appartement (een mijlpaal per eenheid), dan zoekt CPM de code enkel in de planning van die woning. Zo volgt elke woning haar eigen taak, ook al staat dezelfde code in de planning van elke woning. Alle appartementen van één gebouw volgen dezelfde taak. Een mijlpaal van het hele project met een code die op meer dan één plaats voorkomt (bijvoorbeeld in twee woningen) laat CPM met rust, want het is dan niet te zeggen welke taak bedoeld is. Hetzelfde geldt voor een woning die in geen enkele planning zit. Koppel die handmatig in het taakpaneel. Open daarvoor de planning van de woning: de mijlpalen van die woning staan in de lijst Koppeling met trajectmijlpaal, met de naam van de woning erachter. Een mijlpaal van een woning kan enkel aan een taak of fase in de planning van die woning.
   - q: Kan ik de toepassing ongedaan maken?
-    a: Niet met Ongedaan maken. Verwijder de gemaakte plannings met **Instellen** naast de tabs.
+    a: Niet met Ongedaan maken. Verwijder de gemaakte plannings met het tandwiel **Instellen** rechtsboven de planning.
   - q: Een woning heeft een andere planning nodig dan de rest. Kan dat?
     a: Ja. Pas het sjabloon toe en wijzig daarna de planning van die woning zoals elke andere planning.
 ---
 ## Een planning bewaren als sjabloon
 
 1. Open de planning die je wilt bewaren, bijvoorbeeld die van woning 1.
-2. Klik naast de tabs op **Als sjabloon**.
+2. Klik rechtsboven op **Sjablonen** en kies **Als sjabloon**.
 3. Geef het sjabloon een naam, bij voorkeur duidelijk, zoals "Eengezinswoning, 2 verdiepingen".
 4. Klik op **Bewaren**.
 
@@ -48,7 +48,7 @@ CPM geeft elke fase en taak een vaste code, afgeleid van de naam, bijvoorbeeld R
 
 ## Een sjabloon toepassen
 
-1. Klik naast de tabs op **Sjabloon**.
+1. Klik rechtsboven op **Sjablonen** en kies **Sjabloon**.
 2. Kies het sjabloon.
 3. Zet een vinkje bij de woningen of plannings waarvoor je het sjabloon wilt gebruiken. Een woning zonder planning staat er als "nieuwe planning" bij en krijgt een eigen planning. Wil je meerdere woningen in één planning, maak die dan eerst met **Planning** aan en kies daar de eenheden. Heeft een planning al taken, dan staat er "vervangt de planning" bij. Kies je die, dan vraagt CPM eerst om bevestiging, en de bestaande fases en taken gaan verloren. Een lege planning vult het sjabloon gewoon.
 4. Bepaal de volgorde met de pijltjes. Die volgorde bepaalt de estafette.
@@ -63,7 +63,7 @@ Wij tellen zoals in Vlaanderen: gelijkvloers, 1ste verdieping, 2de verdieping. H
 
 Een sjabloon kan blokken bevatten die alleen bij een kelder of een bepaald dak horen, en blokken die per bouwlaag terugkomen als "Ruwbouw gelijkvloers", "Ruwbouw 1ste verdieping", "Ruwbouw 2de verdieping" enzovoort. Bij één bouwlaag blijft de naam zonder toevoeging.
 
-De afdek van een bouwlaag is de vloerplaat van de volgende. In het sjabloon kies je bij het metselwerk als voorganger **Vorige bouwlaag: Afdek**: het metselwerk van een bouwlaag start dan pas na de afdek van de vorige, en niet na de hele vorige bouwlaag. Met een kelder is de afdek van de kelder de vloerplaat van het gelijkvloers, dus dan komt er geen aparte vloerplaat gelijkvloers.
+De voorganger **Eerste bouwlaag: …** wijst naar dezelfde taak in de eerste bouwlaag en kan vanuit elke taak gekozen worden. Zo start het gevelmetselwerk pas na het metselwerk van de eerste bouwlaag, en niet na dat van de bovenste. De afdek van een bouwlaag is de vloerplaat van de volgende. In het sjabloon kies je bij het metselwerk als voorganger **Vorige bouwlaag: Afdek**: het metselwerk van een bouwlaag start dan pas na de afdek van de vorige, en niet na de hele vorige bouwlaag. Met een kelder is de afdek van de kelder de vloerplaat van het gelijkvloers, dus dan komt er geen aparte vloerplaat gelijkvloers.
 
 Een taak onder Ruwbouw zonder voorganger, zoals het gevelmetselwerk, start op de eerste dag van de planning. Geef ze zelf een voorganger als ze later moet beginnen, bijvoorbeeld "Start samen" met het metselwerk.
 
@@ -94,12 +94,22 @@ Via **⋯** op een rij kun je het sjabloon **dupliceren** (een kopie met dezelfd
 
 Elke fase en taak heeft een vaste code onder zijn naam. De code verandert niet als je de naam wijzigt, zodat voorgangers blijven kloppen. CPM controleert bij het opslaan of elke voorganger bestaat en of taken niet op elkaar blijven wachten. Is er een rood punt, dan wordt er niets bewaard.
 
+## Bouwstaat en activiteit per taak
+
+Onder elke taak staan drie keuzelijsten: **Komt voor**, **Bouwstaat** en **Activiteit**. Is **Komt voor** iets anders dan "Altijd", dan kleurt het veld groen. Is de bouwstaat of de activiteit nog leeg, dan heeft het veld een gouden stippellijn.
+
+- De **bouwstaat** is de toestand die de taak oplevert, bijvoorbeeld "Opstort gegoten". Een betalingsschijf of trajectmijlpaal wacht op een bouwstaat. Leveren twee taken dezelfde bouwstaat (bv. de leidingen van elektriciteit en van sanitair), dan is de bouwstaat bereikt als beide klaar zijn. Je beheert de lijst onder **Instellingen › Automatisatie › Bouwstaten**.
+- De **activiteit** is de discipline: wie het werk doet en op welk lot van het budget het meetelt. Het is dezelfde lijst als bij contracten en budgetten. Later volgt de uitvoerder van een taak uit het contract dat die activiteit bevat.
+- In een gouden balk boven de blokken zie je hoeveel taken nog geen bouwstaat of activiteit hebben, met de namen van die taken. Opslaan kan ook zonder.
+- Een voorganger **Vorige bouwlaag: …** of **Eerste bouwlaag: …** staat als blauwe chip bij de taak, zodat je ze niet verwart met een gewone voorganger.
+- Bij het toepassen van het sjabloon nemen de planningtaken de bouwstaat en de activiteit over.
+
 ## Voorbeeld, proefdraaien en controle
 
 Rechts naast de blokken zie je meteen wat je sjabloon oplevert. Bij elke taak staat de startdag in een voorbeeldplanning, taken op het kritieke pad hebben een **K**.
 
-- **Voorbeeld** toont de duur per blok, de totale duur en het kritieke pad. Blokken met een voorwaarde doen mee alsof de kelder er is en het dak hellend is.
-- **Proefdraaien** rekent het sjabloon door voor 1 tot 4 woningen en 1 tot 3 verdiepingen, zoals bij het toepassen op een project. Zo zie je het effect van de estafette en van blokken per verdieping.
+- **Voorbeeld** toont de duur per blok, de totale duur en het kritieke pad. Een blok met een deelfase per bouwlaag toont ook de duur per bouwlaag en de eenmalige taken.
+- **Proefdraaien** rekent het sjabloon door voor 1 tot 4 woningen en 1 tot 3 verdiepingen, met of zonder kelder, zoals bij het toepassen op een project. Zo zie je het effect van de estafette en van blokken per verdieping. Taken die in die proef wegvallen, bijvoorbeeld "alleen met kelder" bij **Zonder**, worden grijs en tonen als start een streepje.
 - **Controle** meldt rode punten (een kring van taken die op elkaar wachten, een onbekende code) en aandachtspunten, zoals een taak zonder voorganger. Die start op dag 1 van het project.
 ![Proefdraaien](/img/help/projecten/planning-sjablonen/5-proefdraaien.png)
 

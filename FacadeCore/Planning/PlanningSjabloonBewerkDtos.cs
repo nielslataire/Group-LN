@@ -39,6 +39,10 @@ public sealed class PlanningSjabloonBewerkTaak
     public int EstafetteWacht { get; set; }
     /// <summary>Bv. "laag:eerste,kelder:nee"; leeg = altijd. Zie <c>PlanningSjabloonUitrol.TaakVoorwaarden</c>.</summary>
     public string? Voorwaarde { get; set; }
+    /// <summary>De bouwstaat die de taak oplevert (migratie 158).</summary>
+    public int? BouwstaatId { get; set; }
+    /// <summary>De activiteit (discipline) van de taak (migratie 158).</summary>
+    public int? ActivityId { get; set; }
     public List<PlanningSjabloonBewerkVoorganger> Voorgangers { get; set; } = new();
 }
 
@@ -112,6 +116,9 @@ public sealed class PlanningSjabloonProefVerzoek
     public PlanningSjabloonBewerk Sjabloon { get; set; } = new();
     public int Woningen { get; set; } = 1;
     public int Verdiepingen { get; set; } = 2;
+
+    /// <summary>Proefdraaien met of zonder kelder: taken "alleen met kelder" en "op de grond" wisselen mee.</summary>
+    public bool Kelder { get; set; } = true;
 }
 
 public sealed class PlanningSjabloonProefBlok
@@ -120,6 +127,17 @@ public sealed class PlanningSjabloonProefBlok
     public string Naam { get; set; } = "";
 
     /// <summary>Eerste werkdag (1 = projectstart) en laatste werkdag van het blok in woning 1.</summary>
+    public int Start { get; set; }
+    public int Einde { get; set; }
+    public int Duur { get; set; }
+
+    /// <summary>Bij een blok met een deelfase per bouwlaag: per bouwlaag het verloop (en "Eenmalig" voor taken zonder bouwlaag), in woning 1.</summary>
+    public List<PlanningSjabloonProefDeel> Delen { get; set; } = new();
+}
+
+public sealed class PlanningSjabloonProefDeel
+{
+    public string Naam { get; set; } = "";
     public int Start { get; set; }
     public int Einde { get; set; }
     public int Duur { get; set; }

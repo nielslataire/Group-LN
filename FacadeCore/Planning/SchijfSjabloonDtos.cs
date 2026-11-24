@@ -13,6 +13,10 @@ public sealed class SchijfSjabloonSchijfBewerk
     /// <summary>"kelder" of "dak"; samen met <see cref="VoorwaardeWaarde"/> ("ja", "nee", "hellend", "plat"). Leeg = altijd.</summary>
     public string? VoorwaardeVariabele { get; set; }
     public string? VoorwaardeWaarde { get; set; }
+    /// <summary>De bouwstaat waarop de schijf wacht (migratie 158); leeg = enkel de planningcode.</summary>
+    public int? BouwstaatId { get; set; }
+    /// <summary>0 = betaalbaar als alle leverende taken voltooid zijn, 1 = als ze gestart zijn.</summary>
+    public byte BouwstaatRegel { get; set; }
 }
 
 /// <summary>Een schijvensjabloon in de editor (Id 0 = nieuw).</summary>
@@ -79,6 +83,9 @@ public sealed class SchijfVoorstel
     public decimal Percentage { get; set; }
     public string? PlanningCode { get; set; }
     public int? PlanningVolgnr { get; set; }
+    /// <summary>De bouwstaat waarop de schijf wacht en de regel (0 = voltooid, 1 = gestart); migratie 158.</summary>
+    public int? BouwstaatId { get; set; }
+    public byte BouwstaatRegel { get; set; }
     /// <summary>Het percentage was vast ingesteld in het sjabloon (anders volgt het uit een gewicht).</summary>
     public bool IsVast { get; set; }
 }

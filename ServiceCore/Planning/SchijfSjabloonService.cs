@@ -14,6 +14,7 @@ public sealed class SchijfSjabloonService : ISchijfSjabloonService
     {
         var lijst = await _db.SchijfSjabloon.AsNoTracking().Include(s => s.Schijven).OrderBy(s => s.Naam).ToListAsync();
         var gebruikt = (await _db.ProjectSjabloon.AsNoTracking().Where(p => p.SchijfSjabloonId != null).Select(p => new { Id = p.SchijfSjabloonId!.Value, p.Naam }).ToListAsync())
+            .Concat(await _db.ProjectSjabloon.AsNoTracking().Where(p => p.SchijfSjabloonBijgebouwId != null).Select(p => new { Id = p.SchijfSjabloonBijgebouwId!.Value, p.Naam }).ToListAsync())
             .GroupBy(x => x.Id).ToDictionary(g => g.Key, g => g.Select(x => x.Naam).OrderBy(n => n).ToList());
         var gebruikerIds = lijst.Select(s => s.ModifiedByUserId ?? s.CreatedByUserId).Where(i => !string.IsNullOrEmpty(i)).Distinct().ToList();
         var namen = gebruikerIds.Count == 0 ? new Dictionary<string, string>()
@@ -97,6 +98,7 @@ public sealed class SchijfSjabloonService : ISchijfSjabloonService
             {
                 Naam = x.Naam, PlanningCode = x.PlanningCode, VastPercentage = x.VastPercentage, Gewicht = x.Gewicht, PerVerdieping = x.PerVerdieping,
                 VoorwaardeVariabele = x.VoorwaardeVariabele, VoorwaardeWaarde = x.VoorwaardeWaarde,
+                BouwstaatId = x.BouwstaatId, BouwstaatRegel = x.BouwstaatRegel,
             }).ToList(),
         };
     }
@@ -130,7 +132,7 @@ public sealed class SchijfSjabloonService : ISchijfSjabloonService
             foreach (var (kelder, dak) in new (bool, string?)[] { (false, null), (true, null), (false, "hellend"), (false, "plat"), (true, "hellend"), (true, "plat") })
             {
                 var actief = s.Schijven.Where(x => SchijfSjabloonUitrol.VoorwaardeKlopt(
-                    new SchijfInvoer(x.Naam, x.PlanningCode, x.VastPercentage, x.Gewicht, x.PerVerdieping, x.VoorwaardeVariabele, x.VoorwaardeWaarde), kelder, dak)).ToList();
+                    new SchijfInvoer(x.Naam, x.PlanningCode, x.VastPercentage, x.Gewicht, x.PerVerdieping, x.VoorwaardeVariabele, x.VoorwaardeWaarde, x.BouwstaatId, x.BouwstaatRegel), kelder, dak)).ToList();
                 if (actief.Count == 0) { fouten.Add($"Met {(kelder ? "kelder" : "zonder kelder")}{(dak == null ? "" : ", " + dak + " dak")} blijft er geen enkele schijf over."); break; }
                 var vast = actief.Where(x => x.VastPercentage != null).Sum(x => x.VastPercentage!.Value);
                 var gewogen = actief.Count(x => x.VastPercentage == null);
@@ -177,6 +179,7 @@ public sealed class SchijfSjabloonService : ISchijfSjabloonService
                 VastPercentage = x.VastPercentage, Gewicht = x.Gewicht > 0 ? x.Gewicht : 1m, PerVerdieping = x.PerVerdieping,
                 VoorwaardeVariabele = string.IsNullOrWhiteSpace(x.VoorwaardeVariabele) ? null : x.VoorwaardeVariabele.Trim().ToLowerInvariant(),
                 VoorwaardeWaarde = string.IsNullOrWhiteSpace(x.VoorwaardeVariabele) ? null : (x.VoorwaardeWaarde ?? "").Trim().ToLowerInvariant(),
+                BouwstaatId = x.BouwstaatId, BouwstaatRegel = (byte)(x.BouwstaatRegel == 1 ? 1 : 0),
             });
             volgorde += 10;
         }
@@ -188,7 +191,7 @@ public sealed class SchijfSjabloonService : ISchijfSjabloonService
     {
         var s = await _db.SchijfSjabloon.FirstOrDefaultAsync(x => x.Id == id);
         if (s == null) return "Het sjabloon bestaat niet meer.";
-        var inProjectsjabloon = await _db.ProjectSjabloon.Where(p => p.SchijfSjabloonId == id).Select(p => p.Naam).ToListAsync();
+        var inProjectsjabloon = await _db.ProjectSjabloon.Where(p => p.SchijfSjabloonId == id || p.SchijfSjabloonBijgebouwId == id).Select(p => p.Naam).ToListAsync();
         if (inProjectsjabloon.Count > 0) return $"Het sjabloon wordt gebruikt in {(inProjectsjabloon.Count == 1 ? "projectsjabloon" : "projectsjablonen")} “{string.Join("”, “", inProjectsjabloon)}”. Zet het op inactief of kies eerst een ander schijvensjabloon.";
         _db.SchijfSjabloon.Remove(s);      // de schijven gaan mee (cascade); betalingsgroepen die het gebruikten houden hun eigen schijven
         await _db.SaveChangesAsync();
@@ -221,7 +224,7 @@ public sealed class SchijfSjabloonService : ISchijfSjabloonService
         var s = await _db.SchijfSjabloon.AsNoTracking().Include(x => x.Schijven).FirstOrDefaultAsync(x => x.Id == id && x.IsActief);
         if (s == null || s.Schijven.Count == 0) return null;
         var invoer = s.Schijven.OrderBy(x => x.Volgorde).ThenBy(x => x.Id)
-            .Select(x => new SchijfInvoer(x.Naam, x.PlanningCode, x.VastPercentage, x.Gewicht, x.PerVerdieping, x.VoorwaardeVariabele, x.VoorwaardeWaarde)).ToList();
+            .Select(x => new SchijfInvoer(x.Naam, x.PlanningCode, x.VastPercentage, x.Gewicht, x.PerVerdieping, x.VoorwaardeVariabele, x.VoorwaardeWaarde, x.BouwstaatId, x.BouwstaatRegel)).ToList();
         return SchijfSjabloonUitrol.Rol(s.MinimumPercentage, invoer, Math.Max(1, Math.Min(verdiepingen, 20)), kelder, dak);
     }
 }

@@ -9,6 +9,8 @@ public sealed class ProjectSjabloonBewerk
     public int? PlanningSjabloonId { get; set; }
     public int? TrajectSjabloonId { get; set; }
     public int? SchijfSjabloonId { get; set; }
+    /// <summary>Schijvensjabloon voor groepen met enkel parkings en bergingen (leeg = het gewone schijvensjabloon).</summary>
+    public int? SchijfSjabloonBijgebouwId { get; set; }
     public int StandaardVerdiepingen { get; set; } = 1;
     public bool StandaardKelder { get; set; }
     /// <summary>"hellend", "plat" of leeg.</summary>
@@ -111,6 +113,8 @@ public sealed class ProjectSjabloonKeuze
     public int Verdiepingen { get; set; } = 1;
     public bool Kelder { get; set; }
     public string? Dak { get; set; }
+    /// <summary>"planning 9 fases · traject 7 fases · 14 schijven": wat erin zit, voor de keuzekaart in de modal.</summary>
+    public string? Kern { get; set; }
 }
 
 /// <summary>De antwoorden over het gebouw waaraan het sjabloon zich aanpast.</summary>

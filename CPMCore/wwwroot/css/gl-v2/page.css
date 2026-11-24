@@ -233,6 +233,10 @@
 .gl-v2-section-card-title { margin: 0; font: 700 13px var(--gl-v2-font-sans); color: var(--gl-v2-primary); flex: none; }
 .gl-v2-section-card-desc { font: 450 11.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gl-v2-section-card-spacer { flex: 1; }
+/* Acties uiterst rechts in de kop van een kaart (Dupliceren, Verwijderen, + Actie, ...): één gedeelde plek en tussenruimte voor elke kaartkop, ook voor koppen met een eigen klasse
+   (.gl-v2-section-card-header, .gl-v2-card-header, .gl-v2-tsa-detail-head, ...). Inhoud = .gl-v2-icon-btn (is-danger voor verwijderen) en/of .gl-v2-btn.gl-v2-btn-secondary; geen eigen knopstijl per pagina. */
+.gl-v2-card-acts { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; flex: none; }
+.gl-v2-card-acts.is-wrap { flex-wrap: wrap; justify-content: flex-end; flex: 0 1 auto; }
 .gl-v2-section-card-meta { font: 450 11px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light); flex: none; }
 .gl-v2-section-card-chevron { display: none; flex: none; font-size: 13px; color: var(--gl-v2-muted); transition: transform .15s ease; }
 

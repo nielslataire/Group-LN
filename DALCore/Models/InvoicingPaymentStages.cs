@@ -27,6 +27,12 @@ public partial class InvoicingPaymentStages
     /// <summary>Bij een herhaling per verdieping: de verdieping (1, 2, ...) waarvoor deze schijf geldt (migratie 155).</summary>
     public int? PlanningVolgnr { get; set; }
 
+    /// <summary>De bouwstaat waarop deze schijf wacht (migratie 158); leeg = enkel de planningcode of handmatig.</summary>
+    public int? BouwstaatId { get; set; }
+
+    /// <summary>0 = betaalbaar zodra alle leverende taken voltooid zijn, 1 = zodra ze gestart zijn (migratie 158).</summary>
+    public byte BouwstaatRegel { get; set; }
+
     public virtual ProjectDocs Doc { get; set; }
 
     public virtual InvoicingPaymentGroup Group { get; set; }

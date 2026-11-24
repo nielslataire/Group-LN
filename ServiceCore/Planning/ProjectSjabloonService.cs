@@ -151,9 +151,20 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
     }
 
     public async Task<List<ProjectSjabloonKeuze>> Keuzes()
-        => (await _db.ProjectSjabloon.AsNoTracking().Where(s => s.IsActief).OrderBy(s => s.Naam).ToListAsync())
-            .Select(s => new ProjectSjabloonKeuze { Id = s.Id, Naam = s.Naam, Beschrijving = s.Beschrijving, Verdiepingen = Math.Max(1, s.StandaardVerdiepingen), Kelder = s.StandaardKelder, Dak = s.StandaardDak })
-            .ToList();
+    {
+        var lijst = await _db.ProjectSjabloon.AsNoTracking().Where(s => s.IsActief).OrderBy(s => s.Naam).ToListAsync();
+        var planning = await _db.PlanningSjabloon.AsNoTracking().Select(p => new { p.Id, N = p.Blokken.Count }).ToDictionaryAsync(x => x.Id, x => x.N);
+        var traject = await _db.TrajectSjabloon.AsNoTracking().Select(p => new { p.Id, N = p.Fases.Count }).ToDictionaryAsync(x => x.Id, x => x.N);
+        var schijven = await _db.SchijfSjabloon.AsNoTracking().Select(p => new { p.Id, N = p.Schijven.Count }).ToDictionaryAsync(x => x.Id, x => x.N);
+        return lijst.Select(s =>
+        {
+            var delen = new List<string>();
+            if (s.PlanningSjabloonId is int p && planning.TryGetValue(p, out var np)) delen.Add($"planning {np} {(np == 1 ? "fase" : "fases")}");
+            if (s.TrajectSjabloonId is int t && traject.TryGetValue(t, out var nt)) delen.Add($"traject {nt} {(nt == 1 ? "fase" : "fases")}");
+            if (s.SchijfSjabloonId is int c && schijven.TryGetValue(c, out var nc)) delen.Add($"{nc} {(nc == 1 ? "schijf" : "schijven")}");
+            return new ProjectSjabloonKeuze { Id = s.Id, Naam = s.Naam, Beschrijving = s.Beschrijving, Verdiepingen = Math.Max(1, s.StandaardVerdiepingen), Kelder = s.StandaardKelder, Dak = s.StandaardDak, Kern = delen.Count == 0 ? null : string.Join(" · ", delen) };
+        }).ToList();
+    }
 
     public async Task<ProjectSjabloonOpties> Opties() => new()
     {
@@ -169,7 +180,7 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
         return new ProjectSjabloonBewerk
         {
             Id = s.Id, Naam = s.Naam, Beschrijving = s.Beschrijving, PlanningSjabloonId = s.PlanningSjabloonId, TrajectSjabloonId = s.TrajectSjabloonId,
-            SchijfSjabloonId = s.SchijfSjabloonId, StandaardVerdiepingen = s.StandaardVerdiepingen, StandaardKelder = s.StandaardKelder, StandaardDak = s.StandaardDak, IsActief = s.IsActief,
+            SchijfSjabloonId = s.SchijfSjabloonId, SchijfSjabloonBijgebouwId = s.SchijfSjabloonBijgebouwId, StandaardVerdiepingen = s.StandaardVerdiepingen, StandaardKelder = s.StandaardKelder, StandaardDak = s.StandaardDak, IsActief = s.IsActief,
         };
     }
 
@@ -186,6 +197,7 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
         if (s.PlanningSjabloonId is int p && !await _db.PlanningSjabloon.AnyAsync(x => x.Id == p)) fouten.Add("Het gekozen planningssjabloon bestaat niet meer.");
         if (s.TrajectSjabloonId is int t && !await _db.TrajectSjabloon.AnyAsync(x => x.Id == t)) fouten.Add("Het gekozen trajectsjabloon bestaat niet meer.");
         if (s.SchijfSjabloonId is int c && !await _db.SchijfSjabloon.AnyAsync(x => x.Id == c)) fouten.Add("Het gekozen schijvensjabloon bestaat niet meer.");
+        if (s.SchijfSjabloonBijgebouwId is int cb && !await _db.SchijfSjabloon.AnyAsync(x => x.Id == cb)) fouten.Add("Het gekozen schijvensjabloon voor parkings en bergingen bestaat niet meer.");
         if (fouten.Count == 0 && await _db.ProjectSjabloon.AnyAsync(x => x.Id != s.Id && x.Naam == naam)) fouten.Add("Er bestaat al een projectsjabloon met deze naam.");
         if (fouten.Count > 0) return new ProjectSjabloonBewerkUitkomst { Fouten = fouten };
 
@@ -201,7 +213,7 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
             _db.ProjectSjabloon.Add(e);
         }
         e.Naam = naam; e.Beschrijving = string.IsNullOrWhiteSpace(s.Beschrijving) ? null : s.Beschrijving.Trim();
-        e.PlanningSjabloonId = s.PlanningSjabloonId; e.TrajectSjabloonId = s.TrajectSjabloonId; e.SchijfSjabloonId = s.SchijfSjabloonId;
+        e.PlanningSjabloonId = s.PlanningSjabloonId; e.TrajectSjabloonId = s.TrajectSjabloonId; e.SchijfSjabloonId = s.SchijfSjabloonId; e.SchijfSjabloonBijgebouwId = s.SchijfSjabloonBijgebouwId;
         e.StandaardVerdiepingen = s.StandaardVerdiepingen; e.StandaardKelder = s.StandaardKelder; e.StandaardDak = dak; e.IsActief = s.IsActief;
         await _db.SaveChangesAsync();
         return new ProjectSjabloonBewerkUitkomst { Ok = true, Id = e.Id };
@@ -292,6 +304,17 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
         };
     }
 
+    /// <summary>
+    /// Betalingsgroepen waarvan alle eenheden een parking of berging zijn: eenheden met een type buiten de typegroepen woning (1) en commercieel (4), zoals de documentenmodule ze ook onderscheidt.
+    /// Een groep met ook maar één woning, een commerciële ruimte of een eenheid zonder type telt als gewone groep.
+    /// </summary>
+    private async Task<HashSet<int>> BijgebouwGroepen(int projectId)
+    {
+        var eenheden = await _db.Units.AsNoTracking().Where(u => u.ProjectId == projectId && u.PaymentGroupId != null)
+            .Select(u => new { Groep = u.PaymentGroupId!.Value, TypeGroep = u.Type != null ? (int?)u.Type.GroupId : null }).ToListAsync();
+        return eenheden.GroupBy(e => e.Groep).Where(g => g.All(e => e.TypeGroep is int t && t != 1 && t != 4)).Select(g => g.Key).ToHashSet();
+    }
+
     private static string Lijstje(IEnumerable<string> namen, int max = 5)
     {
         var l = namen.ToList();
@@ -329,10 +352,13 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
                 var hoofd = a.EenPlanningVoorAlles && a.InHoofdplanning
                     ? await _db.BouwPlanning.AsNoTracking().Where(b => b.ProjectId == projectId && b.IsHoofd && b.IsActief).Select(b => new { b.Id }).FirstOrDefaultAsync()
                     : null;
-                var hoofdLeeg = hoofd != null && !await _db.PlanningSectie.AnyAsync(s => s.ProjectId == projectId && (s.BouwPlanningId == hoofd.Id || s.BouwPlanningId == null));
+                // Verwijderde (inactieve) fasen tellen niet mee: de hoofdplanning is dan voor de gebruiker leeg.
+                var hoofdLeeg = hoofd != null && !await _db.PlanningSectie.AnyAsync(s => s.ProjectId == projectId && s.IsActief && (s.BouwPlanningId == hoofd.Id || s.BouwPlanningId == null));
                 var inHoofd = hoofd != null && hoofdLeeg;
                 if (a.EenPlanningVoorAlles && a.InHoofdplanning && !inHoofd)
-                    res.Opmerkingen.Add("De hoofdplanning heeft al fasen of taken: de planning komt in een aparte planning.");
+                    res.Opmerkingen.Add(hoofd == null
+                        ? "Er is nog geen hoofdplanning voor dit project: de planning komt in een aparte planning."
+                        : "De hoofdplanning heeft al fasen of taken: de planning komt in een aparte planning.");
                 var rijen = inHoofd
                     ? new List<PlanningToepassingPlanning> { new() { PlanningId = hoofd!.Id, Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak, Terrassen = a.Terrassen } }
                     : a.EenPlanningVoorAlles
@@ -375,42 +401,61 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
             }
         }
 
-        // ── schijven: betalingsgroepen zonder (gebruikte) schijven
-        if (sj.SchijfSjabloonId is int schijfSjabloonId)
+        // ── schijven: betalingsgroepen zonder (gebruikte) schijven.
+        // Een groep met enkel parkings en bergingen krijgt het schijvensjabloon voor bijgebouwen (als dat gekozen is), alle andere groepen het gewone.
+        if (sj.SchijfSjabloonId is int || sj.SchijfSjabloonBijgebouwId is int)
         {
-            var voorstel = await _schijven.Voorbeeld(schijfSjabloonId, a.Verdiepingen, a.Kelder, a.Dak);
-            if (voorstel == null) res.Opmerkingen.Add("Het schijvensjabloon van dit projectsjabloon bestaat niet meer of is leeg: er komen geen schijven.");
+            var hoofd = sj.SchijfSjabloonId is int hid ? await _schijven.Voorbeeld(hid, a.Verdiepingen, a.Kelder, a.Dak) : null;
+            var bij = sj.SchijfSjabloonBijgebouwId is int bid ? await _schijven.Voorbeeld(bid, a.Verdiepingen, a.Kelder, a.Dak) : null;
+            if (sj.SchijfSjabloonId != null && hoofd == null) res.Opmerkingen.Add("Het schijvensjabloon van dit projectsjabloon bestaat niet meer of is leeg: er komen geen schijven voor de gewone groepen.");
+            if (sj.SchijfSjabloonBijgebouwId != null && bij == null) res.Opmerkingen.Add("Het schijvensjabloon voor parkings en bergingen bestaat niet meer of is leeg: die groepen krijgen het gewone schijvensjabloon.");
+            if (hoofd != null) res.Schijven = hoofd.Schijven;
+            foreach (var w in (hoofd?.Waarschuwingen ?? new List<string>()).Concat(bij?.Waarschuwingen ?? new List<string>())) res.Opmerkingen.Add(w);
+
+            var groepen = await _db.InvoicingPaymentGroup.Include(g => g.InvoicingPaymentStages).Where(g => g.ProjectId == projectId).OrderBy(g => g.Name).ToListAsync();
+            var stageIds = groepen.SelectMany(g => g.InvoicingPaymentStages.Select(s => s.Id)).ToList();
+            var bereikt = (await _db.UnitPaymentStageReached.AsNoTracking().Where(r => stageIds.Contains(r.PaymentStageId)).Select(r => r.PaymentStageId).ToListAsync()).ToHashSet();
+            var gefactureerd = (await _db.InvoicesDetails.AsNoTracking().Where(x => x.PaymentStageId != null && stageIds.Contains(x.PaymentStageId.Value)).Select(x => x.PaymentStageId!.Value).ToListAsync()).ToHashSet();
+            bool Leeg(InvoicingPaymentGroup g) => g.InvoicingPaymentStages.Count <= 1 && !g.InvoicingPaymentStages.Any(s => bereikt.Contains(s.Id) || gefactureerd.Contains(s.Id));
+            var bijgebouwGroepen = await BijgebouwGroepen(projectId);
+
+            if (groepen.Count == 0) res.Opmerkingen.Add("Er zijn nog geen betalingsgroepen: de schijven kan je later toepassen.");
             else
             {
-                res.Schijven = voorstel.Schijven;
-                foreach (var w in voorstel.Waarschuwingen) res.Opmerkingen.Add(w);
-                var groepen = await _db.InvoicingPaymentGroup.Include(g => g.InvoicingPaymentStages).Where(g => g.ProjectId == projectId).OrderBy(g => g.Name).ToListAsync();
-                var stageIds = groepen.SelectMany(g => g.InvoicingPaymentStages.Select(s => s.Id)).ToList();
-                var bereikt = (await _db.UnitPaymentStageReached.AsNoTracking().Where(r => stageIds.Contains(r.PaymentStageId)).Select(r => r.PaymentStageId).ToListAsync()).ToHashSet();
-                var gefactureerd = (await _db.InvoicesDetails.AsNoTracking().Where(x => x.PaymentStageId != null && stageIds.Contains(x.PaymentStageId.Value)).Select(x => x.PaymentStageId!.Value).ToListAsync()).ToHashSet();
-                bool Leeg(InvoicingPaymentGroup g) => g.InvoicingPaymentStages.Count <= 1 && !g.InvoicingPaymentStages.Any(s => bereikt.Contains(s.Id) || gefactureerd.Contains(s.Id));
-                var leeg = groepen.Where(Leeg).ToList();
-                var bezet = groepen.Count - leeg.Count;
-                if (groepen.Count == 0) res.Opmerkingen.Add("Er zijn nog geen betalingsgroepen: de schijven kan je later toepassen.");
+                var bezet = groepen.Count(g => !Leeg(g));
+                if (bezet > 0) res.Opmerkingen.Add($"{bezet} {(bezet == 1 ? "betalingsgroep heeft" : "betalingsgroepen hebben")} al schijven en blijven ongemoeid.");
+
+                // Per lege groep het voorstel dat erbij hoort
+                var toe = new List<(InvoicingPaymentGroup Groep, SchijfVoorbeeld Voorstel, bool Bijgebouw)>();
+                foreach (var g in groepen.Where(Leeg))
+                {
+                    var isBij = bijgebouwGroepen.Contains(g.Id) && bij != null;
+                    var v = isBij ? bij : hoofd;
+                    if (v == null) { res.Opmerkingen.Add($"Voor “{g.Name}” is er geen schijvensjabloon gekozen: er komen geen schijven."); continue; }
+                    if (Math.Abs(v.Totaal - 100m) > 0.005m) { res.Opmerkingen.Add($"De schijven voor “{g.Name}” komen samen op {v.Totaal:0.##} % uit in plaats van 100 %: ze zijn niet toegepast. Pas het schijvensjabloon aan."); continue; }
+                    toe.Add((g, v, isBij));
+                }
+                if (toe.Count == 0) { if (groepen.Any(Leeg)) { /* opmerkingen staan er al */ } else res.Opmerkingen.Add("Geen betalingsgroep zonder schijven: er zijn geen schijven toegepast."); }
                 else
                 {
-                    if (bezet > 0) res.Opmerkingen.Add($"{bezet} {(bezet == 1 ? "betalingsgroep heeft" : "betalingsgroepen hebben")} al schijven en blijven ongemoeid.");
-                    if (leeg.Count > 0 && Math.Abs(voorstel.Totaal - 100m) > 0.005m)
-                        res.Opmerkingen.Add($"De schijven uit het sjabloon komen samen op {voorstel.Totaal:0.##} % uit in plaats van 100 %: ze zijn niet toegepast. Pas het schijvensjabloon aan.");
-                    else if (leeg.Count > 0 && !uitvoeren)
-                        res.Stappen.Add($"Schijven: {voorstel.Schijven.Count} schijven in {Lijstje(leeg.Select(g => g.Name ?? ""))}.");
-                    else if (leeg.Count > 0)
+                    foreach (var deel in toe.GroupBy(x => x.Bijgebouw))
                     {
-                        foreach (var g in leeg)
+                        var namen = Lijstje(deel.Select(x => x.Groep.Name ?? ""));
+                        var aantal = deel.First().Voorstel.Schijven.Count;
+                        res.Stappen.Add(uitvoeren
+                            ? $"Schijven: {aantal} schijven gezet in {namen}{(deel.Key ? " (parkings en bergingen)" : "")}."
+                            : $"Schijven: {aantal} schijven in {namen}{(deel.Key ? " (parkings en bergingen)" : "")}.");
+                    }
+                    if (uitvoeren)
+                    {
+                        foreach (var (g, v, _) in toe)
                         {
                             _db.InvoicingPaymentStages.RemoveRange(g.InvoicingPaymentStages.ToList());
-                            foreach (var s in voorstel.Schijven)
-                                g.InvoicingPaymentStages.Add(new InvoicingPaymentStages { Name = s.Naam, Percentage = s.Percentage, Invoicable = false, PlanningCode = s.PlanningCode, PlanningVolgnr = s.PlanningVolgnr });
+                            foreach (var s in v.Schijven)
+                                g.InvoicingPaymentStages.Add(new InvoicingPaymentStages { Name = s.Naam, Percentage = s.Percentage, Invoicable = false, PlanningCode = s.PlanningCode, PlanningVolgnr = s.PlanningVolgnr, BouwstaatId = s.BouwstaatId, BouwstaatRegel = s.BouwstaatRegel });
                         }
                         await _db.SaveChangesAsync();
-                        res.Stappen.Add($"Schijven: {voorstel.Schijven.Count} schijven gezet in {Lijstje(leeg.Select(g => g.Name ?? ""))}.");
                     }
-                    else res.Opmerkingen.Add("Geen betalingsgroep zonder schijven: er zijn geen schijven toegepast.");
                 }
             }
         }

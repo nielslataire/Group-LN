@@ -17,6 +17,9 @@ public sealed class UitgerolTaak
     public string? Beschrijving { get; init; }
     public int Duur { get; init; }
     public string? Code { get; init; }
+    /// <summary>De bouwstaat die de taak oplevert en haar activiteit (migratie 158); worden op de planningtaak overgenomen.</summary>
+    public int? BouwstaatId { get; init; }
+    public int? ActivityId { get; init; }
     /// <summary>Naam van het tussenniveau (deelfase) in de fase, bv. "Gelijkvloers" of "1ste verdieping"; null = de taak staat rechtstreeks in de fase.</summary>
     public string? Subfase { get; init; }
     public bool Estafette { get; init; }
@@ -119,6 +122,9 @@ public static class PlanningSjabloonUitrol
 
     /// <summary>Voorloop van een voorgangercode die naar dezelfde taak in de vorige bouwlaag wijst (bv. "VORIGE:AFDEK").</summary>
     public const string VorigePrefix = "vorige:";
+
+    /// <summary>Voorloop van een voorgangercode die naar dezelfde taak in de eerste bouwlaag wijst (bv. "EERSTE:METSELWERK_RUWBOUW"); bruikbaar vanuit elke taak.</summary>
+    public const string EerstePrefix = "eerste:";
 
     private static bool IsTerras(PlanningSjabloonBlok b) => string.Equals((b.VoorwaardeVariabele ?? "").Trim(), "terras", StringComparison.OrdinalIgnoreCase);
 
@@ -237,7 +243,7 @@ public static class PlanningSjabloonUitrol
                 var taak = new UitgerolTaak
                 {
                     Sleutel = inst.Sleutel(t, laag), Naam = taakNaam, Beschrijving = t.Beschrijving, Duur = Math.Max(0, t.Duur),
-                    Code = t.Code, Estafette = t.Estafette, EstafetteWacht = t.EstafetteWacht,
+                    Code = t.Code, Estafette = t.Estafette, EstafetteWacht = t.EstafetteWacht, BouwstaatId = t.BouwstaatId, ActivityId = t.ActivityId,
                     Subfase = inst.Blok.Herhaling == PerBouwlaagEenFase && laag > 0 && n > 1 ? char.ToUpperInvariant(BouwlaagNaam(laag)[0]) + BouwlaagNaam(laag)[1..] : null,
                 };
                 void Voeg(string sleutel, byte type, int wacht)
@@ -252,6 +258,15 @@ public static class PlanningSjabloonUitrol
                 foreach (var vg in t.Voorgangers)
                 {
                     var code = (vg.VoorgangerCode ?? "").Trim().ToLowerInvariant();
+                    // "eerste:metselwerk_ruwbouw" = het metselwerk van de eerste bouwlaag, vanuit elke taak (bv. het gevelmetselwerk start na het metselwerk van de eerste bouwlaag).
+                    if (code.StartsWith(EerstePrefix, StringComparison.Ordinal))
+                    {
+                        code = code[EerstePrefix.Length..];
+                        if (!taakPerCode.TryGetValue(code, out var et) || et.Blok.Herhaling < 1) continue;
+                        var eerste = Plaatsen(et.Taak).OrderBy(p => p.Laag).FirstOrDefault();
+                        if (eerste.Inst != null) Voeg(eerste.Inst.Sleutel(et.Taak, eerste.Laag), vg.Type, vg.WachtDagen);
+                        continue;
+                    }
                     // "vorige:metselwerk_ruwbouw" = het metselwerk van de vorige bouwlaag (de eerste bouwlaag heeft geen vorige en slaat dit over).
                     if (code.StartsWith(VorigePrefix, StringComparison.Ordinal))
                     {

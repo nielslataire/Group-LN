@@ -6,7 +6,7 @@ treeOrder: 7
 role: Projectleider
 device: Desktop · tablet
 minutes: 5
-updated: 2026-11-15
+updated: 2026-11-24
 newsTag: Nieuw
 screens: planning-index
 related: planning-handleiding, planning-navigeren, basisplanning-vastleggen, planning-bijhouden-tijdens-de-bouw, planning-problemen-oplossen, slechtweerdagen-registreren
@@ -28,13 +28,34 @@ faq:
   - q: Wat is speling?
     a: Het aantal werkdagen dat een taak mag uitlopen zonder dat het einde van de planning opschuift. Je ziet ze in het paneel van de taak. Een taak zonder speling ligt op het kritieke pad.
 ---
+## Bovenaan: de planningen en de acties
+
+Links staan de planningen van het project als schakelaar: **Hoofdplanning**, een planning per bouwdeel, **Globaal** en **Per aannemer**. Een getal in een knop is het aantal eenheden van die planning. Met **Planning** maak je een nieuwe. Rechts staan **Importeren**, **Sjablonen** (met Sjabloon, Projectsjabloon en Als sjabloon) en het tandwiel **Instellen**.
+
 ## De kop
 
+Onder de titel staat bij **Geldt voor** voor welke eenheden de planning geldt, bijvoorbeeld "50 eenheden · 18 appartementen · 14 autostaanplaatsen". Met **alle tonen** zie je ze allemaal. Het vinkje **wijzigingen worden meteen bewaard** zegt dat je niets apart hoeft op te slaan. Naam wijzigen of de planning verwijderen doe je via **⋯** naast de titel.
+
+De kerncijfers staan op één lijn:
+
 - **Start** en **Einde** zijn de eerste en de laatste dag van de planning.
-- **Duur** is het aantal werkdagen daartussen.
-- **Deadline oplevering** is de voorziene oplevering van het project, met daarnaast hoeveel werkdagen marge er nog is of hoeveel te laat.
-- **Verletdagen** zijn de weerverletdagen binnen de planning.
+- **Duur** is het aantal werkdagen daartussen, met een balk die toont hoever vandaag in de doorlooptijd zit.
+- **Deadline oplevering** is de voorziene oplevering van het project, met daarnaast als groen label hoeveel werkdagen marge er nog is, of als rood label hoeveel te laat.
+- **Verletdagen** zijn de weerverletdagen binnen de planning. Is er geen weerstation gekozen, dan staat het vak in goud met **kiezen**: de werkdagen en de deadline rekenen dan zonder weerverlet.
 - **Basisplanning** toont de datum waarop je ze vastlegde en hoeveel het einde intussen verschoof.
+
+## Vraagt actie
+
+Volgens de planning is het vandaag later dan wat in CPM staat? Dan verschijnt boven de planning een gouden kader. Daarin staat hoeveel taken voorbij hun einddatum zijn zonder afgevinkt te zijn, en hoeveel schijven volgens de planning bereikt zijn maar nog niet gemarkeerd.
+
+- **Afvinken tot vandaag…** opent een lijst van die taken. Je kiest eerst wat klopt: enkel de aangevinkte taken gaan op 100 %.
+- **Markeren…** opent een lijst van de bereikte schijven. Je kiest welke je markeert; ze zijn daarna factureerbaar.
+
+## Wat de kleuren zeggen
+
+Een taak die voorbij haar einddatum is en niet is afgevinkt heeft een gouden gestippeld rondje en een gouden einddatum, en in de grafiek een gouden gearceerde balk. Een taak die vandaag loopt heeft een groen kader in de lijst en een donkergroene balk. Een schijf staat als genummerd muntje aan het einde van de balk, en in goud zodra ze verschuldigd is. Een ingeklapte fase toont in goud hoeveel taken erin niet zijn afgevinkt.
+
+Bij het eerste openen van een planning zijn de fases ingeklapt, behalve wat nu loopt. De tijdlijn opent op vandaag.
 
 ## Lijst en grafiek
 

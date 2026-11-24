@@ -5,6 +5,7 @@
     "use strict";
 
     var PROJECT_CREATED = "PROJECT_CREATED";
+    var UITVOERING_DEADLINE = "UITVOERING_DEADLINE";   // uiterlijke einde van de bouwwerken: aanvangsdatum bouw + uitvoeringstermijn (berekend door CPM per project)
     var XDAGEN_VOOR_DOELDATUM = 2; // BOCore.TriggerEvent — enige event dat een offset-dagen-waarde gebruikt
     var FASE_PALET = ["#0a5a3b", "#c17d1f", "#7A8450", "#8B6B4A", "#0f7a52", "#8A7967"];
 
@@ -101,6 +102,11 @@
     // ── Streefdag-berekening (anker + offset-keten) ─────────────────────────────────────────────
     function resolveDag(code, guard) {
         if (!code || code === PROJECT_CREATED) return 0;
+        if (code === UITVOERING_DEADLINE) {   // in de simulatie bij benadering: een jaar na de start van de uitvoering
+            if (!findMijlpaalByCode("UITVOERING_START")) return null;
+            var bs = resolveDag("UITVOERING_START", guard);
+            return bs == null ? null : bs + 365;
+        }
         if (guard.indexOf(code) !== -1) return null;
         var m = findMijlpaalByCode(code);
         if (!m) return null;
@@ -141,7 +147,14 @@
     }
     function focusNavItemDom(item) { var row = navItemRow(item); if (row) row.focus(); }
 
+    function updateSummary() {
+        var el = $("tsaSummary"); if (!el) return;
+        var n = 0, auto = 0; state.fases.forEach(function (f) { n += f.mijlpalen.length; f.mijlpalen.forEach(function (m) { if (m.bronBinding) auto++; }); });
+        el.textContent = state.fases.length + " fases · " + n + " mijlpalen · " + auto + " automatisch";
+    }
     function renderTree() {
+        var probleem = {}; computeIssues().forEach(function (i) { if (!i.faseUid) return; if (i.severity === "urgent") probleem[i.faseUid] = "urgent"; else if (!probleem[i.faseUid]) probleem[i.faseUid] = "normal"; });
+        updateSummary();
         var html = state.fases.map(function (f, fi) {
             var isFaseSel = state.selection && state.selection.type === "fase" && state.selection.faseUid === f._uid;
             var mhtml = f.mijlpalen.map(function (m) {
@@ -150,16 +163,18 @@
                 var icon = m.bronBinding ? '<i class="ph ph-lightning gl-v2-tsa-m-icon" aria-hidden="true" title="Automatische bron"></i>' : '<i class="ph ph-hand-pointing gl-v2-tsa-m-icon" aria-hidden="true" title="Handmatig afvinken"></i>';
                 var dag = computeMijlpaalDag(m);
                 var badge = m.triggers.length ? '<span class="gl-v2-tsa-m-badge" title="' + m.triggers.length + ' actie(s)">' + m.triggers.length + "</span>" : "";
+                var eenh = m.scope === 1 ? '<span class="gl-v2-tsa-m-eenh" title="Per eenheid">per eenheid</span>' : "";
                 return '<li class="gl-v2-tsa-m-row' + (isSel ? " is-selected" : "") + '" data-mijlpaal-uid="' + m._uid + '" data-fase-uid="' + f._uid + '" draggable="true" role="button" tabindex="-1" aria-current="' + (isSel ? "true" : "false") +
                     '" aria-label="Mijlpaal: ' + esc(m.naam || "(naamloze mijlpaal)") + (m.triggers.length ? ", " + m.triggers.length + " actie(s)" : "") + '">' +
-                    '<i class="ph ph-dots-six-vertical gl-v2-tsa-grip" aria-hidden="true"></i>' + icon + '<span class="gl-v2-tsa-m-naam">' + naam + "</span>" + badge +
+                    '<i class="ph ph-dots-six-vertical gl-v2-tsa-grip" aria-hidden="true"></i>' + icon + '<span class="gl-v2-tsa-m-naam">' + naam + "</span>" + eenh + badge +
                     '<span class="gl-v2-tsa-m-dag">' + (dag == null ? "?" : "dag " + dag) + "</span></li>";
             }).join("");
             var faseLabel = f.naam || "(naamloze fase)";
             return '<div class="gl-v2-tsa-fase' + (f.expanded ? "" : " is-collapsed") + '" data-fase-uid="' + f._uid + '">' +
                 '<div class="gl-v2-tsa-fase-head' + (isFaseSel ? " is-selected" : "") + '" data-fase-uid="' + f._uid + '" draggable="true" role="button" tabindex="-1" aria-current="' + (isFaseSel ? "true" : "false") + '" aria-label="Fase: ' + esc(faseLabel) + '">' +
                 '<i class="ph ph-dots-six-vertical gl-v2-tsa-grip" aria-hidden="true"></i><span class="gl-v2-tsa-dot" style="background:' + faseKleur(f, fi) + '" aria-hidden="true"></span>' +
-                '<span class="gl-v2-tsa-fase-naam" data-fase-select="' + f._uid + '">' + esc(faseLabel) + "</span>" + (f.code ? '<span class="gl-v2-tsa-fase-code">' + esc(f.code) + "</span>" : "") +
+                '<span class="gl-v2-tsa-fase-tekst"><span class="gl-v2-tsa-fase-naam" data-fase-select="' + f._uid + '">' + esc(faseLabel) + '</span><small>' + f.mijlpalen.length + (f.mijlpalen.length === 1 ? " mijlpaal" : " mijlpalen") + "</small></span>" +
+                (probleem[f._uid] ? '<i class="gl-v2-tsa-wd is-' + probleem[f._uid] + '" title="Aandachtspunt: zie de tab Controle" aria-label="Aandachtspunt"></i>' : "") + (f.code ? '<span class="gl-v2-tsa-fase-code">' + esc(f.code) + "</span>" : "") +
                 '<button type="button" class="gl-v2-tsa-chevron" data-fase-toggle="' + f._uid + '" aria-expanded="' + (f.expanded ? "true" : "false") + '" aria-label="Fase ' + esc(faseLabel) + (f.expanded ? " inklappen" : " uitklappen") + '"><i class="ph ph-caret-down" aria-hidden="true"></i></button></div>' +
                 '<ul class="gl-v2-tsa-mlist" data-fase-uid="' + f._uid + '">' + mhtml + "</ul>" +
                 '<button type="button" class="gl-v2-tsa-add-m" data-add-mijlpaal="' + f._uid + '"><i class="ph ph-plus" aria-hidden="true"></i>Mijlpaal</button></div>';
@@ -270,7 +285,7 @@
 
     // ═══ Detail (rechts) ════════════════════════════════════════════════════════════════════════
     function anchorItems(self) {
-        var items = [{ v: PROJECT_CREATED, n: "Bij aanmaken van het project" }], known = {};
+        var items = [{ v: PROJECT_CREATED, n: "Startdatum van het project" }, { v: UITVOERING_DEADLINE, n: "Uiterlijke einde bouwwerken (aanvang bouw + uitvoeringstermijn)" }], known = {};
         state.fases.forEach(function (f) {
             f.mijlpalen.forEach(function (m) {
                 if (m._uid === self._uid || !m.code.trim()) return;
@@ -279,7 +294,7 @@
             });
         });
         var saved = self.doeldatumAnkerCode;
-        if (saved && saved !== PROJECT_CREATED && !known[saved.trim().toLowerCase()]) items.unshift({ v: saved, n: "Onbekende mijlpaal-code: " + saved });
+        if (saved && saved !== PROJECT_CREATED && saved !== UITVOERING_DEADLINE && !known[saved.trim().toLowerCase()]) items.unshift({ v: saved, n: "Onbekende mijlpaal-code: " + saved });
         return items;
     }
 
@@ -338,7 +353,7 @@
     function renderTriggerRow(m, t, idx) {
         return '<div class="gl-v2-tsa-actie"><div class="gl-v2-tsa-actie-head"><span class="gl-v2-tsa-nr" aria-hidden="true">' + (idx + 1) + '</span><span class="gl-v2-tsa-actie-sum">' + triggerSummary(t) + "</span>" +
             toggleHtml({ field: "trigger-actief", checked: t.isActief, attrs: { idx: idx }, aria: "Actie " + (idx + 1) + " actief" }) +
-            '<button type="button" class="gl-v2-row-action gl-v2-row-action-danger" data-action="delete-trigger" data-idx="' + idx + '" title="Actie ' + (idx + 1) + ' verwijderen" aria-label="Actie ' + (idx + 1) + ' verwijderen"><i class="ph ph-x" aria-hidden="true"></i></button></div>' +
+            '<button type="button" class="gl-v2-icon-btn is-danger" data-action="delete-trigger" data-idx="' + idx + '" title="Actie ' + (idx + 1) + ' verwijderen" aria-label="Actie ' + (idx + 1) + ' verwijderen"><i class="ph ph-x" aria-hidden="true"></i></button></div>' +
             '<div class="gl-v2-tsa-grid">' +
             selHtml({ id: "m-trig-event-" + idx, field: "trigger-event", label: "Gebeurtenis", items: triggerEventOpties, value: t.triggerEvent, attrs: { idx: idx } }) +
             selHtml({ id: "m-trig-actie-" + idx, field: "trigger-actie", label: "Actie", items: triggerActieOpties, value: t.triggerActie, attrs: { idx: idx } }) +
@@ -351,12 +366,20 @@
         return '<div class="gl-v2-tsa-sec-head"><span class="gl-v2-tsa-nr" aria-hidden="true">' + n + '</span><div><h4>' + title + "</h4>" + (hint ? "<p>" + hint + "</p>" : "") + "</div>" + (extra || "") + "</div>";
     }
 
+    /** De zin onder Bron en Parameter: wat CPM precies detecteert. */
+    function autoZin(m) {
+        var bron = optLabel(bindingOpties, m.bronBinding) || "?", modus = bronParamModeByBinding[m.bronBinding] || "hidden", par = "";
+        if (modus === "select" && m.bronParam) { var lijst = bronParamOptiesByBinding[m.bronBinding] || []; for (var i = 0; i < lijst.length; i++) { if (lijst[i].v === m.bronParam) { par = lijst[i].n; break; } } par = par || m.bronParam; }
+        else if (modus === "numeriek" && m.bronParam) par = "nr. " + m.bronParam;
+        if (modus === "select" && !m.bronParam) return '<i class="ph ph-warning" aria-hidden="true"></i>Kies eerst een parameter: zonder weet CPM niet wat het moet detecteren.';
+        return '<i class="ph ph-lightning" aria-hidden="true"></i>CPM vinkt deze mijlpaal zelf af zodra “' + esc(bron) + "”" + (par ? " (" + esc(par) + ")" : "") + " bereikt is. De datum is dan de dag waarop CPM het merkt.";
+    }
     function renderMijlpaalDetail(f, m) {
         var isAuto = !!m.bronBinding, dag = computeMijlpaalDag(m), bindingNonZero = bindingOpties.filter(function (o) { return o.v !== 0; });
         var html = '<div class="gl-v2-tsa-detail-head"><span class="gl-v2-tsa-detail-icon" aria-hidden="true"><i class="ph ph-flag"></i></span><div class="gl-v2-tsa-detail-titles"><h3>' + (esc(m.naam) || "(naamloze mijlpaal)") + "</h3>" +
             '<p class="gl-v2-tsa-detail-sub">' + esc(f.naam) + " · " + formatDagLabel(dag) + "</p></div>" +
-            '<span class="gl-v2-tsa-detail-acts"><button type="button" class="gl-v2-row-action" data-action="duplicate-mijlpaal" title="Mijlpaal dupliceren" aria-label="Mijlpaal dupliceren"><i class="ph ph-copy" aria-hidden="true"></i></button>' +
-            '<button type="button" class="gl-v2-row-action gl-v2-row-action-danger" data-action="delete-mijlpaal" title="Mijlpaal verwijderen" aria-label="Mijlpaal verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button></span></div>' +
+            '<span class="gl-v2-card-acts"><button type="button" class="gl-v2-icon-btn" data-action="duplicate-mijlpaal" title="Mijlpaal dupliceren" aria-label="Mijlpaal dupliceren"><i class="ph ph-copy" aria-hidden="true"></i></button>' +
+            '<button type="button" class="gl-v2-icon-btn is-danger" data-action="delete-mijlpaal" title="Mijlpaal verwijderen" aria-label="Mijlpaal verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button></span></div>' +
             '<div class="gl-v2-tsa-detail-body">';
 
         html += "<section>" + sectionHead(1, "Wat is deze mijlpaal?") + '<div class="gl-v2-tsa-grid is-3">' +
@@ -367,7 +390,8 @@
             selHtml({ id: "m-rol", field: "rol", label: "Verantwoordelijke rol", items: rolOpties, value: m.verantwoordelijkeRol, blank: "Geen" }) +
             '<div class="gl-v2-field"><span class="gl-v2-field-label" id="m-scope-label">Geldt voor</span><div class="gl-v2-segmented is-sm" role="group" aria-labelledby="m-scope-label">' +
             '<button type="button" data-action="set-scope" data-scope="0" aria-pressed="' + (m.scope === 0) + '" class="' + (m.scope === 0 ? "is-active" : "") + '">Heel het project</button>' +
-            '<button type="button" data-action="set-scope" data-scope="1" aria-pressed="' + (m.scope === 1) + '" class="' + (m.scope === 1 ? "is-active" : "") + '">Per eenheid</button></div></div>' +
+            '<button type="button" data-action="set-scope" data-scope="1" aria-pressed="' + (m.scope === 1) + '" class="' + (m.scope === 1 ? "is-active" : "") + '">Per eenheid</button></div>' +
+            '<span class="gl-v2-field-help">' + (m.scope === 1 ? "Komt terug op elke eenheid (bv. per appartement); de fase is pas af als alle eenheden de mijlpaal hebben." : "Eén keer voor het hele project.") + "</span></div>" +
             '<div class="gl-v2-field"><span class="gl-v2-field-label">Verplicht</span>' + toggleHtml({ id: "m-verplicht", field: "verplicht", checked: m.isVerplicht, text: "Vóór de fase afgerond kan worden" }) + "</div>" +
             "</div></section>";
 
@@ -375,7 +399,7 @@
             '<div class="gl-v2-tsa-cards" role="group" aria-label="Wanneer is ze bereikt?">' +
             '<button type="button" class="gl-v2-tsa-card' + (!isAuto ? " is-active" : "") + '" data-action="set-mode" data-mode="handmatig" aria-pressed="' + !isAuto + '"><i class="ph ph-hand-pointing" aria-hidden="true"></i><span><b>Handmatig afvinken</b><em>De verantwoordelijke zet de datum zelf.</em></span></button>' +
             '<button type="button" class="gl-v2-tsa-card' + (isAuto ? " is-active" : "") + '" data-action="set-mode" data-mode="automatisch" aria-pressed="' + isAuto + '"><i class="ph ph-lightning" aria-hidden="true"></i><span><b>Automatisch uit CPM</b><em>Bereikt zodra een gegeven in het project verandert.</em></span></button></div>';
-        if (isAuto) html += '<div class="gl-v2-tsa-grid">' + selHtml({ id: "m-binding", field: "binding", label: "Bron", items: bindingNonZero, value: m.bronBinding }) + paramControlHtml(m) + "</div>";
+        if (isAuto) html += '<div class="gl-v2-tsa-grid">' + selHtml({ id: "m-binding", field: "binding", label: "Bron", items: bindingNonZero, value: m.bronBinding }) + paramControlHtml(m) + "</div>" + '<p class="gl-v2-tsa-autot" id="m-autot">' + autoZin(m) + "</p>";
         html += "</section>";
 
         html += "<section>" + sectionHead(3, "Streefdatum", "bepaalt waarschuwingen en de tijdlijn") + '<div class="gl-v2-tsa-daterule">' +
@@ -397,7 +421,7 @@
     function renderFaseDetail(f) {
         var idx = state.fases.indexOf(f), kleur = faseKleur(f, idx);
         var html = '<div class="gl-v2-tsa-detail-head"><span class="gl-v2-tsa-detail-icon" aria-hidden="true" style="background:' + kleur + '22;color:' + kleur + '"><i class="ph ph-flag-banner"></i></span><div class="gl-v2-tsa-detail-titles"><h3>' + (esc(f.naam) || "(naamloze fase)") + "</h3>" +
-            '<p class="gl-v2-tsa-detail-sub">Fase · ' + f.mijlpalen.length + ' mijlpalen</p></div><span class="gl-v2-tsa-detail-acts"><button type="button" class="gl-v2-row-action gl-v2-row-action-danger" data-action="delete-fase" title="Fase verwijderen" aria-label="Fase verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button></span></div>' +
+            '<p class="gl-v2-tsa-detail-sub">Fase · ' + f.mijlpalen.length + ' mijlpalen</p></div><span class="gl-v2-card-acts"><button type="button" class="gl-v2-icon-btn is-danger" data-action="delete-fase" title="Fase verwijderen" aria-label="Fase verwijderen"><i class="ph ph-trash" aria-hidden="true"></i></button></span></div>' +
             '<div class="gl-v2-tsa-detail-body"><section><div class="gl-v2-tsa-grid">' +
             inpHtml({ id: "f-naam", field: "fnaam", label: "Fasenaam", value: f.naam }) + inpHtml({ id: "f-code", field: "fcode", label: "Code", value: f.code, mono: true }) +
             inpHtml({ id: "f-volgorde", field: "fvolgorde", label: "Volgorde", type: "number", value: f.volgorde }) +
@@ -466,7 +490,7 @@
         switch (field) {
             case "type": m.mijlpaalType = parseInt(el.value, 10) || 0; break;
             case "rol": m.verantwoordelijkeRol = el.value === "" ? null : parseInt(el.value, 10); break;
-            case "bronParam": m.bronParam = el.value; break;
+            case "bronParam": m.bronParam = el.value; var az = $("m-autot"); if (az) az.innerHTML = autoZin(m); break;
             case "verplicht": m.isVerplicht = el.checked; break;
             case "binding": m.bronBinding = parseInt(el.value, 10) || 0; m.bronParam = ""; markDirty(); scheduleControleRefresh(); renderMijlpaalDetail(findFase(sel.faseUid), m); renderTree(); return;
             case "anker": m.doeldatumAnkerCode = el.value; patchStreefdatumBadge(m); scheduleControleRefresh(); markDirty(); return;
@@ -534,42 +558,74 @@
         if (state.selection && state.selection.type === "mijlpaal") { var m = findMijlpaal(state.selection.faseUid, state.selection.mijlpaalUid); if (m) patchStreefdatumBadge(m); }
         renderTijdlijn();
     });
-    var tlMode = $("tsaTlMode");
-    tlMode.addEventListener("click", function (e) {
-        var btn = e.target.closest("button[data-mode]"); if (!btn) return;
-        state.tlMode = btn.getAttribute("data-mode");
-        tlMode.querySelectorAll("button").forEach(function (x) { var on = x === btn; x.classList.toggle("is-active", on); x.setAttribute("aria-pressed", on ? "true" : "false"); });
+    // Tijdlijn (67c): dag 0 = simulatiedatum, per fase een balk en per mijlpaal een ruit (vol = automatisch). Passend kort lange pauzes zonder mijlpalen in tot een gearceerde strook
+    // ("+ 8 jaar 10 mnd"); Ware schaal toont alles op echte afstand en scrolt horizontaal met de fasenamen vast links. De as kiest jaren, kwartalen of maanden naargelang er plaats is.
+    var TL_DREMPEL = 400, TL_BEHOUD = 45, TL_STREEP = 75, TL_NAAM = 260, MND = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+    function tlJaren(n) { var y = Math.floor(n / 365), m = Math.round((n - y * 365) / 30.4); return (y ? y + " jaar" : "") + (y && m ? " " : "") + (m ? m + " mnd" : ""); }
+    function tlDatum(d) { return dateFmt ? dateFmt.format(dagDatum(d)) : dagDatum(d).toLocaleDateString(); }
+    function renderTijdlijn() {
+        var host = $("tijdlijnContainer"), totaal = $("tsaTlTotaal"), nota = $("tsaTlNote"); if (!host) return;
+        if (!state.fases.length) { host.innerHTML = '<p class="gl-v2-tsa-empty">Nog geen fases om te simuleren.</p>'; if (totaal) totaal.textContent = "—"; if (nota) nota.hidden = true; return; }
+        var dagen = {}, alle = [];
+        state.fases.forEach(function (f) { f.mijlpalen.forEach(function (m) { var d = computeMijlpaalDag(m); dagen[m._uid] = d == null ? 0 : d; alle.push(dagen[m._uid]); }); });
+        var maxD = Math.max.apply(null, [30].concat(alle)), pts = [0, maxD].concat(alle).filter(function (v, i, a) { return a.indexOf(v) === i; }).sort(function (x, y) { return x - y; });
+        var passend = state.tlSchaal !== "real", brk = [];
+        if (passend) for (var k = 1; k < pts.length; k++) { var g = pts[k] - pts[k - 1]; if (g > TL_DREMPEL) brk.push({ s: pts[k - 1] + TL_BEHOUD, e: pts[k] - TL_BEHOUD, a: pts[k - 1], b: pts[k] }); }
+        function v(d) { var x = d; brk.forEach(function (r) { var L = r.e - r.s; if (d >= r.e) x -= (L - TL_STREEP); else if (d > r.s) x -= (d - r.s) - (d - r.s) / L * TL_STREEP; }); return x; }
+        var einde = maxD + 30, beschikbaar = Math.max(640, host.clientWidth - TL_NAAM - 8);
+        var W = passend ? beschikbaar : Math.max(beschikbaar, Math.round(einde / 30.4 * 34));
+        function px(d) { return v(d) / v(einde) * W; }
+        if (totaal) totaal.textContent = "dag " + maxD + " · " + tlDatum(maxD) + " · ± " + Math.max(1, Math.round(maxD / 30.4)) + " maanden";
+        // As: elk jaar (en de eerste maand na een pauze), daarna kwartalen en maanden zolang er plaats is; nooit afgekapte labels
+        var start = new Date(state.simStart + "T12:00:00"), ticks = [];
+        var s0 = new Date(start.getFullYear(), start.getMonth(), 1, 12);
+        for (var j = 0; j < 600; j++) {
+            var a1 = new Date(s0.getFullYear(), s0.getMonth() + j, 1, 12), da = (a1 - start) / 864e5; if (da > einde) break;
+            if (da < 0 || brk.some(function (r) { return da > r.s && da < r.e; })) continue;
+            var na = brk.some(function (r) { return da >= r.e && !ticks.some(function (t) { return t.da >= r.e; }); });
+            ticks.push({ da: da, x: px(da), mm: a1.getMonth(), y: a1.getFullYear(), first: !ticks.length || na });
+        }
+        var gekozen = [];
+        function vrij(x, d, lbl) { return gekozen.every(function (c) { return x >= c.x ? x - c.x >= Math.max(d, c.l.length * 6.4 + 12) : c.x - x >= Math.max(d, lbl.length * 6.4 + 12); }); }
+        ticks.filter(function (t) { return t.mm === 0 || t.first; }).forEach(function (t) { var l = t.mm === 0 ? String(t.y) : MND[t.mm] + " " + t.y; if (vrij(t.x, 34, l)) gekozen.push({ x: t.x, l: l, j: true }); });
+        [[3, 32], [1, 30]].forEach(function (qd) { ticks.filter(function (t) { return t.mm % qd[0] === 0 && t.mm !== 0 && !t.first; }).forEach(function (t) { var l = MND[t.mm]; if (vrij(t.x, qd[1], l)) gekozen.push({ x: t.x, l: l, j: false }); }); });
+        var as = gekozen.sort(function (p, q) { return p.x - q.x; }).map(function (c) { return '<span class="' + (c.j ? "is-jaar" : "") + '" style="left:' + c.x.toFixed(1) + 'px">' + esc(c.l) + "</span>"; }).join("");
+        var strook = brk.map(function (r) { return { s: "left:" + px(r.s).toFixed(1) + "px;width:" + Math.max(14, px(r.e) - px(r.s)).toFixed(1) + "px", l: "+ " + tlJaren(r.e - r.s + 2 * TL_BEHOUD), t: "Geen mijlpalen tussen " + tlDatum(r.a) + " en " + tlDatum(r.b) + ": ingekort" }; });
+        var rijen = state.fases.map(function (f, fi) {
+            var ds = f.mijlpalen.map(function (m) { return dagen[m._uid]; }), kleur = faseKleur(f, fi);
+            var van = ds.length ? Math.min.apply(null, ds) : 0, tot = ds.length ? Math.max.apply(null, ds) : 0;
+            var bar = f.mijlpalen.length ? '<span class="gl-v2-tsa-tl-bar" style="left:' + px(van).toFixed(1) + "px;width:" + Math.max(4, px(tot) - px(van)).toFixed(1) + "px;background:" + kleur + '" aria-hidden="true"></span>' : "";
+            var dia = f.mijlpalen.map(function (m) {
+                var raw = computeMijlpaalDag(m), d = dagen[m._uid];
+                var tip = (m.naam || "(naamloze mijlpaal)") + " · " + tlDatum(d) + (m.bronBinding ? " · automatisch" : " · handmatig") + (raw == null ? " · geen geldig anker, valt terug op de projectstart" : "");
+                return '<button type="button" class="gl-v2-tsa-dia' + (m.bronBinding ? " is-auto" : "") + (raw == null ? " is-onbekend" : "") + '" style="left:' + px(d).toFixed(1) + "px;border-color:" + kleur + (m.bronBinding ? ";background:" + kleur : "") + '" title="' + esc(tip) + '" aria-label="' + esc(tip) + '" data-jump-fase="' + f._uid + '" data-jump-mijlpaal="' + m._uid + '"></button>';
+            }).join("");
+            return '<div class="gl-v2-tsa-tl-row"><span class="gl-v2-tsa-tl-label"><i class="gl-v2-tsa-dot" style="background:' + kleur + '" aria-hidden="true"></i><span><b>' + esc(f.naam || "(naamloze fase)") + "</b><small>" +
+                (f.mijlpalen.length ? esc(tlDatum(van) + " → " + tlDatum(tot)) : "geen mijlpalen") + '</small></span></span><div class="gl-v2-tsa-tl-track" style="width:' + W + 'px">' +
+                strook.map(function (k2) { return '<i class="gl-v2-tsa-tl-bk" style="' + k2.s + '"></i>'; }).join("") + bar + dia + "</div></div>";
+        }).join("");
+        host.className = "gl-v2-tsa-tl-host" + (passend ? "" : " is-scroll");
+        host.innerHTML = '<div class="gl-v2-tsa-tl"><div class="gl-v2-tsa-tl-row is-head"><span class="gl-v2-tsa-tl-label"></span><div class="gl-v2-tsa-tl-axis" style="width:' + W + 'px">' + as +
+            strook.map(function (k2) { return '<em class="gl-v2-tsa-tl-bk is-as" style="' + k2.s + '" title="' + esc(k2.t) + '">' + esc(k2.l) + "</em>"; }).join("") + "</div></div>" + rijen + "</div>" +
+            '<div class="gl-v2-tsa-tl-legend"><span><i class="gl-v2-tsa-dia is-static"></i>handmatig</span><span><i class="gl-v2-tsa-dia is-static is-auto"></i>automatisch</span><span>Klik op een mijlpaal om ze in Structuur te openen.</span></div>';
+        if (nota) {
+            var na2 = []; state.fases.forEach(function (f) { f.mijlpalen.forEach(function (m) { var d = dagen[m._uid]; if (brk.some(function (r) { return Math.abs(r.b - d) < 1; })) na2.push((m.naam || "(naamloos)") + " · " + tlDatum(d)); }); });
+            nota.hidden = !brk.length;
+            if (brk.length) $("tsaTlNoteTekst").innerHTML = brk.length + (brk.length > 1 ? " lange pauzes" : " lange pauze") + " zonder mijlpalen ingekort (" + esc(strook.map(function (k3) { return k3.l.slice(2); }).join(", ")) + "). Na de pauze: " + esc(na2.join(", ")) + ". Kies <b>Ware schaal</b> om alles op echte afstand te zien en horizontaal te scrollen.";
+        }
+    }
+    var tlSchaalEl = $("tsaTlSchaal");
+    if (tlSchaalEl) tlSchaalEl.addEventListener("click", function (e) {
+        var b = e.target.closest("button[data-schaal]"); if (!b) return;
+        state.tlSchaal = b.getAttribute("data-schaal");
+        tlSchaalEl.querySelectorAll("button").forEach(function (x) { var on = x === b; x.classList.toggle("is-active", on); x.setAttribute("aria-pressed", on ? "true" : "false"); });
         renderTijdlijn();
     });
-    function tlScalePct(dag, maxDag) { if (!maxDag || maxDag <= 0) return 0; return Math.sqrt(Math.min(Math.max(dag || 0, 0), maxDag) / maxDag) * 100; }
-    var TL_AXIS = [0, 7, 14, 30, 60, 90, 180, 270, 365, 540, 730, 915, 1095, 1460];
-    function tlTicks(maxDag) { var t = TL_AXIS.filter(function (d) { return d <= maxDag; }); if (!t.length || t[t.length - 1] < maxDag) t.push(maxDag); return t; }
-    function tlAxisLabel(dag) { return state.tlMode !== "datums" ? "d" + dag : (monthFmt ? monthFmt.format(dagDatum(dag)) : dagDatum(dag).toLocaleDateString()); }
-    function tlDagLabel(dag) { if (dag == null) return "onbekend"; return state.tlMode === "datums" ? (dateFmt ? dateFmt.format(dagDatum(dag)) : dagDatum(dag).toLocaleDateString()) : "dag " + dag; }
-
-    function renderTijdlijn() {
-        var host = $("tijdlijnContainer"); if (!host) return;
-        if (!state.fases.length) { host.innerHTML = '<p class="gl-v2-tsa-empty">Nog geen fases om te simuleren.</p>'; return; }
-        var all = [0]; state.fases.forEach(function (f) { f.mijlpalen.forEach(function (m) { var d = computeMijlpaalDag(m); all.push(d == null ? 0 : d); }); });
-        var maxDag = Math.max.apply(null, all), ticks = tlTicks(maxDag);
-        var axis = '<div class="gl-v2-tsa-tl-row"><div></div><div class="gl-v2-tsa-tl-axis">' + ticks.map(function (d) {
-            return '<span class="gl-v2-tsa-tl-tick" style="left:' + tlScalePct(d, maxDag).toFixed(2) + '%"><span class="l" aria-hidden="true"></span><span class="t">' + esc(tlAxisLabel(d)) + "</span></span>";
-        }).join("") + "</div></div>";
-        var rows = state.fases.map(function (f, fi) {
-            var markers = f.mijlpalen.slice().sort(function (a, b) { return (computeMijlpaalDag(a) || 0) - (computeMijlpaalDag(b) || 0); }), last = null;
-            var mh = markers.map(function (m) {
-                var raw = computeMijlpaalDag(m), onb = raw == null, dag = onb ? 0 : raw, pct = tlScalePct(dag, maxDag);
-                var show = last == null || Math.abs(pct - last) >= 5; if (show) last = pct;
-                var cls = "gl-v2-tsa-tl-marker" + (onb ? " is-onbekend" : m.bronBinding ? " is-auto" : " is-handmatig") + (show ? "" : " is-tick-only");
-                return '<div class="' + cls + '" style="left:' + pct.toFixed(2) + '%" title="' + esc((m.naam || "(naamloze mijlpaal)") + (onb ? " (geen geldig anker, teruggevallen op projectstart)" : "")) + '"><span class="d" aria-hidden="true"></span>' +
-                    (m.triggers.length ? '<span class="a" aria-hidden="true"></span>' : "") +
-                    (show ? '<span class="lb"><span class="n">' + esc(m.naam || "(naamloos)") + '</span><span class="g">' + esc(tlDagLabel(onb ? null : dag)) + "</span></span>" : "") + "</div>";
-            }).join("");
-            return '<div class="gl-v2-tsa-tl-row"><div class="gl-v2-tsa-tl-label"><span class="n">' + esc(f.naam || "(naamloze fase)") + '</span><span class="m">' + (f.mijlpalen.length === 1 ? "1 mijlpaal" : f.mijlpalen.length + " mijlpalen") + (f.code ? " · " + esc(f.code) : "") + "</span></div>" +
-                '<div class="gl-v2-tsa-tl-track"><span class="line" style="background:' + faseKleur(f, fi) + '33" aria-hidden="true"></span>' + mh + "</div></div>";
-        }).join("");
-        host.innerHTML = '<div class="gl-v2-tsa-tl">' + rows + axis + '</div><div class="gl-v2-tsa-tl-legend"><span><i class="d is-auto"></i>automatisch bereikt</span><span><i class="d is-handmatig"></i>handmatig aan te vinken</span><span><i class="a"></i>heeft acties</span><span><i class="d is-onbekend"></i>anker onbekend, valt terug op projectstart</span></div>';
-    }
+    $("tijdlijnContainer").addEventListener("click", function (e) {
+        var d = e.target.closest("[data-jump-fase]"); if (!d) return;
+        var fu = d.getAttribute("data-jump-fase"), mu = d.getAttribute("data-jump-mijlpaal"), f = findFase(fu); if (!f) return;
+        f.expanded = true; activate("structuur"); selectMijlpaal(fu, mu, true);
+    });
 
     // ═══ Controle ═══════════════════════════════════════════════════════════════════════════════
     function computeIssues() {
@@ -587,11 +643,17 @@
                 if (!m.code.trim()) add("urgent", '"' + (m.naam || "(naamloos)") + '" heeft geen technische code en kan niet als anker gebruikt worden.');
                 else { var key = m.code.trim().toLowerCase(); (codeMap[key] = codeMap[key] || []).push({ faseUid: f._uid, mijlpaalUid: m._uid, loc: loc }); }
                 var anker = m.doeldatumAnkerCode;
-                if (anker && anker !== PROJECT_CREATED) {
+                if (anker && anker !== PROJECT_CREATED && anker !== UITVOERING_DEADLINE) {
                     if (!findMijlpaalByCode(anker)) add("urgent", '"' + (m.naam || "?") + '" verwijst naar een onbekende ankercode "' + anker + '".');
                     else if (computeMijlpaalDag(m) == null) add("urgent", '"' + (m.naam || "?") + '" zit in een cirkelverwijzing van ankers.');
                 }
-                if (m.bronBinding && bronParamModeByBinding[m.bronBinding] === "select" && !m.bronParam) add("normal", '"' + (m.naam || "?") + '" heeft een automatische bron gekozen maar geen bron-parameter.');
+                if (m.bronBinding && bronParamModeByBinding[m.bronBinding] === "select" && !m.bronParam) add("urgent", '"' + (m.naam || "?") + '" is automatisch maar heeft geen voorwaarde: kies wat CPM moet detecteren.');
+                var fi0 = state.fases.indexOf(f), dagM = computeMijlpaalDag(m);
+                if (fi0 > 0 && dagM != null) {
+                    var vorige = state.fases[fi0 - 1], eind = null;
+                    vorige.mijlpalen.forEach(function (x) { var dx = computeMijlpaalDag(x); if (dx != null && (eind == null || dx > eind)) eind = dx; });
+                    if (eind != null && dagM < eind) add("normal", '"' + (m.naam || "?") + '" ligt vóór het einde van "' + (vorige.naam || "de vorige fase") + '" (dag ' + dagM + " tegenover dag " + eind + "): de fases overlappen.");
+                }
                 (m.triggers || []).forEach(function (t, ti) {
                     if (t.triggerEvent === XDAGEN_VOOR_DOELDATUM && (t.offsetDagen == null || t.offsetDagen === "")) add("normal", "Actie " + (ti + 1) + ' op "' + (m.naam || "?") + '" ("X dagen voor streefdatum") heeft geen aantal dagen ingevuld.');
                     if (t.actieParametersJson) { try { JSON.parse(t.actieParametersJson); } catch (x) { add("normal", "Actie " + (ti + 1) + ' op "' + (m.naam || "?") + '" heeft ongeldige parameters.'); } }
@@ -617,7 +679,7 @@
             var list = issues.filter(function (i) { return i.severity === sev; }); if (!list.length) return "";
             return '<div class="gl-v2-tsa-issues"><div class="gl-v2-tsa-issues-title">' + SEV[sev].title + " (" + list.length + ")</div>" + list.map(function (i) {
                 var jump = !!(i.mijlpaalUid || i.faseUid), attrs = i.mijlpaalUid ? ' data-jump-fase="' + i.faseUid + '" data-jump-mijlpaal="' + i.mijlpaalUid + '"' : (i.faseUid ? ' data-jump-fase="' + i.faseUid + '"' : "");
-                return "<" + (jump ? 'button type="button"' : "div") + ' class="gl-v2-tsa-issue ' + SEV[sev].tone + '"' + attrs + '><i class="ph ' + SEV[sev].icon + '" aria-hidden="true"></i><span>' + esc(i.text) + (i.loc ? '<span class="loc">' + esc(i.loc) + "</span>" : "") + "</span></" + (jump ? "button" : "div") + ">";
+                return "<" + (jump ? 'button type="button"' : "div") + ' class="gl-v2-tsa-issue ' + SEV[sev].tone + '"' + attrs + '><i class="ph ' + SEV[sev].icon + '" aria-hidden="true"></i><span>' + esc(i.text) + (i.loc ? '<span class="loc">' + esc(i.loc) + "</span>" : "") + "</span>" + (jump ? '<span class="gl-v2-tsa-issue-open">Openen</span>' : "") + "</" + (jump ? "button" : "div") + ">";
             }).join("") + "</div>";
         }).join("");
     }
@@ -663,6 +725,12 @@
         var naamEl = $("sj-naam"), err = $("sj-naam-error");
         if (!naamEl.value.trim()) { e.preventDefault(); if (err) err.hidden = false; activate("structuur"); naamEl.focus(); return; }
         if (err) err.hidden = true;
+        var rood = computeIssues().filter(function (i) { return i.severity === "urgent"; });
+        if (rood.length) {
+            e.preventDefault(); renderControle(); activate("controle");
+            if (window.GlV2Toast && window.GlV2Toast.notify) window.GlV2Toast.notify("danger", "Los eerst de rode punten op", rood.length + (rood.length === 1 ? " punt" : " punten") + " in de tab Controle houden het opslaan tegen.");
+            return;
+        }
         var payload = {
             id: initial.id || null, naam: naamEl.value.trim(), projectType: $("sj-type").value === "" ? null : parseInt($("sj-type").value, 10),
             isStandaard: $("sj-standaard").checked, isActief: $("sj-actief").checked, omschrijving: $("sj-omschrijving").value,

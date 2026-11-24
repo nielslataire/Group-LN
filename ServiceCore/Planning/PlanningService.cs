@@ -102,8 +102,18 @@ public class PlanningService : IPlanningService
         };
     }
 
+    /// <summary>De uiterlijke einddatum van de bouwwerken: de aanvangsdatum van de bouwwerken plus de uitvoeringstermijn in werkdagen (met feestdagen, bouwverlof en weerverlet). Null zolang aanvangsdatum of termijn ontbreekt.</summary>
+    internal static async Task<DateOnly?> UitvoeringsDeadline(cpmRunningContext db, Project project)
+    {
+        if (project.StartDateConstruction is not DateOnly sd || (project.ExecutionDays ?? 0) <= 0) return null;
+        var kal = await LaadKalender(db, project.ProjectId, project.WheaterStationId);
+        return kal.Voeg(sd, project.ExecutionDays!.Value);
+    }
+
     /// <summary>Zelfde bronnen als <c>ProjectService.LaadWerkKalender</c>: feestdagen/bouwverlof van bedrijf + project en het verlet van het weerstation.</summary>
-    private async Task<WerkKalender> LaadKalender(int projectId, int? weerstationId)
+    private Task<WerkKalender> LaadKalender(int projectId, int? weerstationId) => LaadKalender(_db, projectId, weerstationId);
+
+    internal static async Task<WerkKalender> LaadKalender(cpmRunningContext _db, int projectId, int? weerstationId)
     {
         var verlof = await _db.VacationDays.AsNoTracking()
             .Where(v => v.ProjectId == null || v.ProjectId == projectId)
@@ -255,8 +265,15 @@ public class PlanningService : IPlanningService
     {
         var d = await LaadData(projectId);
         if (d == null) return new PlanningStaat { ProjectId = projectId };
-        return await Bouw(d, Rekenen(d), planningId == GlobaalId ? GlobaalId : d.Doel(planningId));
+        var doel = planningId == GlobaalId ? GlobaalId : d.Doel(planningId);
+        // Niets gevraagd en de hoofdplanning is leeg terwijl er wel een bouwdeel-planning is: toon die. De lege hoofdplanning is dan verborgen (zie HoofdplanningVerborgen).
+        if ((planningId == null || planningId == 0) && HoofdplanningVerborgen(d)) doel = d.Planningen.Where(p => !p.IsHoofd).OrderBy(p => p.Volgorde).ThenBy(p => p.Id).First().Id;
+        return await Bouw(d, Rekenen(d), doel);
     }
+
+    /// <summary>De hoofdplanning heeft geen enkele fase en taak, en het project heeft wel een planning voor een bouwdeel: dan tonen we de lege hoofdplanning niet.</summary>
+    private static bool HoofdplanningVerborgen(Data d)
+        => d.Planningen.Any(p => !p.IsHoofd) && !d.Secties.Any(s => d.PlanningVan(s) == d.HoofdId) && !d.Taken.Any(t => d.PlanningVanTaak(t) == d.HoofdId);
 
     private static string? Iso(DateOnly? d) => d?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
@@ -306,7 +323,7 @@ public class PlanningService : IPlanningService
                               join g in _db.InvoicingPaymentGroup.AsNoTracking() on u.PaymentGroupId equals (int?)g.Id into gg
                               from g in gg.DefaultIfEmpty()
                               orderby u.Name
-                              select new { u.Id, u.Name, Groep = g.Name }).ToListAsync();
+                              select new { u.Id, u.Name, Groep = g.Name, TypeNaam = u.Type.Name }).ToListAsync();
         var eenheidNaam = eenheden.ToDictionary(e => e.Id, e => e.Name ?? "");
         var lijstPlannings = d.Planningen.Count > 0 ? d.Planningen : new List<BouwPlanning> { new() { Id = 0, Naam = "Hoofdplanning", IsHoofd = true } };
         foreach (var bp in lijstPlannings)
@@ -316,6 +333,7 @@ public class PlanningService : IPlanningService
                 Id = bp.Id,
                 Naam = bp.Naam,
                 IsHoofd = bp.IsHoofd,
+                Verborgen = bp.IsHoofd && HoofdplanningVerborgen(d),
                 EenheidIds = d.Eenheden.Where(e => e.BouwPlanningId == bp.Id).Select(e => e.UnitId).ToList(),
                 StartDatum = Iso(bp.StartDatum),
             };
@@ -331,7 +349,7 @@ public class PlanningService : IPlanningService
         foreach (var e in eenheden)
             staat.Eenheden.Add(new PlanningEenheidOptie
             {
-                Id = e.Id, Naam = e.Name ?? "", GroepNaam = e.Groep,
+                Id = e.Id, Naam = e.Name ?? "", GroepNaam = e.Groep, TypeNaam = e.TypeNaam,
                 PlanningId = d.Eenheden.FirstOrDefault(x => x.UnitId == e.Id)?.BouwPlanningId,
             });
 
@@ -347,7 +365,8 @@ public class PlanningService : IPlanningService
         var lots = await _db.ActivityGroup.AsNoTracking().ToDictionaryAsync(g => g.GroupId, g => g.Name);
 
         // Uitvoerders: bedrijven met een contract in dit project, plus alle die al ergens gekozen zijn.
-        var contractBedrijven = await _db.Contract.AsNoTracking().Where(c => c.ProjectId == d.Project.ProjectId).Select(c => c.CompanyId).Distinct().ToListAsync();
+        var contracten = await _db.Contract.AsNoTracking().Where(c => c.ProjectId == d.Project.ProjectId).Select(c => new { c.CompanyId, c.ContractSigned }).ToListAsync();
+        var contractBedrijven = contracten.Select(c => c.CompanyId).Distinct().ToList();
         var gekozen = d.Secties.Where(s => s.UitvoerderCompanyId != null).Select(s => s.UitvoerderCompanyId!.Value)
             .Concat(d.Taken.Where(t => t.UitvoerderCompanyId != null).Select(t => t.UitvoerderCompanyId!.Value)).Distinct().ToList();
         var bedrijfIds = contractBedrijven.Concat(gekozen).Distinct().ToList();
@@ -355,7 +374,7 @@ public class PlanningService : IPlanningService
             .Select(c => new { c.CompanyId, c.BedrijfsNaam }).ToDictionaryAsync(c => c.CompanyId, c => c.BedrijfsNaam ?? "");
         // De keuzelijst bevat enkel aannemers met een contract in het project; de namen van reeds gekozen andere bedrijven blijven wel beschikbaar voor de weergave.
         foreach (var bid in contractBedrijven.Where(bedrijfNamen.ContainsKey).OrderBy(b => bedrijfNamen[b], StringComparer.CurrentCultureIgnoreCase))
-            staat.Uitvoerders.Add(new PlanningUitvoerderOptie { Id = bid, Naam = bedrijfNamen[bid], InProject = contractBedrijven.Contains(bid) });
+            staat.Uitvoerders.Add(new PlanningUitvoerderOptie { Id = bid, Naam = bedrijfNamen[bid], InProject = contractBedrijven.Contains(bid), ContractStatus = contracten.Any(c => c.CompanyId == bid && c.ContractSigned == true) ? "getekend" : "niet getekend" });
         void ZetEffectief(PlanningRij rij, Knoop knoop)
         {
             int? eigen = knoop.IsFase ? knoop.Sectie!.UitvoerderCompanyId : knoop.Taak!.UitvoerderCompanyId;
@@ -864,13 +883,37 @@ public class PlanningService : IPlanningService
         var volgnr = stages.GroupBy(s => s.GroupId).SelectMany(g => g.Select((s, i) => (s.Id, Nr: i + 1))).ToDictionary(x => x.Id, x => x.Nr);
         string Tekst(InvoicingPaymentStages s) => groepen[s.GroupId] + " · " + volgnr[s.Id] + ". " + s.Name + " (" + s.Percentage.ToString("0.##", Nl) + " %)";
 
+        // Bouwstaten (migratie 158): een schijf met een bouwstaat en zonder eigen koppeling wacht op alle taken en fases van deze planning die die bouwstaat opleveren.
+        var bouwstaten = await _db.Bouwstaat.AsNoTracking().ToDictionaryAsync(b => b.Id);
+        var rijBouwstaat = new Dictionary<string, int>();
+        foreach (var t in d.Taken.Where(t => t.BouwstaatId != null)) rijBouwstaat["t" + t.Id] = t.BouwstaatId!.Value;
+        foreach (var f in d.Secties.Where(f => f.BouwstaatId != null)) rijBouwstaat["f" + f.Id] = f.BouwstaatId!.Value;
+
         var gekoppeld = new List<(InvoicingPaymentStages Stage, PlanningRij Rij, PlanningSchijfLink Link)>();
         foreach (var s in stages)
         {
             var optie = new PlanningSchijfOptie { StageId = s.Id, Tekst = Tekst(s) };
             var k = koppelingen.FirstOrDefault(x => x.PaymentStageId == s.Id);
             var sleutel = k == null ? null : k.TaakId != null ? "t" + k.TaakId : k.SectieId != null ? "f" + k.SectieId : null;
-            if (sleutel != null && rijPerSleutel.TryGetValue(sleutel, out var rij))
+            PlanningRij? rij = null;
+            var klaar = false;
+            if (sleutel != null && rijPerSleutel.TryGetValue(sleutel, out var eigen)) { rij = eigen; klaar = eigen.Afgerond; }
+            else if (k == null && s.BouwstaatId is int bid)
+            {
+                var lev = staat.Rijen.Where(r => rijBouwstaat.TryGetValue(r.Sleutel, out var b) && b == bid).ToList();
+                if (bouwstaten.TryGetValue(bid, out var bs) && bs.PerBouwlaag)
+                {
+                    var nr = Math.Max(1, s.PlanningVolgnr ?? 1) - 1;
+                    lev = nr < lev.Count ? new List<PlanningRij> { lev[nr] } : new List<PlanningRij>();
+                }
+                if (lev.Count > 0)
+                {
+                    rij = lev.OrderBy(r => r.Einde ?? "").Last();
+                    sleutel = rij.Sleutel;
+                    klaar = lev.All(r => s.BouwstaatRegel == 1 ? BouwstaatGestart(r) : r.Afgerond);
+                }
+            }
+            if (sleutel != null && rij != null)
             {
                 optie.GekoppeldAanSleutel = sleutel; optie.GekoppeldAanTekst = rij.Wbs + " " + rij.Naam;
                 var leden = eenheden.Where(e => e.GroepId == s.GroupId).ToList();
@@ -882,7 +925,7 @@ public class PlanningService : IPlanningService
                 {
                     StageId = s.Id, Nummer = volgnr[s.Id], Naam = s.Name ?? "", Percentage = s.Percentage, GroepNaam = groepen[s.GroupId],
                     AantalEenheden = leden.Count, AantalBereikt = gedaan, TeMarkeren = markeerbaar, Overgeslagen = kandidaten.Count - markeerbaar,
-                    KlaarOmTeMarkeren = rij.Afgerond && markeerbaar > 0,
+                    KlaarOmTeMarkeren = klaar && markeerbaar > 0,
                     AllesBereikt = leden.Count > 0 && gedaan == leden.Count,
                 };
                 rij.Schijven.Add(link);
@@ -892,6 +935,9 @@ public class PlanningService : IPlanningService
         }
         await SynchroniseerSchijfTaken(d, actief, gekoppeld);
     }
+
+    /// <summary>Een rij is gestart als ze afgerond is, voortgang heeft of een werkelijke start kreeg (regel "gestart" van een schijf op een bouwstaat).</summary>
+    private static bool BouwstaatGestart(PlanningRij r) => r.Afgerond || r.Voortgang > 0 || !string.IsNullOrEmpty(r.WerkelijkStart);
 
     private const string SchijfTaakBeheerder = "planning";
 
@@ -1756,7 +1802,7 @@ public class PlanningService : IPlanningService
                         doel = sub; taakVolgorde = stv; stv += 10;
                     }
                     else { sub = null; subNaam = null; taakVolgorde = tv; tv += 10; }
-                    var taak = new PlanningTaak { PlanningSectieId = doel.Id, Naam = ut.Naam, Code = string.IsNullOrWhiteSpace(ut.Code) ? null : ut.Code.Trim(), Beschrijving = ut.Beschrijving, Duur = ut.Duur, Volgorde = taakVolgorde };
+                    var taak = new PlanningTaak { PlanningSectieId = doel.Id, Naam = ut.Naam, Code = string.IsNullOrWhiteSpace(ut.Code) ? null : ut.Code.Trim(), Beschrijving = ut.Beschrijving, Duur = ut.Duur, Volgorde = taakVolgorde, BouwstaatId = ut.BouwstaatId, ActivityId = ut.ActivityId };
                     _db.PlanningTaak.Add(taak);
                     uitTaken.Add((ut, taak));
                     faseTaken.Add((ut, taak));

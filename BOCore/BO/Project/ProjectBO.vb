@@ -134,12 +134,26 @@ Public Class ProjectBO
             _deliverydatedef = value
         End Set
     End Property
+    'Startdatum van het hele project (begin van het traject)
+    Private _projectstartdate As DateOnly?
+    <UIHint("Date")>
+    <DisplayFormat(ApplyFormatInEditMode:=True, DataFormatString:="{0:dd/MM/yyyy}")>
+    <DataType(DataType.Date)>
+    <Display(Name:="Startdatum project")>
+    Public Property ProjectStartDate() As DateOnly?
+        Get
+            Return _projectstartdate
+        End Get
+        Set(ByVal value As DateOnly?)
+            _projectstartdate = value
+        End Set
+    End Property
     'Aanvangsdatum werken
     Private _startdateconstruction As DateOnly?
     <UIHint("Date")>
     <DisplayFormat(ApplyFormatInEditMode:=True, DataFormatString:="{0:dd/MM/yyyy}")>
     <DataType(DataType.Date)>
-    <Display(Name:="Aanvangsdatum")>
+    <Display(Name:="Aanvangsdatum bouwwerken")>
     Public Property StartDateConstruction() As DateOnly?
         Get
             Return _startdateconstruction

@@ -6,7 +6,7 @@ treeOrder: 12
 role: Projectleider
 device: Desktop · tablet
 minutes: 5
-updated: 2026-11-20
+updated: 2026-11-24
 newsTag: Nieuw
 screens: planning-index, instellingen-projectsjablonen, instellingen-projectsjablonen-bewerken
 related: planning-sjablonen, schijvensjablonen-beheren, planning-schijven-koppelen
@@ -35,17 +35,18 @@ faq:
 ---
 ## Een projectsjabloon toepassen
 
-1. Open **Projecten › Planning** en kies **Projectsjabloon** naast de tabs.
-2. Kies het projectsjabloon dat bij je project past.
-3. Beantwoord de vragen, of beschrijf het gebouw en klik op **Laat de AI de vragen invullen**:
-   - het aantal **bouwlagen** (gelijkvloers + verdiepingen: gelijkvloers + 2 verdiepingen = 3)
+1. Open **Projecten › Planning** en kies **Sjablonen › Projectsjabloon**. Het venster heeft twee kolommen: links de vragen in vier stappen, rechts **Wat er gebeurt**. Dat rechts verandert meteen mee met elk antwoord.
+2. Wil je hulp, beschrijf dan het gebouw bij stap 1 en klik op **Laat de AI een voorstel doen**. Wat de AI invulde, staat blauw met het label **AI**, zodat je ziet wat je moet nakijken. Met **Ongedaan maken** zet je alles terug. Wijzig je zelf een antwoord, dan verdwijnt het label bij dat antwoord.
+3. Kies bij stap 2 het projectsjabloon dat bij je project past. Elke kaart toont wat erin zit: het aantal fases van de planning en het traject, en het aantal schijven.
+4. Beantwoord bij stap 3 en 4 de vragen over het gebouw:
+   - het aantal **bouwlagen** met de knoppen − en + (gelijkvloers + verdiepingen: gelijkvloers + 2 verdiepingen = 3)
    - bij welke afdek **terrassen of luifels** komen (knoppen GV, 1, 2 …; leeg = geen)
-   - of er een **kelder** is
-   - of het **dak** hellend of plat is
-   - of het **één planning voor alle eenheden** is (een gebouw met appartementen) of een planning per woning
+   - of er een **kelder** is (**Met kelder** of **Zonder**)
+   - of het **dak** plat of hellend is, of **Geen keuze**
+   - of het **één planning voor het gebouw** is (een gebouw met appartementen) of **per eenheid**, met erbij hoeveel eenheden nog geen planning hebben. Bij een appartementsgebouw is één planning de standaard: de werf loopt per bouwlaag, niet per appartement
    - bij één planning: of ze **in de hoofdplanning** komt. Dat kan enkel als de hoofdplanning nog leeg is. Is ze niet leeg, of zet je dit uit, dan komt er een aparte planning naast de hoofdplanning
-4. Lees onder **Wat er gebeurt** wat CPM gaat doen. Daar staan ook de schijven met hun percentages.
-5. Klik op **Toepassen**.
+5. Lees rechts bij **Wat er gebeurt** wat CPM gaat doen: een kaart voor de planning, het traject en de schijven met hun percentages. Een schijf die onder het minimum van het sjabloon zakt, staat oker met een melding. Onderaan de kaarten staat wat **ongemoeid blijft**, en onderaan het venster een samenvatting van wat **Toepassen** maakt.
+6. Klik op **Toepassen**.
 
 ![Het venster Projectsjabloon toepassen met de vragen en het voorbeeld](/img/help/projecten/projectsjabloon-toepassen/1-toepassen.png)
 

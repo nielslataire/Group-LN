@@ -3,6 +3,7 @@
 @using FacadeCore
 @model PlanningSjabloonBewerk
 @inject IPermissionService PermissionService
+@inject IBouwstaatService Bouwstaten
 @*
     gl-v2 — Instellingen › Planningssjablonen › bewerken (design-handoff "CRM Planningssjablonen" 63b). Links: de kop (naam, omschrijving, reageert op, actief) en de blokken met per taak één regel
     (naam met vaste code, duur, voorgangers als chips, start, estafette, ⋯). Rechts, meeschuivend: het voorbeeld (duur per blok, totaal, kritiek pad, proefdraaien met 1-4 woningen en 1-3
@@ -26,6 +27,7 @@
         blokken = Model.Blokken,
     };
     var opties = PlanningSjabloonReageertOp.Opties.Select(o => new { v = o.Sleutel, t = o.Tekst });
+    var keuzes = await Bouwstaten.Keuzes();
 }
 @section PageStyle
 {
@@ -86,6 +88,7 @@
                 <button type="button" class="gl-v2-btn gl-v2-btn-text" id="pls-alles-dicht">Alles inklappen</button>
             </div>
 
+            <div class="gl-v2-notice gl-v2-notice-compact is-warning gl-v2-pls-warn" id="pls-koppel-info" hidden><i class="ph ph-warning" aria-hidden="true"></i><span data-tekst></span></div>
             <div id="pls-blokken" class="gl-v2-pls-blokken"></div>
             @if (canWrite)
             {
@@ -118,6 +121,8 @@
                 <div class="gl-v2-pls-vb">
                     <div class="gl-v2-pls-seg"><span>Woningen</span><div class="gl-v2-segmented is-sm" id="pls-seg-woningen" role="group" aria-label="Aantal woningen"></div></div>
                     <div class="gl-v2-pls-seg"><span>Verdiepingen</span><div class="gl-v2-segmented is-sm" id="pls-seg-verdiepingen" role="group" aria-label="Aantal verdiepingen"></div></div>
+                    <div class="gl-v2-pls-seg"><span>Kelder</span><div class="gl-v2-segmented is-sm" id="pls-seg-kelder" role="group" aria-label="Kelder"></div></div>
+                    <span class="gl-v2-field-help">taken “alleen met kelder” en “op de grond” wisselen mee</span>
                     <div class="gl-v2-pls-pv" id="pls-vb-woningen"></div>
                     <div class="gl-v2-pls-ud" id="pls-vb-alle"></div>
                 </div>
@@ -204,5 +209,6 @@
 {
     <script id="pls-data" type="application/json">@Html.Raw(JsonSerializer.Serialize(data, new JsonSerializerOptions(JsonSerializerDefaults.Web)).Replace("<", "\\u003c"))</script>
     <script id="pls-opties" type="application/json">@Html.Raw(JsonSerializer.Serialize(opties, new JsonSerializerOptions(JsonSerializerDefaults.Web)).Replace("<", "\\u003c"))</script>
+    <script id="pls-keuzes" type="application/json">@Html.Raw(JsonSerializer.Serialize(keuzes, new JsonSerializerOptions(JsonSerializerDefaults.Web)).Replace("<", "\\u003c"))</script>
     <script src="~/js/gl-v2-instellingen-planningsjabloon.js" asp-append-version="true"></script>
 }

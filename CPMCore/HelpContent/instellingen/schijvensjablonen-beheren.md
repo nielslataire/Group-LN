@@ -4,7 +4,7 @@ topic: instellingen
 role: Projectleider · Beheerder
 device: Desktop
 minutes: 6
-updated: 2026-11-20
+updated: 2026-11-24
 newsTag: Nieuw
 screens: instellingen-schijvensjablonen, instellingen-schijvensjablonen-bewerken, projecten-betalingsgroep-bewerken
 related: betalingsgroep-instellen, planning-schijven-koppelen, planning-sjablonen, projectsjabloon-toepassen, projectsjablonen-beheren
@@ -52,15 +52,17 @@ Per sjabloon zie je het aantal schijven, welke schijven vast zijn, welke enkel b
 
 ![De editor van een schijvensjabloon met schijven, voorbeeld en controle](/img/help/instellingen/schijvensjablonen-beheren/1-editor.png)
 
-Boven de schijven staat één regel die het uitrekent, bijvoorbeeld "vast 5 %, 95 % verdeeld over gewicht 7 = 13,57 % per gewicht". Staan er geen gewichten in, dan moeten de vaste percentages samen 100 % zijn.
+Boven de schijven staat één regel die het uitrekent, bijvoorbeeld "vast 5 % · 95 % over gewicht 7 = 13,57 % per gewicht voor het gebouw rechts (2 bouwlagen, zonder kelder, geen dak gekozen)". Hij rekent met het voorbeeldgebouw rechts, dus een schijf die daar niet bij past telt niet mee. Staan er geen gewichten in, dan moeten de vaste percentages samen 100 % zijn.
+
+Elke schijf heeft twee regels. Op de eerste regel staan de omschrijving, de soort, de waarde, **Per verd.**, **Enkel bij** en het voorbeeld. Op de tweede regel, naast **WACHT OP**, kies je de bouwstaat (zie "Een schijf aan de planning hangen"). Een grijze rij komt niet voor bij het voorbeeldgebouw rechts.
 
 ### Het voorbeeld rechts
 
-Kies rechts het aantal verdiepingen, of er een kelder is, welk dak en een constructiewaarde. Je ziet meteen alle schijven met hun percentage en bedrag. Een schijf per verdieping staat er per verdieping uitgeschreven ("1ste verdieping", "2de verdieping"). Een schijf die niet bij dat gebouw past, staat er niet. In de tabel toont de kolom **Voorbeeld** hetzelfde per schijf. Die kolom zie je enkel op brede schermen.
+Kies rechts het aantal bouwlagen, of er een kelder is, welk dak en een constructiewaarde. Je ziet meteen alle schijven met hun percentage en bedrag. Een schijf per verdieping staat er per verdieping uitgeschreven ("1ste verdieping", "2de verdieping"). Een schijf die niet bij dat gebouw past, staat er niet. In de tabel toont de kolom **Voorbeeld** hetzelfde per schijf. Die kolom zie je enkel op brede schermen.
 
 ### De volgorde en verwijderen
 
-Sleep een schijf aan het handvat links om ze te verplaatsen, of kies **⋯ › Omhoog** of **Omlaag**. Verwijderen en dupliceren van een schijf zit ook onder **⋯**.
+Sleep een schijf aan het handvat links om ze te verplaatsen, of kies **⋯ › Omhoog** of **Omlaag**. Verwijderen en dupliceren van een schijf zit ook onder **⋯**. Dupliceren is handig voor een variant: pas bij de kopie **Enkel bij** aan, bijvoorbeeld één schijf met kelder en één zonder.
 
 ## Schijven per verdieping
 
@@ -70,19 +72,21 @@ Schrijf **{verdieping}** in de omschrijving om te bepalen waar "1ste verdieping"
 
 ## Schijven voor een kelder of een soort dak
 
-Kies bij **Enkel bij** wanneer een schijf meetelt: altijd, met kelder, zonder kelder, hellend dak of plat dak. Een schijf die niet bij het gebouw past, valt weg. De overige percentages worden dan opnieuw verdeeld, dus het totaal blijft 100 %.
+Kies bij **Enkel bij** wanneer een schijf meetelt: altijd, met kelder, zonder kelder, hellend dak, plat dak of voor elke bouwlaag boven het gelijkvloers. Een keuze anders dan **Altijd** kleurt groen. Een schijf die niet bij het gebouw past, valt weg. De overige percentages worden dan opnieuw verdeeld, dus het totaal blijft 100 %.
 
 CPM controleert bij het opslaan elke combinatie van kelder en dak. Komt er in één combinatie geen 100 % uit, dan krijg je een melding en wordt het sjabloon niet bewaard.
 
 ## Een schijf aan de planning hangen
 
-Vul bij **Code in planning** de code in van de taak of fase uit je planningssjabloon. Wordt de planning uit dat sjabloon opgebouwd, of bewaar je de betalingsgroep, dan hangt CPM de schijf aan de juiste taak. Bij een schijf per verdieping hangt de eerste verdieping aan de eerste taak met die code, de tweede aan de tweede, enzovoort.
+Kies op de tweede regel van de schijf, naast **WACHT OP**, de bouwstaat waarop de schijf wacht, bijvoorbeeld "Ruwbouw bovenbouw · Opstort gegoten". Naast de bouwstaat kies je **gestart** of **voltooid**. Zolang er geen bouwstaat is, staat het veld goud en kan je dat niet kiezen. De schijf wordt betaalbaar zodra alle taken die die bouwstaat opleveren voltooid zijn, of gestart als je dat kiest.
 
-CPM controleert de code meteen onder het veld, tegen de actieve planningssjablonen:
+In de planning hangt zo'n schijf vanzelf aan **alle** taken die die bouwstaat opleveren, zonder dat je ze met de hand koppelt. Bij een bouwstaat per bouwlaag (zoals de opstort) hoort schijf 1 bij de opstort van de eerste bouwlaag, schijf 2 bij de tweede, enzovoort. Koppel je een schijf zelf aan een taak, dan telt alleen die taak.
 
-- **Gevonden**: de naam van de taak of het blok staat eronder.
-- **Niet gevonden** in het rood: er is geen taak met die code. CPM stelt een code voor die erop lijkt.
-- **Niet leesbaar** in het goud: de taak bestaat, maar heeft een code als NIEUWE_TAAK_3. Geef ze in het planningssjabloon een leesbare code.
+Een schijf zonder bouwstaat hangt niet vanzelf aan de planning. Het paneel **Controle** telt ze en noemt ze bij naam.
+
+### Oude planningscode
+
+Schijven die van vóór de bouwstaten zijn, kunnen nog een **oude code** hebben. Dat veld staat dan op de tweede regel, naast de bouwstaat, en wordt gecontroleerd tegen de planningssjablonen: gevonden, niet gevonden (met een voorstel) of niet leesbaar. Nieuwe schijven hebben dit veld niet. Kies bij een oude schijf liever een bouwstaat.
 
 Rechts in het paneel **Controle** staan de aandachtspunten samen. Een rode of gouden code houdt het opslaan niet tegen, maar de schijf hangt dan niet aan de planning.
 

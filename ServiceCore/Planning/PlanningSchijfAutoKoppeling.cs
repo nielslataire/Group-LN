@@ -7,6 +7,7 @@ namespace ServiceCore.Planning;
 /// Hangt betalingsschijven die uit een schijvensjabloon komen automatisch aan de juiste taak of fase van de planning, via de code van het sjabloon
 /// (<c>InvoicingPaymentStages.PlanningCode</c>) en bij een herhaling per verdieping het volgnummer van de verdieping. Een schijf die in die planning al
 /// ergens aan hangt, blijft ongemoeid. Komt de code in een planning niet (genoeg) voor, dan blijft de schijf los en koppel je ze met de hand.
+/// Heeft de schijf een bouwstaat die in die planning geleverd wordt, dan koppelt de planning ze dynamisch aan alle leverende taken en maken we hier niets aan.
 /// </summary>
 public static class PlanningSchijfAutoKoppeling
 {
@@ -48,6 +49,11 @@ public static class PlanningSchijfAutoKoppeling
         var sectiePerId = secties.ToDictionary(s => s.Id);
         int PlanningVan(PlanningSectie s) => s.BouwPlanningId ?? hoofdId;
 
+        // Bouwstaten (migratie 158): heeft de schijf een bouwstaat die in deze planning door taken of fases geleverd wordt, dan hangt de planning ze dynamisch aan al die taken (zie PlanningService.VulSchijven) en maken we hier geen koppeling met één taak.
+        var bouwstatenPerPlanning = new Dictionary<int, HashSet<int>>();
+        foreach (var s in secties.Where(s => s.BouwstaatId != null)) { var pl = PlanningVan(s); if (!bouwstatenPerPlanning.TryGetValue(pl, out var set)) bouwstatenPerPlanning[pl] = set = new HashSet<int>(); set.Add(s.BouwstaatId!.Value); }
+        foreach (var t in taken.Where(t => t.BouwstaatId != null)) { var pl = PlanningVan(sectiePerId[t.PlanningSectieId]); if (!bouwstatenPerPlanning.TryGetValue(pl, out var set)) bouwstatenPerPlanning[pl] = set = new HashSet<int>(); set.Add(t.BouwstaatId!.Value); }
+
         var stageIds = stages.Select(s => s.Id).ToList();
         var bestaand = await db.PlanningSchijfKoppeling.Where(k => stageIds.Contains(k.PaymentStageId)).ToListAsync();
 
@@ -60,6 +66,7 @@ public static class PlanningSchijfAutoKoppeling
             foreach (var planning in plannings)
             {
                 if (bestaand.Any(k => k.PaymentStageId == stage.Id && k.BouwPlanningId == planning)) continue;
+                if (stage.BouwstaatId is int bid && bouwstatenPerPlanning.TryGetValue(planning, out var aanwezig) && aanwezig.Contains(bid)) continue;
                 var taakDoel = taken
                     .Where(t => string.Equals(t.Code?.Trim(), code, StringComparison.OrdinalIgnoreCase) && sectiePerId.TryGetValue(t.PlanningSectieId, out var s) && PlanningVan(s) == planning)
                     .OrderBy(t => sectiePerId[t.PlanningSectieId].Volgorde).ThenBy(t => t.PlanningSectieId).ThenBy(t => t.Volgorde).ThenBy(t => t.Id)

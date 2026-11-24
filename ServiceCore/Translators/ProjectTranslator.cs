@@ -31,6 +31,7 @@ namespace ServiceCore.Translators
             bo.ProjectType = (ProjectType)_entity.ProjectType;
             bo.Slug = _entity.Slug;
             bo.StartDateConstruction = _entity.StartDateConstruction;
+            bo.ProjectStartDate = _entity.ProjectStartDate;
             bo.Street = _entity.Street;
             bo.AspNetUserID = _entity.AspNetUserId;
             bo.ProjectFolder = _entity.ProjectFolder;
@@ -159,6 +160,7 @@ namespace ServiceCore.Translators
             _entity.ProjectName = bo.Name;
             _entity.Slug = bo.Slug;
             _entity.StartDateConstruction = bo.StartDateConstruction;
+            _entity.ProjectStartDate = bo.ProjectStartDate;
             _entity.Street = bo.Street;
             _entity.FacebookAlbumId = bo.FacebookAlbumId;
             _entity.AspNetUserId = string.IsNullOrWhiteSpace(bo.AspNetUserID)
