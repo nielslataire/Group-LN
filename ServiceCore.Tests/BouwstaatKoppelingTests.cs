@@ -49,7 +49,7 @@ public class BouwstaatKoppelingTests
     }
 
     private static async Task<PlanningSchijfLink?> Link(PlanningService svc)
-        => (await svc.Laad(ProjectId, 0)).Rijen.SelectMany(r => r.Schijven).SingleOrDefault(l => l.StageId == StageId);
+        => (await svc.Laad(ProjectId, 0)).Rijen.SelectMany(r => r.Schijven).FirstOrDefault(l => l.StageId == StageId);
 
     [Fact]
     public async Task Een_schijf_wacht_op_alle_taken_die_de_bouwstaat_opleveren()
@@ -67,6 +67,17 @@ public class BouwstaatKoppelingTests
         Assert.True((await Link(svc))!.KlaarOmTeMarkeren);
     }
 
+
+    [Fact]
+    public async Task De_schijf_toont_zich_bij_alle_taken_waarop_ze_wacht()
+    {
+        var (svc, _, elektra, sanitair) = await Maak();
+        var staat = await svc.Laad(ProjectId, 0);
+        var metSchijf = staat.Rijen.Where(r => r.Schijven.Any(l => l.StageId == StageId)).Select(r => r.Sleutel).ToList();
+        Assert.Contains("t" + elektra, metSchijf);
+        Assert.Contains("t" + sanitair, metSchijf);
+        Assert.Equal(2, metSchijf.Count);
+    }
     [Fact]
     public async Task Met_de_regel_gestart_volstaat_het_dat_alle_taken_begonnen_zijn()
     {

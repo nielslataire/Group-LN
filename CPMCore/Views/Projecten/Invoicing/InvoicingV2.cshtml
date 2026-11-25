@@ -151,6 +151,12 @@
                             </span>
                         }
                         <span class="gl-v2-card-header-spacer"></span>
+                        @if (account.AkteOpen && Model.CanWrite)
+                        {
+                            <button type="button" class="gl-v2-btn js-inv-akte" data-account-id="@account.ClientAccountId" title="Zet de grondfactuur, de kostenfactuur en de werken tot nu toe klaar als conceptfacturen: @account.AkteSamenvatting">
+                                <i class="ph ph-files" aria-hidden="true"></i> Aktefacturen klaarzetten
+                            </button>
+                        }
                         @if (account.HasProgress)
                         {
                             <div class="gl-v2-inv-progress">
@@ -405,6 +411,7 @@
         "previewUrl": "@Url.Action("PreviewInvoices")",
         "makeInvoicesUrl": "@Url.Action("MakeInvoices")",
         "makeInvoicesCoUrl": "@Url.Action("MakeInvoicesCO")",
+        "akteMakenUrl": "@Url.Action("AkteFacturenMaken")",
         "dossierUrl": "@Url.Action("Dossier", "SigningAdmin", new { id = "__CASEID__" })",
         "cancelUrl": "@Url.Action("Cancel", "SigningAdmin")",
         "uploadSignedUrl": "@Url.Action("UploadSigned", "SigningAdmin")"

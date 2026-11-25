@@ -21,6 +21,24 @@ public class PaymentGroupCardV2
     public decimal TotalPercentage => Stages.Sum(s => s.Percentage);
     /// <summary>Structurele positie van de laatste schijf ("schijf 11") — de eindafrekening.</summary>
     public int LastStageNumber => Stages.Count;
+
+    // ── 68a/68b: tabs, kop en "vraagt actie" ──
+    /// <summary>Eenheden die verkocht zijn (een klantenrekening hebben).</summary>
+    public int SoldUnits => Units.Count(u => u.IsSold);
+    /// <summary>Schijven die volgens de planning bereikt zijn en waarvoor nog eenheden te markeren zijn.</summary>
+    public int DueStageCount => Stages.Count(s => s.IsDue && s.MarkableCount > 0);
+    /// <summary>Verschillende eenheden die in die schijven nog te markeren zijn.</summary>
+    public int DueUnitCount => Stages.Where(s => s.IsDue).SelectMany(s => s.CellsByUnitId.Where(c => c.Value.State == "not-reached").Select(c => c.Key)).Distinct().Count();
+    /// <summary>De schijven in kolom-volgorde van die schijven (voor de knop "Alle n markeren").</summary>
+    public IEnumerable<int> DueStageIds => Stages.Where(s => s.IsDue && s.MarkableCount > 0).Select(s => s.StageId);
+    /// <summary>Kolomkoppen boven de eenheden: per bouwlaag of, zonder bouwlagen, per soort.</summary>
+    public List<PaymentUnitHeaderV2> UnitHeaders { get; set; } = new();
+}
+
+public class PaymentUnitHeaderV2
+{
+    public string Label { get; set; } = "";
+    public int Count { get; set; }
 }
 
 public class PaymentGroupUnitV2
@@ -28,6 +46,10 @@ public class PaymentGroupUnitV2
     public int UnitId { get; set; }
     public string UnitName { get; set; } = "";
     public bool IsSold { get; set; }
+    /// <summary>Verkocht en met een verkocht bedrag: enkel dan kan een schijf voor de eenheid gemarkeerd of gefactureerd worden.</summary>
+    public bool Eligible { get; set; }
+    /// <summary>De groep waaronder de kolom staat (bouwlaag of soort); een scheidingslijn komt waar ze wisselt.</summary>
+    public string GroupLabel { get; set; } = "";
 }
 
 public class PaymentStageRowV2
@@ -47,6 +69,19 @@ public class PaymentStageRowV2
     /// eenheid teruggezet worden (dat zou meteen weer "reached" tonen door de groep-vlag) — enkel een
     /// individuele UnitPaymentStageReached-rij (stage.Invoicable == false) mag je terug uitzetten.</summary>
     public bool IsGroupForced { get; set; }
+
+    // ── 68a: de stand uit de planning, per schijf ──
+    /// <summary>De taak of fase in de planning waaraan de schijf hangt ("3.1.2 Opstort gelijkvloers"); leeg = niet gekoppeld.</summary>
+    public string? PlanningTask { get; set; }
+    public DateOnly? PlanningDate { get; set; }
+    /// <summary>De taak is afgevinkt of haar einddatum is voorbij: de schijf is volgens de planning bereikt.</summary>
+    public bool IsDue { get; set; }
+    /// <summary>Eenheden waarvoor de schijf nog gemarkeerd kan worden.</summary>
+    public int MarkableCount => CellsByUnitId.Values.Count(c => c.State == "not-reached");
+    public int InvoicedCount => CellsByUnitId.Values.Count(c => c.State == "invoiced");
+    public int ReachedCount => CellsByUnitId.Values.Count(c => c.State == "reached");
+    /// <summary>Eenheden waarvoor de schijf ooit kan gelden (verkocht en met verkocht bedrag).</summary>
+    public int EligibleCount => CellsByUnitId.Values.Count(c => c.State != "not-sold" && c.State != "not-invoicable");
 }
 
 public class PaymentStageCellV2

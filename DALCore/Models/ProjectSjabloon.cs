@@ -18,6 +18,11 @@ public partial class ProjectSjabloon
     /// <summary>Schijvensjabloon voor betalingsgroepen met enkel parkings en bergingen (migratie 160). Leeg = die groepen krijgen het gewone schijvensjabloon.</summary>
     public int? SchijfSjabloonBijgebouwId { get; set; }
 
+    /// <summary>Planningssjabloon voor het project zelf (de hoofdplanning, bv. de wegenis van een verkaveling; migratie 164). Leeg = geen.</summary>
+    public int? PlanningSjabloonProjectId { get; set; }
+    /// <summary>Bouwstaatcode waarna de woningen starten (bv. WEGENIS_VERHARDING); leeg = onmiddellijk (migratie 164).</summary>
+    public string WoningenStartNa { get; set; }
+
     public int StandaardVerdiepingen { get; set; } = 1;
     public bool StandaardKelder { get; set; }
 
@@ -43,6 +48,7 @@ public partial class cpmRunningContext
             entity.Property(e => e.Naam).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Beschrijving).HasMaxLength(1000);
             entity.Property(e => e.StandaardDak).HasMaxLength(20);
+            entity.Property(e => e.WoningenStartNa).HasMaxLength(60);
             entity.Property(e => e.CreatedByUserId).HasMaxLength(450);
             entity.Property(e => e.ModifiedByUserId).HasMaxLength(450);
         });

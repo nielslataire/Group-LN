@@ -38,6 +38,8 @@ Onder **Instellingen › Sjablonen › Projectsjablonen** staan je projectsjablo
 1. Kies **Nieuw sjabloon**.
 2. Geef het sjabloon een naam en eventueel een korte omschrijving. **Actief** staat bovenaan. Alleen actieve sjablonen kan je toepassen.
 3. Kies bij **Onderdelen** een planning, een traject en schijven. Onder elke keuze staan de kerncijfers van dat sjabloon. Via **Openen** ga je naar het sjabloon zelf.
+   Heb je parkings of bergingen met eigen schijven, kies dan ook **Schijven parkings en bergingen**. Laat je dat leeg, dan krijgen alle groepen dezelfde schijven.
+   Bij een verkaveling met wegenis kies je ook **Planning van het project zelf**: die planning (de wegenis) komt in de hoofdplanning, en de planning van de woningen komt per woning. Kies bij **Woningen starten** wanneer de woningen mogen beginnen: onmiddellijk, na de wegenfundering, na de nutsvoorzieningen, na de wegverharding of na de voorlopige oplevering van de wegenis. Bij het toepassen krijgt de planning van de woningen die startdatum. Je past ze per project nog aan in de planning.
 4. Kies het **standaard gebouw**: de verdiepingen boven het gelijkvloers met de knoppen − en +, het dak en de kelder.
 5. Klik op **Sjabloon opslaan**.
 
@@ -47,7 +49,7 @@ Onder **Instellingen › Sjablonen › Projectsjablonen** staan je projectsjablo
 
 Rechts zie je wat het sjabloon doet voor het standaardgebouw: hoeveel fases en taken de planning krijgt en hoeveel werkdagen die duurt, hoeveel mijlpalen het traject heeft en welke schijven er met welk percentage komen. Het voorbeeld past zich aan als je het gebouw of een onderdeel wijzigt.
 
-Op een project vult het sjabloon enkel aan wat nog leeg is. Een bestaande planning of bestaande schijven blijven staan. De projectleider ziet altijd eerst het voorstel. Hoe dat gaat, lees je bij "Een projectsjabloon toepassen op je project".
+Op een project vult het sjabloon enkel aan wat nog leeg is. Een betalingsgroep waarin enkel parkings en bergingen zitten, krijgt het schijvensjabloon voor parkings en bergingen. Een groep met ook maar één appartement of andere eenheid krijgt de gewone schijven. Een parking of berging die aan een appartement hangt, zet je daarom in de groep van dat appartement: ze volgt dan diens schijven. Een bestaande planning of bestaande schijven blijven staan. De projectleider ziet altijd eerst het voorstel. Hoe dat gaat, lees je bij "Een projectsjabloon toepassen op je project".
 
 ## Let op
 

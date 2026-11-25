@@ -220,21 +220,21 @@
         if (dot) { e.preventDefault(); unmarkOneUnit(dot); }
     });
 
-    // Groep-pillen — wisselt welke kaart zichtbaar is, geen round-trip (zelfde client-side patroon als
-    // Facturatie's filterpillen).
+    // Groeptabs (68a) — wisselt welke kaart zichtbaar is, geen round-trip.
     // De gekozen groep blijft onthouden (per project, per tabblad): een bol of schijf aanklikken herlaadt de pagina,
     // en dan moet dezelfde betalingsgroep open blijven i.p.v. terug naar de eerste te springen.
-    var pillBar = document.querySelector(".gl-v2-ps-pills");
+    var pillBar = document.querySelector(".gl-v2-ps-tabs");
     if (pillBar) {
         var opslagSleutel = "gl-v2-ps-groep-" + (cfg.projectId || "");
+        var tabs = function () { return $$(".gl-v2-ps-tab[data-ps-pill-group]", pillBar); };
         var toonGroep = function (groupId) {
-            $$(".gl-v2-ps-pill", pillBar).forEach(function (p) { p.classList.toggle("is-active", p.getAttribute("data-ps-pill-group") === groupId); });
+            tabs().forEach(function (p) { var on = p.getAttribute("data-ps-pill-group") === groupId; p.classList.toggle("is-active", on); p.setAttribute("aria-pressed", on ? "true" : "false"); });
             $$("[data-ps-group-card]").forEach(function (card) {
                 card.hidden = card.getAttribute("data-ps-group-card") !== groupId;
             });
         };
         pillBar.addEventListener("click", function (e) {
-            var pill = e.target.closest(".gl-v2-ps-pill");
+            var pill = e.target.closest(".gl-v2-ps-tab[data-ps-pill-group]");
             if (!pill) return;
             var groupId = pill.getAttribute("data-ps-pill-group");
             toonGroep(groupId);
@@ -242,7 +242,33 @@
         });
         try {
             var bewaard = sessionStorage.getItem(opslagSleutel);
-            if (bewaard && $$(".gl-v2-ps-pill", pillBar).some(function (p) { return p.getAttribute("data-ps-pill-group") === bewaard; })) toonGroep(bewaard);
+            if (bewaard && tabs().some(function (p) { return p.getAttribute("data-ps-pill-group") === bewaard; })) toonGroep(bewaard);
         } catch (err) { /* zie hierboven */ }
     }
+
+    // "Alle n markeren voor m eenheden…" (68a): na bevestiging elke schijf die volgens de planning bereikt is markeren voor alle eenheden die nog open staan.
+    // Dezelfde server-actie als de knop per schijf (één verzoek per schijf, vandaag als datum); daarna herlaadt de pagina.
+    document.addEventListener("click", function (e) {
+        var knop = e.target.closest(".js-ps-mark-all");
+        if (!knop || knop.disabled) return;
+        var ids = (knop.getAttribute("data-stage-ids") || "").split(",").filter(Boolean);
+        var n = knop.getAttribute("data-unit-count"), s = knop.getAttribute("data-stage-count");
+        var run = function () {
+            knop.disabled = true;
+            var vandaag = new Date().toISOString().slice(0, 10), keten = Promise.resolve();
+            ids.forEach(function (stageId) {
+                var units = $$('.js-ps-mark-one[data-stage-id="' + stageId + '"]').map(function (d) { return d.getAttribute("data-unit-id"); });
+                if (!units.length) return;
+                keten = keten.then(function () {
+                    var fd = new FormData();
+                    fd.append("__RequestVerificationToken", token()); fd.append("projectId", cfg.projectId); fd.append("stageId", stageId); fd.append("reachedDate", vandaag);
+                    units.forEach(function (u) { fd.append("unitIds", u); });
+                    return fetch(cfg.submitUrl, { method: "POST", body: fd, credentials: "same-origin" });
+                });
+            });
+            keten.then(function () { window.location.reload(); }).catch(function () { knop.disabled = false; });
+        };
+        if (window.GlV2Bevestig) window.GlV2Bevestig({ title: "Schijven markeren?", desc: s + (s === "1" ? " schijf wordt" : " schijven worden") + " als bereikt gemarkeerd voor " + n + (n === "1" ? " eenheid" : " eenheden") + ", met vandaag als datum. De posten komen in Facturatie onder “Te factureren”; er wordt nog niets gefactureerd.", ok: "Markeren", tone: "warning" }).then(function (ok) { if (ok) run(); });
+        else run();
+    });
 })();

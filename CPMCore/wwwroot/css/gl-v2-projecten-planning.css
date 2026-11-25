@@ -711,7 +711,7 @@ body.gl-v2-pl-is-dragging[data-pl-drag="voortgang"], body.gl-v2-pl-is-dragging[d
 .gl-v2-pa-gantt { overflow-x: auto; position: relative; }
 .gl-v2-pa-r { display: flex; align-items: stretch; min-height: 34px; border-bottom: 1px solid var(--gl-v2-hairline-soft); width: max-content; min-width: 100%; }
 .gl-v2-pa-l { flex: none; display: flex; align-items: center; gap: 10px; padding: 0 12px 0 16px; border-right: 1px solid var(--gl-v2-hairline-soft); font: 450 12.5px var(--gl-v2-font-sans); color: var(--gl-v2-ink); min-width: 0; position: sticky; left: 0; z-index: 6; background: var(--gl-v2-surface); }
-.gl-v2-pa-l code { width: 40px; flex: none; font: 500 11px var(--gl-v2-font-mono); color: var(--gl-v2-muted-light, #7a8a78); }
+.gl-v2-pa-l code { width: 40px; flex: none; font: 500 11px var(--gl-v2-font-mono, 'IBM Plex Mono', monospace); color: var(--gl-v2-muted-light, #7a8a78); }
 .gl-v2-pa-tn { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gl-v2-pa-hn { flex: 1; font: 600 10.5px var(--gl-v2-font-sans); letter-spacing: .06em; color: var(--gl-v2-muted); text-transform: uppercase; }
 .gl-v2-pa-f { width: 150px; flex: none; color: var(--gl-v2-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -726,7 +726,7 @@ body.gl-v2-pl-is-dragging[data-pl-drag="voortgang"], body.gl-v2-pl-is-dragging[d
 .gl-v2-pa-mh span { position: absolute; top: 0; height: 22px; display: flex; align-items: center; padding-left: 6px; font: 700 11px var(--gl-v2-font-sans); color: var(--gl-v2-ink); border-left: 1px solid var(--gl-v2-hairline); white-space: nowrap; overflow: hidden; }
 .gl-v2-pa-wk { position: relative; height: 22px; }
 .gl-v2-pa-wk i { position: absolute; top: 0; bottom: 0; border-left: 1px solid rgba(44, 59, 42, .07); }
-.gl-v2-pa-wk b { font: 500 9px var(--gl-v2-font-mono); color: #9aa898; padding-left: 2px; }
+.gl-v2-pa-wk b { font: 500 9px var(--gl-v2-font-mono, 'IBM Plex Mono', monospace); color: #9aa898; padding-left: 2px; }
 .gl-v2-pa-rows { position: relative; }
 .gl-v2-pa-g { position: relative; flex: none; background-image: repeating-linear-gradient(90deg, transparent 0 29px, rgba(44, 59, 42, .03) 29px 30px); }
 .gl-v2-pa-bar { position: absolute; top: 9px; height: 16px; padding: 0; border: 0; border-radius: 5px; background: var(--c, #B9C2B5); }

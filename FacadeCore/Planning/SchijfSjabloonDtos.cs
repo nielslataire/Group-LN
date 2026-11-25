@@ -74,6 +74,8 @@ public sealed class SchijfSjabloonKeuze
     public bool HeeftVerdiepingen { get; set; }
     public bool HeeftKelder { get; set; }
     public bool HeeftDak { get; set; }
+    /// <summary>Aantal schijven in het sjabloon, voor de keuzekaart ("3 schijven").</summary>
+    public int AantalSchijven { get; set; }
 }
 
 /// <summary>Eén schijf uit het uitgerekende voorstel.</summary>

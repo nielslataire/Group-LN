@@ -1,7 +1,10 @@
 @model CPMCore.Models.Projecten.PaymentStagesV2Vm
 @*
     gl-v2 — Betalingsschijven (design-handoff 21g "Betalingsschijven — schijven × eenheden, btw van de
-    groep, eindafrekening gemarkeerd" / 21h "Schijf bereikt aanduiden"). Eén kaart per betalingsgroep,
+    groep, eindafrekening gemarkeerd" / 21h "Schijf bereikt aanduiden"; herwerkt 25/11/2026 naar 68a/68b:
+    groepen als tabs met "te markeren", kop op één regel, kolommen per bouwlaag of soort zonder horizontaal
+    scrollen, niet-verkochte eenheden als gearceerde kolom, de planning onder elke schijf, "Vraagt actie"
+    voor schijven die volgens de planning bereikt zijn, en de stand per schijf rechts). Eén kaart per betalingsgroep,
     een matrix schijf × eenheid — elke cel toont per eenheid apart of die schijf al gefactureerd,
     bereikt/te factureren of nog niet bereikt is (UnitPaymentStageReached, migratie 062).
 
@@ -20,6 +23,8 @@
 
     var be = CultureInfo.GetCultureInfo("nl-BE");
     string Pct(decimal v) => v.ToString("0.##", be);
+    // Korte kolomkop: "Appartement 0.02" wordt 0.02, "Autostaanplaats P01" wordt P01 (de volledige naam staat in de tooltip)
+    string Kort(string n) { var i = (n ?? "").Trim().LastIndexOf(' '); return i > 0 ? n.Trim()[(i + 1)..] : (n ?? ""); }
 
     var menuVm = new GlV2ProjectMenuVm
     {
@@ -33,16 +38,6 @@
     <link rel="stylesheet" href="~/css/gl-v2-project-inner-menu.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-projecten-paymentstages.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/gl-v2-projecten-paymentgroup.css" asp-append-version="true" />
-}
-@section PageActions
-{
-    @if (Model.CanWrite)
-    {
-        @* 26a: opent de "Nieuwe betalingsgroep"-modal (vertrek van een bestaande groep of leeg). *@
-        <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-npg-open">
-            <i class="ph ph-plus" aria-hidden="true"></i><span>Betalingsgroep</span>
-        </button>
-    }
 }
 @section ProjectMenu
 {
@@ -75,122 +70,162 @@
     }
     else
     {
-        if (Model.Groups.Count > 1)
-        {
-            <div class="gl-v2-ps-pills">
-                @for (var gi = 0; gi < Model.Groups.Count; gi++)
-                {
-                    var g = Model.Groups[gi];
-                    <button type="button" class="gl-v2-ps-pill @(gi == 0 ? "is-active" : "")" data-ps-pill-group="@g.GroupId">@g.Name · @Pct(g.VatPercentage) % btw · @g.Units.Count @(g.Units.Count == 1 ? "eenheid" : "eenheden")</button>
-                }
-            </div>
-        }
+        @* 68a: de groepen als tabs met wat ze nodig hebben, en "+ Betalingsgroep" erbij *@
+        <div class="gl-v2-ps-tabs" role="group" aria-label="Betalingsgroepen">
+            @for (var gi = 0; gi < Model.Groups.Count; gi++)
+            {
+                var g = Model.Groups[gi];
+                <button type="button" class="gl-v2-ps-tab @(gi == 0 ? "is-active" : "")" aria-pressed="@(gi == 0 ? "true" : "false")" data-ps-pill-group="@g.GroupId">
+                    <b>@g.Name</b><span>@Pct(g.VatPercentage) % btw · @g.Units.Count @(g.Units.Count == 1 ? "eenheid" : "eenheden")</span>
+                    @if (g.DueStageCount > 0) { <em>@g.DueStageCount te markeren</em> }
+                </button>
+            }
+            @if (Model.CanWrite)
+            {
+                <button type="button" class="gl-v2-ps-tab is-add js-npg-open"><i class="ph ph-plus" aria-hidden="true"></i>Betalingsgroep</button>
+            }
+        </div>
         @for (var gi = 0; gi < Model.Groups.Count; gi++)
         {
             var group = Model.Groups[gi];
-            <div class="gl-v2-card gl-v2-ps-card" data-ps-group-card="@group.GroupId" hidden="@(Model.Groups.Count > 1 && gi > 0)">
-                <div class="gl-v2-card-header">
+            var nietVerkocht = group.Units.Where(u => !u.IsSold).Select(u => u.UnitName).ToList();
+            var totaalOk = group.TotalPercentage == 100m;
+            <section class="gl-v2-card gl-v2-ps-card" data-ps-group-card="@group.GroupId" hidden="@(Model.Groups.Count > 1 && gi > 0)">
+                <div class="gl-v2-ps-ch">
                     <span class="gl-v2-card-header-icon"><i class="ph ph-stack" aria-hidden="true"></i></span>
-                    <h2 class="gl-v2-card-header-title">@group.Name</h2>
-                    <span class="gl-v2-field-divider"></span>
-                    <span class="gl-v2-card-header-count">@group.Units.Count @(group.Units.Count == 1 ? "eenheid" : "eenheden")</span>
-                    <span class="gl-v2-card-header-spacer"></span>
+                    <div class="gl-v2-ps-ct">
+                        <h2>@group.Name</h2>
+                        <span>btw klant <b>@Pct(group.VatPercentage) %</b> · @group.Units.Count @(group.Units.Count == 1 ? "eenheid" : "eenheden")@(group.Units.Count > 0 ? ", waarvan " : "")@if (group.Units.Count > 0) { <b>@group.SoldUnits verkocht</b> } · @group.Stages.Count @(group.Stages.Count == 1 ? "schijf" : "schijven") · totaal <b class="@(totaalOk ? "is-ok" : "is-bad")">@Pct(group.TotalPercentage) %@if (totaalOk) { <i class="ph ph-check" aria-hidden="true"></i> }</b></span>
+                    </div>
                     @if (Model.CanWrite)
                     {
-                        <a href="@Url.Action("PaymentGroupEditV2", "Projecten", new { projectid = Model.ProjectId, groupid = group.GroupId })" class="gl-v2-card-header-action">Groep bewerken</a>
+                        <span class="gl-v2-card-acts">
+                            <a href="@Url.Action("PaymentGroupEditV2", "Projecten", new { projectid = Model.ProjectId, groupid = group.GroupId, sjabloon = 1 })" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-list-checks" aria-hidden="true"></i>Sjabloon toepassen</a>
+                            <a href="@Url.Action("PaymentGroupEditV2", "Projecten", new { projectid = Model.ProjectId, groupid = group.GroupId })" class="gl-v2-btn gl-v2-btn-secondary"><i class="ph ph-pencil-simple" aria-hidden="true"></i>Groep bewerken</a>
+                        </span>
                     }
                 </div>
-                <div class="gl-v2-ps-stats">
-                    <div class="gl-v2-ps-stat"><span class="gl-v2-ps-stat-label">BTW KLANT</span><span class="gl-v2-ps-stat-value">@Pct(group.VatPercentage) %</span></div>
-                    <div class="gl-v2-ps-stat"><span class="gl-v2-ps-stat-label">EENHEDEN</span><span class="gl-v2-ps-stat-value">@(group.Units.Count == 0 ? "nog geen eenheden gekoppeld" : string.Join(" · ", group.Units.Select(u => u.UnitName)))</span></div>
-                    <div class="gl-v2-ps-stat"><span class="gl-v2-ps-stat-label">TOTAAL</span><span class="gl-v2-ps-stat-value">@Pct(group.TotalPercentage) %</span></div>
-                    <div class="gl-v2-ps-stat"><span class="gl-v2-ps-stat-label">EINDAFREKENING</span><span class="gl-v2-ps-stat-value">schijf @group.LastStageNumber</span></div>
+
+                @if (Model.CanWrite && group.DueStageCount > 0)
+                {
+                    @* Vraagt actie: schijven die volgens de planning bereikt zijn, maar nog niet gemarkeerd *@
+                    <div class="gl-v2-ps-va" role="status">
+                        <i class="ph ph-warning" aria-hidden="true"></i>
+                        <span><b>@group.DueStageCount @(group.DueStageCount == 1 ? "schijf is" : "schijven zijn") volgens de planning bereikt</b>, maar nog niet voor alle eenheden gemarkeerd (vandaag @DateTime.Today.ToString("dd/MM/yyyy")). Markeer per schijf, of alles in één keer.</span>
+                        <button type="button" class="gl-v2-btn gl-v2-btn-secondary js-ps-mark-all" data-stage-ids="@string.Join(",", group.DueStageIds)" data-stage-count="@group.DueStageCount" data-unit-count="@group.DueUnitCount">Alle @group.DueStageCount markeren voor @group.DueUnitCount @(group.DueUnitCount == 1 ? "eenheid" : "eenheden")…</button>
+                    </div>
+                }
+
+                <div class="gl-v2-ps-lg">
+                    <span><span class="gl-v2-ps-dot is-invoiced"></span>gefactureerd</span>
+                    <span><span class="gl-v2-ps-dot is-reached"></span>bereikt, te factureren</span>
+                    <span><span class="gl-v2-ps-dot is-not-reached"></span>nog niet bereikt</span>
+                    <span><span class="gl-v2-ps-dot is-not-reached is-due"></span>volgens planning bereikt, niet gemarkeerd</span>
+                    @if (nietVerkocht.Count > 0)
+                    {
+                        <span><span class="gl-v2-ps-na"></span>niet verkocht (@string.Join(" · ", nietVerkocht.Take(6))@(nietVerkocht.Count > 6 ? " …" : ""))</span>
+                    }
+                    @if (Model.CanWrite)
+                    {
+                        <span class="gl-v2-ps-lg-hint">klik op een bolletje om één eenheid te markeren</span>
+                    }
                 </div>
-                <div class="gl-v2-ps-table-scroll">
-                    <table class="gl-v2-ps-table">
-                        <thead>
-                            <tr>
-                                <th scope="col" class="is-num">#</th>
-                                <th scope="col">Schijf</th>
-                                <th scope="col" class="is-right">%</th>
-                                @foreach (var u in group.Units)
-                                {
-                                    <th scope="col" class="is-center">@u.UnitName.ToUpperInvariant()</th>
-                                }
-                                <th scope="col"><span class="visually-hidden">Actie</span></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var stage in group.Stages)
+
+                <div class="gl-v2-ps-mx" role="table" aria-label="Schijven per eenheid">
+                    <div class="gl-v2-ps-r is-hd1" role="row">
+                        <span class="gl-v2-ps-l"></span>
+                        <div class="gl-v2-ps-cells">
+                            @foreach (var h in group.UnitHeaders)
                             {
-                                <tr class="gl-v2-ps-row @(stage.IsLast ? "is-last" : "")">
-                                    <td class="is-num">@stage.Number</td>
-                                    <td class="gl-v2-ps-desc">
-                                        @stage.Name
-                                        @if (stage.IsLast)
-                                        {
-                                            <span class="gl-v2-ps-lastbadge">EINDAFREKENING</span>
-                                        }
-                                    </td>
-                                    <td class="is-right gl-v2-ps-tabular">@Pct(stage.Percentage) %</td>
-                                    @foreach (var u in group.Units)
-                                    {
-                                        var cell = stage.CellsByUnitId[u.UnitId];
-                                        <td class="is-center" data-label="@u.UnitName">
-                                            @if (cell.State == "invoiced")
-                                            {
-                                                <span class="gl-v2-ps-dot is-invoiced" title="Gefactureerd"><i class="ph ph-check" aria-hidden="true"></i></span>
-                                            }
-                                            else if (cell.State == "reached" && Model.CanWrite && !stage.IsGroupForced)
-                                            {
-                                                <span class="gl-v2-ps-dot is-reached is-clickable js-ps-unmark-one" data-stage-id="@stage.StageId" data-unit-id="@u.UnitId" title="Klik om terug uit te zetten" tabindex="0" role="button"></span>
-                                            }
-                                            else if (cell.State == "reached")
-                                            {
-                                                <span class="gl-v2-ps-dot is-reached" title="Bereikt, te factureren"></span>
-                                            }
-                                            else if (cell.State == "not-sold")
-                                            {
-                                                <span class="gl-v2-ps-dash" title="Nog niet verkocht">—</span>
-                                            }
-                                            else if (cell.State == "not-invoicable")
-                                            {
-                                                <span class="gl-v2-ps-dash" title="Akte nog niet verleden">—</span>
-                                            }
-                                            else if (Model.CanWrite)
-                                            {
-                                                <span class="gl-v2-ps-dot is-not-reached is-clickable js-ps-mark-one" data-stage-id="@stage.StageId" data-unit-id="@u.UnitId" title="Klik om dit lot als bereikt aan te duiden" tabindex="0" role="button"></span>
-                                            }
-                                            else
-                                            {
-                                                <span class="gl-v2-ps-dot is-not-reached" title="Nog niet bereikt"></span>
-                                            }
-                                        </td>
-                                    }
-                                    <td class="is-right">
-                                        @if (Model.CanWrite && stage.HasActionableUnits)
-                                        {
-                                            <button type="button" class="gl-v2-ps-action js-ps-mark-reached" data-stage-id="@stage.StageId" data-stage-number="@stage.Number" data-stage-name="@stage.Name" data-stage-percentage="@Pct(stage.Percentage)">Bereikt aanduiden →</button>
-                                        }
-                                    </td>
-                                </tr>
+                                <span class="gl-v2-ps-gh" style="width: calc(var(--ps-col) * @h.Count)">@h.Label.ToUpperInvariant()</span>
                             }
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="3" class="gl-v2-ps-legend-cell">
-                                    <span class="gl-v2-ps-legend">
-                                        <span class="gl-v2-ps-legend-item"><span class="gl-v2-ps-dot is-invoiced"></span>gefactureerd</span>
-                                        <span class="gl-v2-ps-legend-item"><span class="gl-v2-ps-dot is-reached"></span>bereikt, te factureren</span>
-                                        <span class="gl-v2-ps-legend-item"><span class="gl-v2-ps-dot is-not-reached"></span>nog niet bereikt</span>
+                        </div>
+                        <span class="gl-v2-ps-st"></span>
+                    </div>
+                    <div class="gl-v2-ps-r is-hd2" role="row">
+                        <span class="gl-v2-ps-l"><span class="n">#</span><span class="t">SCHIJF</span><span class="p">%</span></span>
+                        <div class="gl-v2-ps-cells">
+                            @for (var ui = 0; ui < group.Units.Count; ui++)
+                            {
+                                var u = group.Units[ui];
+                                var eindeGroep = ui == group.Units.Count - 1 || group.Units[ui + 1].GroupLabel != u.GroupLabel;
+                                <span class="gl-v2-ps-uh @(u.IsSold ? "" : "is-ns") @(eindeGroep ? "is-end" : "")" title="@u.UnitName@(u.IsSold ? " · verkocht" : " · niet verkocht, geen schijven")">@Kort(u.UnitName)</span>
+                            }
+                        </div>
+                        <span class="gl-v2-ps-st">STAND</span>
+                    </div>
+                    @foreach (var stage in group.Stages)
+                    {
+                        var due = stage.IsDue && stage.MarkableCount > 0;
+                        <div class="gl-v2-ps-r @(due ? "is-due" : "") @(stage.IsLast ? "is-last" : "")" role="row">
+                            <span class="gl-v2-ps-l">
+                                <span class="n">@stage.Number</span>
+                                <span class="t">
+                                    <b>@stage.Name @if (stage.IsLast) { <i class="gl-v2-ps-end">eindafrekening</i> }</b>
+                                    @if (stage.PlanningTask != null)
+                                    {
+                                        <small class="@(due ? "is-due" : "")"><i class="ph ph-calendar-check" aria-hidden="true"></i>@(stage.IsDue ? "volgens planning klaar " : "planning ")@(stage.PlanningDate.HasValue ? stage.PlanningDate.Value.ToString("dd/MM/yy") + " · " : "")@stage.PlanningTask</small>
+                                    }
+                                </span>
+                                <span class="p">@Pct(stage.Percentage) %</span>
+                            </span>
+                            <div class="gl-v2-ps-cells">
+                                @for (var ui = 0; ui < group.Units.Count; ui++)
+                                {
+                                    var u = group.Units[ui];
+                                    var eindeGroep = ui == group.Units.Count - 1 || group.Units[ui + 1].GroupLabel != u.GroupLabel;
+                                    var cell = stage.CellsByUnitId[u.UnitId];
+                                    <span class="gl-v2-ps-c @(eindeGroep ? "is-end" : "")" role="cell" data-label="@u.UnitName">
+                                        @if (cell.State == "invoiced")
+                                        {
+                                            <span class="gl-v2-ps-dot is-invoiced" title="@u.UnitName: gefactureerd"><i class="ph ph-check" aria-hidden="true"></i></span>
+                                        }
+                                        else if (cell.State == "reached" && Model.CanWrite && !stage.IsGroupForced)
+                                        {
+                                            <span class="gl-v2-ps-dot is-reached is-clickable js-ps-unmark-one" data-stage-id="@stage.StageId" data-unit-id="@u.UnitId" title="@u.UnitName: bereikt, te factureren. Klik om terug uit te zetten" tabindex="0" role="button"></span>
+                                        }
+                                        else if (cell.State == "reached")
+                                        {
+                                            <span class="gl-v2-ps-dot is-reached" title="@u.UnitName: bereikt, te factureren"></span>
+                                        }
+                                        else if (cell.State == "not-sold")
+                                        {
+                                            <span class="gl-v2-ps-na" title="@u.UnitName: nog niet verkocht"></span>
+                                        }
+                                        else if (cell.State == "not-invoicable")
+                                        {
+                                            <span class="gl-v2-ps-na" title="@u.UnitName: akte nog niet verleden"></span>
+                                        }
+                                        else if (Model.CanWrite)
+                                        {
+                                            <span class="gl-v2-ps-dot is-not-reached @(stage.IsDue ? "is-due" : "") is-clickable js-ps-mark-one" data-stage-id="@stage.StageId" data-unit-id="@u.UnitId" title="@u.UnitName: @(stage.IsDue ? "volgens de planning bereikt. " : "")Klik om dit lot als bereikt aan te duiden" tabindex="0" role="button"></span>
+                                        }
+                                        else
+                                        {
+                                            <span class="gl-v2-ps-dot is-not-reached @(stage.IsDue ? "is-due" : "")" title="@u.UnitName: nog niet bereikt"></span>
+                                        }
                                     </span>
-                                </td>
-                                <td colspan="@(group.Units.Count + 1)"></td>
-                            </tr>
-                        </tfoot>
-                    </table>
+                                }
+                            </div>
+                            <span class="gl-v2-ps-st">
+                                @if (!(due && Model.CanWrite && stage.HasActionableUnits))
+                                {
+                                    <span class="gl-v2-ps-stand" title="@stage.InvoicedCount van @stage.EligibleCount gefactureerd@(stage.ReachedCount > 0 ? ", " + stage.ReachedCount + " bereikt, te factureren" : "")">@stage.InvoicedCount / @stage.EligibleCount</span>
+                                }
+                                @if (Model.CanWrite && stage.HasActionableUnits)
+                                {
+                                    <button type="button" class="gl-v2-ps-mk @(due ? "is-due" : "") js-ps-mark-reached" data-stage-id="@stage.StageId" data-stage-number="@stage.Number" data-stage-name="@stage.Name" data-stage-percentage="@Pct(stage.Percentage)">Markeren (@stage.MarkableCount)</button>
+                                }
+                            </span>
+                        </div>
+                    }
+                    <div class="gl-v2-ps-r is-ft" role="row">
+                        <span class="gl-v2-ps-l"><span class="n"></span><span class="t">Totaal · eindafrekening schijf @group.LastStageNumber</span><span class="p @(totaalOk ? "is-ok" : "is-bad")">@Pct(group.TotalPercentage) %</span></span>
+                        <div class="gl-v2-ps-cells"></div>
+                        <span class="gl-v2-ps-st"></span>
+                    </div>
                 </div>
-            </div>
+            </section>
         }
     }
 </div>
@@ -239,6 +274,7 @@
 @if (Model.CanWrite)
 {
     @await Html.PartialAsync("Modals/_NewPaymentGroupShellV2")
+    @await Html.PartialAsync("GlV2/_BevestigModal")
 }
 
 @section PageScripts

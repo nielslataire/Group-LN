@@ -372,8 +372,11 @@ html { scroll-padding-top: var(--pdv4-anchor-offset); }
 .pdv4-cta-line p { margin: 0; font-size: 16px; color: var(--pdv4-ink); }
 .pdv4-faq { border-top: 1px solid var(--pdv4-line-strong); }
 .pdv4-faq__item { border-bottom: 1px solid var(--pdv4-line-strong); }
-.pdv4-faq__item h3 { margin: 0; font-weight: 400; }
-.pdv4-faq__item button { width: 100%; display: flex; justify-content: space-between; gap: 20px; padding: 20px 0; background: none; border: 0; cursor: pointer; text-align: left; font-family: var(--pdv4-serif); font-size: 19px; color: var(--pdv4-ink); }
+.pdv4-faq__q { position: relative; display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 20px 0; }
+.pdv4-faq__item h3 { margin: 0; font-weight: 400; font-family: var(--pdv4-serif); font-size: 19px; color: var(--pdv4-ink); }
+.pdv4-faq__item button { background: none; border: 0; padding: 0; cursor: pointer; font-family: var(--pdv4-serif); font-size: 19px; color: var(--pdv4-ink); }
+/* knop overspant de hele rij, zodat de volledige titelrij klikbaar blijft */
+.pdv4-faq__item button::after { content: ""; position: absolute; inset: 0; }
 .pdv4-faq__sign { color: var(--pdv4-green); }
 .pdv4-faq__item p { margin: 0 0 22px; font-size: 15px; line-height: 1.8; color: var(--pdv4-muted); }
 

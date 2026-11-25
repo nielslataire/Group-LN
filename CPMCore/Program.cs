@@ -207,6 +207,7 @@ builder.Services.AddScoped<ICookieConsentStatsService, CookieConsentStatsService
 builder.Services.AddScoped<IIssuerSeriesService, IssuerSeriesService>();
 builder.Services.AddScoped<IPartyLookupService, PartyLookupService>();
 builder.Services.AddScoped<IInvoiceCommandService, InvoiceCommandService>();
+builder.Services.AddScoped<FacadeCore.IAkteFactuurService, ServiceCore.Invoicing.AkteFactuurService>();   // aktefacturen klaarzetten (grond + kosten)
 builder.Services.AddScoped<FacadeCore.IRecurringInvoiceService, ServiceCore.Invoicing.RecurringInvoiceService>();   // terugkerende facturen (migratie 133)
 builder.Services.AddHostedService<CPMCore.Services.RecurringInvoiceHostedService>();
 builder.Services.AddHttpClient<FacadeCore.IHealthIndexService, ServiceCore.Invoicing.HealthIndexService>(c => c.Timeout = TimeSpan.FromSeconds(30));   // gezondheidsindex Statbel (migratie 135)

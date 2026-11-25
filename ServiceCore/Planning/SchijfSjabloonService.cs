@@ -82,7 +82,7 @@ public sealed class SchijfSjabloonService : ISchijfSjabloonService
     public async Task<List<SchijfSjabloonKeuze>> Keuzes()
     {
         var lijst = await _db.SchijfSjabloon.AsNoTracking().Include(s => s.Schijven).Where(s => s.IsActief && s.Schijven.Any()).OrderBy(s => s.Naam).ToListAsync();
-        return lijst.Select(s => new SchijfSjabloonKeuze { Id = s.Id, Naam = s.Naam, Beschrijving = s.Beschrijving, HeeftVerdiepingen = s.Schijven.Any(x => x.PerVerdieping),
+        return lijst.Select(s => new SchijfSjabloonKeuze { Id = s.Id, Naam = s.Naam, Beschrijving = s.Beschrijving, AantalSchijven = s.Schijven.Count, HeeftVerdiepingen = s.Schijven.Any(x => x.PerVerdieping),
             HeeftKelder = s.Schijven.Any(x => string.Equals(x.VoorwaardeVariabele, "kelder", StringComparison.OrdinalIgnoreCase)),
             HeeftDak = s.Schijven.Any(x => string.Equals(x.VoorwaardeVariabele, "dak", StringComparison.OrdinalIgnoreCase)) }).ToList();
     }

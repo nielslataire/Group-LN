@@ -180,7 +180,7 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
         return new ProjectSjabloonBewerk
         {
             Id = s.Id, Naam = s.Naam, Beschrijving = s.Beschrijving, PlanningSjabloonId = s.PlanningSjabloonId, TrajectSjabloonId = s.TrajectSjabloonId,
-            SchijfSjabloonId = s.SchijfSjabloonId, SchijfSjabloonBijgebouwId = s.SchijfSjabloonBijgebouwId, StandaardVerdiepingen = s.StandaardVerdiepingen, StandaardKelder = s.StandaardKelder, StandaardDak = s.StandaardDak, IsActief = s.IsActief,
+            SchijfSjabloonId = s.SchijfSjabloonId, SchijfSjabloonBijgebouwId = s.SchijfSjabloonBijgebouwId, PlanningSjabloonProjectId = s.PlanningSjabloonProjectId, WoningenStartNa = s.WoningenStartNa, StandaardVerdiepingen = s.StandaardVerdiepingen, StandaardKelder = s.StandaardKelder, StandaardDak = s.StandaardDak, IsActief = s.IsActief,
         };
     }
 
@@ -190,11 +190,14 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
         var naam = (s.Naam ?? "").Trim();
         if (naam.Length == 0) fouten.Add("Geef het sjabloon een naam.");
         if (naam.Length > 200) fouten.Add("De naam is te lang.");
-        if (s.PlanningSjabloonId == null && s.TrajectSjabloonId == null && s.SchijfSjabloonId == null) fouten.Add("Kies minstens één sjabloon: planning, traject of schijven.");
+        if (s.PlanningSjabloonId == null && s.PlanningSjabloonProjectId == null && s.TrajectSjabloonId == null && s.SchijfSjabloonId == null) fouten.Add("Kies minstens één sjabloon: planning, traject of schijven.");
         if (s.StandaardVerdiepingen < 1 || s.StandaardVerdiepingen > 20) fouten.Add("Het standaard aantal verdiepingen ligt tussen 1 en 20.");
         var dak = string.IsNullOrWhiteSpace(s.StandaardDak) ? null : s.StandaardDak.Trim().ToLowerInvariant();
         if (dak != null && dak is not ("hellend" or "plat")) fouten.Add("Het dak is hellend of plat.");
         if (s.PlanningSjabloonId is int p && !await _db.PlanningSjabloon.AnyAsync(x => x.Id == p)) fouten.Add("Het gekozen planningssjabloon bestaat niet meer.");
+        if (s.PlanningSjabloonProjectId is int pp && !await _db.PlanningSjabloon.AnyAsync(x => x.Id == pp)) fouten.Add("Het gekozen planningssjabloon voor het project zelf bestaat niet meer.");
+        var startNa = string.IsNullOrWhiteSpace(s.WoningenStartNa) ? null : s.WoningenStartNa.Trim().ToUpperInvariant();
+        if (startNa != null && !await _db.Bouwstaat.AnyAsync(x => x.Code == startNa)) fouten.Add("De bouwstaat waarna de woningen starten bestaat niet.");
         if (s.TrajectSjabloonId is int t && !await _db.TrajectSjabloon.AnyAsync(x => x.Id == t)) fouten.Add("Het gekozen trajectsjabloon bestaat niet meer.");
         if (s.SchijfSjabloonId is int c && !await _db.SchijfSjabloon.AnyAsync(x => x.Id == c)) fouten.Add("Het gekozen schijvensjabloon bestaat niet meer.");
         if (s.SchijfSjabloonBijgebouwId is int cb && !await _db.SchijfSjabloon.AnyAsync(x => x.Id == cb)) fouten.Add("Het gekozen schijvensjabloon voor parkings en bergingen bestaat niet meer.");
@@ -214,6 +217,7 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
         }
         e.Naam = naam; e.Beschrijving = string.IsNullOrWhiteSpace(s.Beschrijving) ? null : s.Beschrijving.Trim();
         e.PlanningSjabloonId = s.PlanningSjabloonId; e.TrajectSjabloonId = s.TrajectSjabloonId; e.SchijfSjabloonId = s.SchijfSjabloonId; e.SchijfSjabloonBijgebouwId = s.SchijfSjabloonBijgebouwId;
+        e.PlanningSjabloonProjectId = s.PlanningSjabloonProjectId; e.WoningenStartNa = startNa;
         e.StandaardVerdiepingen = s.StandaardVerdiepingen; e.StandaardKelder = s.StandaardKelder; e.StandaardDak = dak; e.IsActief = s.IsActief;
         await _db.SaveChangesAsync();
         return new ProjectSjabloonBewerkUitkomst { Ok = true, Id = e.Id };
@@ -335,6 +339,60 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
         if (!await _db.Project.AnyAsync(p => p.ProjectId == projectId)) { res.Fout = "Het project bestaat niet meer."; return res; }
         var a = Schoon(antwoorden);
 
+        // ── planning van het project zelf (hoofdplanning, bv. de wegenis): enkel als de hoofdplanning nog leeg is
+        DateOnly? woningenStart = null;
+        if (sj.PlanningSjabloonProjectId is int projectPlanningId)
+        {
+            var projNaam = await _db.PlanningSjabloon.AsNoTracking().Where(x => x.Id == projectPlanningId).Select(x => x.Naam).FirstOrDefaultAsync();
+            if (projNaam == null) res.Opmerkingen.Add("Het planningssjabloon voor het project zelf bestaat niet meer: er komt geen planning voor het project.");
+            else
+            {
+                // De hoofdplanning wordt pas bij de eerste schrijfactie aangemaakt: bestaat ze nog niet, dan is ze leeg (tenzij er losse fasen zonder planning zijn).
+                var hp = await _db.BouwPlanning.AsNoTracking().Where(b => b.ProjectId == projectId && b.IsHoofd && b.IsActief).Select(b => new { b.Id }).FirstOrDefaultAsync();
+                var hpId = hp?.Id;
+                var hpLeeg = !await _db.PlanningSectie.AnyAsync(s => s.ProjectId == projectId && s.IsActief && (s.BouwPlanningId == null || (hpId != null && s.BouwPlanningId == hpId)));
+                if (!hpLeeg) res.Opmerkingen.Add($"De hoofdplanning heeft al fasen of taken: de planning voor het project zelf ({projNaam}) is niet toegepast.");
+                else if (!uitvoeren) res.Stappen.Add($"Planning “{projNaam}” komt in de hoofdplanning (voor het project zelf)." + (string.IsNullOrEmpty(sj.WoningenStartNa) ? "" : " De woningen starten daarna: zie de startdatum van hun planning."));
+                else
+                {
+                    if (hpId == null)
+                    {
+                        var nieuweHoofd = new BouwPlanning { ProjectId = projectId, Naam = "Hoofdplanning", IsHoofd = true, Volgorde = 0, IsActief = true, CreatedDate = DateTime.UtcNow };
+                        _db.BouwPlanning.Add(nieuweHoofd);
+                        await _db.SaveChangesAsync();
+                        hpId = nieuweHoofd.Id;
+                    }
+                    var staat0 = await _planning.Laad(projectId, 0);
+                    var uit0 = await _planning.Voer(projectId, new PlanningCommando
+                    {
+                        Type = "sjabloonToepassen", PlanningId = 0, Versie = staat0.Versie,
+                        Toepassing = new PlanningSjabloonToepassing { SjabloonId = projectPlanningId, Planningen = new List<PlanningToepassingPlanning> { new() { PlanningId = hpId, Verdiepingen = 1 } } },
+                    }, userId);
+                    if (!uit0.Ok) { res.Fout = "De planning voor het project zelf kon niet gemaakt worden: " + uit0.Fout; return res; }
+                    res.Stappen.Add($"Planning “{projNaam}” toegepast in de hoofdplanning.");
+                    foreach (var w in uit0.Waarschuwingen ?? new List<string>()) res.Opmerkingen.Add(w);
+
+                    // De woningen starten de dag na de laatste taak die de gekozen bouwstaat oplevert (bv. na de verharding van de wegenis)
+                    if (!string.IsNullOrEmpty(sj.WoningenStartNa))
+                    {
+                        var bsId = await _db.Bouwstaat.AsNoTracking().Where(b => b.Code == sj.WoningenStartNa && b.ProjectId == null).Select(b => (int?)b.Id).FirstOrDefaultAsync();
+                        var staat1 = await _planning.Laad(projectId, hpId);
+                        var taakIds = staat1.Rijen.Where(r => r.Soort == "taak").Select(r => r.Id).ToList();
+                        var levert = bsId == null ? new HashSet<int>() : (await _db.PlanningTaak.AsNoTracking().Where(t => taakIds.Contains(t.Id) && t.BouwstaatId == bsId).Select(t => t.Id).ToListAsync()).ToHashSet();
+                        var einden = staat1.Rijen.Where(r => r.Soort == "taak" && levert.Contains(r.Id) && r.Einde != null)
+                            .Select(r => DateOnly.TryParse(r.Einde, System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : (DateOnly?)null)
+                            .Where(d => d != null).Select(d => d!.Value).ToList();
+                        if (einden.Count == 0) res.Opmerkingen.Add("Geen taak in de planning van het project levert de bouwstaat waarna de woningen starten: de woningen starten op de aanvangsdatum van de bouwwerken.");
+                        else
+                        {
+                            woningenStart = new WerkKalender().OpOfNa(einden.Max().AddDays(1));   // de eerstvolgende werkdag (verlof en verlet vangt de planning zelf op)
+                            res.Stappen.Add($"De woningen starten op {woningenStart:dd/MM/yyyy}, de dag na “{sj.WoningenStartNa}” in de planning van het project. Je kan de startdatum per planning aanpassen.");
+                        }
+                    }
+                }
+            }
+        }
+
         // ── planning: eenheden zonder planning
         if (sj.PlanningSjabloonId is int planningSjabloonId)
         {
@@ -364,6 +422,7 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
                     : a.EenPlanningVoorAlles
                     ? new List<PlanningToepassingPlanning> { new() { EenheidIds = eenheden.Select(u => u.Id).ToList(), Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak, Terrassen = a.Terrassen } }
                     : eenheden.Select(u => new PlanningToepassingPlanning { EenheidIds = new List<int> { u.Id }, Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak, Terrassen = a.Terrassen }).ToList();
+                if (woningenStart != null && !inHoofd) foreach (var r in rijen) r.StartDatum = woningenStart.Value.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
                 var tekst = inHoofd ? $"in de hoofdplanning, voor {eenheden.Count} {(eenheden.Count == 1 ? "eenheid" : "eenheden")} ({Lijstje(eenheden.Select(u => u.Name ?? ""))})"
                           : a.EenPlanningVoorAlles ? $"één planning voor {eenheden.Count} {(eenheden.Count == 1 ? "eenheid" : "eenheden")} ({Lijstje(eenheden.Select(u => u.Name ?? ""))})"
                                                    : $"een planning voor elk van de {eenheden.Count} {(eenheden.Count == 1 ? "eenheid" : "eenheden")} zonder planning ({Lijstje(eenheden.Select(u => u.Name ?? ""))})";

@@ -468,6 +468,12 @@ namespace ServiceCore
                 await _db.ProjectContractSlice
                     .Where(s => s.InvoiceId == invoiceId)
                     .ExecuteUpdateAsync(u => u.SetProperty(s => s.InvoiceId, (int?)null), ct);
+
+                // Grondfactuur van de akte (Units.LandValueInvoiceId, gezet door "Aktefacturen klaarzetten"): zonder deze koppeling los te maken
+                // blokkeert de foreign key het verwijderen. De eenheid komt weer vrij voor een nieuwe grondfactuur.
+                await _db.Units
+                    .Where(u => u.LandValueInvoiceId == invoiceId)
+                    .ExecuteUpdateAsync(u => u.SetProperty(x => x.LandValueInvoiceId, (int?)null), ct);
                 await _db.ProjectRegieUur
                     .Where(r => r.InvoiceId == invoiceId)
                     .ExecuteUpdateAsync(u => u

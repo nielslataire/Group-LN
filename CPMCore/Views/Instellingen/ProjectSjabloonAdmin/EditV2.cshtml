@@ -71,7 +71,8 @@
                     @{
                         var delen = new[]
                         {
-                            (Sleutel: "planning", Titel: "Planning", Icoon: "ph-calendar-check", Naam: "PlanningSjabloonId", Gekozen: Model.PlanningSjabloonId, Lijst: opties.Planning, Geen: "geen planning"),
+                            (Sleutel: "projectplanning", Titel: "Planning van het project zelf", Icoon: "ph-road-horizon", Naam: "PlanningSjabloonProjectId", Gekozen: Model.PlanningSjabloonProjectId, Lijst: opties.Planning, Geen: "geen planning voor het project zelf"),
+                            (Sleutel: "planning", Titel: "Planning van de woningen of eenheden", Icoon: "ph-calendar-check", Naam: "PlanningSjabloonId", Gekozen: Model.PlanningSjabloonId, Lijst: opties.Planning, Geen: "geen planning"),
                             (Sleutel: "traject", Titel: "Traject", Icoon: "ph-git-branch", Naam: "TrajectSjabloonId", Gekozen: Model.TrajectSjabloonId, Lijst: opties.Traject, Geen: "geen traject"),
                             (Sleutel: "schijven", Titel: "Schijven", Icoon: "ph-list-checks", Naam: "SchijfSjabloonId", Gekozen: Model.SchijfSjabloonId, Lijst: opties.Schijven, Geen: "geen schijven"),
                             (Sleutel: "bijgebouwen", Titel: "Schijven parkings en bergingen", Icoon: "ph-car", Naam: "SchijfSjabloonBijgebouwId", Gekozen: Model.SchijfSjabloonBijgebouwId, Lijst: opties.Schijven, Geen: "dezelfde schijven als hierboven"),
@@ -82,7 +83,21 @@
                         <div class="gl-v2-pjs-deel" data-deel="@d.Sleutel" data-geen="@d.Geen">
                             <div class="gl-v2-pjs-deelkop"><i class="ph @d.Icoon" aria-hidden="true"></i><b>@d.Titel</b><a href="#" class="gl-v2-pjs-open" hidden>Openen</a></div>
                             <div class="gl-v2-field-box"><select id="pjs-@d.Sleutel" name="@d.Naam" class="gl-v2-field-input js-pjs-sel" aria-label="@d.Titel" @dis><option value="">Geen</option>@foreach (var o in d.Lijst) { <option value="@o.Id" selected="@(d.Gekozen == o.Id)">@o.Naam</option> }</select></div>
-                            <ul class="gl-v2-pjs-feiten" data-feiten> (d.Sleutel == "bijgebouwen") { <li>Voor betalingsgroepen met enkel parkings en bergingen. Een berging of parking die aan een appartement hangt, zet je in de groep van dat appartement en volgt dan diens schijven.</li> }</ul>
+                            <ul class="gl-v2-pjs-feiten" data-feiten>@if (d.Sleutel == "bijgebouwen") { <li>Voor betalingsgroepen met enkel parkings en bergingen. Een berging of parking die aan een appartement hangt, zet je in de groep van dat appartement en volgt dan diens schijven.</li> } else if (d.Sleutel == "projectplanning") { <li>Komt in de hoofdplanning, bv. de wegenis van een verkaveling. Enkel als de hoofdplanning nog leeg is.</li> }</ul>
+                            @if (d.Sleutel == "projectplanning")
+                            {
+                                <div class="gl-v2-field" style="margin-top:8px">
+                                    <label class="gl-v2-field-label" for="pjs-startna">Woningen starten</label>
+                                    <div class="gl-v2-field-box"><select id="pjs-startna" name="WoningenStartNa" class="gl-v2-field-input" @dis>
+                                        <option value="" selected="@string.IsNullOrEmpty(Model.WoningenStartNa)">onmiddellijk (aanvangsdatum bouwwerken)</option>
+                                        <option value="WEGENIS_FUNDERING" selected="@(Model.WoningenStartNa == "WEGENIS_FUNDERING")">na de wegenfundering</option>
+                                        <option value="WEGENIS_NUTSVOORZIENINGEN" selected="@(Model.WoningenStartNa == "WEGENIS_NUTSVOORZIENINGEN")">na de nutsvoorzieningen</option>
+                                        <option value="WEGENIS_VERHARDING" selected="@(Model.WoningenStartNa == "WEGENIS_VERHARDING")">na de wegverharding</option>
+                                        <option value="WEGENIS_VOORLOPIGE_OPLEVERING" selected="@(Model.WoningenStartNa == "WEGENIS_VOORLOPIGE_OPLEVERING")">na de voorlopige oplevering van de wegenis</option>
+                                    </select></div>
+                                    <span class="gl-v2-field-help">Standaard. Bij het toepassen krijgt de planning van de woningen die startdatum; je past ze per project nog aan in de planning.</span>
+                                </div>
+                            }
                         </div>
                     }
                 </div>

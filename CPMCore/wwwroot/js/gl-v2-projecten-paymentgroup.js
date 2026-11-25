@@ -440,31 +440,54 @@
     if (sjBtn && sjModal) {
         var sjConfirm = document.getElementById("gl-v2-pg-sjabloon-confirm");
         var sjVerdWrap = document.getElementById("gl-v2-pg-sjabloon-verd"), sjVerd = document.getElementById("gl-v2-pg-sjabloon-verd-input");
+        var sjKelderIn = document.getElementById("gl-v2-pg-sjabloon-kelder-input"), sjDakIn = document.getElementById("gl-v2-pg-sjabloon-dak-input");
         var sjVoorbeeld = document.getElementById("gl-v2-pg-sjabloon-voorbeeld");
         var sjVoorstel = null, sjAanvraag = 0;
         var cfgEl = document.getElementById("gl-v2-pg-config"), cfg = {};
         try { cfg = JSON.parse(cfgEl.textContent || "{}"); } catch (e) { }
+        var sjEenheden = parseInt(sjModal.getAttribute("data-eenheden"), 10) || 0;
         function sjKeuze() { var r = $$('input[name="gl-v2-pg-sjabloon-keuze"]', sjModal).filter(function (x) { return x.checked; })[0]; return r || null; }
         function fmtNl(n) { return String(Math.round(n * 100) / 100).replace(".", ","); }
+        // De schijven die nu in het formulier staan (om het voorstel mee te vergelijken)
+        function sjHuidig() { return rows().filter(function (r) { return !isLocked(r); }).map(function (r) { return { naam: (nameOf(r).value || "").trim(), pct: parsePct(pctInput(r).value) }; }); }
+        function sjSegmenten() {
+            $$("#gl-v2-pg-sjabloon-kelder-seg button", sjModal).forEach(function (b) { b.classList.toggle("is-active", (b.getAttribute("data-v") === "ja") === sjKelderIn.checked); });
+            $$("#gl-v2-pg-sjabloon-dak-seg button", sjModal).forEach(function (b) { b.classList.toggle("is-active", b.getAttribute("data-v") === (sjDakIn.value || "")); });
+            var n = Math.max(1, Math.min(20, parseInt(sjVerd.value, 10) || 1));
+            document.getElementById("gl-v2-pg-sjabloon-verd-t").textContent = n;
+            document.getElementById("gl-v2-pg-sjabloon-min").disabled = n <= 1; document.getElementById("gl-v2-pg-sjabloon-plus").disabled = n >= 20;
+        }
         function sjToon(v) {
             sjVoorstel = v; sjConfirm.disabled = !v;
-            sjVoorbeeld.hidden = !v;
-            if (!v) return;
-            var ol = document.getElementById("gl-v2-pg-sjabloon-schijven"); ol.innerHTML = "";
+            sjVoorbeeld.hidden = !v; document.getElementById("gl-v2-pg-sjabloon-leeg").hidden = !!v;
+            var fs = document.getElementById("gl-v2-pg-sjabloon-fs");
+            if (!v) { fs.textContent = ""; return; }
+            var huidig = sjHuidig(), ol = document.getElementById("gl-v2-pg-sjabloon-schijven"), gelijk = huidig.length === v.schijven.length;
+            ol.innerHTML = "";
             v.schijven.forEach(function (s, i) {
+                var cur = huidig[i], zelfde = cur && cur.naam === s.naam && cur.pct != null && Math.abs(cur.pct - s.percentage) < 0.005;
+                if (!zelfde) gelijk = false;
                 var li = document.createElement("li");
-                var a = document.createElement("span"); a.textContent = s.naam;
-                var b = document.createElement("span"); b.className = "is-pct"; b.textContent = fmtNl(s.percentage) + " %" + (i === v.schijven.length - 1 ? " · eindafrekening" : "");
-                li.appendChild(a); li.appendChild(b); ol.appendChild(li);
+                var n = document.createElement("span"); n.className = "n"; n.textContent = String(i + 1);
+                var t = document.createElement("span"); t.className = "t"; t.textContent = s.naam;
+                if (i === v.schijven.length - 1) { var e = document.createElement("i"); e.className = "gl-v2-pg-sj-end"; e.textContent = "eindafrekening"; t.appendChild(e); }
+                var p = document.createElement("b"); p.textContent = fmtNl(s.percentage) + " %";
+                var d = document.createElement("span"); d.className = "d" + (zelfde ? "" : " is-wijzig"); d.textContent = zelfde ? "gelijk" : (cur && cur.pct != null ? "was " + fmtNl(cur.pct) + " %" : "nieuw");
+                li.appendChild(n); li.appendChild(t); li.appendChild(p); li.appendChild(d); ol.appendChild(li);
             });
-            document.getElementById("gl-v2-pg-sjabloon-totaal").textContent = "Totaal " + fmtNl(v.totaal) + " %";
-            var ul = document.getElementById("gl-v2-pg-sjabloon-waarschuwingen"); ul.innerHTML = "";
-            v.waarschuwingen.forEach(function (w) { var li = document.createElement("li"); li.textContent = w; ul.appendChild(li); });
+            var tot = document.getElementById("gl-v2-pg-sjabloon-totaal");
+            tot.innerHTML = "<span>Totaal</span><b class=\"" + (Math.abs(v.totaal - 100) < 0.005 ? "is-ok" : "is-bad") + "\">" + fmtNl(v.totaal) + " %</b>";
+            var warn = document.getElementById("gl-v2-pg-sjabloon-warn"), wt = document.getElementById("gl-v2-pg-sjabloon-waarschuwingen");
+            wt.textContent = (v.waarschuwingen || []).join(" "); warn.hidden = !(v.waarschuwingen || []).length;
+            var gl = document.getElementById("gl-v2-pg-sjabloon-gelijk");
+            gl.hidden = !gelijk;
+            if (gelijk) gl.querySelector("span").innerHTML = "<b>Hetzelfde als nu</b>: de " + huidig.length + " huidige schijven (" + huidig.map(function (h) { return fmtNl(h.pct); }).join(" / ") + " %) blijven gelijk. Overnemen is niet nodig.";
+            fs.innerHTML = "Vervangt <b>" + huidig.length + "</b> " + (huidig.length === 1 ? "schijf" : "schijven") + " door <b>" + v.schijven.length + "</b>" + (sjEenheden ? " · geldt voor " + sjEenheden + (sjEenheden === 1 ? " eenheid" : " eenheden") : "");
         }
         function sjLaad() {
             var k = sjKeuze(); if (!k) { sjToon(null); return; }
             var token = (form.querySelector("input[name=__RequestVerificationToken]") || {}).value || "";
-            var body = new URLSearchParams({ projectId: cfg.projectId, sjabloonId: k.value, verdiepingen: sjVerd.value || "1", kelder: document.getElementById("gl-v2-pg-sjabloon-kelder-input").checked ? "true" : "false", dak: document.getElementById("gl-v2-pg-sjabloon-dak-input").value, __RequestVerificationToken: token });
+            var body = new URLSearchParams({ projectId: cfg.projectId, sjabloonId: k.value, verdiepingen: sjVerd.value || "1", kelder: sjKelderIn.checked ? "true" : "false", dak: sjDakIn.value, __RequestVerificationToken: token });
             var nr = ++sjAanvraag;
             fetch(cfg.sjabloonVoorbeeldUrl, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/x-www-form-urlencoded", "X-Requested-With": "XMLHttpRequest" }, body: body.toString() })
                 .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
@@ -473,22 +496,26 @@
         }
         sjBtn.addEventListener("click", function () {
             $$('input[name="gl-v2-pg-sjabloon-keuze"]', sjModal).forEach(function (r) { r.checked = false; });
-            sjVerd.value = "1"; sjVerdWrap.hidden = true; sjToon(null);
-            document.getElementById("gl-v2-pg-sjabloon-kelder").hidden = true; document.getElementById("gl-v2-pg-sjabloon-dak").hidden = true;
-            document.getElementById("gl-v2-pg-sjabloon-kelder-input").checked = false; document.getElementById("gl-v2-pg-sjabloon-dak-input").value = "";
+            sjVerd.value = "1"; sjKelderIn.checked = false; sjDakIn.value = "";
+            ["gl-v2-pg-sjabloon-gebouw", "gl-v2-pg-sjabloon-verd", "gl-v2-pg-sjabloon-kelder", "gl-v2-pg-sjabloon-dak", "gl-v2-pg-sjabloon-geenafhang"].forEach(function (id) { document.getElementById(id).hidden = true; });
+            sjSegmenten(); sjToon(null);
             bsModal(sjModal).show();
         });
         sjModal.addEventListener("change", function (e) {
             if (e.target.name !== "gl-v2-pg-sjabloon-keuze") return;
-            var lbl = e.target.closest("label");
-            sjVerdWrap.hidden = lbl.getAttribute("data-verdiepingen") !== "1";
-            document.getElementById("gl-v2-pg-sjabloon-kelder").hidden = lbl.getAttribute("data-kelder") !== "1";
-            document.getElementById("gl-v2-pg-sjabloon-dak").hidden = lbl.getAttribute("data-dak") !== "1";
+            var lbl = e.target.closest("label"), verd = lbl.getAttribute("data-verdiepingen") === "1", kelder = lbl.getAttribute("data-kelder") === "1", dak = lbl.getAttribute("data-dak") === "1";
+            sjVerdWrap.hidden = !verd;
+            document.getElementById("gl-v2-pg-sjabloon-kelder").hidden = !kelder;
+            document.getElementById("gl-v2-pg-sjabloon-dak").hidden = !dak;
+            document.getElementById("gl-v2-pg-sjabloon-gebouw").hidden = false;
+            document.getElementById("gl-v2-pg-sjabloon-geenafhang").hidden = verd || kelder || dak;
             sjLaad();
         });
-        sjVerd.addEventListener("input", sjLaad);
-        document.getElementById("gl-v2-pg-sjabloon-kelder-input").addEventListener("change", sjLaad);
-        document.getElementById("gl-v2-pg-sjabloon-dak-input").addEventListener("change", sjLaad);
+        // Antwoorden: de knoppen zetten de verborgen velden en rekenen opnieuw
+        document.getElementById("gl-v2-pg-sjabloon-min").addEventListener("click", function () { sjVerd.value = Math.max(1, (parseInt(sjVerd.value, 10) || 1) - 1); sjSegmenten(); sjLaad(); });
+        document.getElementById("gl-v2-pg-sjabloon-plus").addEventListener("click", function () { sjVerd.value = Math.min(20, (parseInt(sjVerd.value, 10) || 1) + 1); sjSegmenten(); sjLaad(); });
+        document.getElementById("gl-v2-pg-sjabloon-kelder-seg").addEventListener("click", function (e) { var b = e.target.closest("button[data-v]"); if (!b) return; sjKelderIn.checked = b.getAttribute("data-v") === "ja"; sjSegmenten(); sjLaad(); });
+        document.getElementById("gl-v2-pg-sjabloon-dak-seg").addEventListener("click", function (e) { var b = e.target.closest("button[data-v]"); if (!b) return; sjDakIn.value = b.getAttribute("data-v"); sjSegmenten(); sjLaad(); });
         sjConfirm.addEventListener("click", function () {
             if (!sjVoorstel) return;
             // Alle (niet-vaste) schijven worden vervangen; de volgorde van het voorstel is de volgorde van de schijven, de laatste is de eindafrekening.
@@ -497,6 +524,8 @@
             bsModal(sjModal).hide();
             changed();
         });
+        // De knop "Sjabloon toepassen" op de Betalingsschijven-pagina opent deze modal meteen (?sjabloon=1)
+        try { if (new URLSearchParams(window.location.search).get("sjabloon") === "1" && !sjBtn.disabled) window.setTimeout(function () { sjBtn.click(); }, 250); } catch (e) { }
     }
 
     // ── eenheden (chips + "+ eenheid") ───────────────────────────────────────────────────────

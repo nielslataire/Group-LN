@@ -26,6 +26,10 @@ faq:
     a: Bij dat klantaccount staat nog een niet-ondertekende wijzigingsopdracht. Beslis eerst over die wijzigingsopdracht.
   - q: Hoeveel facturen krijg ik per klant?
     a: Eén voor de klant zelf en één voor elke mede-eigenaar. De bedragen worden verdeeld volgens het aandeel van elke eigenaar. Dat zie je in het voorstel.
+  - q: Waarom zie ik de knop Aktefacturen klaarzetten niet?
+    a: De knop staat enkel bij een klant met een datum van de akte die vandaag of later is. Zonder aktedatum of na de akte verschijnt hij niet. Hij verschijnt ook pas als er nog een grond- of kostenfactuur klaar te zetten is. Er moet ook een facturatiebedrijf van de grondeigenaar ingesteld zijn bij het project, en een grondwaarde of kosten (Verkoopinstellingen, Kosten koper).
+  - q: Welke kosten komen op de kostenfactuur?
+    a: Het aandeel in de basisakte (enkel bij appartementen), het aandeel in de verkavelingsakte, de landmetingskosten en de eigen kostenposten uit de Verkoopinstellingen. De kosten overschrijving (notaris) en de aansluitkosten komen er niet op. De aansluitkosten rekent de bouwvennootschap achteraf af.
   - q: Zijn het echte facturen?
     a: Het zijn conceptfacturen zonder nummer. Ze worden pas definitief als je ze nummert. Tot dan kun je ze nog aanpassen.
 ---
@@ -73,6 +77,21 @@ Staat er bij dat account nog een wijzigingsopdracht die niet getekend is, dan lu
 Klik op **Facturen opmaken**. Er opent een venster dat uitrekent wat er zou gebeuren. Er wordt nog niets bewaard.
 
 Je ziet per eigenaar een blok met de lijnen en het totaal van die factuur, en onderaan het aantal facturen en het totaal. Staat er een gele melding, lees die dan voor je verdergaat. Staat er "Er blijft niets over om te factureren", dan is er voor deze selectie niets meer te factureren.
+
+## Aktefacturen klaarzetten
+
+![De knop Aktefacturen klaarzetten in de kop van een klantkaart](/img/help/facturatie-wijzigingen/project-factureren/aktefacturen-knop.png)
+
+Rond de akte maak je tot drie facturen per klant. Met de knop **Aktefacturen klaarzetten** in de kop van de klantkaart zet je ze in één keer klaar.
+
+1. Klik op **Aktefacturen klaarzetten**. CPM vinkt alle schijven aan die bereikt zijn en nog niet gefactureerd zijn, en opent het voorstel.
+2. Lees het voorstel. Je ziet per eigenaar:
+   - de **grondfactuur**: de grondwaarde zonder btw, van het facturatiebedrijf van de grondeigenaar;
+   - de **kostenfactuur**: aandeel in de akte(n), landmeting en eigen kostenposten, met 21 % btw, van hetzelfde bedrijf;
+   - de **werkenfactuur**: de bereikte schijven, van de bouwvennootschap.
+3. Klik op **Bevestigen**. Alles wordt als conceptfactuur aangemaakt.
+
+Een mede-eigenaar krijgt telkens een eigen factuur voor zijn aandeel. Heeft een eenheid al een grond- of kostenfactuur (niet geannuleerd), dan komt die er niet nog eens bij. Annuleer je die factuur, dan kan ze opnieuw klaargezet worden.
 
 ## De conceptfacturen aanmaken
 

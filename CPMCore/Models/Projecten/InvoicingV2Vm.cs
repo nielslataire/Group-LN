@@ -56,6 +56,11 @@ public class InvoicingAccountCardV2
     public string? FirstBlockedDescription => BlockedRows.FirstOrDefault()?.Description;
     public bool HasNothingOpen => Rows.Count == 0;
 
+    /// <summary>Er staan nog akte-facturen klaar te zetten (grond- en/of kostenfactuur, nog niet aangemaakt). Toont de knop "Aktefacturen klaarzetten".</summary>
+    public bool AkteOpen { get; set; }
+    /// <summary>"grond € 85.000,00 · kosten € 1.250,00" (bedragen voor het hoofdaccount, na aftrek van de mede-eigenaars).</summary>
+    public string? AkteSamenvatting { get; set; }
+
     /// <summary>Verloopbalk (20a): % van de totale schijvenwaarde van dit account dat al gefactureerd,
     /// nog te factureren (Invoicable) resp. nog niet vrijgegeven is (InvoicingPaymentStages.Invoicable =
     /// false — de enige "nog niet bereikt"-indicator die het schema echt heeft, geen mijlpaal-datum).

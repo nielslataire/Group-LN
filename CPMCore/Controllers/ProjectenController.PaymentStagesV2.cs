@@ -25,7 +25,7 @@ namespace CPMCore.Controllers
     public partial class ProjectenController
     {
         [HttpGet]
-        public IActionResult PaymentStagesV2(int projectid)
+        public async Task<IActionResult> PaymentStagesV2(int projectid)
         {
             var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
             var canWrite = _ps.HasWrite(PermissionCodes.ProjectsInvoicing);
@@ -62,9 +62,12 @@ namespace CPMCore.Controllers
                 .Include(u => u.Type)
                 .Include(u => u.ClientAccount)
                 .Include(u => u.UnitConstructionValue)
+                .Include(u => u.LevelNavigation)
                 .ToList();
 
             var unitIds = units.Select(u => u.Id).ToList();
+            var planningPerSchijf = await SchijfPlanningInfo(projectid);
+            var vandaag = DateOnly.FromDateTime(DateTime.Today);
             var invoicedPairs = _db.InvoicesDetails.AsNoTracking()
                 .Where(d => d.LineType == "Stages" && d.PaymentStageId.HasValue && d.UnitId.HasValue && unitIds.Contains(d.UnitId.Value))
                 .Select(d => new { StageId = d.PaymentStageId!.Value, UnitId = d.UnitId!.Value })
@@ -82,21 +85,40 @@ namespace CPMCore.Controllers
                 // krijgt een kolom, ook als ValueSold nog leeg is (akte nog niet verleden/aktedatum nog
                 // niet ingevuld) — die eenheid toont dan gewoon "—" in elke schijf-rij (Niels, 2026-09-30).
                 // Voordien liet de ValueSold>0-voorwaarde die eenheden volledig uit de matrix vallen.
-                var groupUnits = units.Where(u => u.UnitConstructionValue.Any(cv => cv.PaymentGroupId == group.Id))
-                    .OrderBy(u => u.Name, StringComparer.OrdinalIgnoreCase)
+                var groupUnitsAlle = units.Where(u => u.UnitConstructionValue.Any(cv => cv.PaymentGroupId == group.Id)).ToList();
+                // Kolommen per bouwlaag (gelijkvloers, 1ste verdieping, ...) en, zonder bouwlagen, per soort (parking, berging, ...): zo blijven er korte koppen als 0.01 of P01 en past alles op één scherm.
+                var opBouwlaag = groupUnitsAlle.Any(u => u.LevelNavigation != null);
+                string Label(Units u) => opBouwlaag ? (u.LevelNavigation?.Level ?? "Overige") : (u.Type?.Name ?? "Overige");
+                var groupUnits = groupUnitsAlle
+                    .OrderBy(u => opBouwlaag ? (u.LevelNavigation?.Number ?? int.MaxValue) : 0)
+                    .ThenBy(u => Label(u), StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(u => u.Name, StringComparer.OrdinalIgnoreCase)
                     .ToList();
                 // Een groep zonder eenheden blijft zichtbaar (kaart zonder eenheid-kolommen): anders is een
                 // net aangemaakte groep (punt 26) onvindbaar tot er een eenheid aan hangt.
 
                 var card = new PaymentGroupCardV2 { GroupId = group.Id, Name = group.Name, VatPercentage = group.VatPercentage ?? 21m };
                 foreach (var u in groupUnits)
-                    card.Units.Add(new PaymentGroupUnitV2 { UnitId = u.Id, UnitName = u.Name, IsSold = u.ClientAccountId.HasValue });
+                {
+                    card.Units.Add(new PaymentGroupUnitV2
+                    {
+                        UnitId = u.Id, UnitName = u.Name, IsSold = u.ClientAccountId.HasValue, GroupLabel = Label(u),
+                        Eligible = u.ClientAccountId.HasValue && u.UnitConstructionValue.Any(cv => cv.PaymentGroupId == group.Id && cv.ValueSold > 0),
+                    });
+                }
+                foreach (var gl in card.Units.GroupBy(u => u.GroupLabel))
+                    card.UnitHeaders.Add(new PaymentUnitHeaderV2 { Label = gl.Key, Count = gl.Count() });
 
                 var groupStages = stages.Where(s => s.GroupId == group.Id).ToList();
                 for (var i = 0; i < groupStages.Count; i++)
                 {
                     var stage = groupStages[i];
                     var row = new PaymentStageRowV2 { StageId = stage.Id, Number = i + 1, Name = stage.Name, Percentage = stage.Percentage, IsLast = i == groupStages.Count - 1, IsGroupForced = stage.Invoicable };
+                    if (planningPerSchijf.TryGetValue(stage.Id, out var pl))
+                    {
+                        row.PlanningTask = pl.Taak; row.PlanningDate = pl.Einde;
+                        row.IsDue = pl.Klaar || (pl.Einde.HasValue && pl.Einde.Value < vandaag);
+                    }
                     foreach (var u in groupUnits)
                     {
                         var hasSoldValue = u.UnitConstructionValue.Any(cv => cv.PaymentGroupId == group.Id && cv.ValueSold > 0);
@@ -114,6 +136,29 @@ namespace CPMCore.Controllers
             }
 
             return View(vm);
+        }
+
+        /// <summary>Per betalingsschijf de taak of fase uit de planning waaraan ze hangt, met haar einddatum en of ze afgevinkt is. Alle plannings van het project tellen mee (hoogstens 12, een project met een planning per woning slaat dit over).</summary>
+        private async Task<Dictionary<int, (string Taak, DateOnly? Einde, bool Klaar)>> SchijfPlanningInfo(int projectId)
+        {
+            var uit = new Dictionary<int, (string, DateOnly?, bool)>();
+            try
+            {
+                var planning = HttpContext.RequestServices.GetRequiredService<IPlanningService>();
+                var basis = await planning.Laad(projectId);
+                var ids = (basis.Planningen ?? new List<PlanningInfo>()).Where(p => p.AantalTaken > 0).Select(p => p.Id).Distinct().ToList();
+                if (ids.Count == 0 || ids.Count > 12) return uit;
+                foreach (var id in ids)
+                {
+                    var staat = id == basis.ActiefPlanningId ? basis : await planning.Laad(projectId, id);
+                    foreach (var r in staat.Rijen.Where(r => r.Schijven.Count > 0))
+                        foreach (var s in r.Schijven)
+                            if (!uit.ContainsKey(s.StageId))
+                                uit[s.StageId] = (r.Wbs + " " + r.Naam, DateOnly.TryParse(r.Einde, out var e) ? e : (DateOnly?)null, r.Afgerond);
+                }
+            }
+            catch { /* de planning is een extraatje: zonder blijft de matrix gewoon werken */ }
+            return uit;
         }
 
         /// <summary>Eenheid×schijf is factureerbaar zodra ÓF de groep-brede Invoicable-vlag aanstaat ÓF er

@@ -4,7 +4,7 @@ topic: facturatie-wijzigingen
 role: Projectleider · Boekhouding
 device: Desktop · tablet
 minutes: 6
-updated: 2026-11-19
+updated: 2026-11-25
 newsTag: Nieuw
 screens: projecten-betalingsgroep-bewerken
 related: betalingsschijven-volgen, project-factureren, planning-schijven-koppelen, schijvensjablonen-beheren
@@ -63,7 +63,12 @@ De laatste rij is altijd de eindafrekening. Rechts boven de rijen toont CPM het 
 
 ## Een sjabloon toepassen
 
-Heb je een schijvensjabloon gemaakt, dan kies je onder de schijven **Sjabloon toepassen**. CPM toont eerst het voorstel met de percentages. Na **Schijven overnemen** pas je nog alles aan en sla je gewoon op. Hoe je een sjabloon maakt, staat in "Een schijvensjabloon maken en toepassen".
+Heb je een schijvensjabloon gemaakt, dan kies je **Sjabloon toepassen**, op de pagina Betalingsschijven in de kop van de groep of onder de schijven in dit formulier. Het venster heeft twee kolommen:
+
+1. Links kies je het sjabloon als kaart (met het aantal schijven) en beantwoord je, als het sjabloon ervan afhangt, de vragen over de kelder, de bouwlagen en het dak. Hangt het sjabloon van niets af, dan zegt het venster dat de antwoorden niets veranderen.
+2. Rechts staat het **Voorstel** als tabel met per schijf het percentage en of het gelijk blijft of wijzigt ("was 25 %", "nieuw"). Is het voorstel hetzelfde als wat er nu staat, dan zegt het kader **Hetzelfde als nu** dat overnemen niet nodig is. Onderaan staat hoeveel schijven er vervangen worden en voor hoeveel eenheden het geldt.
+
+Na **Schijven overnemen** pas je nog alles aan en sla je gewoon op. Hoe je een sjabloon maakt, staat in "Een schijvensjabloon maken en toepassen".
 
 ## Vergrendelde schijven respecteren
 

@@ -63,7 +63,7 @@
 .gl-v2 .gl-v2-sjs-rb { font: 700 11px var(--gl-v2-font-sans); padding: 3px 8px; border-radius: 5px; }
 .gl-v2 .gl-v2-sjs-rb.is-vast { background: var(--gl-v2-gold-tint); color: var(--gl-v2-warning); }
 .gl-v2 .gl-v2-sjs-rb.is-gewicht { background: var(--gl-v2-primary-tint); color: var(--gl-v2-primary-deep); }
-.gl-v2 .gl-v2-sjs-regel code { font: 500 11px var(--gl-v2-font-mono); }
+.gl-v2 .gl-v2-sjs-regel code { font: 500 11px var(--gl-v2-font-mono, 'IBM Plex Mono', monospace); }
 
 /* Tabel met schijven */
 .gl-v2 .gl-v2-sjs-tabelkop, .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij { display: grid; grid-template-columns: 16px 18px minmax(0, 1fr) 128px 88px 48px 190px 92px 28px; gap: 10px; align-items: start; padding: 0 14px 0 10px; }
@@ -78,12 +78,12 @@
 .gl-v2 .gl-v2-sjs .gl-v2-sjs-rij.is-doel { box-shadow: inset 0 2px 0 var(--gl-v2-primary); }
 .gl-v2 .gl-v2-sjs-grip { padding-top: 9px; cursor: grab; color: var(--gl-v2-muted); opacity: .5; font-size: 16px; line-height: 1; }
 .gl-v2 .gl-v2-sjs-rij:hover .gl-v2-sjs-grip { opacity: 1; }
-.gl-v2 .gl-v2-sjs-nr { padding-top: 9px; font: 600 11.5px var(--gl-v2-font-mono); color: var(--gl-v2-muted-light, #9aa898); }
+.gl-v2 .gl-v2-sjs-nr { padding-top: 9px; font: 600 11.5px var(--gl-v2-font-mono, 'IBM Plex Mono', monospace); color: var(--gl-v2-muted-light, #9aa898); }
 .gl-v2 .gl-v2-sjs-om { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .gl-v2 .gl-v2-sjs-omsub { display: flex; gap: 6px; flex-wrap: wrap; }
 .gl-v2 .gl-v2-sjs-omsub:empty { display: none; }
 .gl-v2 .gl-v2-sjs-omsub em { font-style: normal; }
-.gl-v2 .gl-v2-sjs-tok { font: 500 11px var(--gl-v2-font-mono); color: #7A4E8C; background: #F3ECF6; padding: 0 4px; border-radius: 3px; }
+.gl-v2 .gl-v2-sjs-tok { font: 500 11px var(--gl-v2-font-mono, 'IBM Plex Mono', monospace); color: #7A4E8C; background: #F3ECF6; padding: 0 4px; border-radius: 3px; }
 .gl-v2 .gl-v2-sjs-tokh { font: 450 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-muted-light, #7a8a78); }
 .gl-v2 .gl-v2-sjs-tokwarn { font: 500 10.5px var(--gl-v2-font-sans); color: var(--gl-v2-warning); }
 .gl-v2 .gl-v2-sjs-eind { font: 700 9.5px var(--gl-v2-font-sans); letter-spacing: .06em; text-transform: uppercase; color: var(--gl-v2-warning); background: var(--gl-v2-gold-tint); padding: 2px 6px; border-radius: 4px; }
@@ -93,7 +93,7 @@
 .gl-v2 .gl-v2-sjs-bssel { flex: 0 1 460px; min-width: 0; display: flex; }
 .gl-v2 .gl-v2-sjs-wacht .gl-v2-segmented { flex: none; }
 .gl-v2 .gl-v2-sjs-code { flex: 0 1 150px; min-width: 0; height: 30px; }
-.gl-v2 .gl-v2-sjs-code .gl-v2-field-input { font: 500 11.5px var(--gl-v2-font-mono); }
+.gl-v2 .gl-v2-sjs-code .gl-v2-field-input { font: 500 11.5px var(--gl-v2-font-mono, 'IBM Plex Mono', monospace); }
 .gl-v2 .gl-v2-sjs-wacht .gl-v2-sjs-codestatus { flex: 1 1 auto; min-width: 0; }
 /* Keuzelijsten in de rij: de gedeelde .gl-v2-select, enkel kleiner gemaakt (hoogte via --gl-v2-field-h) en vlak naast de andere velden */
 .gl-v2 .gl-v2-sjs-rij .gl-v2-select { width: 100%; }
@@ -154,7 +154,7 @@
 .gl-v2 .gl-v2-sjs-euro .gl-v2-field-input { text-align: right; }
 .gl-v2 .gl-v2-sjs-uitrol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .gl-v2 .gl-v2-sjs-uitrol li { display: grid; grid-template-columns: 18px minmax(0, 1fr) 64px 78px; gap: 8px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--gl-v2-hairline-soft); font: 450 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }
-.gl-v2 .gl-v2-sjs-uitrol .nr { font: 600 10.5px var(--gl-v2-font-mono); color: var(--gl-v2-muted-light, #9aa898); }
+.gl-v2 .gl-v2-sjs-uitrol .nr { font: 600 10.5px var(--gl-v2-font-mono, 'IBM Plex Mono', monospace); color: var(--gl-v2-muted-light, #9aa898); }
 .gl-v2 .gl-v2-sjs-uitrol b { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
 .gl-v2 .gl-v2-sjs-uitrol .e, .gl-v2 .gl-v2-sjs-totaal .e { text-align: right; color: var(--gl-v2-muted); font-variant-numeric: tabular-nums; }
 .gl-v2 .gl-v2-sjs-totaal { display: grid; grid-template-columns: minmax(0, 1fr) 64px 78px; gap: 8px; padding-top: 8px; border-top: 1.5px solid var(--gl-v2-hairline); font: 600 12px var(--gl-v2-font-sans); color: var(--gl-v2-ink); }

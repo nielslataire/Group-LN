@@ -637,7 +637,10 @@ End Section
                     @For i As Integer = 0 To p.Faq.Items.Count - 1
                         Dim q = p.Faq.Items(i)
                         @<div class="pdv4-faq__item@(If(i = 0, " is-open", ""))">
-                            <h3><button type="button" aria-expanded="@(If(i = 0, "true", "false"))" aria-controls="pdv4-faq-a@(i)" id="pdv4-faq-q@(i)"><span>@q.Title</span><span class="pdv4-faq__sign" aria-hidden="true">@(If(i = 0, "−", "+"))</span></button></h3>
+                            <div class="pdv4-faq__q">
+                                <h3 id="pdv4-faq-q@(i)">@q.Title</h3>
+                                <button type="button" aria-expanded="@(If(i = 0, "true", "false"))" aria-controls="pdv4-faq-a@(i)" aria-labelledby="pdv4-faq-q@(i)"><span class="pdv4-faq__sign" aria-hidden="true">@(If(i = 0, "−", "+"))</span></button>
+                            </div>
                             <div id="pdv4-faq-a@(i)" class="pdv4-faq__answer" role="region" aria-labelledby="pdv4-faq-q@(i)" @(If(i = 0, "", "hidden"))>@V4Html.SafeHtml(q.Text)</div>
                         </div>
                     Next

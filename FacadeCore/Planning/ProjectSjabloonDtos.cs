@@ -11,6 +11,10 @@ public sealed class ProjectSjabloonBewerk
     public int? SchijfSjabloonId { get; set; }
     /// <summary>Schijvensjabloon voor groepen met enkel parkings en bergingen (leeg = het gewone schijvensjabloon).</summary>
     public int? SchijfSjabloonBijgebouwId { get; set; }
+    /// <summary>Planningssjabloon voor het project zelf (hoofdplanning, bv. wegenis). Leeg = geen.</summary>
+    public int? PlanningSjabloonProjectId { get; set; }
+    /// <summary>Bouwstaatcode waarna de woningen starten (bv. WEGENIS_VERHARDING); leeg = onmiddellijk.</summary>
+    public string? WoningenStartNa { get; set; }
     public int StandaardVerdiepingen { get; set; } = 1;
     public bool StandaardKelder { get; set; }
     /// <summary>"hellend", "plat" of leeg.</summary>

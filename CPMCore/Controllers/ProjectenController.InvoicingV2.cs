@@ -286,6 +286,20 @@ namespace CPMCore.Controllers
             // Elk klantenaccount krijgt een kaart, ook zonder open posten (Niels, 2026-09-30) — geen
             // Rows.Count-filter meer.
             vm.Accounts = cardsByAccount.Values.OrderBy(c => c.DisplayName, StringComparer.OrdinalIgnoreCase).ToList();
+
+            // Aktefacturen (grond + kosten): welke klanten hebben er nog klaar te zetten? Enkel voor wie schrijfrecht heeft.
+            if (canWrite && vm.Accounts.Count > 0)
+            {
+                var akte = await HttpContext.RequestServices.GetRequiredService<IAkteFactuurService>()
+                    .BerekenAsync(projectid, vm.Accounts.Select(a => a.ClientAccountId).ToList(), ct);
+                foreach (var card in vm.Accounts)
+                {
+                    var mijn = akte.Facturen.Where(f => f.ClientAccountId == card.ClientAccountId && f.IsHoofdeigenaar).ToList();
+                    if (mijn.Count == 0) continue;
+                    card.AkteOpen = true;
+                    card.AkteSamenvatting = string.Join(" · ", mijn.Select(f => $"{(f.Soort == "Grond" ? "grond" : "kosten")} € {f.Draft.Lines.Sum(l => l.Price):N2}"));
+                }
+            }
             foreach (var card in vm.Accounts)
             {
                 var units = unitNamesByAccount.TryGetValue(card.ClientAccountId, out var un) ? string.Join(", ", un) : null;
@@ -364,15 +378,45 @@ namespace CPMCore.Controllers
         {
             public List<ClientAccountUnitInvoiceBO> Stages { get; set; } = new();
             public List<ClientAccountChangeOrderInvoiceBO> ChangeOrders { get; set; } = new();
+            /// <summary>Knop "Aktefacturen klaarzetten": klantenaccounts waarvoor ook de grond- en kostenfactuur in het voorstel komen.</summary>
+            public List<int> AkteAccountIds { get; set; } = new();
+            public int ProjectId { get; set; }
+        }
+
+        public class AkteMakenRequest
+        {
+            public int ProjectId { get; set; }
+            public List<int> AccountIds { get; set; } = new();
+        }
+
+        /// <summary>Maakt de grond- en kostenfactuur (concept) voor de gekozen klantenaccounts aan. De werkenfactuur loopt via MakeInvoices.</summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AkteFacturenMaken([FromBody] AkteMakenRequest request, CancellationToken ct)
+        {
+            if (request == null || request.ProjectId <= 0 || request.AccountIds == null || request.AccountIds.Count == 0)
+                return BadRequest(new { error = "Geen klant gekozen." });
+            var svc = HttpContext.RequestServices.GetRequiredService<IAkteFactuurService>();
+            var (aangemaakt, opmerkingen) = await svc.AanmakenAsync(request.ProjectId, request.AccountIds, ct);
+            return Json(new { aangemaakt, opmerkingen });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult PreviewInvoices([FromBody] PreviewInvoicesRequest request)
+        public async Task<IActionResult> PreviewInvoices([FromBody] PreviewInvoicesRequest request, CancellationToken ct)
         {
             request ??= new PreviewInvoicesRequest();
             var owners = new List<InvoicePreviewOwnerV2>();
             var notices = new List<string>();
+
+            if (request.AkteAccountIds.Count > 0 && request.ProjectId > 0)
+            {
+                var akte = await HttpContext.RequestServices.GetRequiredService<IAkteFactuurService>()
+                    .BerekenAsync(request.ProjectId, request.AkteAccountIds, ct);
+                foreach (var f in akte.Facturen)
+                    owners.Add(ToPreviewOwner($"{f.Eigenaar} · {(f.Soort == "Grond" ? "grondfactuur (zonder btw)" : "kostenfactuur")}", f.Aandeel, f.Draft));
+                notices.AddRange(akte.Opmerkingen);
+            }
 
             using var uow = _uow;
             var db = (cpmRunningContext)uow.Context;

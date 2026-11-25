@@ -896,6 +896,7 @@ public class PlanningService : IPlanningService
             var k = koppelingen.FirstOrDefault(x => x.PaymentStageId == s.Id);
             var sleutel = k == null ? null : k.TaakId != null ? "t" + k.TaakId : k.SectieId != null ? "f" + k.SectieId : null;
             PlanningRij? rij = null;
+            var mede = new List<PlanningRij>();   // de andere taken die dezelfde bouwstaat opleveren: de schijf wacht ook op hen en toont zich bij hen
             var klaar = false;
             if (sleutel != null && rijPerSleutel.TryGetValue(sleutel, out var eigen)) { rij = eigen; klaar = eigen.Afgerond; }
             else if (k == null && s.BouwstaatId is int bid)
@@ -909,6 +910,7 @@ public class PlanningService : IPlanningService
                 if (lev.Count > 0)
                 {
                     rij = lev.OrderBy(r => r.Einde ?? "").Last();
+                    mede = lev.Where(r => r != rij).ToList();
                     sleutel = rij.Sleutel;
                     klaar = lev.All(r => s.BouwstaatRegel == 1 ? BouwstaatGestart(r) : r.Afgerond);
                 }
@@ -930,6 +932,8 @@ public class PlanningService : IPlanningService
                 };
                 rij.Schijven.Add(link);
                 gekoppeld.Add((s, rij, link));
+                // Dezelfde schijf ook bij de andere leverende taken tonen (enkel voor het zicht; de taak in Mijn taken en het markeren hangen aan de laatste taak)
+                foreach (var m in mede) m.Schijven.Add(link);
             }
             staat.SchijfOpties.Add(optie);
         }

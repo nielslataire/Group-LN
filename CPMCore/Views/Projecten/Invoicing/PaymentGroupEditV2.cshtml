@@ -404,45 +404,70 @@
 @* "Sjabloon toepassen" — vervangt de schijven door het voorstel van een schijvensjabloon; daarna pas je nog alles aan en sla je gewoon op. *@
 @if (Model.Sjablonen.Count > 0)
 {
-    <div class="modal fade gl-v2-modal-form" id="gl-v2-pg-sjabloon-modal" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-pg-sjabloon-title">
-        <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+    @* 68c: twee kolommen, links de keuze en het gebouw, rechts het voorstel met de vergelijking met de huidige schijven *@
+    <div class="modal fade gl-v2-modal-form gl-v2-pg-sj-modal" id="gl-v2-pg-sjabloon-modal" data-eenheden="@Model.Units.Count" tabindex="-1" aria-hidden="true" aria-labelledby="gl-v2-pg-sjabloon-title">
+        <div class="modal-dialog modal-dialog-centered modal-xl modal-fullscreen-lg-down">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2 class="modal-title" id="gl-v2-pg-sjabloon-title">Sjabloon toepassen</h2>
+                    <div>
+                        <h2 class="modal-title" id="gl-v2-pg-sjabloon-title">Sjabloon toepassen</h2>
+                        <span class="gl-v2-pg-sj-sub">@Model.Name · @Model.Units.Count @(Model.Units.Count == 1 ? "eenheid" : "eenheden") · je ziet eerst het voorstel; daarna pas je nog elk percentage aan voor je opslaat</span>
+                    </div>
                     <button type="button" class="gl-v2-modal-close" data-bs-dismiss="modal" aria-label="Sluiten"><i class="ph ph-x" aria-hidden="true"></i></button>
                 </div>
-                <div class="modal-body">
-                    <p class="gl-v2-pg-modal-lead">Kies een sjabloon. De huidige schijven worden vervangen door het voorstel; je ziet het eerst en past daarna nog elk percentage aan voor je opslaat.</p>
-                    <div class="gl-v2-npg-list" id="gl-v2-pg-sjabloon-list" role="radiogroup" aria-label="Schijvensjabloon">
-                        @foreach (var sj in Model.Sjablonen)
-                        {
-                            <label class="gl-v2-pg-pick-item" data-verdiepingen="@(sj.HeeftVerdiepingen ? "1" : "0")" data-kelder="@(sj.HeeftKelder ? "1" : "0")" data-dak="@(sj.HeeftDak ? "1" : "0")">
-                                <input type="radio" name="gl-v2-pg-sjabloon-keuze" value="@sj.Id" />
-                                <span class="gl-v2-pg-pick-text"><span class="gl-v2-pg-pick-name">@sj.Naam</span>@if (!string.IsNullOrWhiteSpace(sj.Beschrijving)) { <small>@sj.Beschrijving</small> }</span>
-                            </label>
-                        }
+                <div class="modal-body gl-v2-pg-sj-body">
+                    <div class="gl-v2-pg-sj-links">
+                        <section class="gl-v2-pg-sj-sec">
+                            <span class="gl-v2-pg-sj-k">1 · Kies een sjabloon</span>
+                            <div class="gl-v2-radio-cards gl-v2-pg-sj-kaarten" id="gl-v2-pg-sjabloon-list" role="radiogroup" aria-label="Schijvensjabloon">
+                                @foreach (var sj in Model.Sjablonen)
+                                {
+                                    <label class="gl-v2-radio-card" data-verdiepingen="@(sj.HeeftVerdiepingen ? "1" : "0")" data-kelder="@(sj.HeeftKelder ? "1" : "0")" data-dak="@(sj.HeeftDak ? "1" : "0")">
+                                        <input type="radio" name="gl-v2-pg-sjabloon-keuze" value="@sj.Id" />
+                                        <span><b>@sj.Naam</b>@if (!string.IsNullOrWhiteSpace(sj.Beschrijving)) { <small>@sj.Beschrijving</small> }</span>
+                                        <em class="gl-v2-pg-sj-n">@sj.AantalSchijven @(sj.AantalSchijven == 1 ? "schijf" : "schijven")</em>
+                                    </label>
+                                }
+                            </div>
+                        </section>
+                        <section class="gl-v2-pg-sj-sec" id="gl-v2-pg-sjabloon-gebouw" hidden>
+                            <span class="gl-v2-pg-sj-k">2 · Het gebouw</span>
+                            <div class="gl-v2-pg-sj-q" id="gl-v2-pg-sjabloon-kelder" hidden>
+                                <span class="gl-v2-pg-sj-qt"><b>Kelder</b><small>sommige schijven gelden enkel bij een kelder</small></span>
+                                <div class="gl-v2-segmented is-sm" id="gl-v2-pg-sjabloon-kelder-seg" role="group" aria-label="Kelder"><button type="button" data-v="ja">Met kelder</button><button type="button" data-v="nee" class="is-active">Zonder</button></div>
+                                <input type="checkbox" id="gl-v2-pg-sjabloon-kelder-input" hidden />
+                            </div>
+                            <div class="gl-v2-pg-sj-q" id="gl-v2-pg-sjabloon-verd" hidden>
+                                <span class="gl-v2-pg-sj-qt"><b>Bouwlagen</b><small>gelijkvloers + verdiepingen; het percentage per bouwlaag wordt gelijk verdeeld</small></span>
+                                <span class="gl-v2-pg-sj-stap" role="group" aria-label="Aantal bouwlagen"><button type="button" id="gl-v2-pg-sjabloon-min" aria-label="Eén bouwlaag minder">−</button><b id="gl-v2-pg-sjabloon-verd-t">1</b><button type="button" id="gl-v2-pg-sjabloon-plus" aria-label="Eén bouwlaag meer">+</button></span>
+                                <input type="hidden" id="gl-v2-pg-sjabloon-verd-input" value="1" />
+                            </div>
+                            <div class="gl-v2-pg-sj-q" id="gl-v2-pg-sjabloon-dak" hidden>
+                                <span class="gl-v2-pg-sj-qt"><b>Dak</b></span>
+                                <div class="gl-v2-segmented is-sm" id="gl-v2-pg-sjabloon-dak-seg" role="group" aria-label="Dak"><button type="button" data-v="" class="is-active">Geen keuze</button><button type="button" data-v="plat">Plat</button><button type="button" data-v="hellend">Hellend</button></div>
+                                <input type="hidden" id="gl-v2-pg-sjabloon-dak-input" value="" />
+                            </div>
+                            <p class="gl-v2-field-help" id="gl-v2-pg-sjabloon-geenafhang" hidden>Dit sjabloon heeft geen schijven die van de kelder, de bouwlagen of het dak afhangen: de antwoorden veranderen hier niets. Bij een sjabloon als “Appartementsgebouw” wel (kelderplaat, één vloerplaat per bouwlaag).</p>
+                        </section>
                     </div>
-                    <div class="gl-v2-field" id="gl-v2-pg-sjabloon-verd" hidden>
-                        <label class="gl-v2-field-label" for="gl-v2-pg-sjabloon-verd-input">Aantal verdiepingen</label>
-                        <div class="gl-v2-field-box"><input type="number" id="gl-v2-pg-sjabloon-verd-input" class="gl-v2-field-input is-tabular" min="1" max="20" value="1" inputmode="numeric" /></div>
-                        <span class="gl-v2-field-help">Dit sjabloon heeft schijven per verdieping. Het percentage ervan wordt gelijk verdeeld.</span>
-                    </div>
-                    <div class="gl-v2-field" id="gl-v2-pg-sjabloon-kelder" hidden>
-                        <label class="gl-v2-toggle-row" for="gl-v2-pg-sjabloon-kelder-input"><input type="checkbox" id="gl-v2-pg-sjabloon-kelder-input" class="gl-v2-toggle-switch" /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Met kelder</span><span class="gl-v2-toggle-desc">sommige schijven gelden enkel bij een kelder</span></span></label>
-                    </div>
-                    <div class="gl-v2-field" id="gl-v2-pg-sjabloon-dak" hidden>
-                        <label class="gl-v2-field-label" for="gl-v2-pg-sjabloon-dak-input">Dak</label>
-                        <div class="gl-v2-field-box"><select id="gl-v2-pg-sjabloon-dak-input" class="gl-v2-field-input"><option value="">Geen keuze</option><option value="hellend">Hellend dak</option><option value="plat">Plat dak</option></select></div>
-                    </div>
-                    <div class="gl-v2-pg-voorbeeld" id="gl-v2-pg-sjabloon-voorbeeld" hidden>
-                        <ol class="gl-v2-pg-voorbeeld-lijst" id="gl-v2-pg-sjabloon-schijven"></ol>
-                        <div class="gl-v2-pg-voorbeeld-totaal" id="gl-v2-pg-sjabloon-totaal"></div>
-                        <ul class="gl-v2-pg-voorbeeld-waarschuwing" id="gl-v2-pg-sjabloon-waarschuwingen"></ul>
-                    </div>
+                    <aside class="gl-v2-pg-sj-rechts" aria-label="Voorstel">
+                        <div class="gl-v2-pg-sj-rh"><b>Voorstel</b><small>vervangt de huidige schijven van deze groep</small></div>
+                        <p class="gl-v2-pg-sj-leeg" id="gl-v2-pg-sjabloon-leeg">Kies links een sjabloon om het voorstel te zien.</p>
+                        <div class="gl-v2-pg-sj-voorstel" id="gl-v2-pg-sjabloon-voorbeeld" hidden>
+                            <div class="gl-v2-pg-sj-kaart">
+                                <ol class="gl-v2-pg-sj-lijst" id="gl-v2-pg-sjabloon-schijven"></ol>
+                                <div class="gl-v2-pg-sj-tot" id="gl-v2-pg-sjabloon-totaal"></div>
+                            </div>
+                            <div class="gl-v2-notice gl-v2-notice-compact is-warning" id="gl-v2-pg-sjabloon-warn" hidden><i class="ph ph-warning" aria-hidden="true"></i><span id="gl-v2-pg-sjabloon-waarschuwingen"></span></div>
+                            <div class="gl-v2-pg-sj-gelijk" id="gl-v2-pg-sjabloon-gelijk" hidden><i class="ph ph-equals" aria-hidden="true"></i><span></span></div>
+                            <div class="gl-v2-pg-sj-keep"><i class="ph ph-lock-simple" aria-hidden="true"></i><span>Nog geen schijf gefactureerd of bereikt in deze groep, dus vervangen kan zonder gevolgen. Zodra een schijf gefactureerd of bereikt is, blijft ze staan en kan een sjabloon de schijven niet meer vervangen.</span></div>
+                        </div>
+                    </aside>
                 </div>
                 <div class="modal-footer">
+                    <span class="gl-v2-pg-sj-fs" id="gl-v2-pg-sjabloon-fs"></span>
                     <button type="button" class="gl-v2-btn gl-v2-btn-text" data-bs-dismiss="modal">Annuleren</button>
-                    <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-pg-sjabloon-confirm" disabled>Schijven overnemen</button>
+                    <button type="button" class="gl-v2-btn gl-v2-btn-primary" id="gl-v2-pg-sjabloon-confirm" disabled><i class="ph ph-check" aria-hidden="true"></i>Schijven overnemen</button>
                 </div>
             </div>
         </div>

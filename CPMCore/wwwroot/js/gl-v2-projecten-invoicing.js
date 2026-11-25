@@ -199,10 +199,13 @@
     var previewConfirmBtn = document.getElementById("gl-v2-inv-preview-confirm");
     var lastPayload = null;
 
-    if (previewGoBtn) {
-        previewGoBtn.addEventListener("click", function () {
+    // Voorstel openen. akteIds = klantenaccounts waarvoor ook de grond- en kostenfactuur meekomen (knop "Aktefacturen klaarzetten").
+    function openPreview(akteIds) {
+        {
             lastPayload = selectionPayload();
-            if (lastPayload.Stages.length === 0 && lastPayload.ChangeOrders.length === 0) return;
+            lastPayload.AkteAccountIds = akteIds || [];
+            lastPayload.ProjectId = cfg.projectId;
+            if (lastPayload.Stages.length === 0 && lastPayload.ChangeOrders.length === 0 && lastPayload.AkteAccountIds.length === 0) return;
             var m = bsModal("gl-v2-inv-preview-modal");
             if (m) m.show();
             previewBody.innerHTML = '<div class="gl-v2-inv-preview-empty">Bezig met berekenen…</div>';
@@ -217,8 +220,25 @@
                 .catch(function () {
                     previewBody.innerHTML = '<div class="gl-v2-inv-preview-empty">Het voorstel kon niet berekend worden.</div>';
                 });
-        });
+        }
     }
+
+    if (previewGoBtn) previewGoBtn.addEventListener("click", function () { openPreview([]); });
+
+    // "Aktefacturen klaarzetten" (per klantkaart): alle bereikte schijven van het account aanvinken (werkenfactuur) en het voorstel openen
+    // met ook de grondfactuur (zonder btw) en de kostenfactuur (met btw), allemaal van de grondvennootschap resp. de bouwvennootschap.
+    $$(".js-inv-akte").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            var id = num(btn.getAttribute("data-account-id"));
+            var card = btn.closest(".gl-v2-inv-card");
+            if (card) {
+                $$(".js-inv-stage", card).forEach(function (b) { if (!b.disabled) b.checked = true; });
+                applyLastStageLock(card);
+                updateSelection();
+            }
+            openPreview([id]);
+        });
+    });
 
     if (previewConfirmBtn) {
         previewConfirmBtn.addEventListener("click", function () {
@@ -226,6 +246,13 @@
             previewConfirmBtn.disabled = true;
             previewConfirmBtn.classList.add("is-loading");
             var calls = [];
+            if (lastPayload.AkteAccountIds && lastPayload.AkteAccountIds.length > 0) {
+                calls.push(fetch(cfg.akteMakenUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "RequestVerificationToken": token() },
+                    body: JSON.stringify({ ProjectId: cfg.projectId, AccountIds: lastPayload.AkteAccountIds })
+                }));
+            }
             if (lastPayload.Stages.length > 0) {
                 calls.push(fetch(cfg.makeInvoicesUrl, {
                     method: "POST",
