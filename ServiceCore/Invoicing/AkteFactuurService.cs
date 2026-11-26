@@ -39,11 +39,28 @@ namespace ServiceCore.Invoicing
                 plan.Opmerkingen.Add("Geen facturatiebedrijf van de grondeigenaar ingesteld voor dit project (Projectgegevens > Facturatie).");
                 return plan;
             }
-            const decimal vatPct = 21m;   // de kosten (akten, landmeter, eigen kosten) zijn altijd met 21 % btw, ongeacht het btw-stelsel van de bouw in de verkoopsinstellingen
-            // 0 %-btwcode van de grondvennootschap, als ze er een heeft (anders blijft het bij het percentage 0)
-            var nulBtwTypeId = await _db.Vattype.AsNoTracking()
-                .Where(v => v.IssuerCompanyId == issuerId.Value && v.BasePercentage == 0m)
-                .OrderBy(v => v.Id).Select(v => (int?)v.Id).FirstOrDefaultAsync(ct);
+            // Instellingen van de grondvennootschap (Instellingen > Bedrijven > Facturatie > Aktefacturen); leeg = standaard
+            var issuer = await _db.IssuerCompany.AsNoTracking().FirstOrDefaultAsync(i => i.Id == issuerId.Value, ct);
+            // kosten (akten, landmeter, eigen kosten): standaard 21 % btw, ongeacht het btw-stelsel van de bouw in de verkoopsinstellingen
+            var vatPct = 21m;
+            int? kostenVatTypeId = null;
+            if (issuer?.AkteKostenVatTypeId is int kv)
+            {
+                var vt = await _db.Vattype.AsNoTracking().FirstOrDefaultAsync(v => v.Id == kv, ct);
+                if (vt != null) { kostenVatTypeId = vt.Id; vatPct = vt.BasePercentage; }
+            }
+            // grond: standaard 0 %-btwcode van de grondvennootschap, als ze er een heeft (anders blijft het bij het percentage 0)
+            var grondVatPct = 0m;
+            int? nulBtwTypeId = null;
+            if (issuer?.AkteGrondVatTypeId is int gv)
+            {
+                var vt = await _db.Vattype.AsNoTracking().FirstOrDefaultAsync(v => v.Id == gv, ct);
+                if (vt != null) { nulBtwTypeId = vt.Id; grondVatPct = vt.BasePercentage; }
+            }
+            if (nulBtwTypeId == null)
+                nulBtwTypeId = await _db.Vattype.AsNoTracking()
+                    .Where(v => v.IssuerCompanyId == issuerId.Value && v.BasePercentage == 0m)
+                    .OrderBy(v => v.Id).Select(v => (int?)v.Id).FirstOrDefaultAsync(ct);
 
             var units = await _db.Units.AsNoTracking().Include(u => u.Type)
                 .Where(u => u.ProjectId == projectId && u.ClientAccountId != null && clientAccountIds.Contains(u.ClientAccountId.Value))
@@ -110,7 +127,8 @@ namespace ServiceCore.Invoicing
                 {
                     if (grondLijnen.Count > 0)
                     {
-                        var d = NieuwDraft(issuerId.Value, projectId, accountId, contactId, account.InvoiceExtra);
+                        var d = NieuwDraft(issuerId.Value, projectId, accountId, contactId);
+                        d.PaymentTermId = issuer?.AkteGrondPaymentTermId;
                         d.HeaderDescription = $"Voor de aankoop van de grond van {string.Join(", ", grondLijnen.Select(g => g.Naam).Distinct())} in project {project.ProjectName} ingevolge verkoopsovereenkomst.";
                         d.SelectedVatTypeId = nulBtwTypeId;
                         foreach (var g in grondLijnen)
@@ -118,20 +136,22 @@ namespace ServiceCore.Invoicing
                             {
                                 Text = pct < 100m ? $"Grondwaarde {g.Naam} ({pct:0.##} %)" : $"Grondwaarde {g.Naam}",
                                 Price = Math.Round(g.Bedrag * pct / 100m, 2, MidpointRounding.AwayFromZero),
-                                VatPercentage = 0m, VatTypeId = nulBtwTypeId, LineType = LineTypeGrond, GroupName = g.Naam, UnitId = g.Unit.Id,
+                                VatPercentage = grondVatPct, VatTypeId = nulBtwTypeId, LineType = LineTypeGrond, GroupName = g.Naam, UnitId = g.Unit.Id,
                             });
                         plan.Facturen.Add(new AkteFactuurVoorstel { ClientAccountId = accountId, Soort = "Grond", Eigenaar = eigenaarNaam, Aandeel = pct, IsHoofdeigenaar = hoofd, Draft = d, UnitIds = grondLijnen.Select(g => g.Unit.Id).Distinct().ToList() });
                     }
                     if (kostenLijnen.Count > 0)
                     {
-                        var d = NieuwDraft(issuerId.Value, projectId, accountId, contactId, account.InvoiceExtra);
+                        var d = NieuwDraft(issuerId.Value, projectId, accountId, contactId);
+                        d.PaymentTermId = issuer?.AkteKostenPaymentTermId;
+                        d.SelectedVatTypeId = kostenVatTypeId;
                         d.HeaderDescription = $"Kosten van akte en landmeter voor {string.Join(", ", kostenLijnen.Select(k => k.Naam).Distinct())} in project {project.ProjectName} ingevolge verkoopsovereenkomst.";
                         foreach (var k in kostenLijnen)
                             d.Lines.Add(new InvoiceLineBO
                             {
                                 Text = pct < 100m ? $"{k.Tekst} ({pct:0.##} %)" : k.Tekst,
                                 Price = Math.Round(k.Bedrag * pct / 100m, 2, MidpointRounding.AwayFromZero),
-                                VatPercentage = vatPct, LineType = LineTypeKosten, GroupName = k.Naam, UnitId = k.Unit.Id,
+                                VatPercentage = vatPct, VatTypeId = kostenVatTypeId, LineType = LineTypeKosten, GroupName = k.Naam, UnitId = k.Unit.Id,
                             });
                         plan.Facturen.Add(new AkteFactuurVoorstel { ClientAccountId = accountId, Soort = "Kosten", Eigenaar = eigenaarNaam, Aandeel = pct, IsHoofdeigenaar = hoofd, Draft = d, UnitIds = kostenLijnen.Select(k => k.Unit.Id).Distinct().ToList() });
                     }
@@ -167,7 +187,7 @@ namespace ServiceCore.Invoicing
             return (aantal, opm);
         }
 
-        private static InvoiceDraftBO NieuwDraft(int issuerId, int projectId, int accountId, int? contactId, string? invoiceExtra)
+        private static InvoiceDraftBO NieuwDraft(int issuerId, int projectId, int accountId, int? contactId)
         {
             var d = new InvoiceDraftBO
             {
@@ -179,7 +199,7 @@ namespace ServiceCore.Invoicing
             // 1 = klantenaccount, 2 = mede-eigenaar/contactpersoon (zelfde codes als InvoicePartyType)
             if (contactId.HasValue) { d.ClientType = 2; d.ClientId = contactId; } else { d.ClientType = 1; d.ClientId = accountId; }
             d.CompanyId = null;
-            if (!string.IsNullOrWhiteSpace(invoiceExtra)) d.FooterDescription = invoiceExtra;
+            d.SkipPartyExtraInfo = true;   // geen extra vermelding van de klant (ClientAccount.InvoiceExtra) op grond- en kostenfacturen (Niels, 26/11/2026)
             return d;
         }
 

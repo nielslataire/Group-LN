@@ -6,7 +6,7 @@ treeOrder: 12
 role: Projectleider
 device: Desktop · tablet
 minutes: 5
-updated: 2026-11-24
+updated: 2026-11-26
 newsTag: Nieuw
 screens: planning-index, instellingen-projectsjablonen, instellingen-projectsjablonen-bewerken
 related: planning-sjablonen, schijvensjablonen-beheren, planning-schijven-koppelen
@@ -44,11 +44,15 @@ faq:
    - of er een **kelder** is (**Met kelder** of **Zonder**)
    - of het **dak** plat of hellend is, of **Geen keuze**
    - of het **één planning voor het gebouw** is (een gebouw met appartementen) of **per eenheid**, met erbij hoeveel eenheden nog geen planning hebben. Bij een appartementsgebouw is één planning de standaard: de werf loopt per bouwlaag, niet per appartement
+   - bij **per eenheid**: het veld **Woningen per planning**. Laat je het leeg, dan krijgt elke woning een eigen planning. Vul je bv. 7 in bij 14 woningen, dan komt er één planning voor lot 1 tot 7 en één voor lot 8 tot 14. Die planning (bv. "Lot 01 t/m Lot 07") bevat de taken van één woning en geldt voor alle woningen van de groep. Pas de duur van de taken daarna aan als een groep meer tijd nodig heeft
+   - wil je zelf bepalen welke woningen samen in een planning komen? Kies **Woningen zelf indelen**. Je ziet dan elke woning met een nummer: woningen met hetzelfde nummer delen één planning. Het nummer bepaalt ook de volgorde van de estafette. De knop "Terug naar vast aantal per planning" zet de keuze weer uit
    - bij één planning: of ze **in de hoofdplanning** komt. Dat kan enkel als de hoofdplanning nog leeg is. Is ze niet leeg, of zet je dit uit, dan komt er een aparte planning naast de hoofdplanning
 5. Lees rechts bij **Wat er gebeurt** wat CPM gaat doen: een kaart voor de planning, het traject en de schijven met hun percentages. Een schijf die onder het minimum van het sjabloon zakt, staat oker met een melding. Onderaan de kaarten staat wat **ongemoeid blijft**, en onderaan het venster een samenvatting van wat **Toepassen** maakt.
 6. Klik op **Toepassen**.
 
 ![Het venster Projectsjabloon toepassen met de vragen en het voorbeeld](/img/help/projecten/projectsjabloon-toepassen/1-toepassen.png)
+
+Heeft het sjabloon ook een planning voor het project zelf, bijvoorbeeld de wegenis bij een verkaveling, dan verschijnt in het venster de vraag **Start van de woningen**. Daar kies je of de woningen meteen starten of pas na een stap van de wegenis (fundering, nutsvoorzieningen, verharding of voorlopige oplevering). Het sjabloon stelt zelf een keuze voor. Het voorstel rechts toont de startdatum die daaruit volgt, en je kan die later per planning nog aanpassen.
 
 ## Wat het sjabloon aanpast
 

@@ -5,6 +5,7 @@
 -- TWEE VARIANTEN (zet @Variant hieronder):
 --   1 = "Residentie Hofstede"    appartementsgebouw in Kortrijk: 18 appartementen, 14 autostaanplaatsen, 18 bergingen, 5 bouwlagen
 --   2 = "Verkaveling Wilgenhoek" verkaveling in Zulte: 14 loten met eengezinswoningen (halfopen en open bebouwing)
+--   3 = "Verkaveling Berkenhof"   zelfde opbouw als 2 (14 loten), bedoeld voor het projectsjabloon "Verkaveling zonder wegenis" (code TP-VERK-02)
 --
 -- WAT HET AANMAAKT (per project):
 --   * partijen als aparte bedrijven: ontwikkelaar, architect, stabiliteitsingenieur, veiligheidscoördinator, EPB-verslaggever, notaris + aannemers
@@ -35,14 +36,14 @@
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
 
-DECLARE @Variant  INT = 1;   -- <<< 1 = appartementsgebouw, 2 = verkaveling
+DECLARE @Variant  INT = 1;   -- <<< 1 = appartementsgebouw, 2 = verkaveling (met wegenis), 3 = verkaveling (zonder wegenis)
 DECLARE @Uitvoeren BIT = 0;  -- <<< 0 = proefrit, 1 = echt bewaren
 
-DECLARE @code NVARCHAR(30)  = CASE @Variant WHEN 1 THEN N'TP-APP-01' ELSE N'TP-VERK-01' END;
+DECLARE @code NVARCHAR(30)  = CASE @Variant WHEN 1 THEN N'TP-APP-01' WHEN 3 THEN N'TP-VERK-02' ELSE N'TP-VERK-01' END;
 DECLARE @marker NVARCHAR(100) = N'TESTPROJECT-DATA ' + @code;
 DECLARE @vandaag DATE = CAST(GETDATE() AS DATE);
 
-IF @Variant NOT IN (1, 2) THROW 50020, N'@Variant moet 1 of 2 zijn.', 1;
+IF @Variant NOT IN (1, 2, 3) THROW 50020, N'@Variant moet 1, 2 of 3 zijn.', 1;
 IF EXISTS (SELECT 1 FROM dbo.Project WHERE ProjectCode = @code)
 BEGIN PRINT N'Project ' + @code + N' bestaat al, niets gedaan. Verwijder het eerst met TESTPROJECT_Verwijderen.sql.'; RETURN; END
 
@@ -51,8 +52,8 @@ BEGIN TRAN;
 -- ---------------------------------------------------------------------------------------------
 -- [0] Referentiegegevens opzoeken
 -- ---------------------------------------------------------------------------------------------
-DECLARE @gemeente NVARCHAR(50) = CASE @Variant WHEN 1 THEN N'Kortrijk' ELSE N'Zulte' END;
-DECLARE @postcode NVARCHAR(10) = CASE @Variant WHEN 1 THEN N'8500'     ELSE N'9870'  END;
+DECLARE @gemeente NVARCHAR(50) = CASE @Variant WHEN 1 THEN N'Kortrijk' WHEN 3 THEN N'Deinze' ELSE N'Zulte' END;
+DECLARE @postcode NVARCHAR(10) = CASE @Variant WHEN 1 THEN N'8500'     WHEN 3 THEN N'9800' ELSE N'9870'  END;
 DECLARE @pcId INT = (SELECT TOP 1 PostcodeId FROM dbo.PostalCode WHERE Postcode = @postcode AND Gemeente LIKE @gemeente + N'%' ORDER BY PostcodeId);
 IF @pcId IS NULL
 BEGIN
@@ -67,7 +68,7 @@ IF @statusId IS NULL BEGIN SET @statusId = (SELECT TOP 1 StatusId FROM dbo.Proje
 DECLARE @donor INT = (SELECT TOP 1 ProjectId FROM dbo.Project
                       WHERE ProjectCode IS NULL OR ProjectCode NOT LIKE N'TP-%'
                       ORDER BY CASE WHEN @Variant = 1 AND ProjectName LIKE N'%Res%' THEN 0
-                                    WHEN @Variant = 2 AND ProjectName LIKE N'%erkaveling%' THEN 0 ELSE 1 END, ProjectId DESC);
+                                    WHEN @Variant IN (2, 3) AND ProjectName LIKE N'%erkaveling%' THEN 0 ELSE 1 END, ProjectId DESC);
 DECLARE @projType INT = ISNULL((SELECT ProjectType FROM dbo.Project WHERE ProjectId = @donor), 1);
 DECLARE @issuer   INT = (SELECT TOP 1 IssuerCompanyIdBuilder FROM dbo.Project WHERE IssuerCompanyIdBuilder IS NOT NULL ORDER BY ProjectId DESC);
 IF @issuer IS NULL SET @issuer = (SELECT TOP 1 Id FROM dbo.IssuerCompany ORDER BY Id);
@@ -128,6 +129,9 @@ ELSE
      (N'SCHR', N'Houtbouw en Schrijnwerk Lammens',   N'BV', N'Ambachtsstraat', N'5', N'0707.693.144'),
      (N'TEGEL',N'Vloeren Tegelzetterij Hoste',       N'BV', N'Kortrijkstraat', N'88', N'0743.215.870');
 
+-- Variant 3 deelt de partijnamen met variant 2, maar het ondernemingsnummer is uniek: eerste cijfer 0 wordt 1.
+IF @Variant = 3 UPDATE @bed SET Ond = N'1' + SUBSTRING(Ond, 2, 20);
+
 INSERT INTO dbo.CompanyInfo (BedrijfsNaam, Straat, Huisnummer, Telefoon1, Email, Ondernemingsnummer, VatNumber, Type, LandCode, PostCodeId, Postcode, Gemeente, IsActive, Opmerkingen)
 SELECT b.Naam + N' ' + b.Vorm, b.Straat, b.Nr, N'056 ' + RIGHT(N'000000' + CAST(ABS(CHECKSUM(b.Naam)) % 1000000 AS NVARCHAR(10)), 6),
        N'info@' + LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(b.Naam, N' ', N''), N'&', N''), N'ë', N'e'), N'ö', N'o'), N'-', N'')) + N'.example.com',
@@ -141,9 +145,9 @@ PRINT N'[1] partijen aangemaakt: ' + CAST(@t1 AS NVARCHAR(10));
 -- ---------------------------------------------------------------------------------------------
 -- [2] Project
 -- ---------------------------------------------------------------------------------------------
-DECLARE @naam NVARCHAR(100)  = CASE @Variant WHEN 1 THEN N'Residentie Hofstede' ELSE N'Verkaveling Wilgenhoek' END;
-DECLARE @slug NVARCHAR(100)  = CASE @Variant WHEN 1 THEN N'residentie-hofstede' ELSE N'verkaveling-wilgenhoek' END;
-DECLARE @straat NVARCHAR(100)= CASE @Variant WHEN 1 THEN N'Hofstedestraat' ELSE N'Wilgenhoekstraat' END;
+DECLARE @naam NVARCHAR(100)  = CASE @Variant WHEN 1 THEN N'Residentie Hofstede' WHEN 3 THEN N'Verkaveling Berkenhof' ELSE N'Verkaveling Wilgenhoek' END;
+DECLARE @slug NVARCHAR(100)  = CASE @Variant WHEN 1 THEN N'residentie-hofstede' WHEN 3 THEN N'verkaveling-berkenhof' ELSE N'verkaveling-wilgenhoek' END;
+DECLARE @straat NVARCHAR(100)= CASE @Variant WHEN 1 THEN N'Hofstedestraat' WHEN 3 THEN N'Berkenlaan' ELSE N'Wilgenhoekstraat' END;
 DECLARE @huisnr NVARCHAR(10) = CASE @Variant WHEN 1 THEN N'24' ELSE N'2' END;
 DECLARE @start DATE = CASE @Variant WHEN 1 THEN DATEADD(MONTH, -9, @vandaag) ELSE DATEADD(MONTH, -5, @vandaag) END;
 -- begin op een maandag

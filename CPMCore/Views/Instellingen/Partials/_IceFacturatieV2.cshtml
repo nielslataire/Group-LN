@@ -71,6 +71,37 @@
 
         <section class="gl-v2-section-card">
             <div class="gl-v2-section-card-header">
+                <span class="gl-v2-section-card-icon"><i class="ph ph-file-text" aria-hidden="true"></i></span>
+                <h2 class="gl-v2-section-card-title">Aktefacturen</h2>
+                <span class="gl-v2-field-divider"></span>
+                <span class="gl-v2-section-card-desc">Voor de knop Aktefacturen klaarzetten. Leeg = standaard.</span>
+            </div>
+            @{
+                var termItems = terms.Select(t => new GlV2SelectItem { Value = t.Id.ToString(), Text = t.Label }).ToList();
+                var vatItems = vatCodes.Select(v => new GlV2SelectItem { Value = v.Id.ToString(), Text = $"{v.Code} — {v.Description} ({v.BasePercentage:0.##}%)" }).ToList();
+                var vatHelp = vatCodes.Any() ? null : "Synchroniseer het dossier (tab Boekhouding) om btw-codes op te halen.";
+            }
+            <div class="gl-v2-section-grid">
+                <div class="gl-v2-col-6">
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "AkteGrondVatTypeId", Id = "ice-akte-grond-vat", Label = "Btw-code grondfactuur", Value = Model.AkteGrondVatTypeId?.ToString() ?? "", EmptyText = "— 0 % (standaard) —", Disabled = !vatCodes.Any(), Help = vatHelp, Items = vatItems })
+                </div>
+                <div class="gl-v2-col-6">
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "AkteGrondPaymentTermId", Id = "ice-akte-grond-term", Label = "Betaaltermijn grondfactuur", Value = Model.AkteGrondPaymentTermId?.ToString() ?? "", EmptyText = "— standaardtermijn —", Items = termItems })
+                </div>
+                <div class="gl-v2-col-6">
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "AkteKostenVatTypeId", Id = "ice-akte-kosten-vat", Label = "Btw-code kostenfactuur", Value = Model.AkteKostenVatTypeId?.ToString() ?? "", EmptyText = "— 21 % (standaard) —", Disabled = !vatCodes.Any(), Help = vatHelp, Items = vatItems })
+                </div>
+                <div class="gl-v2-col-6">
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "AkteKostenPaymentTermId", Id = "ice-akte-kosten-term", Label = "Betaaltermijn kostenfactuur", Value = Model.AkteKostenPaymentTermId?.ToString() ?? "", EmptyText = "— standaardtermijn —", Items = termItems })
+                </div>
+                <div class="gl-v2-col-6">
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "AkteWerkenPaymentTermId", Id = "ice-akte-werken-term", Label = "Betaaltermijn werkenfactuur bij akte", Value = Model.AkteWerkenPaymentTermId?.ToString() ?? "", EmptyText = "— standaardtermijn —", Help = "Voor de bouwvennootschap: geldt voor de facturen die je met de akteknop klaarzet.", Items = termItems })
+                </div>
+            </div>
+        </section>
+
+        <section class="gl-v2-section-card">
+            <div class="gl-v2-section-card-header">
                 <span class="gl-v2-section-card-icon"><i class="ph ph-list-numbers" aria-hidden="true"></i></span>
                 <h2 class="gl-v2-section-card-title">Nummerreeksen</h2>
                 <span class="gl-v2-section-card-spacer"></span>

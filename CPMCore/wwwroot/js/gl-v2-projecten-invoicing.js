@@ -61,8 +61,10 @@
             if (!btn) return;
             $$(".gl-v2-inv-filter", filterBar).forEach(function (b) { b.classList.toggle("is-active", b === btn); });
             var kinds = (btn.getAttribute("data-inv-filter") || "").split(",").filter(Boolean);
+            var akteOnly = kinds.indexOf("@akte") !== -1;
             $$("[data-inv-row]").forEach(function (row) {
-                row.hidden = kinds.length > 0 && kinds.indexOf(row.getAttribute("data-kind")) === -1;
+                if (akteOnly) row.hidden = row.getAttribute("data-akte") !== "1";
+                else row.hidden = kinds.length > 0 && kinds.indexOf(row.getAttribute("data-kind")) === -1;
             });
         });
     }
@@ -257,7 +259,7 @@
                 calls.push(fetch(cfg.makeInvoicesUrl, {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "RequestVerificationToken": token() },
-                    body: JSON.stringify({ Invoices: lastPayload.Stages })
+                    body: JSON.stringify({ Invoices: lastPayload.Stages, Akte: !!(lastPayload.AkteAccountIds && lastPayload.AkteAccountIds.length > 0) })
                 }));
             }
             if (lastPayload.ChangeOrders.length > 0) {

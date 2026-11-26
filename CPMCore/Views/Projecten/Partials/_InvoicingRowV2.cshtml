@@ -18,7 +18,7 @@
     var childOf = ViewData["ChildOf"] as int?;
     var isChild = childOf.HasValue;
 }
-<tr class="gl-v2-inv-row @(row.IsBlocked ? "is-blocked" : "") @(isChild ? "is-child is-collapsed" : "")" data-inv-row data-kind="@row.Kind" data-amount="@Inv(row.Amount)" @(isChild ? $"data-inv-child-of={childOf}" : "")>
+<tr class="gl-v2-inv-row @(row.IsBlocked ? "is-blocked" : "") @(isChild ? "is-child is-collapsed" : "")" data-inv-row data-kind="@row.Kind" data-akte="@(row.IsAkte ? "1" : "0")" data-amount="@Inv(row.Amount)" @(isChild ? $"data-inv-child-of={childOf}" : "")>
     <td class="is-check" data-label="">
         @if (row.IsBlocked)
         {
@@ -66,7 +66,7 @@
             </span>
         }
     </td>
-    <td class="gl-v2-inv-muted" data-label="Moment">@row.Moment</td>
+    <td class="gl-v2-inv-muted" data-label="Moment">@if (row.IsAkte) { <span class="gl-v2-inv-moment-akte"><i class="ph ph-files" aria-hidden="true"></i> bij de akte</span> } else { @row.Moment }</td>
     <td class="is-right gl-v2-inv-tabular" data-label="%">@(row.IsStage || row.IsBlocked ? Pct(row.Percentage) + " %" : "")</td>
     <td class="is-right gl-v2-inv-tabular @(row.IsBlocked ? "gl-v2-inv-muted" : "")" data-label="Excl. btw">@Eur(row.Amount)</td>
 </tr>

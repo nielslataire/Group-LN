@@ -1729,7 +1729,7 @@ public class PlanningService : IPlanningService
                 if (eenheden.Count != b.EenheidIds.Count) return "Een gekozen woning of gebouw hoort niet bij dit project.";
                 if (d.Eenheden.Any(e => b.EenheidIds.Contains(e.UnitId))) return "Een gekozen woning of gebouw zit al in een planning.";
                 var eerste = eenheden.OrderBy(u => b.EenheidIds.IndexOf(u.Id)).First();
-                var naam = (eerste.Name ?? "").Trim() + (eenheden.Count > 1 ? " e.a." : "");
+                var naam = !string.IsNullOrWhiteSpace(b.Naam) ? b.Naam.Trim() : (eerste.Name ?? "").Trim() + (eenheden.Count > 1 ? " e.a." : "");
                 var fout = ControleerNaam(d, new BouwPlanning { Naam = naam });
                 if (fout != null) return string.IsNullOrWhiteSpace(naam) ? "Een gekozen woning heeft geen naam." : $"{fout} (planning “{naam}”)";
                 if (rijen.Any(r => r.Bestaand == null && r.Naam.Equals(naam, StringComparison.OrdinalIgnoreCase))) return $"Er komen twee plannings met de naam {naam}.";

@@ -60,6 +60,11 @@ namespace ServiceCore
                     Website = x.company.Website,
                     DefaultPaymentTermId = x.company.DefaultPaymentTermId,
                     DefaultVatTypeId = x.company.DefaultVatTypeId,
+                    AkteGrondVatTypeId = x.company.AkteGrondVatTypeId,
+                    AkteGrondPaymentTermId = x.company.AkteGrondPaymentTermId,
+                    AkteKostenVatTypeId = x.company.AkteKostenVatTypeId,
+                    AkteKostenPaymentTermId = x.company.AkteKostenPaymentTermId,
+                    AkteWerkenPaymentTermId = x.company.AkteWerkenPaymentTermId,
                     IsActive = x.company.IsActive,
                     IsExternalCoordinationDefault = x.company.IsExternalCoordinationDefault,
                     VatReturnFrequency = x.company.VatReturnFrequency,
@@ -445,6 +450,11 @@ namespace ServiceCore
                 LogoBytes = x.LogoBytes,
                 DefaultPaymentTermId = x.DefaultPaymentTermId,
                 DefaultVatTypeId = x.DefaultVatTypeId,
+                AkteGrondVatTypeId = x.AkteGrondVatTypeId,
+                AkteGrondPaymentTermId = x.AkteGrondPaymentTermId,
+                AkteKostenVatTypeId = x.AkteKostenVatTypeId,
+                AkteKostenPaymentTermId = x.AkteKostenPaymentTermId,
+                AkteWerkenPaymentTermId = x.AkteWerkenPaymentTermId,
                 IsActive = x.IsActive,
                 IsExternalCoordinationDefault = x.IsExternalCoordinationDefault,
                 EInvoiceEnabled = x.EinvoiceEnabled,
@@ -511,6 +521,11 @@ namespace ServiceCore
             e.LogoBytes = bo.LogoBytes;
             e.DefaultPaymentTermId = bo.DefaultPaymentTermId;
             e.DefaultVatTypeId = bo.DefaultVatTypeId;
+            e.AkteGrondVatTypeId = bo.AkteGrondVatTypeId;
+            e.AkteGrondPaymentTermId = bo.AkteGrondPaymentTermId;
+            e.AkteKostenVatTypeId = bo.AkteKostenVatTypeId;
+            e.AkteKostenPaymentTermId = bo.AkteKostenPaymentTermId;
+            e.AkteWerkenPaymentTermId = bo.AkteWerkenPaymentTermId;
             e.IsActive = bo.IsActive;
             e.IsExternalCoordinationDefault = bo.IsExternalCoordinationDefault;
             e.EinvoiceEnabled = bo.EInvoiceEnabled;

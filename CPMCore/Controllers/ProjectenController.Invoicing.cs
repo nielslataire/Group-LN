@@ -582,6 +582,14 @@ namespace CPMCore.Controllers
 
                     projectId = project.Id;
             }
+            if (request.Akte && drafts.Count > 0)
+            {
+                var issuerIds = drafts.Select(d => d.IssuerCompanyId).Distinct().ToList();
+                var akteTermen = await db.IssuerCompany.AsNoTracking().Where(i => issuerIds.Contains(i.Id) && i.AkteWerkenPaymentTermId != null)
+                    .ToDictionaryAsync(i => i.Id, i => i.AkteWerkenPaymentTermId);
+                foreach (var d in drafts)
+                    if (akteTermen.TryGetValue(d.IssuerCompanyId, out var termId)) d.PaymentTermId = termId;
+            }
             foreach (var draft in drafts)
             {
                 try
@@ -745,6 +753,8 @@ namespace CPMCore.Controllers
         public class MakeInvoicesRequest
         {
             public List<ClientAccountUnitInvoiceBO> Invoices { get; set; } = new();
+            /// <summary>True als de facturen via "Aktefacturen klaarzetten" komen: dan geldt de betaaltermijn voor werken bij de akte van het facturatiebedrijf.</summary>
+            public bool Akte { get; set; }
         }
 
         public class MakeInvoicesCoRequest

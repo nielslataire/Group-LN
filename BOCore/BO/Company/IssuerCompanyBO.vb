@@ -23,6 +23,12 @@
     Public Property LogoBytes As Byte()
     Public Property DefaultPaymentTermId As Integer?
     Public Property DefaultVatTypeId As Integer?
+    ''' <summary>Aktefacturen: btw-code en betaaltermijn van de grondfactuur, van de kostenfactuur en betaaltermijn van de werkenfactuur bij de akte.</summary>
+    Public Property AkteGrondVatTypeId As Integer?
+    Public Property AkteGrondPaymentTermId As Integer?
+    Public Property AkteKostenVatTypeId As Integer?
+    Public Property AkteKostenPaymentTermId As Integer?
+    Public Property AkteWerkenPaymentTermId As Integer?
     Public Property IsActive As Boolean
     ''' <summary>Verzamelbak voor leveranciers van contracten zonder eigen facturatiebedrijf (coördinatie/extern). Max één.</summary>
     Public Property IsExternalCoordinationDefault As Boolean

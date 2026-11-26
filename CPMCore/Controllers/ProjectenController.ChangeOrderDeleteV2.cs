@@ -12,8 +12,8 @@ namespace CPMCore.Controllers
 {
     /// <summary>Verwijderen vanuit ChangeOrderDetailV2. Een OFFERTE mag verwijderd worden door iedereen met
     /// verwijderrechten op wijzigingsopdrachten; een WIJZIGINGSOPDRACHT enkel door een admin (bovenop dat
-    /// recht). Een lopend of afgerond ondertekendossier blijft vergrendelen, ook voor een admin: eerst
-    /// intrekken. Databasefouten (bv. gekoppelde facturen) komen als melding terug via
+    /// recht). Een lopend ondertekendossier blijft vergrendelen, ook voor een admin: eerst intrekken.
+    /// Een afgerond (ondertekend) dossier mag een admin wel verwijderen; het ondertekenbewijs blijft bewaard. Databasefouten (bv. gekoppelde facturen) komen als melding terug via
     /// DbUpdateExceptionFilter.</summary>
     public partial class ProjectenController
     {
@@ -46,6 +46,8 @@ namespace CPMCore.Controllers
         /// blijven bestaan (zonder koppeling), afgeleide versies verliezen enkel hun verwijzing naar de bron. Geeft het aantal ontkoppelde inkoopregels terug.</summary>
         private async Task<int> UnlinkChangeOrderReferencesAsync(int changeOrderId)
         {
+            // Betaaltermijnen (facturatieplan): FK zonder cascade. De blocker hierboven garandeert dat er geen factuurregel aan hangt.
+            await _db.ChangeOrderPaymentTerm.Where(t => t.ChangeOrderId == changeOrderId).ExecuteDeleteAsync();
             var purchase = await _db.IncommingInvoiceDetail.Where(d => d.ChangeOrderId == changeOrderId)
                 .ExecuteUpdateAsync(s => s.SetProperty(d => d.ChangeOrderId, (int?)null));
             // ProjectDocs.ChangeOrderId bestaat in de database maar niet in het EF-model.
@@ -72,11 +74,16 @@ namespace CPMCore.Controllers
                 AddMessage("error", "Er loopt een ondertekening. Trek die eerst in en verwijder daarna.", "Vergrendeld");
                 return BackToChangeOrder(projectId, changeOrderId);
             }
-            if (await CompletedSigningCaseAsync(changeOrderId) is not null)
+            // Afgerond ondertekendossier: enkel een admin mag toch verwijderen. Het dossier (SigningCase/-Party/-Event/-Document,
+            // hash-ketting) heeft geen FK naar de wijzigingsopdracht en blijft dus ongemoeid bewaard.
+            var completedCase = await CompletedSigningCaseAsync(changeOrderId);
+            if (completedCase is not null && !await IsAdminUserAsync())
             {
                 AddMessage("error", SigningCompletedLockedMessage, "Vergrendeld");
                 return BackToChangeOrder(projectId, changeOrderId);
             }
+            if (completedCase is not null)
+                _logger.LogWarning("Admin {UserId} verwijdert ondertekende wijzigingsopdracht {ChangeOrderId}; ondertekendossier blijft bewaard.", User.GetCpmUserId(), changeOrderId);
 
             var blocker = await ChangeOrderDeleteBlockerAsync(changeOrderId);
             if (blocker is not null)
@@ -95,7 +102,8 @@ namespace CPMCore.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Verwijderen van wijzigingsopdracht {ChangeOrderId} mislukt.", changeOrderId);
-                AddMessage("error", "Het verwijderen is mislukt: er hangt nog iets anders aan deze wijzigingsopdracht. De fout is gelogd.", "Niet verwijderd");
+                // Enkel admins kunnen hier komen (of het is een offerte): de technische oorzaak (meestal de naam van de blokkerende FK) erbij, zodat ze te vinden is.
+                AddMessage("error", "Het verwijderen is mislukt: er hangt nog iets anders aan deze wijzigingsopdracht. De fout is gelogd. Technisch: " + ex.GetBaseException().Message, "Niet verwijderd");
                 return BackToChangeOrder(projectId, changeOrderId);
             }
             if (!response.Success)

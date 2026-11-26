@@ -119,6 +119,7 @@
                 <button type="button" class="gl-v2-inv-filter is-active" data-inv-filter="">Alles</button>
                 <button type="button" class="gl-v2-inv-filter" data-inv-filter="Schijf">Schijven</button>
                 <button type="button" class="gl-v2-inv-filter" data-inv-filter="Meerwerk,Minwerk">Meer- en minwerken</button>
+                <button type="button" class="gl-v2-inv-filter" data-inv-filter="@@akte">Bij de akte</button>
                 <span class="gl-v2-inv-filters-spacer"></span>
                 <span class="gl-v2-inv-legend">
                     <span class="gl-v2-inv-legend-item"><span class="gl-v2-inv-legend-dot is-invoiced"></span>gefactureerd</span>
@@ -151,12 +152,6 @@
                             </span>
                         }
                         <span class="gl-v2-card-header-spacer"></span>
-                        @if (account.AkteOpen && Model.CanWrite)
-                        {
-                            <button type="button" class="gl-v2-btn js-inv-akte" data-account-id="@account.ClientAccountId" title="Zet de grondfactuur, de kostenfactuur en de werken tot nu toe klaar als conceptfacturen: @account.AkteSamenvatting">
-                                <i class="ph ph-files" aria-hidden="true"></i> Aktefacturen klaarzetten
-                            </button>
-                        }
                         @if (account.HasProgress)
                         {
                             <div class="gl-v2-inv-progress">
@@ -176,6 +171,63 @@
                             <span class="gl-v2-card-header-count">@account.OpenRows.Count() @(account.OpenRows.Count() == 1 ? "post" : "posten") · @Eur(account.OpenTotal)</span>
                         }
                     </div>
+                    @if (account.AkteToon && Model.CanWrite)
+                    {
+                        @* 20a2: aktefacturen als eigen kader met 4 stappen en de verdeling per koper (vervangt de losse knop in de kaartkop) *@
+                        var akteVandaag = DateOnly.FromDateTime(DateTime.Today);
+                        var akteTitel = !account.AkteDatum.HasValue ? "Akte nog niet gepland"
+                            : account.AkteDatum.Value > akteVandaag ? "Akte nog niet verleden"
+                            : account.AkteDatum.Value == akteVandaag ? "Akte vandaag" : "Akte verleden";
+                        var akteAantalTxt = account.AkteFactuurAantal + (account.AkteFactuurAantal == 1 ? " conceptfactuur" : " conceptfacturen");
+                        var akteStappen = new[]
+                        {
+                            ("Klaarzetten", account.AkteBestaat ? akteAantalTxt : akteAantalTxt + " volgens eigendom"),
+                            ("Naar de notaris", "pdf + afrekening per koper"),
+                            ("Akte verleden", "datum invullen"),
+                            ("Geboekt", "facturen definitief, schijven gefactureerd"),
+                        };
+                        var akteUitleg = account.AkteBestaat && !account.AkteOpen
+                            ? "de aktefacturen zijn aangemaakt"
+                            : (account.AkteSchijvenAantal == 1 ? "1 bereikte schijf wordt" : account.AkteSchijvenAantal + " bereikte schijven worden") + " samen met de grond- en kostenfactuur gefactureerd bij de akte";
+                        <div class="gl-v2-inv-akte" data-inv-akte>
+                            <div class="gl-v2-inv-akte-head">
+                                <span class="gl-v2-inv-akte-icon"><i class="ph ph-files" aria-hidden="true"></i></span>
+                                <div class="gl-v2-inv-akte-text">
+                                    <b>@akteTitel · @akteUitleg</b>
+                                    <small>
+                                        @if (account.AkteSchijvenAantal > 0) { <text>@Pct(account.AkteSchijvenPct) % · </text> }<span class="gl-v2-inv-tabular">@Eur(account.AkteTotaal)</span> excl. btw · de notaris int dit bedrag op de akte. Aktedatum: <b>@(account.AkteDatum.HasValue ? account.AkteDatum.Value.ToString("dd/MM/yyyy") : "nog niet ingevuld")</b>
+                                    </small>
+                                </div>
+                                @if (account.AkteOpen)
+                                {
+                                    <button type="button" class="gl-v2-btn gl-v2-inv-akte-go js-inv-akte" data-account-id="@account.ClientAccountId" title="Zet de grondfactuur, de kostenfactuur en de werken tot nu toe klaar als conceptfacturen: @account.AkteSamenvatting">
+                                        <i class="ph ph-files" aria-hidden="true"></i> Aktefacturen klaarzetten
+                                    </button>
+                                }
+                            </div>
+                            <ol class="gl-v2-inv-akte-steps">
+                                @for (var si = 0; si < akteStappen.Length; si++)
+                                {
+                                    var stapKlaar = account.AkteStapKlaar[si];
+                                    var stapNu = account.AkteStap == si + 1;
+                                    <li class="@(stapNu ? "is-now" : stapKlaar ? "is-done" : "")">
+                                        <i>@if (stapKlaar) { <span class="ph ph-check" aria-hidden="true"></span> } else { @(si + 1) }</i>
+                                        <span><b>@akteStappen[si].Item1</b><small>@akteStappen[si].Item2</small></span>
+                                    </li>
+                                }
+                            </ol>
+                            @if (account.AkteVerdeling.Count > 0)
+                            {
+                                <div class="gl-v2-inv-akte-split">
+                                    @foreach (var ak in account.AkteVerdeling)
+                                    {
+                                        <span>@ak.Naam <b>@Pct(ak.Aandeel) %</b></span><b class="gl-v2-inv-tabular">@Eur(ak.Bedrag)</b>
+                                    }
+                                    <span class="gl-v2-inv-akte-mut">+ btw waar van toepassing · @(account.AkteBestaat ? "concept, nog niets geboekt" : "nog niets aangemaakt")</span>
+                                </div>
+                            }
+                        </div>
+                    }
                     @if (account.HasNothingOpen)
                     {
                         <div class="gl-v2-inv-card-empty">Niets te factureren</div>

@@ -4,7 +4,7 @@ topic: facturatie-wijzigingen
 role: Boekhouding · Projectleider
 device: Desktop · tablet
 minutes: 5
-updated: 2026-10-26
+updated: 2026-11-26
 newsTag: Nieuw
 screens: projecten-facturatie
 related: betalingsschijven-volgen, factuur-bekijken, factuur-nummeren-en-verzenden, wijzigingsopdracht-opmaken
@@ -90,6 +90,8 @@ Rond de akte maak je tot drie facturen per klant. Met de knop **Aktefacturen kla
    - de **kostenfactuur**: aandeel in de akte(n), landmeting en eigen kostenposten, met 21 % btw, van hetzelfde bedrijf;
    - de **werkenfactuur**: de bereikte schijven, van de bouwvennootschap.
 3. Klik op **Bevestigen**. Alles wordt als conceptfactuur aangemaakt.
+
+De btw-code en de betaaltermijn van de grond- en kostenfactuur, en de betaaltermijn van de werkenfactuur, stel je in bij het facturatiebedrijf: **Instellingen > Bedrijven > bedrijf bewerken > Facturatie > Aktefacturen**. Laat je een keuze leeg, dan geldt de standaard: grond zonder btw, kosten met 21 % btw en de standaardbetaaltermijn van het bedrijf. Op de grond- en kostenfactuur komt de extra vermelding van de klant niet.
 
 Een mede-eigenaar krijgt telkens een eigen factuur voor zijn aandeel. Heeft een eenheid al een grond- of kostenfactuur (niet geannuleerd), dan komt die er niet nog eens bij. Annuleer je die factuur, dan kan ze opnieuw klaargezet worden.
 

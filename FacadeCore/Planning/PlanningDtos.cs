@@ -442,6 +442,8 @@ public sealed class PlanningToepassingPlanning
 
     /// <summary>Bij een nieuwe planning: de eenheden die erbij horen (nog zonder planning). De planning krijgt de naam van de eerste eenheid.</summary>
     public List<int> EenheidIds { get; set; } = new();
+    /// <summary>Bij een nieuwe planning: de naam. Leeg = de naam van de eerste eenheid (met "e.a." als er meer zijn).</summary>
+    public string? Naam { get; set; }
     /// <summary>Het aantal bouwlagen boven de grond, het gelijkvloers meegeteld (gelijkvloers + 2 verdiepingen = 3).</summary>
     public int Verdiepingen { get; set; } = 1;
     public bool Kelder { get; set; }

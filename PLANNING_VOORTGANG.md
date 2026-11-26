@@ -346,3 +346,48 @@ Uitwerking van `PLANNING_ONTWERP_HERZIEN.md` stap A; lijst en besluiten van Niel
 7. Unit-tests voor AkteFactuurService; screenshot aktefacturen-knop genoteerd in docs/archive/help/HELP_SCREENSHOTS.md.
 8. Bekend: de bestaande code voor "in hoofdplanning" bij woningen meldt "geen hoofdplanning" zolang die nog niet bestaat (hoofdplanning wordt pas bij de eerste schrijfactie aangemaakt); de nieuwe projectplanning-code vangt dat wel op.
 9. Eerder open: lijst "verkeerde zaken" appartementenplanning, gevelafwerking als projectkeuze, afwerking deels parallel, mails naar rol Bestuurders/Boekhouder, 2 help-screenshots bouwstaten, project 81 groep "Parkings en bergingen" schijven opnieuw toepassen met kelder ja.
+
+## Update 26/11/2026 – aktefacturen: btw, betaaltermijn, geen extra vermelding
+- Migratie `_migrations/166_IssuerCompany_AkteInstellingen.sql` (5 kolommen op IssuerCompany) – **vóór app-start draaien**.
+- Instellingen > Bedrijven > Facturatie: nieuw blok "Aktefacturen" (btw-code + termijn grond, btw-code + termijn kosten, termijn werken bij akte). Leeg = oud gedrag.
+- Werkenfactuur-termijn geldt enkel voor facturen via de akteknop (MakeInvoicesRequest.Akte).
+- Grond- en kostenfactuur krijgen de extra vermelding van de klant (InvoiceExtra) niet meer.
+- Gebouwd/compileert, niet browser-getest.
+
+## Update 26/11/2026 (later) – project 83 getest door Niels
+- 167 (estafette Woning) gedraaid, project 83 opnieuw opgebouwd: wegenisplanning staat in de hoofdplanning (einde 13/01/2027), woningen starten na de wegenverharding (Lot 01: 16/12/2026), Lot 02 wacht per taak op Lot 01 (voorgangers "Lot 01…"). Werkt zoals bedoeld.
+- Let op: met 14 lots in estafette loopt het einde ver uit (Lot 02 einde 02/09/2027); groepen woningen of estafette enkel voor zware taken blijft een open keuze.
+- Volgende: traject-taak "aktefacturen klaarzetten" 1 dag voor de akte, testproject zonder wegenis.
+- 168 (`_migrations/168_Traject_Trigger_Aktefacturen.sql`): trajecttrigger op mijlpaal NOTARIELE_AKTE (XDagenVoorDoeldatum 1 dag → MaakTaak "Aktefacturen klaarzetten" bij de verantwoordelijke) in alle trajectsjablonen en bestaande trajecten. Niet gedraaid, niet getest; de trigger vuurt enkel als de mijlpaal een doeldatum heeft (akte per kavel: controleren).
+- `TESTPROJECT_Aanmaken.sql`: variant 3 = "Verkaveling Berkenhof" (TP-VERK-02, Deinze) voor het projectsjabloon "Verkaveling zonder wegenis". Omschrijving en notaris/ontwikkelaarsnamen zijn nog die van Wilgenhoek. Niet gedraaid.
+- 169 (`_migrations/169_Trajectsjablonen_Verkaveling_woningen.sql`): nieuwe trajectsjablonen "Verkaveling met/zonder wegenis - woningen per lot" naast de 041-versies, volgens de lijst van Niels (docs/voortgang/TRAJECT_VERKAVELING_VOORSTEL.md). Projectdeel (scope 0) + woningdeel (scope 1, per lot, identiek). Bouwmijlpalen dragen een bouwstaat-code en volgen de planning van de woning; wegenismijlpalen volgen de wegenisplanning. Trigger aktefacturen (rol boekhouder, 1 dag vóór de akte). Zet ook de projectsjablonen van 165 om naar de nieuwe trajecten. Niet gedraaid, niet getest. Aandachtspunten: "Dak dicht" bestaat tweemaal (plat/hellend; de overbodige verwijderen), in de lijst stond "EPB-aangifte" dubbel (één mijlpaal gemaakt), per-woning-koppeling met de planning moet in de browser bekeken worden (14 lots x ~35 mijlpalen).
+- 26/11/2026 laat: project 85 (zonder wegenis) getest door Niels na herberekening: planning-koppeling, estafette en klantdata (compromis/akte) werken per lot. Gefixt: ProjectSjabloonService herrekent het traject nu meteen na het toepassen (optionele ITrajectRecalculationService). Nieuw: bij een gekozen dak verdwijnen de "dak dicht"-mijlpalen van het andere dak (bij elke woning). Werf-taken blijven bewust zonder estafette (Niels). Help projectsjablonen-beheren bijgewerkt. Niet getest in de browser: het weglaten van de dakmijlpaal.
+- 26/11/2026 (nacht): unit tests AkteFactuurService (8, groen) in ServiceCore.Tests/AkteFactuurServiceTests.cs. Toepassen-modal van het projectsjabloon vraagt nu "Start van de woningen" (enkel bij een sjabloon met projectplanning): ProjectSjabloonAntwoorden.WoningenStartNa (leeg = standaard sjabloon, "GEEN" = meteen), keuzelijst in Planning/IndexV2.cshtml, JS gl-v2-projecten-planning.js, 2 tests erbij (36 groen). Niet in de browser getest. Help projectsjabloon-toepassen bijgewerkt (geen screenshot genoteerd).
+- 26/11/2026 (nacht): "Woningen per planning" in de toepassen-modal van het projectsjabloon: ProjectSjabloonAntwoorden.GroepGrootte (>=2 = een planning per groep, naam "Lot 01 t/m Lot 07"), PlanningToepassingPlanning.Naam; 2 tests (150 planning/sjabloon-tests groen). Estafette loopt van groep naar groep; duren in een groepsplanning zijn die van één woning (aan te passen). Niet in de browser getest. Help projectsjabloon-toepassen en bedrijf-factuurstandaarden bijgewerkt; screenshots genoteerd in HELP_SCREENSHOTS.md (aktefacturen-knop stond er al).
+
+- 26/11/2026 (laat): "Woningen zelf indelen" in de toepassen-modal: ProjectSjabloonAntwoorden.Groepen (per planning de eenheden), knop + nummerveld per woning in Planning/IndexV2.cshtml en gl-v2-projecten-planning.js (zelfde nummer = zelfde planning, volgorde nummers = estafette; wat niet ingedeeld is krijgt een eigen planning). Voorrang op GroepGrootte. 1 nieuwe test, 180 planning/sjabloon-tests groen. Niet in de browser getest. Help projectsjabloon-toepassen bijgewerkt; screenshot van de modal staat al als "opnieuw nemen".
+
+## Stand 26/11/2026 – wat nog moet gebeuren
+**Door Niels te doen (migraties en tests):**
+1. Migratie 168 draaien (trigger aktefacturen) als dat nog niet gebeurd is; controleren dat de taak "Aktefacturen klaarzetten" een dag voor de akte verschijnt (trigger vuurt enkel bij een doeldatum).
+2. App starten met de nieuwe build en in de browser testen: instellingen "Aktefacturen" bij het facturatiebedrijf (btw + termijnen), werkenfactuur-termijn via de akteknop, toepassen-modal (Start van de woningen, Woningen per planning, Woningen zelf indelen), weglaten van de dakmijlpaal, bestaande conceptfacturen met extra vermelding verwijderen en opnieuw klaarzetten.
+3. Project 81: groep "Parkings en bergingen" schijven opnieuw toepassen met kelder ja.
+**Door mij te doen (open):**
+4. Lijst "verkeerde zaken" in de appartementenplanning (Niels moet de lijst nog geven).
+5. Gevelafwerking als projectkeuze; afwerking deels parallel.
+6. Mails naar de rollen Bestuurders/Boekhouder.
+7. Help-screenshots in één batch met Playwright nemen (zie docs/archive/help/HELP_SCREENSHOTS.md, o.a. aktefacturen, toepassen-modal, 2 bouwstaten-pagina's).
+8. Optioneel: unit-test voor het weglaten van de dakmijlpaal (de TrajectDubbel-fake maakt geen mijlpalen).
+**Bewuste keuzes:** werf-taken zonder estafette; "PO & PL"/"PO & VK" in de lijst = eerste rol (PO); duren in een groepsplanning = die van één woning (aanpasbaar).
+
+## Update 26/11/2026 (avond) – browsertest toepassen-modal door Niels
+- Bevestigd werkend: Start van de woningen, Woningen per planning, Woningen zelf indelen (punten 1-3 van de testlijst).
+- Gefixt: "Start van de woningen" was een gewone browserlijst; nu de eigen keuzelijst (GlV2/_SelectList, id gl-v2-pl-pj-startna, items via setSelect in pjKies). Niet opnieuw in de browser bekeken.
+- Bewust gedrag (uitgelegd): het sjabloon overschrijft niets; zonder eenheden zonder planning, met een gevulde hoofdplanning en een bestaand traject blijven enkel schijven over. Opnieuw toepassen op een testproject kan enkel na het opruimscript (TEST_project81_planning_en_schijven_opruimen.sql met @ProjectId).
+- **NIEUW OPEN:** nergens in de app kan de planning van een woning verwijderd worden. Idee Niels: voor een administrator wel mogelijk maken (verwijderen van een (woning)planning, eventueel met "opnieuw toepassen" als vervolg). Nog uit te werken: waar de knop komt, recht (enkel beheerder), bevestigingsmodal (bvBevestigd), wat met gekoppelde trajectmijlpalen, schijven en taken, en of een vervangoptie in het toepassen-venster beter is.
+
+**Nog open voor Niels om te testen (niet-facturatie):**
+- Dak: bij een gekozen dak enkel de "Dak dicht"-mijlpaal van dat dak per woning.
+- Trigger 168: taak "Aktefacturen klaarzetten" een dag voor de akte (migratie 168 eerst draaien; vuurt enkel met een doeldatum).
+- Project 81: schijven "Parkings en bergingen" opnieuw toepassen met kelder ja.
+- Facturatie-tests (instellingen Aktefacturen, werkenfactuur-termijn, geen extra vermelding op grond/kosten) staan ook nog open.

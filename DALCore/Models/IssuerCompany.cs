@@ -78,6 +78,16 @@ public partial class IssuerCompany
 
     public int? DefaultVatTypeId { get; set; }
 
+    public int? AkteGrondVatTypeId { get; set; }
+
+    public int? AkteGrondPaymentTermId { get; set; }
+
+    public int? AkteKostenVatTypeId { get; set; }
+
+    public int? AkteKostenPaymentTermId { get; set; }
+
+    public int? AkteWerkenPaymentTermId { get; set; }
+
     public string TemplateKey { get; set; }
 
     public string TemplateJson { get; set; }

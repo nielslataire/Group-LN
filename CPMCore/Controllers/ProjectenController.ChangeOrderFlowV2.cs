@@ -816,7 +816,8 @@ namespace CPMCore.Controllers
                         PhoneMasked = p.PhoneMasked,
                         Capacity = p.Capacity,
                     }).ToList();
-                    vm.SigningRule = package.SuggestedRule ?? policy?.SigningRule ?? (int)SigningRule.All;
+                    // Standaard: één eigenaar volstaat om te tekenen (Niels, 26/11/2026) — de verzender kan nog naar "Alle eigenaars" wisselen
+                    vm.SigningRule = (int)SigningRule.Any;
                     vm.ExpiresOn = DateOnly.FromDateTime(DateTime.Today.AddDays(policy?.LinkValidityDays ?? 30));
                     vm.ReminderAfterDays = policy?.ReminderAfterDays;
                     vm.PreviewUrl = Url.Action("Preview", "SigningAdmin", new { documentType = source.DocumentType, sourceId = co.Id });

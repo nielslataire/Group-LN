@@ -107,4 +107,61 @@ public class ProjectSjabloonVerkavelingTests
         Assert.Contains(r.Opmerkingen, o => o.Contains("Geen taak"));
         Assert.All(db.BouwPlanning.Where(b => !b.IsHoofd), b => Assert.Null(b.StartDatum));
     }
+
+    [Fact]
+    public async Task Het_antwoord_GEEN_laat_de_woningen_meteen_starten_ondanks_de_standaard_van_het_sjabloon()
+    {
+        var (svc, db, id) = Maak("WEGENIS_VERHARDING");
+        var r = await svc.Toepassen(ProjectId, id, new ProjectSjabloonAntwoorden { Verdiepingen = 1, WoningenStartNa = "GEEN" }, "u");
+        Assert.True(r.Ok, r.Fout);
+        Assert.All(db.BouwPlanning.Where(b => !b.IsHoofd), b => Assert.Null(b.StartDatum));
+    }
+
+    [Fact]
+    public async Task Het_antwoord_overschrijft_de_standaard_van_het_sjabloon()
+    {
+        // standaard van het sjabloon: nergens op wachten; antwoord: na de verharding
+        var (svc, db, id) = Maak(null);
+        var r = await svc.Toepassen(ProjectId, id, new ProjectSjabloonAntwoorden { Verdiepingen = 1, WoningenStartNa = "wegenis_verharding" }, "u");
+        Assert.True(r.Ok, r.Fout);
+        Assert.All(db.BouwPlanning.Where(b => !b.IsHoofd), b => Assert.Equal(new DateOnly(2026, 11, 30), b.StartDatum));
+    }
+
+    [Fact]
+    public async Task Een_groep_woningen_krijgt_samen_een_planning_met_een_eigen_naam()
+    {
+        var (svc, db, id) = Maak(null);
+        var r = await svc.Toepassen(ProjectId, id, new ProjectSjabloonAntwoorden { Verdiepingen = 1, GroepGrootte = 2 }, "u");
+        Assert.True(r.Ok, r.Fout);
+        var plannings = db.BouwPlanning.Where(b => !b.IsHoofd).ToList();
+        var p = Assert.Single(plannings);
+        Assert.Equal("Woning 1 t/m Woning 2", p.Naam);
+        Assert.Equal(2, db.BouwPlanningEenheid.Count(e => e.BouwPlanningId == p.Id));
+    }
+
+    [Fact]
+    public async Task Zelf_gekozen_woningen_komen_in_dezelfde_planning_en_de_rest_krijgt_een_eigen_planning()
+    {
+        var (svc, db, id) = Maak(null);
+        var ids = db.Units.Where(u => u.ProjectId == ProjectId).OrderBy(u => u.Name).Select(u => u.Id).ToList();
+        var r = await svc.Toepassen(ProjectId, id, new ProjectSjabloonAntwoorden { Verdiepingen = 1, Groepen = new() { new() { ids[0], ids[1] } } }, "u");
+        Assert.True(r.Ok, r.Fout);
+        var p = Assert.Single(db.BouwPlanning.Where(b => !b.IsHoofd).ToList());
+        Assert.Equal(2, db.BouwPlanningEenheid.Count(e => e.BouwPlanningId == p.Id));
+
+        var (svc2, db2, id2) = Maak(null);
+        var ids2 = db2.Units.Where(u => u.ProjectId == ProjectId).OrderBy(u => u.Name).Select(u => u.Id).ToList();
+        var r2 = await svc2.Toepassen(ProjectId, id2, new ProjectSjabloonAntwoorden { Verdiepingen = 1, Groepen = new() { new() { ids2[1] } } }, "u");
+        Assert.True(r2.Ok, r2.Fout);
+        Assert.Equal(2, db2.BouwPlanning.Count(b => !b.IsHoofd));
+    }
+
+    [Fact]
+    public async Task Groepgrootte_1_of_0_geeft_een_planning_per_woning()
+    {
+        var (svc, db, id) = Maak(null);
+        var r = await svc.Toepassen(ProjectId, id, new ProjectSjabloonAntwoorden { Verdiepingen = 1, GroepGrootte = 1 }, "u");
+        Assert.True(r.Ok, r.Fout);
+        Assert.Equal(2, db.BouwPlanning.Count(b => !b.IsHoofd));
+    }
 }

@@ -76,6 +76,21 @@ namespace CPMCore.Models.Instellingen
         [Display(Name = "Standaard btw-code")]
         public int? DefaultVatTypeId { get; set; }
 
+        [Display(Name = "Btw-code grondfactuur")]
+        public int? AkteGrondVatTypeId { get; set; }
+
+        [Display(Name = "Betaaltermijn grondfactuur")]
+        public int? AkteGrondPaymentTermId { get; set; }
+
+        [Display(Name = "Btw-code kostenfactuur")]
+        public int? AkteKostenVatTypeId { get; set; }
+
+        [Display(Name = "Betaaltermijn kostenfactuur")]
+        public int? AkteKostenPaymentTermId { get; set; }
+
+        [Display(Name = "Betaaltermijn werkenfactuur bij akte")]
+        public int? AkteWerkenPaymentTermId { get; set; }
+
         [Display(Name = "Actief")]
         public bool IsActive { get; set; } = true;
         [Display(Name = "Standaard voor externe / coördinatiecontracten")]

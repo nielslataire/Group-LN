@@ -14,10 +14,11 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
     private readonly IPlanningService _planning;
     private readonly ITrajectInstantiationService _traject;
     private readonly ISchijfSjabloonService _schijven;
+    private readonly ITrajectRecalculationService? _herreken;
 
-    public ProjectSjabloonService(cpmRunningContext db, IPlanningService planning, ITrajectInstantiationService traject, ISchijfSjabloonService schijven)
+    public ProjectSjabloonService(cpmRunningContext db, IPlanningService planning, ITrajectInstantiationService traject, ISchijfSjabloonService schijven, ITrajectRecalculationService? herreken = null)
     {
-        _db = db; _planning = planning; _traject = traject; _schijven = schijven;
+        _db = db; _planning = planning; _traject = traject; _schijven = schijven; _herreken = herreken;
     }
 
     // ── beheer ──
@@ -162,7 +163,7 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
             if (s.PlanningSjabloonId is int p && planning.TryGetValue(p, out var np)) delen.Add($"planning {np} {(np == 1 ? "fase" : "fases")}");
             if (s.TrajectSjabloonId is int t && traject.TryGetValue(t, out var nt)) delen.Add($"traject {nt} {(nt == 1 ? "fase" : "fases")}");
             if (s.SchijfSjabloonId is int c && schijven.TryGetValue(c, out var nc)) delen.Add($"{nc} {(nc == 1 ? "schijf" : "schijven")}");
-            return new ProjectSjabloonKeuze { Id = s.Id, Naam = s.Naam, Beschrijving = s.Beschrijving, Verdiepingen = Math.Max(1, s.StandaardVerdiepingen), Kelder = s.StandaardKelder, Dak = s.StandaardDak, Kern = delen.Count == 0 ? null : string.Join(" · ", delen) };
+            return new ProjectSjabloonKeuze { Id = s.Id, Naam = s.Naam, Beschrijving = s.Beschrijving, Verdiepingen = Math.Max(1, s.StandaardVerdiepingen), Kelder = s.StandaardKelder, Dak = s.StandaardDak, WoningenStartNa = s.PlanningSjabloonProjectId == null ? null : s.WoningenStartNa, Kern = delen.Count == 0 ? null : string.Join(" · ", delen) };
         }).ToList();
     }
 
@@ -296,6 +297,21 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
 
     // ── toepassen ──
 
+    /// <summary>De gekozen groepen (enkel eenheden zonder planning, elke eenheid hoogstens één keer, in de volgorde van de lijst); wat in geen groep staat krijgt een eigen planning.</summary>
+    private static List<List<(int Id, string Name)>> ZelfIndeling(List<(int Id, string Name)> vrij, List<List<int>> groepen)
+    {
+        var rest = vrij.ToDictionary(u => u.Id);
+        var uit = new List<List<(int Id, string Name)>>();
+        foreach (var g in groepen)
+        {
+            var leden = new List<(int Id, string Name)>();
+            foreach (var id in g) if (rest.Remove(id, out var u)) leden.Add(u);
+            if (leden.Count > 0) uit.Add(leden.OrderBy(u => vrij.FindIndex(v => v.Id == u.Id)).ToList());
+        }
+        foreach (var u in vrij) if (rest.ContainsKey(u.Id)) uit.Add(new List<(int Id, string Name)> { u });
+        return uit;
+    }
+
     private static ProjectSjabloonAntwoorden Schoon(ProjectSjabloonAntwoorden a)
     {
         var dak = string.IsNullOrWhiteSpace(a?.Dak) ? null : a.Dak.Trim().ToLowerInvariant();
@@ -305,6 +321,9 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
             Dak = dak is "hellend" or "plat" ? dak : null, EenPlanningVoorAlles = a?.EenPlanningVoorAlles ?? false,
             Terrassen = (a?.Terrassen ?? new List<int>()).Where(t => t >= 1).Distinct().OrderBy(t => t).Take(20).ToList(),
             InHoofdplanning = a?.InHoofdplanning ?? false,
+            GroepGrootte = Math.Max(0, Math.Min(a?.GroepGrootte ?? 0, 200)),
+            Groepen = (a?.Groepen ?? new List<List<int>>()).Where(g => g != null && g.Count > 0).Take(500).Select(g => g.Distinct().ToList()).ToList(),
+            WoningenStartNa = string.IsNullOrWhiteSpace(a?.WoningenStartNa) ? null : a.WoningenStartNa.Trim().ToUpperInvariant(),
         };
     }
 
@@ -338,6 +357,8 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
         if (sj == null) { res.Fout = "Het projectsjabloon bestaat niet meer of is inactief."; return res; }
         if (!await _db.Project.AnyAsync(p => p.ProjectId == projectId)) { res.Fout = "Het project bestaat niet meer."; return res; }
         var a = Schoon(antwoorden);
+        // Startmoment van de woningen: het antwoord van de gebruiker, anders de standaard van het sjabloon ("GEEN" = meteen)
+        var startNa = a.WoningenStartNa == null ? (string.IsNullOrEmpty(sj.WoningenStartNa) ? null : sj.WoningenStartNa) : (a.WoningenStartNa == "GEEN" ? null : a.WoningenStartNa);
 
         // ── planning van het project zelf (hoofdplanning, bv. de wegenis): enkel als de hoofdplanning nog leeg is
         DateOnly? woningenStart = null;
@@ -352,7 +373,7 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
                 var hpId = hp?.Id;
                 var hpLeeg = !await _db.PlanningSectie.AnyAsync(s => s.ProjectId == projectId && s.IsActief && (s.BouwPlanningId == null || (hpId != null && s.BouwPlanningId == hpId)));
                 if (!hpLeeg) res.Opmerkingen.Add($"De hoofdplanning heeft al fasen of taken: de planning voor het project zelf ({projNaam}) is niet toegepast.");
-                else if (!uitvoeren) res.Stappen.Add($"Planning “{projNaam}” komt in de hoofdplanning (voor het project zelf)." + (string.IsNullOrEmpty(sj.WoningenStartNa) ? "" : " De woningen starten daarna: zie de startdatum van hun planning."));
+                else if (!uitvoeren) res.Stappen.Add($"Planning “{projNaam}” komt in de hoofdplanning (voor het project zelf)." + (string.IsNullOrEmpty(startNa) ? "" : " De woningen starten daarna: zie de startdatum van hun planning."));
                 else
                 {
                     if (hpId == null)
@@ -373,9 +394,9 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
                     foreach (var w in uit0.Waarschuwingen ?? new List<string>()) res.Opmerkingen.Add(w);
 
                     // De woningen starten de dag na de laatste taak die de gekozen bouwstaat oplevert (bv. na de verharding van de wegenis)
-                    if (!string.IsNullOrEmpty(sj.WoningenStartNa))
+                    if (!string.IsNullOrEmpty(startNa))
                     {
-                        var bsId = await _db.Bouwstaat.AsNoTracking().Where(b => b.Code == sj.WoningenStartNa && b.ProjectId == null).Select(b => (int?)b.Id).FirstOrDefaultAsync();
+                        var bsId = await _db.Bouwstaat.AsNoTracking().Where(b => b.Code == startNa && b.ProjectId == null).Select(b => (int?)b.Id).FirstOrDefaultAsync();
                         var staat1 = await _planning.Laad(projectId, hpId);
                         var taakIds = staat1.Rijen.Where(r => r.Soort == "taak").Select(r => r.Id).ToList();
                         var levert = bsId == null ? new HashSet<int>() : (await _db.PlanningTaak.AsNoTracking().Where(t => taakIds.Contains(t.Id) && t.BouwstaatId == bsId).Select(t => t.Id).ToListAsync()).ToHashSet();
@@ -386,7 +407,7 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
                         else
                         {
                             woningenStart = new WerkKalender().OpOfNa(einden.Max().AddDays(1));   // de eerstvolgende werkdag (verlof en verlet vangt de planning zelf op)
-                            res.Stappen.Add($"De woningen starten op {woningenStart:dd/MM/yyyy}, de dag na “{sj.WoningenStartNa}” in de planning van het project. Je kan de startdatum per planning aanpassen.");
+                            res.Stappen.Add($"De woningen starten op {woningenStart:dd/MM/yyyy}, de dag na “{startNa}” in de planning van het project. Je kan de startdatum per planning aanpassen.");
                         }
                     }
                 }
@@ -421,9 +442,23 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
                     ? new List<PlanningToepassingPlanning> { new() { PlanningId = hoofd!.Id, Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak, Terrassen = a.Terrassen } }
                     : a.EenPlanningVoorAlles
                     ? new List<PlanningToepassingPlanning> { new() { EenheidIds = eenheden.Select(u => u.Id).ToList(), Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak, Terrassen = a.Terrassen } }
+                    : a.Groepen.Count > 0
+                    ? ZelfIndeling(eenheden.Select(u => (u.Id, u.Name ?? "")).ToList(), a.Groepen).Select(g => new PlanningToepassingPlanning
+                    {
+                        EenheidIds = g.Select(u => u.Id).ToList(), Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak, Terrassen = a.Terrassen,
+                        Naam = g.Count == 1 ? g[0].Name.Trim() : $"{g[0].Name.Trim()} t/m {g[^1].Name.Trim()}",
+                    }).ToList()
+                    : a.GroepGrootte >= 2
+                    ? eenheden.Chunk(a.GroepGrootte).Select(g => new PlanningToepassingPlanning
+                    {
+                        EenheidIds = g.Select(u => u.Id).ToList(), Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak, Terrassen = a.Terrassen,
+                        Naam = g.Length == 1 ? (g[0].Name ?? "").Trim() : $"{(g[0].Name ?? "").Trim()} t/m {(g[^1].Name ?? "").Trim()}",
+                    }).ToList()
                     : eenheden.Select(u => new PlanningToepassingPlanning { EenheidIds = new List<int> { u.Id }, Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak, Terrassen = a.Terrassen }).ToList();
                 if (woningenStart != null && !inHoofd) foreach (var r in rijen) r.StartDatum = woningenStart.Value.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
                 var tekst = inHoofd ? $"in de hoofdplanning, voor {eenheden.Count} {(eenheden.Count == 1 ? "eenheid" : "eenheden")} ({Lijstje(eenheden.Select(u => u.Name ?? ""))})"
+                          : a.Groepen.Count > 0 && rijen.Count > 0 && !a.EenPlanningVoorAlles ? $"{rijen.Count} {(rijen.Count == 1 ? "planning" : "plannings")} volgens jouw indeling, samen {eenheden.Count} eenheden ({Lijstje(rijen.Select(r => r.Naam ?? ""))})"
+                          : a.GroepGrootte >= 2 && rijen.Count > 0 && !a.EenPlanningVoorAlles ? $"{rijen.Count} {(rijen.Count == 1 ? "planning" : "plannings")} van elk maximaal {a.GroepGrootte} eenheden, samen {eenheden.Count} ({Lijstje(rijen.Select(r => r.Naam ?? ""))})"
                           : a.EenPlanningVoorAlles ? $"één planning voor {eenheden.Count} {(eenheden.Count == 1 ? "eenheid" : "eenheden")} ({Lijstje(eenheden.Select(u => u.Name ?? ""))})"
                                                    : $"een planning voor elk van de {eenheden.Count} {(eenheden.Count == 1 ? "eenheid" : "eenheden")} zonder planning ({Lijstje(eenheden.Select(u => u.Name ?? ""))})";
                 if (!uitvoeren) res.Stappen.Add($"Planning “{planningNaam}”: {tekst}.");
@@ -455,6 +490,19 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
                 {
                     await _traject.Instantiate(new BOCore.TrajectInstantiatieBO { ProjectId = projectId, TrajectSjabloonId = trajectSjabloonId }, userId);
                     res.Stappen.Add($"Traject “{trajectNaam}” aangemaakt.");
+                    // Is het dak gekozen, dan verdwijnt de "dak dicht"-mijlpaal van het andere dak (bij elke woning); zonder keuze blijven beide staan.
+                    if (a.Dak is "plat" or "hellend")
+                    {
+                        var weg = a.Dak == "plat" ? "DAK_HELLEND_DICHT" : "DAK_PLAT_DICHT";
+                        var ids = await _db.Mijlpaal.Where(m => m.Projecttraject.ProjectId == projectId && m.Code == weg).Select(m => m.Id).ToListAsync();
+                        if (ids.Count > 0)
+                        {
+                            _db.ProjectDossierMijlpaal.RemoveRange(await _db.ProjectDossierMijlpaal.Where(x => ids.Contains(x.MijlpaalId)).ToListAsync());
+                            _db.Mijlpaal.RemoveRange(await _db.Mijlpaal.Where(m => ids.Contains(m.Id)).ToListAsync());
+                            await _db.SaveChangesAsync();
+                            res.Stappen.Add($"{ids.Count} mijlpaal{(ids.Count == 1 ? "" : "en")} voor het {(a.Dak == "plat" ? "hellende" : "platte")} dak weggelaten.");
+                        }
+                    }
                 }
                 catch (Exception ex) { res.Opmerkingen.Add("Het traject kon niet aangemaakt worden: " + ex.Message); }
             }
@@ -525,6 +573,13 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
             var schijfKoppelingen = await PlanningSchijfAutoKoppeling.KoppelOpCode(_db, projectId);
             if (schijfKoppelingen > 0) res.Stappen.Add($"{schijfKoppelingen} {(schijfKoppelingen == 1 ? "schijf hangt" : "schijven hangen")} nu aan een taak of fase in de planning.");
             await PlanningTrajectKoppeling.KoppelOpCode(_db, projectId);
+            // Het traject herrekent meteen: streefdata uit de planning, en bereikte mijlpalen en datums uit de klantaccounts (compromis, akte, oplevering).
+            // Zonder dit blijft het traject tot de volgende herberekening op de rekendata uit de ankers staan.
+            if (_herreken != null && await _db.Projecttraject.AnyAsync(t => t.ProjectId == projectId))
+            {
+                try { await _herreken.RecalculateProject(projectId, null); }
+                catch { res.Opmerkingen.Add("Het traject kon niet meteen herrekend worden; dat gebeurt later vanzelf."); }
+            }
         }
 
         if (res.Stappen.Count == 0 && res.Opmerkingen.Count == 0) res.Opmerkingen.Add("Er valt niets toe te passen.");

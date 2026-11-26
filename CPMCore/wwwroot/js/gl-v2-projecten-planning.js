@@ -1434,7 +1434,7 @@
 
     // ── Projectsjabloon: planning, traject en schijven in één keer, aangepast aan het gebouw (design-handoff 59g/59h) ──
     // Links de antwoorden (de verborgen velden hieronder zijn de bron van waarheid, de knoppen tonen ze), rechts "Wat er gebeurt" per onderdeel.
-    var pj = { keuzes: [], gekozen: null, aanvraag: 0, timer: null, bezig: false, terrassen: [], ai: {}, vorige: null };
+    var pj = { indeel: false, nrs: {}, keuzes: [], gekozen: null, aanvraag: 0, timer: null, bezig: false, terrassen: [], ai: {}, vorige: null };
     var PJ_VELDEN = ["verd", "kelder", "dak", "lagen", "een"];
     function pjAantal() { return Math.max(1, Math.min(20, parseInt($("gl-v2-pl-pj-verd").value, 10) || 1)); }
     function pjLagen() {
@@ -1450,8 +1450,31 @@
             kelder: $("gl-v2-pl-pj-kelder").checked, dak: $("gl-v2-pl-pj-dak").value || null,
             terrassen: schoonLagen(pj.terrassen, pjAantal()),
             eenPlanningVoorAlles: $("gl-v2-pl-pj-een").checked,
-            inHoofdplanning: $("gl-v2-pl-pj-een").checked && $("gl-v2-pl-pj-hoofd").checked
+            inHoofdplanning: $("gl-v2-pl-pj-een").checked && $("gl-v2-pl-pj-hoofd").checked,
+            woningenStartNa: $("gl-v2-pl-pj-q-startna").hidden ? null : $("gl-v2-pl-pj-startna").value,
+            groepGrootte: $("gl-v2-pl-pj-een").checked || pj.indeel ? 0 : Math.max(0, parseInt($("gl-v2-pl-pj-groep").value, 10) || 0),
+            groepen: $("gl-v2-pl-pj-een").checked || !pj.indeel ? [] : pjGroepen()
         };
+    }
+    // Zelf indelen: per woning het nummer van de planning; hetzelfde nummer = dezelfde planning
+    function pjVrij() { return (state.eenheden || []).filter(function (e) { return e.planningId == null; }); }
+    function pjGroepen() {
+        var perNr = {};
+        pjVrij().forEach(function (e) { var n = pj.nrs[e.id]; if (n >= 1) (perNr[n] = perNr[n] || []).push(e.id); });
+        return Object.keys(perNr).map(Number).sort(function (a, b) { return a - b; }).map(function (n) { return perNr[n]; });
+    }
+    function pjIndeelVul() {
+        var n = Math.max(1, parseInt($("gl-v2-pl-pj-groep").value, 10) || 1);
+        pj.nrs = {}; pjVrij().forEach(function (e, i) { pj.nrs[e.id] = Math.floor(i / n) + 1; });
+    }
+    function pjIndeelToon() {
+        var aan = !!pj.indeel;
+        $("gl-v2-pl-pj-indeel").hidden = !aan;
+        $("gl-v2-pl-pj-indeel-knop").lastChild.textContent = aan ? "Terug naar vast aantal per planning" : "Woningen zelf indelen";
+        if (!aan) return;
+        $("gl-v2-pl-pj-indeel-lijst").innerHTML = pjVrij().map(function (e) {
+            return "<label class=\"gl-v2-field\"><span class=\"gl-v2-field-label\">" + esc(e.naam) + "</span><span class=\"gl-v2-field-box\"><input type=\"number\" class=\"gl-v2-field-input\" min=\"1\" max=\"500\" step=\"1\" data-pj-nr=\"" + e.id + "\" value=\"" + (pj.nrs[e.id] || "") + "\" aria-label=\"Planning voor " + esc(e.naam) + "\" /></span></label>";
+        }).join("");
     }
     // De knoppen (gl-v2-segmented) volgen de verborgen velden
     function pjSegmenten() {
@@ -1460,6 +1483,9 @@
         $("gl-v2-pl-pj-dak-seg").querySelectorAll("button").forEach(function (b) { b.classList.toggle("is-active", b.getAttribute("data-v") === dak); });
         $("gl-v2-pl-pj-een-seg").querySelectorAll("button").forEach(function (b) { b.classList.toggle("is-active", (b.getAttribute("data-v") === "een") === een); });
         $("gl-v2-pl-pj-hoofd-rij").hidden = !een;
+        $("gl-v2-pl-pj-groep-rij").hidden = een;
+        $("gl-v2-pl-pj-indeel-rij").hidden = een || pjVrij().length < 2;
+        $("gl-v2-pl-pj-groep-rij").hidden = een || pj.indeel;
         var vrij = (state.eenheden || []).filter(function (e) { return e.planningId == null; }).length;
         $("gl-v2-pl-pj-elk").textContent = "Per eenheid" + (vrij ? " (" + vrij + ")" : "");
         $("gl-v2-pl-pj-een-help").textContent = "Bij een appartementsgebouw is één planning de standaard: de werf loopt per bouwlaag, niet per appartement. “Per eenheid” maakt " + (vrij ? vrij + " planningen" : "een planning per eenheid") + ".";
@@ -1548,7 +1574,17 @@
     function pjKies(k) {
         pj.gekozen = k; pj.ai = {};
         pjZetAntwoorden({ verdiepingen: k.verdiepingen, kelder: k.kelder, dak: k.dak, terrassen: [], eenPlanningVoorAlles: false });
-        $("gl-v2-pl-pj-hoofd").checked = true; pjSegmenten();
+        $("gl-v2-pl-pj-hoofd").checked = true; $("gl-v2-pl-pj-groep").value = ""; pj.indeel = false; pj.nrs = {}; pjIndeelToon(); pjSegmenten();
+        // Startmoment van de woningen: enkel bij een sjabloon met de planning van het project zelf; standaard wat het sjabloon zegt
+        $("gl-v2-pl-pj-q-startna").hidden = !k.woningenStartNa;
+        var startItems = [
+            { value: "GEEN", text: "Meteen, op de aanvangsdatum van de bouwwerken" }, { value: "WEGENIS_FUNDERING", text: "Na de wegenfundering" },
+            { value: "WEGENIS_NUTSVOORZIENINGEN", text: "Na de nutsvoorzieningen" }, { value: "WEGENIS_VERHARDING", text: "Na de wegverharding" },
+            { value: "WEGENIS_VOORLOPIGE_OPLEVERING", text: "Na de voorlopige oplevering van de wegenis" }
+        ];
+        var startWaarde = k.woningenStartNa || "GEEN";
+        if (!startItems.some(function (o) { return o.value === startWaarde; })) startItems.push({ value: startWaarde, text: "Na " + startWaarde });
+        setSelect("gl-v2-pl-pj-startna", startItems, startWaarde);
         $("gl-v2-pl-pj-ainote").hidden = true; pjAiMarks();
         $("gl-v2-pl-pj-rest").hidden = false;
         $("gl-v2-pl-pj-leeg") && ($("gl-v2-pl-pj-leeg").textContent = "Even rekenen …");
@@ -1582,6 +1618,13 @@
     $("gl-v2-pl-pj").addEventListener("change", function (e) {
         if (e.target.name === "gl-v2-pl-pj-keuze") { var id = parseInt(e.target.value, 10); var k = pj.keuzes.filter(function (x) { return x.id === id; })[0]; if (k) pjKies(k); return; }
         if (e.target.id === "gl-v2-pl-pj-hoofd") pjPlanVoorbeeld();
+        if (e.target.id === "gl-v2-pl-pj-startna" || e.target.id === "gl-v2-pl-pj-groep") pjPlanVoorbeeld();
+        if (e.target.hasAttribute && e.target.hasAttribute("data-pj-nr")) { pj.nrs[e.target.getAttribute("data-pj-nr")] = Math.max(0, parseInt(e.target.value, 10) || 0); pjPlanVoorbeeld(); }
+    });
+    $("gl-v2-pl-pj-indeel-knop").addEventListener("click", function () {
+        pj.indeel = !pj.indeel;
+        if (pj.indeel) pjIndeelVul();
+        pjIndeelToon(); pjSegmenten(); pjPlanVoorbeeld();
     });
     // Antwoorden: de knoppen zetten de verborgen velden, wissen het AI-label van die vraag en rekenen opnieuw
     function pjWijzig(veld, zet) { zet(); pjAiUit(veld); pjSegmenten(); pjPlanVoorbeeld(); }

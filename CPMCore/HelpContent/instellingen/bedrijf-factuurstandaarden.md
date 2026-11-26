@@ -4,7 +4,7 @@ topic: instellingen
 role: Boekhouding
 device: Desktop · tablet
 minutes: 5
-updated: 2026-10-26
+updated: 2026-11-26
 newsTag: Nieuw
 screens: instellingen-bedrijven-bewerken
 related: bedrijf-bewerken, nummerreeks-beheren, bankrekening-toevoegen, factuurlayout-en-mail-instellen
@@ -40,6 +40,12 @@ Onder **Betaaltermijnen** staan de termijnen die kiesbaar zijn op facturen van d
 4. Klik op **Toepassen** en bewaar daarna het bedrijf.
 
 Klik op een bestaande termijn om ze aan te passen of met **Verwijderen** te schrappen.
+
+## Aktefacturen instellen
+
+In het blok **Aktefacturen** kies je wat de knop **Aktefacturen klaarzetten** gebruikt: de btw-code en betaaltermijn van de grondfactuur, de btw-code en betaaltermijn van de kostenfactuur, en de betaaltermijn van de werkenfactuur bij de akte. Laat je een keuze leeg, dan geldt de standaard: grond zonder btw, kosten met 21 % btw en de standaardbetaaltermijn. De werkenfactuur-termijn stel je in bij de bouwvennootschap, grond en kosten bij de grondvennootschap.
+
+![Het blok Aktefacturen met btw-code en betaaltermijn per factuur](/img/help/instellingen/bedrijf-factuurstandaarden/aktefacturen.png)
 
 ## De betaal-QR instellen
 

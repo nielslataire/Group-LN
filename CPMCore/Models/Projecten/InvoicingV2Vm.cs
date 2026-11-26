@@ -61,6 +61,26 @@ public class InvoicingAccountCardV2
     /// <summary>"grond € 85.000,00 · kosten € 1.250,00" (bedragen voor het hoofdaccount, na aftrek van de mede-eigenaars).</summary>
     public string? AkteSamenvatting { get; set; }
 
+    // ── 20a2: aktekader boven de tabel van de klant ──
+    /// <summary>Het aktekader tonen: er is iets klaar te zetten, of er staan al aktefacturen.</summary>
+    public bool AkteToon => AkteOpen || AkteBestaat;
+    /// <summary>Er bestaan al (niet-geannuleerde) aktefacturen voor dit account.</summary>
+    public bool AkteBestaat { get; set; }
+    public int AkteFactuurAantal { get; set; }
+    public DateOnly? AkteDatum { get; set; }
+    /// <summary>Stap die nu aan de beurt is (1 klaarzetten, 2 naar de notaris, 3 akte verleden, 4 geboekt); 0 = alles klaar.</summary>
+    public int AkteStap { get; set; }
+    public bool[] AkteStapKlaar { get; set; } = new bool[4];
+    public int AkteSchijvenAantal { get; set; }
+    public decimal AkteSchijvenBedrag { get; set; }
+    public decimal AkteGrondBedrag { get; set; }
+    public decimal AkteKostenBedrag { get; set; }
+    public decimal AkteTotaal => AkteSchijvenBedrag + AkteGrondBedrag + AkteKostenBedrag;
+    /// <summary>% van de schijvenwaarde van het account dat bij de akte meekomt.</summary>
+    public decimal AkteSchijvenPct { get; set; }
+    /// <summary>Verdeling per koper (zelfde eigendomsaandeel als de facturen): naam, aandeel %, bedrag excl. btw.</summary>
+    public List<(string Naam, decimal Aandeel, decimal Bedrag)> AkteVerdeling { get; set; } = new();
+
     /// <summary>Verloopbalk (20a): % van de totale schijvenwaarde van dit account dat al gefactureerd,
     /// nog te factureren (Invoicable) resp. nog niet vrijgegeven is (InvoicingPaymentStages.Invoicable =
     /// false — de enige "nog niet bereikt"-indicator die het schema echt heeft, geen mijlpaal-datum).
@@ -104,6 +124,8 @@ public class InvoicingPostRowV2
     /// een klare WO, "blokkeert" voor een geblokkeerde. Blijft leeg voor schijven: er is geen
     /// "bereikt op"-datum in het schema (enkel Invoicable, geen mijlpaal-tracking).</summary>
     public string? Moment { get; set; }
+    /// <summary>20a2: schijf die samen met de aktefacturen gefactureerd wordt (aktekader van het account staat open).</summary>
+    public bool IsAkte { get; set; }
     public string? UnitName { get; set; }
     public decimal Amount { get; set; }
     public decimal Percentage { get; set; }

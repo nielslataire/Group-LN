@@ -16,6 +16,8 @@
     Public Property HeaderDescription As String
     Public Property DetailDescription As String
     Public Property FooterDescription As String
+    ' <summary>True = de extra vermelding van de klant (ClientAccount.InvoiceExtra) niet automatisch op de factuur zetten (bv. aktefacturen grond en kosten).</summary>
+    Public Property SkipPartyExtraInfo As Boolean
 
     Public Property Lines As List(Of InvoiceLineBO) = New List(Of InvoiceLineBO)()
     Public Property SelectedVatTypeId As Integer?

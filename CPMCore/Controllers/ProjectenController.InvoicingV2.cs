@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using ServiceCore;
 using ServiceCore.Helpers;
+using ServiceCore.Invoicing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -298,6 +299,55 @@ namespace CPMCore.Controllers
                     if (mijn.Count == 0) continue;
                     card.AkteOpen = true;
                     card.AkteSamenvatting = string.Join(" · ", mijn.Select(f => $"{(f.Soort == "Grond" ? "grond" : "kosten")} € {f.Draft.Lines.Sum(l => l.Price):N2}"));
+                }
+
+                // 20a2: gegevens voor het aktekader (datum, verdeling per koper, stappen)
+                var accIds = vm.Accounts.Select(a => a.ClientAccountId).ToList();
+                var accDates = await _db.ClientAccount.AsNoTracking().Where(c => accIds.Contains(c.Id))
+                    .Select(c => new { c.Id, c.DateDeedOfSale }).ToDictionaryAsync(c => c.Id, c => c.DateDeedOfSale, ct);
+                var unitAcc = await _db.Units.AsNoTracking().Where(u => u.ProjectId == projectid && u.ClientAccountId != null && accIds.Contains(u.ClientAccountId.Value))
+                    .Select(u => new { u.Id, Acc = u.ClientAccountId!.Value }).ToListAsync(ct);
+                var accByUnit = unitAcc.ToDictionary(u => u.Id, u => u.Acc);
+                var unitIdsAll = accByUnit.Keys.ToList();
+                var cancelledId = (byte)InvoiceStatusId.Cancelled;
+                var draftId = (byte)InvoiceStatusId.Draft;
+                var bestaande = await (from d in _db.InvoicesDetails.AsNoTracking()
+                                       join h in _db.Invoices.AsNoTracking() on d.InvoiceId equals h.Id
+                                       where (d.LineType == AkteFactuurService.LineTypeGrond || d.LineType == AkteFactuurService.LineTypeKosten)
+                                             && d.UnitId != null && unitIdsAll.Contains(d.UnitId.Value) && h.StatusId != cancelledId
+                                       select new { d.InvoiceId, UnitId = d.UnitId!.Value, h.StatusId }).ToListAsync(ct);
+                var today = DateOnly.FromDateTime(DateTime.Today);
+                foreach (var card in vm.Accounts)
+                {
+                    var mijnBestaand = bestaande.Where(b => accByUnit.TryGetValue(b.UnitId, out var a) && a == card.ClientAccountId).ToList();
+                    card.AkteBestaat = mijnBestaand.Count > 0;
+                    card.AkteFactuurAantal = mijnBestaand.Select(b => b.InvoiceId).Distinct().Count();
+                    card.AkteDatum = accDates.TryGetValue(card.ClientAccountId, out var dd) ? dd : null;
+                    var voorstel = akte.Facturen.Where(f => f.ClientAccountId == card.ClientAccountId).ToList();
+                    if (!card.AkteToon) continue;
+
+                    var stageRows = card.OpenRows.Where(r => r.IsStage).ToList();
+                    if (card.AkteOpen) foreach (var sr in stageRows) sr.IsAkte = true;
+                    card.AkteSchijvenAantal = stageRows.Count;
+                    card.AkteSchijvenBedrag = stageRows.Sum(r => r.Amount);
+                    card.AkteSchijvenPct = stageRows.Sum(r => r.Percentage);
+                    card.AkteGrondBedrag = voorstel.Where(f => f.IsHoofdeigenaar && f.Soort == "Grond").Sum(f => f.Draft.Lines.Sum(l => l.Price));
+                    card.AkteKostenBedrag = voorstel.Where(f => f.IsHoofdeigenaar && f.Soort == "Kosten").Sum(f => f.Draft.Lines.Sum(l => l.Price));
+                    if (card.AkteOpen) card.AkteFactuurAantal = voorstel.Count;
+                    foreach (var o in card.Owners)
+                    {
+                        var eigen = voorstel.Where(f => string.Equals(f.Eigenaar, o.DisplayName, StringComparison.OrdinalIgnoreCase) || (o.IsMainOwner && f.IsHoofdeigenaar))
+                            .Sum(f => f.Draft.Lines.Sum(l => l.Price));
+                        card.AkteVerdeling.Add((o.DisplayName, o.Percentage, Math.Round(card.AkteSchijvenBedrag * o.Percentage / 100m, 2) + eigen));
+                    }
+
+                    var verleden = card.AkteDatum.HasValue && card.AkteDatum.Value < today;
+                    var alleDefinitief = card.AkteBestaat && mijnBestaand.All(b => b.StatusId != draftId);
+                    card.AkteStapKlaar[0] = card.AkteBestaat;
+                    card.AkteStapKlaar[2] = verleden;
+                    card.AkteStapKlaar[3] = alleDefinitief;
+                    card.AkteStapKlaar[1] = card.AkteBestaat && (verleden || alleDefinitief);
+                    card.AkteStap = Array.FindIndex(card.AkteStapKlaar, k => !k) + 1;
                 }
             }
             foreach (var card in vm.Accounts)

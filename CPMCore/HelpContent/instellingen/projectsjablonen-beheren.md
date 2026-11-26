@@ -4,7 +4,7 @@ topic: instellingen
 role: Beheerder
 device: Desktop
 minutes: 5
-updated: 2026-11-20
+updated: 2026-11-26
 newsTag: Nieuw
 screens: instellingen-projectsjablonen, instellingen-projectsjablonen-bewerken
 related: projectsjabloon-toepassen, schijvensjablonen-beheren, planning-sjablonen, trajectsjablonen-overzicht
@@ -50,6 +50,8 @@ Onder **Instellingen › Sjablonen › Projectsjablonen** staan je projectsjablo
 Rechts zie je wat het sjabloon doet voor het standaardgebouw: hoeveel fases en taken de planning krijgt en hoeveel werkdagen die duurt, hoeveel mijlpalen het traject heeft en welke schijven er met welk percentage komen. Het voorbeeld past zich aan als je het gebouw of een onderdeel wijzigt.
 
 Op een project vult het sjabloon enkel aan wat nog leeg is. Een betalingsgroep waarin enkel parkings en bergingen zitten, krijgt het schijvensjabloon voor parkings en bergingen. Een groep met ook maar één appartement of andere eenheid krijgt de gewone schijven. Een parking of berging die aan een appartement hangt, zet je daarom in de groep van dat appartement: ze volgt dan diens schijven. Een bestaande planning of bestaande schijven blijven staan. De projectleider ziet altijd eerst het voorstel. Hoe dat gaat, lees je bij "Een projectsjabloon toepassen op je project".
+
+Bij een verkaveling is het trajectsjabloon opgebouwd uit twee delen: de mijlpalen van het project zelf en een blok mijlpalen per woning (één rij per lot). Na het toepassen herrekent het traject meteen: de bouwmijlpalen volgen de planning van hun woning en de data van compromis, akte en oplevering komen uit het klantaccount. Kies je een dak (plat of hellend), dan verdwijnt bij elke woning de mijlpaal "Dak dicht" van het andere dak. Kies je geen dak, dan blijven beide staan en verwijder je de overbodige zelf.
 
 ## Let op
 

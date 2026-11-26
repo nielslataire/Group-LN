@@ -117,6 +117,8 @@ public sealed class ProjectSjabloonKeuze
     public int Verdiepingen { get; set; } = 1;
     public bool Kelder { get; set; }
     public string? Dak { get; set; }
+    /// <summary>De bouwstaat waarna de woningen starten volgens het sjabloon (enkel bij een sjabloon met planning voor het project zelf); anders leeg.</summary>
+    public string? WoningenStartNa { get; set; }
     /// <summary>"planning 9 fases · traject 7 fases · 14 schijven": wat erin zit, voor de keuzekaart in de modal.</summary>
     public string? Kern { get; set; }
 }
@@ -135,6 +137,12 @@ public sealed class ProjectSjabloonAntwoorden
     public bool EenPlanningVoorAlles { get; set; }
     /// <summary>Samen met <see cref="EenPlanningVoorAlles"/>: de planning komt in de hoofdplanning (enkel als die nog leeg is); anders een aparte planning.</summary>
     public bool InHoofdplanning { get; set; }
+    /// <summary>Bij een planning per eenheid: het aantal woningen per planning (2 of meer = een planning per groep, bv. 7 = lot 1 tot 7, lot 8 tot 14). 0 of 1 = een planning per woning.</summary>
+    public int GroepGrootte { get; set; }
+    /// <summary>Zelf gekozen indeling bij een planning per eenheid: per planning de eenheden (id's) die erin komen. Heeft voorrang op <see cref="GroepGrootte"/>; eenheden zonder planning die in geen groep staan, krijgen elk een eigen planning.</summary>
+    public List<List<int>> Groepen { get; set; } = new();
+    /// <summary>Het startmoment van de woningen: leeg = de standaard van het sjabloon, "GEEN" = meteen op de aanvangsdatum van de bouwwerken, anders de code van een bouwstaat (bv. WEGENIS_VERHARDING).</summary>
+    public string? WoningenStartNa { get; set; }
 }
 
 /// <summary>Wat het toepassen zou doen (voorbeeld) of gedaan heeft (uitkomst), per onderdeel in gewone taal.</summary>

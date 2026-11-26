@@ -107,7 +107,7 @@ namespace ServiceCore
                     Adress = party.Address,
                     PostalCodeId = party.PostalCodeId,
                     VatNumber = party.VatNumber,
-                    ExtraInfo = footerText ?? party.ExtraInfo,
+                    ExtraInfo = footerText ?? (bo.SkipPartyExtraInfo ? null : party.ExtraInfo),
                     BankAccount = bankAccount,
                     PaymentTermId = bo.PaymentTermId,
                     StructuredCommOgm = null,
