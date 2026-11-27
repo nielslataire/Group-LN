@@ -4,7 +4,7 @@ topic: traject-dossiers
 role: Projectleider
 device: Desktop · tablet
 minutes: 5
-updated: 2026-10-26
+updated: 2026-11-27
 newsTag: Nieuw
 screens: traject-index
 related: mijlpaal-toevoegen-of-bewerken, mijlpaal-als-bereikt-aanduiden, traject-synchroniseren-met-sjabloon, mijlpalen-in-bulk-aanpassen, traject-aanmaken-of-verwijderen, deadlines-overzicht, trajectsjablonen-overzicht
@@ -24,6 +24,8 @@ faq:
     a: Afgeronde en geplande fases staan ingeklapt. De actieve fase en een fase met een te late mijlpaal staan open. Klik op de fasenaam om te openen of te sluiten.
   - q: Waar komt het traject vandaan?
     a: Uit een trajectsjabloon. Bij het aanmaken kopieert CPM de fases en mijlpalen en berekent de streefdata uit de startdatum.
+  - q: Wie krijgt de mail van een trigger die een rol verwittigt?
+    a: "Bij Projectleider en Verkoper de persoon die op het project staat. Bij Boekhouder, CEO / CFO (de bestuurders) en Projectontwikkelaar elke actieve gebruiker met dat dashboardtype en een e-mailadres, zoals ingesteld bij het beheer van gebruikers. Staat er niemand, dan gaat er geen mail uit en staat in het triggerlogboek waarom."
   - q: Wat zijn de kleine labels verplicht en trigger bij een mijlpaal?
     a: "Verplicht betekent dat de fase niet afgerond kan worden zonder die mijlpaal. Een trigger is een automatische actie die aan een mijlpaal hangt. Wordt de mijlpaal bereikt, dan zet de trigger iets in gang: een melding aan een gebruiker of rol, een taak, een herinneringsmail, een nieuw dossier, het ontgrendelen van de volgende fase of het aanpassen van de projectstatus."
 ---

@@ -7,8 +7,8 @@ namespace ServiceCore.Traject.TriggerActions;
 
 /// <summary>
 /// Stuurt een herinneringsmail — typisch gekoppeld aan het <c>XDagenVoorDoeldatum</c>-event.
-/// Probeert eerst de toegewezen gebruiker, dan de verantwoordelijke rol (enkel Projectleider/Verkoper
-/// hebben een directe koppeling), anders overgeslagen.
+/// Probeert eerst de toegewezen gebruiker, dan de verantwoordelijke rol (zie RolOntvangers: projectkoppeling of dashboardtype);
+/// vindt het niemand, dan wordt de actie overgeslagen.
 /// </summary>
 public class PlanHerinneringAction : ITrajectTriggerAction
 {
@@ -28,28 +28,23 @@ public class PlanHerinneringAction : ITrajectTriggerAction
         var parameters = TriggerParamHelper.Parse(trigger.ActieParametersJson);
         var userId = TriggerParamHelper.GetString(parameters, "userId") ?? mijlpaal.VerantwoordelijkeUserId;
 
-        string? email = null;
+        var ontvangers = new List<string>();
         if (!string.IsNullOrWhiteSpace(userId))
-            email = await _db.Users.Where(u => u.UserId == userId).Select(u => u.Email).FirstOrDefaultAsync(ct);
-
-        if (string.IsNullOrWhiteSpace(email) && mijlpaal.VerantwoordelijkeRol is int r)
         {
-            string? roleUserId = (InterneRol)r switch
-            {
-                InterneRol.Projectleider => project.AspNetUserId,
-                InterneRol.Verkoper => project.SalesResponsibleAspNetUserId,
-                _ => null
-            };
-            if (!string.IsNullOrWhiteSpace(roleUserId))
-                email = await _db.Users.Where(u => u.UserId == roleUserId).Select(u => u.Email).FirstOrDefaultAsync(ct);
+            var mail = await _db.Users.Where(u => u.UserId == userId).Select(u => u.Email).FirstOrDefaultAsync(ct);
+            if (!string.IsNullOrWhiteSpace(mail)) ontvangers.Add(mail.Trim());
         }
 
-        if (string.IsNullOrWhiteSpace(email))
+        if (ontvangers.Count == 0 && mijlpaal.VerantwoordelijkeRol is int r)
+            ontvangers = await RolOntvangers.ZoekAsync(_db, (InterneRol)r, project, ct);
+
+        if (ontvangers.Count == 0)
             return TriggerActieResultaat.Skip("Geen gebruiker/rol met bekend e-mailadres om te herinneren.");
 
         var subject = $"Herinnering — '{mijlpaal.Naam}' nadert ({project.ProjectName})";
         var body = TrajectEmailBuilder.Build(project.ProjectName, mijlpaal, "nadert en vraagt binnenkort actie");
-        await _emailSender.SendEmailAsync(email!, subject, body);
-        return TriggerActieResultaat.Success($"Herinnering verzonden naar {email}.");
+        foreach (var email in ontvangers)
+            await _emailSender.SendEmailAsync(email, subject, body);
+        return TriggerActieResultaat.Success($"Herinnering verzonden naar {string.Join(", ", ontvangers)}.");
     }
 }
