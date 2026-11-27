@@ -172,6 +172,8 @@ public class ProjectPlanningController : BaseController
     public async Task<IActionResult> ProjectSjabloonVoorbeeld(int projectId, [FromBody] ProjectSjabloonVerzoek verzoek)
     {
         if (verzoek == null) return BadRequest();
+        if ((verzoek.Antwoorden?.VervangPlanning ?? false) && !HttpContext.RequestServices.GetRequiredService<IPermissionService>().HasDelete(PermissionCodes.ProjectsPlanning))
+            return Json(new ProjectSjabloonResultaat { Fout = "De bestaande planning vervangen vraagt het recht Verwijderen op Planning. Je rol heeft dat niet." }, JsonOpties);
         return Json(await HttpContext.RequestServices.GetRequiredService<IProjectSjabloonService>().Voorbeeld(projectId, verzoek.SjabloonId, verzoek.Antwoorden ?? new()), JsonOpties);
     }
 
@@ -184,6 +186,8 @@ public class ProjectPlanningController : BaseController
         if (verzoek == null) return BadRequest();
         if (!HttpContext.RequestServices.GetRequiredService<IPermissionService>().HasWrite(PermissionCodes.ProjectsInvoicing))
             return Json(new ProjectSjabloonResultaat { Fout = "Voor een projectsjabloon heb je ook schrijfrecht op de facturatie nodig, want de schijven komen in de betalingsgroepen." }, JsonOpties);
+        if ((verzoek.Antwoorden?.VervangPlanning ?? false) && !HttpContext.RequestServices.GetRequiredService<IPermissionService>().HasDelete(PermissionCodes.ProjectsPlanning))
+            return Json(new ProjectSjabloonResultaat { Fout = "De bestaande planning vervangen vraagt het recht Verwijderen op Planning. Je rol heeft dat niet." }, JsonOpties);
         return Json(await HttpContext.RequestServices.GetRequiredService<IProjectSjabloonService>().Toepassen(projectId, verzoek.SjabloonId, verzoek.Antwoorden ?? new(), UserId), JsonOpties);
     }
 

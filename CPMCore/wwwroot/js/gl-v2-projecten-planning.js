@@ -1453,7 +1453,8 @@
             inHoofdplanning: $("gl-v2-pl-pj-een").checked && $("gl-v2-pl-pj-hoofd").checked,
             woningenStartNa: $("gl-v2-pl-pj-q-startna").hidden ? null : $("gl-v2-pl-pj-startna").value,
             groepGrootte: $("gl-v2-pl-pj-een").checked || pj.indeel ? 0 : Math.max(0, parseInt($("gl-v2-pl-pj-groep").value, 10) || 0),
-            groepen: $("gl-v2-pl-pj-een").checked || !pj.indeel ? [] : pjGroepen()
+            groepen: $("gl-v2-pl-pj-een").checked || !pj.indeel ? [] : pjGroepen(),
+            vervangPlanning: canDelete && $("gl-v2-pl-pj-vervang").checked
         };
     }
     // Zelf indelen: per woning het nummer van de planning; hetzelfde nummer = dezelfde planning
@@ -1575,6 +1576,7 @@
         pj.gekozen = k; pj.ai = {};
         pjZetAntwoorden({ verdiepingen: k.verdiepingen, kelder: k.kelder, dak: k.dak, terrassen: [], eenPlanningVoorAlles: false });
         $("gl-v2-pl-pj-hoofd").checked = true; $("gl-v2-pl-pj-groep").value = ""; pj.indeel = false; pj.nrs = {}; pjIndeelToon(); pjSegmenten();
+        $("gl-v2-pl-pj-vervang").checked = false; $("gl-v2-pl-pj-q-vervang").hidden = !canDelete;
         // Startmoment van de woningen: enkel bij een sjabloon met de planning van het project zelf; standaard wat het sjabloon zegt
         $("gl-v2-pl-pj-q-startna").hidden = !k.woningenStartNa;
         var startItems = [
@@ -1617,7 +1619,7 @@
     }
     $("gl-v2-pl-pj").addEventListener("change", function (e) {
         if (e.target.name === "gl-v2-pl-pj-keuze") { var id = parseInt(e.target.value, 10); var k = pj.keuzes.filter(function (x) { return x.id === id; })[0]; if (k) pjKies(k); return; }
-        if (e.target.id === "gl-v2-pl-pj-hoofd") pjPlanVoorbeeld();
+        if (e.target.id === "gl-v2-pl-pj-hoofd" || e.target.id === "gl-v2-pl-pj-vervang") pjPlanVoorbeeld();
         if (e.target.id === "gl-v2-pl-pj-startna" || e.target.id === "gl-v2-pl-pj-groep") pjPlanVoorbeeld();
         if (e.target.hasAttribute && e.target.hasAttribute("data-pj-nr")) { pj.nrs[e.target.getAttribute("data-pj-nr")] = Math.max(0, parseInt(e.target.value, 10) || 0); pjPlanVoorbeeld(); }
     });
@@ -1678,6 +1680,7 @@
     $("gl-v2-pl-pj").querySelector("form").addEventListener("submit", function (e) {
         e.preventDefault();
         if (!pj.gekozen || pj.bezig) return;
+        var voerUit = function () {
         pj.bezig = true; $("gl-v2-pl-pj-ok").disabled = true; pjFout("");
         postJson(cfg.projectSjabloonToepassenUrl, { sjabloonId: pj.gekozen.id, antwoorden: pjAntwoorden() }).then(function (res) {
             pj.bezig = false;
@@ -1686,6 +1689,10 @@
             herlaadStaat();
             toast("success", "Projectsjabloon toegepast", (res.stappen || []).join(" ") + ((res.opmerkingen || []).length ? " Let op: " + res.opmerkingen.join(" ") : ""));
         }).catch(function (err) { pj.bezig = false; $("gl-v2-pl-pj-ok").disabled = false; pjFout(err.message || "Toepassen mislukt. Probeer het zo opnieuw."); });
+        };
+        if (canDelete && $("gl-v2-pl-pj-vervang").checked && window.GlV2Bevestig)
+            window.GlV2Bevestig({ title: "Bestaande planning verwijderen?", desc: "Alle plannings van de woningen en de fases en taken van de hoofdplanning worden verwijderd, met alle voortgang. Daarna komt de nieuwe planning. Dit kan je niet ongedaan maken.", ok: "Verwijderen en toepassen", tone: "danger", icon: "ph-trash" }).then(function (ok) { if (ok) voerUit(); });
+        else voerUit();
     });
 
     function sjabloonGekozen() {

@@ -322,6 +322,7 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
             Terrassen = (a?.Terrassen ?? new List<int>()).Where(t => t >= 1).Distinct().OrderBy(t => t).Take(20).ToList(),
             InHoofdplanning = a?.InHoofdplanning ?? false,
             GroepGrootte = Math.Max(0, Math.Min(a?.GroepGrootte ?? 0, 200)),
+            VervangPlanning = a?.VervangPlanning ?? false,
             Groepen = (a?.Groepen ?? new List<List<int>>()).Where(g => g != null && g.Count > 0).Take(500).Select(g => g.Distinct().ToList()).ToList(),
             WoningenStartNa = string.IsNullOrWhiteSpace(a?.WoningenStartNa) ? null : a.WoningenStartNa.Trim().ToUpperInvariant(),
         };
@@ -333,9 +334,34 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
     /// </summary>
     private async Task<HashSet<int>> BijgebouwGroepen(int projectId)
     {
-        var eenheden = await _db.Units.AsNoTracking().Where(u => u.ProjectId == projectId && u.PaymentGroupId != null)
-            .Select(u => new { Groep = u.PaymentGroupId!.Value, TypeGroep = u.Type != null ? (int?)u.Type.GroupId : null }).ToListAsync();
+        // De groepskoppeling van de V2-pagina staat op UnitConstructionValue.PaymentGroupId; Units.PaymentGroupId is de oudere koppeling (enkel als terugval)
+        var rijen = await _db.Units.AsNoTracking().Where(u => u.ProjectId == projectId)
+            .Select(u => new { Legacy = u.PaymentGroupId, Cv = u.UnitConstructionValue.Where(c => c.PaymentGroupId != null).Select(c => c.PaymentGroupId!.Value).ToList(), TypeGroep = u.Type != null ? (int?)u.Type.GroupId : null }).ToListAsync();
+        var eenheden = rijen.SelectMany(r => (r.Cv.Count > 0 ? r.Cv : (r.Legacy is int l ? new List<int> { l } : new List<int>())).Select(g => new { Groep = g, r.TypeGroep })).ToList();
         return eenheden.GroupBy(e => e.Groep).Where(g => g.All(e => e.TypeGroep is int t && t != 1 && t != 4)).Select(g => g.Key).ToHashSet();
+    }
+
+    /// <summary>Verwijdert alle plannings naast de hoofdplanning en de fases en taken van de hoofdplanning (via de planningcommando's, zodat links en koppelingen netjes opgeruimd worden).</summary>
+    private async Task<string?> VerwijderBestaandePlanning(int projectId, string? userId)
+    {
+        var staat = await _planning.Laad(projectId, 0);
+        var ids = await _db.BouwPlanning.AsNoTracking().Where(b => b.ProjectId == projectId && b.IsActief && !b.IsHoofd).Select(b => b.Id).ToListAsync();
+        foreach (var id in ids)
+        {
+            var uit = await _planning.Voer(projectId, new PlanningCommando { Type = "planningVerwijder", PlanningId = id, Versie = staat.Versie }, userId);
+            if (!uit.Ok) return uit.Fout;
+            staat = uit.Staat;
+        }
+        var hoofdId = await _db.BouwPlanning.AsNoTracking().Where(b => b.ProjectId == projectId && b.IsHoofd && b.IsActief).Select(b => (int?)b.Id).FirstOrDefaultAsync();
+        var wortels = await _db.PlanningSectie.AsNoTracking()
+            .Where(s => s.ProjectId == projectId && s.IsActief && s.ParentSectieId == null && (s.BouwPlanningId == null || (hoofdId != null && s.BouwPlanningId == hoofdId)))
+            .Select(s => s.Id).ToListAsync();
+        if (wortels.Count > 0)
+        {
+            var uit = await _planning.Voer(projectId, new PlanningCommando { Type = "verwijder", PlanningId = 0, Versie = staat.Versie, Items = wortels.Select(w => new PlanningItemRef { Soort = "fase", Id = w }).ToList() }, userId);
+            if (!uit.Ok) return uit.Fout;
+        }
+        return null;
     }
 
     private static string Lijstje(IEnumerable<string> namen, int max = 5)
@@ -360,6 +386,26 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
         // Startmoment van de woningen: het antwoord van de gebruiker, anders de standaard van het sjabloon ("GEEN" = meteen)
         var startNa = a.WoningenStartNa == null ? (string.IsNullOrEmpty(sj.WoningenStartNa) ? null : sj.WoningenStartNa) : (a.WoningenStartNa == "GEEN" ? null : a.WoningenStartNa);
 
+        // ── bestaande planning eerst weg (enkel op vraag): uitvoeren = echt verwijderen, voorbeeld = doen alsof ze weg is
+        var vervang = a.VervangPlanning && (sj.PlanningSjabloonId != null || sj.PlanningSjabloonProjectId != null);
+        if (vervang)
+        {
+            var bestaand = await _db.BouwPlanning.AsNoTracking().CountAsync(b => b.ProjectId == projectId && b.IsActief && !b.IsHoofd);
+            var hoofdIdVervang = await _db.BouwPlanning.AsNoTracking().Where(b => b.ProjectId == projectId && b.IsHoofd && b.IsActief).Select(b => (int?)b.Id).FirstOrDefaultAsync();
+            var hoofdFases = await _db.PlanningSectie.CountAsync(s => s.ProjectId == projectId && s.IsActief && s.ParentSectieId == null && (s.BouwPlanningId == null || (hoofdIdVervang != null && s.BouwPlanningId == hoofdIdVervang)));
+            if (bestaand > 0 || hoofdFases > 0)
+            {
+                var wat = (bestaand > 0 ? $"{bestaand} {(bestaand == 1 ? "planning" : "plannings")}" : "") + (bestaand > 0 && hoofdFases > 0 ? " en " : "") + (hoofdFases > 0 ? $"de {hoofdFases} {(hoofdFases == 1 ? "fase" : "fases")} van de hoofdplanning" : "");
+                if (!uitvoeren) res.Stappen.Add($"Eerst verwijderd: {wat} (met alle taken). Dit kan je niet ongedaan maken.");
+                else
+                {
+                    var fout = await VerwijderBestaandePlanning(projectId, userId);
+                    if (fout != null) { res.Fout = "De bestaande planning kon niet verwijderd worden: " + fout; return res; }
+                    res.Stappen.Add($"Eerst verwijderd: {wat}.");
+                }
+            }
+        }
+
         // ── planning van het project zelf (hoofdplanning, bv. de wegenis): enkel als de hoofdplanning nog leeg is
         DateOnly? woningenStart = null;
         if (sj.PlanningSjabloonProjectId is int projectPlanningId)
@@ -371,7 +417,7 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
                 // De hoofdplanning wordt pas bij de eerste schrijfactie aangemaakt: bestaat ze nog niet, dan is ze leeg (tenzij er losse fasen zonder planning zijn).
                 var hp = await _db.BouwPlanning.AsNoTracking().Where(b => b.ProjectId == projectId && b.IsHoofd && b.IsActief).Select(b => new { b.Id }).FirstOrDefaultAsync();
                 var hpId = hp?.Id;
-                var hpLeeg = !await _db.PlanningSectie.AnyAsync(s => s.ProjectId == projectId && s.IsActief && (s.BouwPlanningId == null || (hpId != null && s.BouwPlanningId == hpId)));
+                var hpLeeg = (vervang && !uitvoeren) || !await _db.PlanningSectie.AnyAsync(s => s.ProjectId == projectId && s.IsActief && (s.BouwPlanningId == null || (hpId != null && s.BouwPlanningId == hpId)));
                 if (!hpLeeg) res.Opmerkingen.Add($"De hoofdplanning heeft al fasen of taken: de planning voor het project zelf ({projNaam}) is niet toegepast.");
                 else if (!uitvoeren) res.Stappen.Add($"Planning “{projNaam}” komt in de hoofdplanning (voor het project zelf)." + (string.IsNullOrEmpty(startNa) ? "" : " De woningen starten daarna: zie de startdatum van hun planning."));
                 else
@@ -417,7 +463,7 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
         // ── planning: eenheden zonder planning
         if (sj.PlanningSjabloonId is int planningSjabloonId)
         {
-            var planningIds = await _db.BouwPlanning.AsNoTracking().Where(b => b.ProjectId == projectId && b.IsActief).Select(b => b.Id).ToListAsync();
+            var planningIds = vervang && !uitvoeren ? new List<int>() : await _db.BouwPlanning.AsNoTracking().Where(b => b.ProjectId == projectId && b.IsActief).Select(b => b.Id).ToListAsync();
             var metPlanning = (await _db.BouwPlanningEenheid.AsNoTracking().Where(e => planningIds.Contains(e.BouwPlanningId)).Select(e => e.UnitId).ToListAsync()).ToHashSet();
             var eenheden = (await _db.Units.AsNoTracking().Where(u => u.ProjectId == projectId).OrderBy(u => u.Name).Select(u => new { u.Id, u.Name }).ToListAsync())
                 .Where(u => !metPlanning.Contains(u.Id)).ToList();
@@ -432,7 +478,7 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
                     ? await _db.BouwPlanning.AsNoTracking().Where(b => b.ProjectId == projectId && b.IsHoofd && b.IsActief).Select(b => new { b.Id }).FirstOrDefaultAsync()
                     : null;
                 // Verwijderde (inactieve) fasen tellen niet mee: de hoofdplanning is dan voor de gebruiker leeg.
-                var hoofdLeeg = hoofd != null && !await _db.PlanningSectie.AnyAsync(s => s.ProjectId == projectId && s.IsActief && (s.BouwPlanningId == hoofd.Id || s.BouwPlanningId == null));
+                var hoofdLeeg = hoofd != null && ((vervang && !uitvoeren) || !await _db.PlanningSectie.AnyAsync(s => s.ProjectId == projectId && s.IsActief && (s.BouwPlanningId == hoofd.Id || s.BouwPlanningId == null)));
                 var inHoofd = hoofd != null && hoofdLeeg;
                 if (a.EenPlanningVoorAlles && a.InHoofdplanning && !inHoofd)
                     res.Opmerkingen.Add(hoofd == null

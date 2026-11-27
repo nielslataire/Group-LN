@@ -141,6 +141,8 @@ public sealed class ProjectSjabloonAntwoorden
     public int GroepGrootte { get; set; }
     /// <summary>Zelf gekozen indeling bij een planning per eenheid: per planning de eenheden (id's) die erin komen. Heeft voorrang op <see cref="GroepGrootte"/>; eenheden zonder planning die in geen groep staan, krijgen elk een eigen planning.</summary>
     public List<List<int>> Groepen { get; set; } = new();
+    /// <summary>Eerst alle bestaande plannings van het project verwijderen (en de fases en taken van de hoofdplanning), daarna het sjabloon toepassen. Vraagt het recht Verwijderen op Planning; kan niet ongedaan gemaakt worden.</summary>
+    public bool VervangPlanning { get; set; }
     /// <summary>Het startmoment van de woningen: leeg = de standaard van het sjabloon, "GEEN" = meteen op de aanvangsdatum van de bouwwerken, anders de code van een bouwstaat (bv. WEGENIS_VERHARDING).</summary>
     public string? WoningenStartNa { get; set; }
 }

@@ -77,6 +77,20 @@ public class ProjectSjabloonBijgebouwenTests
     }
 
     [Fact]
+    public async Task De_groepskoppeling_via_de_bouwwaarde_telt_ook_en_gaat_voor_op_de_oude_koppeling()
+    {
+        var (svc, db, id) = Maak(metBijgebouwSjabloon: true);
+        // zoals in de echte data: Units.PaymentGroupId leeg, de groep hangt aan de bouwwaarde van de eenheid
+        foreach (var u in db.Units.ToList()) { db.UnitConstructionValue.Add(new UnitConstructionValue { UnitId = u.Id, PaymentGroupId = u.PaymentGroupId }); u.PaymentGroupId = null; }
+        db.SaveChanges();
+        var r = await svc.Toepassen(ProjectId, id, new ProjectSjabloonAntwoorden { Verdiepingen = 1 }, "u");
+        Assert.Null(r.Fout);
+        Assert.Equal(new[] { 30m, 40m, 30m }, Percentages(db, 6));
+        Assert.Equal(new[] { 95m, 5m }, Percentages(db, 5));
+        Assert.Equal(new[] { 95m, 5m }, Percentages(db, 7));
+    }
+
+    [Fact]
     public async Task Zonder_bijgebouwsjabloon_krijgen_alle_groepen_het_gewone_schijvensjabloon()
     {
         var (svc, db, id) = Maak(metBijgebouwSjabloon: false);

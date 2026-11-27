@@ -157,6 +157,32 @@ public class ProjectSjabloonVerkavelingTests
     }
 
     [Fact]
+    public async Task Vervangen_verwijdert_de_bestaande_planning_eerst_en_zonder_vlag_blijft_ze_ongemoeid()
+    {
+        var (svc, db, id) = Maak(null);
+        var eerste = await svc.Toepassen(ProjectId, id, new ProjectSjabloonAntwoorden { Verdiepingen = 1 }, "u");
+        Assert.True(eerste.Ok, eerste.Fout);
+        var oudeIds = db.BouwPlanning.Where(b => !b.IsHoofd).Select(b => b.Id).ToList();
+        Assert.Equal(2, oudeIds.Count);
+
+        // zonder vlag: er zijn geen eenheden zonder planning, dus niets nieuws
+        await svc.Toepassen(ProjectId, id, new ProjectSjabloonAntwoorden { Verdiepingen = 1 }, "u");
+        Assert.Equal(oudeIds.OrderBy(x => x), db.BouwPlanning.Where(b => !b.IsHoofd).Select(b => b.Id).ToList().OrderBy(x => x));
+
+        // het voorbeeld met vlag toont wat er verdwijnt en maakt de nieuwe planning
+        var voorbeeld = await svc.Voorbeeld(ProjectId, id, new ProjectSjabloonAntwoorden { Verdiepingen = 1, VervangPlanning = true });
+        Assert.Contains(voorbeeld.Stappen, s => s.StartsWith("Eerst verwijderd"));
+        Assert.Contains(voorbeeld.Stappen, s => s.StartsWith("Planning "));
+        Assert.Equal(2, db.BouwPlanning.Count(b => !b.IsHoofd));   // het voorbeeld verwijdert niets
+
+        var tweede = await svc.Toepassen(ProjectId, id, new ProjectSjabloonAntwoorden { Verdiepingen = 1, VervangPlanning = true }, "u");
+        Assert.True(tweede.Ok, tweede.Fout);
+        var nieuweIds = db.BouwPlanning.Where(b => !b.IsHoofd).Select(b => b.Id).ToList();
+        Assert.Equal(2, nieuweIds.Count);
+        Assert.Empty(nieuweIds.Intersect(oudeIds));
+    }
+
+    [Fact]
     public async Task Groepgrootte_1_of_0_geeft_een_planning_per_woning()
     {
         var (svc, db, id) = Maak(null);
