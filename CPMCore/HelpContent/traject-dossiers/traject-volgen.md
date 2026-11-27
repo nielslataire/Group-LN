@@ -25,7 +25,7 @@ faq:
   - q: Waar komt het traject vandaan?
     a: Uit een trajectsjabloon. Bij het aanmaken kopieert CPM de fases en mijlpalen en berekent de streefdata uit de startdatum.
   - q: Wie krijgt de mail van een trigger die een rol verwittigt?
-    a: "Bij Projectleider en Verkoper de persoon die op het project staat. Bij Boekhouder, CEO / CFO (de bestuurders) en Projectontwikkelaar elke actieve gebruiker met dat dashboardtype en een e-mailadres, zoals ingesteld bij het beheer van gebruikers. Staat er niemand, dan gaat er geen mail uit en staat in het triggerlogboek waarom."
+    a: "Bij Projectleider en Verkoper de persoon die op het project staat. Bij Boekhouder elke actieve gebruiker met de rol Boekhouding en een e-mailadres. Bij CEO / CFO en Projectontwikkelaar elke actieve gebruiker met de rol Bestuurder of Admin. De rollen stel je in bij het beheer van gebruikers. Gebruikers zonder rol zijn extern en krijgen deze mails niet. Staat er niemand, dan gaat er geen mail uit en staat in het triggerlogboek waarom."
   - q: Wat zijn de kleine labels verplicht en trigger bij een mijlpaal?
     a: "Verplicht betekent dat de fase niet afgerond kan worden zonder die mijlpaal. Een trigger is een automatische actie die aan een mijlpaal hangt. Wordt de mijlpaal bereikt, dan zet de trigger iets in gang: een melding aan een gebruiker of rol, een taak, een herinneringsmail, een nieuw dossier, het ontgrendelen van de volgende fase of het aanpassen van de projectstatus."
 ---

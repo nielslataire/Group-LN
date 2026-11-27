@@ -7,7 +7,7 @@ namespace ServiceCore.Traject.TriggerActions;
 
 /// <summary>
 /// Stuurt een herinneringsmail — typisch gekoppeld aan het <c>XDagenVoorDoeldatum</c>-event.
-/// Probeert eerst de toegewezen gebruiker, dan de verantwoordelijke rol (zie RolOntvangers: projectkoppeling of dashboardtype);
+/// Probeert eerst de toegewezen gebruiker, dan de verantwoordelijke rol (zie RolOntvangers: projectkoppeling of gebruikersrol);
 /// vindt het niemand, dan wordt de actie overgeslagen.
 /// </summary>
 public class PlanHerinneringAction : ITrajectTriggerAction

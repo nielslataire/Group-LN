@@ -8,7 +8,7 @@ namespace ServiceCore.Traject.TriggerActions;
 /// <summary>
 /// Verwittigt de interne rol die verantwoordelijk is voor de mijlpaal. Er is (nog) geen algemene
 /// rol→gebruiker-mapping in de app: Projectleider en Verkoper volgen de directe koppeling op het project,
-/// Boekhouder, CEO / CFO en Projectontwikkelaar gaan naar alle actieve gebruikers met dat dashboardtype (zie RolOntvangers). Voor overige
+/// Boekhouder (rol Boekhouding), CEO / CFO en Projectontwikkelaar (rol Bestuurder) gaan naar alle actieve gebruikers met die rol (zie RolOntvangers). Voor overige
 /// rollen kan een expliciet e-mailadres in <c>ActieParametersJson</c> ("email") meegegeven worden.
 /// </summary>
 public class VerwittigRolAction : ITrajectTriggerAction
@@ -39,7 +39,7 @@ public class VerwittigRolAction : ITrajectTriggerAction
             ontvangers = await RolOntvangers.ZoekAsync(_db, (InterneRol)r, project, ct);
 
         if (ontvangers.Count == 0)
-            return TriggerActieResultaat.Skip($"Geen e-mailadres gekend voor rol '{aanduiding}': geen gebruiker met dat dashboardtype (of projectkoppeling) en geen expliciet e-mailadres opgegeven.");
+            return TriggerActieResultaat.Skip($"Geen e-mailadres gekend voor rol '{aanduiding}': geen gebruiker met die rol (of projectkoppeling) en geen expliciet e-mailadres opgegeven.");
 
         var subject = $"Mijlpaal '{mijlpaal.Naam}' — {project.ProjectName}";
         var body = TrajectEmailBuilder.Build(project.ProjectName, mijlpaal, "vraagt de aandacht van " + aanduiding);
