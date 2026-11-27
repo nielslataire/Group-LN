@@ -114,6 +114,7 @@ public class VerzekeringService
     {
         var v = Vandaag;
         if (p.IsRequested) return new PolisStatus { Label = "Aangevraagd", Tone = "is-attention", Key = "aandacht" };
+        if (p.StartAtDelivery && !l.Start.HasValue) return new PolisStatus { Label = "Start bij VO", Tone = "is-info", Key = "lopend" };
         if (l.Start.HasValue && l.Start.Value > v) return new PolisStatus { Label = "Start " + Dat(l.Start.Value), Tone = "is-info", Key = "lopend" };
 
         if (p.Type == 1 && l.Einde.HasValue)
@@ -631,13 +632,18 @@ public class VerzekeringService
 
         var tjPolis = polissen.FirstOrDefault(p => p.Type == 3);
         var tjAttesten = attesten.Where(a => a.TjVereist).ToList();
-        if (vo.HasValue && (tjPolis != null || tjAttesten.Count > 0))
+        // Start van de tienjarige: de start van de polis (VO of vaste datum), anders de VO.
+        var tjStart = tjPolis != null ? Bereken(tjPolis, vo).Start : vo;
+        tjStart ??= vo;
+        if (tjStart.HasValue && (tjPolis != null || tjAttesten.Count > 0))
         {
             var jaren = tjPolis?.DurationYears ?? TienjarigeStandaardJaren;
-            var einde = vo.Value.AddYears(jaren);
-            var sub = tjAttesten.Count > 0 ? $"{tjAttesten.Count(a => !a.TjOntbreekt)} van {tjAttesten.Count} attesten · loopt door tot {einde.Year}" : $"{jaren} jaar na VO";
-            t.Rijen.Add(new VzTijdlijnRij { Label = "Tienjarige", Sub = sub, Balken = { Balk(vo.Value, einde, "tienjarige", "", einde > re) } });
+            var einde = tjStart.Value.AddYears(jaren);
+            var sub = tjAttesten.Count > 0 ? $"{tjAttesten.Count(a => !a.TjOntbreekt)} van {tjAttesten.Count} attesten · loopt door tot {einde.Year}" : $"{jaren} jaar";
+            t.Rijen.Add(new VzTijdlijnRij { Label = "Tienjarige", Sub = sub, Balken = { Balk(tjStart.Value, einde, "tienjarige", "", einde > re) } });
         }
+        else if (tjPolis != null)
+            t.Rijen.Add(new VzTijdlijnRij { Label = "Tienjarige", Sub = "start bij VO · datum nog niet bepaald" });
         return t;
     }
 
@@ -759,7 +765,7 @@ public class VerzekeringService
         if (i.Type < 1 || i.Type > 5) return (false, "Kies een type verzekering.", 0);
         if (i.InsuranceCompanyId is null or <= 0) return (false, "Kies een maatschappij.", 0);
         var vo = (await _db.Project.AsNoTracking().Where(p => p.ProjectId == i.ProjectId).Select(p => p.DeliveryDate).FirstOrDefaultAsync());
-        if (i.StartAtDelivery && !vo.HasValue) return (false, "Vul eerst de datum van de voorlopige oplevering in bij het project, of kies een vaste startdatum.", 0);
+        // Start bij de VO zonder dat die datum al bepaald is, mag: de polis wacht dan tot de VO-datum ingevuld wordt (status "Start bij VO").
         if (!i.StartAtDelivery && !i.Startdate.HasValue && !i.Requested) return (false, "Vul een startdatum in, of laat de polis starten bij de voorlopige oplevering.", 0);
         if (i.Enddate.HasValue && i.Startdate.HasValue && i.Enddate.Value < i.Startdate.Value) return (false, "De einddatum ligt vóór de startdatum.", 0);
 

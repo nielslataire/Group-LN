@@ -27,7 +27,7 @@ faq:
   - q: Ik ken het polisnummer nog niet. Kan ik toch bewaren?
     a: Ja. Kies Bewaren als aangevraagd. De polis staat dan op Aangevraagd en krijgt een aandachtspunt tot je het polisnummer invult. Je moet dan wel een maatschappij kiezen.
   - q: Wat doet Start bij de voorlopige oplevering?
-    a: De startdatum volgt dan de datum van de voorlopige oplevering van het project. Verschuift die datum, dan verschuift de start mee. Is er nog geen datum ingevuld, dan vraagt CPM om ze eerst bij het project in te vullen.
+    a: De startdatum volgt dan de datum van de voorlopige oplevering van het project. Verschuift die datum, dan verschuift de start mee. Is er nog geen datum bepaald, dan kan je de polis toch al bewaren. Ze krijgt de status Start bij VO en staat in de tijdlijn zonder balk. Vul je later de voorlopige oplevering bij het project in, dan berekent CPM de start en het einde zelf.
   - q: Wat betekent een lege einddatum?
     a: De polis loopt door. Een ABR-polis berekent haar einde uit de termijn en de verlenging. Een tienjarige loopt het aantal jaar dat je invult, vanaf de start.
   - q: Wat gebeurt er als ik een makelaar kies?
@@ -60,7 +60,9 @@ faq:
 1. Vul de **Startdatum** in, of zet **Start bij de voorlopige oplevering** aan.
 2. Vul een **Einddatum** in als je ze kent.
 3. Bij een **ABR**-polis vul je ook de **Termijn**, de **Verlenging** en de **Waarborgperiode** in, in maanden. CPM rekent daaruit het einde van de werken en de waarborgperiode uit.
-4. Bij een **Tienjarige** vul je de **Duur** in jaren in. Dat zijn standaard 10 jaar.
+4. Bij een **Tienjarige** vul je de **Duur** in jaren in. Dat zijn standaard 10 jaar. Een tienjarige start meestal bij de voorlopige oplevering. Is die datum nog niet bepaald, zet **Start bij de voorlopige oplevering** dan toch aan en bewaar de polis. Ze start automatisch zodra je de voorlopige oplevering bij het project invult.
+
+   ![Een tienjarige polis die start bij de voorlopige oplevering, terwijl die datum nog niet bepaald is](/img/help/projecten/verzekering-toevoegen/3-tienjarige-start-bij-vo.png)
 5. De **Premie** en de **Opmerking** zijn optioneel.
 
 ## Een tienjarige polis voor het project of per eenheid

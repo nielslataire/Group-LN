@@ -169,7 +169,7 @@
                         @await Html.PartialAsync("GlV2/_DateField", new GlV2DateFieldVm { Id = "gln-vz-start", Name = "Input.Startdate", Label = "STARTDATUM", Required = true, IsoValue = Iso(i.Startdate), DisplayValue = Disp(i.Startdate) })
                         <label class="gl-v2-toggle-row gln-vz-startvo" data-vz-types="1 2 3">
                             <input type="checkbox" class="gl-v2-toggle-switch" name="Input.StartAtDelivery" id="gln-vz-startvo" value="true" checked="@i.StartAtDelivery" />
-                            <span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Start bij de voorlopige oplevering</span><span class="gl-v2-toggle-hint">@(Model.VoDatum.HasValue ? "= geplande voorlopige oplevering " + Disp(Model.VoDatum) : "vul eerst de datum van de voorlopige oplevering in bij het project")</span></span>
+                            <span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Start bij de voorlopige oplevering</span><span class="gl-v2-toggle-hint">@(Model.VoDatum.HasValue ? "= geplande voorlopige oplevering " + Disp(Model.VoDatum) : "nog niet bepaald: de polis start automatisch zodra je de voorlopige oplevering bij het project invult")</span></span>
                         </label>
                     </div>
                     <div class="gl-v2-col-6" data-vz-types="1 2 3 4 5">

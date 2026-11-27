@@ -97,7 +97,7 @@ Kies de drie puntjes aan het einde van de rij.
 
 ![De tijdlijn met balken per polis, de werf en de dag van vandaag](/img/help/projecten/verzekeringen-overzicht/4-tijdlijn.png)
 
-Onderaan zie je per polis een balk op een tijdlijn. De rode streep is vandaag. De rij **Werf** toont de start, de voorlopige oplevering (VO) en de definitieve oplevering (DO). Een gestippelde rode balk betekent dat er een polis ontbreekt. Gaten tussen de balken vallen zo meteen op.
+Onderaan zie je per polis een balk op een tijdlijn. De rode streep is vandaag. De rij **Werf** toont de start, de voorlopige oplevering (VO) en de definitieve oplevering (DO). Een gestippelde rode balk betekent dat er een polis ontbreekt. Gaten tussen de balken vallen zo meteen op. Een **Tienjarige** polis heeft een eigen balk, vanaf haar start en voor het aantal jaar van de polis. Start ze bij de voorlopige oplevering en is die datum nog niet bepaald, dan staat de rij er al, zonder balk, met de tekst *start bij VO · datum nog niet bepaald*. In de lijst heeft die polis de status **Start bij VO**.
 
 ## Let op
 CPM stuurt geen mails. Herinneringen en aandachtspunten verschijnen op deze pagina en, voor rood en goud, op het dashboard van de projectleider.
