@@ -21,7 +21,7 @@ public class MaakTaakAction : ITrajectTriggerAction
     {
         var parameters = TriggerParamHelper.Parse(trigger.ActieParametersJson);
         var titel = TriggerParamHelper.GetString(parameters, "titel") ?? $"Opvolgen: {mijlpaal.Naam}";
-        var omschrijving = TriggerParamHelper.GetString(parameters, "omschrijving");
+        var omschrijving = MijlpaalVerwachting.Wat(mijlpaal, TriggerParamHelper.GetString(parameters, "omschrijving"));
         var userId = TriggerParamHelper.GetString(parameters, "userId") ?? mijlpaal.VerantwoordelijkeUserId;
         var rol = TriggerParamHelper.GetInt(parameters, "rol") ?? mijlpaal.VerantwoordelijkeRol;
         var offsetDagen = TriggerParamHelper.GetInt(parameters, "offsetDagen") ?? 7;

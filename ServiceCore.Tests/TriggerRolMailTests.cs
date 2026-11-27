@@ -3,6 +3,7 @@ using DALCore.Models;
 using FacadeCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore.InMemory.Infrastructure.Internal;
 using ServiceCore.Traject.TriggerActions;
 using Xunit;
@@ -20,9 +21,9 @@ public class TriggerRolMailTests
 
     private class Verzender : IEmailSender
     {
-        public List<(string Aan, string Onderwerp)> Verstuurd { get; } = new();
+        public List<(string Aan, string Onderwerp, string Body)> Verstuurd { get; } = new();
         public Task SendEmailAsync(string toEmail, string subject, string htmlMessage, IEnumerable<EmailAttachment>? attachments = null, string? cc = null, string? bcc = null, string? fromEmail = null)
-        { Verstuurd.Add((toEmail, subject)); return Task.CompletedTask; }
+        { Verstuurd.Add((toEmail, subject, htmlMessage)); return Task.CompletedTask; }
     }
 
     private static (TestDb Db, Project Project) Maak()
@@ -113,6 +114,46 @@ public class TriggerRolMailTests
         await actie.ExecuteAsync(Mijlpaal(InterneRol.CeoCfo), Trigger(), project, null);
 
         Assert.Equal(4, verzender.Verstuurd.Count);                                          // 1 boekhouder + 3 bestuurders (CEO, CFO, admin)
-        Assert.All(verzender.Verstuurd, v => Assert.StartsWith("Herinnering", v.Onderwerp));
+        Assert.All(verzender.Verstuurd, v => Assert.StartsWith("Herinnering:", v.Onderwerp));
+    }
+
+    private static IConfiguration Config() => new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["App:BaseUrl"] = "https://cpm.test/" }).Build();
+
+    [Fact]
+    public async Task De_mail_zegt_wat_je_moet_doen_en_bevat_eenheid_datum_en_link()
+    {
+        var (db, project) = Maak();
+        db.Units.Add(new Units { Id = 50, Name = "Lot 09", ProjectId = 1 });
+        db.SaveChanges();
+        var verzender = new Verzender();
+        var mijlpaal = new Mijlpaal { Id = 765, Code = "AKTEFACTUREN_BETAALD", Naam = "Aktefacturen betaald", UnitId = 50, VerantwoordelijkeRol = (int)InterneRol.Boekhouder, Doeldatum = DateOnly.FromDateTime(DateTime.Today.AddDays(1)) };
+        var trigger = new MijlpaalTrigger { TriggerEvent = (int)TriggerEvent.XDagenVoorDoeldatum };
+
+        await new VerwittigRolAction(db, verzender, Config()).ExecuteAsync(mijlpaal, trigger, project, null);
+
+        var mail = verzender.Verstuurd.First();
+        Assert.StartsWith("Actie nodig: Aktefacturen betaald — Lot 09 (Residentie)", mail.Onderwerp);
+        Assert.Contains("Wat moet je doen?", mail.Body);
+        Assert.Contains("Controleer of de aktefacturen van deze woning betaald zijn", mail.Body);
+        Assert.Contains("is morgen", mail.Body);
+        Assert.Contains("Lot 09", mail.Body);
+        Assert.Contains("https://cpm.test/Projects/1/Traject?hl=765", mail.Body);
+        Assert.DoesNotContain("Opmerking", mail.Body);                                      // lege opmerking verdwijnt
+    }
+
+    [Fact]
+    public async Task De_tekst_van_de_trigger_gaat_voor_op_de_standaardtekst_en_een_onbekende_code_krijgt_een_algemene_zin()
+    {
+        var (db, project) = Maak();
+        var verzender = new Verzender();
+        var actie = new VerwittigRolAction(db, verzender, Config());
+        var eigen = new MijlpaalTrigger { TriggerEvent = (int)TriggerEvent.BijBereiken, ActieParametersJson = "{\"omschrijving\":\"Bel de notaris.\"}" };
+        await actie.ExecuteAsync(new Mijlpaal { Id = 1, Code = "NOTARIELE_AKTE", Naam = "Akte", VerantwoordelijkeRol = (int)InterneRol.Boekhouder }, eigen, project, null);
+        await actie.ExecuteAsync(new Mijlpaal { Id = 2, Code = "ONBEKEND_X", Naam = "Iets", VerantwoordelijkeRol = (int)InterneRol.Boekhouder }, new MijlpaalTrigger { TriggerEvent = (int)TriggerEvent.BijOverschrijding }, project, null);
+
+        Assert.Contains("Bel de notaris.", verzender.Verstuurd[0].Body);
+        Assert.DoesNotContain("Volg de notariële akte", verzender.Verstuurd[0].Body);
+        Assert.Contains("vink ze af zodra ze klaar is", verzender.Verstuurd[1].Body);
+        Assert.Contains("niet op tijd afgerond", verzender.Verstuurd[1].Body);
     }
 }

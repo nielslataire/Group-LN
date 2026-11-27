@@ -2,6 +2,7 @@ using BOCore;
 using DALCore.Models;
 using FacadeCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace ServiceCore.Traject.TriggerActions;
 
@@ -17,11 +18,13 @@ public class VerwittigRolAction : ITrajectTriggerAction
 
     private readonly cpmRunningContext _db;
     private readonly IEmailSender _emailSender;
+    private readonly IConfiguration? _config;
 
-    public VerwittigRolAction(cpmRunningContext db, IEmailSender emailSender)
+    public VerwittigRolAction(cpmRunningContext db, IEmailSender emailSender, IConfiguration? config = null)
     {
         _db = db;
         _emailSender = emailSender;
+        _config = config;
     }
 
     public async Task<TriggerActieResultaat> ExecuteAsync(Mijlpaal mijlpaal, MijlpaalTrigger trigger, Project project, string? triggeredBy, CancellationToken ct = default)
@@ -41,8 +44,7 @@ public class VerwittigRolAction : ITrajectTriggerAction
         if (ontvangers.Count == 0)
             return TriggerActieResultaat.Skip($"Geen e-mailadres gekend voor rol '{aanduiding}': geen gebruiker met die rol (of projectkoppeling) en geen expliciet e-mailadres opgegeven.");
 
-        var subject = $"Mijlpaal '{mijlpaal.Naam}' — {project.ProjectName}";
-        var body = TrajectEmailBuilder.Build(project.ProjectName, mijlpaal, "vraagt de aandacht van " + aanduiding);
+        var (subject, body) = await TrajectEmailBuilder.MaakAsync(_db, _config?["App:BaseUrl"], "Actie nodig", "Actie nodig van " + aanduiding, mijlpaal, trigger, project, ct);
         foreach (var email in ontvangers)
             await _emailSender.SendEmailAsync(email, subject, body);
         return TriggerActieResultaat.Success($"E-mail verzonden naar {string.Join(", ", ontvangers)} (rol: {aanduiding}).");

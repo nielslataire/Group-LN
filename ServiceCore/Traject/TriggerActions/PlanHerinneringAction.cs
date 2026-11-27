@@ -2,6 +2,7 @@ using BOCore;
 using DALCore.Models;
 using FacadeCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace ServiceCore.Traject.TriggerActions;
 
@@ -16,11 +17,13 @@ public class PlanHerinneringAction : ITrajectTriggerAction
 
     private readonly cpmRunningContext _db;
     private readonly IEmailSender _emailSender;
+    private readonly IConfiguration? _config;
 
-    public PlanHerinneringAction(cpmRunningContext db, IEmailSender emailSender)
+    public PlanHerinneringAction(cpmRunningContext db, IEmailSender emailSender, IConfiguration? config = null)
     {
         _db = db;
         _emailSender = emailSender;
+        _config = config;
     }
 
     public async Task<TriggerActieResultaat> ExecuteAsync(Mijlpaal mijlpaal, MijlpaalTrigger trigger, Project project, string? triggeredBy, CancellationToken ct = default)
@@ -41,8 +44,7 @@ public class PlanHerinneringAction : ITrajectTriggerAction
         if (ontvangers.Count == 0)
             return TriggerActieResultaat.Skip("Geen gebruiker/rol met bekend e-mailadres om te herinneren.");
 
-        var subject = $"Herinnering — '{mijlpaal.Naam}' nadert ({project.ProjectName})";
-        var body = TrajectEmailBuilder.Build(project.ProjectName, mijlpaal, "nadert en vraagt binnenkort actie");
+        var (subject, body) = await TrajectEmailBuilder.MaakAsync(_db, _config?["App:BaseUrl"], "Herinnering", "Herinnering", mijlpaal, trigger, project, ct);
         foreach (var email in ontvangers)
             await _emailSender.SendEmailAsync(email, subject, body);
         return TriggerActieResultaat.Success($"Herinnering verzonden naar {string.Join(", ", ontvangers)}.");
