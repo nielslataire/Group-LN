@@ -1434,7 +1434,7 @@
 
     // ── Projectsjabloon: planning, traject en schijven in één keer, aangepast aan het gebouw (design-handoff 59g/59h) ──
     // Links de antwoorden (de verborgen velden hieronder zijn de bron van waarheid, de knoppen tonen ze), rechts "Wat er gebeurt" per onderdeel.
-    var pj = { indeel: false, nrs: {}, keuzes: [], gekozen: null, aanvraag: 0, timer: null, bezig: false, terrassen: [], ai: {}, vorige: null };
+    var pj = { gevels: [], indeel: false, nrs: {}, keuzes: [], gekozen: null, aanvraag: 0, timer: null, bezig: false, terrassen: [], ai: {}, vorige: null };
     var PJ_VELDEN = ["verd", "kelder", "dak", "lagen", "een"];
     function pjAantal() { return Math.max(1, Math.min(20, parseInt($("gl-v2-pl-pj-verd").value, 10) || 1)); }
     function pjLagen() {
@@ -1454,7 +1454,8 @@
             woningenStartNa: $("gl-v2-pl-pj-q-startna").hidden ? null : $("gl-v2-pl-pj-startna").value,
             groepGrootte: $("gl-v2-pl-pj-een").checked || pj.indeel ? 0 : Math.max(0, parseInt($("gl-v2-pl-pj-groep").value, 10) || 0),
             groepen: $("gl-v2-pl-pj-een").checked || !pj.indeel ? [] : pjGroepen(),
-            vervangPlanning: canDelete && $("gl-v2-pl-pj-vervang").checked
+            vervangPlanning: canDelete && $("gl-v2-pl-pj-vervang").checked,
+            gevelafwerkingen: $("gl-v2-pl-pj-q-gevel").hidden ? [] : pj.gevels.slice()
         };
     }
     // Zelf indelen: per woning het nummer van de planning; hetzelfde nummer = dezelfde planning
@@ -1577,6 +1578,7 @@
         pjZetAntwoorden({ verdiepingen: k.verdiepingen, kelder: k.kelder, dak: k.dak, terrassen: [], eenPlanningVoorAlles: false });
         $("gl-v2-pl-pj-hoofd").checked = true; $("gl-v2-pl-pj-groep").value = ""; pj.indeel = false; pj.nrs = {}; pjIndeelToon(); pjSegmenten();
         $("gl-v2-pl-pj-vervang").checked = false; $("gl-v2-pl-pj-q-vervang").hidden = !canDelete;
+        pj.gevels = []; $("gl-v2-pl-pj-q-gevel").hidden = !k.heeftGevel; pjGevelToon();
         // Startmoment van de woningen: enkel bij een sjabloon met de planning van het project zelf; standaard wat het sjabloon zegt
         $("gl-v2-pl-pj-q-startna").hidden = !k.woningenStartNa;
         var startItems = [
@@ -1622,6 +1624,16 @@
         if (e.target.id === "gl-v2-pl-pj-hoofd" || e.target.id === "gl-v2-pl-pj-vervang") pjPlanVoorbeeld();
         if (e.target.id === "gl-v2-pl-pj-startna" || e.target.id === "gl-v2-pl-pj-groep") pjPlanVoorbeeld();
         if (e.target.hasAttribute && e.target.hasAttribute("data-pj-nr")) { pj.nrs[e.target.getAttribute("data-pj-nr")] = Math.max(0, parseInt(e.target.value, 10) || 0); pjPlanVoorbeeld(); }
+    });
+    // Gevelafwerkingen: meerdere tegelijk (pleister, hout, aluminium); de stenen gevel is altijd aanwezig
+    function pjGevelToon() {
+        $("gl-v2-pl-pj-gevel-seg").querySelectorAll("button").forEach(function (b) { var aan = pj.gevels.indexOf(b.getAttribute("data-v")) >= 0; b.classList.toggle("is-active", aan); b.setAttribute("aria-pressed", aan ? "true" : "false"); });
+    }
+    $("gl-v2-pl-pj-gevel-seg").addEventListener("click", function (e) {
+        var b = e.target.closest("button[data-v]"); if (!b) return;
+        var v = b.getAttribute("data-v"), i = pj.gevels.indexOf(v);
+        if (i >= 0) pj.gevels.splice(i, 1); else pj.gevels.push(v);
+        pjGevelToon(); pjPlanVoorbeeld();
     });
     $("gl-v2-pl-pj-indeel-knop").addEventListener("click", function () {
         pj.indeel = !pj.indeel;

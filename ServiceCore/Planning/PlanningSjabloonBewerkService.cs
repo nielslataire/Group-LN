@@ -41,6 +41,7 @@ public sealed partial class PlanningSjabloonService
                 HeeftKelder = PlanningSjabloonUitrol.GebruiktVariabele(s, "kelder"),
                 HeeftDak = PlanningSjabloonUitrol.GebruiktVariabele(s, "dak"),
                 HeeftTerras = PlanningSjabloonUitrol.GebruiktVariabele(s, "terras"),
+                HeeftGevel = PlanningSjabloonUitrol.GebruiktVariabele(s, "gevel"),
                 HeeftEstafette = s.Blokken.Any(b => b.Taken.Any(t => t.Estafette)),
                 Duur = duur, Verdiepingen = verdiepingen,
                 ReageertOp = s.ReageertOp, ReageertOpTekst = PlanningSjabloonReageertOp.Tekst(s.ReageertOp),
@@ -261,7 +262,7 @@ public sealed partial class PlanningSjabloonService
 
     private static readonly Dictionary<string, string[]> TaakVoorwaardeWaarden = new()
     {
-        ["kelder"] = new[] { "ja", "nee" }, ["dak"] = new[] { "hellend", "plat" }, ["terras"] = new[] { "ja", "nee" }, ["laag"] = new[] { "eerste", "laatste", "boven", "eenmalig" }, ["grond"] = new[] { "ja", "nee" },
+        ["kelder"] = new[] { "ja", "nee" }, ["dak"] = new[] { "hellend", "plat" }, ["terras"] = new[] { "ja", "nee" }, ["gevel"] = new[] { "pleister", "hout", "aluminium" }, ["laag"] = new[] { "eerste", "laatste", "boven", "eenmalig" }, ["grond"] = new[] { "ja", "nee" },
     };
 
     /// <summary>Controleert de voorwaarde van een taak ("laag:eerste,kelder:nee"): enkel bekende variabelen en waarden. Een ongeldige voorwaarde is een fout, geen stille "altijd".</summary>

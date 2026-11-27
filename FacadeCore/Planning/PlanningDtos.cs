@@ -424,6 +424,7 @@ public sealed class PlanningSjabloonInfo
     public bool HeeftKelder { get; set; }
     public bool HeeftDak { get; set; }
     public bool HeeftTerras { get; set; }
+    public bool HeeftGevel { get; set; }
     public bool HeeftEstafette { get; set; }
 }
 
@@ -450,6 +451,9 @@ public sealed class PlanningToepassingPlanning
 
     /// <summary>De bouwlagen (1 = gelijkvloers, 2 = 1ste verdieping, ...) met terrassen of luifels bij de afdek.</summary>
     public List<int> Terrassen { get; set; } = new();
+
+    /// <summary>De gekozen extra gevelafwerkingen naast de stenen gevel: "pleister", "hout" en/of "aluminium". Leeg = enkel de stenen gevel.</summary>
+    public List<string> Gevelafwerkingen { get; set; } = new();
 
     /// <summary>De bestaande planning (met taken) mag door het sjabloon vervangen worden.</summary>
     public bool Vervang { get; set; }

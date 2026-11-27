@@ -157,13 +157,16 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
         var planning = await _db.PlanningSjabloon.AsNoTracking().Select(p => new { p.Id, N = p.Blokken.Count }).ToDictionaryAsync(x => x.Id, x => x.N);
         var traject = await _db.TrajectSjabloon.AsNoTracking().Select(p => new { p.Id, N = p.Fases.Count }).ToDictionaryAsync(x => x.Id, x => x.N);
         var schijven = await _db.SchijfSjabloon.AsNoTracking().Select(p => new { p.Id, N = p.Schijven.Count }).ToDictionaryAsync(x => x.Id, x => x.N);
+        var planIds = lijst.Where(s => s.PlanningSjabloonId != null).Select(s => s.PlanningSjabloonId!.Value).Distinct().ToList();
+        var metGevel = (await _db.PlanningSjabloon.AsNoTracking().Include(p => p.Blokken).ThenInclude(b => b.Taken).Where(p => planIds.Contains(p.Id)).ToListAsync())
+            .Where(p => PlanningSjabloonUitrol.GebruiktVariabele(p, "gevel")).Select(p => p.Id).ToHashSet();
         return lijst.Select(s =>
         {
             var delen = new List<string>();
             if (s.PlanningSjabloonId is int p && planning.TryGetValue(p, out var np)) delen.Add($"planning {np} {(np == 1 ? "fase" : "fases")}");
             if (s.TrajectSjabloonId is int t && traject.TryGetValue(t, out var nt)) delen.Add($"traject {nt} {(nt == 1 ? "fase" : "fases")}");
             if (s.SchijfSjabloonId is int c && schijven.TryGetValue(c, out var nc)) delen.Add($"{nc} {(nc == 1 ? "schijf" : "schijven")}");
-            return new ProjectSjabloonKeuze { Id = s.Id, Naam = s.Naam, Beschrijving = s.Beschrijving, Verdiepingen = Math.Max(1, s.StandaardVerdiepingen), Kelder = s.StandaardKelder, Dak = s.StandaardDak, WoningenStartNa = s.PlanningSjabloonProjectId == null ? null : s.WoningenStartNa, Kern = delen.Count == 0 ? null : string.Join(" · ", delen) };
+            return new ProjectSjabloonKeuze { Id = s.Id, Naam = s.Naam, Beschrijving = s.Beschrijving, Verdiepingen = Math.Max(1, s.StandaardVerdiepingen), Kelder = s.StandaardKelder, Dak = s.StandaardDak, WoningenStartNa = s.PlanningSjabloonProjectId == null ? null : s.WoningenStartNa, HeeftGevel = s.PlanningSjabloonId is int gp && metGevel.Contains(gp), Kern = delen.Count == 0 ? null : string.Join(" · ", delen) };
         }).ToList();
     }
 
@@ -265,7 +268,7 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
             {
                 bool Heeft(string v) => PlanningSjabloonUitrol.GebruiktVariabele(pl, v);
                 k.HeeftBouwlagen = pl.Blokken.Any(b => b.Herhaling >= 1);
-                k.HeeftKelder = Heeft("kelder"); k.HeeftDak = Heeft("dak"); k.HeeftTerras = Heeft("terras");
+                k.HeeftKelder = Heeft("kelder"); k.HeeftDak = Heeft("dak"); k.HeeftTerras = Heeft("terras"); k.HeeftGevel = Heeft("gevel");
                 k.Planning = r.PlanningKern + ": " + string.Join(", ", pl.Blokken.OrderBy(b => b.Volgorde).Select(b => b.Naam));
             }
             ctx.Keuzes.Add(k);
@@ -282,7 +285,7 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
         var a = Schoon(antwoorden);
         var eenheden = await _db.Units.AsNoTracking().CountAsync(u => u.ProjectId == projectId);
         var woningen = a.EenPlanningVoorAlles ? 1 : Math.Clamp(Math.Max(1, eenheden), 1, 20);
-        var proef = PlanningSjabloonProef.Rekenen(pl, woningen, new SjabloonVariabelen(a.Verdiepingen, a.Kelder, a.Dak, a.Terrassen));
+        var proef = PlanningSjabloonProef.Rekenen(pl, woningen, new SjabloonVariabelen(a.Verdiepingen, a.Kelder, a.Dak, a.Terrassen, a.Gevelafwerkingen));
         var wd = woningen > 1 ? proef.WerkdagenAlle : proef.Werkdagen;
         if (wd <= 0) return null;
         var max = await _db.Project.AsNoTracking().Where(p => p.ProjectId == projectId).Select(p => p.ExecutionDays).FirstOrDefaultAsync();
@@ -320,6 +323,7 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
             Verdiepingen = Math.Max(1, Math.Min(a?.Verdiepingen ?? 1, 20)), Kelder = a?.Kelder ?? false,
             Dak = dak is "hellend" or "plat" ? dak : null, EenPlanningVoorAlles = a?.EenPlanningVoorAlles ?? false,
             Terrassen = (a?.Terrassen ?? new List<int>()).Where(t => t >= 1).Distinct().OrderBy(t => t).Take(20).ToList(),
+            Gevelafwerkingen = GevelAfwerkingen.Schoon(a?.Gevelafwerkingen),
             InHoofdplanning = a?.InHoofdplanning ?? false,
             GroepGrootte = Math.Max(0, Math.Min(a?.GroepGrootte ?? 0, 200)),
             VervangPlanning = a?.VervangPlanning ?? false,
@@ -485,22 +489,22 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
                         ? "Er is nog geen hoofdplanning voor dit project: de planning komt in een aparte planning."
                         : "De hoofdplanning heeft al fasen of taken: de planning komt in een aparte planning.");
                 var rijen = inHoofd
-                    ? new List<PlanningToepassingPlanning> { new() { PlanningId = hoofd!.Id, Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak, Terrassen = a.Terrassen } }
+                    ? new List<PlanningToepassingPlanning> { new() { PlanningId = hoofd!.Id, Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak, Terrassen = a.Terrassen, Gevelafwerkingen = a.Gevelafwerkingen } }
                     : a.EenPlanningVoorAlles
-                    ? new List<PlanningToepassingPlanning> { new() { EenheidIds = eenheden.Select(u => u.Id).ToList(), Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak, Terrassen = a.Terrassen } }
+                    ? new List<PlanningToepassingPlanning> { new() { EenheidIds = eenheden.Select(u => u.Id).ToList(), Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak, Terrassen = a.Terrassen, Gevelafwerkingen = a.Gevelafwerkingen } }
                     : a.Groepen.Count > 0
                     ? ZelfIndeling(eenheden.Select(u => (u.Id, u.Name ?? "")).ToList(), a.Groepen).Select(g => new PlanningToepassingPlanning
                     {
-                        EenheidIds = g.Select(u => u.Id).ToList(), Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak, Terrassen = a.Terrassen,
+                        EenheidIds = g.Select(u => u.Id).ToList(), Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak, Terrassen = a.Terrassen, Gevelafwerkingen = a.Gevelafwerkingen,
                         Naam = g.Count == 1 ? g[0].Name.Trim() : $"{g[0].Name.Trim()} t/m {g[^1].Name.Trim()}",
                     }).ToList()
                     : a.GroepGrootte >= 2
                     ? eenheden.Chunk(a.GroepGrootte).Select(g => new PlanningToepassingPlanning
                     {
-                        EenheidIds = g.Select(u => u.Id).ToList(), Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak, Terrassen = a.Terrassen,
+                        EenheidIds = g.Select(u => u.Id).ToList(), Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak, Terrassen = a.Terrassen, Gevelafwerkingen = a.Gevelafwerkingen,
                         Naam = g.Length == 1 ? (g[0].Name ?? "").Trim() : $"{(g[0].Name ?? "").Trim()} t/m {(g[^1].Name ?? "").Trim()}",
                     }).ToList()
-                    : eenheden.Select(u => new PlanningToepassingPlanning { EenheidIds = new List<int> { u.Id }, Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak, Terrassen = a.Terrassen }).ToList();
+                    : eenheden.Select(u => new PlanningToepassingPlanning { EenheidIds = new List<int> { u.Id }, Verdiepingen = a.Verdiepingen, Kelder = a.Kelder, Dak = a.Dak, Terrassen = a.Terrassen, Gevelafwerkingen = a.Gevelafwerkingen }).ToList();
                 if (woningenStart != null && !inHoofd) foreach (var r in rijen) r.StartDatum = woningenStart.Value.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
                 var tekst = inHoofd ? $"in de hoofdplanning, voor {eenheden.Count} {(eenheden.Count == 1 ? "eenheid" : "eenheden")} ({Lijstje(eenheden.Select(u => u.Name ?? ""))})"
                           : a.Groepen.Count > 0 && rijen.Count > 0 && !a.EenPlanningVoorAlles ? $"{rijen.Count} {(rijen.Count == 1 ? "planning" : "plannings")} volgens jouw indeling, samen {eenheden.Count} eenheden ({Lijstje(rijen.Select(r => r.Naam ?? ""))})"

@@ -29,6 +29,7 @@ public sealed partial class PlanningSjabloonService : IPlanningSjabloonService
             HeeftKelder = PlanningSjabloonUitrol.GebruiktVariabele(s, "kelder"),
             HeeftDak = PlanningSjabloonUitrol.GebruiktVariabele(s, "dak"),
             HeeftTerras = PlanningSjabloonUitrol.GebruiktVariabele(s, "terras"),
+            HeeftGevel = PlanningSjabloonUitrol.GebruiktVariabele(s, "gevel"),
             HeeftEstafette = s.Blokken.Any(b => b.Taken.Any(t => t.Estafette)),
         }).ToList();
     }

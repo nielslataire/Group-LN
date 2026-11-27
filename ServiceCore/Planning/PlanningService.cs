@@ -1773,7 +1773,7 @@ public class PlanningService : IPlanningService
             }
             if (eersteNieuw) { bewerkt.Add("p" + bp.Id); eersteNieuw = false; }
 
-            var uit = PlanningSjabloonUitrol.Rol(sjabloon, new SjabloonVariabelen(Math.Max(1, b.Verdiepingen), b.Kelder, b.Dak, b.Terrassen));
+            var uit = PlanningSjabloonUitrol.Rol(sjabloon, new SjabloonVariabelen(Math.Max(1, b.Verdiepingen), b.Kelder, b.Dak, b.Terrassen, GevelAfwerkingen.Schoon(b.Gevelafwerkingen)));
             foreach (var w in uit.Waarschuwingen) waarschuwingen.Add($"{naam}: {w}");
 
             var taakIdPerSleutel = new Dictionary<string, int>();

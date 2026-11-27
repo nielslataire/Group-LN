@@ -6,7 +6,7 @@ treeOrder: 12
 role: Projectleider
 device: Desktop · tablet
 minutes: 5
-updated: 2026-11-26
+updated: 2026-11-27
 newsTag: Nieuw
 screens: planning-index, instellingen-projectsjablonen, instellingen-projectsjablonen-bewerken
 related: planning-sjablonen, schijvensjablonen-beheren, planning-schijven-koppelen
@@ -41,6 +41,7 @@ faq:
 4. Beantwoord bij stap 3 en 4 de vragen over het gebouw:
    - het aantal **bouwlagen** met de knoppen − en + (gelijkvloers + verdiepingen: gelijkvloers + 2 verdiepingen = 3)
    - bij welke afdek **terrassen of luifels** komen (knoppen GV, 1, 2 …; leeg = geen)
+   - welke **gevelafwerkingen** er naast de stenen gevel komen (blok **Gevelafwerking**, enkel zichtbaar als het planningssjabloon ze kent): **Gevelpleister**, **Houten bekleding** en/of **Aluminium bekleding**. Je kan er meerdere kiezen of geen. De stenen gevel is er altijd en komt eerst, daarna de gevelpleister, en pas daarna de houten of aluminium bekleding
    - of er een **kelder** is (**Met kelder** of **Zonder**)
    - of het **dak** plat of hellend is, of **Geen keuze**
    - of het **één planning voor het gebouw** is (een gebouw met appartementen) of **per eenheid**, met erbij hoeveel eenheden nog geen planning hebben. Bij een appartementsgebouw is één planning de standaard: de werf loopt per bouwlaag, niet per appartement

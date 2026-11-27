@@ -434,6 +434,14 @@
                                 <span class="gl-v2-field-help" id="gl-v2-pl-pj-een-help">Bij een appartementsgebouw is één planning de standaard: de werf loopt per bouwlaag, niet per appartement. “Per eenheid” maakt een planning per eenheid.</span>
                                 <label class="gl-v2-toggle-row" for="gl-v2-pl-pj-hoofd" id="gl-v2-pl-pj-hoofd-rij" hidden><input type="checkbox" id="gl-v2-pl-pj-hoofd" class="gl-v2-toggle-switch" checked /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">In de hoofdplanning zetten</span><span class="gl-v2-toggle-desc">enkel als de hoofdplanning nog leeg is. Uit of niet leeg = een aparte planning naast de hoofdplanning</span></span></label>
                             </section>
+                            <section class="gl-v2-pl-pj-sec" id="gl-v2-pl-pj-q-gevel" hidden>
+                                <span class="gl-v2-pl-pj-k">Gevelafwerking</span>
+                                <div class="gl-v2-pl-pj-q">
+                                    <span class="gl-v2-pl-pj-qt"><b>Naast de stenen gevel</b><small>de stenen gevel is altijd aanwezig en komt eerst; kies wat er daarna bijkomt</small></span>
+                                    <div class="gl-v2-segmented is-sm" id="gl-v2-pl-pj-gevel-seg" role="group" aria-label="Gevelafwerkingen (meerdere mogelijk)"><button type="button" data-v="pleister" aria-pressed="false">Gevelpleister</button><button type="button" data-v="hout" aria-pressed="false">Houten bekleding</button><button type="button" data-v="aluminium" aria-pressed="false">Aluminium bekleding</button></div>
+                                </div>
+                                <span class="gl-v2-field-help">Volgorde in de planning: stenen gevel, dan gevelpleister, daarna houten of aluminium bekleding. Je kan er meerdere kiezen.</span>
+                            </section>
                             <section class="gl-v2-pl-pj-sec" id="gl-v2-pl-pj-q-vervang" hidden>
                                 <span class="gl-v2-pl-pj-k">Bestaande planning</span>
                                 <label class="gl-v2-toggle-row" for="gl-v2-pl-pj-vervang"><input type="checkbox" id="gl-v2-pl-pj-vervang" class="gl-v2-toggle-switch" /><span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Bestaande planning eerst verwijderen</span><span class="gl-v2-toggle-desc">alle plannings van de woningen en de fases en taken van de hoofdplanning gaan weg, daarna komt de nieuwe planning. Kan niet ongedaan gemaakt worden; het traject en de schijven blijven staan</span></span></label>

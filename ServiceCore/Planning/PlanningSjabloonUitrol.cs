@@ -6,8 +6,22 @@ namespace ServiceCore.Planning;
 /// <summary>
 /// <paramref name="Verdiepingen"/> = het aantal bouwlagen boven de grond, het gelijkvloers meegeteld (gelijkvloers + 2 verdiepingen = 3).
 /// <paramref name="Terrassen"/> = de bouwlagen (1 = gelijkvloers, 2 = 1ste verdieping, ...) met terrassen of luifels bij de afdek; leeg of null = geen.
+/// <paramref name="Gevels"/> = de gekozen extra gevelafwerkingen naast de stenen gevel ("pleister", "hout", "aluminium"); leeg of null = enkel de stenen gevel.
 /// </summary>
-public sealed record SjabloonVariabelen(int Verdiepingen = 1, bool Kelder = false, string? Dak = null, IReadOnlyCollection<int>? Terrassen = null);
+public sealed record SjabloonVariabelen(int Verdiepingen = 1, bool Kelder = false, string? Dak = null, IReadOnlyCollection<int>? Terrassen = null, IReadOnlyCollection<string>? Gevels = null);
+
+/// <summary>De gevelafwerkingen die een project naast de stenen gevel kan kiezen, in de volgorde waarin ze uitgevoerd worden: steen (altijd) eerst, dan pleister, daarna houten of aluminium bekleding.</summary>
+public static class GevelAfwerkingen
+{
+    public const string Pleister = "pleister", Hout = "hout", Aluminium = "aluminium";
+    public static readonly string[] Alle = { Pleister, Hout, Aluminium };
+    /// <summary>Alleen geldige keuzes, zonder dubbels, in vaste volgorde.</summary>
+    public static List<string> Schoon(IEnumerable<string>? keuzes)
+    {
+        var set = (keuzes ?? Array.Empty<string>()).Select(k => (k ?? "").Trim().ToLowerInvariant()).ToHashSet();
+        return Alle.Where(set.Contains).ToList();
+    }
+}
 
 /// <summary>Eén taak van een uitgerolde planning. <see cref="Sleutel"/> is uniek binnen de uitrol en gelijk voor "dezelfde" taak in een andere uitrol (estafette).</summary>
 public sealed class UitgerolTaak
@@ -69,13 +83,14 @@ public static class PlanningSjabloonUitrol
             "kelder" => waarde is "ja" or "true" ? v.Kelder : (waarde is "nee" or "false" ? !v.Kelder : v.Kelder),
             "dak" => string.Equals(v.Dak ?? "", waarde, StringComparison.OrdinalIgnoreCase),
             "terras" => TerrasKlopt(b, v, null),
+            "gevel" => v.Gevels?.Contains(waarde, StringComparer.OrdinalIgnoreCase) == true,
             _ => true,
         };
     }
 
     /// <summary>
     /// De voorwaarde van een taak: een lijst "variabele:waarde" gescheiden door komma's, alle voorwaarden moeten kloppen.
-    /// kelder:ja|nee · dak:hellend|plat · terras:ja|nee (per bouwlaag) · laag:eerste|laatste|boven (eerste = het gelijkvloers, boven = niet het gelijkvloers).
+    /// kelder:ja|nee · dak:hellend|plat · gevel:pleister|hout|aluminium (enkel als die afwerking gekozen is) · terras:ja|nee (per bouwlaag) · laag:eerste|laatste|boven (eerste = het gelijkvloers, boven = niet het gelijkvloers).
     /// Zo kan één blok per bouwlaag taken bevatten die enkel op het gelijkvloers, enkel zonder kelder of enkel bij terrassen voorkomen.
     /// </summary>
     public static IEnumerable<(string Variabele, string Waarde)> TaakVoorwaarden(string? voorwaarde)
@@ -101,6 +116,8 @@ public static class PlanningSjabloonUitrol
                 case "terras":
                     var heeft = index == 0 ? (v.Terrassen?.Count ?? 0) > 0 : v.Terrassen?.Contains(index) == true;
                     if (heeft != ja) return false; break;
+                case "gevel": // een extra gevelafwerking (pleister, hout, aluminium): de taak komt enkel als ze gekozen is
+                    if ((v.Gevels?.Contains(waarde, StringComparer.OrdinalIgnoreCase) == true) != ja) return false; break;
                 case "grond": // de bouwlaag rust op de grond: het gelijkvloers zonder kelder
                     if ((index <= 1 && !v.Kelder) != ja) return false; break;
                 case "laag":

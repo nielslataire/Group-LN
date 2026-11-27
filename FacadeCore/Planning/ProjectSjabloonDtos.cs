@@ -119,6 +119,8 @@ public sealed class ProjectSjabloonKeuze
     public string? Dak { get; set; }
     /// <summary>De bouwstaat waarna de woningen starten volgens het sjabloon (enkel bij een sjabloon met planning voor het project zelf); anders leeg.</summary>
     public string? WoningenStartNa { get; set; }
+    /// <summary>Het planningssjabloon kent gevelafwerkingen (pleister, hout, aluminium): dan vraagt het toepassen welke van toepassing zijn.</summary>
+    public bool HeeftGevel { get; set; }
     /// <summary>"planning 9 fases · traject 7 fases · 14 schijven": wat erin zit, voor de keuzekaart in de modal.</summary>
     public string? Kern { get; set; }
 }
@@ -133,6 +135,8 @@ public sealed class ProjectSjabloonAntwoorden
     public string? Dak { get; set; }
     /// <summary>De bouwlagen (1 = gelijkvloers, 2 = 1ste verdieping, ...) met terrassen of luifels bij de afdek. Leeg = geen.</summary>
     public List<int> Terrassen { get; set; } = new();
+    /// <summary>De gekozen extra gevelafwerkingen naast de stenen gevel ("pleister", "hout", "aluminium"); de stenen gevel is altijd aanwezig. Volgorde: steen, pleister, dan hout of aluminium.</summary>
+    public List<string> Gevelafwerkingen { get; set; } = new();
     /// <summary>Eén planning voor alle eenheden zonder planning (een gebouw); anders een planning per eenheid (woningen).</summary>
     public bool EenPlanningVoorAlles { get; set; }
     /// <summary>Samen met <see cref="EenPlanningVoorAlles"/>: de planning komt in de hoofdplanning (enkel als die nog leeg is); anders een aparte planning.</summary>
@@ -207,6 +211,7 @@ public sealed class ProjectSjabloonAiKeuze
     public bool HeeftKelder { get; set; }
     public bool HeeftDak { get; set; }
     public bool HeeftTerras { get; set; }
+    public bool HeeftGevel { get; set; }
     /// <summary>Korte samenvatting, bv. "11 blokken, 38 taken" en de namen van de blokken.</summary>
     public string? Planning { get; set; }
     public string? Traject { get; set; }

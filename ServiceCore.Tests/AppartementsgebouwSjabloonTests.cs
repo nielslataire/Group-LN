@@ -52,6 +52,9 @@ public class AppartementsgebouwSjabloonTests
         B_DAK.Taken.Add(new() { Code = "DAKSTRUCTUUR", Naam = "Dakstructuur", Duur = 15, Voorwaarde = "dak:hellend", Voorgangers = { new() { Code = "METSELWERK_RUWBOUW" } } });
         B_DAK.Taken.Add(new() { Code = "DAKBEDEKKING_HELLEND", Naam = "Dakbedekking hellend dak", Duur = 10, Voorwaarde = "dak:hellend", Voorgangers = { new() { Code = "DAKSTRUCTUUR" } } });
         B_GEVEL.Taken.Add(new() { Code = "BUITENSCHRIJNWERK", Naam = "Plaatsen buitenschrijnwerk en glas", Duur = 20, Voorwaarde = null, Voorgangers = { new() { Code = "B_DAK" } } });
+        B_GEVEL.Taken.Add(new() { Code = "GEVELBEPLEISTERING", Naam = "Gevelbepleistering", Duur = 20, Voorwaarde = "gevel:pleister", Voorgangers = { new() { Code = "GEVELMETSELWERK" } } });
+        B_GEVEL.Taken.Add(new() { Code = "GEVELBEKLEDING_HOUT", Naam = "Houten gevelbekleding", Duur = 15, Voorwaarde = "gevel:hout", Voorgangers = { new() { Code = "GEVELMETSELWERK" }, new() { Code = "GEVELBEPLEISTERING" } } });
+        B_GEVEL.Taken.Add(new() { Code = "GEVELBEKLEDING_ALU", Naam = "Aluminium gevelbekleding", Duur = 15, Voorwaarde = "gevel:aluminium", Voorgangers = { new() { Code = "GEVELMETSELWERK" }, new() { Code = "GEVELBEPLEISTERING" } } });
         B_TECHNIEKEN.Taken.Add(new() { Code = "LEIDINGEN_ELEKTRA", Naam = "Plaatsen leidingen elektriciteit", Duur = 25, Voorwaarde = null, Voorgangers = { new() { Code = "B_DAK" }, new() { Code = "BUITENSCHRIJNWERK" } } });
         B_TECHNIEKEN.Taken.Add(new() { Code = "LEIDINGEN_SANITAIR", Naam = "Plaatsen leidingen sanitair en verwarming", Duur = 25, Voorwaarde = null, Voorgangers = { new() { Code = "B_DAK" }, new() { Code = "BUITENSCHRIJNWERK" } } });
         B_TECHNIEKEN.Taken.Add(new() { Code = "LIFT", Naam = "Plaatsen lift", Duur = 15, Voorwaarde = null, Voorgangers = { new() { Code = "B_DAK" } } });
@@ -64,7 +67,7 @@ public class AppartementsgebouwSjabloonTests
         B_AFWERKING.Taken.Add(new() { Code = "KEUKEN", Naam = "Plaatsen keuken", Duur = 10, Voorwaarde = null, Voorgangers = { new() { Code = "PARKET" } } });
         B_AFWERKING.Taken.Add(new() { Code = "SCHILDERWERK", Naam = "Schilderwerken", Duur = 20, Voorwaarde = null, Voorgangers = { new() { Code = "BINNENSCHRIJNWERK" }, new() { Code = "KEUKEN" }, new() { Code = "LIFT" } } });
         B_OMGEVING.Taken.Add(new() { Code = "OMGEVINGSWERKEN", Naam = "Omgevingswerken", Duur = 30, Voorwaarde = null, Voorgangers = { new() { Code = "B_AFWERKING" } } });
-        B_OPLEVERING.Taken.Add(new() { Code = "OPKUIS", Naam = "Opkuis", Duur = 5, Voorwaarde = null, Voorgangers = { new() { Code = "B_OMGEVING" } } });
+        B_OPLEVERING.Taken.Add(new() { Code = "OPKUIS", Naam = "Opkuis", Duur = 5, Voorwaarde = null, Voorgangers = { new() { Code = "B_OMGEVING" }, new() { Code = "GEVELBEPLEISTERING" }, new() { Code = "GEVELBEKLEDING_HOUT" }, new() { Code = "GEVELBEKLEDING_ALU" } } });
         B_OPLEVERING.Taken.Add(new() { Code = "VOORLOPIGE_OPLEVERING", Naam = "Voorlopige oplevering (sleutels)", Duur = 1, Voorwaarde = null, Voorgangers = { new() { Code = "OPKUIS" } } });
         return dto;
     }
@@ -108,5 +111,63 @@ public class AppartementsgebouwSjabloonTests
         Assert.Equal(new[] { "Gelijkvloers", "1ste verdieping", "2de verdieping", "Eenmalig" }, boven.Delen.Select(d => d.Naam));
         // het gevelmetselwerk (40 d) start na het metselwerk van de eerste bouwlaag en niet vanaf dag 1
         Assert.True(boven.Delen.Single(d => d.Naam == "Eenmalig").Start > boven.Delen[0].Start);
+    }
+
+    private static async Task<SjabloonUitrolling> Rol(params string[] gevels)
+    {
+        var db = new TestDb(Guid.NewGuid().ToString());
+        var uit = await new PlanningSjabloonService(db).Bewaar(Bouw(), "u");
+        Assert.True(uit.Ok, string.Join("; ", uit.Fouten));
+        var s = await db.PlanningSjabloon.Include(x => x.Blokken).ThenInclude(b => b.Taken).ThenInclude(t => t.Voorgangers).SingleAsync();
+        return PlanningSjabloonUitrol.Rol(s, new SjabloonVariabelen(3, true, "plat", null, gevels));
+    }
+
+    [Fact]
+    public async Task Zonder_keuze_blijft_enkel_de_stenen_gevel_en_de_opkuis_verliest_geen_voorganger()
+    {
+        var rol = await Rol();
+        Assert.Empty(rol.Waarschuwingen);
+        var taken = rol.Fases.SelectMany(f => f.Taken).ToList();
+        Assert.Contains(taken, t => t.Code == "GEVELMETSELWERK");
+        Assert.DoesNotContain(taken, t => t.Code is "GEVELBEPLEISTERING" or "GEVELBEKLEDING_HOUT" or "GEVELBEKLEDING_ALU");
+    }
+
+    [Fact]
+    public async Task Pleister_komt_na_de_steen_en_hout_en_aluminium_na_steen_en_pleister()
+    {
+        var rol = await Rol("hout", "pleister", "aluminium");
+        Assert.Empty(rol.Waarschuwingen);
+        var taken = rol.Fases.SelectMany(f => f.Taken).ToList();
+        var steen = taken.Single(t => t.Code == "GEVELMETSELWERK");
+        var pleister = taken.Single(t => t.Code == "GEVELBEPLEISTERING");
+        var hout = taken.Single(t => t.Code == "GEVELBEKLEDING_HOUT");
+        var alu = taken.Single(t => t.Code == "GEVELBEKLEDING_ALU");
+        Assert.Contains(pleister.Voorgangers, v => v.Sleutel == steen.Sleutel);
+        foreach (var bekleding in new[] { hout, alu })
+        {
+            Assert.Contains(bekleding.Voorgangers, v => v.Sleutel == steen.Sleutel);
+            Assert.Contains(bekleding.Voorgangers, v => v.Sleutel == pleister.Sleutel);
+        }
+        // de opkuis wacht op alle gekozen gevelafwerkingen
+        var opkuis = taken.Single(t => t.Code == "OPKUIS");
+        foreach (var g in new[] { pleister, hout, alu }) Assert.Contains(opkuis.Voorgangers, v => v.Sleutel == g.Sleutel);
+    }
+
+    [Fact]
+    public async Task Hout_zonder_pleister_wacht_enkel_op_de_stenen_gevel()
+    {
+        var rol = await Rol("hout");
+        Assert.Empty(rol.Waarschuwingen);
+        var taken = rol.Fases.SelectMany(f => f.Taken).ToList();
+        Assert.DoesNotContain(taken, t => t.Code == "GEVELBEPLEISTERING");
+        var hout = taken.Single(t => t.Code == "GEVELBEKLEDING_HOUT");
+        Assert.Single(hout.Voorgangers);
+        Assert.Equal(taken.Single(t => t.Code == "GEVELMETSELWERK").Sleutel, hout.Voorgangers[0].Sleutel);
+    }
+
+    [Fact]
+    public void Onbekende_en_dubbele_keuzes_worden_opgeschoond_in_de_vaste_volgorde()
+    {
+        Assert.Equal(new[] { "pleister", "hout", "aluminium" }, GevelAfwerkingen.Schoon(new[] { "Aluminium", "baksteen", "hout", "pleister", "hout" }));
     }
 }

@@ -20,7 +20,8 @@ internal static class PlanningSjabloonProef
         dak ??= s.Blokken.SelectMany(b => b.Taken).SelectMany(t => PlanningSjabloonUitrol.TaakVoorwaarden(t.Voorwaarde)).Where(v => v.Variabele == "dak").Select(v => v.Waarde).FirstOrDefault(w => !string.IsNullOrEmpty(w));
         var lagen = Math.Max(1, verdiepingen);
         // Terrassen of luifels: in het voorbeeld bij elke bouwlaag, zodat het langste verloop te zien is.
-        return new SjabloonVariabelen(lagen, kelder, dak, Enumerable.Range(1, lagen).ToArray());
+        // Gevelafwerkingen: in het voorbeeld alle, zodat het langste verloop te zien is.
+        return new SjabloonVariabelen(lagen, kelder, dak, Enumerable.Range(1, lagen).ToArray(), GevelAfwerkingen.Alle);
     }
 
     private static int Nr(DateOnly d)

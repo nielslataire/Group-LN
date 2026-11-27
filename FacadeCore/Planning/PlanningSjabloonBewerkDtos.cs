@@ -91,6 +91,7 @@ public sealed class PlanningSjabloonBeheerRij
     public bool HeeftKelder { get; set; }
     public bool HeeftDak { get; set; }
     public bool HeeftTerras { get; set; }
+    public bool HeeftGevel { get; set; }
     public bool HeeftEstafette { get; set; }
 }
 
