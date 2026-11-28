@@ -20,6 +20,18 @@ public class TrajectInstantiationService : ITrajectInstantiationService
         _dossiers = dossiers;
     }
 
+    /// <summary>
+    /// De eenheden die een eigen traject (mijlpalen per eenheid) krijgen: de hoofdeenheden (woning, appartement, commercieel). Parkings en bergingen
+    /// volgen het traject van hun hoofdeenheid (besluit Niels 28/11/2026). Heeft het project enkel parkings of bergingen, dan krijgen die er wel een.
+    /// </summary>
+    public async Task<List<int>> EenhedenMetEigenTraject(int projectId)
+    {
+        var eenheden = await _db.Units.AsNoTracking().Where(u => u.ProjectId == projectId).OrderBy(u => u.Name)
+            .Select(u => new { u.Id, Groep = u.Type != null ? (int?)u.Type.GroupId : null }).ToListAsync();
+        var hoofd = eenheden.Where(u => u.Groep == null || u.Groep == 1 || u.Groep == 4).Select(u => u.Id).ToList();
+        return hoofd.Count > 0 ? hoofd : eenheden.Select(u => u.Id).ToList();
+    }
+
     // (zie ook PlanningTrajectKoppeling: mijlpalen met dezelfde code als een planningstaak worden na het aanmaken gekoppeld)
     public async Task<Projecttraject> Instantiate(TrajectInstantiatieBO dto, string? userId)
     {
@@ -36,8 +48,7 @@ public class TrajectInstantiationService : ITrajectInstantiationService
         if (sjabloon == null)
             throw new InvalidOperationException("Geen (standaard)sjabloon gevonden om het traject uit op te bouwen.");
 
-        var unitIds = await _db.Units.Where(u => u.ProjectId == dto.ProjectId)
-            .OrderBy(u => u.Name).Select(u => u.Id).ToListAsync();
+        var unitIds = await EenhedenMetEigenTraject(dto.ProjectId);
 
         var anchorBase = dto.Startdatum
                          ?? project.ProjectStartDate
@@ -130,8 +141,7 @@ public class TrajectInstantiationService : ITrajectInstantiationService
         var sjabloon = await _sjablonen.GetById(sid, includeDetails: true);
         if (sjabloon == null) return 0;
 
-        var unitIds = await _db.Units.Where(u => u.ProjectId == traject.ProjectId)
-            .OrderBy(u => u.Name).Select(u => u.Id).ToListAsync();
+        var unitIds = await EenhedenMetEigenTraject(traject.ProjectId);
 
         var faseByCode = traject.Fases
             .Where(f => !string.IsNullOrWhiteSpace(f.Code))
@@ -455,7 +465,7 @@ public class TrajectInstantiationService : ITrajectInstantiationService
             .FirstOrDefaultAsync(t => t.Id == projecttrajectId);
         if (traject?.TrajectSjabloonId is not int sid) return (null, null, new List<int>());
         var sjabloon = await _sjablonen.GetById(sid, includeDetails: true);
-        var unitIds = await _db.Units.Where(u => u.ProjectId == traject.ProjectId).OrderBy(u => u.Name).Select(u => u.Id).ToListAsync();
+        var unitIds = await EenhedenMetEigenTraject(traject.ProjectId);
         return (traject, sjabloon, unitIds);
     }
 

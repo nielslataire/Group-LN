@@ -6,15 +6,15 @@ namespace ServiceCore.Planning;
 /// <summary>
 /// <paramref name="Verdiepingen"/> = het aantal bouwlagen boven de grond, het gelijkvloers meegeteld (gelijkvloers + 2 verdiepingen = 3).
 /// <paramref name="Terrassen"/> = de bouwlagen (1 = gelijkvloers, 2 = 1ste verdieping, ...) met terrassen of luifels bij de afdek; leeg of null = geen.
-/// <paramref name="Gevels"/> = de gekozen extra gevelafwerkingen naast de stenen gevel ("pleister", "hout", "aluminium"); leeg of null = enkel de stenen gevel.
+/// <paramref name="Gevels"/> = de gekozen gevelafwerkingen ("steen", "pleister", "hout", "aluminium"); ze zijn allemaal optioneel; leeg of null = geen enkele gevelafwerking.
 /// </summary>
-public sealed record SjabloonVariabelen(int Verdiepingen = 1, bool Kelder = false, string? Dak = null, IReadOnlyCollection<int>? Terrassen = null, IReadOnlyCollection<string>? Gevels = null);
+public sealed record SjabloonVariabelen(int Verdiepingen = 1, bool Kelder = false, string? Dak = null, IReadOnlyCollection<int>? Terrassen = null, IReadOnlyCollection<string>? Gevels = null, int Eenheden = 1);
 
-/// <summary>De gevelafwerkingen die een project naast de stenen gevel kan kiezen, in de volgorde waarin ze uitgevoerd worden: steen (altijd) eerst, dan pleister, daarna houten of aluminium bekleding.</summary>
+/// <summary>De gevelafwerkingen die een project kan kiezen (allemaal optioneel), in de volgorde waarin ze uitgevoerd worden: de stenen gevel loopt mee met de bovenbouw; pleister, houten en aluminium bekleding starten pas als de bovenbouw af is (pleister eerst).</summary>
 public static class GevelAfwerkingen
 {
-    public const string Pleister = "pleister", Hout = "hout", Aluminium = "aluminium";
-    public static readonly string[] Alle = { Pleister, Hout, Aluminium };
+    public const string Steen = "steen", Pleister = "pleister", Hout = "hout", Aluminium = "aluminium";
+    public static readonly string[] Alle = { Steen, Pleister, Hout, Aluminium };
     /// <summary>Alleen geldige keuzes, zonder dubbels, in vaste volgorde.</summary>
     public static List<string> Schoon(IEnumerable<string>? keuzes)
     {
@@ -90,7 +90,7 @@ public static class PlanningSjabloonUitrol
 
     /// <summary>
     /// De voorwaarde van een taak: een lijst "variabele:waarde" gescheiden door komma's, alle voorwaarden moeten kloppen.
-    /// kelder:ja|nee · dak:hellend|plat · gevel:pleister|hout|aluminium (enkel als die afwerking gekozen is) · terras:ja|nee (per bouwlaag) · laag:eerste|laatste|boven (eerste = het gelijkvloers, boven = niet het gelijkvloers).
+    /// kelder:ja|nee · dak:hellend|plat · gevel:steen|pleister|hout|aluminium (enkel als die afwerking gekozen is) · terras:ja|nee (per bouwlaag) · laag:eerste|laatste|boven (eerste = het gelijkvloers, boven = niet het gelijkvloers).
     /// Zo kan één blok per bouwlaag taken bevatten die enkel op het gelijkvloers, enkel zonder kelder of enkel bij terrassen voorkomen.
     /// </summary>
     public static IEnumerable<(string Variabele, string Waarde)> TaakVoorwaarden(string? voorwaarde)
@@ -116,7 +116,7 @@ public static class PlanningSjabloonUitrol
                 case "terras":
                     var heeft = index == 0 ? (v.Terrassen?.Count ?? 0) > 0 : v.Terrassen?.Contains(index) == true;
                     if (heeft != ja) return false; break;
-                case "gevel": // een extra gevelafwerking (pleister, hout, aluminium): de taak komt enkel als ze gekozen is
+                case "gevel": // een gevelafwerking (steen, pleister, hout, aluminium): de taak komt enkel als ze gekozen is
                     if ((v.Gevels?.Contains(waarde, StringComparer.OrdinalIgnoreCase) == true) != ja) return false; break;
                 case "grond": // de bouwlaag rust op de grond: het gelijkvloers zonder kelder
                     if ((index <= 1 && !v.Kelder) != ja) return false; break;
@@ -160,6 +160,10 @@ public static class PlanningSjabloonUitrol
 
     /// <summary>De bouwlaag zoals wij ze noemen: 1 = gelijkvloers, 2 = 1ste verdieping, 3 = 2de verdieping, ...</summary>
     public static string BouwlaagNaam(int bouwlaag) => bouwlaag <= 1 ? "gelijkvloers" : SchijfSjabloonUitrol.Rangtelwoord(bouwlaag - 1) + " verdieping";
+
+    /// <summary>De duur van een taak: de vaste duur, of bij "dagen per eenheid" dagen × het aantal eenheden van de planning (minstens 1 dag).</summary>
+    public static int DuurVan(PlanningSjabloonTaak t, int eenheden)
+        => t.DuurPerEenheid is > 0m ? Math.Max(1, (int)Math.Ceiling((double)t.DuurPerEenheid.Value * Math.Max(1, eenheden))) : Math.Max(0, t.Duur);
 
     public static SjabloonUitrolling Rol(PlanningSjabloon sjabloon, SjabloonVariabelen v)
     {
@@ -235,6 +239,9 @@ public static class PlanningSjabloonUitrol
         {
             var kandidaten = instanties.Where(i => i.Blok.Id == doel.Id).SelectMany(i => i.Items.Select(x => (Inst: i, x.T, x.Laag))).ToList();
             if (kandidaten.Count == 0) return Array.Empty<string>();
+            // Een taak buiten een blok "één fase, taken per bouwlaag" wacht op de hele fase (bv. de gevelpleister start pas als de bovenbouw af is).
+            if (doel.Herhaling == PerBouwlaagEenFase && vanBlok.Id != doel.Id)
+                return kandidaten.Select(k => k.Inst.Sleutel(k.T, k.Laag)).ToList();
             var lagen = kandidaten.Select(k => k.Laag).Distinct().ToList();
             var laag = doel.Herhaling >= 1 && vanBlok.Herhaling >= 1 && vanLaag > 0 && lagen.Contains(vanLaag)
                 ? vanLaag
@@ -259,7 +266,7 @@ public static class PlanningSjabloonUitrol
                 var taakNaam = inst.Blok.Herhaling == PerBouwlaagEenFase && laag > 0 && n > 1 ? $"{t.Naam} {BouwlaagNaam(laag)}" : t.Naam;
                 var taak = new UitgerolTaak
                 {
-                    Sleutel = inst.Sleutel(t, laag), Naam = taakNaam, Beschrijving = t.Beschrijving, Duur = Math.Max(0, t.Duur),
+                    Sleutel = inst.Sleutel(t, laag), Naam = taakNaam, Beschrijving = t.Beschrijving, Duur = DuurVan(t, v.Eenheden),
                     Code = t.Code, Estafette = t.Estafette, EstafetteWacht = t.EstafetteWacht, BouwstaatId = t.BouwstaatId, ActivityId = t.ActivityId,
                     Subfase = inst.Blok.Herhaling == PerBouwlaagEenFase && laag > 0 && n > 1 ? char.ToUpperInvariant(BouwlaagNaam(laag)[0]) + BouwlaagNaam(laag)[1..] : null,
                 };

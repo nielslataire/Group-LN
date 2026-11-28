@@ -1487,10 +1487,14 @@
         $("gl-v2-pl-pj-hoofd-rij").hidden = !een;
         $("gl-v2-pl-pj-groep-rij").hidden = een;
         $("gl-v2-pl-pj-indeel-rij").hidden = een || pjVrij().length < 2;
-        $("gl-v2-pl-pj-groep-rij").hidden = een || pj.indeel;
+        var gebouw = !!(pj.gekozen && pj.gekozen.isGebouw);
+        $("gl-v2-pl-pj-indeel-rij").hidden = een || gebouw || pjVrij().length < 2;
+        $("gl-v2-pl-pj-groep-rij").hidden = een || gebouw || pj.indeel;
         var vrij = (state.eenheden || []).filter(function (e) { return e.planningId == null; }).length;
         $("gl-v2-pl-pj-elk").textContent = "Per eenheid" + (vrij ? " (" + vrij + ")" : "");
-        $("gl-v2-pl-pj-een-help").textContent = "Bij een appartementsgebouw is één planning de standaard: de werf loopt per bouwlaag, niet per appartement. “Per eenheid” maakt " + (vrij ? vrij + " planningen" : "een planning per eenheid") + ".";
+        $("gl-v2-pl-pj-een-help").textContent = gebouw
+            ? "Bij een appartementsgebouw is één planning de standaard: de werf loopt per bouwlaag, niet per appartement. “Per eenheid” maakt " + (vrij ? vrij + " planningen" : "een planning per eenheid") + "."
+            : "Bij woningen krijgt elke woning een planning, of je zet er meerdere in één planning (hieronder). “Eén planning” zet alles samen in één planning.";
     }
     function pjHoofdRij() { pjSegmenten(); }
     // Wat de AI invulde is blauw met een AI-label tot jij het zelf wijzigt
@@ -1575,10 +1579,11 @@
     function pjKaartRadio(id) { document.querySelectorAll("input[name=\"gl-v2-pl-pj-keuze\"]").forEach(function (r) { r.checked = parseInt(r.value, 10) === id; }); }
     function pjKies(k) {
         pj.gekozen = k; pj.ai = {};
-        pjZetAntwoorden({ verdiepingen: k.verdiepingen, kelder: k.kelder, dak: k.dak, terrassen: [], eenPlanningVoorAlles: false });
+        // Een sjabloon voor een gebouw (blokken per bouwlaag) start met één planning voor het gebouw; woningen krijgen er elk een
+        pjZetAntwoorden({ verdiepingen: k.verdiepingen, kelder: k.kelder, dak: k.dak, terrassen: [], eenPlanningVoorAlles: !!k.isGebouw });
         $("gl-v2-pl-pj-hoofd").checked = true; $("gl-v2-pl-pj-groep").value = ""; pj.indeel = false; pj.nrs = {}; pjIndeelToon(); pjSegmenten();
         $("gl-v2-pl-pj-vervang").checked = false; $("gl-v2-pl-pj-q-vervang").hidden = !canDelete;
-        pj.gevels = []; $("gl-v2-pl-pj-q-gevel").hidden = !k.heeftGevel; pjGevelToon();
+        pj.gevels = k.heeftGevel ? ["steen"] : []; $("gl-v2-pl-pj-q-gevel").hidden = !k.heeftGevel; pjGevelToon();   // de stenen gevel is de gewone keuze; alles is optioneel
         // Startmoment van de woningen: enkel bij een sjabloon met de planning van het project zelf; standaard wat het sjabloon zegt
         $("gl-v2-pl-pj-q-startna").hidden = !k.woningenStartNa;
         var startItems = [
@@ -1616,8 +1621,27 @@
                     return "<label class=\"gl-v2-radio-card\"><input type=\"radio\" name=\"gl-v2-pl-pj-keuze\" value=\"" + k.id + "\" /><span><b>" + esc(k.naam) + "</b><small>" + esc(k.kern || k.beschrijving || "") + "</small></span></label>";
                 }).join("");
                 if (pj.keuzes.length === 1) { var r = lijst.querySelector("input"); r.checked = true; pjKies(pj.keuzes[0]); }
+                pjBewaardeKeuze(lijst);
             })
             .catch(function () { lijst.innerHTML = ""; $("gl-v2-pl-pj-info").textContent = "De projectsjablonen konden niet geladen worden. Probeer het zo opnieuw."; });
+    }
+    // Het sjabloon en de antwoorden die op het project bewaard zijn (bij het aanmaken of de vorige keer toepassen), vooraf ingevuld
+    function pjBewaardeKeuze(lijst) {
+        if (!cfg.projectKeuzeUrl) return;
+        fetch(cfg.projectKeuzeUrl, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (bk) {
+                if (!bk || !bk.sjabloonId) return;
+                var k = pj.keuzes.filter(function (x) { return x.id === bk.sjabloonId; })[0];
+                if (!k) return;
+                var radio = lijst.querySelector("input[value=\"" + k.id + "\"]"); if (radio) radio.checked = true;
+                pjKies(k);
+                var a = bk.antwoorden || {};
+                pjZetAntwoorden({ verdiepingen: a.verdiepingen || k.verdiepingen, kelder: !!a.kelder, dak: a.dak || "", terrassen: a.terrassen || [], eenPlanningVoorAlles: a.eenPlanningVoorAlles != null ? !!a.eenPlanningVoorAlles : !!k.isGebouw });
+                pj.gevels = k.heeftGevel ? (a.gevelafwerkingen || []).slice() : [];
+                pjGevelToon(); pjPlanVoorbeeld();
+            })
+            .catch(function () { /* geen bewaarde keuze: niets te doen */ });
     }
     $("gl-v2-pl-pj").addEventListener("change", function (e) {
         if (e.target.name === "gl-v2-pl-pj-keuze") { var id = parseInt(e.target.value, 10); var k = pj.keuzes.filter(function (x) { return x.id === id; })[0]; if (k) pjKies(k); return; }
@@ -1625,7 +1649,7 @@
         if (e.target.id === "gl-v2-pl-pj-startna" || e.target.id === "gl-v2-pl-pj-groep") pjPlanVoorbeeld();
         if (e.target.hasAttribute && e.target.hasAttribute("data-pj-nr")) { pj.nrs[e.target.getAttribute("data-pj-nr")] = Math.max(0, parseInt(e.target.value, 10) || 0); pjPlanVoorbeeld(); }
     });
-    // Gevelafwerkingen: meerdere tegelijk (pleister, hout, aluminium); de stenen gevel is altijd aanwezig
+    // Gevelafwerkingen: meerdere tegelijk (steen, pleister, hout, aluminium), allemaal optioneel
     function pjGevelToon() {
         $("gl-v2-pl-pj-gevel-seg").querySelectorAll("button").forEach(function (b) { var aan = pj.gevels.indexOf(b.getAttribute("data-v")) >= 0; b.classList.toggle("is-active", aan); b.setAttribute("aria-pressed", aan ? "true" : "false"); });
     }

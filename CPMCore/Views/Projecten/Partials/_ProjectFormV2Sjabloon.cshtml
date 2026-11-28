@@ -1,0 +1,46 @@
+@using CPMCore.Models.GlV2
+@model CPMCore.Models.Projecten.ProjectModel
+@*
+    gl-v2 — Projectsjabloon kiezen bij het aanmaken van een project (E1, 28/11/2026). Optioneel. Alleen de keuze en de antwoorden worden op het
+    project bewaard en het traject wordt meteen aangemaakt; planning en schijven pas in hun fase, via Planning › Projectsjabloon (bewuste actie).
+    De velden (SjabloonId, SjabloonVerdiepingen, SjabloonKelder, SjabloonDak) zijn gewone formuliervelden van ProjectModel.
+*@
+@if (Model.SjabloonKeuzes.Count > 0)
+{
+    var items = Model.SjabloonKeuzes.Select(k => new GlV2SelectItem { Value = k.Id.ToString(), Text = k.Naam }).ToList();
+    var dakItems = new List<GlV2SelectItem> { new() { Value = "hellend", Text = "Hellend dak" }, new() { Value = "plat", Text = "Plat dak" } };
+    <div class="gl-v2-section-card">
+        <div class="gl-v2-section-card-header">
+            <span class="gl-v2-section-card-icon"><i class="ph ph-stack" aria-hidden="true"></i></span>
+            <h2 class="gl-v2-section-card-title">Projectsjabloon</h2>
+            <span class="gl-v2-field-divider"></span>
+            <span class="gl-v2-section-card-desc">Optioneel. Het traject wordt meteen aangemaakt; planning en schijven pas later, in hun fase.</span>
+        </div>
+        <div class="gl-v2-section-grid">
+            <div class="gl-v2-col-12">
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                {
+                    Name = "SjabloonId", Id = "gl-v2-pf-sjabloon", Label = "Projectsjabloon", Value = Model.SjabloonId?.ToString() ?? "", EmptyText = "— nog geen keuze —", Items = items,
+                    Help = "Je kan dit later nog kiezen of wijzigen bij Planning › Projectsjabloon of op de projectpagina."
+                })
+            </div>
+            <div class="gl-v2-col-4">
+                <div class="gl-v2-field">
+                    <label class="gl-v2-field-label" for="gl-v2-pf-sj-verd">Bouwlagen</label>
+                    <div class="gl-v2-field-box"><input type="number" class="gl-v2-field-input" id="gl-v2-pf-sj-verd" name="SjabloonVerdiepingen" min="1" max="20" step="1" value="@Model.SjabloonVerdiepingen" inputmode="numeric" /></div>
+                    <span class="gl-v2-field-help">Gelijkvloers en verdiepingen samen.</span>
+                </div>
+            </div>
+            <div class="gl-v2-col-4">
+                @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm { Name = "SjabloonDak", Id = "gl-v2-pf-sj-dak", Label = "Dak", Value = Model.SjabloonDak ?? "", EmptyText = "— geen keuze —", Items = dakItems })
+            </div>
+            <div class="gl-v2-col-4">
+                <label class="gl-v2-toggle-row" for="gl-v2-pf-sj-kelder">
+                    <input type="checkbox" id="gl-v2-pf-sj-kelder" name="SjabloonKelder" class="gl-v2-toggle-switch" value="true" @(Model.SjabloonKelder ? "checked" : "") />
+                    <input type="hidden" name="SjabloonKelder" value="false" />
+                    <span class="gl-v2-toggle-text"><span class="gl-v2-toggle-label">Met kelder</span><span class="gl-v2-toggle-desc">een kelder of ondergrondse verdieping</span></span>
+                </label>
+            </div>
+        </div>
+    </div>
+}

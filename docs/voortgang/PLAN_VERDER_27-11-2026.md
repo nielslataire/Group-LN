@@ -4,6 +4,17 @@ Doel van dit document: één plek met alles wat nog open staat, in een volgorde 
 
 Legenda: **Wie** = wie het volgende doet (C = Claude bouwt, N = Niels beslist of test, CN = beide). **Staat**: nieuw / gebouwd, niet getest / wacht op Niels.
 
+## Update 28/11/2026
+- **A3 gebouwd** (niet in de browser getest): een projectsjabloon voor een gebouw start met "Eén planning voor het gebouw", "Woningen per planning" enkel bij woningen, per betalingsgroep staat wat ongemoeid blijft en waarom, met het verschil in aantal schijven. 190 tests groen.
+- **C2 bevestigd** in code en logboek (17/11): estafette per taak kiezen, voorgangers uit andere plannings zichtbaar, blokkerende fouten als `.gl-v2-inline-error`. Enkel laad- en printfouten blijven een toast (bewust).
+- **A2 afgerond:** in de triggereditor (Instellingen › Trajectsjablonen) heeft de actie "Verwittig rol", "Verwittig gebruiker" en "Plan herinnering" nu het veld "Wat moet de ontvanger doen? (optioneel)" (parameter `omschrijving`); leeg = de standaardtekst bij de mijlpaalcode. Bij "Maak taak" stond het al. 201 planning-, traject- en triggertests groen.
+- **Fase A is hiermee gebouwd.** Wat overblijft is testen door Niels: A1 (gevelafwerking in het toepassen-venster), A2 (testtrigger met `_migrations/testdata/TEST_trigger_rolmail.sql`, teksten in `MijlpaalVerwachting.cs` nalezen) en A3 (de standaard "Eén planning" bij een gebouw).
+- **A1 aangepast na de test van Niels (28/11):** het gevelmetselwerk is ook optioneel (keuze "Stenen gevel"), en gevelpleister, hout en aluminium starten pas als de hele bovenbouw af is. Migratie `171_Gevelafwerkingen_na_bovenbouw.sql` vóór de volgende test draaien en het projectsjabloon opnieuw toepassen (Vervang).
+- **B3 vervalt** (grond is een aktefactuur, geen schijf, ook voor appartementen). **B4 besloten en gebouwd (28/11):** parkings en bergingen krijgen geen eigen mijlpalen per eenheid (volgen hun hoofdeenheid) en geen eigen taken in de planning. Nog open: een bestaand traject (project 81) opruimen. **C3 gebouwd** (weerstationwaarschuwing op de klantkaart).
+- **B1 vervalt, B2 en C4 gebouwd (28/11):** afwerking deels parallel (migratie 172, aanname: tegelwerk en parket parallel, keuken na beide); mijlpaal koppelen aan een taak of fase vanuit het mijlpaalformulier van het Traject (veld "Volgt de planning"). Nog te draaien vóór een deploy: 170 tot en met 176 (176 = projectsjabloon op het project; 175 = alle afwerking per eenheid; 173 = afwerking elektriciteit, sanitaire en verwarmingstoestellen parallel, 174 = duur per eenheid en die taken na de vloerafwerking).
+- **E1 gebouwd (28/11):** projectsjabloon kiezen bij het aanmaken van een project of later op de projectpagina; keuze en antwoorden bewaard op het project (migratie 176), traject meteen aangemaakt, planning en schijven blijven een bewuste actie.
+- **C1:** testlijst in `docs/voortgang/PLANNING_TESTLIJST_C1.md`.
+
 ## Fase A. Nu bezig (branch `planning-gevel-mails-voorbeeld`)
 
 | # | Punt | Staat | Wie | Klaar als |
@@ -64,7 +75,7 @@ B te bevestigen schijven en boekhoudlijst · D poorten · E marge en kritieke we
 |---|---|---|
 | G1 | Alle help-screenshots in één batch met Playwright nemen volgens `docs/archive/help/HELP_SCREENSHOTS.md` (o.a. toepassen-venster, aktefacturen, bouwstaten, gevelafwerking) | C |
 | G2 | Facturatietests van Niels (instellingen Aktefacturen, werkenfactuur-termijn, geen extra vermelding): Niels zei 27/11 klaar | N bevestigd |
-| G3 | Migratielijst bijhouden: wat moet gedraaid zijn vóór een deploy. Nu nog te draaien: **170**. Gedraaid: 166 t/m 169 | CN |
+| G3 | Migratielijst bijhouden: wat moet gedraaid zijn vóór een deploy. Nu nog te draaien: **170 en 171** (171 = gevel na de bovenbouw, 28/11). Gedraaid: 166 t/m 169 | CN |
 | G4 | De uitgebreide tests in de browser bij elke afgewerkte fase; veel is nu alleen met unit-tests gecontroleerd | N |
 | G5 | Branch-hygiëne: `master` is de stabiele lijn, per taak een korte branch; `layout-experiment` verwijderen als back-up niet meer nodig is | CN |
 

@@ -1,4 +1,5 @@
 using DALCore.Models;
+using FacadeCore;
 
 namespace CPMCore.Models.Traject;
 
@@ -22,4 +23,10 @@ public class MijlpaalModalV2Vm
     public List<Mijlpaal> Mijlpalen { get; set; } = new();
 
     public int? ActieveFaseId { get; set; }
+
+    /// <summary>Fases en taken van de planning waaraan de mijlpaal gekoppeld kan worden; leeg = het veld verschijnt niet.</summary>
+    public List<PlanningKoppelDoel> PlanningDoelen { get; set; } = new();
+
+    /// <summary>De huidige koppeling met de planning: "taak:12", "fase:3" of leeg.</summary>
+    public string? HuidigePlanningKoppeling { get; set; }
 }

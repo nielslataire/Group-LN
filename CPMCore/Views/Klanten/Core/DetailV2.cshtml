@@ -357,6 +357,13 @@
                         <span class="gl-v2-detail-value is-empty">geen startdatum ingegeven — werkdagen nog niet te berekenen</span>
                     }
                 </div>
+                @if (Model.WeatherStationMissing && Model.FinalConstructionDate != DateOnly.MinValue)
+                {
+                    <div class="gl-v2-notice gl-v2-notice-compact is-warning" role="status">
+                        <i class="ph ph-warning" aria-hidden="true"></i>
+                        <span>Dit project heeft geen weerstation: de voorziene oplevering rekent zonder weerverlet. <a href="@Url.Action("Edit", "Projecten", new { projectid = Model.ProjectId })">Kies een weerstation</a></span>
+                    </div>
+                }
                 @if (projectUnits.Count > 1)
                 {
                     <span class="gl-v2-kd-unit-more">+ @(projectUnits.Count - 1) andere eenhe@(projectUnits.Count - 1 == 1 ? "id" : "den")</span>

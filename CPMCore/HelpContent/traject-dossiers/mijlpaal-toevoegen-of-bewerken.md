@@ -48,6 +48,8 @@ Bij **Bereikt** kun je **Bereikt op** invullen. Laat je die leeg, dan neemt CPM 
 
 Bij **Of relatief** kies je het aantal dagen na een andere mijlpaal.
 
+Bij een bestaande mijlpaal staat daaronder **Volgt de planning** (enkel als je ook schrijfrecht op de planning hebt en de mijlpaal niets anders, zoals een document of dossier, volgt). Kies daar een fase of taak van de planning: de streefdatum volgt dan het einde ervan en de mijlpaal staat op bereikt zodra die klaar is. Kies **geen koppeling** om het los te maken. Een mijlpaal van één woning of appartement kan enkel aan een taak of fase in de planning van die eenheid hangen.
+
 ## De verantwoordelijke en de opmerking
 
 Kies de **Verantwoordelijke rol**. Zet **Verplichte mijlpaal** aan als de fase niet afgerond mag worden zonder deze mijlpaal. Een **Opmerking** is enkel voor intern gebruik.

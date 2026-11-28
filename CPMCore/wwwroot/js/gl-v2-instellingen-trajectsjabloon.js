@@ -311,15 +311,15 @@
     }
 
     var TRIGGER_ACTIE_PARAM_SCHEMA = {
-        0: [{ key: "rol", label: "Rol (optioneel)", type: "select-int", options: rolOpties, blank: "(rol van de mijlpaal)" }, { key: "email", label: "E-mailadres, override (optioneel)", type: "text", placeholder: "naam@bedrijf.be" }],
-        1: [{ key: "userId", label: "Gebruiker-Id (optioneel)", type: "text", placeholder: "(verantwoordelijke van de mijlpaal)" }],
+        0: [{ key: "rol", label: "Rol (optioneel)", type: "select-int", options: rolOpties, blank: "(rol van de mijlpaal)" }, { key: "email", label: "E-mailadres, override (optioneel)", type: "text", placeholder: "naam@bedrijf.be" }, { key: "omschrijving", label: "Wat moet de ontvanger doen? (optioneel)", type: "text", placeholder: "(standaardtekst bij deze mijlpaal)" }],
+        1: [{ key: "userId", label: "Gebruiker-Id (optioneel)", type: "text", placeholder: "(verantwoordelijke van de mijlpaal)" }, { key: "omschrijving", label: "Wat moet de ontvanger doen? (optioneel)", type: "text", placeholder: "(standaardtekst bij deze mijlpaal)" }],
         2: [{ key: "titel", label: "Titel (optioneel)", type: "text", placeholder: "(mijlpaalnaam)" }, { key: "omschrijving", label: "Omschrijving (optioneel)", type: "text" },
             { key: "userId", label: "Toegewezen gebruiker-Id (optioneel)", type: "text" }, { key: "rol", label: "Of toegewezen rol (optioneel)", type: "select-int", options: rolOpties, blank: "(geen)" },
             { key: "offsetDagen", label: "Vervaldag, dagen na bereiken (optioneel)", type: "number", placeholder: "7" }],
         3: [{ key: "kind", label: "Soort dossier (optioneel)", type: "select-int", options: dossierKindOpties, blank: "Vrij dossier" }, { key: "titel", label: "Titel (optioneel)", type: "text", placeholder: "(mijlpaalnaam)" }],
         4: [{ key: "vlag", label: "Vlag", type: "select-str", options: projectVlagOpties, required: true, blank: "Kies een vlag" }, { key: "waarde", label: "Waarde", type: "toggle", default: true }],
         5: [{ key: "status", label: "Nieuwe Project.StatusId", type: "number", required: true, hint: "Bekende waarden: 1 Opgeleverd, 2 Uitvoering, 3 Ontwerp, 4 Bouwaanvraag, 5 Voorverkoop, 6 Stopgezet. Mogelijk bestaan er meer." }],
-        6: [{ key: "userId", label: "Gebruiker-Id (optioneel)", type: "text", placeholder: "(verantwoordelijke van de mijlpaal)" }],
+        6: [{ key: "userId", label: "Gebruiker-Id (optioneel)", type: "text", placeholder: "(verantwoordelijke van de mijlpaal)" }, { key: "omschrijving", label: "Wat moet de ontvanger doen? (optioneel)", type: "text", placeholder: "(standaardtekst bij deze mijlpaal)" }],
         7: [], 8: []
     };
     function paramsToObject(json) { if (!json) return {}; try { var o = JSON.parse(json); return (o && typeof o === "object" && !Array.isArray(o)) ? o : {}; } catch (e) { return {}; } }

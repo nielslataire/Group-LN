@@ -48,6 +48,12 @@ public partial class Project
 
     public int? ExecutionDays { get; set; }
 
+    /// <summary>Het gekozen projectsjabloon (migratie 176); leeg = nog geen keuze.</summary>
+    public int? ProjectSjabloonId { get; set; }
+
+    /// <summary>De antwoorden bij het projectsjabloon (bouwlagen, kelder, dak, ...) als JSON; aanpasbaar, toepassen blijft een bewuste actie.</summary>
+    public string ProjectSjabloonAntwoorden { get; set; }
+
     public int? WheaterStationId { get; set; }
 
     public int? DefaultPictureId { get; set; }

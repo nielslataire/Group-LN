@@ -158,15 +158,16 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
         var traject = await _db.TrajectSjabloon.AsNoTracking().Select(p => new { p.Id, N = p.Fases.Count }).ToDictionaryAsync(x => x.Id, x => x.N);
         var schijven = await _db.SchijfSjabloon.AsNoTracking().Select(p => new { p.Id, N = p.Schijven.Count }).ToDictionaryAsync(x => x.Id, x => x.N);
         var planIds = lijst.Where(s => s.PlanningSjabloonId != null).Select(s => s.PlanningSjabloonId!.Value).Distinct().ToList();
-        var metGevel = (await _db.PlanningSjabloon.AsNoTracking().Include(p => p.Blokken).ThenInclude(b => b.Taken).Where(p => planIds.Contains(p.Id)).ToListAsync())
-            .Where(p => PlanningSjabloonUitrol.GebruiktVariabele(p, "gevel")).Select(p => p.Id).ToHashSet();
+        var plannen = await _db.PlanningSjabloon.AsNoTracking().Include(p => p.Blokken).ThenInclude(b => b.Taken).Where(p => planIds.Contains(p.Id)).ToListAsync();
+        var metGevel = plannen.Where(p => PlanningSjabloonUitrol.GebruiktVariabele(p, "gevel")).Select(p => p.Id).ToHashSet();
+        var gebouwen = plannen.Where(p => p.Blokken.Any(b => b.Herhaling >= 1)).Select(p => p.Id).ToHashSet();   // blokken per bouwlaag = een gebouw
         return lijst.Select(s =>
         {
             var delen = new List<string>();
             if (s.PlanningSjabloonId is int p && planning.TryGetValue(p, out var np)) delen.Add($"planning {np} {(np == 1 ? "fase" : "fases")}");
             if (s.TrajectSjabloonId is int t && traject.TryGetValue(t, out var nt)) delen.Add($"traject {nt} {(nt == 1 ? "fase" : "fases")}");
             if (s.SchijfSjabloonId is int c && schijven.TryGetValue(c, out var nc)) delen.Add($"{nc} {(nc == 1 ? "schijf" : "schijven")}");
-            return new ProjectSjabloonKeuze { Id = s.Id, Naam = s.Naam, Beschrijving = s.Beschrijving, Verdiepingen = Math.Max(1, s.StandaardVerdiepingen), Kelder = s.StandaardKelder, Dak = s.StandaardDak, WoningenStartNa = s.PlanningSjabloonProjectId == null ? null : s.WoningenStartNa, HeeftGevel = s.PlanningSjabloonId is int gp && metGevel.Contains(gp), Kern = delen.Count == 0 ? null : string.Join(" · ", delen) };
+            return new ProjectSjabloonKeuze { Id = s.Id, Naam = s.Naam, Beschrijving = s.Beschrijving, Verdiepingen = Math.Max(1, s.StandaardVerdiepingen), Kelder = s.StandaardKelder, Dak = s.StandaardDak, WoningenStartNa = s.PlanningSjabloonProjectId == null ? null : s.WoningenStartNa, HeeftGevel = s.PlanningSjabloonId is int gp && metGevel.Contains(gp), IsGebouw = s.PlanningSjabloonId is int gb && gebouwen.Contains(gb), Kern = delen.Count == 0 ? null : string.Join(" · ", delen) };
         }).ToList();
     }
 
@@ -245,6 +246,79 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
         return null;
     }
 
+    /// <summary>Maakt het traject van het project aan en laat de "dak dicht"-mijlpaal van het andere dak weg als het dak gekozen is. Fouten komen als opmerking in het resultaat.</summary>
+    private async Task TrajectAanmaken(int projectId, int trajectSjabloonId, string trajectNaam, ProjectSjabloonAntwoorden a, ProjectSjabloonResultaat res, string? userId)
+    {
+        try
+        {
+            await _traject.Instantiate(new BOCore.TrajectInstantiatieBO { ProjectId = projectId, TrajectSjabloonId = trajectSjabloonId }, userId);
+            res.Stappen.Add($"Traject “{trajectNaam}” aangemaakt.");
+            // Is het dak gekozen, dan verdwijnt de "dak dicht"-mijlpaal van het andere dak (bij elke woning); zonder keuze blijven beide staan.
+            if (a.Dak is "plat" or "hellend")
+            {
+                var weg = a.Dak == "plat" ? "DAK_HELLEND_DICHT" : "DAK_PLAT_DICHT";
+                var ids = await _db.Mijlpaal.Where(m => m.Projecttraject.ProjectId == projectId && m.Code == weg).Select(m => m.Id).ToListAsync();
+                if (ids.Count > 0)
+                {
+                    _db.ProjectDossierMijlpaal.RemoveRange(await _db.ProjectDossierMijlpaal.Where(x => ids.Contains(x.MijlpaalId)).ToListAsync());
+                    _db.Mijlpaal.RemoveRange(await _db.Mijlpaal.Where(m => ids.Contains(m.Id)).ToListAsync());
+                    await _db.SaveChangesAsync();
+                    res.Stappen.Add($"{ids.Count} mijlpaal{(ids.Count == 1 ? "" : "en")} voor het {(a.Dak == "plat" ? "hellende" : "platte")} dak weggelaten.");
+                }
+            }
+        }
+        catch (Exception ex) { res.Opmerkingen.Add("Het traject kon niet aangemaakt worden: " + ex.Message); }
+    }
+
+    // ── De keuze op het project (E1) ──
+
+    public async Task<ProjectSjabloonProjectKeuze> ProjectKeuze(int projectId)
+    {
+        var uit = new ProjectSjabloonProjectKeuze();
+        var p = await _db.Project.AsNoTracking().Where(x => x.ProjectId == projectId).Select(x => new { x.ProjectSjabloonId, x.ProjectSjabloonAntwoorden }).FirstOrDefaultAsync();
+        if (p == null) return uit;
+        uit.SjabloonId = p.ProjectSjabloonId;
+        if (p.ProjectSjabloonId is int sid) uit.SjabloonNaam = await _db.ProjectSjabloon.AsNoTracking().Where(x => x.Id == sid).Select(x => x.Naam).FirstOrDefaultAsync();
+        if (!string.IsNullOrWhiteSpace(p.ProjectSjabloonAntwoorden))
+        {
+            try { uit.Antwoorden = System.Text.Json.JsonSerializer.Deserialize<ProjectSjabloonAntwoorden>(p.ProjectSjabloonAntwoorden, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new(); }
+            catch { uit.Antwoorden = new(); }
+        }
+        uit.HeeftTraject = await _db.Projecttraject.AsNoTracking().AnyAsync(t => t.ProjectId == projectId);
+        uit.HeeftPlanning = await _db.PlanningSectie.AsNoTracking().AnyAsync(s => s.ProjectId == projectId && s.IsActief);
+        uit.HeeftSchijven = await _db.InvoicingPaymentGroup.AsNoTracking().AnyAsync(g => g.ProjectId == projectId && g.InvoicingPaymentStages.Count > 1);
+        return uit;
+    }
+
+    public async Task<ProjectSjabloonResultaat> BewaarProjectKeuze(int projectId, int? sjabloonId, ProjectSjabloonAntwoorden? antwoorden, bool maakTraject, string? userId)
+    {
+        var res = new ProjectSjabloonResultaat();
+        var project = await _db.Project.FirstOrDefaultAsync(p => p.ProjectId == projectId);
+        if (project == null) { res.Fout = "Het project bestaat niet meer."; return res; }
+        if (sjabloonId == null)
+        {
+            project.ProjectSjabloonId = null; project.ProjectSjabloonAntwoorden = null;
+            await _db.SaveChangesAsync();
+            res.Ok = true; return res;
+        }
+        var sj = await _db.ProjectSjabloon.AsNoTracking().FirstOrDefaultAsync(x => x.Id == sjabloonId && x.IsActief);
+        if (sj == null) { res.Fout = "Het projectsjabloon bestaat niet meer of is inactief."; return res; }
+        var a = Schoon(antwoorden);
+        project.ProjectSjabloonId = sj.Id;
+        project.ProjectSjabloonAntwoorden = System.Text.Json.JsonSerializer.Serialize(a);
+        await _db.SaveChangesAsync();
+        res.Stappen.Add($"Projectsjabloon “{sj.Naam}” bewaard op het project.");
+        if (maakTraject && sj.TrajectSjabloonId is int tid)
+        {
+            var naam = await _db.TrajectSjabloon.AsNoTracking().Where(x => x.Id == tid).Select(x => x.Naam).FirstOrDefaultAsync();
+            if (naam == null) res.Opmerkingen.Add("Het trajectsjabloon van dit projectsjabloon bestaat niet meer: er komt geen traject.");
+            else if (await _db.Projecttraject.AnyAsync(t => t.ProjectId == projectId)) res.Opmerkingen.Add("Het project heeft al een traject: dat blijft ongewijzigd.");
+            else await TrajectAanmaken(projectId, tid, naam, a, res, userId);
+        }
+        res.Ok = true;
+        return res;
+    }
+
     // ── AI: anonieme context en controle ──
 
     public async Task<ProjectSjabloonAiContext> AiContext(int projectId)
@@ -285,7 +359,9 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
         var a = Schoon(antwoorden);
         var eenheden = await _db.Units.AsNoTracking().CountAsync(u => u.ProjectId == projectId);
         var woningen = a.EenPlanningVoorAlles ? 1 : Math.Clamp(Math.Max(1, eenheden), 1, 20);
-        var proef = PlanningSjabloonProef.Rekenen(pl, woningen, new SjabloonVariabelen(a.Verdiepingen, a.Kelder, a.Dak, a.Terrassen, a.Gevelafwerkingen));
+        // "Dagen per eenheid": bij één planning voor het gebouw telt het aantal hoofdeenheden, anders één eenheid per planning
+        var hoofdEenheden = (await _db.Units.AsNoTracking().Where(u => u.ProjectId == projectId).Select(u => u.Type != null ? (int?)u.Type.GroupId : null).ToListAsync()).Count(g => g == null || g == 1 || g == 4);
+        var proef = PlanningSjabloonProef.Rekenen(pl, woningen, new SjabloonVariabelen(a.Verdiepingen, a.Kelder, a.Dak, a.Terrassen, a.Gevelafwerkingen, a.EenPlanningVoorAlles ? Math.Max(1, hoofdEenheden) : 1));
         var wd = woningen > 1 ? proef.WerkdagenAlle : proef.Werkdagen;
         if (wd <= 0) return null;
         var max = await _db.Project.AsNoTracking().Where(p => p.ProjectId == projectId).Select(p => p.ExecutionDays).FirstOrDefaultAsync();
@@ -534,28 +610,7 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
             if (trajectNaam == null) res.Opmerkingen.Add("Het trajectsjabloon van dit projectsjabloon bestaat niet meer: er komt geen traject.");
             else if (await _db.Projecttraject.AnyAsync(t => t.ProjectId == projectId)) res.Opmerkingen.Add("Het project heeft al een traject: dat blijft ongewijzigd.");
             else if (!uitvoeren) res.Stappen.Add($"Traject “{trajectNaam}” wordt aangemaakt.");
-            else
-            {
-                try
-                {
-                    await _traject.Instantiate(new BOCore.TrajectInstantiatieBO { ProjectId = projectId, TrajectSjabloonId = trajectSjabloonId }, userId);
-                    res.Stappen.Add($"Traject “{trajectNaam}” aangemaakt.");
-                    // Is het dak gekozen, dan verdwijnt de "dak dicht"-mijlpaal van het andere dak (bij elke woning); zonder keuze blijven beide staan.
-                    if (a.Dak is "plat" or "hellend")
-                    {
-                        var weg = a.Dak == "plat" ? "DAK_HELLEND_DICHT" : "DAK_PLAT_DICHT";
-                        var ids = await _db.Mijlpaal.Where(m => m.Projecttraject.ProjectId == projectId && m.Code == weg).Select(m => m.Id).ToListAsync();
-                        if (ids.Count > 0)
-                        {
-                            _db.ProjectDossierMijlpaal.RemoveRange(await _db.ProjectDossierMijlpaal.Where(x => ids.Contains(x.MijlpaalId)).ToListAsync());
-                            _db.Mijlpaal.RemoveRange(await _db.Mijlpaal.Where(m => ids.Contains(m.Id)).ToListAsync());
-                            await _db.SaveChangesAsync();
-                            res.Stappen.Add($"{ids.Count} mijlpaal{(ids.Count == 1 ? "" : "en")} voor het {(a.Dak == "plat" ? "hellende" : "platte")} dak weggelaten.");
-                        }
-                    }
-                }
-                catch (Exception ex) { res.Opmerkingen.Add("Het traject kon niet aangemaakt worden: " + ex.Message); }
-            }
+            else await TrajectAanmaken(projectId, trajectSjabloonId, trajectNaam, a, res, userId);
         }
 
         // ── schijven: betalingsgroepen zonder (gebruikte) schijven.
@@ -579,8 +634,16 @@ public sealed class ProjectSjabloonService : IProjectSjabloonService
             if (groepen.Count == 0) res.Opmerkingen.Add("Er zijn nog geen betalingsgroepen: de schijven kan je later toepassen.");
             else
             {
-                var bezet = groepen.Count(g => !Leeg(g));
-                if (bezet > 0) res.Opmerkingen.Add($"{bezet} {(bezet == 1 ? "betalingsgroep heeft" : "betalingsgroepen hebben")} al schijven en blijven ongemoeid.");
+                // Per groep wat ongemoeid blijft en waarom, en waarom het aantal schijven verschilt van het sjabloon
+                foreach (var g in groepen.Where(x => !Leeg(x)))
+                {
+                    var n = g.InvoicingPaymentStages.Count;
+                    var br = g.InvoicingPaymentStages.Count(s => bereikt.Contains(s.Id)); var gf = g.InvoicingPaymentStages.Count(s => gefactureerd.Contains(s.Id));
+                    var voorstelGroep = bijgebouwGroepen.Contains(g.Id) && bij != null ? bij : hoofd;
+                    var tekst = $"Groep “{g.Name}” blijft ongemoeid: ze heeft al {n} {(n == 1 ? "schijf" : "schijven")}" + (br > 0 ? $", waarvan {br} bereikt" : "") + (gf > 0 ? $" en {gf} gefactureerd" : "");
+                    if (voorstelGroep != null && n != voorstelGroep.Schijven.Count) tekst += $"; het sjabloon zou er {voorstelGroep.Schijven.Count} zetten voor deze keuzes (kelder, dak, bouwlagen)";
+                    res.Opmerkingen.Add(tekst + ". Wil je de schijven van het sjabloon, verwijder dan eerst de schijven van deze groep.");
+                }
 
                 // Per lege groep het voorstel dat erbij hoort
                 var toe = new List<(InvoicingPaymentGroup Groep, SchijfVoorbeeld Voorstel, bool Bijgebouw)>();

@@ -201,3 +201,8 @@
 /* Voorbeeld: per bouwlaag (deelfase) ingesprongen onder het blok */
 .gl-v2-pls-pr.is-deel .gl-v2-pls-pn { padding-left: 14px; font-weight: 450; font-size: 11.5px; color: var(--gl-v2-muted); }
 .gl-v2-pls-pr.is-deel .gl-v2-pls-pd { color: var(--gl-v2-muted); }
+
+/* Eenheid bij de duur van een taak: "d" (vaste duur) of "d/eenh." (dagen per eenheid); een knop om te wisselen */
+.gl-v2-pls-dur .gl-v2-pls-pe { border: 0; background: transparent; cursor: pointer; font: inherit; color: inherit; white-space: nowrap; }
+.gl-v2-pls-dur .gl-v2-pls-pe[aria-pressed="true"] { color: var(--gl-v2-primary); font-weight: 600; }
+.gl-v2-pls-dur .gl-v2-pls-pe:focus-visible { outline: 2px solid var(--gl-v2-primary); outline-offset: 1px; border-radius: 4px; }

@@ -42,6 +42,7 @@
         { v: "laag:eenmalig", t: "Eén keer, na de bouwlagen (geen bouwlaag in de naam)" },
         { v: "laag:eenmalig,dak:plat", t: "Eén keer, enkel bij plat dak" },
         { v: "terras:ja", t: "Alleen bij terrassen of luifels" },
+        { v: "gevel:steen", t: "Alleen bij een stenen gevel" },
         { v: "gevel:pleister", t: "Alleen bij gevelpleister" },
         { v: "gevel:hout", t: "Alleen bij houten gevelbekleding" },
         { v: "gevel:aluminium", t: "Alleen bij aluminium gevelbekleding" },
@@ -75,7 +76,7 @@
                     voorwaarde: b.voorwaardeVariabele ? b.voorwaardeVariabele + ":" + (b.voorwaardeWaarde || "") : "", open: true,
                     taken: (b.taken || []).map(function (t) {
                         return {
-                            code: t.code || "", naam: t.naam || "", beschrijving: t.beschrijving || "", duur: t.duur == null ? 1 : t.duur, estafette: !!t.estafette, wacht: t.estafetteWacht || 0, voorwaarde: t.voorwaarde || "", bouwstaat: t.bouwstaatId ? String(t.bouwstaatId) : "", activiteit: t.activityId ? String(t.activityId) : "",
+                            code: t.code || "", naam: t.naam || "", beschrijving: t.beschrijving || "", duur: t.duur == null ? 1 : t.duur, dpe: t.duurPerEenheid != null ? t.duurPerEenheid : null, estafette: !!t.estafette, wacht: t.estafetteWacht || 0, voorwaarde: t.voorwaarde || "", bouwstaat: t.bouwstaatId ? String(t.bouwstaatId) : "", activiteit: t.activityId ? String(t.activityId) : "",
                             voorg: (t.voorgangers || []).map(function (v) { return { code: v.code, type: v.type || "FS", lag: v.wachtDagen || 0 }; })
                         };
                     })
@@ -136,7 +137,7 @@
     }
     function nieuweTaak(blok) {
         var naam = "Nieuwe taak", vorige = blok.taken[blok.taken.length - 1];
-        return { code: geefCode(naam), naam: naam, beschrijving: "", duur: 5, estafette: false, wacht: 0, voorg: vorige ? [{ code: vorige.code, type: "FS", lag: 0 }] : [] };
+        return { code: geefCode(naam), naam: naam, beschrijving: "", duur: 5, dpe: null, estafette: false, wacht: 0, voorg: vorige ? [{ code: vorige.code, type: "FS", lag: 0 }] : [] };
     }
 
     // GlV2-keuzelijst in JS-markup (zelfde structuur als GlV2/_SelectList, basisvariant); GlV2Select.init bedraadt ze na het tekenen
@@ -168,7 +169,8 @@
         return "<div class=\"gl-v2-pls-tr\" data-taak-rij " + id + ">" +
             "<span class=\"gl-v2-pls-grip\" data-grip title=\"Sleep om te herschikken\" aria-hidden=\"true\"><i class=\"ph ph-dots-six-vertical\"></i></span>" +
             "<div class=\"gl-v2-pls-nm\"><div class=\"gl-v2-field-box\"><input type=\"text\" class=\"gl-v2-field-input\" data-f=\"t-naam\" " + id + " value=\"" + esc(t.naam) + "\" maxlength=\"200\" placeholder=\"Naam van de taak\" aria-label=\"Naam van de taak\"" + (canWrite ? "" : " disabled") + " /></div><small data-code-van=\"" + esc(t.code) + "\">" + esc(t.code) + "</small></div>" +
-            "<div class=\"gl-v2-field-box gl-v2-pls-dur\"><input type=\"text\" inputmode=\"numeric\" maxlength=\"4\" autocomplete=\"off\" class=\"gl-v2-field-input\" data-f=\"t-duur\" " + id + " value=\"" + esc(t.duur) + "\" aria-label=\"Duur in werkdagen\"" + (canWrite ? "" : " disabled") + " /><span class=\"gl-v2-field-unit\">d</span></div>" +
+            "<div class=\"gl-v2-field-box gl-v2-pls-dur\"><input type=\"text\" inputmode=\"" + (t.dpe != null ? "decimal" : "numeric") + "\" maxlength=\"" + (t.dpe != null ? 5 : 4) + "\" autocomplete=\"off\" class=\"gl-v2-field-input\" data-f=\"t-duur\" " + id + " value=\"" + esc(t.dpe != null ? String(t.dpe).replace(".", ",") : t.duur) + "\" aria-label=\"" + (t.dpe != null ? "Werkdagen per eenheid" : "Duur in werkdagen") + "\"" + (canWrite ? "" : " disabled") + " />" +
+            (canWrite ? "<button type=\"button\" class=\"gl-v2-field-unit gl-v2-pls-pe\" data-act=\"t-pereenh\" " + id + " aria-pressed=\"" + (t.dpe != null ? "true" : "false") + "\" title=\"" + esc(t.dpe != null ? "Dagen per eenheid: de duur is dagen × het aantal eenheden van de planning. Klik voor een vaste duur." : "Vaste duur. Klik voor dagen per eenheid (bv. de afwerking van toestellen).") + "\">" + (t.dpe != null ? "d/eenh." : "d") + "</button>" : "<span class=\"gl-v2-field-unit\">" + (t.dpe != null ? "d/eenh." : "d") + "</span>") + "</div>" +
             "<div class=\"gl-v2-pls-ps\">" + vgHtml + "</div>" +
             "<span class=\"gl-v2-pls-st\" data-start-van=\"" + esc(t.code) + "\"></span>" +
             "<button type=\"button\" class=\"gl-v2-pls-est" + (t.estafette ? " is-on" : "") + "\" data-act=\"t-est\" " + id + " aria-pressed=\"" + (t.estafette ? "true" : "false") + "\" title=\"" + esc(t.estafette ? "Wacht op de vorige woning" + (t.wacht ? " + " + t.wacht + " d" : "") : "Estafette uit") + "\"" + (canWrite ? "" : " disabled") + ">" + SVG_WONINGEN + "</button>" +
@@ -245,7 +247,7 @@
                 return {
                     code: b.code, naam: b.naam, herhaling: b.herhaling, volgtVorigeVerdieping: b.herhaling === 1 && b.volgt, voorwaardeVariabele: v[0] || null, voorwaardeWaarde: v[1] || null,
                     taken: b.taken.map(function (t) {
-                        return { code: t.code, naam: t.naam, beschrijving: t.beschrijving, duur: t.duur, estafette: t.estafette, estafetteWacht: t.estafette ? t.wacht : 0, voorwaarde: t.voorwaarde || null, bouwstaatId: t.bouwstaat ? parseInt(t.bouwstaat, 10) : null, activityId: t.activiteit ? parseInt(t.activiteit, 10) : null,
+                        return { code: t.code, naam: t.naam, beschrijving: t.beschrijving, duur: t.duur, duurPerEenheid: t.dpe != null && t.dpe > 0 ? t.dpe : null, estafette: t.estafette, estafetteWacht: t.estafette ? t.wacht : 0, voorwaarde: t.voorwaarde || null, bouwstaatId: t.bouwstaat ? parseInt(t.bouwstaat, 10) : null, activityId: t.activiteit ? parseInt(t.activiteit, 10) : null,
                             voorgangers: t.voorg.map(function (v2) { return { code: v2.code, type: v2.type, wachtDagen: v2.lag }; }) };
                     })
                 };
@@ -367,7 +369,11 @@
         var f = e.target.getAttribute("data-f"); if (!f) return;
         if (f === "b-naam") { blokVan(e.target).naam = e.target.value; verversNamen(); }
         else if (f === "t-naam") { taakVan(e.target).naam = e.target.value; verversNamen(); }
-        else if (f === "t-duur") { var cijfers = e.target.value.replace(/\D/g, ""); if (cijfers !== e.target.value) e.target.value = cijfers; taakVan(e.target).duur = cijfers === "" ? 0 : parseInt(cijfers, 10); }
+        else if (f === "t-duur") {
+            var tk = taakVan(e.target);
+            if (tk.dpe != null) { var dec = e.target.value.replace(/[^0-9.,]/g, "").replace(".", ","); if (dec !== e.target.value) e.target.value = dec; var nr = parseFloat(dec.replace(",", ".")); tk.dpe = isNaN(nr) || nr <= 0 ? 1 : Math.min(nr, 100); }
+            else { var cijfers = e.target.value.replace(/\D/g, ""); if (cijfers !== e.target.value) e.target.value = cijfers; tk.duur = cijfers === "" ? 0 : parseInt(cijfers, 10); }
+        }
         else return;
         markDirty();
     });
@@ -405,6 +411,7 @@
             var rijen = host.querySelectorAll("[data-b=\"" + bi + "\"][data-taak-rij] input[data-f=\"t-naam\"]"), l = rijen[rijen.length - 1];
             if (l) { l.focus(); l.select(); }
         }
+        else if (act === "t-pereenh") { t.dpe = t.dpe != null ? null : 1; markDirty(); render(); }
         else if (act === "t-est") { t.estafette = !t.estafette; if (!t.estafette) t.wacht = 0; markDirty(); render(); }
         else if (act === "v-toevoegen") openPick(bi, ti, -1);
         else if (act === "v-bewerk") openPick(bi, ti, pi);

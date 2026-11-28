@@ -23,7 +23,9 @@ faq:
   - q: En als het project al een traject heeft?
     a: Dan blijft dat traject ongewijzigd. Het projectsjabloon maakt enkel een traject als er nog geen is.
   - q: Wat gebeurt er met betalingsgroepen die al schijven hebben?
-    a: Die blijven ongemoeid. Enkel groepen zonder schijven, of met enkel de standaardschijf van 100 %, krijgen de schijven uit het sjabloon. Is er al gefactureerd of bereikt, dan verandert er niets.
+    a: Die blijven ongemoeid; bij **Wat er gebeurt** staat per groep hoeveel schijven ze heeft, hoeveel er bereikt of gefactureerd zijn en, als het sjabloon er een ander aantal zou zetten (door kelder, dak of bouwlagen), hoeveel. Wil je de schijven van het sjabloon, verwijder dan eerst de schijven van die groep. Enkel groepen zonder schijven, of met enkel de standaardschijf van 100 %, krijgen de schijven uit het sjabloon. Is er al gefactureerd of bereikt, dan verandert er niets.
+  - q: Eén planning of een planning per eenheid?
+    a: Bij een projectsjabloon voor een gebouw (met blokken per bouwlaag, zoals het appartementsgebouw) staat **Eén planning voor het gebouw** standaard aan: de werf loopt per bouwlaag, niet per appartement. Bij woningen krijgt elke woning een planning, of je zet er meerdere in één planning met **Woningen per planning** of **Woningen zelf indelen**; die twee opties zie je alleen bij woningen.
   - q: Wat doet de AI precies?
     a: Je beschrijft het gebouw in gewone woorden. De AI kiest uit je projectsjablonen het sjabloon dat het best past en vult de vragen in: aantal bouwlagen, terrassen of luifels, kelder, dak en of het één gebouw of losse woningen zijn. Daaronder zie je wat de AI heeft aangenomen omdat het er niet stond, eventuele vragen, en hoeveel werkdagen het plan volgens de planning duurt tegenover de uitvoeringstermijn van het project. Die duur rekent CPM zelf uit, niet de AI. Het is een voorstel: jij kijkt het na en past aan voor er iets gebeurt.
   - q: Wat ziet de AI van mijn project?
@@ -41,7 +43,7 @@ faq:
 4. Beantwoord bij stap 3 en 4 de vragen over het gebouw:
    - het aantal **bouwlagen** met de knoppen − en + (gelijkvloers + verdiepingen: gelijkvloers + 2 verdiepingen = 3)
    - bij welke afdek **terrassen of luifels** komen (knoppen GV, 1, 2 …; leeg = geen)
-   - welke **gevelafwerkingen** er naast de stenen gevel komen (blok **Gevelafwerking**, enkel zichtbaar als het planningssjabloon ze kent): **Gevelpleister**, **Houten bekleding** en/of **Aluminium bekleding**. Je kan er meerdere kiezen of geen. De stenen gevel is er altijd en komt eerst, daarna de gevelpleister, en pas daarna de houten of aluminium bekleding
+   - welke **gevelafwerkingen** er komen (blok **Gevelafwerking**, enkel zichtbaar als het planningssjabloon ze kent): **Stenen gevel**, **Gevelpleister**, **Houten bekleding** en/of **Aluminium bekleding**. Alles is optioneel, je kan er meerdere kiezen of geen; de stenen gevel staat standaard aangevinkt. De stenen gevel loopt mee met de bovenbouw. De gevelpleister en de houten of aluminium bekleding starten pas als de bovenbouw af is, eerst de pleister en daarna de bekleding.
    - of er een **kelder** is (**Met kelder** of **Zonder**)
    - of het **dak** plat of hellend is, of **Geen keuze**
    - of het **één planning voor het gebouw** is (een gebouw met appartementen) of **per eenheid**, met erbij hoeveel eenheden nog geen planning hebben. Bij een appartementsgebouw is één planning de standaard: de werf loopt per bouwlaag, niet per appartement
@@ -55,6 +57,10 @@ faq:
 ![Het venster Projectsjabloon toepassen met de vragen en het voorbeeld](/img/help/projecten/projectsjabloon-toepassen/1-toepassen.png)
 
 Heeft het sjabloon ook een planning voor het project zelf, bijvoorbeeld de wegenis bij een verkaveling, dan verschijnt in het venster de vraag **Start van de woningen**. Daar kies je of de woningen meteen starten of pas na een stap van de wegenis (fundering, nutsvoorzieningen, verharding of voorlopige oplevering). Het sjabloon stelt zelf een keuze voor. Het voorstel rechts toont de startdatum die daaruit volgt, en je kan die later per planning nog aanpassen.
+
+## De keuze staat op het project
+
+Het gekozen projectsjabloon en je antwoorden (bouwlagen, kelder, dak, terrassen, gevelafwerkingen, één planning of per eenheid) bewaart CPM op het project: bij het aanmaken van het project, via de projectpagina, of zodra je het sjabloon toepast. Open je dit venster later opnieuw, dan staan het sjabloon en de antwoorden al ingevuld. Wijzig je ze, dan verandert er niets aan een bestaande planning of bestaande schijven tot je zelf opnieuw toepast.
 
 ## Wat het sjabloon aanpast
 

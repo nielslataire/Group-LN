@@ -14,6 +14,13 @@ namespace CPMCore.Models.Projecten
     //test
     public class ProjectModel : IProjectFormModel
     {
+        // Projectsjabloon kiezen bij het aanmaken (E1): optioneel; enkel de keuze en de antwoorden worden bewaard en het traject aangemaakt
+        public int? SjabloonId { get; set; }
+        public int SjabloonVerdiepingen { get; set; } = 1;
+        public bool SjabloonKelder { get; set; }
+        public string? SjabloonDak { get; set; }
+        public List<FacadeCore.ProjectSjabloonKeuze> SjabloonKeuzes { get; set; } = new();
+
         public ProjectModel()
         {
             _project = new ProjectBO();
@@ -591,6 +598,10 @@ namespace CPMCore.Models.Projecten
         }
         /// <summary>Het project heeft geen weerstation: de werkdagen/deadline rekenen dan zonder verlet.</summary>
         public bool WeatherStationMissing { get; set; }
+        /// <summary>Het gekozen projectsjabloon met wat al toegepast is (E1); leeg als de gebruiker de planning niet mag wijzigen.</summary>
+        public FacadeCore.ProjectSjabloonProjectKeuze? ProjectSjabloonKeuze { get; set; }
+        /// <summary>De projectsjablonen waaruit gekozen kan worden als er nog geen keuze is.</summary>
+        public List<FacadeCore.ProjectSjabloonKeuze> SjabloonOpties { get; set; } = new();
         private int _workingdaysleft;
         public int WorkingDaysLeft
         {

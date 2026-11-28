@@ -35,6 +35,8 @@ public sealed class PlanningSjabloonBewerkTaak
     public string Naam { get; set; } = "";
     public string? Beschrijving { get; set; }
     public int Duur { get; set; } = 1;
+    /// <summary>Werkdagen per eenheid; leeg = de vaste duur. De duur wordt dagen × het aantal eenheden van de planning.</summary>
+    public decimal? DuurPerEenheid { get; set; }
     public bool Estafette { get; set; }
     public int EstafetteWacht { get; set; }
     /// <summary>Bv. "laag:eerste,kelder:nee"; leeg = altijd. Zie <c>PlanningSjabloonUitrol.TaakVoorwaarden</c>.</summary>

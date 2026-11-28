@@ -78,7 +78,7 @@ public sealed partial class PlanningSjabloonService
                     Code = t.Code,
                     Naam = t.Naam ?? "",
                     Beschrijving = t.Beschrijving,
-                    Duur = t.Duur,
+                    Duur = t.Duur, DuurPerEenheid = t.DuurPerEenheid,
                     Estafette = t.Estafette,
                     EstafetteWacht = t.EstafetteWacht,
                     Voorwaarde = string.IsNullOrWhiteSpace(t.Voorwaarde) ? null : t.Voorwaarde,
@@ -157,6 +157,7 @@ public sealed partial class PlanningSjabloonService
                 if (tnaam.Length == 0) { fouten.Add($"Blok “{bnaam}”: elke taak heeft een naam nodig."); continue; }
                 if (tnaam.Length > 200) tnaam = tnaam[..200];
                 if (t.Duur < 0 || t.Duur > 3650) fouten.Add($"Taak “{tnaam}”: de duur moet tussen 0 en 3650 werkdagen liggen.");
+                if (t.DuurPerEenheid is decimal dpe && (dpe <= 0m || dpe > 100m)) fouten.Add($"Taak “{tnaam}”: de duur per eenheid moet tussen 0 en 100 werkdagen liggen.");
                 if (t.EstafetteWacht < 0 || t.EstafetteWacht > 3650) fouten.Add($"Taak “{tnaam}”: de wachttijd van de estafette moet 0 of meer dagen zijn.");
                 var tcode = Maak(t.Code, tnaam);
                 var tvoorwaarde = SchoneTaakVoorwaarde(t.Voorwaarde, tnaam, fouten);
@@ -167,7 +168,7 @@ public sealed partial class PlanningSjabloonService
                     Id = tijdelijkeIds ? ++nummer : 0,
                     Code = tcode, Naam = tnaam,
                     Beschrijving = string.IsNullOrWhiteSpace(t.Beschrijving) ? null : t.Beschrijving.Trim(),
-                    Duur = Math.Clamp(t.Duur, 0, 3650), Volgorde = tv,
+                    Duur = Math.Clamp(t.Duur, 0, 3650), DuurPerEenheid = t.DuurPerEenheid is > 0m ? Math.Round(Math.Min(t.DuurPerEenheid.Value, 100m), 2) : null, Volgorde = tv,
                     Estafette = t.Estafette, EstafetteWacht = t.Estafette ? Math.Clamp(t.EstafetteWacht, 0, 3650) : 0,
                 });
                 tv += 10;
@@ -262,7 +263,7 @@ public sealed partial class PlanningSjabloonService
 
     private static readonly Dictionary<string, string[]> TaakVoorwaardeWaarden = new()
     {
-        ["kelder"] = new[] { "ja", "nee" }, ["dak"] = new[] { "hellend", "plat" }, ["terras"] = new[] { "ja", "nee" }, ["gevel"] = new[] { "pleister", "hout", "aluminium" }, ["laag"] = new[] { "eerste", "laatste", "boven", "eenmalig" }, ["grond"] = new[] { "ja", "nee" },
+        ["kelder"] = new[] { "ja", "nee" }, ["dak"] = new[] { "hellend", "plat" }, ["terras"] = new[] { "ja", "nee" }, ["gevel"] = new[] { "steen", "pleister", "hout", "aluminium" }, ["laag"] = new[] { "eerste", "laatste", "boven", "eenmalig" }, ["grond"] = new[] { "ja", "nee" },
     };
 
     /// <summary>Controleert de voorwaarde van een taak ("laag:eerste,kelder:nee"): enkel bekende variabelen en waarden. Een ongeldige voorwaarde is een fout, geen stille "altijd".</summary>
@@ -365,7 +366,7 @@ public sealed partial class PlanningSjabloonService
             var nb = new PlanningSjabloonBlok { Code = b.Code, Naam = b.Naam, Volgorde = b.Volgorde, Herhaling = b.Herhaling, VolgtVorigeVerdieping = b.VolgtVorigeVerdieping, VoorwaardeVariabele = b.VoorwaardeVariabele, VoorwaardeWaarde = b.VoorwaardeWaarde };
             foreach (var t in b.Taken.OrderBy(x => x.Volgorde))
             {
-                var nt = new PlanningSjabloonTaak { Code = t.Code, Naam = t.Naam, Beschrijving = t.Beschrijving, Duur = t.Duur, Volgorde = t.Volgorde, Estafette = t.Estafette, EstafetteWacht = t.EstafetteWacht, Voorwaarde = t.Voorwaarde, BouwstaatId = t.BouwstaatId, ActivityId = t.ActivityId };
+                var nt = new PlanningSjabloonTaak { Code = t.Code, Naam = t.Naam, Beschrijving = t.Beschrijving, Duur = t.Duur, DuurPerEenheid = t.DuurPerEenheid, Volgorde = t.Volgorde, Estafette = t.Estafette, EstafetteWacht = t.EstafetteWacht, Voorwaarde = t.Voorwaarde, BouwstaatId = t.BouwstaatId, ActivityId = t.ActivityId };
                 foreach (var v in t.Voorgangers) nt.Voorgangers.Add(new PlanningSjabloonVoorganger { VoorgangerCode = v.VoorgangerCode, Type = v.Type, WachtDagen = v.WachtDagen });
                 nb.Taken.Add(nt);
             }

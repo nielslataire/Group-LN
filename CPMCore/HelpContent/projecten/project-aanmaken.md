@@ -32,7 +32,8 @@ faq:
 4. Vul eventueel de **Projectcode** in: het dossiernummer, een koppelteken, de maand en het jaar van de aanvangsdatum. Laat je dit leeg, dan blijft het leeg. CPM vult het niet zelf in.
 5. Kies eventueel de **Projectbeheerder** en de **Verkoopverantwoordelijke**. Dat kan ook later.
 6. Voeg eventueel een **Standaard foto** toe.
-7. Klik onderaan op **Project aanmaken**.
+7. Kies eventueel een **Projectsjabloon** (enkel als je de planning mag wijzigen) en vul het aantal **Bouwlagen**, het **Dak** en **Met kelder** in. CPM bewaart die keuze op het project en maakt meteen het **traject** aan. De planning en de schijven maak je later, in hun fase, bij **Planning › Projectsjabloon**. Je kan de keuze ook later doen of wijzigen.
+8. Klik onderaan op **Project aanmaken**.
 
 ## Resultaat
 

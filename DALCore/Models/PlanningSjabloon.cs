@@ -54,6 +54,8 @@ public partial class PlanningSjabloonTaak
     public string Naam { get; set; }
     public string Beschrijving { get; set; }
     public int Duur { get; set; } = 1;
+    /// <summary>Werkdagen per eenheid (bv. 1 voor de afwerking van de toestellen): de duur wordt dan dagen × aantal eenheden van de planning (minstens 1). Leeg = de vaste <see cref="Duur"/>.</summary>
+    public decimal? DuurPerEenheid { get; set; }
     public int Volgorde { get; set; }
 
     /// <summary>Wacht bij meerdere bouwdelen op dezelfde taak in het vorige bouwdeel.</summary>

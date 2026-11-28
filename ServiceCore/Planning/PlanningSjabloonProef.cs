@@ -21,7 +21,8 @@ internal static class PlanningSjabloonProef
         var lagen = Math.Max(1, verdiepingen);
         // Terrassen of luifels: in het voorbeeld bij elke bouwlaag, zodat het langste verloop te zien is.
         // Gevelafwerkingen: in het voorbeeld alle, zodat het langste verloop te zien is.
-        return new SjabloonVariabelen(lagen, kelder, dak, Enumerable.Range(1, lagen).ToArray(), GevelAfwerkingen.Alle);
+        // Eenheden: taken met "dagen per eenheid" rekenen in het voorbeeld met een gebouw van 10 eenheden.
+        return new SjabloonVariabelen(lagen, kelder, dak, Enumerable.Range(1, lagen).ToArray(), GevelAfwerkingen.Alle, 10);
     }
 
     private static int Nr(DateOnly d)

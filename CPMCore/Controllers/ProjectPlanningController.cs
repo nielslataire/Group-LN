@@ -165,6 +165,12 @@ public class ProjectPlanningController : BaseController
     public async Task<IActionResult> ProjectSjablonen(int projectId)
         => Json(await HttpContext.RequestServices.GetRequiredService<IProjectSjabloonService>().Keuzes(), JsonOpties);
 
+    /// <summary>Het projectsjabloon dat op het project gekozen is, met de bewaarde antwoorden (E1): het venster Projectsjabloon vult die vooraf in.</summary>
+    [HttpGet("ProjectKeuze")]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsPlanning)]
+    public async Task<IActionResult> ProjectKeuze(int projectId)
+        => Json(await HttpContext.RequestServices.GetRequiredService<IProjectSjabloonService>().ProjectKeuze(projectId), JsonOpties);
+
     /// <summary>Wat het projectsjabloon met deze antwoorden zou doen. Bewaart niets.</summary>
     [HttpPost("ProjectSjabloonVoorbeeld")]
     [ValidateAntiForgeryToken]
@@ -188,7 +194,11 @@ public class ProjectPlanningController : BaseController
             return Json(new ProjectSjabloonResultaat { Fout = "Voor een projectsjabloon heb je ook schrijfrecht op de facturatie nodig, want de schijven komen in de betalingsgroepen." }, JsonOpties);
         if ((verzoek.Antwoorden?.VervangPlanning ?? false) && !HttpContext.RequestServices.GetRequiredService<IPermissionService>().HasDelete(PermissionCodes.ProjectsPlanning))
             return Json(new ProjectSjabloonResultaat { Fout = "De bestaande planning vervangen vraagt het recht Verwijderen op Planning. Je rol heeft dat niet." }, JsonOpties);
-        return Json(await HttpContext.RequestServices.GetRequiredService<IProjectSjabloonService>().Toepassen(projectId, verzoek.SjabloonId, verzoek.Antwoorden ?? new(), UserId), JsonOpties);
+        var sjablonen = HttpContext.RequestServices.GetRequiredService<IProjectSjabloonService>();
+        var resultaat = await sjablonen.Toepassen(projectId, verzoek.SjabloonId, verzoek.Antwoorden ?? new(), UserId);
+        // Wat toegepast is, onthoudt het project als zijn keuze (zonder het traject opnieuw aan te maken)
+        if (resultaat.Ok) await sjablonen.BewaarProjectKeuze(projectId, verzoek.SjabloonId, verzoek.Antwoorden ?? new(), false, UserId);
+        return Json(resultaat, JsonOpties);
     }
 
     /// <summary>De AI vult de antwoorden in uit een beschrijving van het gebouw. Enkel een voorstel: er wordt niets bewaard of toegepast.</summary>

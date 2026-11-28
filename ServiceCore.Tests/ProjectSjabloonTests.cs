@@ -112,6 +112,66 @@ public class ProjectSjabloonTests
     }
 
     [Fact]
+    public async Task Een_sjabloon_met_blokken_per_bouwlaag_is_een_gebouw_en_woningen_niet()
+    {
+        var (svc, db, id) = Maak();
+        Assert.False((await svc.Keuzes()).First(k => k.Id == id).IsGebouw);
+        foreach (var blok in db.PlanningSjabloonBlok) blok.Herhaling = 1;
+        db.SaveChanges();
+        Assert.True((await svc.Keuzes()).First(k => k.Id == id).IsGebouw);
+    }
+
+    [Fact]
+    public async Task De_keuze_en_de_antwoorden_worden_op_het_project_bewaard_en_het_traject_wordt_meteen_aangemaakt()
+    {
+        var (svc, db, id) = Maak();
+        var leeg = await svc.ProjectKeuze(ProjectId);
+        Assert.Null(leeg.SjabloonId);
+
+        var r = await svc.BewaarProjectKeuze(ProjectId, id, new ProjectSjabloonAntwoorden { Verdiepingen = 3, Kelder = true, Dak = "plat", Terrassen = new() { 1, 3 }, Gevelafwerkingen = new() { "steen", "pleister" } }, true, "u1");
+        Assert.True(r.Ok, r.Fout);
+        Assert.Single(db.Projecttraject);                                        // het traject is meteen aangemaakt
+        Assert.False(db.PlanningSectie.Any());                                   // planning blijft een bewuste actie
+        Assert.Equal(100m, db.InvoicingPaymentStages.Single().Percentage);       // schijven ook
+
+        var k = await svc.ProjectKeuze(ProjectId);
+        Assert.Equal(id, k.SjabloonId);
+        Assert.Equal("Rijwoning", k.SjabloonNaam);
+        Assert.Equal(3, k.Antwoorden.Verdiepingen);
+        Assert.True(k.Antwoorden.Kelder);
+        Assert.Equal("plat", k.Antwoorden.Dak);
+        Assert.Equal(new[] { 1, 3 }, k.Antwoorden.Terrassen);
+        Assert.Equal(new[] { "steen", "pleister" }, k.Antwoorden.Gevelafwerkingen);
+        Assert.True(k.HeeftTraject);
+        Assert.False(k.HeeftPlanning);
+    }
+
+    [Fact]
+    public async Task Een_tweede_keer_bewaren_past_enkel_de_antwoorden_aan_en_maakt_geen_tweede_traject()
+    {
+        var (svc, db, id) = Maak();
+        await svc.BewaarProjectKeuze(ProjectId, id, new ProjectSjabloonAntwoorden { Verdiepingen = 2 }, true, "u1");
+        var r = await svc.BewaarProjectKeuze(ProjectId, id, new ProjectSjabloonAntwoorden { Verdiepingen = 4 }, true, "u1");
+        Assert.True(r.Ok, r.Fout);
+        Assert.Single(db.Projecttraject);
+        Assert.Equal(4, (await svc.ProjectKeuze(ProjectId)).Antwoorden.Verdiepingen);
+        Assert.Contains(r.Opmerkingen, o => o.Contains("al een traject"));
+    }
+
+    [Fact]
+    public async Task Zonder_traject_te_maken_en_bij_het_wissen_van_de_keuze()
+    {
+        var (svc, db, id) = Maak();
+        var r = await svc.BewaarProjectKeuze(ProjectId, id, new ProjectSjabloonAntwoorden { Verdiepingen = 2 }, false, "u1");
+        Assert.True(r.Ok, r.Fout);
+        Assert.Empty(db.Projecttraject);
+        Assert.Equal(id, (await svc.ProjectKeuze(ProjectId)).SjabloonId);
+        Assert.True((await svc.BewaarProjectKeuze(ProjectId, null, null, false, "u1")).Ok);
+        Assert.Null((await svc.ProjectKeuze(ProjectId)).SjabloonId);
+        Assert.False((await svc.BewaarProjectKeuze(ProjectId, 9999, null, false, "u1")).Ok);   // onbekend sjabloon
+    }
+
+    [Fact]
     public async Task Wat_al_bestaat_blijft_ongemoeid()
     {
         var (svc, db, id) = Maak();
@@ -130,6 +190,8 @@ public class ProjectSjabloonTests
         Assert.Equal(1, db.BouwPlanning.Count(b => !b.IsHoofd && b.Naam == "Woning 2"));   // enkel woning 2 kreeg een planning
         Assert.Contains(r.Opmerkingen, o => o.Contains("traject"));
         Assert.Contains(r.Opmerkingen, o => o.Contains("ongemoeid"));
+        // per groep wat blijft en waarom
+        Assert.Contains(r.Opmerkingen, o => o.StartsWith("Groep") && o.Contains("blijft ongemoeid") && o.Contains("gefactureerd"));
     }
 
     [Fact]

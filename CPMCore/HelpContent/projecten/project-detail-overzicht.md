@@ -34,6 +34,10 @@ verderop. Hoe je dat paneel gebruikt, lees je in "Zien wat een project nog tegen
 **Bewerken** opent het formulier om het project aan te passen. De knop **?** opent dit Helpcentrum met
 artikels voor precies dit scherm.
 
+## Het projectsjabloon van het project
+
+Bovenaan staat, als je de planning mag wijzigen, een regel over het **projectsjabloon**. Is er een gekozen, dan zie je of het traject, de planning en de schijven al toegepast zijn of nog klaarstaan. Via de link ga je naar **Planning › Projectsjabloon**, waar de bewaarde keuze en antwoorden vooraf ingevuld staan. Is er nog geen keuze, dan kies je er een in de keuzelijst en klik je op **Bewaar keuze en maak traject**. Planning en schijven worden nooit vanzelf toegepast: dat doe je zelf, wanneer het project zover is.
+
 ## Op je gsm
 
 Op een gsm staat de pagina in een andere volgorde, zodat je minder moet scrollen.

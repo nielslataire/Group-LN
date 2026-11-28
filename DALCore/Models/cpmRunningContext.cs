@@ -2546,6 +2546,7 @@ public partial class cpmRunningContext : DbContext
             entity.ToTable("PlanningSjabloonTaak");
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.BlokId, "IX_PlanningSjabloonTaak_Blok");
+            entity.Property(e => e.DuurPerEenheid).HasPrecision(5, 2);
             entity.Property(e => e.Code).HasMaxLength(60);
             entity.Property(e => e.Naam).IsRequired().HasMaxLength(200);
             entity.HasOne(d => d.Blok).WithMany(p => p.Taken)

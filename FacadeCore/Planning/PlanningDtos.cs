@@ -452,7 +452,7 @@ public sealed class PlanningToepassingPlanning
     /// <summary>De bouwlagen (1 = gelijkvloers, 2 = 1ste verdieping, ...) met terrassen of luifels bij de afdek.</summary>
     public List<int> Terrassen { get; set; } = new();
 
-    /// <summary>De gekozen extra gevelafwerkingen naast de stenen gevel: "pleister", "hout" en/of "aluminium". Leeg = enkel de stenen gevel.</summary>
+    /// <summary>De gekozen gevelafwerkingen (allemaal optioneel): "steen", "pleister", "hout" en/of "aluminium". Leeg = geen.</summary>
     public List<string> Gevelafwerkingen { get; set; } = new();
 
     /// <summary>De bestaande planning (met taken) mag door het sjabloon vervangen worden.</summary>
@@ -496,8 +496,23 @@ public interface IPlanningSjabloonService
     Task<string?> ZetActief(int id, bool actief, string? userId);
 }
 
+/// <summary>Een fase of taak van een planning waaraan een trajectmijlpaal gekoppeld kan worden (voor de keuzelijst in het Traject).</summary>
+public sealed class PlanningKoppelDoel
+{
+    /// <summary>"taak" of "fase".</summary>
+    public string Soort { get; set; } = "taak";
+    public int Id { get; set; }
+    /// <summary>De waarde in de keuzelijst: "taak:12" of "fase:3".</summary>
+    public string Waarde => Soort + ":" + Id;
+    /// <summary>"Ruwbouw · Gieten vloerplaat" of "Fase · Ruwbouw", met de naam van de planning als er meer dan één is.</summary>
+    public string Tekst { get; set; } = "";
+}
+
 public interface IPlanningService
 {
+    /// <summary>De fases en taken van de actieve plannings van het project, in planningvolgorde. Bij <paramref name="unitId"/> enkel die van de planning van die eenheid (een mijlpaal van één woning mag enkel daar aan hangen).</summary>
+    Task<List<PlanningKoppelDoel>> KoppelDoelen(int projectId, int? unitId);
+
     /// <param name="planningId">De planning die getoond wordt; leeg of onbekend = de hoofdplanning.</param>
     Task<PlanningStaat> Laad(int projectId, int? planningId = null);
 

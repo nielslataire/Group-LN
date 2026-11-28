@@ -761,6 +761,41 @@ public class PlanningService : IPlanningService
 
     private static int? VerwijstNaar(Mijlpaal m) => m.BronRefId ?? (int.TryParse((m.BronParam ?? "").Trim(), out var x) ? x : (int?)null);
 
+    private async Task<int> HoofdEenhedenVanPlanning(int bouwPlanningId)
+    {
+        var groepen = await _db.BouwPlanningEenheid.AsNoTracking().Where(e => e.BouwPlanningId == bouwPlanningId)
+            .Join(_db.Units.AsNoTracking(), e => e.UnitId, u => u.Id, (e, u) => u.Type != null ? (int?)u.Type.GroupId : null).ToListAsync();
+        return Math.Max(1, groepen.Count(g => g == null || g == 1 || g == 4));
+    }
+
+    public async Task<List<PlanningKoppelDoel>> KoppelDoelen(int projectId, int? unitId)
+    {
+        var plannings = await _db.BouwPlanning.AsNoTracking().Where(p => p.ProjectId == projectId && p.IsActief).OrderByDescending(p => p.IsHoofd).ThenBy(p => p.Volgorde).ThenBy(p => p.Id).ToListAsync();
+        if (plannings.Count == 0) return new();
+        var hoofd = plannings.FirstOrDefault(p => p.IsHoofd) ?? plannings[0];
+        int? enkel = null;
+        if (unitId is int uid)
+            enkel = await _db.BouwPlanningEenheid.AsNoTracking().Where(e => e.UnitId == uid && plannings.Select(p => p.Id).Contains(e.BouwPlanningId)).Select(e => (int?)e.BouwPlanningId).FirstOrDefaultAsync();
+        var secties = await _db.PlanningSectie.AsNoTracking().Where(s => s.ProjectId == projectId && s.IsActief).ToListAsync();
+        var sectieIds = secties.Select(s => s.Id).ToList();
+        var taken = await _db.PlanningTaak.AsNoTracking().Where(t => sectieIds.Contains(t.PlanningSectieId)).ToListAsync();
+        var meer = plannings.Count > 1;
+        var uit = new List<PlanningKoppelDoel>();
+        foreach (var p in plannings)
+        {
+            if (enkel != null && p.Id != enkel) continue;
+            var pn = meer ? p.Naam + " · " : "";
+            // secties zonder planning horen bij de hoofdplanning
+            foreach (var s in secties.Where(s => (s.BouwPlanningId ?? hoofd.Id) == p.Id).OrderBy(s => s.Volgorde).ThenBy(s => s.Id))
+            {
+                uit.Add(new PlanningKoppelDoel { Soort = "fase", Id = s.Id, Tekst = pn + "Fase · " + s.Naam });
+                foreach (var t in taken.Where(t => t.PlanningSectieId == s.Id).OrderBy(t => t.Volgorde).ThenBy(t => t.Id))
+                    uit.Add(new PlanningKoppelDoel { Soort = "taak", Id = t.Id, Tekst = pn + s.Naam + " · " + t.Naam });
+            }
+        }
+        return uit;
+    }
+
     public async Task<PlanningUitkomst> Koppel(int projectId, PlanningKoppelCommando c, string? userId)
     {
         if (c == null) return new PlanningUitkomst { Fout = "Geen koppeling opgegeven." };
@@ -1773,7 +1808,9 @@ public class PlanningService : IPlanningService
             }
             if (eersteNieuw) { bewerkt.Add("p" + bp.Id); eersteNieuw = false; }
 
-            var uit = PlanningSjabloonUitrol.Rol(sjabloon, new SjabloonVariabelen(Math.Max(1, b.Verdiepingen), b.Kelder, b.Dak, b.Terrassen, GevelAfwerkingen.Schoon(b.Gevelafwerkingen)));
+            // Taken met "dagen per eenheid" duren dagen × het aantal hoofdeenheden (woning, appartement, commercieel) van deze planning
+            var aantalEenheden = await HoofdEenhedenVanPlanning(bp.Id);
+            var uit = PlanningSjabloonUitrol.Rol(sjabloon, new SjabloonVariabelen(Math.Max(1, b.Verdiepingen), b.Kelder, b.Dak, b.Terrassen, GevelAfwerkingen.Schoon(b.Gevelafwerkingen), aantalEenheden));
             foreach (var w in uit.Waarschuwingen) waarschuwingen.Add($"{naam}: {w}");
 
             var taakIdPerSleutel = new Dictionary<string, int>();

@@ -21,14 +21,17 @@ public class ProjectTrajectController : BaseController
     private readonly IMijlpaalService _mijlpaal;
     private readonly ITrajectSjabloonService _sjablonen;
     private readonly ITrajectInstantiationService _instantiation;
+    private readonly IPlanningService _planning;
 
     public ProjectTrajectController(
         cpmRunningContext db,
         IProjecttrajectService traject,
         IMijlpaalService mijlpaal,
         ITrajectSjabloonService sjablonen,
-        ITrajectInstantiationService instantiation)
+        ITrajectInstantiationService instantiation,
+        IPlanningService planning)
     {
+        _planning = planning;
         _db = db;
         _traject = traject;
         _mijlpaal = mijlpaal;
@@ -235,7 +238,7 @@ public class ProjectTrajectController : BaseController
     [ValidateAntiForgeryToken]
     [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsTraject)]
     public async Task<IActionResult> MijlpaalUpsert(int projectId, [FromForm] MijlpaalUpsertBO dto,
-        string? geldtVoor = null, bool opslaanEnNieuw = false, string? terugTab = null)
+        string? geldtVoor = null, bool opslaanEnNieuw = false, string? terugTab = null, string? planningKoppeling = null, string? planningKoppelingOud = null)
     {
         var traject = await _traject.GetByProject(projectId, includeDetails: false);
         if (traject == null) return NotFound();
@@ -250,6 +253,7 @@ public class ProjectTrajectController : BaseController
         {
             await _mijlpaal.Update(id, dto, UserId);
             opgeslagenId = id;
+            await PasPlanningKoppelingToe(projectId, id, planningKoppeling, planningKoppelingOud);
         }
         else
         {
@@ -284,6 +288,29 @@ public class ProjectTrajectController : BaseController
             hl = opgeslagenId,
             nieuw = opslaanEnNieuw ? (dto.ProjecttrajectFaseId ?? 0) : (int?)null
         });
+    }
+
+    /// <summary>
+    /// Koppelt de mijlpaal aan de gekozen taak of fase van de planning ("taak:12" of "fase:3"), of haalt de koppeling weg (leeg). Gebeurt enkel als de keuze veranderd is
+    /// en de gebruiker schrijfrecht op de planning heeft; een weigering van de planning (bv. een mijlpaal van een andere woning) wordt als waarschuwing getoond.
+    /// </summary>
+    private async Task PasPlanningKoppelingToe(int projectId, int mijlpaalId, string? nieuw, string? oud)
+    {
+        if (nieuw == null || (nieuw ?? "") == (oud ?? "")) return;   // veld niet getoond of niet gewijzigd
+        if (!HttpContext.RequestServices.GetRequiredService<IPermissionService>().HasWrite(PermissionCodes.ProjectsPlanning)) return;
+        PlanningKoppelCommando? cmd = null;
+        var delen = (nieuw ?? "").Split(':');
+        if (delen.Length == 2 && int.TryParse(delen[1], out var doelId) && (delen[0] == "taak" || delen[0] == "fase"))
+            cmd = new PlanningKoppelCommando { Soort = delen[0], Id = doelId, MijlpaalId = mijlpaalId };
+        else if (string.IsNullOrEmpty(nieuw))
+        {
+            var oudDelen = (oud ?? "").Split(':');
+            if (oudDelen.Length == 2 && int.TryParse(oudDelen[1], out var oudId) && (oudDelen[0] == "taak" || oudDelen[0] == "fase"))
+                cmd = new PlanningKoppelCommando { Soort = oudDelen[0], Id = oudId, MijlpaalId = null, VorigeMijlpaalId = mijlpaalId };
+        }
+        if (cmd == null) return;
+        var uitkomst = await _planning.Koppel(projectId, cmd, UserId);
+        if (!uitkomst.Ok) AddMessage("warning", uitkomst.Fout ?? "De koppeling met de planning is niet bewaard.", "Koppeling met planning");
     }
 
     [HttpPost("Mijlpaal/Status")]
@@ -393,6 +420,15 @@ public class ProjectTrajectController : BaseController
             if (vm.Bestaand == null) return NotFound();
             vm.FaseId = vm.Bestaand.ProjecttrajectFaseId;
             vm.UnitId = vm.Bestaand.UnitId;
+            // Koppeling met de planning (C4): enkel voor een mijlpaal die niets anders (document, dossier) volgt, en met schrijfrecht op de planning
+            var binding = vm.Bestaand.BronBinding;
+            if ((binding == null || binding == 0 || binding == 4 || binding == 5)
+                && HttpContext.RequestServices.GetRequiredService<IPermissionService>().HasWrite(PermissionCodes.ProjectsPlanning))
+            {
+                vm.PlanningDoelen = await _planning.KoppelDoelen(projectId, vm.Bestaand.UnitId);
+                vm.HuidigePlanningKoppeling = binding == 4 && vm.Bestaand.BronRefId != null ? "taak:" + vm.Bestaand.BronRefId
+                    : binding == 5 && vm.Bestaand.BronRefId != null ? "fase:" + vm.Bestaand.BronRefId : null;
+            }
         }
         else vm.FaseId ??= vm.ActieveFaseId;
         return PartialView("Modals/_ModalMijlpaalV2", vm);

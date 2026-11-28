@@ -437,10 +437,10 @@
                             <section class="gl-v2-pl-pj-sec" id="gl-v2-pl-pj-q-gevel" hidden>
                                 <span class="gl-v2-pl-pj-k">Gevelafwerking</span>
                                 <div class="gl-v2-pl-pj-q">
-                                    <span class="gl-v2-pl-pj-qt"><b>Naast de stenen gevel</b><small>de stenen gevel is altijd aanwezig en komt eerst; kies wat er daarna bijkomt</small></span>
-                                    <div class="gl-v2-segmented is-sm" id="gl-v2-pl-pj-gevel-seg" role="group" aria-label="Gevelafwerkingen (meerdere mogelijk)"><button type="button" data-v="pleister" aria-pressed="false">Gevelpleister</button><button type="button" data-v="hout" aria-pressed="false">Houten bekleding</button><button type="button" data-v="aluminium" aria-pressed="false">Aluminium bekleding</button></div>
+                                    <span class="gl-v2-pl-pj-qt"><b>Welke gevelafwerkingen?</b><small>alles is optioneel; je kan er meerdere kiezen</small></span>
+                                    <div class="gl-v2-segmented is-sm" id="gl-v2-pl-pj-gevel-seg" role="group" aria-label="Gevelafwerkingen (meerdere mogelijk)"><button type="button" data-v="steen" aria-pressed="false">Stenen gevel</button><button type="button" data-v="pleister" aria-pressed="false">Gevelpleister</button><button type="button" data-v="hout" aria-pressed="false">Houten bekleding</button><button type="button" data-v="aluminium" aria-pressed="false">Aluminium bekleding</button></div>
                                 </div>
-                                <span class="gl-v2-field-help">Volgorde in de planning: stenen gevel, dan gevelpleister, daarna houten of aluminium bekleding. Je kan er meerdere kiezen.</span>
+                                <span class="gl-v2-field-help">In de planning loopt de stenen gevel mee met de bovenbouw. Gevelpleister, houten en aluminium bekleding starten pas als de bovenbouw af is (eerst de pleister, dan hout of aluminium).</span>
                             </section>
                             <section class="gl-v2-pl-pj-sec" id="gl-v2-pl-pj-q-vervang" hidden>
                                 <span class="gl-v2-pl-pj-k">Bestaande planning</span>
@@ -643,6 +643,7 @@
         "koppelUrl": "@Url.Action("Koppeling", "ProjectPlanning", new { projectId = Model.ProjectId })",
         "schijfKoppelUrl": "@Url.Action("SchijfKoppeling", "ProjectPlanning", new { projectId = Model.ProjectId })",
         "projectSjablonenUrl": "@Url.Action("ProjectSjablonen", "ProjectPlanning", new { projectId = Model.ProjectId })",
+        "projectKeuzeUrl": "@Url.Action("ProjectKeuze", "ProjectPlanning", new { projectId = Model.ProjectId })",
         "projectSjabloonVoorbeeldUrl": "@Url.Action("ProjectSjabloonVoorbeeld", "ProjectPlanning", new { projectId = Model.ProjectId })",
         "projectSjabloonToepassenUrl": "@Url.Action("ProjectSjabloonToepassen", "ProjectPlanning", new { projectId = Model.ProjectId })",
         "projectSjabloonAiUrl": "@Url.Action("ProjectSjabloonAi", "ProjectPlanning", new { projectId = Model.ProjectId })",

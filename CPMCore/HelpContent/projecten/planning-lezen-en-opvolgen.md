@@ -22,7 +22,7 @@ faq:
   - q: Waarom staat er een waarschuwing over een klant?
     a: Heeft een klant een andere uitvoeringstermijn of aanvangsdatum dan het project, dan rekent CPM voor die klant een eigen oplevering uit. Valt het einde van de planning daarna, dan zie je een waarschuwing.
   - q: Wat als het project geen weerstation heeft?
-    a: Dan rekent CPM zonder weerverlet en toont ze een waarschuwing. Kies een weerstation in het projectformulier.
+    a: Dan rekent CPM zonder weerverlet en toont ze een waarschuwing, ook bij de voorziene oplevering op de klantkaart. Kies een weerstation in het projectformulier.
   - q: Kan ik de planning zonder weerverlet bekijken?
     a: Ja. Zet de knop **Verlet** uit. Dat is een simulatie. De keuze wordt bewaard voor het hele project, ook voor je collega's. Zet de knop daarna terug aan, dan telt het verlet weer mee.
   - q: Wat is speling?

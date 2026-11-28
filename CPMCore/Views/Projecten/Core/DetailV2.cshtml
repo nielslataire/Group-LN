@@ -596,6 +596,38 @@
         <span>Dit project heeft geen weerstation. De werkdagen en de voorziene oplevering rekenen zonder weerverlet. <a href="@Url.Action("Edit", "Projecten", new { projectid = Model.Project.Id })">Kies een weerstation</a></span>
     </div>
 }
+@* ── Projectsjabloon (E1): de keuze, wat al toegepast is en wat nog moet; planning en schijven blijven een bewuste actie ── *@
+@if (Model.ProjectSjabloonKeuze != null)
+{
+    var psk = Model.ProjectSjabloonKeuze;
+    <div class="gl-v2-notice gl-v2-notice-compact" role="status">
+        <i class="ph ph-stack" aria-hidden="true"></i>
+        @if (psk.SjabloonId != null)
+        {
+            <span>
+                <b>Projectsjabloon: @psk.SjabloonNaam</b> ·
+                traject @(psk.HeeftTraject ? "aangemaakt" : "nog niet aangemaakt") ·
+                planning @(psk.HeeftPlanning ? "toegepast" : "klaar om toe te passen") ·
+                schijven @(psk.HeeftSchijven ? "toegepast" : "klaar om toe te passen").
+                <a href="@Url.Action("Index", "ProjectPlanning", new { projectId = Model.Project.Id })">Open Planning › Projectsjabloon om toe te passen of de antwoorden te wijzigen</a>
+            </span>
+        }
+        else if (Model.SjabloonOpties.Count > 0)
+        {
+            <form method="post" action="@Url.Action("ProjectSjabloonKiezen", "Projecten")" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="projectid" value="@Model.Project.Id" />
+                <span>Nog geen projectsjabloon gekozen.</span>
+                @await Html.PartialAsync("GlV2/_SelectList", new CPMCore.Models.GlV2.GlV2SelectListVm
+                {
+                    Name = "sjabloonId", Id = "gl-v2-pd-sjabloon", Bare = true, Value = "", Placeholder = "Kies een projectsjabloon",
+                    Items = Model.SjabloonOpties.Select(k => new CPMCore.Models.GlV2.GlV2SelectItem { Value = k.Id.ToString(), Text = k.Naam }).ToList()
+                })
+                <button type="submit" class="gl-v2-btn gl-v2-btn-secondary">Bewaar keuze en maak traject</button>
+            </form>
+        }
+    </div>
+}
 @* ── Statistiekenrij (12a §1) ──────────────────────────────────────────────────────────────── *@
 <div class="gl-v2-pd-stats">
     <div class="gl-v2-pd-stat">

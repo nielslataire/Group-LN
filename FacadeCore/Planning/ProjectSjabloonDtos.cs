@@ -121,6 +121,8 @@ public sealed class ProjectSjabloonKeuze
     public string? WoningenStartNa { get; set; }
     /// <summary>Het planningssjabloon kent gevelafwerkingen (pleister, hout, aluminium): dan vraagt het toepassen welke van toepassing zijn.</summary>
     public bool HeeftGevel { get; set; }
+    /// <summary>Het planningssjabloon is voor een gebouw (blokken per bouwlaag): dan staat "Eén planning voor het gebouw" standaard aan en is er geen "woningen per planning".</summary>
+    public bool IsGebouw { get; set; }
     /// <summary>"planning 9 fases · traject 7 fases · 14 schijven": wat erin zit, voor de keuzekaart in de modal.</summary>
     public string? Kern { get; set; }
 }
@@ -218,8 +220,28 @@ public sealed class ProjectSjabloonAiKeuze
     public string? Schijven { get; set; }
 }
 
+/// <summary>Het projectsjabloon dat op het project gekozen is, met de bewaarde antwoorden en wat er al van toegepast is (E1).</summary>
+public sealed class ProjectSjabloonProjectKeuze
+{
+    public int? SjabloonId { get; set; }
+    public string? SjabloonNaam { get; set; }
+    public ProjectSjabloonAntwoorden Antwoorden { get; set; } = new();
+    public bool HeeftTraject { get; set; }
+    public bool HeeftPlanning { get; set; }
+    public bool HeeftSchijven { get; set; }
+}
+
 public interface IProjectSjabloonService
 {
+    /// <summary>De bewaarde keuze van het project (leeg als er geen is) en wat er al van toegepast is.</summary>
+    Task<ProjectSjabloonProjectKeuze> ProjectKeuze(int projectId);
+
+    /// <summary>
+    /// Bewaart het gekozen projectsjabloon en de antwoorden op het project (<paramref name="sjabloonId"/> leeg = keuze wissen). Met <paramref name="maakTraject"/> wordt het traject
+    /// meteen aangemaakt als het project er nog geen heeft; planning en schijven blijven een bewuste actie (toepassen in het planningvenster).
+    /// </summary>
+    Task<ProjectSjabloonResultaat> BewaarProjectKeuze(int projectId, int? sjabloonId, ProjectSjabloonAntwoorden? antwoorden, bool maakTraject, string? userId);
+
     Task<List<ProjectSjabloonBeheerRij>> BeheerLijst();
     Task<List<ProjectSjabloonKeuze>> Keuzes();
     Task<ProjectSjabloonOpties> Opties();

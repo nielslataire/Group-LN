@@ -132,6 +132,18 @@
                 </div>
                 <span class="gl-v2-field-help">Kies een mijlpaal om de streefdatum automatisch te laten meeschuiven; leeg laten voor een vaste datum.</span>
             </div>
+            @if (Model.PlanningDoelen.Count > 0)
+            {
+                <div class="gl-v2-tr-f-full">
+                    <input type="hidden" name="planningKoppelingOud" value="@Model.HuidigePlanningKoppeling" />
+                    @await Html.PartialAsync("GlV2/_SelectList", new GlV2SelectListVm
+                    {
+                        Name = "planningKoppeling", Id = "gl-v2-tr-f-planning", Label = "Volgt de planning", Value = Model.HuidigePlanningKoppeling ?? "", EmptyText = "— geen koppeling —",
+                        Items = Model.PlanningDoelen.Select(d => new GlV2SelectItem { Value = d.Waarde, Text = d.Tekst }).ToList(),
+                        Help = "Optioneel. De streefdatum volgt dan het einde van de gekozen taak of fase in de planning, en de mijlpaal staat op bereikt zodra die klaar is."
+                    })
+                </div>
+            }
         </div>
     </section>
 

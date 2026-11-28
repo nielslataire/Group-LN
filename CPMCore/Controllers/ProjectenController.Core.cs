@@ -261,7 +261,15 @@ namespace CPMCore.Controllers
 
         [HttpGet]
         [Breadcrumb("Project toevoegen", FromAction = nameof(Index))]
-        public IActionResult Toevoegen()
+        /// <summary>De projectsjablonen voor de keuzelijst bij het aanmaken; leeg als de gebruiker de planning niet mag wijzigen (E1).</summary>
+        private async Task<List<FacadeCore.ProjectSjabloonKeuze>> SjabloonKeuzesVoorAanmaken()
+        {
+            if (!HttpContext.RequestServices.GetRequiredService<IPermissionService>().HasWrite(PermissionCodes.ProjectsPlanning)) return new();
+            var sjablonen = HttpContext.RequestServices.GetService<FacadeCore.IProjectSjabloonService>();
+            return sjablonen == null ? new() : await sjablonen.Keuzes();
+        }
+
+        public async Task<IActionResult> Toevoegen()
         {
             SetPageHeader("bx bx-building-house", "Project toevoegen");
             var referrer = Request.Headers["Referer"].ToString();
@@ -273,6 +281,7 @@ namespace CPMCore.Controllers
             model.Project.Postalcode.Country.CountryId = 19;
             model.Project.Postalcode.Country.ISOCode = "BE";
             model.SelectedCountry = 19;
+            model.SjabloonKeuzes = await SjabloonKeuzesVoorAanmaken();
 
             FillInAddSelectLists(model);
             FillInAvailableUsers(model);
@@ -303,6 +312,7 @@ namespace CPMCore.Controllers
             SetPageHeader("bx bx-building-house", "Project toevoegen");
             if (!ModelState.IsValid)
             {
+                model.SjabloonKeuzes = await SjabloonKeuzesVoorAanmaken();
                 FillInAddSelectLists(model);
                 FillInAvailableUsers(model);
                 model.Users = GetOrderedUsers();
@@ -363,6 +373,24 @@ namespace CPMCore.Controllers
                         HourlyRate = r.HourlyRate
                     }).ToList());
 
+                // Gekozen projectsjabloon (E1): de keuze en de antwoorden bewaren en het traject meteen aanmaken; planning en schijven blijven een bewuste actie
+                if (model.SjabloonId is int sjabloonId and > 0
+                    && HttpContext.RequestServices.GetRequiredService<IPermissionService>().HasWrite(PermissionCodes.ProjectsPlanning))
+                {
+                    var sjablonen = HttpContext.RequestServices.GetService<FacadeCore.IProjectSjabloonService>();
+                    if (sjablonen != null)
+                    {
+                        var antw = new FacadeCore.ProjectSjabloonAntwoorden { Verdiepingen = Math.Max(1, model.SjabloonVerdiepingen), Kelder = model.SjabloonKelder, Dak = string.IsNullOrWhiteSpace(model.SjabloonDak) ? null : model.SjabloonDak };
+                        var sj = await sjablonen.BewaarProjectKeuze(newProjectId, sjabloonId, antw, true, User.FindFirst(CpmClaims.UserId)?.Value);
+                        if (!sj.Ok) AddMessage("warning", sj.Fout ?? "Het projectsjabloon kon niet bewaard worden.", "Projectsjabloon");
+                        else
+                        {
+                            foreach (var stap in sj.Stappen) AddMessage("success", stap, "Projectsjabloon");
+                            foreach (var opm in sj.Opmerkingen) AddMessage("warning", opm, "Projectsjabloon");
+                        }
+                    }
+                }
+
                 // Minimale aanmaak -> meteen door naar Bewerken om de rest aan te vullen.
                 AddMessage("success", $"Project {model.Project.Name} is aangemaakt — vul de overige gegevens aan.", "Geslaagd!");
                 return RedirectToAction("Edit", new { projectid = newProjectId });
@@ -378,6 +406,26 @@ namespace CPMCore.Controllers
             return View(ViewData["UseGlV2Layout"] as bool? == true ? "ToevoegenV2" : "Toevoegen", model);
         }
 
+
+        /// <summary>Kiest een projectsjabloon voor een bestaand project (E1): bewaart de keuze met de standaardantwoorden van het sjabloon en maakt het traject aan als het er nog niet is.</summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsPlanning)]
+        public async Task<IActionResult> ProjectSjabloonKiezen(int projectid, int sjabloonId)
+        {
+            var sjablonen = HttpContext.RequestServices.GetRequiredService<FacadeCore.IProjectSjabloonService>();
+            var keuze = (await sjablonen.Keuzes()).FirstOrDefault(k => k.Id == sjabloonId);
+            if (keuze == null) { AddMessage("warning", "Dit projectsjabloon bestaat niet meer of is inactief.", "Projectsjabloon"); return RedirectToAction(nameof(Detail), new { projectid }); }
+            var antw = new FacadeCore.ProjectSjabloonAntwoorden { Verdiepingen = keuze.Verdiepingen, Kelder = keuze.Kelder, Dak = keuze.Dak };
+            var res = await sjablonen.BewaarProjectKeuze(projectid, sjabloonId, antw, true, User.FindFirst(CpmClaims.UserId)?.Value);
+            if (!res.Ok) AddMessage("warning", res.Fout ?? "Het projectsjabloon kon niet bewaard worden.", "Projectsjabloon");
+            else
+            {
+                foreach (var stap in res.Stappen) AddMessage("success", stap, "Projectsjabloon");
+                foreach (var opm in res.Opmerkingen) AddMessage("warning", opm, "Projectsjabloon");
+            }
+            return RedirectToAction(nameof(Detail), new { projectid });
+        }
 
         [HttpGet]
         //[Breadcrumb("Info")]
@@ -415,6 +463,16 @@ namespace CPMCore.Controllers
             else
                 model.StartDate = Service.GetProjectStartDateConstruction(model.Project.Id);
             model.WeatherStationMissing = Service.GetProjectWeatherstation(model.Project.Id) == 0;
+            // Het gekozen projectsjabloon (E1), enkel voor wie de planning mag wijzigen
+            if (_ps.HasWrite(PermissionCodes.ProjectsPlanning))
+            {
+                var sjabloonService = HttpContext.RequestServices.GetService<FacadeCore.IProjectSjabloonService>();
+                if (sjabloonService != null)
+                {
+                    model.ProjectSjabloonKeuze = await sjabloonService.ProjectKeuze(model.Project.Id);
+                    if (model.ProjectSjabloonKeuze.SjabloonId == null) model.SjabloonOpties = await sjabloonService.Keuzes();
+                }
+            }
             model.WorkingDaysLeft = -9999;
             if (model.ExecutionDays != 0 && model.StartDate != DateOnly.MinValue)
             {
